@@ -1,0 +1,85 @@
+# A local stand-in for one regional execution cell (ADR-0009 §2.6).
+#
+# A cell owns its own database and shares nothing with any other cell. This file
+# models that shape at one-machine scale so the topology is familiar before the
+# OpenTofu cell blueprint lands in W1 lane B.
+#
+#   docker compose up --build -d
+#   curl localhost:8080/healthz
+#
+# LOCAL DEVELOPMENT ONLY. The database password below is inline because this
+# stack never holds real data. That is not the deployment pattern: ADR-0017 §2.4
+# requires workload identity or a vault, and a static credential in a manifest is
+# exactly what it forbids.
+
+name: zoikotax-local-cell
+
+services:
+  postgres:
+    # PostgreSQL 17 + PostGIS 3.5 (ADR-0008 §2.1). PostGIS is not optional —
+    # jurisdiction resolution needs real geospatial support, and it is the reason
+    # ADR-0008 §4.4 rules out CockroachDB.
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_DB: ztax
+      POSTGRES_USER: ztax_app
+      POSTGRES_PASSWORD: local-dev-only
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ztax_app -d ztax"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  ztax-core:
+    build:
+      context: .
+      target: ztax-core
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      ZTAX_CELL: local-dev
+      ZTAX_REGION: local
+      ZTAX_ENVIRONMENT: development
+
+      # All seven release trains. A missing one fails the readiness probe
+      # (ADR-0015 §5.1 control 5) rather than starting a process that cannot say
+      # which combination produced a decision.
+      ZTAX_TRAIN_APP: 0.0.0-dev
+      ZTAX_TRAIN_CONTENT: 0.0.0-dev
+      ZTAX_TRAIN_AI: 0.0.0-dev
+      ZTAX_TRAIN_ADAPTER: 0.0.0-dev
+      ZTAX_TRAIN_INFRA: 0.0.0-dev
+      ZTAX_TRAIN_SCHEMA: 0.0.0-dev
+      ZTAX_TRAIN_MIGRATION: 0.0.0-dev
+
+      # A reference to where the credential lives, never the credential
+      # (ADR-0017 §2.4).
+      ZTAX_DATABASE_URL_REF: local://postgres
+
+      ZTAX_HTTP_ADDR: ":8080"
+      ZTAX_LOG_LEVEL: debug
+
+      # Inert until internal/platform/telemetry is wired (ADR-0015 §2.1). The
+      # collector belongs in this stack once it is.
+      ZTAX_OTLP_ENDPOINT: localhost:4317
+
+    # The binary writes nothing to disk. Enforcing that here means a future
+    # change that starts writing fails loudly in development rather than in a
+    # cell.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  pgdata:
