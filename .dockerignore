@@ -1,0 +1,34 @@
+# Keep the build context small and the image free of anything that is not source.
+# Everything excluded here is either build output, local state, or a thing that
+# would make the build non-reproducible.
+
+bin/
+*.test
+coverage.out
+
+# Local environment. Never in a build context — ADR-0017 §2.4 keeps secrets out
+# of images entirely, and this is the file most likely to hold one by accident.
+.env
+.env.local
+*.local
+
+# Build tooling. tools/ is a separate module (ADR-0007 §2.3) that runs in CI and
+# ships nothing, so it has no business in the runtime build context.
+tools/
+
+# Not needed to compile, and each would invalidate the build cache on every edit.
+postman/
+README.md
+Makefile
+.golangci.yml
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Golden vectors are test data (ADR-0018 §2.3). They belong in CI, not in an image.
+testdata/
+
+.git/
+.gitignore
+.vscode/
+.idea/
