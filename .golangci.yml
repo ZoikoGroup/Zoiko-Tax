@@ -1,0 +1,131 @@
+# Architectural controls as lint. Every rule here is CI-blocking and traces to
+# an ADR — a layering diagram nobody can violate is worth more than one everyone
+# has seen (ADR-0007 §3.4).
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - depguard
+    - forbidigo
+    - bodyclose
+    - errorlint
+    - gosec
+    - misspell
+    - revive
+
+  settings:
+    depguard:
+      rules:
+        # ADR-0007 §2.5 — domain is pure. No transport, no SQL, no I/O, no clock.
+        domain-is-pure:
+          list-mode: lax
+          files:
+            - "**/internal/domain/**"
+          deny:
+            - pkg: "net/http"
+              desc: "domain must not know about transport (ADR-0007 §2.5)"
+            - pkg: "database/sql"
+              desc: "domain must not know about persistence (ADR-0007 §2.5)"
+            - pkg: "github.com/jackc/pgx"
+              desc: "domain must not know about persistence (ADR-0007 §2.5)"
+            - pkg: "os"
+              desc: "domain must not perform I/O (ADR-0007 §2.5)"
+            - pkg: "github.com/zoikogroup/zoikotax/backend/internal/adapter"
+              desc: "domain must not depend on adapters (ADR-0007 §2.5)"
+            - pkg: "github.com/zoikogroup/zoikotax/backend/internal/transport"
+              desc: "domain must not depend on transport (ADR-0007 §2.5)"
+
+        # ADR-0006 §2.6 — there is no route from an AI suggestion to a fiscal
+        # record except through human review. High-rated risk in Build Plan §8.
+        fiscal-never-imports-ai:
+          list-mode: lax
+          files:
+            - "**/internal/domain/fiscal/**"
+            - "**/internal/domain/classification/**"
+            - "**/internal/domain/obligation/**"
+          deny:
+            - pkg: "github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
+              desc: "AI output may not reach an authoritative path (ADR-0006 §2.6)"
+
+        # ADR-0005 §2.4 — the rule evaluator cannot be non-deterministic because
+        # it cannot reach anything that would make it so.
+        evaluator-is-deterministic:
+          list-mode: lax
+          files:
+            - "**/internal/domain/rule/eval/**"
+          deny:
+            # `time` itself is permitted — the evaluation frame carries
+            # time.Time values. Reading the clock is what is banned, and
+            # forbidigo covers time.Now below (ADR-0005 §2.4).
+            - pkg: "math/rand"
+              desc: "evaluator must be deterministic (ADR-0005 §2.4)"
+            - pkg: "crypto/rand"
+              desc: "evaluator must be deterministic (ADR-0005 §2.4)"
+            - pkg: "net"
+              desc: "evaluator performs no I/O (ADR-0005 §2.4)"
+            - pkg: "os"
+              desc: "evaluator performs no I/O (ADR-0005 §2.4)"
+
+        # ADR-0014 §5.1 c1 — events leave only via the outbox, inside the
+        # transaction that produced them.
+        no-direct-publishing:
+          list-mode: lax
+          files:
+            - "**/internal/app/**"
+            - "**/internal/domain/**"
+          deny:
+            - pkg: "github.com/segmentio/kafka-go"
+              desc: "publish through the outbox, never directly (ADR-0014 §2.1)"
+            - pkg: "github.com/twmb/franz-go"
+              desc: "publish through the outbox, never directly (ADR-0014 §2.1)"
+
+        # ADR-0002 — the only decimal library, and only through internal/domain/fiscal.
+        one-decimal-library:
+          list-mode: lax
+          files:
+            - "$all"
+            - "!**/internal/domain/fiscal/**"
+          deny:
+            - pkg: "github.com/shopspring/decimal"
+              desc: "apd is the estate's decimal implementation (ADR-0001 §2.4)"
+            - pkg: "github.com/cockroachdb/apd"
+              desc: "decimal arithmetic goes through internal/domain/fiscal (ADR-0002 §5.1 c1)"
+
+    forbidigo:
+      analyze-types: true
+      forbid:
+        # ADR-0015 §2.7 — structured logging only.
+        - pattern: "^fmt\\.Print.*$"
+          msg: "use log/slog; structured logging only (ADR-0015 §2.7)"
+        - pattern: "^log\\.(Print|Fatal|Panic).*$"
+          msg: "use log/slog, not the log package (ADR-0015 §2.7)"
+
+        # ADR-0003 §2.5 — decision time arrives in the envelope. A replay that
+        # reads the wall clock is not a replay.
+        - pattern: "^time\\.Now$"
+          pkg: "^github.com/zoikogroup/zoikotax/backend/internal/(domain|app)/"
+          msg: "decision time comes from the request envelope (ADR-0003 §2.5)"
+
+        # ADR-0011 §2.7 — evidence is serialized by internal/platform/canonical.
+        - pattern: "^json\\.(Marshal|MarshalIndent)$"
+          pkg: "^github.com/zoikogroup/zoikotax/backend/internal/domain/evidence/"
+          msg: "evidence is canonicalized, not marshalled (ADR-0011 §2.7)"
+
+    revive:
+      rules:
+        - name: exported
+        - name: error-strings
+        - name: context-as-argument
+
+  exclusions:
+    rules:
+      # Test helpers construct RoundingPolicy literals; production code may not.
+      - path: "_test\\.go"
+        linters:
+          - gosec
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
