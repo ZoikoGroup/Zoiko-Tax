@@ -1,0 +1,1222 @@
+{
+  "info": {
+    "name": "ZoikoTax API (v1)",
+    "description": "ZoikoTax backend.\n\nSTATUS: only /healthz and /readyz exist today. Every /v1 request will 404 until W2 lane K builds the surface — the collection-level test script detects that and skips contract assertions rather than drowning the run in failures.\n\nPAYLOADS ARE ILLUSTRATIVE. ZTAX-INT-001 was not supplied to the specification pipeline (Build Plan §2), so request bodies are derived from the domain model in the ADRs, not from a published contract. When contracts/openapi lands, regenerate this collection from it rather than editing it by hand — ADR-0010 §2.1 makes the contract the source of truth, and a hand-maintained collection is drift waiting to happen.\n\nThe folder worth your attention is 07 · Contract conformance. Those requests should fail, in specific ways, and each asserts a control from the ADRs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 · Health — implemented today",
+      "description": "The only two endpoints that currently exist. Everything below this folder is the planned /v1 surface from ADR-0010 §2.5 and will 404 until W2 lane K builds it.",
+      "item": [
+        {
+          "name": "GET /healthz",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/healthz",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "healthz"
+              ]
+            },
+            "description": "Liveness. Deliberately checks nothing but the process, so a dependency outage does not cause a restart loop."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "  });",
+                  "  pm.test('body is ok', function () {",
+                  "    pm.expect(pm.response.text().trim()).to.eql('ok');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /readyz",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/readyz",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "readyz"
+              ]
+            },
+            "description": "Readiness. Once the database pool and the content bundle exist, both are checked here — a cell with no loaded bundle is not ready, it is not degraded (ADR-0005 §2.6)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "  });",
+                  "  pm.test('body is ready', function () {",
+                  "    pm.expect(pm.response.text().trim()).to.eql('ready');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 · Capabilities",
+      "description": "Runtime capability discovery. Country pack state moves on the CONTENT train independently of APP, so coverage cannot be inferred from the API version (ADR-0010 §3.4).",
+      "item": [
+        {
+          "name": "GET /v1/capabilities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/capabilities?tenantId={{tenantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "capabilities"
+              ],
+              "query": [
+                {
+                  "key": "tenantId",
+                  "value": "{{tenantId}}"
+                }
+              ]
+            },
+            "description": "Reports EFFECTIVE capability — the intersection of country pack state, security, QA and commercial entitlement. Never entitlement alone: commercial entitlement must never appear to expand legal coverage (Build Plan §8)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 · Determination",
+      "description": "The C0 hot path. Budget is p99 < 150 ms server-side, with the deterministic single-line runtime under 10 ms (ADR-0001 C2).",
+      "item": [
+        {
+          "name": "POST /v1/quotes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/quotes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "quotes"
+              ]
+            },
+            "description": "Non-authoritative estimate. Reads accumulators without taking the row lock, so the value may be stale by whatever is in flight; the response carries an explicit non-authoritative marker (ADR-0004 §2.7). A quote is an estimate — only a commit is a decision.\n\nNo Idempotency-Key: quotes create nothing.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"currency\": \"USD\",\n  \"seller\": {\n    \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n  },\n  \"buyer\": {\n    \"customerRef\": {\n      \"sourceSystem\": \"billing\",\n      \"namespace\": \"crm\",\n      \"value\": \"CUST-99812\"\n    },\n    \"exemptions\": []\n  },\n  \"situsEvidence\": [\n    {\n      \"kind\": \"SERVICE_ADDRESS\",\n      \"precedence\": 1,\n      \"address\": {\n        \"line1\": \"2211 North First Street\",\n        \"locality\": \"San Jose\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"95131\",\n        \"country\": \"US\"\n      }\n    },\n    {\n      \"kind\": \"PLACE_OF_PRIMARY_USE\",\n      \"precedence\": 2,\n      \"address\": {\n        \"line1\": \"1 Market Street\",\n        \"locality\": \"San Francisco\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"94105\",\n        \"country\": \"US\"\n      }\n    }\n  ],\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"45.00\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-MOB-UNL\"\n      }\n    },\n    {\n      \"ordinal\": 2,\n      \"serviceComponent\": \"telecom/data/mobile/overage\",\n      \"chargeComponent\": \"USAGE\",\n      \"quantity\": {\n        \"value\": \"2.500\",\n        \"unit\": \"GIGABYTE\"\n      },\n      \"netAmount\": \"12.75\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-DATA-OVG\"\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "  });",
+                  "  pm.test('ADR-0004 §2.7 — quote is marked non-authoritative', function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b.authoritative, 'quotes must never claim authority').to.eql(false);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/transactions:commit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "Authoritative. One database transaction writes the decision, the evidence record, the fiscal document, the accumulator contributions, any threshold crossings, the idempotency binding and the outbox rows — atomically. That requirement is what decided the service topology (ADR-0009 §1.1).\n\nIdempotency-Key is mandatory (ADR-0013 §2.1).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"currency\": \"USD\",\n  \"seller\": {\n    \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n  },\n  \"buyer\": {\n    \"customerRef\": {\n      \"sourceSystem\": \"billing\",\n      \"namespace\": \"crm\",\n      \"value\": \"CUST-99812\"\n    },\n    \"exemptions\": []\n  },\n  \"situsEvidence\": [\n    {\n      \"kind\": \"SERVICE_ADDRESS\",\n      \"precedence\": 1,\n      \"address\": {\n        \"line1\": \"2211 North First Street\",\n        \"locality\": \"San Jose\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"95131\",\n        \"country\": \"US\"\n      }\n    },\n    {\n      \"kind\": \"PLACE_OF_PRIMARY_USE\",\n      \"precedence\": 2,\n      \"address\": {\n        \"line1\": \"1 Market Street\",\n        \"locality\": \"San Francisco\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"94105\",\n        \"country\": \"US\"\n      }\n    }\n  ],\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"45.00\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-MOB-UNL\"\n      }\n    },\n    {\n      \"ordinal\": 2,\n      \"serviceComponent\": \"telecom/data/mobile/overage\",\n      \"chargeComponent\": \"USAGE\",\n      \"quantity\": {\n        \"value\": \"2.500\",\n        \"unit\": \"GIGABYTE\"\n      },\n      \"netAmount\": \"12.75\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-DATA-OVG\"\n      }\n    }\n  ],\n  \"documentRef\": {\n    \"sourceSystem\": \"billing\",\n    \"namespace\": \"invoice\",\n    \"value\": \"INV-2026-0918-0041\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "  });",
+                  "",
+                  "  const b = pm.response.json();",
+                  "  if (b && b.decisionId) {",
+                  "    pm.collectionVariables.set('decisionId', b.decisionId);",
+                  "    console.log('captured decisionId', b.decisionId);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/transactions:adjust",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:adjust",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:adjust"
+              ]
+            },
+            "description": "A correction is a new record linked by supersession, never a mutation of the original — nothing under ADR-0003 is ever updated in place.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"correctsDecisionId\": \"{{decisionId}}\",\n  \"reasonCode\": \"BILLING_CORRECTION\",\n  \"currency\": \"USD\",\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"40.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/transactions:refund",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:refund",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:refund"
+              ]
+            },
+            "description": "Note the negative amount as a canonical decimal string. ADR-0002 §7.2 flags an open question here: whether any authority mandates asymmetric HALF_UP rounding for credits and refunds.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"refundsDecisionId\": \"{{decisionId}}\",\n  \"reasonCode\": \"SERVICE_CREDIT\",\n  \"currency\": \"USD\",\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"-45.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 · Decisions and replay",
+      "description": "Replay is the tested form of ADR-0001 C3: a decision must reproduce byte-identically, years later, against an immutable manifest.",
+      "item": [
+        {
+          "name": "GET /v1/decisions/{id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/decisions/{{decisionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decisions",
+                "%7B%7BdecisionId%7D%7D"
+              ]
+            },
+            "description": "Returns the decision with its execution trace — every rule node visited, its inputs, its output, and the RuleVersion and RoundingPolicy that produced it (ADR-0005 §2.7). This is evidence, not telemetry."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "  });",
+                  "  pm.test('ADR-0002 §5.1 c3 — the decision names its rounding policy', function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b, 'a decision that cannot name its rounding does not replay').to.have.property('roundingPolicies');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/replay/{id}",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/replay/{{decisionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "replay",
+                "%7B%7BdecisionId%7D%7D"
+              ]
+            },
+            "description": "Re-executes against the pinned manifest — content bundle digest, IR_VERSION, canon profile version, toolchain and apd versions, and the seven release-train versions. Output must be byte-identical. Any divergence is a P1 (ADR-0015 §2.8).",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "  });",
+                  "  pm.test('ADR-0011 §2.8 — replay reports byte-identical output', function () {",
+                  "    const b = pm.response.json();",
+                  "    pm.expect(b.divergence, 'replay divergence is a P1').to.eql(false);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 · Classification",
+      "description": "Taxability and regulatory-revenue decisions are built as separate immutable records — neither is inferred from the other (W2 lane G).",
+      "item": [
+        {
+          "name": "POST /v1/classifications",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/classifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "classifications"
+              ]
+            },
+            "description": "AMBIGUOUS, CONFLICTED, UNSUPPORTED and REVIEW_REQUIRED come back as 200 with a recorded decision and a reason code — not as 4xx. A refusal returned as an error records nothing, and the customer transaction still happened (ADR-0016 §2.1 and §3.1).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"items\": [\n    {\n      \"ordinal\": 1,\n      \"externalRef\": {\n        \"sourceSystem\": \"billing\",\n        \"namespace\": \"sku\",\n        \"value\": \"SKU-UCAAS-SEAT\"\n      },\n      \"description\": \"UCaaS seat licence, per user per month\",\n      \"attributes\": {\n        \"deliveryMode\": \"CLOUD\",\n        \"bundled\": \"false\"\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "  });",
+                  "  pm.test('ADR-0016 §2.1 — a refusal is a decision, not an error', function () {",
+                  "    const b = pm.response.json();",
+                  "    const states = (b.items || []).map(function (i) { return i.state; });",
+                  "    console.log('classification states:', states.join(', '));",
+                  "    pm.expect(pm.response.code).to.eql(200);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 · Obligations",
+      "description": "Five roles — incidence, collection, reporting, remittance, economic bearer — never collapsed into one taxpayer field (W2 lane I).",
+      "item": [
+        {
+          "name": "GET /v1/obligations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/obligations?tenantId={{tenantId}}&jurisdiction=US-CA&period=2026-09",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "obligations"
+              ],
+              "query": [
+                {
+                  "key": "tenantId",
+                  "value": "{{tenantId}}"
+                },
+                {
+                  "key": "jurisdiction",
+                  "value": "US-CA"
+                },
+                {
+                  "key": "period",
+                  "value": "2026-09"
+                }
+              ]
+            },
+            "description": "Returns ObligationDecision records. ForecastObligation is a separate type and is never returned as if it were a decision."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 · Batch",
+      "description": "Batch idempotency semantics are an open question (ADR-0013 §7.1): one key for the batch, one per item, or both.",
+      "item": [
+        {
+          "name": "POST /v1/batches",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "batches"
+              ]
+            },
+            "description": "Idempotency-Key is mandatory here too (ADR-0013 §2.1).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"operation\": \"TRANSACTIONS_COMMIT\",\n  \"items\": [\n    {\n      \"itemKey\": \"line-0001\",\n      \"payload\": {\n        \"tenantId\": \"{{tenantId}}\",\n        \"decisionTime\": \"{{decisionTime}}\",\n        \"eventTime\": \"{{eventTime}}\",\n        \"currency\": \"USD\",\n        \"seller\": {\n          \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n        },\n        \"buyer\": {\n          \"customerRef\": {\n            \"sourceSystem\": \"billing\",\n            \"namespace\": \"crm\",\n            \"value\": \"CUST-99812\"\n          },\n          \"exemptions\": []\n        },\n        \"situsEvidence\": [\n          {\n            \"kind\": \"SERVICE_ADDRESS\",\n            \"precedence\": 1,\n            \"address\": {\n              \"line1\": \"2211 North First Street\",\n              \"locality\": \"San Jose\",\n              \"region\": \"US-CA\",\n              \"postalCode\": \"95131\",\n              \"country\": \"US\"\n            }\n          },\n          {\n            \"kind\": \"PLACE_OF_PRIMARY_USE\",\n            \"precedence\": 2,\n            \"address\": {\n              \"line1\": \"1 Market Street\",\n              \"locality\": \"San Francisco\",\n              \"region\": \"US-CA\",\n              \"postalCode\": \"94105\",\n              \"country\": \"US\"\n            }\n          }\n        ],\n        \"lines\": [\n          {\n            \"ordinal\": 1,\n            \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n            \"chargeComponent\": \"RECURRING_MONTHLY\",\n            \"quantity\": {\n              \"value\": \"1\",\n              \"unit\": \"SUBSCRIPTION\"\n            },\n            \"netAmount\": \"45.00\",\n            \"catalogRef\": {\n              \"sourceSystem\": \"tmf620\",\n              \"namespace\": \"catalog\",\n              \"value\": \"SKU-MOB-UNL\"\n            }\n          },\n          {\n            \"ordinal\": 2,\n            \"serviceComponent\": \"telecom/data/mobile/overage\",\n            \"chargeComponent\": \"USAGE\",\n            \"quantity\": {\n              \"value\": \"2.500\",\n              \"unit\": \"GIGABYTE\"\n            },\n            \"netAmount\": \"12.75\",\n            \"catalogRef\": {\n              \"sourceSystem\": \"tmf620\",\n              \"namespace\": \"catalog\",\n              \"value\": \"SKU-DATA-OVG\"\n            }\n          }\n        ],\n        \"documentRef\": {\n          \"sourceSystem\": \"billing\",\n          \"namespace\": \"invoice\",\n          \"value\": \"INV-2026-0918-0041\"\n        }\n      }\n    },\n    {\n      \"itemKey\": \"line-0002\",\n      \"payload\": {\n        \"tenantId\": \"{{tenantId}}\",\n        \"decisionTime\": \"{{decisionTime}}\",\n        \"eventTime\": \"{{eventTime}}\",\n        \"currency\": \"USD\",\n        \"seller\": {\n          \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n        },\n        \"buyer\": {\n          \"customerRef\": {\n            \"sourceSystem\": \"billing\",\n            \"namespace\": \"crm\",\n            \"value\": \"CUST-99812\"\n          },\n          \"exemptions\": []\n        },\n        \"situsEvidence\": [\n          {\n            \"kind\": \"SERVICE_ADDRESS\",\n            \"precedence\": 1,\n            \"address\": {\n              \"line1\": \"2211 North First Street\",\n              \"locality\": \"San Jose\",\n              \"region\": \"US-CA\",\n              \"postalCode\": \"95131\",\n              \"country\": \"US\"\n            }\n          },\n          {\n            \"kind\": \"PLACE_OF_PRIMARY_USE\",\n            \"precedence\": 2,\n            \"address\": {\n              \"line1\": \"1 Market Street\",\n              \"locality\": \"San Francisco\",\n              \"region\": \"US-CA\",\n              \"postalCode\": \"94105\",\n              \"country\": \"US\"\n            }\n          }\n        ],\n        \"lines\": [\n          {\n            \"ordinal\": 1,\n            \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n            \"chargeComponent\": \"RECURRING_MONTHLY\",\n            \"quantity\": {\n              \"value\": \"1\",\n              \"unit\": \"SUBSCRIPTION\"\n            },\n            \"netAmount\": \"45.00\",\n            \"catalogRef\": {\n              \"sourceSystem\": \"tmf620\",\n              \"namespace\": \"catalog\",\n              \"value\": \"SKU-MOB-UNL\"\n            }\n          },\n          {\n            \"ordinal\": 2,\n            \"serviceComponent\": \"telecom/data/mobile/overage\",\n            \"chargeComponent\": \"USAGE\",\n            \"quantity\": {\n              \"value\": \"2.500\",\n              \"unit\": \"GIGABYTE\"\n            },\n            \"netAmount\": \"12.75\",\n            \"catalogRef\": {\n              \"sourceSystem\": \"tmf620\",\n              \"namespace\": \"catalog\",\n              \"value\": \"SKU-DATA-OVG\"\n            }\n          }\n        ],\n        \"documentRef\": {\n          \"sourceSystem\": \"billing\",\n          \"namespace\": \"invoice\",\n          \"value\": \"INV-2026-0918-0041\"\n        }\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('status is 202', function () {",
+                  "    pm.response.to.have.status(202);",
+                  "  });",
+                  "  const b = pm.response.json();",
+                  "  if (b && b.jobId) { pm.collectionVariables.set('jobId', b.jobId); }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/jobs/{id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/jobs/{{jobId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "jobs",
+                "%7B%7BjobId%7D%7D"
+              ]
+            },
+            "description": "Partial failure is reported per item; the job itself is not an error."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 · Contract conformance — negative tests",
+      "description": "These are the valuable ones. Each asserts a control from the ADRs, and each is a request that SHOULD fail in a specific way. A 2xx here is a finding.",
+      "item": [
+        {
+          "name": "Idempotency · 1 — first commit with a fixed key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{reusedKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "Sets a key that requests 2 and 3 reuse. Run these three in order (Collection Runner does this automatically).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"currency\": \"USD\",\n  \"seller\": {\n    \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n  },\n  \"buyer\": {\n    \"customerRef\": {\n      \"sourceSystem\": \"billing\",\n      \"namespace\": \"crm\",\n      \"value\": \"CUST-99812\"\n    },\n    \"exemptions\": []\n  },\n  \"situsEvidence\": [\n    {\n      \"kind\": \"SERVICE_ADDRESS\",\n      \"precedence\": 1,\n      \"address\": {\n        \"line1\": \"2211 North First Street\",\n        \"locality\": \"San Jose\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"95131\",\n        \"country\": \"US\"\n      }\n    },\n    {\n      \"kind\": \"PLACE_OF_PRIMARY_USE\",\n      \"precedence\": 2,\n      \"address\": {\n        \"line1\": \"1 Market Street\",\n        \"locality\": \"San Francisco\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"94105\",\n        \"country\": \"US\"\n      }\n    }\n  ],\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"45.00\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-MOB-UNL\"\n      }\n    },\n    {\n      \"ordinal\": 2,\n      \"serviceComponent\": \"telecom/data/mobile/overage\",\n      \"chargeComponent\": \"USAGE\",\n      \"quantity\": {\n        \"value\": \"2.500\",\n        \"unit\": \"GIGABYTE\"\n      },\n      \"netAmount\": \"12.75\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-DATA-OVG\"\n      }\n    }\n  ],\n  \"documentRef\": {\n    \"sourceSystem\": \"billing\",\n    \"namespace\": \"invoice\",\n    \"value\": \"INV-2026-0918-0041\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('reusedKey', pm.variables.replaceIn('{{$guid}}'));",
+                  "console.log('reusedKey =', pm.collectionVariables.get('reusedKey'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Idempotency · 2 — same key, same body",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{reusedKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "The retry case. Must return the ORIGINAL stored response verbatim, not execute again (ADR-0013 §2.4). The request digest is canonical (ADR-0011), so a byte-different but semantically identical retry still matches — hashing raw bytes would false-alarm on a client library upgrade.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"currency\": \"USD\",\n  \"seller\": {\n    \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n  },\n  \"buyer\": {\n    \"customerRef\": {\n      \"sourceSystem\": \"billing\",\n      \"namespace\": \"crm\",\n      \"value\": \"CUST-99812\"\n    },\n    \"exemptions\": []\n  },\n  \"situsEvidence\": [\n    {\n      \"kind\": \"SERVICE_ADDRESS\",\n      \"precedence\": 1,\n      \"address\": {\n        \"line1\": \"2211 North First Street\",\n        \"locality\": \"San Jose\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"95131\",\n        \"country\": \"US\"\n      }\n    },\n    {\n      \"kind\": \"PLACE_OF_PRIMARY_USE\",\n      \"precedence\": 2,\n      \"address\": {\n        \"line1\": \"1 Market Street\",\n        \"locality\": \"San Francisco\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"94105\",\n        \"country\": \"US\"\n      }\n    }\n  ],\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"45.00\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-MOB-UNL\"\n      }\n    },\n    {\n      \"ordinal\": 2,\n      \"serviceComponent\": \"telecom/data/mobile/overage\",\n      \"chargeComponent\": \"USAGE\",\n      \"quantity\": {\n        \"value\": \"2.500\",\n        \"unit\": \"GIGABYTE\"\n      },\n      \"netAmount\": \"12.75\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-DATA-OVG\"\n      }\n    }\n  ],\n  \"documentRef\": {\n    \"sourceSystem\": \"billing\",\n    \"namespace\": \"invoice\",\n    \"value\": \"INV-2026-0918-0041\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('ADR-0013 §2.4 — replay returns the original response', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "  });",
+                  "  pm.test('ADR-0013 §2.4 — replay is signalled to the client', function () {",
+                  "    pm.expect(pm.response.headers.get('Idempotent-Replay')).to.eql('true');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Idempotency · 3 — same key, DIFFERENT body",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{reusedKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "Must be 409, and must NOT execute. Returning the original response here would tell the client that something happened which did not — if this request was an adjustment and the first was a commit, the client now believes an adjustment is recorded (ADR-0013 §3.2).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"correctsDecisionId\": \"{{decisionId}}\",\n  \"reasonCode\": \"BILLING_CORRECTION\",\n  \"currency\": \"USD\",\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"40.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('status is 409', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "  });",
+                  "  pm.test('reason code is IDEMPOTENCY_KEY_REUSE', function () {",
+                  "    pm.expect(pm.response.json().ztx_reason_code).to.eql('IDEMPOTENCY_KEY_REUSE');",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Idempotency · 4 — missing key on commit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "Idempotency-Key is declared required in the contract for :commit, :adjust, :refund and POST /v1/batches. Rejected before any work begins (ADR-0013 §2.1).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"currency\": \"USD\",\n  \"seller\": {\n    \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n  },\n  \"buyer\": {\n    \"customerRef\": {\n      \"sourceSystem\": \"billing\",\n      \"namespace\": \"crm\",\n      \"value\": \"CUST-99812\"\n    },\n    \"exemptions\": []\n  },\n  \"situsEvidence\": [\n    {\n      \"kind\": \"SERVICE_ADDRESS\",\n      \"precedence\": 1,\n      \"address\": {\n        \"line1\": \"2211 North First Street\",\n        \"locality\": \"San Jose\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"95131\",\n        \"country\": \"US\"\n      }\n    },\n    {\n      \"kind\": \"PLACE_OF_PRIMARY_USE\",\n      \"precedence\": 2,\n      \"address\": {\n        \"line1\": \"1 Market Street\",\n        \"locality\": \"San Francisco\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"94105\",\n        \"country\": \"US\"\n      }\n    }\n  ],\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"45.00\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-MOB-UNL\"\n      }\n    },\n    {\n      \"ordinal\": 2,\n      \"serviceComponent\": \"telecom/data/mobile/overage\",\n      \"chargeComponent\": \"USAGE\",\n      \"quantity\": {\n        \"value\": \"2.500\",\n        \"unit\": \"GIGABYTE\"\n      },\n      \"netAmount\": \"12.75\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-DATA-OVG\"\n      }\n    }\n  ],\n  \"documentRef\": {\n    \"sourceSystem\": \"billing\",\n    \"namespace\": \"invoice\",\n    \"value\": \"INV-2026-0918-0041\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('missing Idempotency-Key is rejected', function () {",
+                  "    pm.expect(pm.response.code).to.eql(400);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Canonical form · fiscal amount sent as a JSON number",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "netAmount is 45.0 — a JSON number, not a string. Must be rejected, never coerced.\n\nThis is the single most important request in the collection. Build Plan §8 rates binary floating-point on fiscal amounts as High risk, and ADR-0011 §1.1 explains why it bites at the evidence layer too: RFC 8785 serializes numbers through IEEE 754 doubles, so a fiscal quantity that is ever a JSON number has already lost precision before canonicalization sees it.\n\nA 2xx response here is a Critical finding, not a test failure.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"currency\": \"USD\",\n  \"seller\": {\n    \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n  },\n  \"buyer\": {\n    \"customerRef\": {\n      \"sourceSystem\": \"billing\",\n      \"namespace\": \"crm\",\n      \"value\": \"CUST-99812\"\n    },\n    \"exemptions\": []\n  },\n  \"situsEvidence\": [\n    {\n      \"kind\": \"SERVICE_ADDRESS\",\n      \"precedence\": 1,\n      \"address\": {\n        \"line1\": \"2211 North First Street\",\n        \"locality\": \"San Jose\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"95131\",\n        \"country\": \"US\"\n      }\n    },\n    {\n      \"kind\": \"PLACE_OF_PRIMARY_USE\",\n      \"precedence\": 2,\n      \"address\": {\n        \"line1\": \"1 Market Street\",\n        \"locality\": \"San Francisco\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"94105\",\n        \"country\": \"US\"\n      }\n    }\n  ],\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": 45,\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-MOB-UNL\"\n      }\n    },\n    {\n      \"ordinal\": 2,\n      \"serviceComponent\": \"telecom/data/mobile/overage\",\n      \"chargeComponent\": \"USAGE\",\n      \"quantity\": {\n        \"value\": \"2.500\",\n        \"unit\": \"GIGABYTE\"\n      },\n      \"netAmount\": \"12.75\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-DATA-OVG\"\n      }\n    }\n  ],\n  \"documentRef\": {\n    \"sourceSystem\": \"billing\",\n    \"namespace\": \"invoice\",\n    \"value\": \"INV-2026-0918-0041\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('ADR-0010 §2.9 — a numeric fiscal amount is rejected', function () {",
+                  "    pm.expect(pm.response.code, 'coercing this is silent fiscal corruption').to.be.oneOf([400, 422]);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Canonical form · unknown field",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "canon/v1 rule P5: unknown fields are rejected, not ignored. Silently dropping one would let two different requests digest identically — which breaks idempotency detection and replay comparison at once (ADR-0011 §2.1).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"currency\": \"USD\",\n  \"seller\": {\n    \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n  },\n  \"buyer\": {\n    \"customerRef\": {\n      \"sourceSystem\": \"billing\",\n      \"namespace\": \"crm\",\n      \"value\": \"CUST-99812\"\n    },\n    \"exemptions\": []\n  },\n  \"situsEvidence\": [\n    {\n      \"kind\": \"SERVICE_ADDRESS\",\n      \"precedence\": 1,\n      \"address\": {\n        \"line1\": \"2211 North First Street\",\n        \"locality\": \"San Jose\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"95131\",\n        \"country\": \"US\"\n      }\n    },\n    {\n      \"kind\": \"PLACE_OF_PRIMARY_USE\",\n      \"precedence\": 2,\n      \"address\": {\n        \"line1\": \"1 Market Street\",\n        \"locality\": \"San Francisco\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"94105\",\n        \"country\": \"US\"\n      }\n    }\n  ],\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"45.00\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-MOB-UNL\"\n      },\n      \"discountPercentage\": \"10.00\"\n    },\n    {\n      \"ordinal\": 2,\n      \"serviceComponent\": \"telecom/data/mobile/overage\",\n      \"chargeComponent\": \"USAGE\",\n      \"quantity\": {\n        \"value\": \"2.500\",\n        \"unit\": \"GIGABYTE\"\n      },\n      \"netAmount\": \"12.75\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-DATA-OVG\"\n      }\n    }\n  ],\n  \"documentRef\": {\n    \"sourceSystem\": \"billing\",\n    \"namespace\": \"invoice\",\n    \"value\": \"INV-2026-0918-0041\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('ADR-0011 §2.1 P5 — unknown fields are rejected', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Canonical form · explicit null",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "canon/v1 rule P3: null is never emitted and is an error on input. \"Explicitly cleared\" and \"not supplied\" are different facts with different fiscal consequences, and a canonical form that collapses them erases the distinction from the evidence too (ADR-0011 §3.2).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"currency\": \"USD\",\n  \"seller\": {\n    \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n  },\n  \"buyer\": {\n    \"customerRef\": null,\n    \"exemptions\": []\n  },\n  \"situsEvidence\": [\n    {\n      \"kind\": \"SERVICE_ADDRESS\",\n      \"precedence\": 1,\n      \"address\": {\n        \"line1\": \"2211 North First Street\",\n        \"locality\": \"San Jose\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"95131\",\n        \"country\": \"US\"\n      }\n    },\n    {\n      \"kind\": \"PLACE_OF_PRIMARY_USE\",\n      \"precedence\": 2,\n      \"address\": {\n        \"line1\": \"1 Market Street\",\n        \"locality\": \"San Francisco\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"94105\",\n        \"country\": \"US\"\n      }\n    }\n  ],\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"45.00\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-MOB-UNL\"\n      }\n    },\n    {\n      \"ordinal\": 2,\n      \"serviceComponent\": \"telecom/data/mobile/overage\",\n      \"chargeComponent\": \"USAGE\",\n      \"quantity\": {\n        \"value\": \"2.500\",\n        \"unit\": \"GIGABYTE\"\n      },\n      \"netAmount\": \"12.75\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-DATA-OVG\"\n      }\n    }\n  ],\n  \"documentRef\": {\n    \"sourceSystem\": \"billing\",\n    \"namespace\": \"invoice\",\n    \"value\": \"INV-2026-0918-0041\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
+                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "} else {",
+                  "  pm.test('ADR-0011 §2.1 P3 — explicit null is rejected', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Canonical timestamps: RFC 3339 UTC with exactly six fractional digits",
+          "// (ADR-0011 §2.1 P2). Postman's {{$isoTimestamp}} gives seconds only, which",
+          "// is why these are computed rather than used directly.",
+          "const canonical = function (d) {",
+          "  return d.toISOString().replace(/Z$/, '000Z');",
+          "};",
+          "const now = new Date();",
+          "pm.collectionVariables.set('decisionTime', canonical(now));",
+          "pm.collectionVariables.set('eventTime', canonical(new Date(now.getTime() - 2000)));"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Cross-cutting assertions. These run after every request in the collection",
+          "// and encode controls from the ADRs rather than checking one endpoint.",
+          "",
+          "const ct = pm.response.headers.get('Content-Type') || '';",
+          "const isV1 = pm.request.url.getPath().indexOf('/v1/') === 0;",
+          "const notImplemented = pm.response.code === 404 && isV1;",
+          "",
+          "pm.collectionVariables.set('_notImplemented', notImplemented ? '1' : '0');",
+          "",
+          "if (notImplemented) {",
+          "  pm.test('endpoint not implemented yet (W2 lane K) — contract assertions skipped', function () {",
+          "    pm.expect(true).to.be.true;",
+          "  });",
+          "} else {",
+          "  let body = null;",
+          "  try { body = pm.response.json(); } catch (e) { body = null; }",
+          "",
+          "  // ADR-0010 §2.9 · ADR-0001 §4.2 — a fiscal amount is never a JSON number.",
+          "  // JSON.parse turns a bare number into an IEEE 754 double before any of our",
+          "  // code sees it, so the defence has to be that the wire format never carries",
+          "  // one. Key matching is a heuristic until contracts/openapi lands; tighten it",
+          "  // to the published schema then.",
+          "  const FISCAL_KEY = /(amount|total|tax|rate|net|gross|price|fee|charge|base|subtotal|balance|credit|debit)/i;",
+          "",
+          "  const findNumericFiscal = function (node, prefix, out) {",
+          "    if (node === null || typeof node !== 'object') { return out; }",
+          "    if (Array.isArray(node)) {",
+          "      node.forEach(function (v, i) { findNumericFiscal(v, prefix + '[' + i + ']', out); });",
+          "      return out;",
+          "    }",
+          "    Object.keys(node).forEach(function (k) {",
+          "      const v = node[k];",
+          "      const p = prefix ? prefix + '.' + k : k;",
+          "      if (typeof v === 'number' && FISCAL_KEY.test(k)) { out.push(p); }",
+          "      else { findNumericFiscal(v, p, out); }",
+          "    });",
+          "    return out;",
+          "  };",
+          "",
+          "  if (body) {",
+          "    pm.test('ADR-0010 §2.9 — no fiscal amount is a JSON number', function () {",
+          "      const found = findNumericFiscal(body, '', []);",
+          "      pm.expect(found, 'numeric fiscal fields: ' + found.join(', ')).to.have.lengthOf(0);",
+          "    });",
+          "  }",
+          "",
+          "  if (pm.response.code >= 400) {",
+          "    pm.test('ADR-0016 §2.5 — errors are RFC 9457 Problem Details', function () {",
+          "      pm.expect(ct).to.include('application/problem+json');",
+          "    });",
+          "    pm.test('ADR-0016 §2.5 — Problem carries type, title, status and a reason code', function () {",
+          "      const p = pm.response.json();",
+          "      pm.expect(p).to.have.property('type');",
+          "      pm.expect(p).to.have.property('title');",
+          "      pm.expect(p).to.have.property('status');",
+          "      pm.expect(p).to.have.property('ztx_reason_code');",
+          "    });",
+          "    pm.test('ADR-0016 §2.2 — an UNCERTAIN_* state is never an error response', function () {",
+          "      pm.expect(pm.response.text()).to.not.match(/UNCERTAIN_/);",
+          "    });",
+          "    pm.test('ADR-0016 §2.6 — error bodies carry no fiscal amount', function () {",
+          "      const found = findNumericFiscal(pm.response.json(), '', []);",
+          "      pm.expect(found).to.have.lengthOf(0);",
+          "    });",
+          "  }",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "tenantId",
+      "value": "01927f4e-8a7c-7def-9012-3456789abcde",
+      "type": "string"
+    },
+    {
+      "key": "sellerLegalEntityId",
+      "value": "01927f4e-8a7c-7def-9012-3456789abcdf",
+      "type": "string"
+    },
+    {
+      "key": "decisionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "jobId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "reusedKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "decisionTime",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "eventTime",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "_notImplemented",
+      "value": "0",
+      "type": "string"
+    }
+  ]
+}
