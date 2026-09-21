@@ -1,4 +1,5 @@
 GO        ?= go
+PYTHON    ?= python3
 PKG       := ./...
 BIN       := bin
 IMAGE     ?= zoikotax/ztax-core
@@ -33,6 +34,14 @@ test-integration: ## Tier 3 — against real PostgreSQL/PostGIS via testcontaine
 .PHONY: golden
 golden: ## Tier 2 — golden vectors, exact assertions, hermetic
 	$(GO) test -count=1 -run 'TestGolden' $(PKG)
+
+.PHONY: golden-crosscheck
+golden-crosscheck: ## ADR-0002 c2 — the same vectors under Python decimal, no Go involved
+	$(PYTHON) tools/decimalcrosscheck/crosscheck.py testdata/golden/decimal
+
+.PHONY: golden-register
+golden-register: ## Re-baseline vector digests. A reviewed act, not a test fix (ADR-0002 §6)
+	$(PYTHON) tools/decimalcrosscheck/register.py testdata/golden/decimal
 
 .PHONY: lint
 lint: ## Architectural controls as lint (ADR-0007 §2.5, ADR-0006 §2.6)
@@ -96,7 +105,7 @@ logs: ## Follow ztax-core logs
 	docker compose logs -f ztax-core
 
 .PHONY: check
-check: vet fiscalfloat lint test ## Everything that gates a commit
+check: vet fiscalfloat lint test golden-crosscheck ## Everything that gates a commit
 
 .PHONY: clean
 clean: ## Remove build output
