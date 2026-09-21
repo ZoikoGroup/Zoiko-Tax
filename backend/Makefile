@@ -88,21 +88,21 @@ docker-release: ## Build with SBOM and provenance attached (W1 lane B)
 	@echo "      conversion and signing are lane B work, not done here."
 
 .PHONY: up
-up: ## Start the local cell — postgres + ztax-core
-	docker compose up --build -d
-	@echo "ztax-core on http://localhost:8080/healthz"
+up: ## Start the local cell — postgres + ztax-core + ztax-web
+	docker compose -f ../docker-compose.yml up --build -d
+	@echo "ztax-core on http://localhost:8080/healthz, ztax-web on http://localhost:3000"
 
 .PHONY: down
 down: ## Stop the local cell, keeping the database volume
-	docker compose down
+	docker compose -f ../docker-compose.yml down
 
 .PHONY: down-clean
 down-clean: ## Stop the local cell and destroy the database volume
-	docker compose down -v
+	docker compose -f ../docker-compose.yml down -v
 
 .PHONY: logs
 logs: ## Follow ztax-core logs
-	docker compose logs -f ztax-core
+	docker compose -f ../docker-compose.yml logs -f ztax-core
 
 .PHONY: check
 check: vet fiscalfloat lint test golden-crosscheck ## Everything that gates a commit

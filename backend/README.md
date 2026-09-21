@@ -2,7 +2,7 @@
 
 Go implementation of the fiscal core. Release trains `APP` and `ADAPTER`.
 
-Every structural choice here is recorded in [`../adr/`](../adr/README.md). If something in this tree looks unusual — a required rounding parameter, a package that cannot import `time`, a database role with no `UPDATE` grant — the ADR explains why, and the reason is usually that the alternative fails silently.
+Every structural choice here is recorded in [the ADR set](../../adr/README.md). If something in this tree looks unusual — a required rounding parameter, a package that cannot import `time`, a database role with no `UPDATE` grant — the ADR explains why, and the reason is usually that the alternative fails silently.
 
 ## Status
 
@@ -90,7 +90,7 @@ Two consequences of that base image worth knowing before they surprise you:
 - **No `HEALTHCHECK` in the image.** There is no shell and no `curl` to run one. Liveness and readiness are HTTP probes against `/healthz` and `/readyz`, owned by the orchestrator.
 - **`read_only: true` in compose.** The binary writes nothing, and enforcing it locally means a future change that starts writing fails here rather than in a cell.
 
-[`docker-compose.yml`](docker-compose.yml) models one regional execution cell (ADR-0009 §2.6): its own PostgreSQL 17 + PostGIS 3.5, sharing nothing. `make up`, `make logs`, `make down`, `make down-clean`.
+[`docker-compose.yml`](../docker-compose.yml) models one regional execution cell (ADR-0009 §2.6): its own PostgreSQL 17 + PostGIS 3.5, sharing nothing. `make up`, `make logs`, `make down`, `make down-clean`.
 
 `make docker-release` attaches SBOM and provenance. Note that buildx emits SPDX while Build Plan §7 requires **CycloneDX** — conversion and signing are W1 lane B work and are not done here.
 
@@ -111,7 +111,7 @@ Stages for `ztax-outbox-relay` and `ztax-migrate` are commented placeholders unt
 
 Two details worth knowing. The cross-check job has **no Go toolchain in it on purpose** — the check is worth something only because a second implementation, reading nothing but the vectors, reaches the same answers. And actions are pinned to commit SHAs rather than tags, for the reason ADR-0001 control 6 vendors `apd`: a tag is a moving pointer to someone else's code.
 
-[`release.yml`](.github/workflows/release.yml) runs on a `v*` tag and produces what Build Plan §7 requires of the `APP` train — image digest, CycloneDX SBOM, provenance, and a keyless signature **over the digest rather than the tag**. It also writes a release evidence file naming the versions it can attest, marked partial, listing the ones that do not exist yet. A manual dispatch builds and publishes nothing, so the path can be exercised without minting something that looks releasable.
+[`release.yml`](../.github/workflows/release.yml) runs on a `v*` tag and produces what Build Plan §7 requires of the `APP` train — image digest, CycloneDX SBOM, provenance, and a keyless signature **over the digest rather than the tag**. It also writes a release evidence file naming the versions it can attest, marked partial, listing the ones that do not exist yet. A manual dispatch builds and publishes nothing, so the path can be exercised without minting something that looks releasable.
 
 Still lane B: signed-artifact admission in the regional clusters, and the tier 3 integration job, which arrives with persistence.
 

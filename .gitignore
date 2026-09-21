@@ -1,27 +1,27 @@
-# This repository is rooted at backend/, so the project-root .gitignore does not
-# apply here. Patterns below are relative to this directory.
+# Repository-wide. Each service keeps its own ignore file for the things only
+# it produces; this covers what any of them can leave behind.
 
-# Build output
+# Dependencies and build output
+node_modules/
+dist/
+dist-tsc/
 bin/
-coverage.out
-*.test
+*.tsbuildinfo
 
-# vendor/ is NOT ignored. It is committed deliberately: ADR-0001 control 6
-# requires the apd source to be retrievable from our own history across the
-# statutory retention period, not from a third party.
-
-# Local environment. .env.local.example is tracked; .env.local is not, and must
-# never be — ADR-0017 §2.4 keeps credentials out of the repository entirely.
+# Local environment. ADR-0017 §2.4: a secret never lives in the tree, and the
+# .example files are the only form of these that is committed.
 .env
 .env.local
-*.local
+.env.*.local
 
-# Editors
-.vscode/
-.idea/
-*.swp
+# Test and coverage output
+coverage.out
+coverage/
+*.out
 
-# OS
+# Editor and OS
 .DS_Store
 Thumbs.db
-desktop.ini
+.idea/
+.vscode/
+*.swp

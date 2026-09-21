@@ -7,6 +7,9 @@
 #   docker compose up --build -d
 #   curl localhost:8080/healthz
 #
+# The build context is ./backend rather than the repository root, so the image
+# cannot see anything outside the service it builds.
+#
 # LOCAL DEVELOPMENT ONLY. The database password below is inline because this
 # stack never holds real data. That is not the deployment pattern: ADR-0017 §2.4
 # requires workload identity or a vault, and a static credential in a manifest is
@@ -36,7 +39,7 @@ services:
 
   ztax-core:
     build:
-      context: .
+      context: ./backend
       target: ztax-core
     depends_on:
       postgres:
