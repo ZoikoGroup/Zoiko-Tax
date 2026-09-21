@@ -38,7 +38,7 @@ func ParseMoney(amount string, currency Currency) (Money, error) {
 	if err != nil {
 		return Money{}, fmt.Errorf("fiscal: parse money %q: %w", amount, err)
 	}
-	if cond.Inexact() {
+	if cond.Inexact() || !withinPrecision(d) {
 		return Money{}, fmt.Errorf("fiscal: parse money %q: value not representable at precision %d", amount, Precision)
 	}
 	return Money{amount: *d, currency: currency}, nil
@@ -113,6 +113,10 @@ type Rate struct {
 // RateBasis names what a Rate is a proportion of.
 type RateBasis string
 
+// The bases a rate may be a proportion of. NET and GROSS differ by whether the
+// rate applies before or after tax already charged; COMPOUND names a rate that
+// applies to a base including another tax, which is the tax-on-tax shape whose
+// ordering DET-001 has to settle (ADR-0005 §7.1).
 const (
 	RateBasisNet      RateBasis = "NET"
 	RateBasisGross    RateBasis = "GROSS"
@@ -131,7 +135,7 @@ func ParseRate(value string, basis RateBasis) (Rate, error) {
 	if err != nil {
 		return Rate{}, fmt.Errorf("fiscal: parse rate %q: %w", value, err)
 	}
-	if cond.Inexact() {
+	if cond.Inexact() || !withinPrecision(d) {
 		return Rate{}, fmt.Errorf("fiscal: parse rate %q: value not representable at precision %d", value, Precision)
 	}
 	return Rate{value: *d, basis: basis}, nil

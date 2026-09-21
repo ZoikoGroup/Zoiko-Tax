@@ -113,6 +113,18 @@ func ApplyPolicy(dst, x *apd.Decimal, p RoundingPolicy) error {
 	return nil
 }
 
+// withinPrecision reports whether d is a value this context can hold and
+// operate on exactly.
+//
+// apd.NewFromString parses at arbitrary precision and reports no condition for
+// a value wider than the context, so the check has to be made explicitly at
+// every ingress. Without it a 35-digit amount enters the estate looking
+// ordinary and first goes wrong several operations later, in the Inexact trap
+// of something unrelated.
+func withinPrecision(d *apd.Decimal) bool {
+	return d.NumDigits() <= Precision
+}
+
 func wrap(op string, err error) error {
 	if err == nil {
 		return nil
