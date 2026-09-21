@@ -1,0 +1,17 @@
+# The build context is the source, not what previous builds left behind. A
+# node_modules from the host is the common way to ship a native module compiled
+# for the wrong platform into an image.
+node_modules
+dist
+dist-tsc
+.vite
+
+# Never in an image.
+.env
+.env.*
+*.log
+npm-debug.log*
+
+.git
+.gitignore
+README.md
