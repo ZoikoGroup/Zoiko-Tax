@@ -37,7 +37,7 @@ tools/
 migrations/             plain versioned SQL (ADR-0008)
 testdata/golden/        golden vectors — legal artifacts, not fixtures (ADR-0018)
   decimal/              the ADR-0002 corpus, with its own README
-postman/                collection + local environment (see below)
+postman/                one collection, variables included (see below)
 vendor/                 committed deliberately (ADR-0001 c6) — not yet generated
 ```
 
@@ -98,7 +98,7 @@ Stages for `ztax-outbox-relay` and `ztax-migrate` are commented placeholders unt
 
 ## Postman
 
-[`postman/`](postman/README.md) — 20 requests covering the two live endpoints and the planned `/v1` surface from ADR-0010 §2.5. Import the collection and the local environment.
+[`postman/`](postman/README.md) — one collection, 20 requests covering the two live endpoints and the planned `/v1` surface from ADR-0010 §2.5. The local cell's values ride along as collection variables, so there is no environment file to import beside it.
 
 Run it against a live cell:
 
@@ -111,7 +111,7 @@ docker run --rm -v "${PWD}/postman:/etc/newman" postman/newman:alpine \
 
 Against the current binary this gives 20 requests, 22 assertions, 0 failures: the health folder asserts for real, and the `/v1` requests report as not-yet-implemented rather than failing.
 
-The folder that matters is **`07 · Contract conformance`** — eight requests that *should* fail in specific ways, each asserting an ADR control. Chief among them, a commit whose `netAmount` is the JSON number `45.0` rather than the string `"45.00"`. A 2xx there is a Critical finding, not a test failure.
+The folder that matters is **`07 · Contract conformance`** — seven requests that *should* fail in specific ways, each asserting an ADR control. Chief among them, a commit whose `netAmount` is the JSON number `45.0` rather than the string `"45.00"`. A 2xx there is a Critical finding, not a test failure.
 
 The collection is for exploration, not for CI. Contract testing is tier 4 in ADR-0018 §2.5, generated from the contract with `oasdiff` as the release blocker — a second, hand-maintained source of truth about the API is what ADR-0010 §3.1 exists to prevent.
 
