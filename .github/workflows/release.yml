@@ -1,0 +1,150 @@
+# Release build for the APP train: the cell binary and the browser client.
+#
+# Build Plan §7 requires a hermetic pipeline producing a digest, a CycloneDX
+# SBOM, provenance and a signed artifact, and W1 lane B then requires regional
+# clusters to admit only workloads carrying those. This workflow produces the
+# first four, for both images. Admission policy, certification gates and the
+# content-bundle side of the evidence manifest are lane B and lane F work and
+# are not done here — see the note the evidence step writes into its own output.
+#
+# A tag builds and publishes. A manual dispatch builds, signs nothing and
+# publishes nothing, so the path can be exercised without minting an artifact
+# that looks releasable.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  images:
+    name: build, attest and publish ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # push to GHCR
+      id-token: write # keyless signing and provenance, no long-lived key
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: ztax-core
+            context: backend
+          - service: ztax-web
+            context: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: derive image reference and version
+        id: ref
+        run: |
+          # GHCR rejects uppercase; the repository name has it.
+          image="ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')/${{ matrix.service }}"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="0.0.0-dispatch.${GITHUB_SHA::12}"
+          fi
+          {
+            echo "image=$image"
+            echo "version=$version"
+            echo "publish=${{ github.event_name == 'push' }}"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+
+      - name: log in to GHCR
+        if: steps.ref.outputs.publish == 'true'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # For ztax-core, -trimpath, a zeroed buildid and CGO_ENABLED=0 live in the
+      # Dockerfile, which is what makes that build reproducible — ADR-0001 §3.3
+      # folds it into the C3 replay guarantee. For ztax-web the equivalent is
+      # npm ci against a committed lockfile.
+      #
+      # provenance=mode=max records how the image was produced; sbom=true
+      # attaches the SPDX one buildx emits.
+      - name: build and push
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: ${{ matrix.context }}
+          target: ${{ matrix.service }}
+          push: ${{ steps.ref.outputs.publish == 'true' }}
+          provenance: mode=max
+          sbom: true
+          tags: |
+            ${{ steps.ref.outputs.image }}:${{ steps.ref.outputs.version }}
+            ${{ steps.ref.outputs.image }}:sha-${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+
+      # buildx emits SPDX. Build Plan §7 requires CycloneDX, so the format the
+      # plan names is produced explicitly rather than assumed equivalent.
+      - name: CycloneDX SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          path: ${{ matrix.context }}
+          format: cyclonedx-json
+          output-file: sbom.${{ matrix.service }}.cyclonedx.json
+          upload-artifact: false
+
+      - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+
+      # Signed by digest, never by tag: a tag can be moved to another image and
+      # a signature over a mutable pointer says nothing. Keyless, so there is no
+      # signing key to hold, rotate or leak — the key management ADR-0017 covers
+      # is for content bundles and data, not for this.
+      - name: sign the image
+        if: steps.ref.outputs.publish == 'true'
+        run: cosign sign --yes "${{ steps.ref.outputs.image }}@${{ steps.build.outputs.digest }}"
+
+      # ADR-0001 control 3 and ADR-0011 §2.6 require a release to name every
+      # version it was built from. This records the ones that exist today and
+      # says plainly which are still missing, so the gap is visible in the
+      # artifact rather than discovered at the A4 gate.
+      - name: release evidence
+        run: |
+          go_version="$(grep -E '^go ' backend/go.mod | awk '{print $2}')"
+          apd_version="$(grep -E 'cockroachdb/apd' backend/go.mod | awk '{print $NF}' | head -1)"
+          cat > release-evidence.${{ matrix.service }}.json <<JSON
+          {
+            "partial": true,
+            "service": "${{ matrix.service }}",
+            "trains": {
+              "APP": "${{ steps.ref.outputs.version }}"
+            },
+            "commit": "${{ github.sha }}",
+            "image": "${{ steps.ref.outputs.image }}",
+            "imageDigest": "${{ steps.build.outputs.digest }}",
+            "goToolchain": "$go_version",
+            "apdVersion": "$apd_version",
+            "goldenDecimalManifest": $(cat backend/testdata/golden/decimal/manifest.json),
+            "absent": [
+              "CONTENT, AI, ADAPTER, INFRA, SCHEMA and MIGRATION train versions",
+              "IR_VERSION (ADR-0005, arrives with the rule compiler)",
+              "canon profile version (ADR-0011)",
+              "content bundle digest and signing key identifier (ADR-0017 §2.8)"
+            ]
+          }
+          JSON
+          python3 -c "import json,sys;json.load(open(sys.argv[1]))" release-evidence.${{ matrix.service }}.json
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-evidence-${{ matrix.service }}-${{ steps.ref.outputs.version }}
+          path: |
+            sbom.${{ matrix.service }}.cyclonedx.json
+            release-evidence.${{ matrix.service }}.json
+          if-no-files-found: error

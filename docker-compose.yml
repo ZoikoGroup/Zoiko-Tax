@@ -1,11 +1,17 @@
-# A local stand-in for one regional execution cell (ADR-0009 §2.6).
+# A local stand-in for one regional execution cell (ADR-0009 §2.6), with the
+# browser client in front of it.
 #
 # A cell owns its own database and shares nothing with any other cell. This file
 # models that shape at one-machine scale so the topology is familiar before the
 # OpenTofu cell blueprint lands in W1 lane B.
 #
 #   docker compose up --build -d
-#   curl localhost:8080/healthz
+#   curl localhost:8080/healthz      # the cell
+#   open  http://localhost:3000      # the client, proxying /api to the cell
+#
+# Each service builds from its own Dockerfile in its own directory: the Go
+# binary and the browser bundle share no toolchain, no base image and no build
+# cache, and neither context contains the other's source.
 #
 # LOCAL DEVELOPMENT ONLY. The database password below is inline because this
 # stack never holds real data. That is not the deployment pattern: ADR-0017 §2.4
@@ -36,7 +42,7 @@ services:
 
   ztax-core:
     build:
-      context: .
+      context: ./backend
       target: ztax-core
     depends_on:
       postgres:
@@ -76,6 +82,47 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  ztax-web:
+    build:
+      context: ./frontend
+      target: ztax-web
+    depends_on:
+      # Started after the cell, but not dependent on it for its own health: the
+      # client renders an unreachable cell as unreachable (ADR-0019 C3), and a
+      # web tier that refuses to start without its API cannot show that.
+      ztax-core:
+        condition: service_started
+    ports:
+      - "3000:8080"
+    environment:
+      # Service name, not localhost: the browser calls /api on this origin and
+      # nginx resolves the cell inside the compose network.
+      ZTAX_API_ORIGIN: http://ztax-core:8080
+
+    # nginx writes its cache, its pid, and the config its entrypoint renders
+    # from the template — so the filesystem cannot be read-only wholesale. The
+    # writable paths are named instead of the container being left open, which
+    # keeps the property that matters: nothing else in this image can write
+    # anywhere. It runs as uid 101 from the unprivileged base image.
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+    volumes:
+      # The rendered config lands here. A tmpfs mounts root-owned by default and
+      # this container is uid 101, so the mode is set explicitly — without it
+      # the entrypoint cannot write the file and nginx starts with no server
+      # block at all, listening on nothing while looking perfectly healthy.
+      - type: tmpfs
+        target: /etc/nginx/conf.d
+        tmpfs:
+          mode: 0o1777
     cap_drop:
       - ALL
     security_opt:

@@ -1,0 +1,252 @@
+# Every gate in `backend/make check` and the frontend's own, run on push and on
+# every pull request. ADR-0018 §2.1 makes tiers 1 and 2 gates on every commit,
+# and ADR-0002 §5.1 control 2 requires the cross-language vector check to be a
+# CI blocker rather than a thing somebody remembers to run.
+#
+# One job per control, named after the control. A red run should say which
+# guarantee broke, not that "CI failed".
+#
+# Actions are pinned to commit SHAs. A tag is a moving pointer, and an estate
+# that vendors its decimal library (ADR-0001 control 6) does not then execute
+# whatever a third party pushes to v7 this week.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A superseded run proves nothing. Cancel it and keep the runners for the head.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pinned so a toolchain change is a reviewed diff. It must stay in step with
+  # backend/go.mod and with backend/Dockerfile's GO_VERSION.
+  GOLANGCI_LINT_VERSION: v2.13.2
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
+
+jobs:
+  build:
+    name: backend · build · format · vet
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::not gofmt-clean:"; echo "$unformatted"; exit 1
+          fi
+
+      - run: go vet ./...
+      - run: go build ./...
+
+      # The module graph is part of the release evidence manifest (ADR-0001
+      # control 3). A go.mod or go.sum that `go mod tidy` would change means the
+      # manifest names a graph the build did not use.
+      - name: go.mod and go.sum are tidy
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+  lint:
+    name: backend · architectural controls (depguard, forbidigo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      # ADR-0007 §2.5 layering, ADR-0006 §2.6 (fiscal may not import ai),
+      # ADR-0005 §2.4 (the evaluator cannot reach a clock or a network),
+      # ADR-0002 §2.3 (production code may not import internal/fiscaltest).
+      # A layering diagram nobody can violate is worth more than one everyone
+      # has seen.
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          working-directory: backend
+
+  analyzer:
+    name: backend · float64 unreachable from a fiscal value (ADR-0001 c1)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      # The analyzer's own suite runs first. A gate nobody has tested is a
+      # gate nobody should trust.
+      - name: analyzer suite
+        run: make fiscalfloat-test
+
+      - name: analyzer over the module
+        run: make fiscalfloat
+
+  test:
+    name: backend · tier 1 and 2 — unit, property, golden vectors
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      # -race because ADR-0018 §2.2 asserts determinism across concurrent
+      # goroutines, and -count=1 because a cached PASS is not a result.
+      - name: go test -race
+        run: make test
+
+      # Tier 3 (testcontainers against real PostgreSQL) joins this job when
+      # persistence lands — ADR-0018 §2.4, ADR-0008 §5.1 c1.
+
+  crosscheck:
+    name: backend · decimal agreement, Go ↔ Python (ADR-0002 c2)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # Deliberately no Go toolchain in this job. The point of the check is
+      # that a second implementation of the General Decimal Arithmetic
+      # Specification, reading nothing but the vectors, reaches the same
+      # answers — which is what makes ADR-0001 §3.1's cross-language claim
+      # testable rather than aspirational. The script uses the standard library
+      # only, so there is nothing to install.
+      - name: golden vectors under Python decimal
+        run: make golden-crosscheck
+
+  frontend:
+    name: frontend · constraints, types, bundle (ADR-0019)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # ci, not install: the lockfile is the dependency decision, and a job that
+      # silently resolves a different graph is not testing what ships.
+      - run: npm ci
+
+      # ADR-0019's binding constraints as rules: no fiscal arithmetic in the
+      # browser (C1), no hand-written API calls outside the health module (C4),
+      # no browser storage (C8), accessibility from the first screen (C6).
+      - name: constraints
+        run: npm run lint
+
+      - name: types
+        run: npm run typecheck
+
+      - name: bundle
+        run: npm run build
+
+  images:
+    name: images build reproducibly
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: ztax-core
+            context: backend
+          - service: ztax-web
+            context: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+
+      # Built, never pushed here: publishing is the release workflow's job and
+      # happens on a tag. This gate exists so a change that breaks an image
+      # fails on the pull request rather than at release.
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: ${{ matrix.context }}
+          target: ${{ matrix.service }}
+          push: false
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  stack:
+    name: the stack starts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # Each service builds and passes its own gates above. This asserts the
+      # thing none of them can: that the three of them come up together and
+      # answer, which is what a developer runs on the first morning.
+      - name: docker compose up
+        run: docker compose up --build --detach --wait --wait-timeout 180
+
+      - name: the cell answers
+        run: |
+          curl --fail --silent --show-error --max-time 10 http://localhost:8080/healthz
+          curl --fail --silent --show-error --max-time 10 http://localhost:8080/readyz
+
+      - name: the client answers, and serves the application
+        run: |
+          curl --fail --silent --show-error --max-time 10 http://localhost:3000/healthz
+          curl --fail --silent --show-error --max-time 10 http://localhost:3000/ | grep -q '<div id="root">'
+
+      - name: the client reaches the cell through its own origin
+        run: curl --fail --silent --show-error --max-time 10 http://localhost:3000/api/healthz
+
+      - name: logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: down
+        if: always()
+        run: docker compose down --volumes
+
+  ci:
+    name: all gates green
+    runs-on: ubuntu-latest
+    needs: [build, lint, analyzer, test, crosscheck, frontend, images, stack]
+    if: always()
+    steps:
+      # One check to require on the branch, so that adding a gate above does
+      # not mean editing branch protection and forgetting to.
+      - name: verify every gate passed
+        run: |
+          echo "${{ toJSON(needs) }}"
+          if echo "${{ toJSON(needs) }}" | grep -q '"result": *"\(failure\|cancelled\)"'; then
+            echo "::error::a gate did not pass"; exit 1
+          fi
