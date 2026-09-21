@@ -1,0 +1,118 @@
+{
+  "set": "rate-application",
+  "version": "1.0.0",
+  "description": "Rate application and division — the two operations that are permitted to round, and therefore the two that cannot be called without a policy (ADR-0002 §2.2). The shapes here are the ones a determination actually performs: a rate on a net amount, an inclusive extraction, a per-unit factor, a second-step tax on a tax.",
+  "provenance": {
+    "oracle": "General Decimal Arithmetic Specification — multiply, divide, quantize — applied to the calculation shapes named in Build Plan §W2 lane H",
+    "source": "https://speleotrove.com/decimal/decarith.html",
+    "reviewer": "lane-d",
+    "registered": "2026-09-21",
+    "contentVersion": "n/a — engine vectors. Rates here are illustrative magnitudes, not authority-sourced rates; a rate that claims legal force arrives in a signed content bundle with its own instrument reference."
+  },
+  "cases": [
+    {
+      "id": "rate-on-net-exact",
+      "op": "apply_rate",
+      "inputs": ["100.00", "0.20"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "LINE"},
+      "expect": ["20.00"],
+      "oracle": "Elementary arithmetic: the product 20.0000 is exact, and quantizing it to scale 2 discards only zeros. The rounding step is still named, because a policy that is unnecessary for this input is necessary for the next one."
+    },
+    {
+      "id": "rate-on-net-requires-rounding",
+      "op": "apply_rate",
+      "inputs": ["19.99", "0.0875"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "LINE"},
+      "expect": ["1.75"],
+      "oracle": "19.99 x 0.0875 = 1.749125 exactly; half-up at scale 2 gives 1.75. The exact product is carried at full precision and rounded once, per ADR-0002 §2.5."
+    },
+    {
+      "id": "rate-tie-half-up",
+      "op": "apply_rate",
+      "inputs": ["12.00", "0.06375"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "LINE"},
+      "expect": ["0.77"],
+      "oracle": "12.00 x 0.06375 = 0.7650000 exactly, which is a tie at scale 2; half-up resolves away from zero."
+    },
+    {
+      "id": "rate-tie-half-even",
+      "op": "apply_rate",
+      "inputs": ["12.00", "0.06375"],
+      "policy": {"mode": "HALF_EVEN", "scale": 2, "basis": "LINE"},
+      "expect": ["0.76"],
+      "oracle": "The same exact product, 0.7650000, under half-even. One cent of difference on one line from nothing but the mode is the reason ADR-0002 §2.3 sources the mode from content rather than from a Go constant."
+    },
+    {
+      "id": "rate-on-credit-line",
+      "op": "apply_rate",
+      "inputs": ["-19.99", "0.0875"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "LINE"},
+      "expect": ["-1.75"],
+      "oracle": "-1.749125 under half-up away from zero. A credit note must reverse the invoice it corrects to the cent; an asymmetric rounding here would leave residue on every reversal."
+    },
+    {
+      "id": "rate-zero-minor-unit-currency",
+      "op": "apply_rate",
+      "inputs": ["1080", "0.10"],
+      "policy": {"mode": "HALF_UP", "scale": 0, "basis": "LINE"},
+      "expect": ["108"],
+      "oracle": "1080 x 0.10 = 108.000 exactly; JPY materialises at scale 0 (ISO 4217 exponent 0)."
+    },
+    {
+      "id": "rate-per-unit-factor",
+      "op": "apply_rate",
+      "inputs": ["2500", "0.0416667"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "LINE"},
+      "expect": ["104.17"],
+      "oracle": "2500 x 0.0416667 = 104.1667500 exactly, then half-up at scale 2. A PPU factor carries precision far below the currency minor unit, which is the argument in ADR-0002 §4.2 against holding fiscal values as scaled integers."
+    },
+    {
+      "id": "rate-second-step-tax-on-tax",
+      "op": "apply_rate",
+      "inputs": ["1.75", "0.05"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "TAX_COMPONENT"},
+      "expect": ["0.09"],
+      "oracle": "0.0875 exactly, then half-up at scale 2. The base is the rounded output of rate-on-net-requires-rounding: this is the second step of a tax-on-tax, and the ordering that decides whether it is the rounded or the unrounded base belongs to DET-001 (ADR-0005 §7.1), not to the engine."
+    },
+    {
+      "id": "quo-inclusive-extraction",
+      "op": "quo",
+      "inputs": ["120.00", "1.2"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "DOCUMENT"},
+      "expect": ["100.00"],
+      "oracle": "A tax-inclusive gross of 120.00 at 20% has a net of exactly 100. The quotient is exact and the policy still has to be named — division has no default in this package by construction."
+    },
+    {
+      "id": "quo-thirds-at-minor-unit",
+      "op": "quo",
+      "inputs": ["100.00", "3"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "LINE"},
+      "expect": ["33.33"],
+      "oracle": "100/3 = 33.3333... ; half-up at scale 2 gives 33.33. Note that three such lines sum to 99.99 and not to 100.00 — distributing a total is allocation (ADR-0002 §2.6), not three divisions."
+    },
+    {
+      "id": "quo-thirds-at-six-places",
+      "op": "quo",
+      "inputs": ["100.00", "3"],
+      "policy": {"mode": "HALF_UP", "scale": 6, "basis": "TAX_COMPONENT"},
+      "expect": ["33.333333"],
+      "oracle": "The same quotient at the finer scale an intermediate tax component may carry. Authority instruments specify scale independently of mode, which is why the two are separate fields (ADR-0002 §3.3)."
+    },
+    {
+      "id": "quo-one-seventh-half-even",
+      "op": "quo",
+      "inputs": ["1", "7"],
+      "policy": {"mode": "HALF_EVEN", "scale": 6, "basis": "TAX_COMPONENT"},
+      "expect": ["0.142857"],
+      "oracle": "1/7 = 0.142857142857... ; the discarded digits begin with 1, so no mode changes the answer. A non-terminating quotient is exactly why division carries a policy while addition does not."
+    },
+    {
+      "id": "quo-rounds-up-under-up",
+      "op": "quo",
+      "inputs": ["10.00", "3"],
+      "policy": {"mode": "UP", "scale": 2, "basis": "LINE"},
+      "expect": ["3.34"],
+      "oracle": "10/3 = 3.3333... ; round-up moves away from zero whenever anything is discarded, so it gives 3.34 where half-up gives 3.33."
+    }
+  ]
+}

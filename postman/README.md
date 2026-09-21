@@ -1,11 +1,10 @@
 # Postman — ZoikoTax API
 
-| File | Purpose |
-|---|---|
-| `ZoikoTax.postman_collection.json` | 20 requests across 8 folders |
-| `ZoikoTax-local.postman_environment.json` | Local cell — `http://localhost:8080` |
+One file — `ZoikoTax.postman_collection.json`: 20 requests across 8 folders, with the local cell's values carried as collection variables. Import it and run; there is no environment to select.
 
-Import both, select the environment, and run.
+`baseUrl` defaults to `http://localhost:8080`. Point the collection at another cell by editing that variable, or by passing `--env-var baseUrl=...` to newman. The rest — `tenantId`, `sellerLegalEntityId`, `decisionId`, `jobId` and the computed timestamps — are collection state that the requests read and write as they run.
+
+A separate environment file used to hold the same five values with the same defaults. An import that needs two files and a dropdown selection is one more thing to get wrong, for no benefit.
 
 ## Read this before you run it
 
@@ -17,7 +16,7 @@ Import both, select the environment, and run.
 
 ## What is actually worth running
 
-Folder **`07 · Contract conformance`**. Those eight requests are the point of this collection — each one *should* fail, in a specific way, and each asserts a control from the ADRs.
+Folder **`07 · Contract conformance`**. Those seven requests are the point of this collection — each one *should* fail, in a specific way, and each asserts a control from the ADRs.
 
 | Request | Asserts | ADR |
 |---|---|---|
@@ -48,8 +47,7 @@ The collection-level test script runs after **every** request and encodes contro
 
 ```bash
 npm install -g newman
-newman run ZoikoTax.postman_collection.json \
-  -e ZoikoTax-local.postman_environment.json
+newman run ZoikoTax.postman_collection.json
 ```
 
 Do **not** wire this into CI as the contract gate. Contract testing is tier 4 in ADR-0018 §2.5 and is generated from the contract with `oasdiff` as the release blocker. This collection is for exploration and manual verification — a second, hand-maintained source of truth about the API is exactly what ADR-0010 §3.1 exists to prevent.

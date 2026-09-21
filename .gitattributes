@@ -1,0 +1,11 @@
+# Line endings are content here, not formatting.
+#
+# The golden vector sets carry a registered sha256 over their exact bytes
+# (ADR-0002 2.7), and both the Go runner and the Python cross-check verify that
+# digest before reading a set. A checkout that converted LF to CRLF would change
+# every digest and fail the corpus on one platform and not the other, which is
+# exactly the class of divergence the corpus exists to catch.
+testdata/golden/** text eol=lf
+
+# Same reasoning for anything else whose bytes are hashed or signed as it lands.
+*.json text eol=lf

@@ -33,6 +33,23 @@ var exactCtx = &apd.Context{
 	Rounding: apd.RoundHalfEven,
 }
 
+// policyCtx is the context for the one rounding event a policy authorises.
+//
+// Inexact is not trapped here — rounding is the intended outcome, which is the
+// whole distinction ADR-0002 §3.1 draws between division and the exact
+// operations. Everything else still traps: an untrapped division by zero
+// returns Infinity, and an untrapped quantize past the context's precision
+// returns NaN, and both of those are numbers that reach a fiscal document.
+func policyCtx(p RoundingPolicy) *apd.Context {
+	return &apd.Context{
+		Precision:   Precision,
+		MaxExponent: apd.MaxExponent,
+		MinExponent: apd.MinExponent,
+		Traps:       apd.DivisionByZero | apd.InvalidOperation | apd.Overflow | apd.Underflow,
+		Rounding:    p.mode.rounder(),
+	}
+}
+
 // Add sets dst to x+y exactly.
 func Add(dst, x, y *apd.Decimal) error {
 	_, err := exactCtx.Add(dst, x, y)
@@ -63,13 +80,7 @@ func Quo(dst, x, y *apd.Decimal, p RoundingPolicy) error {
 	// Divide at full precision first, then apply the policy's mode and scale as
 	// a single explicit rounding step. Rounding only at the policy's scale keeps
 	// the policy the sole rounding event, per ADR-0002 §2.5.
-	divCtx := &apd.Context{
-		Precision:   Precision,
-		MaxExponent: apd.MaxExponent,
-		MinExponent: apd.MinExponent,
-		Rounding:    p.Mode.rounder(),
-	}
-	if _, err := divCtx.Quo(dst, x, y); err != nil {
+	if _, err := policyCtx(p).Quo(dst, x, y); err != nil {
 		return wrap("quo", err)
 	}
 	return ApplyPolicy(dst, dst, p)
@@ -95,15 +106,41 @@ func ApplyPolicy(dst, x *apd.Decimal, p RoundingPolicy) error {
 	if err := p.validate(); err != nil {
 		return err
 	}
-	roundCtx := &apd.Context{
+	// Quantize to exponent -Scale: scale 2 means an exponent of -2.
+	if _, err := policyCtx(p).Quantize(dst, x, -p.scale); err != nil {
+		return wrap("quantize", err)
+	}
+	return nil
+}
+
+// withinPrecision reports whether d is a value this context can hold and
+// operate on exactly.
+//
+// apd.NewFromString parses at arbitrary precision and reports no condition for
+// a value wider than the context, so the check has to be made explicitly at
+// every ingress. Without it a 35-digit amount enters the estate looking
+// ordinary and first goes wrong several operations later, in the Inexact trap
+// of something unrelated.
+func withinPrecision(d *apd.Decimal) bool {
+	return d.NumDigits() <= Precision
+}
+
+// quoInteger sets dst to the integer part of x/y, and rem to the remainder.
+// Both are exact for the non-negative operands allocation feeds it, which is
+// why allocation can assert totality rather than hope for it.
+func quoInteger(dst, rem, x, y *apd.Decimal) error {
+	intCtx := &apd.Context{
 		Precision:   Precision,
 		MaxExponent: apd.MaxExponent,
 		MinExponent: apd.MinExponent,
-		Rounding:    p.Mode.rounder(),
+		Traps:       apd.DivisionByZero | apd.InvalidOperation | apd.Overflow | apd.Underflow,
+		Rounding:    apd.RoundDown,
 	}
-	// Quantize to exponent -Scale: scale 2 means an exponent of -2.
-	if _, err := roundCtx.Quantize(dst, x, -p.Scale); err != nil {
-		return wrap("quantize", err)
+	if _, err := intCtx.QuoInteger(dst, x, y); err != nil {
+		return wrap("quo-integer", err)
+	}
+	if _, err := intCtx.Rem(rem, x, y); err != nil {
+		return wrap("rem", err)
 	}
 	return nil
 }

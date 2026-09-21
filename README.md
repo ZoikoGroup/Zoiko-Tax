@@ -6,9 +6,9 @@ Every structural choice here is recorded in [`../adr/`](../adr/README.md). If so
 
 ## Status
 
-**W0 skeleton, compiling and running.** What exists: module definition, layout, boot path, configuration, the decimal arithmetic context and the first value objects, the ADR-0001 control 1 analyzer, a container image and a local cell stack. What does not: persistence, transport beyond health checks, and every domain module.
+**W0 skeleton, compiling and running.** What exists: module definition, layout, boot path, configuration, the decimal runtime of ADR-0002 in full — arithmetic context, `Money` and `Rate`, rounding policies decoded from content, largest-remainder allocation, the golden corpus with its Python cross-check and the property suite — the ADR-0001 control 1 analyzer, a container image and a local cell stack. What does not: persistence, transport beyond health checks, and every domain module.
 
-Verified 16 September 2026 in a pinned `golang:1.25-bookworm` container — `go build ./...` and `go vet ./...` clean, analyzer suite passing, image running and serving. There is no Go toolchain on the authoring machine, so everything below goes through Docker; install Go locally and the `make` targets work directly.
+Verified 21 September 2026 in a pinned `golang:1.25-bookworm` container — `go vet ./...` clean, `go test -race ./...` green across the 75 golden vectors, six property suites and the unit tests, `golangci-lint run` reporting 0 issues, the fiscalfloat analyzer clean over the module and its own suite passing, and the Python cross-check agreeing on every vector. There is no Go toolchain on the authoring machine, so everything below goes through Docker; install Go locally and the `make` targets work directly.
 
 ## Layout
 
@@ -27,13 +27,17 @@ internal/
   adapter/              implementations of port — postgres, gateway, broker, authority
   transport/            http (generated server + middleware), grpc
   platform/             config, canonical, idgen, telemetry, kms
-  fiscaltest/           test-only constructors. Production code cannot import this
+  fiscaltest/           test-only constructors, and the golden-vector reader.
+                        Production code cannot import this — depguard, and the
+                        package imports testing
 tools/
   fiscalfloat/          the float64 analyzer (ADR-0001 c1). Own module, so its
                         dependencies stay out of the shipped binary's graph
+  decimalcrosscheck/    the Go ↔ Python decimal cross-check (ADR-0002 c2)
 migrations/             plain versioned SQL (ADR-0008)
 testdata/golden/        golden vectors — legal artifacts, not fixtures (ADR-0018)
-postman/                collection + local environment (see below)
+  decimal/              the ADR-0002 corpus, with its own README
+postman/                one collection, variables included (see below)
 vendor/                 committed deliberately (ADR-0001 c6) — not yet generated
 ```
 
@@ -63,7 +67,9 @@ With a local Go toolchain (1.25+):
 make tidy              # resolve the module graph
 make vendor            # ADR-0001 control 6 — commit the apd source
 make fiscalfloat-test  # the analyzer's own suite
-make check             # vet + fiscalfloat + lint + test
+make golden            # tier 2 — the decimal vectors
+make golden-crosscheck # the same vectors under Python decimal (needs python3)
+make check             # vet + fiscalfloat + lint + test + cross-check
 make run               # needs .env.local; see .env.local.example
 ```
 
@@ -92,7 +98,7 @@ Stages for `ztax-outbox-relay` and `ztax-migrate` are commented placeholders unt
 
 ## Postman
 
-[`postman/`](postman/README.md) — 20 requests covering the two live endpoints and the planned `/v1` surface from ADR-0010 §2.5. Import the collection and the local environment.
+[`postman/`](postman/README.md) — one collection, 20 requests covering the two live endpoints and the planned `/v1` surface from ADR-0010 §2.5. The local cell's values ride along as collection variables, so there is no environment file to import beside it.
 
 Run it against a live cell:
 
@@ -105,13 +111,17 @@ docker run --rm -v "${PWD}/postman:/etc/newman" postman/newman:alpine \
 
 Against the current binary this gives 20 requests, 22 assertions, 0 failures: the health folder asserts for real, and the `/v1` requests report as not-yet-implemented rather than failing.
 
-The folder that matters is **`07 · Contract conformance`** — eight requests that *should* fail in specific ways, each asserting an ADR control. Chief among them, a commit whose `netAmount` is the JSON number `45.0` rather than the string `"45.00"`. A 2xx there is a Critical finding, not a test failure.
+The folder that matters is **`07 · Contract conformance`** — seven requests that *should* fail in specific ways, each asserting an ADR control. Chief among them, a commit whose `netAmount` is the JSON number `45.0` rather than the string `"45.00"`. A 2xx there is a Critical finding, not a test failure.
 
 The collection is for exploration, not for CI. Contract testing is tier 4 in ADR-0018 §2.5, generated from the contract with `oasdiff` as the release blocker — a second, hand-maintained source of truth about the API is what ADR-0010 §3.1 exists to prevent.
 
 ## Things that will surprise you, and why
 
 **Division requires a rounding policy.** `fiscal.Quo` takes a `RoundingPolicy` and there is no default, because rounding is jurisdiction-specific law rather than a runtime convention. A required parameter fails closed at compile time; a default fails open in production. ADR-0002 §2.2.
+
+**Rounding is content, and a policy cannot be written in Go.** `RoundingPolicy` has unexported fields and no literal constructor; the only way to obtain one is `fiscal.DecodeRoundingPolicy`, from the JSON a signed content bundle carries. A composite literal elsewhere produces the zero value, which every operation refuses. Tests construct policies through `internal/fiscaltest`, which builds the same JSON and decodes it — so a test exercises the production ingress rather than a parallel one. ADR-0002 §2.3.
+
+**Distributing a total is one operation, not several divisions.** `fiscal.Allocate` does largest-remainder with an ascending-ordinal tie-break, and the parts sum to the total exactly. Dividing each line separately loses the residual: 100.00 across three lines is 33.34 / 33.33 / 33.33, not 33.33 three times. ADR-0002 §2.6.
 
 **`Money` has no float accessor.** Not even for display. The parse path is from a string, because a string is the only ingress that cannot have passed through a binary float. ADR-0001 §4.2 has the worked example.
 
@@ -127,11 +137,11 @@ The collection is for exploration, not for CI. Contract testing is tier 4 in ADR
 
 ## Next, in order
 
-1. Golden vectors for the decimal context, with the Python `decimal` cross-check wired as a CI blocker — ADR-0002 §5.1 c2. This is the W0 control everything else rests on.
-2. Largest-remainder allocation with the property tests from ADR-0002 §2.6.
-3. `Quantity`, `TimeInterval`, `ReasonCode` and the identity primitives — ADR-0012.
-4. `internal/platform/canonical` with its golden vectors — ADR-0011, a W1 exit gate.
-5. First migration and the pgx `NUMERIC` ↔ `apd.Decimal` conformance test — ADR-0008 §5.1 c1, which discharges ADR-0001 control 2. Compose already runs PostgreSQL 17 + PostGIS 3.5, so the dependency is waiting.
-6. `make vendor` and commit `vendor/` — ADR-0001 control 6, the last open W0 control.
+1. `Quantity`, `TimeInterval`, `ReasonCode` and the identity primitives — ADR-0012. `Quantity` is already named in the fiscalfloat analyzer's guarded type list and does not exist yet.
+2. `internal/platform/canonical` with its golden vectors — ADR-0011, a W1 exit gate.
+3. First migration and the pgx `NUMERIC` ↔ `apd.Decimal` conformance test — ADR-0008 §5.1 c1, which discharges ADR-0001 control 2. Compose already runs PostgreSQL 17 + PostGIS 3.5, so the dependency is waiting.
+4. `make vendor` and commit `vendor/` — ADR-0001 control 6, the last open W0 control.
+5. Lane A pipeline wiring. `make check` runs every gate ADR-0002 asks for, including the cross-check, but there is no pipeline in this repository yet to run it on push — ADR-0002 §5.1 c2 is built and not yet *wired*.
+6. Content-side validation that rejects a `RuleVersion` applying a rate or a division without a rounding policy — ADR-0002 §5.1 c5, lane F, when `content/` opens.
 
 `go mod tidy` dropped `google/uuid` because nothing imports it yet; it returns with `internal/platform/idgen` in step 3.

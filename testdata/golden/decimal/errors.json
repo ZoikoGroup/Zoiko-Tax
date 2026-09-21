@@ -1,0 +1,129 @@
+{
+  "set": "errors",
+  "version": "1.0.0",
+  "description": "Inputs the runtime must refuse. Each case names the substring the returned error has to contain. The cross-check script skips this set: how a runtime reports a refusal is a property of its API, while the arithmetic is what has to agree across languages. The Go runner owns these assertions.",
+  "provenance": {
+    "oracle": "ADR-0002 §2.1 (exact operations trap rather than round), §2.3 (policies come from content and are validated on the way in) and §2.6 (allocation with no proportion has no answer)",
+    "source": "adr/ADR-0002-decimal-rounding-context-policy.md",
+    "reviewer": "lane-d",
+    "registered": "2026-09-21",
+    "contentVersion": "n/a — engine vectors, authored against the ADR rather than against a content bundle"
+  },
+  "cases": [
+    {
+      "id": "add-inexact-across-sixty-one-digits",
+      "op": "add",
+      "inputs": ["1000000000000000000000000000000", "0.000000000000000000000000000001"],
+      "expect": [],
+      "expectError": "inexact",
+      "oracle": "The exact sum needs 61 significant digits and the context carries 34. ADR-0002 §3.1: an exact operation that cannot be exact is a defect, and a trap turns it into a stack trace rather than a number that still looks like a number."
+    },
+    {
+      "id": "mul-inexact-at-precision-boundary",
+      "op": "mul",
+      "inputs": ["1.00000000000000001", "1.00000000000000001"],
+      "expect": [],
+      "expectError": "inexact",
+      "oracle": "(1 + 1E-17)^2 needs 35 significant digits. One digit finer than arithmetic/mul-thirty-three-significant-digits, which is exact — the pair locates the boundary rather than asserting it is somewhere."
+    },
+    {
+      "id": "quo-by-zero",
+      "op": "quo",
+      "inputs": ["1.00", "0"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "LINE"},
+      "expect": [],
+      "expectError": "division by zero",
+      "oracle": "General Decimal Arithmetic Specification: division by zero is a trapped condition. Untrapped it yields Infinity, and an infinite tax amount that reaches a fiscal document is worse than a failed request."
+    },
+    {
+      "id": "round-beyond-representable-precision",
+      "op": "round",
+      "inputs": ["10000000000000000000000000000000000000000"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "LINE"},
+      "expect": [],
+      "expectError": "invalid operation",
+      "oracle": "Specification: quantize is invalid when the result would need more digits than the context's precision — here 43 against 34. The operation refuses rather than returning a rounded approximation of a number it cannot hold."
+    },
+    {
+      "id": "policy-unknown-mode",
+      "op": "round",
+      "inputs": ["2.345"],
+      "policy": {"mode": "BANKERS", "scale": 2, "basis": "LINE"},
+      "expect": [],
+      "expectError": "unknown rounding mode",
+      "oracle": "ADR-0002 §2.4: the mode enum is closed, and adding a member is a SCHEMA train change with a new golden-vector set. Content naming a mode this build does not implement is a bundle/runtime mismatch, not a rounding question."
+    },
+    {
+      "id": "policy-unknown-basis",
+      "op": "round",
+      "inputs": ["2.345"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "INVOICE"},
+      "expect": [],
+      "expectError": "unknown rounding basis",
+      "oracle": "ADR-0002 §2.3: the basis enum is LINE, DOCUMENT, TAX_COMPONENT, JURISDICTION_TOTAL. INVOICE is plausible enough to be typed by a rule author, which is exactly why it is rejected at the boundary."
+    },
+    {
+      "id": "policy-scale-above-maximum",
+      "op": "round",
+      "inputs": ["2.345"],
+      "policy": {"mode": "HALF_UP", "scale": 13, "basis": "LINE"},
+      "expect": [],
+      "expectError": "out of range",
+      "oracle": "MaxScale is 12 — well beyond any currency minor unit and any rate precision expected. A scale past it is malformed content, and failing loudly is the point of the bound."
+    },
+    {
+      "id": "policy-negative-scale",
+      "op": "round",
+      "inputs": ["2.345"],
+      "policy": {"mode": "HALF_UP", "scale": -1, "basis": "LINE"},
+      "expect": [],
+      "expectError": "out of range",
+      "oracle": "A negative scale would round to tens or hundreds. If an authority ever mandates that, it arrives as a reviewed change to the bound with vectors of its own, not as content that happens to pass."
+    },
+    {
+      "id": "policy-missing-scale",
+      "op": "round",
+      "inputs": ["2.345"],
+      "policyRaw": "{\"mode\":\"HALF_UP\",\"basis\":\"LINE\"}",
+      "expect": [],
+      "expectError": "no scale",
+      "oracle": "ADR-0002 §2.3: scale 0 is legal, so an absent scale must not be read as a scale of zero. A JPY policy and a policy that forgot to say differ by nothing but this rejection."
+    },
+    {
+      "id": "policy-unknown-key",
+      "op": "round",
+      "inputs": ["2.345"],
+      "policyRaw": "{\"mode\":\"HALF_UP\",\"scale\":2,\"basis\":\"LINE\",\"rounding\":\"HALF_EVEN\"}",
+      "expect": [],
+      "expectError": "unknown field",
+      "oracle": "Content is signed and versioned. A key this build does not understand means the bundle was authored against a different SCHEMA train version, and ignoring it would silently apply a policy other than the one the author approved."
+    },
+    {
+      "id": "allocate-non-zero-total-over-zero-weights",
+      "op": "allocate",
+      "inputs": ["1.00", "0", "0"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "DOCUMENT"},
+      "expect": [],
+      "expectError": "weights sum to zero",
+      "oracle": "ADR-0002 §2.6: there is no proportion to divide by, and choosing a line to carry the amount would be a fiscal decision taken in Go rather than in content."
+    },
+    {
+      "id": "allocate-negative-weight",
+      "op": "allocate",
+      "inputs": ["1.00", "1", "-1"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "DOCUMENT"},
+      "expect": [],
+      "expectError": "is negative",
+      "oracle": "A negative weight has no fractional remainder that ranks against a positive one, so the largest-remainder guarantee does not survive the mix. A document with offsetting lines is allocated by magnitude, by the caller, with the sign reapplied."
+    },
+    {
+      "id": "allocate-no-weights",
+      "op": "allocate",
+      "inputs": ["1.00"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "DOCUMENT"},
+      "expect": [],
+      "expectError": "no weights",
+      "oracle": "Distributing a total across nothing has no answer. Returning an empty allocation would silently discard the total."
+    }
+  ]
+}

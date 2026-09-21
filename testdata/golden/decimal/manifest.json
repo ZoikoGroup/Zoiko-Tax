@@ -1,0 +1,41 @@
+{
+  "schema": "ztax.golden.decimal/v1",
+  "note": "Digests are sha256 over the exact bytes of each set. The Go runner and the Python cross-check both verify them before reading a set, so an unreviewed edit fails the build rather than relaxing an assertion. Re-register with `make golden-register` (ADR-0002 §2.7, §6).",
+  "sets": [
+    {
+      "file": "allocation.json",
+      "set": "allocation",
+      "version": "1.0.0",
+      "cases": 15,
+      "sha256": "5dcee369b05686ab5a8e8bedf10526fcf3ea2e04d473dc80359c109013b5ce93"
+    },
+    {
+      "file": "arithmetic.json",
+      "set": "arithmetic",
+      "version": "1.0.0",
+      "cases": 10,
+      "sha256": "9cde200d64ba19f0d9d71269a2dca24c2920c765ec41d422ee70cb711ab9e544"
+    },
+    {
+      "file": "errors.json",
+      "set": "errors",
+      "version": "1.0.0",
+      "cases": 13,
+      "sha256": "cacb43966279e455dd33b1ec3b4aab81f4b48f93b5291c25f40bc2d649c76a08"
+    },
+    {
+      "file": "rate-application.json",
+      "set": "rate-application",
+      "version": "1.0.0",
+      "cases": 13,
+      "sha256": "03e4ed409deafec451d6b6dfde84904e62f6716431735a7dbca40cdb7831aa40"
+    },
+    {
+      "file": "rounding-modes.json",
+      "set": "rounding-modes",
+      "version": "1.0.0",
+      "cases": 24,
+      "sha256": "a783c0d3fae07733c79bca1ce7a699a1f46ab857eacec7442eafa0af02931f8d"
+    }
+  ]
+}

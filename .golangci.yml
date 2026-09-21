@@ -80,6 +80,18 @@ linters:
             - pkg: "github.com/twmb/franz-go"
               desc: "publish through the outbox, never directly (ADR-0014 §2.1)"
 
+        # ADR-0002 §2.3 — every RoundingPolicy originates in a signed content
+        # bundle. internal/fiscaltest builds one from a literal for tests, so
+        # nothing that ships may import it. The package's own import of testing
+        # is the second signal; this rule is the gate.
+        policy-literals-are-test-only:
+          list-mode: lax
+          files:
+            - "!$test"
+          deny:
+            - pkg: "github.com/zoikogroup/zoikotax/backend/internal/fiscaltest"
+              desc: "test-only constructors; a production policy comes from content (ADR-0002 §2.3)"
+
         # ADR-0002 — the only decimal library, and only through internal/domain/fiscal.
         one-decimal-library:
           list-mode: lax
@@ -120,8 +132,12 @@ linters:
 
   exclusions:
     rules:
-      # Test helpers construct RoundingPolicy literals; production code may not.
-      - path: "_test\\.go"
+      # Test code reads its own golden vectors from paths it computes, which
+      # gosec reads as file inclusion from a variable. That rule is about
+      # untrusted input reaching a file path, and there is none here —
+      # production code cannot import internal/fiscaltest at all (depguard
+      # rule policy-literals-are-test-only above).
+      - path: "(_test\\.go|internal/fiscaltest/)"
         linters:
           - gosec
 

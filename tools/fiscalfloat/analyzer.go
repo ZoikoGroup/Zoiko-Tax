@@ -19,10 +19,17 @@
 // R1 is the broad structural rule; R2, R3 and R4 close the routes that reach
 // around it from packages that are not themselves guarded — transport, adapters,
 // telemetry.
+//
+// Generated files are exempt from all four. The rules exist to constrain what
+// someone writes in the domain, and the file `go test` generates to run a
+// guarded package's own tests declares a *testing.M, which structurally
+// contains a float. A gate that fires on machine-written code teaches people to
+// pass -skip rather than to fix findings.
 package fiscalfloat
 
 import (
 	"go/ast"
+	"go/token"
 	"go/types"
 	"strings"
 
@@ -66,6 +73,7 @@ func run(pass *analysis.Pass) (any, error) {
 		pass:        pass,
 		fiscalTypes: fiscal,
 		guarded:     isGuarded(pass.Pkg.Path(), guarded),
+		generated:   generatedFiles(pass),
 	}
 
 	// R1 — no float declared in a guarded package.
@@ -78,7 +86,7 @@ func run(pass *analysis.Pass) (any, error) {
 			if obj == nil || id == nil {
 				continue
 			}
-			if obj.Pkg() != pass.Pkg {
+			if obj.Pkg() != pass.Pkg || c.isGenerated(id.Pos()) {
 				continue
 			}
 			if containsFloat(obj.Type(), make(map[types.Type]bool)) {
@@ -109,11 +117,32 @@ type checker struct {
 	pass        *analysis.Pass
 	fiscalTypes []string
 	guarded     bool
+	generated   map[string]bool
+}
+
+// generatedFiles records the files carrying the generated-code marker, so that
+// every rule can skip them.
+func generatedFiles(pass *analysis.Pass) map[string]bool {
+	out := make(map[string]bool)
+	for _, file := range pass.Files {
+		if ast.IsGenerated(file) {
+			out[pass.Fset.Position(file.Pos()).Filename] = true
+		}
+	}
+	return out
+}
+
+func (c *checker) isGenerated(pos token.Pos) bool {
+	return c.generated[c.pass.Fset.Position(pos).Filename]
 }
 
 // checkCall covers R2 (conversion of a fiscal value to a float) and R3 (a method
 // on a fiscal type returning a float).
 func (c *checker) checkCall(call *ast.CallExpr) {
+	if c.isGenerated(call.Pos()) {
+		return
+	}
+
 	// R2 — a conversion is a call whose Fun denotes a type.
 	if tv, ok := c.pass.TypesInfo.Types[call.Fun]; ok && tv.IsType() {
 		if isFloat(tv.Type) && len(call.Args) == 1 {
@@ -157,7 +186,7 @@ func (c *checker) checkCall(call *ast.CallExpr) {
 
 // checkStruct covers R4 — a struct holding both a fiscal field and a float field.
 func (c *checker) checkStruct(st *ast.StructType) {
-	if st.Fields == nil {
+	if st.Fields == nil || c.isGenerated(st.Pos()) {
 		return
 	}
 	var hasFiscal bool
