@@ -132,8 +132,12 @@ linters:
 
   exclusions:
     rules:
-      # Test helpers construct RoundingPolicy literals; production code may not.
-      - path: "_test\\.go"
+      # Test code reads its own golden vectors from paths it computes, which
+      # gosec reads as file inclusion from a variable. That rule is about
+      # untrusted input reaching a file path, and there is none here —
+      # production code cannot import internal/fiscaltest at all (depguard
+      # rule policy-literals-are-test-only above).
+      - path: "(_test\\.go|internal/fiscaltest/)"
         linters:
           - gosec
 
