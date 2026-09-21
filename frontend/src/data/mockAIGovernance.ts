@@ -1,0 +1,65 @@
+import { AIGovernanceLog } from '../types/domain';
+
+export const mockAILogs: AIGovernanceLog[] = [
+  {
+    id: 'ai-log-9001',
+    timestamp: '2026-09-21T10:14:02Z',
+    modelIdentifier: 'Claude-3.5-Sonnet / Zoiko-Telecom-Tax-Embed-v2',
+    modelRiskTier: 'TIER_1_LOW',
+    taskType: 'SHADOW_ASSURANCE_AUDIT',
+    inputSnippet: 'VoIP PSTN Inbound DID session, 420 mins terminating in California CPUC jurisdiction',
+    aiProposal: 'Recommend CPUC Interconnected VoIP Surcharge applied at standard 2.52% rate',
+    deterministicDAGDecision: 'Rule CPUC-VOIP-2026.09: Applied rate 0.025200 with HALF_EVEN rounding',
+    varianceStatus: 'PERFECT_MATCH',
+    humanReviewerStatus: 'APPROVED',
+    boundaryViolationAttempted: false,
+  },
+  {
+    id: 'ai-log-9002',
+    timestamp: '2026-09-21T11:02:45Z',
+    modelIdentifier: 'GPT-4o-Fiscal-Parser / RAG-StateLaw-Embed',
+    modelRiskTier: 'TIER_2_MODERATE',
+    taskType: 'SKU_ONTOLOGY_DISCOVERY',
+    inputSnippet: 'BSS Product SKU: "Global Teams Voice + Webex Pro 100 User Bundle with Cloud Storage"',
+    aiProposal: 'Decompose to: 60% Cloud PBX Software (Non-taxable in TX), 40% Interconnected VoIP (Taxable TX)',
+    deterministicDAGDecision: 'Rule TX-BUND-2026.08: Allocation applied by SKU catalog manifest (unbundled)',
+    varianceStatus: 'ADVISORY_DRIFT',
+    humanReviewerStatus: 'PENDING',
+    boundaryViolationAttempted: false,
+  },
+  {
+    id: 'ai-log-9003',
+    timestamp: '2026-09-21T12:30:19Z',
+    modelIdentifier: 'Zoiko-FineTuned-FCC499-Classifier-v3',
+    modelRiskTier: 'TIER_3_HIGH',
+    taskType: 'SHADOW_ASSURANCE_AUDIT',
+    inputSnippet: 'Transaction: Bulk A2P 10DLC Messaging pass-through fee for Financial 2FA alerts',
+    aiProposal: 'Flag potential FCC 499-A Line 414.2 reclassification vs Information Service exemption',
+    deterministicDAGDecision: 'Rule FCC-A2P-414: Retained Telecom Service assessment per USAC 2026 guidance',
+    varianceStatus: 'FLAGGED_ANOMALY',
+    humanReviewerStatus: 'PENDING',
+    boundaryViolationAttempted: false,
+  },
+  {
+    id: 'ai-log-9004',
+    timestamp: '2026-09-21T14:45:10Z',
+    modelIdentifier: 'Claude-3.5-Sonnet / Rule-Synthesizer',
+    modelRiskTier: 'TIER_3_HIGH',
+    taskType: 'EXPLANATION_GENERATION',
+    inputSnippet: 'Customer Audit Query: "Why was NYC Telecom Excise levied on line item 3?"',
+    aiProposal: 'Generated customer-facing tax explanation citing NYC Admin Code § 11-1102 and sourcing situs',
+    deterministicDAGDecision: 'Audit citation matches exact rule DAG path: NY-NYC-EXCISE-1102-CERTIFIED',
+    varianceStatus: 'PERFECT_MATCH',
+    humanReviewerStatus: 'APPROVED',
+    boundaryViolationAttempted: false,
+  },
+];
+
+export const mockAIGovernanceMetrics = {
+  authorityBoundaryEnforcementRate: '100.00%', // Zero unauthorized AI mutations allowed!
+  totalTransactionsAuditedByShadowAssurance: '1,420,890',
+  anomalyDetectionRate: '0.04%',
+  unreviewedProposalsCount: 2,
+  activeAIModelsPinned: 3,
+  humanInTheLoopSignoffs: 148,
+};
