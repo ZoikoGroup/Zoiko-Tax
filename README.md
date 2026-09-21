@@ -8,7 +8,7 @@ Every structural choice here is recorded in [`../adr/`](../adr/README.md). If so
 
 **W0 skeleton, compiling and running.** What exists: module definition, layout, boot path, configuration, the decimal runtime of ADR-0002 in full — arithmetic context, `Money` and `Rate`, rounding policies decoded from content, largest-remainder allocation, the golden corpus with its Python cross-check and the property suite — the ADR-0001 control 1 analyzer, a container image and a local cell stack. What does not: persistence, transport beyond health checks, and every domain module.
 
-Verified 21 September 2026 in a pinned `golang:1.25-bookworm` container — `go vet ./...` clean, `go test -race ./...` green across the 75 golden vectors, six property suites and the unit tests, `golangci-lint run` reporting 0 issues, the fiscalfloat analyzer clean over the module and its own suite passing, and the Python cross-check agreeing on every vector. There is no Go toolchain on the authoring machine, so everything below goes through Docker; install Go locally and the `make` targets work directly.
+Verified 21 September 2026 in a pinned `golang:1.25-bookworm` container — `go vet ./...` clean, `go test -race ./...` green across the 75 golden vectors, six property suites and the unit tests, `golangci-lint run` reporting 0 issues, the fiscalfloat analyzer clean over the module and its own suite passing, and the Python cross-check agreeing on every vector. Every gate below also runs in CI on each push and pull request, so the verification above is repeated by a machine that has no local state. There is no Go toolchain on the authoring machine, so everything below goes through Docker; install Go locally and the `make` targets work directly.
 
 ## Layout
 
@@ -96,6 +96,25 @@ Two consequences of that base image worth knowing before they surprise you:
 
 Stages for `ztax-outbox-relay` and `ztax-migrate` are commented placeholders until those commands exist. `ztax-migrate` stays a separate image on purpose: it runs under a DDL role the application never holds (ADR-0008 §2.8).
 
+## Pipeline
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push to `main` and every pull request. One job per control, each named after the control it enforces, so a red run says which guarantee broke rather than that CI failed.
+
+| Job | Gate | Source |
+|---|---|---|
+| build · format · vet | `gofmt`, `go vet`, `go build`, and `go.mod`/`go.sum` tidy — the module graph is named in the release evidence manifest | ADR-0001 c3 |
+| architectural controls | `golangci-lint`: layering, `fiscal` may not import `ai`, the evaluator cannot reach a clock or a network, production may not import `fiscaltest` | ADR-0007 §2.5, ADR-0006 §2.6, ADR-0005 §2.4, ADR-0002 §2.3 |
+| float64 unreachable | the `fiscalfloat` analyzer over the module, after its own suite | ADR-0001 c1, ADR-0002 §2.8 |
+| tier 1 and 2 | unit, property and golden-vector tests under `-race` | ADR-0018 §2.1 |
+| decimal agreement | the vectors under Python `decimal`, in a job with no Go toolchain | ADR-0002 §5.1 c2 |
+| image builds | the distroless image, built and not pushed | ADR-0001 §3.3 |
+
+Two details worth knowing. The cross-check job has **no Go toolchain in it on purpose** — the check is worth something only because a second implementation, reading nothing but the vectors, reaches the same answers. And actions are pinned to commit SHAs rather than tags, for the reason ADR-0001 control 6 vendors `apd`: a tag is a moving pointer to someone else's code.
+
+[`release.yml`](.github/workflows/release.yml) runs on a `v*` tag and produces what Build Plan §7 requires of the `APP` train — image digest, CycloneDX SBOM, provenance, and a keyless signature **over the digest rather than the tag**. It also writes a release evidence file naming the versions it can attest, marked partial, listing the ones that do not exist yet. A manual dispatch builds and publishes nothing, so the path can be exercised without minting something that looks releasable.
+
+Still lane B: signed-artifact admission in the regional clusters, and the tier 3 integration job, which arrives with persistence.
+
 ## Postman
 
 [`postman/`](postman/README.md) — one collection, 20 requests covering the two live endpoints and the planned `/v1` surface from ADR-0010 §2.5. The local cell's values ride along as collection variables, so there is no environment file to import beside it.
@@ -141,7 +160,7 @@ The collection is for exploration, not for CI. Contract testing is tier 4 in ADR
 2. `internal/platform/canonical` with its golden vectors — ADR-0011, a W1 exit gate.
 3. First migration and the pgx `NUMERIC` ↔ `apd.Decimal` conformance test — ADR-0008 §5.1 c1, which discharges ADR-0001 control 2. Compose already runs PostgreSQL 17 + PostGIS 3.5, so the dependency is waiting.
 4. `make vendor` and commit `vendor/` — ADR-0001 control 6, the last open W0 control.
-5. Lane A pipeline wiring. `make check` runs every gate ADR-0002 asks for, including the cross-check, but there is no pipeline in this repository yet to run it on push — ADR-0002 §5.1 c2 is built and not yet *wired*.
+5. Signed-artifact admission in a regional cell, so that an unsigned or unattested workload cannot start — W1 lane B. The release workflow now signs; nothing yet refuses an image that is not signed.
 6. Content-side validation that rejects a `RuleVersion` applying a rate or a division without a rounding policy — ADR-0002 §5.1 c5, lane F, when `content/` opens.
 
 `go mod tidy` dropped `google/uuid` because nothing imports it yet; it returns with `internal/platform/idgen` in step 3.
