@@ -1,0 +1,27 @@
+# This repository is rooted at backend/, so the project-root .gitignore does not
+# apply here. Patterns below are relative to this directory.
+
+# Build output
+bin/
+coverage.out
+*.test
+
+# vendor/ is NOT ignored. It is committed deliberately: ADR-0001 control 6
+# requires the apd source to be retrievable from our own history across the
+# statutory retention period, not from a third party.
+
+# Local environment. .env.local.example is tracked; .env.local is not, and must
+# never be — ADR-0017 §2.4 keeps credentials out of the repository entirely.
+.env
+.env.local
+*.local
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
