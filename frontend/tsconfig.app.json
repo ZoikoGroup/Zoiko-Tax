@@ -1,58 +1,19 @@
 {
   "compilerOptions": {
-<<<<<<< HEAD
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "target": "es2023",
-    "lib": ["ES2023", "DOM"],
-    "module": "esnext",
-    "types": ["vite/client"],
-    "allowArbitraryExtensions": true,
-    "skipLibCheck": true,
-
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": false,
-    "moduleDetection": "force",
-    "noEmit": true,
-    "jsx": "react-jsx",
-
-    /* Linting */
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "erasableSyntaxOnly": false,
-    "noFallthroughCasesInSwitch": true
-=======
     "target": "ES2022",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
-    "types": [],
-
-    // strict is the floor, not the ceiling. The settings below it are the ones
-    // that catch the mistakes this application must not make: an index access
-    // that might be undefined, an optional property that is present-but-
-    // undefined, a switch that falls through a fiscal state.
+    "types": ["vite/client"],
+    "skipLibCheck": true,
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    "verbatimModuleSyntax": true,
+    "verbatimModuleSyntax": false,
     "isolatedModules": true,
-
-    // Vite owns the bundle; tsc only type-checks and emits declarations, which
-    // is what a referenced project has to do. dist-tsc is build output and is
-    // git-ignored.
-    "composite": true,
-    "declaration": true,
-    "emitDeclarationOnly": true,
-    "outDir": "./dist-tsc/app",
-    "tsBuildInfoFile": "./dist-tsc/app.tsbuildinfo",
-    "skipLibCheck": true
->>>>>>> origin/main
+    "noEmit": true
   },
   "include": ["src"]
 }

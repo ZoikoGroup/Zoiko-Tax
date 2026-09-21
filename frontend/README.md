@@ -1,37 +1,3 @@
-<<<<<<< HEAD
-# React + TypeScript + Vite
-
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
-=======
 # ZoikoTax — Frontend
 
 React + TypeScript + Vite, served as static files by nginx. `ztax-web` in the local cell stack.
@@ -91,4 +57,3 @@ The shell is one screen: the regional cell's health, and two amounts that exist 
 Not here, and not by accident: a router, a state library, a component library, a design system, an auth flow. Each is a W3 lane N decision, and each is cheaper to make once `UX-001` exists than to unpick afterwards.
 
 The image ships no JavaScript toolchain. Node exists at build time; the runtime is `nginx-unprivileged` serving compiled output as uid 101, so nothing in the running container can execute application code that was not compiled into the bundle.
->>>>>>> origin/main
