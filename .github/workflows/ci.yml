@@ -1,0 +1,167 @@
+# Every gate in `make check`, plus the image build, run on push and on every
+# pull request. ADR-0018 §2.1 makes tiers 1 and 2 gates on every commit, and
+# ADR-0002 §5.1 control 2 requires the cross-language vector check to be a CI
+# blocker rather than a thing somebody remembers to run.
+#
+# One job per control, named after the control. A red run should say which
+# guarantee broke, not that "CI failed".
+#
+# Actions are pinned to commit SHAs. A tag is a moving pointer, and an estate
+# that vendors its decimal library (ADR-0001 control 6) does not then execute
+# whatever a third party pushes to v7 this week.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A superseded run proves nothing. Cancel it and keep the runners for the head.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pinned so a toolchain change is a reviewed diff. It must stay in step with
+  # go.mod and with the Dockerfile's GO_VERSION.
+  GOLANGCI_LINT_VERSION: v2.13.2
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  build:
+    name: build · format · vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::not gofmt-clean:"; echo "$unformatted"; exit 1
+          fi
+
+      - run: go vet ./...
+      - run: go build ./...
+
+      # The module graph is part of the release evidence manifest (ADR-0001
+      # control 3). A go.mod or go.sum that `go mod tidy` would change means the
+      # manifest names a graph the build did not use.
+      - name: go.mod and go.sum are tidy
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+  lint:
+    name: architectural controls (depguard, forbidigo)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # ADR-0007 §2.5 layering, ADR-0006 §2.6 (fiscal may not import ai),
+      # ADR-0005 §2.4 (the evaluator cannot reach a clock or a network),
+      # ADR-0002 §2.3 (production code may not import internal/fiscaltest).
+      # A layering diagram nobody can violate is worth more than one everyone
+      # has seen.
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+
+  analyzer:
+    name: float64 unreachable from a fiscal value (ADR-0001 c1)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # The analyzer's own suite runs first. A gate nobody has tested is a
+      # gate nobody should trust.
+      - name: analyzer suite
+        run: make fiscalfloat-test
+
+      - name: analyzer over the module
+        run: make fiscalfloat
+
+  test:
+    name: tier 1 and 2 — unit, property, golden vectors
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # -race because ADR-0018 §2.2 asserts determinism across concurrent
+      # goroutines, and -count=1 because a cached PASS is not a result.
+      - name: go test -race
+        run: make test
+
+      # Tier 3 (testcontainers against real PostgreSQL) joins this job when
+      # persistence lands — ADR-0018 §2.4, ADR-0008 §5.1 c1.
+
+  crosscheck:
+    name: decimal agreement, Go ↔ Python (ADR-0002 c2)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # Deliberately no Go toolchain in this job. The point of the check is
+      # that a second implementation of the General Decimal Arithmetic
+      # Specification, reading nothing but the vectors, reaches the same
+      # answers — which is what makes ADR-0001 §3.1's cross-language claim
+      # testable rather than aspirational. The script uses the standard library
+      # only, so there is nothing to install.
+      - name: golden vectors under Python decimal
+        run: make golden-crosscheck
+
+  image:
+    name: image builds reproducibly
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+
+      # Built, never pushed here: publishing is the release workflow's job and
+      # happens on a tag. This gate exists so that a change which breaks the
+      # distroless build fails on the pull request rather than at release.
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          target: ztax-core
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  ci:
+    name: all gates green
+    runs-on: ubuntu-latest
+    needs: [build, lint, analyzer, test, crosscheck, image]
+    if: always()
+    steps:
+      # One check to require on the branch, so that adding a gate above does
+      # not mean editing branch protection and forgetting to.
+      - name: verify every gate passed
+        run: |
+          echo "${{ toJSON(needs) }}"
+          if echo "${{ toJSON(needs) }}" | grep -q '"result": *"\(failure\|cancelled\)"'; then
+            echo "::error::a gate did not pass"; exit 1
+          fi
