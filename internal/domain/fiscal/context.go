@@ -125,6 +125,26 @@ func withinPrecision(d *apd.Decimal) bool {
 	return d.NumDigits() <= Precision
 }
 
+// quoInteger sets dst to the integer part of x/y, and rem to the remainder.
+// Both are exact for the non-negative operands allocation feeds it, which is
+// why allocation can assert totality rather than hope for it.
+func quoInteger(dst, rem, x, y *apd.Decimal) error {
+	intCtx := &apd.Context{
+		Precision:   Precision,
+		MaxExponent: apd.MaxExponent,
+		MinExponent: apd.MinExponent,
+		Traps:       apd.DivisionByZero | apd.InvalidOperation | apd.Overflow | apd.Underflow,
+		Rounding:    apd.RoundDown,
+	}
+	if _, err := intCtx.QuoInteger(dst, x, y); err != nil {
+		return wrap("quo-integer", err)
+	}
+	if _, err := intCtx.Rem(rem, x, y); err != nil {
+		return wrap("rem", err)
+	}
+	return nil
+}
+
 func wrap(op string, err error) error {
 	if err == nil {
 		return nil
