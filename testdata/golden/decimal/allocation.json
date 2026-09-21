@@ -1,0 +1,134 @@
+{
+  "set": "allocation",
+  "version": "1.0.0",
+  "description": "Largest-remainder allocation with an ascending-ordinal tie-break (ADR-0002 §2.6). The first input is the total; the rest are the weights, one per part. Every case here sums back to the total exactly — that is the property the method exists to guarantee, and the vectors additionally pin which line receives each residual unit.",
+  "provenance": {
+    "oracle": "ADR-0002 §2.6, worked by hand in minor units. Each expectation is reproducible with integer arithmetic: multiply the total by 10^scale, take the whole units each weight earns, then hand the remaining units out in order of the largest fractional remainder.",
+    "source": "adr/ADR-0002-decimal-rounding-context-policy.md §2.6",
+    "reviewer": "lane-d",
+    "registered": "2026-09-21",
+    "contentVersion": "n/a — engine vectors, authored against the ADR rather than against a content bundle"
+  },
+  "cases": [
+    {
+      "id": "single-line-takes-the-whole",
+      "op": "allocate",
+      "inputs": ["7.77", "1"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "LINE"},
+      "expect": ["7.77"],
+      "oracle": "777 units, one line, no residual. The degenerate case, included because totality has to hold there too."
+    },
+    {
+      "id": "five-cents-across-three-equal-lines",
+      "op": "allocate",
+      "inputs": ["0.05", "1", "1", "1"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "DOCUMENT"},
+      "expect": ["0.02", "0.02", "0.01"],
+      "oracle": "5 units over 3 equal weights: each line earns 1 unit with remainder 2/3, and the 2 residual units go to the lowest ordinals because the remainders tie. Sum 0.05."
+    },
+    {
+      "id": "ten-across-three-equal-lines",
+      "op": "allocate",
+      "inputs": ["10.00", "1", "1", "1"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "DOCUMENT"},
+      "expect": ["3.34", "3.33", "3.33"],
+      "oracle": "1000 units over 3: 333 each, 1 residual unit to ordinal 0. Sum 10.00."
+    },
+    {
+      "id": "hundred-across-three-lines-sums-to-the-total",
+      "op": "allocate",
+      "inputs": ["100.00", "1", "1", "1"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "DOCUMENT"},
+      "expect": ["33.34", "33.33", "33.33"],
+      "oracle": "10000 units over 3: 3333 each, 1 residual. The comparison case is rate-application/quo-thirds-at-minor-unit, where dividing each line separately gives 33.33 three times and loses a cent — the whole reason allocation is a distinct operation."
+    },
+    {
+      "id": "proportional-split-needs-no-residual",
+      "op": "allocate",
+      "inputs": ["100.00", "50.00", "30.00", "20.00"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "DOCUMENT"},
+      "expect": ["50.00", "30.00", "20.00"],
+      "oracle": "Weights that divide the total exactly leave no residual, so no tie-break runs and the result is the plain proportion."
+    },
+    {
+      "id": "unequal-weights-residual-follows-the-largest-remainder",
+      "op": "allocate",
+      "inputs": ["0.10", "1", "2", "3"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "DOCUMENT"},
+      "expect": ["0.02", "0.03", "0.05"],
+      "oracle": "10 units over weights 1:2:3 gives whole parts 1, 3, 5 with remainders 4/6, 2/6, 0/6. The single residual unit goes to ordinal 0, which has the largest remainder although it is the smallest line. Sum 0.10."
+    },
+    {
+      "id": "fractional-weights",
+      "op": "allocate",
+      "inputs": ["1.00", "0.333", "0.333", "0.334"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "DOCUMENT"},
+      "expect": ["0.33", "0.33", "0.34"],
+      "oracle": "Weights need not be whole: 100 units over 0.333:0.333:0.334 gives 33 each with remainders 0.300, 0.300, 0.400, and the residual unit goes to ordinal 2 on remainder rather than on ordinal."
+    },
+    {
+      "id": "tie-break-is-ascending-ordinal",
+      "op": "allocate",
+      "inputs": ["0.03", "1", "1", "1", "1"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "DOCUMENT"},
+      "expect": ["0.01", "0.01", "0.01", "0.00"],
+      "oracle": "3 units over 4 equal weights: every whole part is 0 and every remainder is 3/4, so the tie-break alone decides. The last line receives nothing, deterministically and on every replay."
+    },
+    {
+      "id": "six-equal-lines",
+      "op": "allocate",
+      "inputs": ["1.00", "1", "1", "1", "1", "1", "1"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "DOCUMENT"},
+      "expect": ["0.17", "0.17", "0.17", "0.17", "0.16", "0.16"],
+      "oracle": "100 units over 6: 16 each with remainder 4/6, and 4 residual units to the four lowest ordinals. Sum 1.00. Round-then-adjust-the-last-line would put all four on one line — the bias ADR-0002 §3.4 rejects."
+    },
+    {
+      "id": "zero-weight-line-receives-nothing",
+      "op": "allocate",
+      "inputs": ["9.99", "0", "1"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "DOCUMENT"},
+      "expect": ["0.00", "9.99"],
+      "oracle": "A zero weight earns no whole units and has remainder 0, so it cannot receive a residual unit either. An exempt line on a document stays at zero."
+    },
+    {
+      "id": "zero-total-over-zero-weights",
+      "op": "allocate",
+      "inputs": ["0.00", "0", "0"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "DOCUMENT"},
+      "expect": ["0.00", "0.00"],
+      "oracle": "The one case with no proportion and an unambiguous answer. A non-zero total over zero weights has no answer and is an error — see errors/allocate-non-zero-total-over-zero-weights."
+    },
+    {
+      "id": "negative-total-allocates-by-magnitude",
+      "op": "allocate",
+      "inputs": ["-10.00", "1", "1", "1"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "DOCUMENT"},
+      "expect": ["-3.34", "-3.33", "-3.33"],
+      "oracle": "The mirror of ten-across-three-equal-lines. A credit note allocates exactly as the invoice it reverses did, so the two net to zero line by line; that only holds if allocation is symmetric about zero."
+    },
+    {
+      "id": "total-is-materialised-before-the-split",
+      "op": "allocate",
+      "inputs": ["10.005", "1", "1"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "DOCUMENT"},
+      "expect": ["5.01", "5.00"],
+      "oracle": "The total is rounded once, under the policy, to 10.01 = 1001 units, and the split is exact integer work from there: 500 each with 1 residual unit to ordinal 0. The parts sum to the rounded total, not to the unrounded input — which is what ADR-0002 §2.6 means by distributing a rounded total."
+    },
+    {
+      "id": "zero-minor-unit-currency",
+      "op": "allocate",
+      "inputs": ["100", "1", "1", "3"],
+      "policy": {"mode": "HALF_UP", "scale": 0, "basis": "DOCUMENT"},
+      "expect": ["20", "20", "60"],
+      "oracle": "JPY at scale 0: 100 units over weights 1:1:3 divides exactly, so no residual arises. Allocation at scale 0 distributes whole units of currency."
+    },
+    {
+      "id": "large-total-across-three-lines",
+      "op": "allocate",
+      "inputs": ["1000000.00", "1", "1", "1"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "DOCUMENT"},
+      "expect": ["333333.34", "333333.33", "333333.33"],
+      "oracle": "100000000 units over 3: 33333333 each and 1 residual unit. The residual is one minor unit whatever the magnitude of the total — largest-remainder does not accumulate error with size."
+    }
+  ]
+}

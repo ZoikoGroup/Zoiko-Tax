@@ -1,0 +1,84 @@
+{
+  "set": "arithmetic",
+  "version": "1.0.0",
+  "description": "Addition, subtraction and multiplication are exact within 34 digits (ADR-0002 §2.1). No case here carries a policy, because none of these operations is permitted to round.",
+  "provenance": {
+    "oracle": "General Decimal Arithmetic Specification — add, subtract, multiply",
+    "source": "https://speleotrove.com/decimal/decarith.html",
+    "reviewer": "lane-d",
+    "registered": "2026-09-21",
+    "contentVersion": "n/a — engine vectors, authored against the specification rather than against a content bundle"
+  },
+  "cases": [
+    {
+      "id": "add-preserves-scale",
+      "op": "add",
+      "inputs": ["10.00", "2.50"],
+      "expect": ["12.50"],
+      "oracle": "Specification: the ideal exponent of add is min(exponent(x), exponent(y)), so two minor-unit amounts sum to a minor-unit amount. Scale is semantic — a line of 12.50 is not the same fiscal statement as one of 12.5."
+    },
+    {
+      "id": "add-tenths-the-float-canary",
+      "op": "add",
+      "inputs": ["0.1", "0.2"],
+      "expect": ["0.3"],
+      "oracle": "Elementary arithmetic. In binary floating-point this is 0.30000000000000004; the case exists so that a regression to float64 fails here rather than in a tax return (Build Plan §8, High)."
+    },
+    {
+      "id": "sub-minor-units",
+      "op": "sub",
+      "inputs": ["100.00", "33.33"],
+      "expect": ["66.67"],
+      "oracle": "Elementary arithmetic."
+    },
+    {
+      "id": "sub-tenths",
+      "op": "sub",
+      "inputs": ["0.3", "0.1"],
+      "expect": ["0.2"],
+      "oracle": "Elementary arithmetic. 0.30000000000000004 - 0.1 in binary floating-point is 0.20000000000000004."
+    },
+    {
+      "id": "mul-exponents-add",
+      "op": "mul",
+      "inputs": ["12.34", "5"],
+      "expect": ["61.70"],
+      "oracle": "Specification: multiply has exponent(x) + exponent(y), so 1234E-2 x 5E0 is 6170E-2. The trailing zero is carried, not trimmed."
+    },
+    {
+      "id": "mul-tenths",
+      "op": "mul",
+      "inputs": ["0.1", "0.2"],
+      "expect": ["0.02"],
+      "oracle": "Elementary arithmetic; exponents -1 and -1 give -2."
+    },
+    {
+      "id": "mul-negative-base",
+      "op": "mul",
+      "inputs": ["-12.34", "0.5"],
+      "expect": ["-6.170"],
+      "oracle": "Elementary arithmetic. A credit line multiplies like the debit line it reverses; the exponent is -2 + -1 = -3."
+    },
+    {
+      "id": "add-differing-scales",
+      "op": "add",
+      "inputs": ["1.005", "2.1"],
+      "expect": ["3.105"],
+      "oracle": "Specification: the result takes the finer of the two exponents, so a sub-minor-unit intermediate is not silently rounded to the coarser operand's scale (ADR-0002 §2.5)."
+    },
+    {
+      "id": "add-at-the-precision-boundary",
+      "op": "add",
+      "inputs": ["9999999999999999999999999999999999", "0"],
+      "expect": ["9999999999999999999999999999999999"],
+      "oracle": "34 significant digits is exactly the decimal128 coefficient width (ADR-0002 §2.1 and §4.4). The largest value the context represents exactly must survive an exact operation."
+    },
+    {
+      "id": "mul-thirty-three-significant-digits",
+      "op": "mul",
+      "inputs": ["1.0000000000000001", "1.0000000000000001"],
+      "expect": ["1.00000000000000020000000000000001"],
+      "oracle": "(1 + 1E-16)^2 = 1 + 2E-16 + 1E-32, which is 33 significant digits and therefore exact at precision 34. One digit more of input and the Inexact trap fires — see errors/mul-inexact-at-precision-boundary."
+    }
+  ]
+}

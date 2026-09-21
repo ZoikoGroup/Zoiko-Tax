@@ -1,0 +1,206 @@
+{
+  "set": "rounding-modes",
+  "version": "1.0.0",
+  "description": "Mode-by-mode boundary behaviour at a tie, in both signs, for the closed enum of ADR-0002 §2.4. Basis does not change the arithmetic — it names the point at which content applies the policy — so the sets exercise all four values without expecting them to move a digit.",
+  "provenance": {
+    "oracle": "General Decimal Arithmetic Specification — quantize, and the rounding modes table",
+    "source": "https://speleotrove.com/decimal/decarith.html",
+    "reviewer": "lane-d",
+    "registered": "2026-09-21",
+    "contentVersion": "n/a — engine vectors, authored against the specification rather than against a content bundle"
+  },
+  "cases": [
+    {
+      "id": "half-up-positive-tie",
+      "op": "round",
+      "inputs": ["2.345"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "LINE"},
+      "expect": ["2.35"],
+      "oracle": "Specification, round-half-up: a discarded 5 rounds away from zero. This is the mode most VAT and sales-tax instruments mandate at the line."
+    },
+    {
+      "id": "half-even-positive-tie-keeps-even",
+      "op": "round",
+      "inputs": ["2.345"],
+      "policy": {"mode": "HALF_EVEN", "scale": 2, "basis": "LINE"},
+      "expect": ["2.34"],
+      "oracle": "Specification, round-half-even: the retained digit 4 is already even, so the tie resolves downward."
+    },
+    {
+      "id": "half-even-positive-tie-makes-even",
+      "op": "round",
+      "inputs": ["2.355"],
+      "policy": {"mode": "HALF_EVEN", "scale": 2, "basis": "LINE"},
+      "expect": ["2.36"],
+      "oracle": "Specification, round-half-even: the retained digit 5 is odd, so the same tie resolves upward. The pair with half-even-positive-tie-keeps-even is the whole difference between HALF_EVEN and HALF_UP."
+    },
+    {
+      "id": "half-down-positive-tie",
+      "op": "round",
+      "inputs": ["2.345"],
+      "policy": {"mode": "HALF_DOWN", "scale": 2, "basis": "LINE"},
+      "expect": ["2.34"],
+      "oracle": "Specification, round-half-down: a discarded 5 rounds toward zero."
+    },
+    {
+      "id": "down-positive-tie",
+      "op": "round",
+      "inputs": ["2.345"],
+      "policy": {"mode": "DOWN", "scale": 2, "basis": "LINE"},
+      "expect": ["2.34"],
+      "oracle": "Specification, round-down: truncation toward zero, ties irrelevant."
+    },
+    {
+      "id": "up-positive-tie",
+      "op": "round",
+      "inputs": ["2.345"],
+      "policy": {"mode": "UP", "scale": 2, "basis": "LINE"},
+      "expect": ["2.35"],
+      "oracle": "Specification, round-up: away from zero whenever any discarded digit is non-zero."
+    },
+    {
+      "id": "ceiling-positive-tie",
+      "op": "round",
+      "inputs": ["2.345"],
+      "policy": {"mode": "CEILING", "scale": 2, "basis": "LINE"},
+      "expect": ["2.35"],
+      "oracle": "Specification, round-ceiling: toward positive infinity. Indistinguishable from UP on a positive value, which is why the negative pair below is the case that matters."
+    },
+    {
+      "id": "floor-positive-tie",
+      "op": "round",
+      "inputs": ["2.345"],
+      "policy": {"mode": "FLOOR", "scale": 2, "basis": "LINE"},
+      "expect": ["2.34"],
+      "oracle": "Specification, round-floor: toward negative infinity."
+    },
+    {
+      "id": "half-up-negative-tie",
+      "op": "round",
+      "inputs": ["-2.345"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "LINE"},
+      "expect": ["-2.35"],
+      "oracle": "Specification, round-half-up: away from zero, symmetrically. This vector pins the symmetric reading of HALF_UP on credits and refunds; ADR-0002 §7.2 is open on whether any authority mandates the asymmetric form, and if one does it arrives as a new mode, not as a change here."
+    },
+    {
+      "id": "half-even-negative-tie",
+      "op": "round",
+      "inputs": ["-2.345"],
+      "policy": {"mode": "HALF_EVEN", "scale": 2, "basis": "TAX_COMPONENT"},
+      "expect": ["-2.34"],
+      "oracle": "Specification, round-half-even: sign-symmetric; the retained digit 4 is even."
+    },
+    {
+      "id": "half-down-negative-tie",
+      "op": "round",
+      "inputs": ["-2.345"],
+      "policy": {"mode": "HALF_DOWN", "scale": 2, "basis": "LINE"},
+      "expect": ["-2.34"],
+      "oracle": "Specification, round-half-down: toward zero, sign-symmetric."
+    },
+    {
+      "id": "down-negative",
+      "op": "round",
+      "inputs": ["-2.345"],
+      "policy": {"mode": "DOWN", "scale": 2, "basis": "LINE"},
+      "expect": ["-2.34"],
+      "oracle": "Specification, round-down: toward zero, so a negative value rounds up in magnitude terms and never past it."
+    },
+    {
+      "id": "up-negative",
+      "op": "round",
+      "inputs": ["-2.345"],
+      "policy": {"mode": "UP", "scale": 2, "basis": "LINE"},
+      "expect": ["-2.35"],
+      "oracle": "Specification, round-up: away from zero."
+    },
+    {
+      "id": "ceiling-negative",
+      "op": "round",
+      "inputs": ["-2.345"],
+      "policy": {"mode": "CEILING", "scale": 2, "basis": "DOCUMENT"},
+      "expect": ["-2.34"],
+      "oracle": "Specification, round-ceiling: toward positive infinity, which on a negative value means toward zero. The pair with up-negative is what separates CEILING from UP."
+    },
+    {
+      "id": "floor-negative",
+      "op": "round",
+      "inputs": ["-2.345"],
+      "policy": {"mode": "FLOOR", "scale": 2, "basis": "JURISDICTION_TOTAL"},
+      "expect": ["-2.35"],
+      "oracle": "Specification, round-floor: toward negative infinity, which on a negative value means away from zero."
+    },
+    {
+      "id": "half-up-one-point-zero-zero-five",
+      "op": "round",
+      "inputs": ["1.005"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "LINE"},
+      "expect": ["1.01"],
+      "oracle": "Elementary arithmetic. The case exists because 1.005 is not representable in binary floating-point — it is 1.00499999999999989... — so a float64 implementation returns 1.00 here while believing it rounded half-up."
+    },
+    {
+      "id": "half-even-eighth",
+      "op": "round",
+      "inputs": ["0.125"],
+      "policy": {"mode": "HALF_EVEN", "scale": 2, "basis": "LINE"},
+      "expect": ["0.12"],
+      "oracle": "Specification, round-half-even. 0.125 is exactly representable in binary too, so this case agrees under float64 — included so that the corpus is not composed solely of cases chosen to embarrass floats."
+    },
+    {
+      "id": "half-even-half-to-even-down",
+      "op": "round",
+      "inputs": ["2.5"],
+      "policy": {"mode": "HALF_EVEN", "scale": 0, "basis": "DOCUMENT"},
+      "expect": ["2"],
+      "oracle": "Specification, round-half-even at scale 0."
+    },
+    {
+      "id": "half-even-half-to-even-up",
+      "op": "round",
+      "inputs": ["3.5"],
+      "policy": {"mode": "HALF_EVEN", "scale": 0, "basis": "DOCUMENT"},
+      "expect": ["4"],
+      "oracle": "Specification, round-half-even at scale 0. With the previous case, the pair shows the statistical symmetry that makes HALF_EVEN the right default statistically and the wrong one legally (ADR-0002 §4.1)."
+    },
+    {
+      "id": "half-up-zero-minor-unit-currency",
+      "op": "round",
+      "inputs": ["108.5"],
+      "policy": {"mode": "HALF_UP", "scale": 0, "basis": "LINE"},
+      "expect": ["109"],
+      "oracle": "ISO 4217 gives JPY an exponent of 0, so a JPY line rounds at scale 0. Scale 0 is a legal scale and is why a decoded policy must distinguish an absent scale from a scale of zero (ADR-0002 §2.3)."
+    },
+    {
+      "id": "half-up-three-minor-unit-currency",
+      "op": "round",
+      "inputs": ["1.23456"],
+      "policy": {"mode": "HALF_UP", "scale": 3, "basis": "LINE"},
+      "expect": ["1.235"],
+      "oracle": "ISO 4217 gives KWD and BHD an exponent of 3. ADR-0002 §7.1 keeps the exponent table itself on the CONTENT train; the engine only has to honour the scale it is given."
+    },
+    {
+      "id": "round-is-idempotent",
+      "op": "round",
+      "inputs": ["2.35"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "LINE"},
+      "expect": ["2.35"],
+      "oracle": "Rounding an already-rounded value at the same scale changes nothing. Asserted here as a vector and over generated inputs as a property test, because a materialisation step that is not idempotent makes the number of times a value passes through the boundary fiscally significant."
+    },
+    {
+      "id": "round-raises-scale",
+      "op": "round",
+      "inputs": ["7.5"],
+      "policy": {"mode": "HALF_UP", "scale": 4, "basis": "LINE"},
+      "expect": ["7.5000"],
+      "oracle": "Specification, quantize: quantizing to a finer exponent than the operand's pads with zeros and never loses a digit. A tax component carried at scale 4 states its scale."
+    },
+    {
+      "id": "half-up-negative-below-half-a-minor-unit",
+      "op": "round",
+      "inputs": ["-0.004"],
+      "policy": {"mode": "HALF_UP", "scale": 2, "basis": "LINE"},
+      "expect": ["-0.00"],
+      "oracle": "Specification: the sign of a zero result is the sign of the operand. A negative zero is a real value in this arithmetic and reaches evidence as \"-0.00\", so the corpus states what both engines must render rather than leaving the first occurrence to a production credit note."
+    }
+  ]
+}
