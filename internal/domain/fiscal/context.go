@@ -67,7 +67,7 @@ func Quo(dst, x, y *apd.Decimal, p RoundingPolicy) error {
 		Precision:   Precision,
 		MaxExponent: apd.MaxExponent,
 		MinExponent: apd.MinExponent,
-		Rounding:    p.Mode.rounder(),
+		Rounding:    p.mode.rounder(),
 	}
 	if _, err := divCtx.Quo(dst, x, y); err != nil {
 		return wrap("quo", err)
@@ -99,10 +99,10 @@ func ApplyPolicy(dst, x *apd.Decimal, p RoundingPolicy) error {
 		Precision:   Precision,
 		MaxExponent: apd.MaxExponent,
 		MinExponent: apd.MinExponent,
-		Rounding:    p.Mode.rounder(),
+		Rounding:    p.mode.rounder(),
 	}
 	// Quantize to exponent -Scale: scale 2 means an exponent of -2.
-	if _, err := roundCtx.Quantize(dst, x, -p.Scale); err != nil {
+	if _, err := roundCtx.Quantize(dst, x, -p.scale); err != nil {
 		return wrap("quantize", err)
 	}
 	return nil
