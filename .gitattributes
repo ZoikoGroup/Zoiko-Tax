@@ -1,3 +1,11 @@
+# Text is LF in the repository and LF in the working copy, on every platform.
+#
+# Without this, a Windows checkout converts Go sources to CRLF, gofmt reports
+# every file as unformatted, and `make lint` fails locally while the same
+# commit is green in CI. A gate that means different things on different
+# machines is not a gate.
+* text=auto eol=lf
+
 # Line endings are content here, not formatting.
 #
 # The golden vector sets carry a registered sha256 over their exact bytes
