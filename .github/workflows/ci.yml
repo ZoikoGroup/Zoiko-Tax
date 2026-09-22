@@ -11,10 +11,20 @@
 # whatever a third party pushes to v7 this week.
 name: CI
 
+# intelligence/ is excluded because it has its own pipeline
+# (.github/workflows/intelligence.yml). ADR-0007 §2.2 requires per-path
+# pipelines as the compensating control for implementing eight repository
+# classes as directories, and ADR-0006 §2.4 puts the AI train on its own
+# cadence. A shared trigger would mean every Python commit ran the Go suite,
+# which is one pipeline with two languages in it rather than two trains.
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'intelligence/**'
   pull_request:
+    paths-ignore:
+      - 'intelligence/**'
   workflow_dispatch:
 
 permissions:
@@ -46,15 +56,23 @@ jobs:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
 
+      # vendor/ is excluded because it is upstream's code, not ours. ADR-0001
+      # §9.2 is explicit that the vendored tree is never patched in place, so
+      # reformatting it would be exactly the local modification the vendor-verify
+      # job exists to detect.
       - name: gofmt
         run: |
-          unformatted="$(gofmt -l .)"
+          unformatted="$(gofmt -l . | grep -v '^vendor/' || true)"
           if [ -n "$unformatted" ]; then
             echo "::error::not gofmt-clean:"; echo "$unformatted"; exit 1
           fi
 
       - run: go vet ./...
       - run: go build ./...
+
+      # ADR-0001 control 6: the build reads vendor/, so this asserts the
+      # vendored tree is complete rather than merely present.
+      - run: go build -mod=vendor ./...
 
       # The module graph is part of the release evidence manifest (ADR-0001
       # control 3). A go.mod or go.sum that `go mod tidy` would change means the
@@ -123,8 +141,69 @@ jobs:
       - name: go test -race
         run: make test
 
-      # Tier 3 (testcontainers against real PostgreSQL) joins this job when
-      # persistence lands — ADR-0018 §2.4, ADR-0008 §5.1 c1.
+  # Tier 3 — ADR-0018 §2.4, and the job that discharges ADR-0001 control 2.
+  #
+  # It runs against a real PostgreSQL because the claim under test is about a
+  # driver's behaviour: that NUMERIC binds to apd.Decimal exactly and that no
+  # path narrows one to float64. A mock of the driver would be a mock of the
+  # thing being asserted.
+  integration:
+    name: backend · tier 3 — NUMERIC conformance against real PostgreSQL (ADR-0001 c2)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_DB: ztax
+          POSTGRES_USER: ztax_app
+          POSTGRES_PASSWORD: ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ztax_app -d ztax"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      ZTAX_ENVIRONMENT: development
+      ZTAX_MIGRATE_DATABASE_URL: postgres://ztax_app:ci-only@localhost:5432/ztax?sslmode=disable&search_path=ztax,public
+      ZTAX_TEST_DATABASE_URL: postgres://ztax_app:ci-only@localhost:5432/ztax?sslmode=disable&search_path=ztax,public
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      # The schema is applied by the real migration runner, so this job also
+      # asserts that the migrations apply cleanly from nothing on every commit.
+      - name: apply migrations
+        run: make migrate
+
+      - name: NUMERIC conformance and repository tests
+        run: make test-integration
+
+  vendor:
+    name: backend · apd vendored and unpatched (ADR-0001 c6)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      # ADR-0001 §9.2: vendoring is deliberately not a fork. The vendored tree is
+      # upstream's code, updated by upgrading upstream, never patched in place —
+      # a local patch would silently break the General Decimal Arithmetic
+      # Specification anchor that ADR-0001 §3.1 rests on. This is the check that
+      # detects one.
+      - name: vendor/ is current and unpatched
+        run: make vendor-verify
 
   crosscheck:
     name: backend · decimal agreement, Go ↔ Python (ADR-0002 c2)
@@ -186,6 +265,8 @@ jobs:
         include:
           - service: ztax-core
             context: backend
+          - service: ztax-migrate
+            context: backend
           - service: ztax-web
             context: frontend
     steps:
@@ -228,6 +309,20 @@ jobs:
       - name: the client reaches the cell through its own origin
         run: curl --fail --silent --show-error --max-time 10 http://localhost:3000/api/healthz
 
+      # The administration surface, end to end through the browser origin. It
+      # asserts the two properties that are cheapest to break and most expensive
+      # to discover late: that a session cookie survives the proxy, and that an
+      # unauthenticated request is refused rather than served.
+      - name: the cell refuses an unauthenticated administrative request
+        run: |
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}'             --max-time 10 http://localhost:3000/api/v1/admin/users)"
+          test "$status" = "401" || (echo "::error::expected 401, got $status"; exit 1)
+
+      - name: a bootstrapped administrator can sign in and read the tenant
+        run: |
+          curl --fail --silent --show-error --max-time 10             --cookie-jar /tmp/ztax-cookies.txt             --header 'Content-Type: application/json'             --data '{"tenant":"acme","email":"admin@acme.example","password":"local-dev-only-password"}'             http://localhost:3000/api/v1/auth/sign-in > /dev/null
+          curl --fail --silent --show-error --max-time 10             --cookie /tmp/ztax-cookies.txt             http://localhost:3000/api/v1/admin/users | grep -q 'admin@acme.example' 
+
       - name: logs on failure
         if: failure()
         run: docker compose logs --no-color
@@ -239,7 +334,7 @@ jobs:
   ci:
     name: all gates green
     runs-on: ubuntu-latest
-    needs: [build, lint, analyzer, test, crosscheck, frontend, images, stack]
+    needs: [build, lint, analyzer, test, integration, vendor, crosscheck, frontend, images, stack]
     if: always()
     steps:
       # One check to require on the branch, so that adding a gate above does

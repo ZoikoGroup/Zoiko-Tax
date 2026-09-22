@@ -1,0 +1,64 @@
+# Approval authority, by path.
+#
+# ADR-0007 §2.2 is the reason this file exists and the reason it is the first
+# thing to get right. The W0 lane B mandate asks for eight repository classes;
+# ADR-0007 implements them as directories in one repository, and §5.3 registers
+# that as a deviation whose **compensating control is exactly this file** plus
+# per-path pipelines and branch protection.
+#
+# So a path with no owner here is a path where the deviation is not compensated.
+# That is the failure mode to watch for, and it is invisible: nothing breaks, a
+# change merges with the wrong approver, and nobody finds out.
+#
+# Self-approval is prohibited wherever the governance model requires independent
+# control. That is enforced by branch protection, not by this file — CODEOWNERS
+# says who may approve, branch protection says that someone must.
+#
+# Teams are placeholders until the GitHub org has them. Replace with real teams
+# before this is load-bearing; an unresolvable owner silently approves nothing
+# and GitHub will not warn.
+
+# Default: the platform lane sees anything not claimed below.
+*                               @ZoikoGroup/lane-b-platform
+
+# ---------------------------------------------------------------------------
+# Application class — trains APP and ADAPTER
+# ---------------------------------------------------------------------------
+/backend/                       @ZoikoGroup/lane-d-domain
+/frontend/                      @ZoikoGroup/lane-n-experience
+
+# The fiscal kernel and the decimal runtime. Narrower than /backend/ on purpose:
+# a change here can alter every tax figure the estate has ever produced, and
+# ADR-0002 §5.2 names vector maintenance as content's responsibility as well as
+# engineering's.
+/backend/internal/domain/fiscal/ @ZoikoGroup/lane-d-domain @ZoikoGroup/lane-a-governance
+/backend/testdata/golden/        @ZoikoGroup/lane-a-governance
+/backend/migrations/             @ZoikoGroup/lane-d-domain @ZoikoGroup/lane-b-platform
+
+# ---------------------------------------------------------------------------
+# Intelligence Fabric — train AI
+# ---------------------------------------------------------------------------
+# A separate approver set from APP, which is the whole point of the AI train
+# shipping on its own cadence (ADR-0006 §2.4, ADR-0007 §2.7). Lane C is named
+# alongside lane L because the Gateway is an authorization component: a change
+# to who may call a model is a security change, not a model change.
+/intelligence/                              @ZoikoGroup/lane-l-intelligence
+/intelligence/src/ztax_gateway/governance.py @ZoikoGroup/lane-l-intelligence @ZoikoGroup/lane-c-security
+
+# The Go-side landing zone for AI outputs. ADR-0006 §2.6 forbids any conversion
+# path from these types to fiscal ones, and that prohibition is easiest to erode
+# by a well-meaning refactor — so it gets two approvers.
+/backend/internal/domain/ai/    @ZoikoGroup/lane-l-intelligence @ZoikoGroup/lane-d-domain
+
+# ---------------------------------------------------------------------------
+# Governance
+# ---------------------------------------------------------------------------
+# ADRs and specifications are the record of why the estate is shaped as it is.
+# A change to one is a change to a decision, not to code.
+/adr/                           @ZoikoGroup/lane-a-governance
+/docs/specs/                    @ZoikoGroup/lane-a-governance @ZoikoGroup/lane-h-determination
+
+# CI is where every control above is actually enforced. A change that weakens a
+# gate looks like a change to a YAML file.
+/.github/                       @ZoikoGroup/lane-b-platform @ZoikoGroup/lane-a-governance
+/.github/CODEOWNERS             @ZoikoGroup/lane-a-governance
