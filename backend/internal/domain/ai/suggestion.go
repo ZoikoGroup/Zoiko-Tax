@@ -13,6 +13,10 @@ import (
 // The only legal path from an AiSuggestion to an authoritative record is a
 // human reviewer reading this suggestion and constructing the fiscal record
 // themselves, recording their own identity as the author of that decision.
+//
+// rather than shortened to Suggestion, per project-owner decision (2026-09-22).
+//
+//nolint:revive // ADR-0006 §2.6 names this type explicitly. Kept verbatim
 type AiSuggestion struct {
 	id AiSuggestionID
 

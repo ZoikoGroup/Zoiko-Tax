@@ -17,6 +17,10 @@ import "fmt"
 // does not recognise (ADR-0006 §2.5), so this is deliberately an open string
 // type rather than a closed enum here — the registry of valid values lives
 // with the Gateway, not with this package.
+//
+// rather than shortened to UseCase, per project-owner decision (2026-09-22).
+//
+//nolint:revive // ADR-0006 §2.6 names this type explicitly. Kept verbatim
 type AiUseCase string
 
 // RiskTier is the T0-T4 risk classification carried on every call across the
@@ -110,6 +114,11 @@ func (p Provenance) validate() error {
 // The underlying value is an opaque string produced by
 // internal/platform/idgen (ADR-0012 §2.3) once that package exists. This
 // type does not generate its own identifiers.
+//
+// kept verbatim on the corresponding ID type for consistency, per
+// project-owner decision (2026-09-22).
+//
+//nolint:revive // ADR-0006 §2.6 names the record types with the Ai prefix;
 type AiSuggestionID struct{ v string }
 
 // NewAiSuggestionID wraps an already-generated identifier.
@@ -125,6 +134,8 @@ func (id AiSuggestionID) String() string { return id.v }
 
 // AiExtractionID identifies an AiExtraction. See AiSuggestionID for the
 // wrapping rationale.
+//
+//nolint:revive // ADR-0006 §2.6 naming, see AiSuggestionID above.
 type AiExtractionID struct{ v string }
 
 // NewAiExtractionID wraps an already-generated identifier.
@@ -140,6 +151,8 @@ func (id AiExtractionID) String() string { return id.v }
 
 // AiClassificationProposalID identifies an AiClassificationProposal. See
 // AiSuggestionID for the wrapping rationale.
+//
+//nolint:revive // ADR-0006 §2.6 naming, see AiSuggestionID above.
 type AiClassificationProposalID struct{ v string }
 
 // NewAiClassificationProposalID wraps an already-generated identifier.

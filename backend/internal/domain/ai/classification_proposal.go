@@ -5,6 +5,11 @@ import "fmt"
 // AiClassificationProposal is a proposed classification from the AI plane —
 // the advisory counterpart to a fiscal ClassificationDecision. ADR-0006
 // §2.6: nothing in this package converts one into the other.
+//
+// rather than shortened to ClassificationProposal, per project-owner
+// decision (2026-09-22).
+//
+//nolint:revive // ADR-0006 §2.6 names this type explicitly. Kept verbatim
 type AiClassificationProposal struct {
 	id AiClassificationProposalID
 

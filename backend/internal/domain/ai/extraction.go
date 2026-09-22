@@ -6,6 +6,10 @@ import "fmt"
 // document (e.g. a filed return, an invoice, a customer-supplied file).
 // It is advisory, per ADR-0006 §2.6 — nothing in this package turns an
 // AiExtraction into a fiscal record.
+//
+// rather than shortened to Extraction, per project-owner decision (2026-09-22).
+//
+//nolint:revive // ADR-0006 §2.6 names this type explicitly. Kept verbatim
 type AiExtraction struct {
 	id AiExtractionID
 
