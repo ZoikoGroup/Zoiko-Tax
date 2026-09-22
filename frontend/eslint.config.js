@@ -71,11 +71,22 @@ export default tseslint.config(
   {
     // C4 — the API client is the generated TypeScript SDK; hand-written calls
     // against ZoikoTax endpoints drift from the contract and bypass the error
-    // taxonomy (ADR-0016 §2.9). The SDK opens in W2 lane K. Until then the only
-    // permitted caller is the platform health module, and the exception is
-    // pinned to that one file so it cannot widen into a habit.
+    // taxonomy (ADR-0016 §2.9). The SDK opens in W2 lane K.
+    //
+    // Two files are excepted, each pinned by name rather than by directory so
+    // the exception cannot widen into a habit:
+    //
+    //   platform/health.ts  the operational probes, which are not part of the
+    //                       fiscal contract and are not in any SDK.
+    //   platform/api.ts     the administration and session surface. Also not
+    //                       the fiscal contract: no endpoint it calls carries a
+    //                       fiscal amount, and its types cannot express one. It
+    //                       is replaced by generated code when lane K lands.
+    //
+    // What remains prohibited is the thing C4 is actually about: a fetch against
+    // a determination, transaction, obligation or decision endpoint, anywhere.
     files: ['src/**/*.{ts,tsx}'],
-    ignores: ['src/platform/health.ts'],
+    ignores: ['src/platform/health.ts', 'src/platform/api.ts'],
     rules: {
       'no-restricted-properties': [
         'error',

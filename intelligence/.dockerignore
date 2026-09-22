@@ -1,0 +1,18 @@
+# The build context is the source, not what previous runs left behind.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.venv/
+venv/
+
+# Never in an image.
+.env
+.env.*
+*.log
+
+.git/
+.gitignore
+README.md

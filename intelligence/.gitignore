@@ -1,0 +1,16 @@
+# Build and tool output. None of it belongs in version control, and .pyc files
+# in particular are interpreter- and version-stamped (cpython-312), so they
+# churn on every commit from anyone on a different patch release.
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+.venv/
+venv/
