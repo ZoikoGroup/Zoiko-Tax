@@ -1,10 +1,15 @@
 # The AI train's pipeline.
 #
-# A separate workflow rather than another job in ci.yml, and that is the point
-# rather than a filing convenience. ADR-0007 §2.2 requires per-path pipelines as
-# the compensating control for implementing eight repository classes as
-# directories; ADR-0001 §2.2 and ADR-0006 §2.4 put the Intelligence Fabric on
-# its own release train with its own cadence and its own approver.
+# One job. An earlier version had three — the two real ones plus an aggregate
+# gate over them — and an aggregate over a single job is a runner that exists to
+# report the result of another runner. Branch protection requires `intelligence`
+# directly.
+#
+# A separate *workflow* rather than another job in ci.yml is the part that is
+# not consolidation: ADR-0007 §2.2 requires per-path pipelines as the
+# compensating control for implementing eight repository classes as directories,
+# and ADR-0001 §2.2 and ADR-0006 §2.4 put the Intelligence Fabric on its own
+# release train with its own cadence and its own approver.
 #
 # A shared workflow would defeat both. Every backend commit would run the Python
 # suite and every Python commit would run the Go suite, which is not independent
@@ -38,57 +43,28 @@ concurrency:
 env:
   PYTHON_VERSION: "3.12"
   # ADR-0007 §2.7: a directory belongs to exactly one train, and each pipeline
-  # stamps its train identifier and version into the build. These travel into
-  # telemetry (ADR-0015 §2.6) and into every evidence record influenced by an
-  # AI-assisted step (ADR-0006 §2.7) — including records where the AI
-  # contribution was a rejected suggestion.
+  # stamps its train identifier into the build. It travels into telemetry
+  # (ADR-0015 §2.6) and into every evidence record influenced by an AI-assisted
+  # step (ADR-0006 §2.7) — including records where the AI contribution was a
+  # rejected suggestion, since "we considered and rejected" is itself auditable.
   ZTAX_TRAIN: AI
 
 jobs:
-  gateway:
-    name: intelligence · governance, types, decimal boundary
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: intelligence
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: install
-        run: pip install -e '.[dev]'
-
-      # ADR-0006 §2.5's refusals: unknown use case, A5 regardless of what any
-      # model or tool prompt says, and the per-use-case kill switch. These are
-      # authorization tests, not unit tests — a regression here means a call
-      # that should have been refused was not.
-      - name: governance refusals and decimal boundary
-        run: python -m pytest
-
-      - name: lint
-        run: python -m ruff check .
-
-      # strict, and nothing waived. The Gateway decides whether a call may
-      # proceed, so a type error here is an authorization bug.
-      - name: types
-        run: python -m mypy src tests
-
-  boundary:
-    name: intelligence · no fiscal type crosses the boundary (ADR-0006 §2.6)
+  intelligence:
+    name: intelligence · governance, boundary, types
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # --- the boundary greps, before anything is installed -------------------
+      #
+      # First because they need no toolchain and they assert the property that
+      # matters most: the Gateway routes and authorises, it does not compute.
 
       # ADR-0006 §2.6: there is no function anywhere that converts an ai type
       # into a fiscal type, and depguard enforces the Go half. This is the
       # Python half, and it is a grep rather than a type check because the
       # violation would arrive as a new import, not as a new signature.
-      #
-      # The Gateway has no business importing anything fiscal: it routes and
-      # authorises, it does not compute. A fiscal import here is the first step
-      # of it starting to.
       - name: the gateway imports nothing fiscal
         run: |
           if grep -rEn '^\s*(from|import)\s+.*(fiscal|tax_decision|subledger)' intelligence/src; then
@@ -115,17 +91,30 @@ jobs:
           fi
           echo "clean"
 
-  ai:
-    name: AI train green
-    runs-on: ubuntu-latest
-    needs: [gateway, boundary]
-    if: always()
-    steps:
-      # One check to require on the branch, so adding a gate above does not mean
-      # editing branch protection and forgetting to.
-      - name: verify every gate passed
-        run: |
-          echo "${{ toJSON(needs) }}"
-          if echo "${{ toJSON(needs) }}" | grep -q '"result": *"\(failure\|cancelled\)"'; then
-            echo "::error::a gate did not pass"; exit 1
-          fi
+      # --- the suite ----------------------------------------------------------
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: install
+        working-directory: intelligence
+        run: pip install -e '.[dev]'
+
+      # ADR-0006 §2.5's refusals: unknown use case, A5 regardless of what any
+      # model or tool prompt says, and the per-use-case kill switch. These are
+      # authorization tests, not unit tests — a regression here means a call
+      # that should have been refused was not.
+      - name: governance refusals and decimal boundary
+        working-directory: intelligence
+        run: python -m pytest
+
+      - name: lint
+        working-directory: intelligence
+        run: python -m ruff check .
+
+      # strict, and nothing waived. The Gateway decides whether a call may
+      # proceed, so a type error here is an authorization bug.
+      - name: types
+        working-directory: intelligence
+        run: python -m mypy src tests

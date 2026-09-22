@@ -1,22 +1,30 @@
-# Every gate in `backend/make check` and the frontend's own, run on push and on
-# every pull request. ADR-0018 §2.1 makes tiers 1 and 2 gates on every commit,
-# and ADR-0002 §5.1 control 2 requires the cross-language vector check to be a
-# CI blocker rather than a thing somebody remembers to run.
+# Every gate in `backend/make check`, plus the frontend's own and the stack.
 #
-# One job per control, named after the control. A red run should say which
-# guarantee broke, not that "CI failed".
+# Four real jobs, and the split is by *toolchain*, not by control. An earlier
+# version had eleven, six of which each paid a fresh checkout and Go setup to
+# run one command — so most of the wall-clock was spent installing Go, and a
+# contributor waiting on CI was mostly waiting on that.
 #
-# Actions are pinned to commit SHAs. A tag is a moving pointer, and an estate
-# that vendors its decimal library (ADR-0001 control 6) does not then execute
-# whatever a third party pushes to v7 this week.
+# Consolidating costs one thing and it is worth naming: a job stops at its first
+# failing step, so a gofmt failure now hides whether the tests would have
+# passed. GitHub names the failing step, so you still know *which* control
+# broke — you just learn about one per run instead of all of them. The steps are
+# ordered cheapest-first so the common failures surface in seconds.
+#
+# What is deliberately still separate:
+#
+#   crosscheck   has no Go toolchain, and that absence IS the assertion
+#                (ADR-0002 c2). Merging it into `backend` would destroy the
+#                property it exists to demonstrate.
+#   frontend     Node, not Go.
+#   stack        builds every image through compose and asserts they answer
+#                together — the thing no single-service job can.
+#
+# intelligence/ has its own workflow entirely (ADR-0006 §2.4, ADR-0007 §2.2):
+# the AI train ships on its own cadence, so it gets its own pipeline rather
+# than another job here.
 name: CI
 
-# intelligence/ is excluded because it has its own pipeline
-# (.github/workflows/intelligence.yml). ADR-0007 §2.2 requires per-path
-# pipelines as the compensating control for implementing eight repository
-# classes as directories, and ADR-0006 §2.4 puts the AI train on its own
-# cadence. A shared trigger would mean every Python commit ran the Go suite,
-# which is one pipeline with two languages in it rather than two trains.
 on:
   push:
     branches: [main]
@@ -43,116 +51,16 @@ env:
   NODE_VERSION: "22"
 
 jobs:
-  build:
-    name: backend · build · format · vet
+  backend:
+    name: backend · every Go gate, tiers 1 to 3
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
 
-      # vendor/ is excluded because it is upstream's code, not ours. ADR-0001
-      # §9.2 is explicit that the vendored tree is never patched in place, so
-      # reformatting it would be exactly the local modification the vendor-verify
-      # job exists to detect.
-      - name: gofmt
-        run: |
-          unformatted="$(gofmt -l . | grep -v '^vendor/' || true)"
-          if [ -n "$unformatted" ]; then
-            echo "::error::not gofmt-clean:"; echo "$unformatted"; exit 1
-          fi
-
-      - run: go vet ./...
-      - run: go build ./...
-
-      # ADR-0001 control 6: the build reads vendor/, so this asserts the
-      # vendored tree is complete rather than merely present.
-      - run: go build -mod=vendor ./...
-
-      # The module graph is part of the release evidence manifest (ADR-0001
-      # control 3). A go.mod or go.sum that `go mod tidy` would change means the
-      # manifest names a graph the build did not use.
-      - name: go.mod and go.sum are tidy
-        run: |
-          go mod tidy
-          git diff --exit-code -- go.mod go.sum
-
-  lint:
-    name: backend · architectural controls (depguard, forbidigo)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
-
-      # ADR-0007 §2.5 layering, ADR-0006 §2.6 (fiscal may not import ai),
-      # ADR-0005 §2.4 (the evaluator cannot reach a clock or a network),
-      # ADR-0002 §2.3 (production code may not import internal/fiscaltest).
-      # A layering diagram nobody can violate is worth more than one everyone
-      # has seen.
-      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
-        with:
-          version: ${{ env.GOLANGCI_LINT_VERSION }}
-          working-directory: backend
-
-  analyzer:
-    name: backend · float64 unreachable from a fiscal value (ADR-0001 c1)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
-
-      # The analyzer's own suite runs first. A gate nobody has tested is a
-      # gate nobody should trust.
-      - name: analyzer suite
-        run: make fiscalfloat-test
-
-      - name: analyzer over the module
-        run: make fiscalfloat
-
-  test:
-    name: backend · tier 1 and 2 — unit, property, golden vectors
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
-
-      # -race because ADR-0018 §2.2 asserts determinism across concurrent
-      # goroutines, and -count=1 because a cached PASS is not a result.
-      - name: go test -race
-        run: make test
-
-  # Tier 3 — ADR-0018 §2.4, and the job that discharges ADR-0001 control 2.
-  #
-  # It runs against a real PostgreSQL because the claim under test is about a
-  # driver's behaviour: that NUMERIC binds to apd.Decimal exactly and that no
-  # path narrows one to float64. A mock of the driver would be a mock of the
-  # thing being asserted.
-  integration:
-    name: backend · tier 3 — NUMERIC conformance against real PostgreSQL (ADR-0001 c2)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
+    # Attached to the whole job so tier 3 can run here rather than in a job of
+    # its own. It costs a container the unit tests do not use; it saves a
+    # checkout and a Go install.
     services:
       postgres:
         image: postgis/postgis:17-3.5
@@ -165,10 +73,12 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U ztax_app -d ztax"
           --health-interval 5s --health-timeout 5s --health-retries 20
+
     env:
       ZTAX_ENVIRONMENT: development
       ZTAX_MIGRATE_DATABASE_URL: postgres://ztax_app:ci-only@localhost:5432/ztax?sslmode=disable&search_path=ztax,public
       ZTAX_TEST_DATABASE_URL: postgres://ztax_app:ci-only@localhost:5432/ztax?sslmode=disable&search_path=ztax,public
+
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
@@ -176,34 +86,76 @@ jobs:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
 
-      # The schema is applied by the real migration runner, so this job also
-      # asserts that the migrations apply cleanly from nothing on every commit.
+      # --- seconds, and the most common failures ------------------------------
+
+      # vendor/ is excluded because it is upstream's code. ADR-0001 §9.2 is
+      # explicit that the vendored tree is never patched in place, so
+      # reformatting it would be the local modification vendor-verify detects.
+      - name: gofmt
+        run: make fmt-check
+
+      - name: vet
+        run: go vet ./...
+
+      - name: build
+        run: go build ./...
+
+      # ADR-0001 control 6: the build reads vendor/, so this asserts the
+      # vendored tree is complete rather than merely present.
+      - name: build from vendor/
+        run: go build -mod=vendor ./...
+
+      # The module graph is part of the release evidence manifest (ADR-0001
+      # control 3). A go.mod or go.sum that `go mod tidy` would change means the
+      # manifest names a graph the build did not use.
+      - name: go.mod and go.sum are tidy
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+      # ADR-0001 §9.2: vendoring is deliberately not a fork. A local patch would
+      # silently break the General Decimal Arithmetic Specification anchor that
+      # ADR-0001 §3.1 rests on, and this is what detects one.
+      - name: apd vendored and unpatched (ADR-0001 c6)
+        run: make vendor-verify
+
+      # --- the architectural controls -----------------------------------------
+
+      # The analyzer's own suite runs first. A gate nobody has tested is a gate
+      # nobody should trust.
+      - name: float64 analyzer — its own suite (ADR-0001 c1)
+        run: make fiscalfloat-test
+
+      - name: float64 unreachable from a fiscal value (ADR-0001 c1)
+        run: make fiscalfloat
+
+      # ADR-0007 §2.5 layering, ADR-0006 §2.6 (fiscal may not import ai),
+      # ADR-0005 §2.4 (the evaluator cannot reach a clock or a network),
+      # ADR-0002 §2.3 (production code may not import internal/fiscaltest).
+      # A layering diagram nobody can violate is worth more than one everyone
+      # has seen.
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          working-directory: backend
+
+      # --- the tests ----------------------------------------------------------
+
+      # -race because ADR-0018 §2.2 asserts determinism across concurrent
+      # goroutines, and -count=1 because a cached PASS is not a result.
+      - name: tier 1 and 2 — unit, property, golden vectors
+        run: make test
+
+      # Applied by the real migration runner, so this also asserts the
+      # migrations apply cleanly from nothing on every commit.
       - name: apply migrations
         run: make migrate
 
-      - name: NUMERIC conformance and repository tests
+      # ADR-0018 §2.4 and ADR-0001 control 2. Against a real PostgreSQL because
+      # the claim is about a driver's behaviour, and a mock of the driver would
+      # be a mock of the thing under test.
+      - name: tier 3 — NUMERIC conformance (ADR-0001 c2)
         run: make test-integration
-
-  vendor:
-    name: backend · apd vendored and unpatched (ADR-0001 c6)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
-
-      # ADR-0001 §9.2: vendoring is deliberately not a fork. The vendored tree is
-      # upstream's code, updated by upgrading upstream, never patched in place —
-      # a local patch would silently break the General Decimal Arithmetic
-      # Specification anchor that ADR-0001 §3.1 rests on. This is the check that
-      # detects one.
-      - name: vendor/ is current and unpatched
-        run: make vendor-verify
 
   crosscheck:
     name: backend · decimal agreement, Go ↔ Python (ADR-0002 c2)
@@ -217,12 +169,13 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # Deliberately no Go toolchain in this job. The point of the check is
-      # that a second implementation of the General Decimal Arithmetic
-      # Specification, reading nothing but the vectors, reaches the same
-      # answers — which is what makes ADR-0001 §3.1's cross-language claim
-      # testable rather than aspirational. The script uses the standard library
-      # only, so there is nothing to install.
+      # Deliberately no Go toolchain in this job, and that is why it is not
+      # folded into `backend`. The point of the check is that a second
+      # implementation of the General Decimal Arithmetic Specification, reading
+      # nothing but the vectors, reaches the same answers — which is what makes
+      # ADR-0001 §3.1's cross-language claim testable rather than aspirational.
+      # A job with Go installed could not demonstrate that. The script uses the
+      # standard library only, so there is nothing to install.
       - name: golden vectors under Python decimal
         run: make golden-crosscheck
 
@@ -245,8 +198,9 @@ jobs:
       - run: npm ci
 
       # ADR-0019's binding constraints as rules: no fiscal arithmetic in the
-      # browser (C1), no hand-written API calls outside the health module (C4),
-      # no browser storage (C8), accessibility from the first screen (C6).
+      # browser (C1), no hand-written API calls outside the two pinned platform
+      # modules (C4), no browser storage (C8), accessibility from the first
+      # screen (C6).
       - name: constraints
         run: npm run lint
 
@@ -256,43 +210,17 @@ jobs:
       - name: bundle
         run: npm run build
 
-  images:
-    name: images build reproducibly
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - service: ztax-core
-            context: backend
-          - service: ztax-migrate
-            context: backend
-          - service: ztax-web
-            context: frontend
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
-
-      # Built, never pushed here: publishing is the release workflow's job and
-      # happens on a tag. This gate exists so a change that breaks an image
-      # fails on the pull request rather than at release.
-      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
-        with:
-          context: ${{ matrix.context }}
-          target: ${{ matrix.service }}
-          push: false
-          cache-from: type=gha,scope=${{ matrix.service }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
-
   stack:
-    name: the stack starts
+    name: the stack starts and answers
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      # Each service builds and passes its own gates above. This asserts the
-      # thing none of them can: that the three of them come up together and
-      # answer, which is what a developer runs on the first morning.
+      # This also replaces the separate image-build matrix: compose builds
+      # ztax-core, ztax-migrate and ztax-web from their own Dockerfiles, so a
+      # change that breaks an image fails here. A matrix that built the same
+      # images and then threw them away was three more runners asserting less —
+      # it proved they compile, this proves they run.
       - name: docker compose up
         run: docker compose up --build --detach --wait --wait-timeout 180
 
@@ -309,19 +237,25 @@ jobs:
       - name: the client reaches the cell through its own origin
         run: curl --fail --silent --show-error --max-time 10 http://localhost:3000/api/healthz
 
-      # The administration surface, end to end through the browser origin. It
-      # asserts the two properties that are cheapest to break and most expensive
-      # to discover late: that a session cookie survives the proxy, and that an
+      # The two properties cheapest to break and most expensive to discover
+      # late: that a session cookie survives the proxy, and that an
       # unauthenticated request is refused rather than served.
       - name: the cell refuses an unauthenticated administrative request
         run: |
-          status="$(curl --silent --output /dev/null --write-out '%{http_code}'             --max-time 10 http://localhost:3000/api/v1/admin/users)"
+          status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --max-time 10 http://localhost:3000/api/v1/admin/users)"
           test "$status" = "401" || (echo "::error::expected 401, got $status"; exit 1)
 
       - name: a bootstrapped administrator can sign in and read the tenant
         run: |
-          curl --fail --silent --show-error --max-time 10             --cookie-jar /tmp/ztax-cookies.txt             --header 'Content-Type: application/json'             --data '{"tenant":"acme","email":"admin@acme.example","password":"local-dev-only-password"}'             http://localhost:3000/api/v1/auth/sign-in > /dev/null
-          curl --fail --silent --show-error --max-time 10             --cookie /tmp/ztax-cookies.txt             http://localhost:3000/api/v1/admin/users | grep -q 'admin@acme.example' 
+          curl --fail --silent --show-error --max-time 10 \
+            --cookie-jar /tmp/ztax-cookies.txt \
+            --header 'Content-Type: application/json' \
+            --data '{"tenant":"acme","email":"admin@acme.example","password":"local-dev-only-password"}' \
+            http://localhost:3000/api/v1/auth/sign-in > /dev/null
+          curl --fail --silent --show-error --max-time 10 \
+            --cookie /tmp/ztax-cookies.txt \
+            http://localhost:3000/api/v1/admin/users | grep -q 'admin@acme.example'
 
       - name: logs on failure
         if: failure()
@@ -334,7 +268,7 @@ jobs:
   ci:
     name: all gates green
     runs-on: ubuntu-latest
-    needs: [build, lint, analyzer, test, integration, vendor, crosscheck, frontend, images, stack]
+    needs: [backend, crosscheck, frontend, stack]
     if: always()
     steps:
       # One check to require on the branch, so that adding a gate above does
