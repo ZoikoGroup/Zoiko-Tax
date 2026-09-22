@@ -1,0 +1,49 @@
+# The Intelligence Fabric's build definition.
+#
+# The dependency list is deliberately short. ADR-0001 §3.3 makes the dependency
+# graph part of the replay guarantee, and while that guarantee binds the APP
+# train rather than this one, a Gateway that sits in the authorization path of
+# every AI call is not the place to accumulate transitive dependencies. The
+# runtime below uses the standard library only; everything listed is a
+# development tool.
+[project]
+name = "ztax-gateway"
+version = "0.1.0"
+description = "ZoikoTax Governed Model Gateway - the only path between the fiscal core and any model provider"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.6",
+  "mypy>=1.11",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+# -q because a green run should be one line; a red one says everything.
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "src"
+# The Gateway decides whether a call may proceed. A type error here is an
+# authorization bug, so nothing is waived.
+warn_unreachable = true

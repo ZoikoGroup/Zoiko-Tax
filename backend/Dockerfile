@@ -70,8 +70,25 @@ EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/ztax-core"]
 
 # -----------------------------------------------------------------------------
-# Stages for ztax-outbox-relay (ADR-0014 §2.2) and ztax-migrate (ADR-0008 §2.8)
-# are added when those commands exist. ztax-migrate in particular must run under
-# a DDL role the application never holds, so it is a separate image with separate
-# credentials — not a flag on this one.
+# ztax-migrate — the schema runner (ADR-0008 §2.8, ADR-0009 §2.2)
+# -----------------------------------------------------------------------------
+# A separate image because it runs under a DDL role the application never holds.
+# The separation is the control: a compromise of ztax-core yields no ability to
+# alter the schema, and a migration cannot run inside a request.
+#
+# It carries its migrations embedded (backend/migrations), so a container finds
+# exactly the migrations it was built with rather than whatever a mounted volume
+# happens to hold.
+FROM ${RUNTIME_IMAGE} AS ztax-migrate
+
+COPY --from=build /out/ztax-migrate /usr/local/bin/ztax-migrate
+
+USER nonroot:nonroot
+
+ENTRYPOINT ["/usr/local/bin/ztax-migrate"]
+CMD ["up"]
+
+# -----------------------------------------------------------------------------
+# A stage for ztax-outbox-relay (ADR-0014 §2.2) is added when that command
+# exists.
 # -----------------------------------------------------------------------------

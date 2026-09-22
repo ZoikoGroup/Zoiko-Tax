@@ -6,9 +6,26 @@ Every structural choice here is recorded in [the ADR set](../../adr/README.md). 
 
 ## Status
 
-**W0 skeleton, compiling and running.** What exists: module definition, layout, boot path, configuration, the decimal runtime of ADR-0002 in full — arithmetic context, `Money` and `Rate`, rounding policies decoded from content, largest-remainder allocation, the golden corpus with its Python cross-check and the property suite — the ADR-0001 control 1 analyzer, a container image and a local cell stack. What does not: persistence, transport beyond health checks, and every domain module.
+**W0 complete for the foundation; persistence, identity and the execution model are in.** What exists:
 
-Verified 21 September 2026 in a pinned `golang:1.25-bookworm` container — `go vet ./...` clean, `go test -race ./...` green across the 75 golden vectors, six property suites and the unit tests, `golangci-lint run` reporting 0 issues, the fiscalfloat analyzer clean over the module and its own suite passing, and the Python cross-check agreeing on every vector. Every gate below also runs in CI on each push and pull request, so the verification above is repeated by a machine that has no local state. There is no Go toolchain on the authoring machine, so everything below goes through Docker; install Go locally and the `make` targets work directly.
+- The decimal runtime of ADR-0002 in full — arithmetic context, `Money`, `Rate`, `Quantity`, rounding policies decoded from content, largest-remainder allocation, the golden corpus with its Python cross-check and the property suite.
+- Canonicalization and digests (ADR-0011) — RFC 8785 JCS under `canon/v1`, the decimal normal form, RFC 6962 Merkle roots.
+- Persistence (ADR-0008) — `pgx` v5 native, the registered `NUMERIC` ↔ `apd.Decimal` codec, the cell schema, and `ztax-migrate`.
+- Tenancy and authentication (ADR-0020) — tenants, users, roles, opaque server-side sessions, the administration surface and its audit trail.
+- The rule execution model (ADR-0005) — the typed IR, bundle load with acyclicity and type checking, and the deterministic evaluator.
+- The error taxonomy (ADR-0016), identifiers (ADR-0012), the transactional outbox (ADR-0014) and the authority adapter boundary (ADR-0009 §2.2).
+
+What does not: the content compiler and any actual tax content, the generated OpenAPI server, the Model Gateway, telemetry, and evidence sealing. Two of those wait on specifications that were never produced — `ZTAX-DET-001` and `ZTAX-JUR-001` — so the interfaces are here and the rule semantics are not, which is exactly where the Build Plan says W0 should leave them.
+
+**Both remaining W0 controls are closed.** ADR-0001 control 2 (`NUMERIC` bound to `apd.Decimal`, no path narrowing to `float64`) is discharged by the conformance suite in `internal/adapter/postgres`, which runs against a real PostgreSQL. Control 6 (`apd` vendored) is done, and `make vendor-verify` detects drift or a local patch.
+
+Verified 22 September 2026 in a pinned `golang:1.25-bookworm` container: `gofmt`, `go vet` and `go build` clean, `go test -race ./...` green, `golangci-lint run` reporting 0 issues, the fiscalfloat analyzer clean over the module and its own suite passing, the Python cross-check agreeing on all 62 shared vectors, the migrations applying from nothing, the NUMERIC conformance suite green against a live database, and the whole stack answering end to end through the browser origin. Every gate runs in CI on each push and pull request. There is no Go toolchain on the authoring machine, so everything below goes through Docker; install Go locally and the `make` targets work directly.
+
+### One defect worth knowing about
+
+The conformance suite found a real bug on its first run, and the fix is load-bearing. pgx's **binary** `NUMERIC` decoder short-circuits when a value has no significant digits — true only of zero — and returns exponent 0, so `0.00` came back as `0`. Every non-zero value round-tripped exactly.
+
+That matters here more than it would elsewhere. Scale is semantic (ADR-0011 §2.2): `0.00` and `0` digest differently, so a zero-tax line read back from the database would canonicalize differently from the one written, and the decision would fail to replay against its own evidence — broken by the one value most likely to appear on a zero-rated or exempt line. The codec is pinned to the text wire format, which carries the scale in the digits and has nowhere to lose it. See `textNumericCodec` in `internal/adapter/postgres/pool.go`.
 
 ## Layout
 
@@ -83,18 +100,37 @@ docker run --rm -v "${PWD}:/src" -w /src golang:1.25-bookworm go build ./...
 
 ## Container and local cell
 
-[`Dockerfile`](Dockerfile) builds `ztax-core` on `gcr.io/distroless/static-debian12:nonroot` — **3.3 MB**, static, no shell, no package manager, runs as `nonroot`. `-trimpath`, a zeroed `buildid` and `CGO_ENABLED=0` make the build reproducible, which ADR-0001 §3.3 folds into the C3 replay guarantee.
+```
+make up            # postgres + migrations + ztax-core + ztax-web
+make logs          # follow the cell
+make down          # stop, keeping the database volume
+make down-clean    # stop and destroy the volume
+```
 
-Two consequences of that base image worth knowing before they surprise you:
+`docker compose up` runs `ztax-migrate` to completion before `ztax-core` starts, which is the same ordering a cell gets from a pre-deploy job. The stack provisions one tenant on first boot, because every administrative endpoint requires an administrator and the first one cannot come through the API without an unauthenticated endpoint that creates tenants (ADR-0020 §3.3):
 
-- **No `HEALTHCHECK` in the image.** There is no shell and no `curl` to run one. Liveness and readiness are HTTP probes against `/healthz` and `/readyz`, owned by the orchestrator.
-- **`read_only: true` in compose.** The binary writes nothing, and enforcing it locally means a future change that starts writing fails here rather than in a cell.
+| | |
+|---|---|
+| Tenant | `acme` |
+| Administrator | `admin@acme.example` |
+| Password | `local-dev-only-password` |
 
-[`docker-compose.yml`](../docker-compose.yml) models one regional execution cell (ADR-0009 §2.6): its own PostgreSQL 17 + PostGIS 3.5, sharing nothing. `make up`, `make logs`, `make down`, `make down-clean`.
+Open <http://localhost:3000> and sign in. The cell is on <http://localhost:8080>.
 
-`make docker-release` attaches SBOM and provenance. Note that buildx emits SPDX while Build Plan §7 requires **CycloneDX** — conversion and signing are W1 lane B work and are not done here.
+**These credentials are development-only and the mechanism says so.** The password is resolved through `internal/platform/secrets`, which refuses `local://` references outside `development` — so the pattern ADR-0017 §2.4 forbids in a cell cannot be the thing that ships. `ZTAX_SECURE_COOKIES=false` is refused outside `development` for the same reason, and `ZTAX_AUTHORITATIVE=true` is refused outside `production`, because no authoritative fiscal output is permitted before A4.
 
-Stages for `ztax-outbox-relay` and `ztax-migrate` are commented placeholders until those commands exist. `ztax-migrate` stays a separate image on purpose: it runs under a DDL role the application never holds (ADR-0008 §2.8).
+### Running against the cell directly
+
+```
+# Tier 3 — the NUMERIC conformance suite and the repository tests
+export ZTAX_TEST_DATABASE_URL='postgres://ztax_app:local-dev-only@localhost:5432/ztax?sslmode=disable&search_path=ztax,public'
+make test-integration
+
+# Apply or inspect the schema by hand
+export ZTAX_ENVIRONMENT=development
+export ZTAX_MIGRATE_DATABASE_URL="$ZTAX_TEST_DATABASE_URL"
+make migrate-status
+```
 
 ## Pipeline
 

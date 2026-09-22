@@ -28,8 +28,17 @@ test: ## Tier 1 — unit and property tests (ADR-0018)
 	$(GO) test -race -count=1 $(PKG)
 
 .PHONY: test-integration
-test-integration: ## Tier 3 — against real PostgreSQL/PostGIS via testcontainers
+test-integration: ## Tier 3 — against a real PostgreSQL/PostGIS. Needs ZTAX_TEST_DATABASE_URL
+	@test -n "$$ZTAX_TEST_DATABASE_URL" || 		(echo "ZTAX_TEST_DATABASE_URL is not set; run 'make up' and see backend/README.md" && exit 1)
 	$(GO) test -race -count=1 -tags=integration $(PKG)
+
+.PHONY: migrate
+migrate: ## Apply the cell schema. Needs ZTAX_MIGRATE_DATABASE_URL and ZTAX_ENVIRONMENT
+	$(GO) run ./cmd/ztax-migrate up
+
+.PHONY: migrate-status
+migrate-status: ## Report the applied schema version without changing anything
+	$(GO) run ./cmd/ztax-migrate status
 
 .PHONY: golden
 golden: ## Tier 2 — golden vectors, exact assertions, hermetic
@@ -50,6 +59,14 @@ lint: ## Architectural controls as lint (ADR-0007 §2.5, ADR-0006 §2.6)
 .PHONY: vet
 vet: ## Standard go vet
 	$(GO) vet $(PKG)
+
+.PHONY: fmt
+fmt: ## Format everything this repository owns. vendor/ is upstream's and is left alone
+	@gofmt -w $$(find . -name '*.go' -not -path './vendor/*')
+
+.PHONY: fmt-check
+fmt-check: ## Fail if anything this repository owns is not gofmt-clean
+	@out=$$(gofmt -l . | grep -v "^vendor/"); if [ -n "$$out" ]; then echo "not gofmt-clean:"; echo "$$out"; exit 1; fi
 
 .PHONY: fiscalfloat
 fiscalfloat: ## ADR-0001 control 1 — float64 unreachable from Money/Rate/Quantity
@@ -105,7 +122,7 @@ logs: ## Follow ztax-core logs
 	docker compose -f ../docker-compose.yml logs -f ztax-core
 
 .PHONY: check
-check: vet fiscalfloat lint test golden-crosscheck ## Everything that gates a commit
+check: fmt-check vet fiscalfloat lint test golden-crosscheck vendor-verify ## Everything that gates a commit
 
 .PHONY: clean
 clean: ## Remove build output

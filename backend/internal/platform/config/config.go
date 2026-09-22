@@ -53,32 +53,86 @@ type Config struct {
 	// Observability.
 	OTLPEndpoint string
 	LogLevel     string
+
+	// Session and cookie behaviour.
+	//
+	// SecureCookies is true everywhere the service is reached over TLS, which
+	// is everywhere except a laptop. It sets the Secure flag and the __Host-
+	// cookie prefix, and the two travel together because a browser silently
+	// drops a __Host- cookie that is not Secure.
+	SecureCookies bool
+	// TrustProxy honours X-Forwarded-For for the recorded client address. It
+	// is false unless the deployment actually sits behind a proxy that sets it,
+	// because an unconditionally trusted header is one a client can forge.
+	TrustProxy bool
+
+	// Bootstrap. A cell with no tenants cannot be administered, because every
+	// administrative endpoint requires an administrator. These provision the
+	// first one at startup and are a no-op once it exists.
+	//
+	// BootstrapAdminPasswordRef names where the first administrator's password
+	// lives; like DatabaseURLRef it is a reference, never the value.
+	BootstrapTenant           string
+	BootstrapTenantName       string
+	BootstrapAdminEmail       string
+	BootstrapAdminName        string
+	BootstrapAdminPasswordRef string
+
+	// Authoritative records whether this deployment may emit authoritative
+	// fiscal output. It is false until A4 and is reported by /v1/capabilities,
+	// so a client discovers it from the service rather than from a release
+	// note. Setting it true is an authorization act, not a configuration
+	// convenience.
+	Authoritative bool
 }
+
+// LocalSecretPrefix is the one recognised variable family whose members are not
+// listed individually.
+//
+// internal/platform/secrets resolves a local://name reference by reading
+// ZTAX_LOCAL_SECRET_NAME, and the set of names is a property of the deployment
+// rather than of this build — so it cannot be enumerated here. The family is
+// development-only: the resolver refuses local:// references outside
+// development, so nothing in this family can be load-bearing in a cell.
+//
+// It is a deliberate hole in ADR-0017 §2.1's "an unknown ZTAX_ variable refuses
+// to start", and it is kept as narrow as the rule allows: a typo in one of these
+// names surfaces as an unresolvable reference at startup, which still fails
+// closed, rather than as a silent default.
+const LocalSecretPrefix = Prefix + "LOCAL_SECRET_"
 
 // known lists every variable this process accepts, with whether it is required
 // and its default. An environment variable under Prefix that is absent from this
-// table is a startup failure.
+// table — and outside LocalSecretPrefix — is a startup failure.
 var known = map[string]struct {
 	required bool
 	def      string
 }{
-	"ZTAX_CELL":                  {required: true},
-	"ZTAX_REGION":                {required: true},
-	"ZTAX_ENVIRONMENT":           {required: true},
-	"ZTAX_TRAIN_APP":             {required: true},
-	"ZTAX_TRAIN_CONTENT":         {required: true},
-	"ZTAX_TRAIN_AI":              {required: true},
-	"ZTAX_TRAIN_ADAPTER":         {required: true},
-	"ZTAX_TRAIN_INFRA":           {required: true},
-	"ZTAX_TRAIN_SCHEMA":          {required: true},
-	"ZTAX_TRAIN_MIGRATION":       {required: true},
-	"ZTAX_DATABASE_URL_REF":      {required: true},
-	"ZTAX_HTTP_ADDR":             {def: ":8080"},
-	"ZTAX_HTTP_READ_TIMEOUT":     {def: "10s"},
-	"ZTAX_HTTP_WRITE_TIMEOUT":    {def: "30s"},
-	"ZTAX_HTTP_SHUTDOWN_TIMEOUT": {def: "30s"},
-	"ZTAX_OTLP_ENDPOINT":         {def: "localhost:4317"},
-	"ZTAX_LOG_LEVEL":             {def: "info"},
+	"ZTAX_CELL":                         {required: true},
+	"ZTAX_REGION":                       {required: true},
+	"ZTAX_ENVIRONMENT":                  {required: true},
+	"ZTAX_TRAIN_APP":                    {required: true},
+	"ZTAX_TRAIN_CONTENT":                {required: true},
+	"ZTAX_TRAIN_AI":                     {required: true},
+	"ZTAX_TRAIN_ADAPTER":                {required: true},
+	"ZTAX_TRAIN_INFRA":                  {required: true},
+	"ZTAX_TRAIN_SCHEMA":                 {required: true},
+	"ZTAX_TRAIN_MIGRATION":              {required: true},
+	"ZTAX_DATABASE_URL_REF":             {required: true},
+	"ZTAX_HTTP_ADDR":                    {def: ":8080"},
+	"ZTAX_HTTP_READ_TIMEOUT":            {def: "10s"},
+	"ZTAX_HTTP_WRITE_TIMEOUT":           {def: "30s"},
+	"ZTAX_HTTP_SHUTDOWN_TIMEOUT":        {def: "30s"},
+	"ZTAX_OTLP_ENDPOINT":                {def: "localhost:4317"},
+	"ZTAX_LOG_LEVEL":                    {def: "info"},
+	"ZTAX_SECURE_COOKIES":               {def: "true"},
+	"ZTAX_TRUST_PROXY":                  {def: "false"},
+	"ZTAX_AUTHORITATIVE":                {def: "false"},
+	"ZTAX_BOOTSTRAP_TENANT":             {def: ""},
+	"ZTAX_BOOTSTRAP_TENANT_NAME":        {def: ""},
+	"ZTAX_BOOTSTRAP_ADMIN_EMAIL":        {def: ""},
+	"ZTAX_BOOTSTRAP_ADMIN_NAME":         {def: ""},
+	"ZTAX_BOOTSTRAP_ADMIN_PASSWORD_REF": {def: ""},
 }
 
 // Load reads and validates configuration from the environment. It is called
@@ -91,6 +145,9 @@ func Load() (Config, error) {
 	for _, kv := range os.Environ() {
 		name, _, ok := strings.Cut(kv, "=")
 		if !ok || !strings.HasPrefix(name, Prefix) {
+			continue
+		}
+		if strings.HasPrefix(name, LocalSecretPrefix) {
 			continue
 		}
 		if _, recognised := known[name]; !recognised {
@@ -125,6 +182,21 @@ func Load() (Config, error) {
 		return d
 	}
 
+	boolean := func(name string) bool {
+		switch v := get(name); v {
+		case "true":
+			return true
+		case "false", "":
+			return false
+		default:
+			// Not a tolerant parse: "yes", "1" and "TRUE" are all things
+			// somebody meant as true, and guessing which is how a security flag
+			// ends up silently off.
+			problems = append(problems, fmt.Sprintf("%s: %q is not true or false", name, v))
+			return false
+		}
+	}
+
 	c := Config{
 		Cell:                get("ZTAX_CELL"),
 		Region:              get("ZTAX_REGION"),
@@ -143,6 +215,32 @@ func Load() (Config, error) {
 		HTTPShutdownTimeout: duration("ZTAX_HTTP_SHUTDOWN_TIMEOUT"),
 		OTLPEndpoint:        get("ZTAX_OTLP_ENDPOINT"),
 		LogLevel:            get("ZTAX_LOG_LEVEL"),
+
+		SecureCookies: boolean("ZTAX_SECURE_COOKIES"),
+		TrustProxy:    boolean("ZTAX_TRUST_PROXY"),
+		Authoritative: boolean("ZTAX_AUTHORITATIVE"),
+
+		BootstrapTenant:           get("ZTAX_BOOTSTRAP_TENANT"),
+		BootstrapTenantName:       get("ZTAX_BOOTSTRAP_TENANT_NAME"),
+		BootstrapAdminEmail:       get("ZTAX_BOOTSTRAP_ADMIN_EMAIL"),
+		BootstrapAdminName:        get("ZTAX_BOOTSTRAP_ADMIN_NAME"),
+		BootstrapAdminPasswordRef: get("ZTAX_BOOTSTRAP_ADMIN_PASSWORD_REF"),
+	}
+
+	// A deployment claiming authority outside development is refused here
+	// rather than at the point of emitting a decision. No authoritative fiscal
+	// output is permitted before A4, and a misconfiguration should stop the
+	// process rather than produce one filed figure.
+	if c.Authoritative && c.Environment != "production" {
+		problems = append(problems, fmt.Sprintf(
+			"ZTAX_AUTHORITATIVE: refused in environment %q; authoritative output requires A4 in production", c.Environment))
+	}
+
+	// Plain-HTTP cookies are a development affordance, and saying so at startup
+	// is cheaper than discovering it in a penetration test.
+	if !c.SecureCookies && c.Environment != "development" {
+		problems = append(problems, fmt.Sprintf(
+			"ZTAX_SECURE_COOKIES: refused as false in environment %q; the session cookie would travel in clear", c.Environment))
 	}
 
 	switch c.LogLevel {
@@ -182,6 +280,9 @@ func (c Config) LogAttrs() []any {
 		"otlp.endpoint", c.OTLPEndpoint,
 		"log.level", c.LogLevel,
 		"database.url_ref", c.DatabaseURLRef,
+		"secure_cookies", c.SecureCookies,
+		"trust_proxy", c.TrustProxy,
+		"authoritative", c.Authoritative,
 		"known_vars", strconv.Itoa(len(known)),
 	}
 }

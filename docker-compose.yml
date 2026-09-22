@@ -40,6 +40,23 @@ services:
       timeout: 5s
       retries: 20
 
+  # Schema first. ADR-0009 §2.2 makes this a separate deployable because it runs
+  # under a DDL role the application never holds; here it is a separate service
+  # that runs to completion before ztax-core starts, which is the same ordering
+  # a cell gets from a pre-deploy job.
+  ztax-migrate:
+    build:
+      context: ./backend
+      target: ztax-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ZTAX_ENVIRONMENT: development
+      ZTAX_MIGRATE_DATABASE_URL: postgres://ztax_app:local-dev-only@postgres:5432/ztax?sslmode=disable&search_path=ztax,public
+    command: ["up"]
+    restart: "no"
+
   ztax-core:
     build:
       context: ./backend
@@ -47,6 +64,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      ztax-migrate:
+        condition: service_completed_successfully
     ports:
       - "8080:8080"
     environment:
@@ -68,6 +87,31 @@ services:
       # A reference to where the credential lives, never the credential
       # (ADR-0017 §2.4).
       ZTAX_DATABASE_URL_REF: local://postgres
+
+      # The local:// resolver reads this. It is the pattern ADR-0017 §2.4
+      # forbids in a cell — a credential in an environment variable at rest —
+      # and internal/platform/secrets refuses local:// references outside
+      # development so it cannot be the thing that ships.
+      ZTAX_LOCAL_SECRET_POSTGRES: postgres://ztax_app:local-dev-only@postgres:5432/ztax?sslmode=disable
+
+      # Plain HTTP locally, so the session cookie cannot carry Secure and the
+      # __Host- prefix has to come off with it (see setSessionCookie). Refused
+      # outside development by config.Load.
+      ZTAX_SECURE_COOKIES: "false"
+
+      # No authoritative fiscal output before A4. Refused outside production.
+      ZTAX_AUTHORITATIVE: "false"
+
+      # The first tenant and administrator. Every admin endpoint requires an
+      # administrator, so the first one cannot come through the API without an
+      # unauthenticated endpoint that creates tenants. A no-op after the first
+      # start.
+      ZTAX_BOOTSTRAP_TENANT: acme
+      ZTAX_BOOTSTRAP_TENANT_NAME: Acme Telecom
+      ZTAX_BOOTSTRAP_ADMIN_EMAIL: admin@acme.example
+      ZTAX_BOOTSTRAP_ADMIN_NAME: Acme Administrator
+      ZTAX_BOOTSTRAP_ADMIN_PASSWORD_REF: local://bootstrap-admin
+      ZTAX_LOCAL_SECRET_BOOTSTRAP_ADMIN: local-dev-only-password
 
       ZTAX_HTTP_ADDR: ":8080"
       ZTAX_LOG_LEVEL: debug

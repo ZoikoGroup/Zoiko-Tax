@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: ztax-gateway
+Version: 0.1.0
+Summary: ZoikoTax Governed Model Gateway - the only path between the fiscal core and any model provider
+Requires-Python: >=3.12
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: ruff>=0.6; extra == "dev"
+Requires-Dist: mypy>=1.11; extra == "dev"
