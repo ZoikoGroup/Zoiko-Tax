@@ -182,3 +182,203 @@ body {
 code {
   font-size: 0.85em;
 }
+
+/* ---------------------------------------------------------------------------
+   Administration workspace
+   ---------------------------------------------------------------------------
+   Plain CSS, no component library. ADR-0019 §4.3 flags that most component
+   libraries format numbers, and formatting a number means a float has already
+   appeared — so the library choice is a C1 evaluation criterion for W3 lane N,
+   not something to settle by reaching for one now.
+
+   Colour is never the only signal: every state that has a colour also has a
+   word (C6). */
+
+.shell--narrow { max-width: 34rem; }
+
+.shell__header--row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.shell__identity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.shell__email { color: #6b7280; }
+
+.banner {
+  padding: 0.625rem 0.875rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  margin: 0 0 1rem;
+  border: 1px solid transparent;
+}
+
+.banner--advisory {
+  background: #fffbeb;
+  border-color: #fcd34d;
+  color: #78350f;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 1rem;
+}
+
+.tab {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.5rem 0.875rem;
+  font: inherit;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.tab--selected {
+  color: #111827;
+  border-bottom-color: #2563eb;
+  font-weight: 600;
+}
+
+.tab:focus-visible,
+.btn:focus-visible,
+.chip:focus-within {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  margin-top: 0.75rem;
+}
+
+.table__caption {
+  text-align: left;
+  color: #6b7280;
+  font-size: 0.8125rem;
+  padding-bottom: 0.5rem;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.5rem 0.625rem;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: top;
+}
+
+.table th { color: #374151; font-weight: 600; }
+
+.row--current { background: #f0f9ff; }
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+}
+
+.muted { color: #6b7280; }
+
+.tag {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 0.75rem;
+  margin-right: 0.25rem;
+}
+
+.tag--ok   { background: #ecfdf5; color: #065f46; }
+.tag--warn { background: #fef2f2; color: #991b1b; }
+
+.roles { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.chip--on { background: #eff6ff; border-color: #93c5fd; color: #1e40af; }
+
+.btn {
+  appearance: none;
+  font: inherit;
+  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #111827;
+  cursor: pointer;
+}
+
+.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn--primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+.btn--severe  { background: #fff; border-color: #dc2626; color: #b91c1c; }
+
+/* The consequential-action pattern (C5). It is visually distinct from the rest
+   of the row on purpose: an action with an external effect should not look like
+   the controls around it. */
+.confirm {
+  border: 1px solid #fcd34d;
+  background: #fffbeb;
+  border-radius: 6px;
+  padding: 0.625rem;
+  max-width: 26rem;
+}
+
+.confirm__effect { margin: 0 0 0.5rem; font-size: 0.8125rem; color: #78350f; }
+.confirm__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.subpanel {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.875rem;
+  margin: 0.75rem 0;
+}
+
+.subpanel h3 { margin-top: 0; }
+
+.field { margin-bottom: 0.75rem; }
+
+.field label,
+.field legend {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.field input {
+  font: inherit;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.field__help  { font-size: 0.75rem; color: #6b7280; margin: 0.25rem 0 0; }
+.field__error { font-size: 0.8125rem; color: #b91c1c; margin: 0.25rem 0; min-height: 1.2em; }
+
+fieldset.field { border: none; padding: 0; margin-inline: 0; }
