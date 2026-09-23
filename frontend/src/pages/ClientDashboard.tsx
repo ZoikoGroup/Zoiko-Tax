@@ -7,7 +7,6 @@ import {
   AlertCircle,
   Sparkles,
   ChevronRight,
-  TrendingUp,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -15,7 +14,6 @@ import {
   Line,
 } from 'recharts';
 import {
-  clientKpiMetrics,
   clientActionItems,
   clientReadinessGauges,
   clientTrendSplineData,

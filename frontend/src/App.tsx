@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { AppProvider } from './context/AppContext';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { ClientDashboard } from './pages/ClientDashboard';
 import { AdminPanel } from './admin/AdminPanel';
@@ -89,11 +88,9 @@ export function App() {
   }
 
   return (
-    <AppProvider>
-      <DashboardLayout>
-        <ClientDashboard />
-      </DashboardLayout>
-    </AppProvider>
+    <DashboardLayout>
+      <ClientDashboard />
+    </DashboardLayout>
   );
 }
 

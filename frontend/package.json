@@ -3,15 +3,17 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc --build && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc --build --force"
   },
   "dependencies": {
-    "@rolldown/binding-win32-x64-msvc": "^1.2.9",
     "@tailwindcss/vite": "^4.3.3",
     "clsx": "^2.1.1",
     "lucide-react": "^1.47.0",
