@@ -1,20 +1,20 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 
-export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const DashboardLayout = ({ children }: { children: ReactNode }) => {
   return (
-    <div className="min-h-screen flex bg-[#f5f6fa] font-sans antialiased text-gray-900">
+    <div className="ztax-layout">
       {/* Left Sidebar */}
       <Sidebar />
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col pl-56 min-w-0">
-        {/* Top Header (Tier 1 and Tier 2) */}
+      <div className="ztax-main-container">
+        {/* Top Header */}
         <Header />
 
         {/* Page Content Viewport */}
-        <main className="flex-1 p-5 w-full">
+        <main className="ztax-dashboard-viewport">
           {children}
         </main>
       </div>

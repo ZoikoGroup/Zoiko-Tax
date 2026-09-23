@@ -5,8 +5,14 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "types": ["node"],
-    "skipLibCheck": true,
-    "noEmit": true
+    "strict": true,
+    "isolatedModules": true,
+    "composite": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "./dist-tsc/node",
+    "tsBuildInfoFile": "./dist-tsc/node.tsbuildinfo",
+    "skipLibCheck": true
   },
   "include": ["vite.config.ts"]
 }
