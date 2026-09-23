@@ -1,0 +1,72 @@
+# ZoikoTax content — EU VAT worked pack
+#
+# This pack is a *shape* test, not law. It names no real jurisdiction, no real
+# rate and no real threshold, because ZTAX-PRD-REQ-0002 exists to detect a
+# jurisdiction named anywhere outside a certified country pack. What it does
+# carry is every construct the IR version 1 surface offers, so that the compiler,
+# the seal and the cell's loading path are all exercised by something with the
+# shape of real content rather than by a fixture built to pass.
+#
+# It is also the "worked pack" the specification register asks for
+# (backend/docs/specs/README.md): a specification nobody has authored content
+# against is a specification with untested assumptions.
+
+bundle "eu-vat-worked-2026.09"
+ir 1
+
+# Two rounding points, because ZTAX-DET-001 §8.1 has four and a pack that uses
+# one of them proves nothing about the others. LINE rounds each line; DOCUMENT
+# rounds the document total, and §8.2 then allocates it back across the lines.
+policy line2 = HALF_UP   scale 2 basis LINE
+policy doc2  = HALF_EVEN scale 2 basis DOCUMENT
+
+# --------------------------------------------------------------------------
+# An ad valorem tax with two rates and an exemption.
+# --------------------------------------------------------------------------
+rule "vat" version "2026.09.1" semantic "ZTAX-RULE-WORKED-VAT" {
+    const zero     money "0.00"   currency EUR
+    const standard rate  "0.2100" basis NET
+    const reduced  rate  "0.0900" basis NET
+
+    input net          money "line.netAmount"
+    input reducedRated bool  "line.reducedRateApplies"
+    input exempt       bool  "line.exemptCertificateHeld"
+
+    # Selecting the rate rather than the amount keeps one multiplication in the
+    # graph instead of two, so the trace shows one rate application and names
+    # which rate it applied.
+    let applicable = select reducedRated reduced standard
+    let vat        = apply_rate net applicable policy line2
+
+    let taxable    = not exempt
+    let payable    = select taxable vat zero
+
+    emit "TAX_VAT" payable
+}
+
+# --------------------------------------------------------------------------
+# A specific (per-unit) charge, suppressed once a threshold is passed.
+# --------------------------------------------------------------------------
+rule "eco-levy" version "2026.09.1" semantic "ZTAX-RULE-WORKED-ECO-LEVY" {
+    const perUnit   rate     "0.0350"   basis PER_UNIT
+    const currency  string   "EUR"
+    const threshold money    "10000.00" currency EUR
+    const zero      money    "0.00"     currency EUR
+
+    input units     quantity "line.quantity"
+
+    # Read before evaluation began and passed in (ADR-0005 §2.5). The executor
+    # cannot query, which is what keeps the read point explicit and the
+    # evaluation reproducible from the trace alone.
+    accumulator ytd "threshold.ecoLevyYtd"
+
+    # A quantity carries no currency, so the content states the one the per-unit
+    # rate extends it into.
+    let levy      = apply_rate units perUnit currency currency policy line2
+
+    let overLimit = compare gte ytd threshold
+    let due       = select overLimit zero levy
+    let rounded   = round due policy doc2
+
+    emit "TAX_ECO_LEVY" rounded
+}

@@ -1,0 +1,89 @@
+{
+  "_generated": "by contracts/tools/routes.mjs from ztax.v1.yaml; do not edit",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/v1/admin/audit",
+      "operationId": "listAudit",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/sessions",
+      "operationId": "listSessions",
+      "public": false
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/admin/sessions/{sessionId}",
+      "operationId": "revokeSession",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/tenant",
+      "operationId": "getTenant",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/admin/users",
+      "operationId": "listUsers",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/users",
+      "operationId": "createUser",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/users/{userId}/roles",
+      "operationId": "grantRole",
+      "public": false
+    },
+    {
+      "method": "DELETE",
+      "path": "/v1/admin/users/{userId}/roles/{role}",
+      "operationId": "revokeRole",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/admin/users/{userId}/status",
+      "operationId": "setUserStatus",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/auth/password",
+      "operationId": "changePassword",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/auth/session",
+      "operationId": "getSession",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/auth/sign-in",
+      "operationId": "signIn",
+      "public": true
+    },
+    {
+      "method": "POST",
+      "path": "/v1/auth/sign-out",
+      "operationId": "signOut",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/capabilities",
+      "operationId": "getCapabilities",
+      "public": true
+    }
+  ]
+}

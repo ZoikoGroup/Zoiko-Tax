@@ -7,6 +7,7 @@ import (
 
 	"github.com/zoikogroup/zoikotax/backend/internal/app"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/idgen"
 	"github.com/zoikogroup/zoikotax/backend/internal/port"
@@ -45,11 +46,92 @@ type Router struct {
 	// fiscal output before then, and the capabilities surface says so rather
 	// than leaving a caller to assume.
 	Authoritative bool
+
+	// Content is the active rule bundle, or nil in a cell deployed without one.
+	// It is the Holder rather than the Bundle, so that a later activation swaps
+	// under a live process and /v1/capabilities reports what is running now
+	// rather than what was running at boot (ADR-0005 §2.6).
+	Content *rule.Holder
 }
 
 // NewRouter wires the surface.
 func NewRouter(auth *app.AuthService, admin *app.AdminService, users port.UserRepository, ready Readiness, log *slog.Logger, ids idgen.Generator) *Router {
 	return &Router{auth: auth, admin: admin, users: users, ready: ready, log: mustLogger(log), ids: ids}
+}
+
+// Route is one entry in the surface.
+//
+// The routes are a table rather than a sequence of mux.Handle calls so that
+// they are *data*, and can be compared with the contract. ADR-0010 §2.1 closes
+// that gap by generating the handlers from contracts/openapi; until the
+// generator is wired up, contract_test.go compares this table against the same
+// contract in both directions — an endpoint the contract does not declare fails,
+// and so does a declared endpoint nothing routes.
+//
+// Roles are part of the table for the same reason they were part of each
+// Handle call: an endpoint that forgets its authorization is a visibly missing
+// field rather than a default it inherited.
+type Route struct {
+	Method  string
+	Pattern string
+	// Public marks a route that requires no session. There are three, and each
+	// has a reason recorded at its declaration.
+	Public bool
+	// Roles are the roles permitted. Empty with Public false means any
+	// authenticated subject.
+	Roles []security.Role
+}
+
+// routes is the cell's HTTP surface.
+func (rt *Router) routes() []struct {
+	Route
+	handler http.HandlerFunc
+} {
+	admin := security.RoleAdmin
+	return []struct {
+		Route
+		handler http.HandlerFunc
+	}{
+		// Health probes. Unauthenticated by design: an orchestrator has no
+		// session, and a readiness probe that needs a credential is a readiness
+		// probe that fails during a credential outage for the wrong reason.
+		// They are deliberately absent from the contract — see its preamble.
+		{Route{"GET", "/healthz", true, nil}, rt.handleHealthz},
+		{Route{"GET", "/readyz", true, nil}, rt.handleReadyz},
+
+		// Discovery. Unauthenticated because a client needs to know whether a
+		// cell can serve it before it has a session.
+		{Route{"GET", "/v1/capabilities", true, nil}, rt.handleCapabilities},
+
+		// Authentication. Sign-in is necessarily unauthenticated; the rest
+		// require a session but no particular role.
+		{Route{"POST", "/v1/auth/sign-in", true, nil}, rt.handleSignIn},
+		{Route{"POST", "/v1/auth/sign-out", false, nil}, rt.handleSignOut},
+		{Route{"GET", "/v1/auth/session", false, nil}, rt.handleSession},
+		{Route{"POST", "/v1/auth/password", false, nil}, rt.handleChangePassword},
+
+		// Administration.
+		{Route{"GET", "/v1/admin/tenant", false, nil}, rt.handleGetTenant},
+		{Route{"GET", "/v1/admin/users", false, []security.Role{admin, security.RoleAnalyst, security.RoleAuditor}}, rt.handleListUsers},
+		{Route{"POST", "/v1/admin/users", false, []security.Role{admin}}, rt.handleCreateUser},
+		{Route{"POST", "/v1/admin/users/{userId}/status", false, []security.Role{admin}}, rt.handleSetUserStatus},
+		{Route{"POST", "/v1/admin/users/{userId}/roles", false, []security.Role{admin}}, rt.handleGrantRole},
+		{Route{"DELETE", "/v1/admin/users/{userId}/roles/{role}", false, []security.Role{admin}}, rt.handleRevokeRole},
+		{Route{"GET", "/v1/admin/sessions", false, []security.Role{admin}}, rt.handleListSessions},
+		{Route{"DELETE", "/v1/admin/sessions/{sessionId}", false, []security.Role{admin}}, rt.handleRevokeSession},
+		{Route{"GET", "/v1/admin/audit", false, []security.Role{admin, security.RoleAuditor}}, rt.handleListAudit},
+	}
+}
+
+// Routes reports the surface this router serves. It exists for the contract
+// conformance test and for the startup log; nothing in the request path uses it.
+func (rt *Router) Routes() []Route {
+	all := rt.routes()
+	out := make([]Route, 0, len(all))
+	for _, r := range all {
+		out = append(out, r.Route)
+	}
+	return out
 }
 
 // Handler returns the routed, wrapped handler.
@@ -60,34 +142,17 @@ func NewRouter(auth *app.AuthService, admin *app.AdminService, users port.UserRe
 func (rt *Router) Handler() http.Handler {
 	mux := http.NewServeMux()
 
-	// Health probes. Unauthenticated by design: an orchestrator has no session,
-	// and a readiness probe that needs a credential is a readiness probe that
-	// fails during a credential outage for the wrong reason.
-	mux.HandleFunc("GET /healthz", rt.handleHealthz)
-	mux.HandleFunc("GET /readyz", rt.handleReadyz)
-	mux.HandleFunc("GET /v1/capabilities", rt.handleCapabilities)
-
-	// Authentication. Sign-in is necessarily unauthenticated; the rest require
-	// a session but no particular role.
-	mux.HandleFunc("POST /v1/auth/sign-in", rt.handleSignIn)
-	mux.Handle("POST /v1/auth/sign-out", requireAuth(rt.log, http.HandlerFunc(rt.handleSignOut)))
-	mux.Handle("GET /v1/auth/session", requireAuth(rt.log, http.HandlerFunc(rt.handleSession)))
-	mux.Handle("POST /v1/auth/password", requireAuth(rt.log, http.HandlerFunc(rt.handleChangePassword)))
-
-	// Administration. Each route names the roles it needs, so an endpoint that
-	// forgets is visibly missing a line rather than inheriting a default.
-	admin := security.RoleAdmin
-	mux.Handle("GET /v1/admin/tenant", requireAuth(rt.log, http.HandlerFunc(rt.handleGetTenant)))
-	mux.Handle("GET /v1/admin/users", requireRole(rt.log, http.HandlerFunc(rt.handleListUsers),
-		admin, security.RoleAnalyst, security.RoleAuditor))
-	mux.Handle("POST /v1/admin/users", requireRole(rt.log, http.HandlerFunc(rt.handleCreateUser), admin))
-	mux.Handle("POST /v1/admin/users/{userId}/status", requireRole(rt.log, http.HandlerFunc(rt.handleSetUserStatus), admin))
-	mux.Handle("POST /v1/admin/users/{userId}/roles", requireRole(rt.log, http.HandlerFunc(rt.handleGrantRole), admin))
-	mux.Handle("DELETE /v1/admin/users/{userId}/roles/{role}", requireRole(rt.log, http.HandlerFunc(rt.handleRevokeRole), admin))
-	mux.Handle("GET /v1/admin/sessions", requireRole(rt.log, http.HandlerFunc(rt.handleListSessions), admin))
-	mux.Handle("DELETE /v1/admin/sessions/{sessionId}", requireRole(rt.log, http.HandlerFunc(rt.handleRevokeSession), admin))
-	mux.Handle("GET /v1/admin/audit", requireRole(rt.log, http.HandlerFunc(rt.handleListAudit),
-		admin, security.RoleAuditor))
+	for _, r := range rt.routes() {
+		handler := http.Handler(r.handler)
+		switch {
+		case r.Public:
+		case len(r.Roles) == 0:
+			handler = requireAuth(rt.log, handler)
+		default:
+			handler = requireRole(rt.log, handler, r.Roles...)
+		}
+		mux.Handle(r.Method+" "+r.Pattern, handler)
+	}
 
 	// An unrouted path returns a Problem rather than ServeMux's plain-text
 	// 404, so every error a client sees has the same shape (ADR-0016 §2.5).
@@ -141,6 +206,21 @@ type capabilitiesResponse struct {
 	CanonProfile  string            `json:"canonProfile"`
 	Authoritative bool              `json:"authoritative"`
 	ReasonCodes   []string          `json:"reasonCodes"`
+	// Content is absent in a cell with no bundle loaded. Absent rather than an
+	// empty object: "this cell has no content" and "this cell has a content
+	// bundle with no identity" are different facts, and a client that has to
+	// tell them apart should not have to guess (ADR-0011 P3, at the API).
+	Content *contentCapability `json:"content,omitempty"`
+}
+
+// contentCapability names the exact bundle serving this cell. It is what a
+// caller quotes in a support request and what a replay names, so it carries the
+// digest rather than only the identifier.
+type contentCapability struct {
+	BundleID  string `json:"bundleId"`
+	Digest    string `json:"digest"`
+	IRVersion int    `json:"irVersion"`
+	NodeCount int    `json:"nodeCount"`
 }
 
 // handleCapabilities is ADR-0010 §2.6's runtime discovery mechanism.
@@ -155,6 +235,18 @@ func (rt *Router) handleCapabilities(w http.ResponseWriter, r *http.Request) {
 	for _, c := range codes {
 		names = append(names, string(c))
 	}
+	var content *contentCapability
+	if rt.Content != nil {
+		if b := rt.Content.Current(); b != nil {
+			content = &contentCapability{
+				BundleID:  b.ID(),
+				Digest:    b.Digest(),
+				IRVersion: b.IRVersion(),
+				NodeCount: b.NodeCount(),
+			}
+		}
+	}
+
 	writeJSON(w, r, rt.log, http.StatusOK, capabilitiesResponse{
 		Cell:          rt.Cell,
 		Region:        rt.Region,
@@ -163,5 +255,6 @@ func (rt *Router) handleCapabilities(w http.ResponseWriter, r *http.Request) {
 		CanonProfile:  "canon/v1",
 		Authoritative: rt.Authoritative,
 		ReasonCodes:   names,
+		Content:       content,
 	})
 }

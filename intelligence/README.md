@@ -73,10 +73,60 @@ python -m mypy src tests  # strict, nothing waived
 
 `mypy` is strict with no waivers because the Gateway decides whether a call may proceed — a type error here is an authorization bug.
 
+## The Tool Registry & Broker
+
+`tool_broker.py` is the authorization gate for every tool call the AI plane
+makes.  It extends the "control before content" shape of `governance.py` from
+*use cases* to *tools* (Chapter 17 §13, §16).
+
+```
+src/ztax_gateway/
+  tool_broker.py   ToolCatalog, authorise(), guarded(), AgentAudit
+```
+
+### Action classes
+
+Five ordered classes, increasing in privilege:
+
+| Class | Description |
+|---|---|
+| `READ` | Read-only; no side effects |
+| `PREPARE` | Stages a change; does not commit it |
+| `MUTATE` | Writes to a mutable store; requires an idempotency token if flagged |
+| `COMMIT` | Finalises a prepared change; requires an idempotency token if flagged |
+| `PRIVILEGED` | Refused unconditionally — same shape as A5 in `governance.py` |
+
+`PRIVILEGED` cannot be registered in the `ToolCatalog`: `register()` rejects
+it, so no catalog state can permit it.
+
+### The check order
+
+`authorise(catalog, provenance)` refuses before work happens, in decreasing
+blast-radius order:
+
+1. **Malformed context** — invalid provenance refused immediately.
+2. **Kill switch** — global kill checked before per-tool, so a global kill never
+   surfaces as `UNKNOWN_TOOL` during an incident.
+3. **Registration** — unknown tools refused.
+4. **Suspension** — a suspended tool keeps its registration (readable history).
+5. **`PRIVILEGED`** — refused unconditionally before any ceiling is consulted.
+6. **Action-class ceiling** — `COMMIT` is the maximum; `PRIVILEGED` is refused
+   at step 5, not here.
+7. **Scope verification** — the caller must hold *every* scope the tool declares.
+8. **Idempotency token** — required for `MUTATE` / `COMMIT` tools flagged
+   `idempotent=True`; missing token is refused rather than silently tolerated.
+9. **Budget** — steps, duration, token cost, monetary cost; refused rather than
+   downgraded.
+
+### Tests
+
+35 tests in `tests/test_tool_broker.py`.  Every refusal code is covered,
+the `ToolProfile` and `ToolProvenance` immutability are verified, and the
+`guarded()` helper is exercised for both the permit and the refusal path.
+
 ## What is not here
 
 - **The Intelligence Fabric proper** — provenance RAG, the SKU/ontology classifier, Change Intelligence extraction, the Evaluation Service and the adversarial harness. W2 lane L.
-- **The Tool Registry and Broker** — action classes, independent authorization, idempotency, budgets. W2 lane L.
 - **Any model provider integration.** The Gateway routes; nothing routes yet.
 
 ## The rule that holds regardless

@@ -67,6 +67,28 @@ linters:
             - pkg: "os"
               desc: "evaluator performs no I/O (ADR-0005 §2.4)"
 
+        # ADR-0005 §2.1 — authoring and compilation happen on the Z4 content
+        # plane, never at request time and never inside a regional cell. The
+        # compiler therefore ships in ztax-contentc and nowhere else; the
+        # bundle *format* (internal/content/bundle) is shared, because a cell
+        # has to read what the compiler wrote.
+        # Test files are exempt for the same reason internal/fiscaltest's rule
+        # exempts them: the constraint is about what ships. The loader's own
+        # test compiles a fixture pack so that it is testing the format the
+        # compiler actually writes rather than one assembled by hand.
+        content-compiler-is-not-in-the-cell:
+          list-mode: lax
+          files:
+            - "$all"
+            - "!$test"
+            - "!**/cmd/ztax-contentc/**"
+            - "!**/internal/content/**"
+          deny:
+            - pkg: "github.com/zoikogroup/zoikotax/backend/internal/content/dsl"
+              desc: "the rule compiler runs on the CONTENT train, not in a cell (ADR-0005 §2.1)"
+            - pkg: "github.com/zoikogroup/zoikotax/backend/internal/content/compile"
+              desc: "the rule compiler runs on the CONTENT train, not in a cell (ADR-0005 §2.1)"
+
         # ADR-0014 §5.1 c1 — events leave only via the outbox, inside the
         # transaction that produced them.
         no-direct-publishing:

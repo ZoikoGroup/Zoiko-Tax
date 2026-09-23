@@ -28,18 +28,46 @@ from .governance import (
     authorise,
 )
 from .provenance import AuthorityOutcome, Provenance, RiskTier
+from .tool_broker import (
+    MAX_PERMITTED_ACTION_CLASS,
+    ActionClass,
+    AgentAudit,
+    ToolBrokerRefusedError,
+    ToolCatalog,
+    ToolProfile,
+    ToolProvenance,
+    guarded,
+)
+from .tool_broker import (
+    Refusal as ToolRefusal,
+)
+from .tool_broker import (
+    authorise as authorise_tool,
+)
 
 __all__ = [
+    # Tool Registry & Broker
+    "MAX_PERMITTED_ACTION_CLASS",
+    # Governance Gateway
     "MAX_PERMITTED_AUTHORITY",
+    "ActionClass",
+    "AgentAudit",
     "AuthorityOutcome",
     "DecimalWireError",
     "GovernanceRefusedError",
     "Provenance",
     "Refusal",
     "RiskTier",
+    "ToolBrokerRefusedError",
+    "ToolCatalog",
+    "ToolProfile",
+    "ToolProvenance",
+    "ToolRefusal",
     "UseCase",
     "UseCaseRegistry",
     "authorise",
+    "authorise_tool",
+    "guarded",
     "parse",
     "render",
 ]

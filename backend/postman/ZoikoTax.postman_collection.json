@@ -1,19 +1,25 @@
 {
   "info": {
+    "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "ZoikoTax backend.\n\nSTATUS: only /healthz and /readyz exist today. Every /v1 request will 404 until W2 lane K builds the surface — the collection-level test script detects that and skips contract assertions rather than drowning the run in failures.\n\nPAYLOADS ARE ILLUSTRATIVE. ZTAX-INT-001 was not supplied to the specification pipeline (Build Plan §2), so request bodies are derived from the domain model in the ADRs, not from a published contract. When contracts/openapi lands, regenerate this collection from it rather than editing it by hand — ADR-0010 §2.1 makes the contract the source of truth, and a hand-maintained collection is drift waiting to happen.\n\nThe folder worth your attention is 07 · Contract conformance. Those requests should fail, in specific ways, and each asserts a control from the ADRs.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:2815bbc9532f029090f92872491b136c7177550d6505cfd2c3468a598d05a93b`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolder `99` records the determination surface, which is specified and not built. Its paths are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "00 · Health — implemented today",
-      "description": "The only two endpoints that currently exist. Everything below this folder is the planned /v1 surface from ADR-0010 §2.5 and will 404 until W2 lane K builds it.",
+      "name": "00 · Health — served, and deliberately not in the contract",
+      "description": "An orchestrator calls these; no SDK does. They carry no session, their bodies are plain text, and declaring them in the contract would generate client methods nobody should call and make a liveness probe a compatibility commitment (ADR-0010 §2.6).\n\nThey are added by the generator rather than derived from the contract, and `contract_test.go` keeps the same exception register on the server side.",
       "item": [
         {
-          "name": "GET /healthz",
+          "name": "GET /healthz — liveness",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/healthz",
               "host": [
@@ -23,7 +29,7 @@
                 "healthz"
               ]
             },
-            "description": "Liveness. Deliberately checks nothing but the process, so a dependency outage does not cause a restart loop."
+            "description": "Liveness: the process is running and can serve. It touches no dependency on purpose — a liveness probe that failed when the database was down would get the process killed, which does not fix a database and does lose the in-memory content bundle."
           },
           "response": [],
           "event": [
@@ -32,26 +38,25 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "  });",
-                  "  pm.test('body is ok', function () {",
-                  "    pm.expect(pm.response.text().trim()).to.eql('ok');",
-                  "  });",
-                  "}"
+                  "pm.test('the process is alive', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.text()).to.eql('ok\\n');",
+                  "});"
                 ]
               }
             }
           ]
         },
         {
-          "name": "GET /readyz",
+          "name": "GET /readyz — readiness",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain"
+              }
+            ],
             "url": {
               "raw": "{{baseUrl}}/readyz",
               "host": [
@@ -61,7 +66,7 @@
                 "readyz"
               ]
             },
-            "description": "Readiness. Once the database pool and the content bundle exist, both are checked here — a cell with no loaded bundle is not ready, it is not degraded (ADR-0005 §2.6)."
+            "description": "Readiness: this replica can take traffic right now. Unlike liveness it does check the cell store, because a replica that cannot reach it should leave the rotation rather than serve one 503 per caller."
           },
           "response": [],
           "event": [
@@ -70,16 +75,10 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "  });",
-                  "  pm.test('body is ready', function () {",
-                  "    pm.expect(pm.response.text().trim()).to.eql('ready');",
-                  "  });",
-                  "}"
+                  "pm.test('this replica can take traffic', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.text()).to.eql('ready\\n');",
+                  "});"
                 ]
               }
             }
@@ -88,205 +87,558 @@
       ]
     },
     {
-      "name": "01 · Capabilities",
-      "description": "Runtime capability discovery. Country pack state moves on the CONTENT train independently of APP, so coverage cannot be inferred from the API version (ADR-0010 §3.4).",
+      "name": "01 · Discovery",
+      "description": "What this deployment can actually do, before you have a session.",
       "item": [
         {
-          "name": "GET /v1/capabilities",
+          "name": "GET /v1/capabilities — Report this deployment's effective capability",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/v1/capabilities?tenantId={{tenantId}}",
+              "raw": "{{baseUrl}}/v1/capabilities",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "v1",
                 "capabilities"
+              ]
+            },
+            "description": "Report this deployment's effective capability\n\nEffective capability, not entitlement: the intersection of content\nstate, security, QA and commercial entitlement (ADR-0010 §2.6).\n\nUnauthenticated, because a client needs to know whether a cell can serve\nit before it has a session, and because an integration diagnosing a\nproblem should not need a credential to report which cell and which\ncontent bundle it reached.\n\n`content` is absent in a cell with no bundle loaded, which is a\nlegitimate deployment before A4. Absent rather than null: \"no content\"\nand \"content with no identity\" are different facts (ADR-0011 P3)."
+          },
+          "response": [
+            {
+              "name": "200 · A cell before A4, with a worked pack loaded",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/capabilities",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "capabilities"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"cell\": \"eu-west-1\",\n  \"region\": \"eu-west\",\n  \"environment\": \"development\",\n  \"trains\": {\n    \"app\": \"0.4.0\",\n    \"content\": \"0.0.0-dev\",\n    \"ai\": \"0.1.0\",\n    \"adapter\": \"0.2.0\",\n    \"infra\": \"0.3.0\",\n    \"schema\": \"0.1.0\",\n    \"migration\": \"6\"\n  },\n  \"canonProfile\": \"canon/v1\",\n  \"authoritative\": false,\n  \"reasonCodes\": [\n    \"AMBIGUOUS\",\n    \"CURRENCY_MISMATCH\",\n    \"FORBIDDEN\",\n    \"NOT_AUTHORITATIVE\",\n    \"NO_CONTENT_BUNDLE\"\n  ],\n  \"content\": {\n    \"bundleId\": \"eu-vat-worked-2026.09\",\n    \"digest\": \"zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b\",\n    \"irVersion\": 1,\n    \"nodeCount\": 22\n  }\n}"
+            },
+            {
+              "name": "200 · A cell deployed with no content bundle",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/capabilities",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "capabilities"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"cell\": \"eu-west-1\",\n  \"region\": \"eu-west\",\n  \"environment\": \"production\",\n  \"trains\": {\n    \"app\": \"0.4.0\",\n    \"content\": \"none\",\n    \"ai\": \"0.1.0\",\n    \"adapter\": \"0.2.0\",\n    \"infra\": \"0.3.0\",\n    \"schema\": \"0.1.0\",\n    \"migration\": \"6\"\n  },\n  \"canonProfile\": \"canon/v1\",\n  \"authoritative\": false,\n  \"reasonCodes\": [\n    \"NO_CONTENT_BUNDLE\",\n    \"NOT_AUTHORITATIVE\"\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getCapabilities returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('the deployment states whether it may produce authoritative output', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json()).to.have.property('authoritative');",
+                  "});",
+                  "pm.test('ADR-0011 §2.6 — it names the canonicalization profile it digests under', function () {",
+                  "  pm.expect(pm.response.json().canonProfile).to.match(/^canon\\/v\\d+$/);",
+                  "});",
+                  "// No authoritative fiscal output is permitted before A4. This is a warning",
+                  "// rather than a failure, because `false` is the correct answer today.",
+                  "if (pm.response.json().authoritative === true) {",
+                  "  console.warn('this deployment claims authoritative output — that requires A4');",
+                  "}",
+                  "const content = pm.response.json().content;",
+                  "if (content) {",
+                  "  pm.test('ADR-0011 §2.3 — the active bundle is named by digest, not only by id', function () {",
+                  "    pm.expect(content.digest).to.match(/^zt1:[0-9a-f]{64}$/);",
+                  "  });",
+                  "  pm.collectionVariables.set('bundleDigest', content.digest);",
+                  "} else {",
+                  "  console.info('no content bundle loaded; determination refuses with NO_CONTENT_BUNDLE');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 · Sign in",
+      "description": "Opens the session every folder below depends on. The response carries no token — the session is an `HttpOnly` cookie Postman's cookie jar keeps for you.",
+      "item": [
+        {
+          "name": "POST /v1/auth/sign-in — Open a session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant\": \"{{tenantSlug}}\",\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/sign-in",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "sign-in"
+              ]
+            },
+            "description": "Open a session\n\nExchanges a tenant slug, an email address and a password for an opaque\nsession cookie.\n\nThe response carries **no token**. The session identifier is in a\n`__Host-`-prefixed, `HttpOnly`, `SameSite=Strict` cookie that JavaScript\ncannot read, which is why the browser client has nothing to store and\nnothing to leak (ADR-0019 C8, ADR-0020).\n\nA failure does not distinguish an unknown subject from a wrong password.\nThe difference is an account-enumeration oracle and a caller can do\nnothing with it, so both are `INVALID_CREDENTIALS`."
+          },
+          "response": [
+            {
+              "name": "200 · A signed-in administrator",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/auth/sign-in",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "auth",
+                    "sign-in"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"tenant\": {\n    \"id\": \"ztn_01JBQ0S9C3X8Q1H6M2KX5R7F4A\",\n    \"slug\": \"acme\",\n    \"displayName\": \"Acme Telecom\",\n    \"residencyRegion\": \"eu-west\",\n    \"status\": \"ACTIVE\"\n  },\n  \"user\": {\n    \"id\": \"ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4B\",\n    \"email\": \"admin@acme.example\",\n    \"displayName\": \"Ada Lovelace\",\n    \"status\": \"ACTIVE\",\n    \"roles\": [\n      \"ADMIN\"\n    ],\n    \"createdAt\": \"2026-09-01T09:14:22.104000Z\"\n  },\n  \"expiresAt\": \"2026-09-24T09:14:22.104000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('signIn returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('sign-in succeeds', function () { pm.response.to.have.status(200); });",
+                  "pm.test('ADR-0020 — the session is a cookie, and the body carries no token', function () {",
+                  "  // A token a client can read is a token a client can leak, and a stateless",
+                  "  // one cannot be revoked. The absence of it here is the design.",
+                  "  pm.expect(pm.response.text()).to.not.match(/\"(token|accessToken|jwt|bearer|sessionToken)\"/i);",
+                  "});",
+                  "pm.test('the session cookie is set HttpOnly', function () {",
+                  "  const header = pm.response.headers.get('Set-Cookie') || '';",
+                  "  pm.expect(header.toLowerCase()).to.include('httponly');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 · Who am I",
+      "description": "What the client learns about itself, which is the only way it can learn it (ADR-0019 C8).",
+      "item": [
+        {
+          "name": "GET /v1/auth/session — Who am I, and until when",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/session",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "session"
+              ]
+            },
+            "description": "Who am I, and until when\n\nThe only way a client learns its own identity. Nothing about the session\nis readable in the browser, so a client calls this on load rather than\ndecoding a token (ADR-0019 C8)."
+          },
+          "response": [
+            {
+              "name": "200 · An analyst's session",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/auth/session",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "auth",
+                    "session"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"tenant\": {\n    \"id\": \"ztn_01JBQ0S9C3X8Q1H6M2KX5R7F4A\",\n    \"slug\": \"acme\",\n    \"displayName\": \"Acme Telecom\",\n    \"residencyRegion\": \"eu-west\",\n    \"status\": \"ACTIVE\"\n  },\n  \"user\": {\n    \"id\": \"ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C\",\n    \"email\": \"analyst@acme.example\",\n    \"displayName\": \"Grace Hopper\",\n    \"status\": \"ACTIVE\",\n    \"roles\": [\n      \"ANALYST\"\n    ],\n    \"createdAt\": \"2026-09-02T11:02:00.000000Z\"\n  },\n  \"expiresAt\": \"2026-09-24T09:14:22.104000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getSession returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/admin/tenant — The authenticated subject's tenant",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/tenant",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "tenant"
+              ]
+            },
+            "description": "The authenticated subject's tenant\n\nRequires a session but no particular role: every member of a tenant may\nsee which tenant they are in, its residency region and whether it is\nsuspended."
+          },
+          "response": [
+            {
+              "name": "200 · An active tenant",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/admin/tenant",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "admin",
+                    "tenant"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"ztn_01JBQ0S9C3X8Q1H6M2KX5R7F4A\",\n  \"slug\": \"acme\",\n  \"displayName\": \"Acme Telecom\",\n  \"residencyRegion\": \"eu-west\",\n  \"status\": \"ACTIVE\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getTenant returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 · Administration",
+      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.",
+      "item": [
+        {
+          "name": "GET /v1/admin/users — List the tenant's users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/users?limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "users"
               ],
               "query": [
                 {
-                  "key": "tenantId",
-                  "value": "{{tenantId}}"
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
                 }
               ]
             },
-            "description": "Reports EFFECTIVE capability — the intersection of country pack state, security, QA and commercial entitlement. Never entitlement alone: commercial entitlement must never appear to expand legal coverage (Build Plan §8)."
+            "description": "List the tenant's users\n\nReadable by `ADMIN`, `ANALYST` and `AUDITOR`."
           },
-          "response": [],
-          "event": [
+          "response": [
             {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "  });",
-                  "}"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "02 · Determination",
-      "description": "The C0 hot path. Budget is p99 < 150 ms server-side, with the deterministic single-line runtime under 10 ms (ADR-0001 C2).",
-      "item": [
-        {
-          "name": "POST /v1/quotes",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/v1/quotes",
-              "host": [
-                "{{baseUrl}}"
+              "name": "200 · Two users",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/admin/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "admin",
+                    "users"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
               ],
-              "path": [
-                "v1",
-                "quotes"
-              ]
-            },
-            "description": "Non-authoritative estimate. Reads accumulators without taking the row lock, so the value may be stale by whatever is in flight; the response carries an explicit non-authoritative marker (ADR-0004 §2.7). A quote is an estimate — only a commit is a decision.\n\nNo Idempotency-Key: quotes create nothing.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"currency\": \"USD\",\n  \"seller\": {\n    \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n  },\n  \"buyer\": {\n    \"customerRef\": {\n      \"sourceSystem\": \"billing\",\n      \"namespace\": \"crm\",\n      \"value\": \"CUST-99812\"\n    },\n    \"exemptions\": []\n  },\n  \"situsEvidence\": [\n    {\n      \"kind\": \"SERVICE_ADDRESS\",\n      \"precedence\": 1,\n      \"address\": {\n        \"line1\": \"2211 North First Street\",\n        \"locality\": \"San Jose\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"95131\",\n        \"country\": \"US\"\n      }\n    },\n    {\n      \"kind\": \"PLACE_OF_PRIMARY_USE\",\n      \"precedence\": 2,\n      \"address\": {\n        \"line1\": \"1 Market Street\",\n        \"locality\": \"San Francisco\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"94105\",\n        \"country\": \"US\"\n      }\n    }\n  ],\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"45.00\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-MOB-UNL\"\n      }\n    },\n    {\n      \"ordinal\": 2,\n      \"serviceComponent\": \"telecom/data/mobile/overage\",\n      \"chargeComponent\": \"USAGE\",\n      \"quantity\": {\n        \"value\": \"2.500\",\n        \"unit\": \"GIGABYTE\"\n      },\n      \"netAmount\": \"12.75\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-DATA-OVG\"\n      }\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "body": "{\n  \"users\": [\n    {\n      \"id\": \"ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4B\",\n      \"email\": \"admin@acme.example\",\n      \"displayName\": \"Ada Lovelace\",\n      \"status\": \"ACTIVE\",\n      \"roles\": [\n        \"ADMIN\"\n      ],\n      \"createdAt\": \"2026-09-01T09:14:22.104000Z\"\n    },\n    {\n      \"id\": \"ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C\",\n      \"email\": \"analyst@acme.example\",\n      \"displayName\": \"Grace Hopper\",\n      \"status\": \"INVITED\",\n      \"roles\": [\n        \"ANALYST\"\n      ],\n      \"createdAt\": \"2026-09-02T11:02:00.000000Z\"\n    }\n  ]\n}"
             }
-          },
-          "response": [],
+          ],
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "  });",
-                  "  pm.test('ADR-0004 §2.7 — quote is marked non-authoritative', function () {",
-                  "    const b = pm.response.json();",
-                  "    pm.expect(b.authoritative, 'quotes must never claim authority').to.eql(false);",
-                  "  });",
-                  "}"
+                  "pm.test('listUsers returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
                 ]
               }
             }
           ]
         },
         {
-          "name": "POST /v1/transactions:commit",
+          "name": "POST /v1/admin/users — Create a user",
           "request": {
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json"
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
               },
               {
-                "key": "Idempotency-Key",
-                "value": "{{$guid}}"
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/v1/transactions:commit",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "transactions:commit"
-              ]
-            },
-            "description": "Authoritative. One database transaction writes the decision, the evidence record, the fiscal document, the accumulator contributions, any threshold crossings, the idempotency binding and the outbox rows — atomically. That requirement is what decided the service topology (ADR-0009 §1.1).\n\nIdempotency-Key is mandatory (ADR-0013 §2.1).",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"currency\": \"USD\",\n  \"seller\": {\n    \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n  },\n  \"buyer\": {\n    \"customerRef\": {\n      \"sourceSystem\": \"billing\",\n      \"namespace\": \"crm\",\n      \"value\": \"CUST-99812\"\n    },\n    \"exemptions\": []\n  },\n  \"situsEvidence\": [\n    {\n      \"kind\": \"SERVICE_ADDRESS\",\n      \"precedence\": 1,\n      \"address\": {\n        \"line1\": \"2211 North First Street\",\n        \"locality\": \"San Jose\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"95131\",\n        \"country\": \"US\"\n      }\n    },\n    {\n      \"kind\": \"PLACE_OF_PRIMARY_USE\",\n      \"precedence\": 2,\n      \"address\": {\n        \"line1\": \"1 Market Street\",\n        \"locality\": \"San Francisco\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"94105\",\n        \"country\": \"US\"\n      }\n    }\n  ],\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"45.00\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-MOB-UNL\"\n      }\n    },\n    {\n      \"ordinal\": 2,\n      \"serviceComponent\": \"telecom/data/mobile/overage\",\n      \"chargeComponent\": \"USAGE\",\n      \"quantity\": {\n        \"value\": \"2.500\",\n        \"unit\": \"GIGABYTE\"\n      },\n      \"netAmount\": \"12.75\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-DATA-OVG\"\n      }\n    }\n  ],\n  \"documentRef\": {\n    \"sourceSystem\": \"billing\",\n    \"namespace\": \"invoice\",\n    \"value\": \"INV-2026-0918-0041\"\n  }\n}",
+              "raw": "{\n  \"email\": \"{{newUserEmail}}\",\n  \"displayName\": \"Katherine Johnson\",\n  \"roles\": [\n    \"AUDITOR\"\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "users"
+              ]
+            },
+            "description": "Create a user\n\n`ADMIN` only. A user created without a password is `INVITED` and cannot\nsign in until one is set."
           },
-          "response": [],
+          "response": [
+            {
+              "name": "201 · The invited auditor",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/admin/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "admin",
+                    "users"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4D\",\n  \"email\": \"auditor@acme.example\",\n  \"displayName\": \"Katherine Johnson\",\n  \"status\": \"INVITED\",\n  \"roles\": [\n    \"AUDITOR\"\n  ],\n  \"createdAt\": \"2026-09-23T12:00:00.000000Z\"\n}"
+            }
+          ],
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('status is 201', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "  });",
-                  "",
-                  "  const b = pm.response.json();",
-                  "  if (b && b.decisionId) {",
-                  "    pm.collectionVariables.set('decisionId', b.decisionId);",
-                  "    console.log('captured decisionId', b.decisionId);",
-                  "  }",
-                  "}"
+                  "pm.test('createUser returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('the user is created', function () { pm.response.to.have.status(201); });",
+                  "pm.test('a user created without a password cannot sign in', function () {",
+                  "  // INVITED is a distinct state rather than a disabled user, because the two",
+                  "  // lead to different administrative actions.",
+                  "  pm.expect(pm.response.json().status).to.eql('INVITED');",
+                  "});",
+                  "pm.test('the response carries no credential material', function () {",
+                  "  pm.expect(pm.response.text()).to.not.match(/\"(password|verifier|salt|hash|argon)/i);",
+                  "});",
+                  "pm.collectionVariables.set('userId', pm.response.json().id);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "POST /v1/transactions:adjust",
+          "name": "POST /v1/admin/users/{userId}/roles — Grant a role",
           "request": {
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json"
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
               },
               {
-                "key": "Idempotency-Key",
-                "value": "{{$guid}}"
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/v1/transactions:adjust",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "transactions:adjust"
-              ]
-            },
-            "description": "A correction is a new record linked by supersession, never a mutation of the original — nothing under ADR-0003 is ever updated in place.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"correctsDecisionId\": \"{{decisionId}}\",\n  \"reasonCode\": \"BILLING_CORRECTION\",\n  \"currency\": \"USD\",\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"40.00\"\n    }\n  ]\n}",
+              "raw": "{\n  \"role\": \"AUDITOR\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/users/{{userId}}/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "users",
+                "{{userId}}",
+                "roles"
+              ]
+            },
+            "description": "Grant a role\n\n`ADMIN` only. Granting a role a user already holds is not an error."
           },
           "response": [],
           "event": [
@@ -295,52 +647,51 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('status is 201', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "  });",
-                  "}"
+                  "pm.test('grantRole returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([204]);",
+                  "});"
                 ]
               }
             }
           ]
         },
         {
-          "name": "POST /v1/transactions:refund",
+          "name": "POST /v1/admin/users/{userId}/status — Enable or disable a user",
           "request": {
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json"
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
               },
               {
-                "key": "Idempotency-Key",
-                "value": "{{$guid}}"
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/v1/transactions:refund",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "transactions:refund"
-              ]
-            },
-            "description": "Note the negative amount as a canonical decimal string. ADR-0002 §7.2 flags an open question here: whether any authority mandates asymmetric HALF_UP rounding for credits and refunds.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"refundsDecisionId\": \"{{decisionId}}\",\n  \"reasonCode\": \"SERVICE_CREDIT\",\n  \"currency\": \"USD\",\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"-45.00\"\n    }\n  ]\n}",
+              "raw": "{\n  \"status\": \"DISABLED\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/users/{{userId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "users",
+                "{{userId}}",
+                "status"
+              ]
+            },
+            "description": "Enable or disable a user\n\n`ADMIN` only. Disabling a user revokes their sessions: an account whose\naccess has been withdrawn and whose session still works is an account\nwhose access has not been withdrawn."
           },
           "response": [],
           "event": [
@@ -349,294 +700,94 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('status is 201', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "  });",
-                  "}"
+                  "pm.test('setUserStatus returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([204]);",
+                  "});"
                 ]
               }
             }
           ]
-        }
-      ]
-    },
-    {
-      "name": "03 · Decisions and replay",
-      "description": "Replay is the tested form of ADR-0001 C3: a decision must reproduce byte-identically, years later, against an immutable manifest.",
-      "item": [
+        },
         {
-          "name": "GET /v1/decisions/{id}",
+          "name": "GET /v1/admin/sessions — List the tenant's sessions",
           "request": {
             "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/v1/decisions/{{decisionId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "decisions",
-                "%7B%7BdecisionId%7D%7D"
-              ]
-            },
-            "description": "Returns the decision with its execution trace — every rule node visited, its inputs, its output, and the RuleVersion and RoundingPolicy that produced it (ADR-0005 §2.7). This is evidence, not telemetry."
-          },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "  });",
-                  "  pm.test('ADR-0002 §5.1 c3 — the decision names its rounding policy', function () {",
-                  "    const b = pm.response.json();",
-                  "    pm.expect(b, 'a decision that cannot name its rounding does not replay').to.have.property('roundingPolicies');",
-                  "  });",
-                  "}"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "POST /v1/replay/{id}",
-          "request": {
-            "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json"
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/replay/{{decisionId}}",
+              "raw": "{{baseUrl}}/v1/admin/sessions?limit={{limit}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "v1",
-                "replay",
-                "%7B%7BdecisionId%7D%7D"
-              ]
-            },
-            "description": "Re-executes against the pinned manifest — content bundle digest, IR_VERSION, canon profile version, toolchain and apd versions, and the seven release-train versions. Output must be byte-identical. Any divergence is a P1 (ADR-0015 §2.8).",
-            "body": {
-              "mode": "raw",
-              "raw": "{}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "  });",
-                  "  pm.test('ADR-0011 §2.8 — replay reports byte-identical output', function () {",
-                  "    const b = pm.response.json();",
-                  "    pm.expect(b.divergence, 'replay divergence is a P1').to.eql(false);",
-                  "  });",
-                  "}"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "04 · Classification",
-      "description": "Taxability and regulatory-revenue decisions are built as separate immutable records — neither is inferred from the other (W2 lane G).",
-      "item": [
-        {
-          "name": "POST /v1/classifications",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/v1/classifications",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "classifications"
-              ]
-            },
-            "description": "AMBIGUOUS, CONFLICTED, UNSUPPORTED and REVIEW_REQUIRED come back as 200 with a recorded decision and a reason code — not as 4xx. A refusal returned as an error records nothing, and the customer transaction still happened (ADR-0016 §2.1 and §3.1).",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"items\": [\n    {\n      \"ordinal\": 1,\n      \"externalRef\": {\n        \"sourceSystem\": \"billing\",\n        \"namespace\": \"sku\",\n        \"value\": \"SKU-UCAAS-SEAT\"\n      },\n      \"description\": \"UCaaS seat licence, per user per month\",\n      \"attributes\": {\n        \"deliveryMode\": \"CLOUD\",\n        \"bundled\": \"false\"\n      }\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "  });",
-                  "  pm.test('ADR-0016 §2.1 — a refusal is a decision, not an error', function () {",
-                  "    const b = pm.response.json();",
-                  "    const states = (b.items || []).map(function (i) { return i.state; });",
-                  "    console.log('classification states:', states.join(', '));",
-                  "    pm.expect(pm.response.code).to.eql(200);",
-                  "  });",
-                  "}"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "05 · Obligations",
-      "description": "Five roles — incidence, collection, reporting, remittance, economic bearer — never collapsed into one taxpayer field (W2 lane I).",
-      "item": [
-        {
-          "name": "GET /v1/obligations",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/v1/obligations?tenantId={{tenantId}}&jurisdiction=US-CA&period=2026-09",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "obligations"
+                "admin",
+                "sessions"
               ],
               "query": [
                 {
-                  "key": "tenantId",
-                  "value": "{{tenantId}}"
-                },
-                {
-                  "key": "jurisdiction",
-                  "value": "US-CA"
-                },
-                {
-                  "key": "period",
-                  "value": "2026-09"
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
                 }
               ]
             },
-            "description": "Returns ObligationDecision records. ForecastObligation is a separate type and is never returned as if it were a decision."
+            "description": "List the tenant's sessions\n\n`ADMIN` only. `current` marks the caller's own session, so an\nadministrative screen can warn before revoking it rather than signing\nthe administrator out with no explanation."
           },
-          "response": [],
-          "event": [
+          "response": [
             {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "  });",
-                  "}"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "06 · Batch",
-      "description": "Batch idempotency semantics are an open question (ADR-0013 §7.1): one key for the batch, one per item, or both.",
-      "item": [
-        {
-          "name": "POST /v1/batches",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
+              "name": "200 · The caller's session and a revoked one",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/admin/sessions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "admin",
+                    "sessions"
+                  ]
+                }
               },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{$guid}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/v1/batches",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "batches"
-              ]
-            },
-            "description": "Idempotency-Key is mandatory here too (ADR-0013 §2.1).",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"operation\": \"TRANSACTIONS_COMMIT\",\n  \"items\": [\n    {\n      \"itemKey\": \"line-0001\",\n      \"payload\": {\n        \"tenantId\": \"{{tenantId}}\",\n        \"decisionTime\": \"{{decisionTime}}\",\n        \"eventTime\": \"{{eventTime}}\",\n        \"currency\": \"USD\",\n        \"seller\": {\n          \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n        },\n        \"buyer\": {\n          \"customerRef\": {\n            \"sourceSystem\": \"billing\",\n            \"namespace\": \"crm\",\n            \"value\": \"CUST-99812\"\n          },\n          \"exemptions\": []\n        },\n        \"situsEvidence\": [\n          {\n            \"kind\": \"SERVICE_ADDRESS\",\n            \"precedence\": 1,\n            \"address\": {\n              \"line1\": \"2211 North First Street\",\n              \"locality\": \"San Jose\",\n              \"region\": \"US-CA\",\n              \"postalCode\": \"95131\",\n              \"country\": \"US\"\n            }\n          },\n          {\n            \"kind\": \"PLACE_OF_PRIMARY_USE\",\n            \"precedence\": 2,\n            \"address\": {\n              \"line1\": \"1 Market Street\",\n              \"locality\": \"San Francisco\",\n              \"region\": \"US-CA\",\n              \"postalCode\": \"94105\",\n              \"country\": \"US\"\n            }\n          }\n        ],\n        \"lines\": [\n          {\n            \"ordinal\": 1,\n            \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n            \"chargeComponent\": \"RECURRING_MONTHLY\",\n            \"quantity\": {\n              \"value\": \"1\",\n              \"unit\": \"SUBSCRIPTION\"\n            },\n            \"netAmount\": \"45.00\",\n            \"catalogRef\": {\n              \"sourceSystem\": \"tmf620\",\n              \"namespace\": \"catalog\",\n              \"value\": \"SKU-MOB-UNL\"\n            }\n          },\n          {\n            \"ordinal\": 2,\n            \"serviceComponent\": \"telecom/data/mobile/overage\",\n            \"chargeComponent\": \"USAGE\",\n            \"quantity\": {\n              \"value\": \"2.500\",\n              \"unit\": \"GIGABYTE\"\n            },\n            \"netAmount\": \"12.75\",\n            \"catalogRef\": {\n              \"sourceSystem\": \"tmf620\",\n              \"namespace\": \"catalog\",\n              \"value\": \"SKU-DATA-OVG\"\n            }\n          }\n        ],\n        \"documentRef\": {\n          \"sourceSystem\": \"billing\",\n          \"namespace\": \"invoice\",\n          \"value\": \"INV-2026-0918-0041\"\n        }\n      }\n    },\n    {\n      \"itemKey\": \"line-0002\",\n      \"payload\": {\n        \"tenantId\": \"{{tenantId}}\",\n        \"decisionTime\": \"{{decisionTime}}\",\n        \"eventTime\": \"{{eventTime}}\",\n        \"currency\": \"USD\",\n        \"seller\": {\n          \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n        },\n        \"buyer\": {\n          \"customerRef\": {\n            \"sourceSystem\": \"billing\",\n            \"namespace\": \"crm\",\n            \"value\": \"CUST-99812\"\n          },\n          \"exemptions\": []\n        },\n        \"situsEvidence\": [\n          {\n            \"kind\": \"SERVICE_ADDRESS\",\n            \"precedence\": 1,\n            \"address\": {\n              \"line1\": \"2211 North First Street\",\n              \"locality\": \"San Jose\",\n              \"region\": \"US-CA\",\n              \"postalCode\": \"95131\",\n              \"country\": \"US\"\n            }\n          },\n          {\n            \"kind\": \"PLACE_OF_PRIMARY_USE\",\n            \"precedence\": 2,\n            \"address\": {\n              \"line1\": \"1 Market Street\",\n              \"locality\": \"San Francisco\",\n              \"region\": \"US-CA\",\n              \"postalCode\": \"94105\",\n              \"country\": \"US\"\n            }\n          }\n        ],\n        \"lines\": [\n          {\n            \"ordinal\": 1,\n            \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n            \"chargeComponent\": \"RECURRING_MONTHLY\",\n            \"quantity\": {\n              \"value\": \"1\",\n              \"unit\": \"SUBSCRIPTION\"\n            },\n            \"netAmount\": \"45.00\",\n            \"catalogRef\": {\n              \"sourceSystem\": \"tmf620\",\n              \"namespace\": \"catalog\",\n              \"value\": \"SKU-MOB-UNL\"\n            }\n          },\n          {\n            \"ordinal\": 2,\n            \"serviceComponent\": \"telecom/data/mobile/overage\",\n            \"chargeComponent\": \"USAGE\",\n            \"quantity\": {\n              \"value\": \"2.500\",\n              \"unit\": \"GIGABYTE\"\n            },\n            \"netAmount\": \"12.75\",\n            \"catalogRef\": {\n              \"sourceSystem\": \"tmf620\",\n              \"namespace\": \"catalog\",\n              \"value\": \"SKU-DATA-OVG\"\n            }\n          }\n        ],\n        \"documentRef\": {\n          \"sourceSystem\": \"billing\",\n          \"namespace\": \"invoice\",\n          \"value\": \"INV-2026-0918-0041\"\n        }\n      }\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
                 }
-              }
+              ],
+              "body": "{\n  \"sessions\": [\n    {\n      \"id\": \"zts_01JBQ0S9C3X8Q1H6M2KX5R7F4E\",\n      \"userId\": \"ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4B\",\n      \"createdAt\": \"2026-09-23T09:14:22.104000Z\",\n      \"expiresAt\": \"2026-09-24T09:14:22.104000Z\",\n      \"userAgent\": \"Mozilla/5.0\",\n      \"clientIp\": \"203.0.113.7\",\n      \"revoked\": false,\n      \"current\": true\n    },\n    {\n      \"id\": \"zts_01JBQ0S9C3X8Q1H6M2KX5R7F4F\",\n      \"userId\": \"ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C\",\n      \"createdAt\": \"2026-09-20T08:00:00.000000Z\",\n      \"expiresAt\": \"2026-09-21T08:00:00.000000Z\",\n      \"revoked\": true,\n      \"current\": false\n    }\n  ]\n}"
             }
-          },
-          "response": [],
+          ],
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
+                  "pm.test('listSessions returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('the caller can tell which session is its own', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const sessions = pm.response.json().sessions;",
+                  "  pm.expect(sessions.filter(function (s) { return s.current; })).to.have.lengthOf(1);",
+                  "});",
+                  "// Capture one that is not the caller's, so `revokeSession` below does not",
+                  "// sign this run out of the rest of the collection.",
+                  "const other = pm.response.json().sessions.filter(function (s) { return !s.current && !s.revoked; })[0];",
+                  "if (other) {",
+                  "  pm.collectionVariables.set('sessionId', other.id);",
                   "} else {",
-                  "  pm.test('status is 202', function () {",
-                  "    pm.response.to.have.status(202);",
-                  "  });",
-                  "  const b = pm.response.json();",
-                  "  if (b && b.jobId) { pm.collectionVariables.set('jobId', b.jobId); }",
+                  "  console.info('no revocable session other than this one; revokeSession will 404');",
                   "}"
                 ]
               }
@@ -644,22 +795,116 @@
           ]
         },
         {
-          "name": "GET /v1/jobs/{id}",
+          "name": "GET /v1/admin/audit — Read the tenant's audit trail",
           "request": {
             "method": "GET",
-            "header": [],
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
             "url": {
-              "raw": "{{baseUrl}}/v1/jobs/{{jobId}}",
+              "raw": "{{baseUrl}}/v1/admin/audit?limit={{limit}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "v1",
-                "jobs",
-                "%7B%7BjobId%7D%7D"
+                "admin",
+                "audit"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
               ]
             },
-            "description": "Partial failure is reported per item; the job itself is not an error."
+            "description": "Read the tenant's audit trail\n\nReadable by `ADMIN` and `AUDITOR`. Append-only: records are written, never\namended, and a correction is a new record (ADR-0003).\n\n`detail` is a canonical JSON document as a string. It is a string rather\nthan an object because it is the exact bytes that were recorded and\ndigested — re-encoding it through this API would mean the value a reader\nsees is this build's serializer's opinion of what was written, rather\nthan what was written (ADR-0011 §2.7)."
+          },
+          "response": [
+            {
+              "name": "200 · A role grant",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/admin/audit",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "admin",
+                    "audit"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"records\": [\n    {\n      \"id\": \"zta_01JBQ0S9C3X8Q1H6M2KX5R7F4G\",\n      \"actorUserId\": \"ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4B\",\n      \"action\": \"user.role.granted\",\n      \"subjectType\": \"user\",\n      \"subjectId\": \"ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C\",\n      \"detail\": \"{\\\"role\\\":\\\"AUDITOR\\\"}\",\n      \"recordedAt\": \"2026-09-23T12:00:00.000000Z\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listAudit returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('the audit trail reads most recent first', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const at = pm.response.json().records.map(function (r) { return r.recordedAt; });",
+                  "  pm.expect(at).to.eql(at.slice().sort().reverse());",
+                  "});",
+                  "pm.test('ADR-0011 §2.7 — detail is passed through as recorded, not re-encoded', function () {",
+                  "  // A string, because it is the exact bytes that were digested. An object",
+                  "  // here would mean a reader sees this build's serializer's opinion of what",
+                  "  // was written rather than what was written.",
+                  "  pm.response.json().records.forEach(function (r) {",
+                  "    pm.expect(r.detail).to.be.a('string');",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /v1/admin/users/{userId}/roles/{role} — Revoke a role",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/users/{{userId}}/roles/{{role}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "users",
+                "{{userId}}",
+                "roles",
+                "{{role}}"
+              ]
+            },
+            "description": "Revoke a role\n\n`ADMIN` only. Revoking the last `ADMIN` role in a tenant is refused with\n`STATE_TRANSITION_INVALID`: a tenant with no administrator cannot be\nadministered, and recovering from it is a support incident."
           },
           "response": [],
           "event": [
@@ -668,13 +913,48 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('status is 200', function () {",
-                  "    pm.response.to.have.status(200);",
-                  "  });",
-                  "}"
+                  "pm.test('revokeRole returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /v1/admin/sessions/{sessionId} — Revoke a session",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/sessions/{{sessionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "sessions",
+                "{{sessionId}}"
+              ]
+            },
+            "description": "Revoke a session\n\n`ADMIN` only. The session is marked revoked, never deleted."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('revokeSession returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([204]);",
+                  "});"
                 ]
               }
             }
@@ -683,43 +963,224 @@
       ]
     },
     {
-      "name": "07 · Contract conformance — negative tests",
-      "description": "These are the valuable ones. Each asserts a control from the ADRs, and each is a request that SHOULD fail in a specific way. A 2xx here is a finding.",
+      "name": "05 · Sign out",
+      "description": "Last, because everything above needs the session this ends.",
       "item": [
         {
-          "name": "Idempotency · 1 — first commit with a fixed key",
+          "name": "POST /v1/auth/sign-out — End the current session",
           "request": {
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{reusedKey}}"
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "raw": "{{baseUrl}}/v1/auth/sign-out",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "v1",
-                "transactions:commit"
+                "auth",
+                "sign-out"
               ]
             },
-            "description": "Sets a key that requests 2 and 3 reuse. Run these three in order (Collection Runner does this automatically).",
+            "description": "End the current session\n\nRevokes this session server-side and clears the cookie. The session is\nrevoked rather than forgotten, so it appears in\n`GET /v1/admin/sessions` with `revoked: true` — a session that vanished\nwould leave nothing for an audit to look at."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('signOut returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "90 · Contract conformance — what arrives that should not",
+      "description": "Requests a well-behaved client would never send. Each asserts a control, and each runs against an endpoint that exists today — so a green row here is evidence rather than an aspiration.\n\nThese need a session: run `01 · Sign in` first, or run the whole collection.",
+      "item": [
+        {
+          "name": "Unknown field is rejected, not ignored",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"currency\": \"USD\",\n  \"seller\": {\n    \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n  },\n  \"buyer\": {\n    \"customerRef\": {\n      \"sourceSystem\": \"billing\",\n      \"namespace\": \"crm\",\n      \"value\": \"CUST-99812\"\n    },\n    \"exemptions\": []\n  },\n  \"situsEvidence\": [\n    {\n      \"kind\": \"SERVICE_ADDRESS\",\n      \"precedence\": 1,\n      \"address\": {\n        \"line1\": \"2211 North First Street\",\n        \"locality\": \"San Jose\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"95131\",\n        \"country\": \"US\"\n      }\n    },\n    {\n      \"kind\": \"PLACE_OF_PRIMARY_USE\",\n      \"precedence\": 2,\n      \"address\": {\n        \"line1\": \"1 Market Street\",\n        \"locality\": \"San Francisco\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"94105\",\n        \"country\": \"US\"\n      }\n    }\n  ],\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"45.00\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-MOB-UNL\"\n      }\n    },\n    {\n      \"ordinal\": 2,\n      \"serviceComponent\": \"telecom/data/mobile/overage\",\n      \"chargeComponent\": \"USAGE\",\n      \"quantity\": {\n        \"value\": \"2.500\",\n        \"unit\": \"GIGABYTE\"\n      },\n      \"netAmount\": \"12.75\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-DATA-OVG\"\n      }\n    }\n  ],\n  \"documentRef\": {\n    \"sourceSystem\": \"billing\",\n    \"namespace\": \"invoice\",\n    \"value\": \"INV-2026-0918-0041\"\n  }\n}",
+              "raw": "{\n  \"email\": \"{{newUserEmail}}\",\n  \"displayName\": \"Unknown Field Probe\",\n  \"displayname\": \"the same field, miscased\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "users"
+              ]
+            },
+            "description": "ADR-0011 §2.1 P5 at the transport boundary.\n\nSilently dropping an undeclared field would let two different requests digest identically, which is exactly the property an idempotency record depends on (ADR-0013 §2.4). It is also the common shape of a real integration bug: a client sends `displayname` where the contract says `displayName`, and a server that ignores it creates a user with no display name and reports success."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('a field the contract does not declare is rejected', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf(['UNKNOWN_FIELD', 'MALFORMED_REQUEST']);",
+                  "});"
+                ]
+              }
             }
+          ]
+        },
+        {
+          "name": "Explicit null is rejected",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{newUserEmail}}\",\n  \"displayName\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "users"
+              ]
+            },
+            "description": "ADR-0011 §2.1 P3.\n\n\"Explicitly cleared\" and \"not supplied\" are different facts with different consequences, and a canonical form that collapses them erases the difference from the evidence too. So `null` is an error rather than something to normalise."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('an explicit null is refused rather than normalised', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json()).to.have.property('ztx_reason_code');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An unrouted path is still a Problem",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/does-not-exist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "does-not-exist"
+              ]
+            },
+            "description": "ADR-0016 §2.5: every error a client sees has one shape, including the one `net/http.ServeMux` would otherwise answer with plain text.\n\nA client that has to parse two error formats parses one of them badly."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('a 404 is a Problem Details document, not plain text', function () {",
+                  "  pm.response.to.have.status(404);",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/problem+json');",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql('NOT_FOUND');",
+                  "});",
+                  "pm.test('a 404 is not retryable', function () {",
+                  "  pm.expect(pm.response.json().ztx_retryable).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "An administrative endpoint refuses an unauthenticated caller",
+          "protocolProfileBehavior": {
+            "disabledSystemHeaders": {}
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "users"
+              ]
+            },
+            "description": "The session cookie is deliberately cleared for this request only.\n\nIt asserts the distinction ADR-0016 §2.5 draws between 401 and 403: this is \"we do not know who you are\", and the client action is to sign in. A 403 here would tell a caller to ask for a role, which would not help."
           },
           "response": [],
           "event": [
@@ -728,8 +1189,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.collectionVariables.set('reusedKey', pm.variables.replaceIn('{{$guid}}'));",
-                  "console.log('reusedKey =', pm.collectionVariables.get('reusedKey'));"
+                  "const jar = pm.cookies.jar();",
+                  "jar.clear(pm.collectionVariables.get('baseUrl'), function () {});"
                 ]
               }
             },
@@ -738,32 +1199,302 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('status is 201', function () {",
-                  "    pm.response.to.have.status(201);",
-                  "  });",
-                  "}"
+                  "// This request must arrive with no session, so the cookie is cleared for",
+                  "// it and only it. Postman's jar is shared, so the next request signs in",
+                  "// again if it needs to.",
+                  "pm.test('no session is UNAUTHENTICATED, not FORBIDDEN', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf(['UNAUTHENTICATED', 'SESSION_EXPIRED', 'SESSION_REVOKED']);",
+                  "});"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Idempotency · 2 — same key, same body",
+          "name": "Sign-in does not distinguish a wrong password from an unknown user",
+          "protocolProfileBehavior": {
+            "disabledSystemHeaders": {}
+          },
           "request": {
             "method": "POST",
             "header": [
               {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant\": \"{{tenantSlug}}\",\n  \"email\": \"nobody-at-all@acme.example\",\n  \"password\": \"not the password either\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/sign-in",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "sign-in"
+              ]
+            },
+            "description": "Both answers are `INVALID_CREDENTIALS`.\n\nDistinguishing them is an account-enumeration oracle, and a caller can do nothing with the difference. Run this and the next request together: the reason code must be identical in both."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const jar = pm.cookies.jar();",
+                  "jar.clear(pm.collectionVariables.get('baseUrl'), function () {});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// This request must arrive with no session, so the cookie is cleared for",
+                  "// it and only it. Postman's jar is shared, so the next request signs in",
+                  "// again if it needs to.",
+                  "pm.test('an unknown subject is INVALID_CREDENTIALS', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql('INVALID_CREDENTIALS');",
+                  "});",
+                  "pm.collectionVariables.set('_unknownUserReason', pm.response.json().ztx_reason_code);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "…and neither does a wrong password for a real user",
+          "protocolProfileBehavior": {
+            "disabledSystemHeaders": {}
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant\": \"{{tenantSlug}}\",\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"definitely not the password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/sign-in",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "sign-in"
+              ]
+            },
+            "description": "The pair with the request above. The assertion is not that this is a 401 — it is that the reason code is the *same* one, so nothing in the response tells a caller whether the address exists."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const jar = pm.cookies.jar();",
+                  "jar.clear(pm.collectionVariables.get('baseUrl'), function () {});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// This request must arrive with no session, so the cookie is cleared for",
+                  "// it and only it. Postman's jar is shared, so the next request signs in",
+                  "// again if it needs to.",
+                  "pm.test('a wrong password is INVALID_CREDENTIALS', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql('INVALID_CREDENTIALS');",
+                  "});",
+                  "pm.test('it is indistinguishable from an unknown subject', function () {",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql(pm.collectionVariables.get('_unknownUserReason'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A role outside the closed set is refused",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"SUPERUSER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/users/{{userId}}/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "users",
+                "{{userId}}",
+                "roles"
+              ]
+            },
+            "description": "`Role` is a closed enum in the contract. Adding one is a reviewed change with an authorization-matrix entry, not a string a caller may invent — and a server that stored an unrecognised role would be a server whose authorization decisions nobody can audit.\n\nNeeds `userId`, which `06 · Create a user` captures."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('an invented role is refused', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
+                  "  pm.expect(pm.response.json()).to.have.property('ztx_reason_code');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "98 · Destructive — run deliberately, not as part of a pass",
+      "description": "`changePassword` revokes every session for the subject, including the calling one — a password change is what you do when a credential is believed compromised, and leaving other sessions alive would defeat it.\n\nIt also leaves the bootstrap administrator on `{{newPassword}}`, which the collection's `adminPassword` no longer names. Run it when you mean to, then update `adminPassword` or re-bootstrap the tenant.",
+      "item": [
+        {
+          "name": "POST /v1/auth/password — Change the current subject's password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{adminPassword}}\",\n  \"newPassword\": \"{{newPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "password"
+              ]
+            },
+            "description": "Change the current subject's password\n\nVerifies the current password and replaces it.\n\n**Every session for this subject is revoked, including this one.** A\npassword change is the action taken when a credential is believed\ncompromised, and leaving other sessions alive would defeat it. The\nclient is signed out and must sign in again."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('changePassword returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "99 · Awaiting the determination surface",
+      "description": "The surface `ZTAX-INT-001` specifies and ADR-0010 §2.5 names: quotes, commit, adjust, refund, decisions, replay, classifications, obligations, batches and jobs.\n\nNone of it exists, none of it is in the contract, and the payloads below are derived from the domain model in the ADRs rather than from a published contract — so field names will change. They are here because the *controls* they assert are decided even though the endpoints are not, and because W2 lane K should have something to run on the day it builds them.\n\nThese paths are in `pendingPaths`, so a 404 is reported as \"not implemented yet\" rather than as a failure.",
+      "item": [
+        {
+          "name": "Idempotency · 1 · first commit with a fixed key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
               },
               {
                 "key": "Idempotency-Key",
                 "value": "{{reusedKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"documentReference\": \"INV-POSTMAN-0001\",\n  \"lines\": [\n    {\n      \"lineNumber\": 1,\n      \"netAmount\": \"45.00\",\n      \"currency\": \"EUR\",\n      \"quantity\": \"1\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
               "raw": "{{baseUrl}}/v1/transactions:commit",
               "host": [
@@ -774,53 +1505,37 @@
                 "transactions:commit"
               ]
             },
-            "description": "The retry case. Must return the ORIGINAL stored response verbatim, not execute again (ADR-0013 §2.4). The request digest is canonical (ADR-0011), so a byte-different but semantically identical retry still matches — hashing raw bytes would false-alarm on a client library upgrade.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"currency\": \"USD\",\n  \"seller\": {\n    \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n  },\n  \"buyer\": {\n    \"customerRef\": {\n      \"sourceSystem\": \"billing\",\n      \"namespace\": \"crm\",\n      \"value\": \"CUST-99812\"\n    },\n    \"exemptions\": []\n  },\n  \"situsEvidence\": [\n    {\n      \"kind\": \"SERVICE_ADDRESS\",\n      \"precedence\": 1,\n      \"address\": {\n        \"line1\": \"2211 North First Street\",\n        \"locality\": \"San Jose\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"95131\",\n        \"country\": \"US\"\n      }\n    },\n    {\n      \"kind\": \"PLACE_OF_PRIMARY_USE\",\n      \"precedence\": 2,\n      \"address\": {\n        \"line1\": \"1 Market Street\",\n        \"locality\": \"San Francisco\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"94105\",\n        \"country\": \"US\"\n      }\n    }\n  ],\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"45.00\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-MOB-UNL\"\n      }\n    },\n    {\n      \"ordinal\": 2,\n      \"serviceComponent\": \"telecom/data/mobile/overage\",\n      \"chargeComponent\": \"USAGE\",\n      \"quantity\": {\n        \"value\": \"2.500\",\n        \"unit\": \"GIGABYTE\"\n      },\n      \"netAmount\": \"12.75\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-DATA-OVG\"\n      }\n    }\n  ],\n  \"documentRef\": {\n    \"sourceSystem\": \"billing\",\n    \"namespace\": \"invoice\",\n    \"value\": \"INV-2026-0918-0041\"\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "ADR-0013 §2.4. The first of four: this one establishes the record, and requests 2 to 4 are the interesting ones."
           },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('ADR-0013 §2.4 — replay returns the original response', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
-                  "  });",
-                  "  pm.test('ADR-0013 §2.4 — replay is signalled to the client', function () {",
-                  "    pm.expect(pm.response.headers.get('Idempotent-Replay')).to.eql('true');",
-                  "  });",
-                  "}"
-                ]
-              }
-            }
-          ]
+          "response": []
         },
         {
-          "name": "Idempotency · 3 — same key, DIFFERENT body",
+          "name": "Idempotency · 2 · same key, same body",
           "request": {
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json"
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
               },
               {
                 "key": "Idempotency-Key",
                 "value": "{{reusedKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"documentReference\": \"INV-POSTMAN-0001\",\n  \"lines\": [\n    {\n      \"lineNumber\": 1,\n      \"netAmount\": \"45.00\",\n      \"currency\": \"EUR\",\n      \"quantity\": \"1\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
               "raw": "{{baseUrl}}/v1/transactions:commit",
               "host": [
@@ -831,49 +1546,37 @@
                 "transactions:commit"
               ]
             },
-            "description": "Must be 409, and must NOT execute. Returning the original response here would tell the client that something happened which did not — if this request was an adjustment and the first was a commit, the client now believes an adjustment is recorded (ADR-0013 §3.2).",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"correctsDecisionId\": \"{{decisionId}}\",\n  \"reasonCode\": \"BILLING_CORRECTION\",\n  \"currency\": \"USD\",\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"40.00\"\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "Must return the *original* response, not a new one. A retry that produced a second decision would be a second fiscal record for one transaction, which is the Critical risk in Build Plan §8."
           },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('status is 409', function () {",
-                  "    pm.response.to.have.status(409);",
-                  "  });",
-                  "  pm.test('reason code is IDEMPOTENCY_KEY_REUSE', function () {",
-                  "    pm.expect(pm.response.json().ztx_reason_code).to.eql('IDEMPOTENCY_KEY_REUSE');",
-                  "  });",
-                  "}"
-                ]
-              }
-            }
-          ]
+          "response": []
         },
         {
-          "name": "Idempotency · 4 — missing key on commit",
+          "name": "Idempotency · 3 · same key, DIFFERENT body",
           "request": {
             "method": "POST",
             "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{reusedKey}}"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"documentReference\": \"INV-POSTMAN-0001\",\n  \"lines\": [\n    {\n      \"lineNumber\": 1,\n      \"netAmount\": \"99.00\",\n      \"currency\": \"EUR\",\n      \"quantity\": \"1\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
               "raw": "{{baseUrl}}/v1/transactions:commit",
               "host": [
@@ -884,50 +1587,74 @@
                 "transactions:commit"
               ]
             },
-            "description": "Idempotency-Key is declared required in the contract for :commit, :adjust, :refund and POST /v1/batches. Rejected before any work begins (ADR-0013 §2.1).",
+            "description": "Must be a 409 `IDEMPOTENCY_KEY_REUSE` and must not execute (ADR-0013 §2.4).\n\nReplaying the original response would be worse than either alternative: the caller would believe the amount it sent was the amount recorded."
+          },
+          "response": []
+        },
+        {
+          "name": "Idempotency · 4 · no key at all",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"currency\": \"USD\",\n  \"seller\": {\n    \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n  },\n  \"buyer\": {\n    \"customerRef\": {\n      \"sourceSystem\": \"billing\",\n      \"namespace\": \"crm\",\n      \"value\": \"CUST-99812\"\n    },\n    \"exemptions\": []\n  },\n  \"situsEvidence\": [\n    {\n      \"kind\": \"SERVICE_ADDRESS\",\n      \"precedence\": 1,\n      \"address\": {\n        \"line1\": \"2211 North First Street\",\n        \"locality\": \"San Jose\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"95131\",\n        \"country\": \"US\"\n      }\n    },\n    {\n      \"kind\": \"PLACE_OF_PRIMARY_USE\",\n      \"precedence\": 2,\n      \"address\": {\n        \"line1\": \"1 Market Street\",\n        \"locality\": \"San Francisco\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"94105\",\n        \"country\": \"US\"\n      }\n    }\n  ],\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"45.00\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-MOB-UNL\"\n      }\n    },\n    {\n      \"ordinal\": 2,\n      \"serviceComponent\": \"telecom/data/mobile/overage\",\n      \"chargeComponent\": \"USAGE\",\n      \"quantity\": {\n        \"value\": \"2.500\",\n        \"unit\": \"GIGABYTE\"\n      },\n      \"netAmount\": \"12.75\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-DATA-OVG\"\n      }\n    }\n  ],\n  \"documentRef\": {\n    \"sourceSystem\": \"billing\",\n    \"namespace\": \"invoice\",\n    \"value\": \"INV-2026-0918-0041\"\n  }\n}",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"documentReference\": \"INV-POSTMAN-0002\",\n  \"lines\": [\n    {\n      \"lineNumber\": 1,\n      \"netAmount\": \"45.00\",\n      \"currency\": \"EUR\",\n      \"quantity\": \"1\"\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
-            }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "`Idempotency-Key` is mandatory on `:commit`, `:adjust`, `:refund` and `POST /v1/batches` (ADR-0013 §2.1). Rejected before any work begins.\n\nThe contract lint already enforces the other half of this: when those paths are added, an operation that does not declare a required `Idempotency-Key` header fails `npm run lint`."
           },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('missing Idempotency-Key is rejected', function () {",
-                  "    pm.expect(pm.response.code).to.eql(400);",
-                  "  });",
-                  "}"
-                ]
-              }
-            }
-          ]
+          "response": []
         },
         {
-          "name": "Canonical form · fiscal amount sent as a JSON number",
+          "name": "Canonical form · a fiscal amount sent as a JSON number",
           "request": {
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json"
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
               },
               {
                 "key": "Idempotency-Key",
                 "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"documentReference\": \"INV-POSTMAN-0003\",\n  \"lines\": [\n    { \"lineNumber\": 1, \"netAmount\": 45.0, \"currency\": \"EUR\", \"quantity\": \"1\" }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
               "raw": "{{baseUrl}}/v1/transactions:commit",
               "host": [
@@ -938,50 +1665,37 @@
                 "transactions:commit"
               ]
             },
-            "description": "netAmount is 45.0 — a JSON number, not a string. Must be rejected, never coerced.\n\nThis is the single most important request in the collection. Build Plan §8 rates binary floating-point on fiscal amounts as High risk, and ADR-0011 §1.1 explains why it bites at the evidence layer too: RFC 8785 serializes numbers through IEEE 754 doubles, so a fiscal quantity that is ever a JSON number has already lost precision before canonicalization sees it.\n\nA 2xx response here is a Critical finding, not a test failure.",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"currency\": \"USD\",\n  \"seller\": {\n    \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n  },\n  \"buyer\": {\n    \"customerRef\": {\n      \"sourceSystem\": \"billing\",\n      \"namespace\": \"crm\",\n      \"value\": \"CUST-99812\"\n    },\n    \"exemptions\": []\n  },\n  \"situsEvidence\": [\n    {\n      \"kind\": \"SERVICE_ADDRESS\",\n      \"precedence\": 1,\n      \"address\": {\n        \"line1\": \"2211 North First Street\",\n        \"locality\": \"San Jose\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"95131\",\n        \"country\": \"US\"\n      }\n    },\n    {\n      \"kind\": \"PLACE_OF_PRIMARY_USE\",\n      \"precedence\": 2,\n      \"address\": {\n        \"line1\": \"1 Market Street\",\n        \"locality\": \"San Francisco\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"94105\",\n        \"country\": \"US\"\n      }\n    }\n  ],\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": 45,\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-MOB-UNL\"\n      }\n    },\n    {\n      \"ordinal\": 2,\n      \"serviceComponent\": \"telecom/data/mobile/overage\",\n      \"chargeComponent\": \"USAGE\",\n      \"quantity\": {\n        \"value\": \"2.500\",\n        \"unit\": \"GIGABYTE\"\n      },\n      \"netAmount\": \"12.75\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-DATA-OVG\"\n      }\n    }\n  ],\n  \"documentRef\": {\n    \"sourceSystem\": \"billing\",\n    \"namespace\": \"invoice\",\n    \"value\": \"INV-2026-0918-0041\"\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "**The request in this collection that matters most.**\n\n`\"netAmount\": 45.0` must be rejected, never coerced. A 2xx here is a Critical finding rather than a test failure: RFC 8785 serializes JSON numbers through IEEE 754 doubles (ADR-0011 §1.1), so an amount that is ever a JSON number has lost precision before canonicalization sees it — and the loss is invisible, because 45.0 survives and 0.1 does not.\n\nThe body is raw text rather than a structured one, because the whole point is to send a token a correct client cannot produce."
           },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('ADR-0010 §2.9 — a numeric fiscal amount is rejected', function () {",
-                  "    pm.expect(pm.response.code, 'coercing this is silent fiscal corruption').to.be.oneOf([400, 422]);",
-                  "  });",
-                  "}"
-                ]
-              }
-            }
-          ]
+          "response": []
         },
         {
-          "name": "Canonical form · unknown field",
+          "name": "Canonical form · explicit null in a fiscal position",
           "request": {
             "method": "POST",
             "header": [
               {
-                "key": "Content-Type",
-                "value": "application/json"
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
               },
               {
                 "key": "Idempotency-Key",
                 "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"documentReference\": \"INV-POSTMAN-0004\",\n  \"lines\": [\n    { \"lineNumber\": 1, \"netAmount\": null, \"currency\": \"EUR\", \"quantity\": \"1\" }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
               "raw": "{{baseUrl}}/v1/transactions:commit",
               "host": [
@@ -992,89 +1706,9 @@
                 "transactions:commit"
               ]
             },
-            "description": "canon/v1 rule P5: unknown fields are rejected, not ignored. Silently dropping one would let two different requests digest identically — which breaks idempotency detection and replay comparison at once (ADR-0011 §2.1).",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"currency\": \"USD\",\n  \"seller\": {\n    \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n  },\n  \"buyer\": {\n    \"customerRef\": {\n      \"sourceSystem\": \"billing\",\n      \"namespace\": \"crm\",\n      \"value\": \"CUST-99812\"\n    },\n    \"exemptions\": []\n  },\n  \"situsEvidence\": [\n    {\n      \"kind\": \"SERVICE_ADDRESS\",\n      \"precedence\": 1,\n      \"address\": {\n        \"line1\": \"2211 North First Street\",\n        \"locality\": \"San Jose\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"95131\",\n        \"country\": \"US\"\n      }\n    },\n    {\n      \"kind\": \"PLACE_OF_PRIMARY_USE\",\n      \"precedence\": 2,\n      \"address\": {\n        \"line1\": \"1 Market Street\",\n        \"locality\": \"San Francisco\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"94105\",\n        \"country\": \"US\"\n      }\n    }\n  ],\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"45.00\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-MOB-UNL\"\n      },\n      \"discountPercentage\": \"10.00\"\n    },\n    {\n      \"ordinal\": 2,\n      \"serviceComponent\": \"telecom/data/mobile/overage\",\n      \"chargeComponent\": \"USAGE\",\n      \"quantity\": {\n        \"value\": \"2.500\",\n        \"unit\": \"GIGABYTE\"\n      },\n      \"netAmount\": \"12.75\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-DATA-OVG\"\n      }\n    }\n  ],\n  \"documentRef\": {\n    \"sourceSystem\": \"billing\",\n    \"namespace\": \"invoice\",\n    \"value\": \"INV-2026-0918-0041\"\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
+            "description": "ADR-0011 §2.1 P3 on the path where it costs the most. \"The amount was explicitly cleared\" and \"the integration did not send an amount\" are different events with different fiscal consequences."
           },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('ADR-0011 §2.1 P5 — unknown fields are rejected', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
-                  "  });",
-                  "}"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Canonical form · explicit null",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{$guid}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/v1/transactions:commit",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "transactions:commit"
-              ]
-            },
-            "description": "canon/v1 rule P3: null is never emitted and is an error on input. \"Explicitly cleared\" and \"not supplied\" are different facts with different fiscal consequences, and a canonical form that collapses them erases the distinction from the evidence too (ADR-0011 §3.2).",
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"currency\": \"USD\",\n  \"seller\": {\n    \"legalEntityId\": \"{{sellerLegalEntityId}}\"\n  },\n  \"buyer\": {\n    \"customerRef\": null,\n    \"exemptions\": []\n  },\n  \"situsEvidence\": [\n    {\n      \"kind\": \"SERVICE_ADDRESS\",\n      \"precedence\": 1,\n      \"address\": {\n        \"line1\": \"2211 North First Street\",\n        \"locality\": \"San Jose\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"95131\",\n        \"country\": \"US\"\n      }\n    },\n    {\n      \"kind\": \"PLACE_OF_PRIMARY_USE\",\n      \"precedence\": 2,\n      \"address\": {\n        \"line1\": \"1 Market Street\",\n        \"locality\": \"San Francisco\",\n        \"region\": \"US-CA\",\n        \"postalCode\": \"94105\",\n        \"country\": \"US\"\n      }\n    }\n  ],\n  \"lines\": [\n    {\n      \"ordinal\": 1,\n      \"serviceComponent\": \"telecom/voice/mobile/postpaid\",\n      \"chargeComponent\": \"RECURRING_MONTHLY\",\n      \"quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"SUBSCRIPTION\"\n      },\n      \"netAmount\": \"45.00\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-MOB-UNL\"\n      }\n    },\n    {\n      \"ordinal\": 2,\n      \"serviceComponent\": \"telecom/data/mobile/overage\",\n      \"chargeComponent\": \"USAGE\",\n      \"quantity\": {\n        \"value\": \"2.500\",\n        \"unit\": \"GIGABYTE\"\n      },\n      \"netAmount\": \"12.75\",\n      \"catalogRef\": {\n        \"sourceSystem\": \"tmf620\",\n        \"namespace\": \"catalog\",\n        \"value\": \"SKU-DATA-OVG\"\n      }\n    }\n  ],\n  \"documentRef\": {\n    \"sourceSystem\": \"billing\",\n    \"namespace\": \"invoice\",\n    \"value\": \"INV-2026-0918-0041\"\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.collectionVariables.get('_notImplemented') === '1') {",
-                  "  // endpoint not built yet (W2 lane K) — assertions skipped",
-                  "} else {",
-                  "  pm.test('ADR-0011 §2.1 P3 — explicit null is rejected', function () {",
-                  "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
-                  "  });",
-                  "}"
-                ]
-              }
-            }
-          ]
+          "response": []
         }
       ]
     }
@@ -1085,15 +1719,30 @@
       "script": {
         "type": "text/javascript",
         "exec": [
+          "// Runs before every request in the collection.",
+          "//",
+          "// It exists for two things the collection cannot express as static values: a",
+          "// timestamp in the canonical form, and an email address that is different on",
+          "// every run.",
+          "",
           "// Canonical timestamps: RFC 3339 UTC with exactly six fractional digits",
-          "// (ADR-0011 §2.1 P2). Postman's {{$isoTimestamp}} gives seconds only, which",
-          "// is why these are computed rather than used directly.",
+          "// (ADR-0011 §2.1 P2). Postman's {{$isoTimestamp}} gives seconds only, which is",
+          "// why these are computed rather than used directly — a timestamp at second",
+          "// precision is a different document from one at microsecond precision, and the",
+          "// two digest differently.",
           "const canonical = function (d) {",
-          "  return d.toISOString().replace(/Z$/, '000Z');",
+          "  return d.toISOString().replace(/\\.(\\d{3})Z$/, '.$1000Z');",
           "};",
           "const now = new Date();",
           "pm.collectionVariables.set('decisionTime', canonical(now));",
-          "pm.collectionVariables.set('eventTime', canonical(new Date(now.getTime() - 2000)));"
+          "pm.collectionVariables.set('eventTime', canonical(new Date(now.getTime() - 2000)));",
+          "",
+          "// A fresh address per run, so `POST /v1/admin/users` does not fail with",
+          "// ALREADY_EXISTS the second time somebody runs the collection. It is set once",
+          "// and reused, so the create and the requests that act on the created user agree.",
+          "if (!pm.collectionVariables.get('newUserEmail')) {",
+          "  pm.collectionVariables.set('newUserEmail', 'postman+' + now.getTime() + '@acme.example');",
+          "}"
         ]
       }
     },
@@ -1102,17 +1751,29 @@
       "script": {
         "type": "text/javascript",
         "exec": [
-          "// Cross-cutting assertions. These run after every request in the collection",
-          "// and encode controls from the ADRs rather than checking one endpoint.",
+          "// Runs after every request in the collection.",
+          "//",
+          "// These encode controls from the ADRs rather than checking one endpoint, which",
+          "// is why they live at the collection level: a control that is only asserted",
+          "// where somebody remembered to assert it is a control with holes in it.",
           "",
-          "const ct = pm.response.headers.get('Content-Type') || '';",
-          "const isV1 = pm.request.url.getPath().indexOf('/v1/') === 0;",
-          "const notImplemented = pm.response.code === 404 && isV1;",
+          "const contentType = pm.response.headers.get('Content-Type') || '';",
+          "const path = '/' + pm.request.url.getPath().replace(/^\\/+/, '');",
           "",
-          "pm.collectionVariables.set('_notImplemented', notImplemented ? '1' : '0');",
+          "// Endpoints the contract does not carry yet. The collection includes requests",
+          "// for them so the intent is recorded and so W2 lane K has something to run",
+          "// against; until they exist they 404, and eighteen red rows would hide the",
+          "// rows that matter.",
+          "let pending = [];",
+          "try {",
+          "  pending = JSON.parse(pm.collectionVariables.get('pendingPaths') || '[]');",
+          "} catch (e) {",
+          "  pending = [];",
+          "}",
+          "const notImplemented = pm.response.code === 404 && pending.indexOf(path) !== -1;",
           "",
           "if (notImplemented) {",
-          "  pm.test('endpoint not implemented yet (W2 lane K) — contract assertions skipped', function () {",
+          "  pm.test('not implemented yet (W2 lane K) — assertions skipped', function () {",
           "    pm.expect(true).to.be.true;",
           "  });",
           "} else {",
@@ -1122,8 +1783,8 @@
           "  // ADR-0010 §2.9 · ADR-0001 §4.2 — a fiscal amount is never a JSON number.",
           "  // JSON.parse turns a bare number into an IEEE 754 double before any of our",
           "  // code sees it, so the defence has to be that the wire format never carries",
-          "  // one. Key matching is a heuristic until contracts/openapi lands; tighten it",
-          "  // to the published schema then.",
+          "  // one. Key matching is a heuristic; the contract's own lint checks the",
+          "  // schemas, and this checks what the server actually sent.",
           "  const FISCAL_KEY = /(amount|total|tax|rate|net|gross|price|fee|charge|base|subtotal|balance|credit|debit)/i;",
           "",
           "  const findNumericFiscal = function (node, prefix, out) {",
@@ -1148,9 +1809,31 @@
           "    });",
           "  }",
           "",
+          "  // ADR-0011 §2.1 P2 — every timestamp is RFC 3339 UTC with exactly six",
+          "  // fractional digits and a literal Z. A response that emitted an offset or a",
+          "  // variable precision would digest differently from the record it describes.",
+          "  if (body) {",
+          "    pm.test('ADR-0011 P2 — timestamps carry exactly six fractional digits', function () {",
+          "      const wrong = [];",
+          "      const check = function (node, prefix) {",
+          "        if (node === null || typeof node !== 'object') { return; }",
+          "        if (Array.isArray(node)) { node.forEach(function (v, i) { check(v, prefix + '[' + i + ']'); }); return; }",
+          "        Object.keys(node).forEach(function (k) {",
+          "          const v = node[k];",
+          "          const p = prefix ? prefix + '.' + k : k;",
+          "          if (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}/.test(v)) {",
+          "            if (!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{6}Z$/.test(v)) { wrong.push(p + '=' + v); }",
+          "          } else { check(v, p); }",
+          "        });",
+          "      };",
+          "      check(body, '');",
+          "      pm.expect(wrong, 'not in canonical form: ' + wrong.join(', ')).to.have.lengthOf(0);",
+          "    });",
+          "  }",
+          "",
           "  if (pm.response.code >= 400) {",
           "    pm.test('ADR-0016 §2.5 — errors are RFC 9457 Problem Details', function () {",
-          "      pm.expect(ct).to.include('application/problem+json');",
+          "      pm.expect(contentType).to.include('application/problem+json');",
           "    });",
           "    pm.test('ADR-0016 §2.5 — Problem carries type, title, status and a reason code', function () {",
           "      const p = pm.response.json();",
@@ -1158,6 +1841,11 @@
           "      pm.expect(p).to.have.property('title');",
           "      pm.expect(p).to.have.property('status');",
           "      pm.expect(p).to.have.property('ztx_reason_code');",
+          "    });",
+          "    pm.test('ADR-0016 §2.3 — a Problem states whether retrying is safe', function () {",
+          "      // A client that has to infer retryability from the status code will guess",
+          "      // wrong, and the guess that matters is the one that files a return twice.",
+          "      pm.expect(pm.response.json()).to.have.property('ztx_retryable');",
           "    });",
           "    pm.test('ADR-0016 §2.2 — an UNCERTAIN_* state is never an error response', function () {",
           "      pm.expect(pm.response.text()).to.not.match(/UNCERTAIN_/);",
@@ -1179,27 +1867,52 @@
       "type": "string"
     },
     {
-      "key": "tenantId",
-      "value": "01927f4e-8a7c-7def-9012-3456789abcde",
+      "key": "tenantSlug",
+      "value": "acme",
       "type": "string"
     },
     {
-      "key": "sellerLegalEntityId",
-      "value": "01927f4e-8a7c-7def-9012-3456789abcdf",
+      "key": "adminEmail",
+      "value": "admin@acme.example",
       "type": "string"
     },
     {
-      "key": "decisionId",
+      "key": "adminPassword",
+      "value": "local-dev-only-change-me",
+      "type": "string"
+    },
+    {
+      "key": "newPassword",
+      "value": "a considerably longer passphrase than that one",
+      "type": "string"
+    },
+    {
+      "key": "newUserEmail",
       "value": "",
       "type": "string"
     },
     {
-      "key": "jobId",
+      "key": "userId",
       "value": "",
       "type": "string"
     },
     {
-      "key": "reusedKey",
+      "key": "sessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "role",
+      "value": "AUDITOR",
+      "type": "string"
+    },
+    {
+      "key": "limit",
+      "value": "50",
+      "type": "string"
+    },
+    {
+      "key": "bundleDigest",
       "value": "",
       "type": "string"
     },
@@ -1214,8 +1927,23 @@
       "type": "string"
     },
     {
-      "key": "_notImplemented",
-      "value": "0",
+      "key": "tenantId",
+      "value": "ztn_01JBQ0S9C3X8Q1H6M2KX5R7F4A",
+      "type": "string"
+    },
+    {
+      "key": "reusedKey",
+      "value": "postman-idempotency-0001",
+      "type": "string"
+    },
+    {
+      "key": "pendingPaths",
+      "value": "[\"/v1/transactions:commit\",\"/v1/transactions:adjust\",\"/v1/transactions:refund\"]",
+      "type": "string"
+    },
+    {
+      "key": "contractDigest",
+      "value": "sha256:2815bbc9532f029090f92872491b136c7177550d6505cfd2c3468a598d05a93b",
       "type": "string"
     }
   ]

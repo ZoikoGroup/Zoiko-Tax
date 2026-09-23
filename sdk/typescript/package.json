@@ -1,0 +1,31 @@
+{
+  "name": "@zoikotax/sdk",
+  "version": "1.0.0",
+  "description": "TypeScript client for the ZoikoTax v1 API. Types are generated from the contract; the client is a thin typed fetch over them.",
+  "license": "LicenseRef-ZoikoTax-Proprietary",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "sideEffects": false,
+  "scripts": {
+    "generate": "openapi-typescript ../../contracts/openapi/export/ztax.v1.3.1.yaml -o src/schema.ts",
+    "generate:check": "npm run generate && git diff --exit-code -- src/schema.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "check": "npm run generate:check && npm run typecheck && node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
