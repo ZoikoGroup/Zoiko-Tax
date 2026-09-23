@@ -54,7 +54,7 @@ tools/
 migrations/             plain versioned SQL (ADR-0008)
 testdata/golden/        golden vectors — legal artifacts, not fixtures (ADR-0018)
   decimal/              the ADR-0002 corpus, with its own README
-postman/                one collection, variables included (see below)
+postman/                one collection, generated from the contract (see below)
 vendor/                 committed deliberately (ADR-0001 c6) — not yet generated
 ```
 
@@ -153,7 +153,9 @@ Still lane B: signed-artifact admission in the regional clusters, and the tier 3
 
 ## Postman
 
-[`postman/`](postman/README.md) — one collection, 20 requests covering the two live endpoints and the planned `/v1` surface from ADR-0010 §2.5. The local cell's values ride along as collection variables, so there is no environment file to import beside it.
+[`postman/`](postman/README.md) — one collection, 29 requests, **generated from [`contracts/openapi/ztax.v1.yaml`](../contracts/openapi/ztax.v1.yaml)** and hash-checked, so it cannot disagree with the contract. The local cell's values ride along as collection variables, so there is no environment file to import beside it.
+
+The seven requests in `90 · Contract conformance` are the ones worth running: each sends something a well-behaved client would never send — an unknown field, an explicit null, an invented role, a sign-in for a user that does not exist — and each asserts a control against an endpoint that exists today.
 
 Run it against a live cell:
 
@@ -164,11 +166,15 @@ docker run --rm -v "${PWD}/postman:/etc/newman" postman/newman:alpine \
   --env-var "baseUrl=http://host.docker.internal:8080"
 ```
 
-Against the current binary this gives 20 requests, 22 assertions, 0 failures: the health folder asserts for real, and the `/v1` requests report as not-yet-implemented rather than failing.
+Regenerate it after any contract change:
 
-The folder that matters is **`07 · Contract conformance`** — seven requests that *should* fail in specific ways, each asserting an ADR control. Chief among them, a commit whose `netAmount` is the JSON number `45.0` rather than the string `"45.00"`. A 2xx there is a Critical finding, not a test failure.
+```bash
+make contract
+```
 
-The collection is for exploration, not for CI. Contract testing is tier 4 in ADR-0018 §2.5, generated from the contract with `oasdiff` as the release blocker — a second, hand-maintained source of truth about the API is what ADR-0010 §3.1 exists to prevent.
+Folder `99` holds the determination surface, which is specified and not built. Its paths are listed in the collection's `pendingPaths`, so a 404 there reports as not-yet-implemented rather than as a wall of red that hides the rows that matter. Chief among those is a commit whose `netAmount` is the JSON number `45.0` rather than the string `"45.00"` — a 2xx there is a Critical finding, not a test failure.
+
+The collection is for exploration, not for CI. Contract testing is tier 4 in ADR-0018 §2.5, with `oasdiff` as the release blocker. What CI does run is `npm run postman:check`, which regenerates the collection and fails on a hand edit — the collection is generated precisely so that it cannot become the second source of truth ADR-0010 §3.1 rejects.
 
 ## Things that will surprise you, and why
 

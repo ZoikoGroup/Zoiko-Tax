@@ -52,6 +52,52 @@ golden-crosscheck: ## ADR-0002 c2 — the same vectors under Python decimal, no 
 golden-register: ## Re-baseline vector digests. A reviewed act, not a test fix (ADR-0002 §6)
 	$(PYTHON) tools/decimalcrosscheck/register.py testdata/golden/decimal
 
+# --- content (CONTENT train) ------------------------------------------------
+#
+# The development signing key is generated on demand into content/.keys, which
+# is gitignored. A production pack is signed by the KMS and the private key
+# never leaves it (ADR-0017 2.6), so this target is not the path that does it.
+
+CONTENT_DIR     ?= ../content
+CONTENT_PACK    ?= $(CONTENT_DIR)/packs/eu-vat/eu-vat.ztax
+CONTENT_BUILD   ?= $(CONTENT_DIR)/build
+CONTENT_KEYS    ?= $(CONTENT_DIR)/.keys
+CONTENT_KEY_ID  ?= content-dev-2026
+CONTENT_VERSION ?= 0.0.0-dev
+KEY_FROM        ?= 2026-01-01T00:00:00Z
+KEY_UNTIL       ?= 2030-01-01T00:00:00Z
+CONTENTC        := ZTAX_ENVIRONMENT=development $(GO) run ./cmd/ztax-contentc
+KEY_WINDOW      := -not-before $(KEY_FROM) -not-after $(KEY_UNTIL)
+
+.PHONY: content-keys
+content-keys: ## Generate a development content-signing key and its keyring
+	@test -f $(CONTENT_KEYS)/signing.pem || (mkdir -p $(CONTENT_KEYS) && $(CONTENTC) keygen -key $(CONTENT_KEYS)/signing.pem -keyring $(CONTENT_KEYS)/keyring.json -key-id $(CONTENT_KEY_ID) $(KEY_WINDOW))
+
+.PHONY: content
+content: content-keys ## Compile and seal the worked pack (ADR-0005 2.1)
+	$(CONTENTC) build -source $(CONTENT_PACK) -out $(CONTENT_BUILD) -key $(CONTENT_KEYS)/signing.pem -key-id $(CONTENT_KEY_ID) $(KEY_WINDOW) -content-version $(CONTENT_VERSION)
+
+.PHONY: content-verify
+content-verify: ## Verify the sealed bundle through the cell's own loading path
+	$(CONTENTC) verify -dir $(CONTENT_BUILD) -keyring $(CONTENT_KEYS)/keyring.json
+
+# --- contracts (SCHEMA train) -----------------------------------------------
+
+CONTRACTS_DIR ?= ../contracts
+SDK_TS_DIR    ?= ../sdk/typescript
+
+.PHONY: contract
+contract: ## Lint the contract and regenerate everything derived from it
+	cd $(CONTRACTS_DIR) && npm run lint && npm run export && npm run routes && npm run postman
+
+.PHONY: contract-check
+contract-check: ## ADR-0010 c3 and c4 — the contract's rules, and that the export was generated
+	cd $(CONTRACTS_DIR) && npm run check
+
+.PHONY: sdk
+sdk: ## Regenerate the TypeScript SDK's types from the contract and test it
+	cd $(SDK_TS_DIR) && npm run generate && npm run build && node --test test/*.test.js
+
 .PHONY: lint
 lint: ## Architectural controls as lint (ADR-0007 §2.5, ADR-0006 §2.6)
 	golangci-lint run
@@ -122,7 +168,7 @@ logs: ## Follow ztax-core logs
 	docker compose -f ../docker-compose.yml logs -f ztax-core
 
 .PHONY: check
-check: fmt-check vet fiscalfloat lint test golden-crosscheck vendor-verify ## Everything that gates a commit
+check: fmt-check vet fiscalfloat lint test golden-crosscheck vendor-verify content content-verify contract-check ## Everything that gates a commit
 
 .PHONY: clean
 clean: ## Remove build output

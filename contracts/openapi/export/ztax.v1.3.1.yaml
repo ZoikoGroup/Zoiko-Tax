@@ -1,0 +1,1432 @@
+# GENERATED — do not edit.
+#
+# OpenAPI 3.1.0, derived from ztax.v1.yaml by contracts/tools/downgrade.mjs.
+# The authoritative contract is the 3.2.0 document; this export exists only
+# because the toolchain is not 3.2.0-capable yet (ADR-0010 §2.2, §5.3).
+#
+# A hand edit here fails CI: `npm run export:check` regenerates this file and
+# compares. That check is the only thing keeping the export from becoming a
+# second contract.
+openapi: 3.1.0
+info:
+  title: ZoikoTax
+  version: 1.0.0
+  summary: Tenant identity, session and administration surface of a ZoikoTax regional cell.
+  description: |
+    This is the `/v1` surface a ZoikoTax regional cell serves today: discovery,
+    authentication and tenant administration. The determination surface named in
+    `ZTAX-INT-001` — quotes, transaction commit, adjust, refund, decisions,
+    replay, classifications, obligations, batches and jobs — is not here yet and
+    is added by addition under the same major version (ADR-0010 §2.6).
+
+    **No authoritative fiscal output is permitted before A4.** A client
+    discovers whether this deployment may produce one from
+    `GET /v1/capabilities`, which reports `authoritative`, never from a release
+    note. A deployment reporting `authoritative: false` produces advisory
+    figures that must not be filed.
+
+    ## Errors
+
+    Every error is an RFC 9457 Problem Details document with
+    `Content-Type: application/problem+json` (ADR-0016). Two fields matter more
+    than the status code:
+
+    - `ztx_reason_code` is from a closed, registered vocabulary. It means the
+      same thing in an error, in a decision and in evidence, and it is what a
+      client branches on. Never match on `title` or `detail`; both may be
+      reworded.
+    - `ztx_retryable` states whether retrying the request unchanged could
+      succeed. It is a property of the error rather than something to infer from
+      the status, so a client does not have to guess.
+
+    The full reason-code vocabulary this deployment can emit is reported by
+    `GET /v1/capabilities`.
+
+    ## Fiscal amounts
+
+    Every fiscal amount in this API is a JSON **string** in canonical decimal
+    form, such as `"12.50"` — never a JSON number (ADR-0010 §2.9). Trailing
+    zeros are significant: `"1.50"` and `"1.5"` are different assertions about
+    precision. Do not parse one into a binary float; `JSON.parse` in a browser
+    does exactly that and is the reason this rule exists.
+
+    This version of the surface carries no fiscal amounts. The rule is stated
+    here because it governs every addition to it.
+  contact:
+    name: ZoikoTax integration
+    url: https://developers.zoikotax.com
+  license:
+    name: Proprietary
+    identifier: LicenseRef-ZoikoTax-Proprietary
+servers:
+  - url: https://{cell}.zoikotax.com
+    description: A regional execution cell. Data never leaves its region.
+    variables:
+      cell:
+        default: eu-west-1
+        description: The cell serving the tenant's residency region.
+  - url: http://localhost:8080
+    description: Local development stack (`docker compose up`).
+tags:
+  - name: discovery
+    description: What this deployment can actually do, right now.
+  - name: authentication
+    description: Sessions. Opaque, server-side, cookie-borne (ADR-0020).
+  - name: administration
+    description: Tenant, users, sessions and the audit trail.
+security:
+  - sessionCookie: []
+paths:
+  /v1/capabilities:
+    get:
+      operationId: getCapabilities
+      tags:
+        - discovery
+      summary: Report this deployment's effective capability
+      description: |
+        Effective capability, not entitlement: the intersection of content
+        state, security, QA and commercial entitlement (ADR-0010 §2.6).
+
+        Unauthenticated, because a client needs to know whether a cell can serve
+        it before it has a session, and because an integration diagnosing a
+        problem should not need a credential to report which cell and which
+        content bundle it reached.
+
+        `content` is absent in a cell with no bundle loaded, which is a
+        legitimate deployment before A4. Absent rather than null: "no content"
+        and "content with no identity" are different facts (ADR-0011 P3).
+      security: []
+      responses:
+        "200":
+          description: The deployment's effective capability.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Capabilities"
+              examples:
+                preAuthorization:
+                  summary: A cell before A4, with a worked pack loaded
+                  value:
+                    cell: eu-west-1
+                    region: eu-west
+                    environment: development
+                    trains:
+                      app: 0.4.0
+                      content: 0.0.0-dev
+                      ai: 0.1.0
+                      adapter: 0.2.0
+                      infra: 0.3.0
+                      schema: 0.1.0
+                      migration: "6"
+                    canonProfile: canon/v1
+                    authoritative: false
+                    reasonCodes:
+                      - AMBIGUOUS
+                      - CURRENCY_MISMATCH
+                      - FORBIDDEN
+                      - NOT_AUTHORITATIVE
+                      - NO_CONTENT_BUNDLE
+                    content:
+                      bundleId: eu-vat-worked-2026.09
+                      digest: zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b
+                      irVersion: 1
+                      nodeCount: 22
+                noContent:
+                  summary: A cell deployed with no content bundle
+                  value:
+                    cell: eu-west-1
+                    region: eu-west
+                    environment: production
+                    trains:
+                      app: 0.4.0
+                      content: none
+                      ai: 0.1.0
+                      adapter: 0.2.0
+                      infra: 0.3.0
+                      schema: 0.1.0
+                      migration: "6"
+                    canonProfile: canon/v1
+                    authoritative: false
+                    reasonCodes:
+                      - NO_CONTENT_BUNDLE
+                      - NOT_AUTHORITATIVE
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/auth/sign-in:
+    post:
+      operationId: signIn
+      tags:
+        - authentication
+      summary: Open a session
+      description: |
+        Exchanges a tenant slug, an email address and a password for an opaque
+        session cookie.
+
+        The response carries **no token**. The session identifier is in a
+        `__Host-`-prefixed, `HttpOnly`, `SameSite=Strict` cookie that JavaScript
+        cannot read, which is why the browser client has nothing to store and
+        nothing to leak (ADR-0019 C8, ADR-0020).
+
+        A failure does not distinguish an unknown subject from a wrong password.
+        The difference is an account-enumeration oracle and a caller can do
+        nothing with it, so both are `INVALID_CREDENTIALS`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignInRequest"
+            examples:
+              default:
+                summary: An administrator signing in
+                value:
+                  tenant: acme
+                  email: admin@acme.example
+                  password: correct horse battery staple
+      responses:
+        "200":
+          description: The session, and the subject it belongs to.
+          headers:
+            Set-Cookie:
+              description: |
+                The opaque session cookie. `__Host-ztax_session` where the
+                deployment is served over TLS; `ztax_session` on plain HTTP in
+                local development only, because a browser silently drops a
+                `__Host-` cookie that is not `Secure`.
+              schema:
+                type: string
+              example: __Host-ztax_session=…; Path=/; Secure; HttpOnly; SameSite=Strict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+              examples:
+                default:
+                  summary: A signed-in administrator
+                  value:
+                    tenant:
+                      id: ztn_01JBQ0S9C3X8Q1H6M2KX5R7F4A
+                      slug: acme
+                      displayName: Acme Telecom
+                      residencyRegion: eu-west
+                      status: ACTIVE
+                    user:
+                      id: ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4B
+                      email: admin@acme.example
+                      displayName: Ada Lovelace
+                      status: ACTIVE
+                      roles:
+                        - ADMIN
+                      createdAt: 2026-09-01T09:14:22.104000Z
+                    expiresAt: 2026-09-24T09:14:22.104000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/auth/sign-out:
+    post:
+      operationId: signOut
+      tags:
+        - authentication
+      summary: End the current session
+      description: |
+        Revokes this session server-side and clears the cookie. The session is
+        revoked rather than forgotten, so it appears in
+        `GET /v1/admin/sessions` with `revoked: true` — a session that vanished
+        would leave nothing for an audit to look at.
+      responses:
+        "204":
+          description: The session is revoked and the cookie is cleared.
+          headers:
+            Set-Cookie:
+              description: The cleared session cookie.
+              schema:
+                type: string
+              example: __Host-ztax_session=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=Strict
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/auth/session:
+    get:
+      operationId: getSession
+      tags:
+        - authentication
+      summary: Who am I, and until when
+      description: |
+        The only way a client learns its own identity. Nothing about the session
+        is readable in the browser, so a client calls this on load rather than
+        decoding a token (ADR-0019 C8).
+      responses:
+        "200":
+          description: The current session.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+              examples:
+                default:
+                  summary: An analyst's session
+                  value:
+                    tenant:
+                      id: ztn_01JBQ0S9C3X8Q1H6M2KX5R7F4A
+                      slug: acme
+                      displayName: Acme Telecom
+                      residencyRegion: eu-west
+                      status: ACTIVE
+                    user:
+                      id: ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C
+                      email: analyst@acme.example
+                      displayName: Grace Hopper
+                      status: ACTIVE
+                      roles:
+                        - ANALYST
+                      createdAt: 2026-09-02T11:02:00.000000Z
+                    expiresAt: 2026-09-24T09:14:22.104000Z
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/auth/password:
+    post:
+      operationId: changePassword
+      tags:
+        - authentication
+      summary: Change the current subject's password
+      description: |
+        Verifies the current password and replaces it.
+
+        **Every session for this subject is revoked, including this one.** A
+        password change is the action taken when a credential is believed
+        compromised, and leaving other sessions alive would defeat it. The
+        client is signed out and must sign in again.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+            examples:
+              default:
+                summary: Rotating a password
+                value:
+                  currentPassword: correct horse battery staple
+                  newPassword: a considerably longer passphrase than that one
+      responses:
+        "204":
+          description: The password is changed and every session is revoked.
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/admin/tenant:
+    get:
+      operationId: getTenant
+      tags:
+        - administration
+      summary: The authenticated subject's tenant
+      description: |
+        Requires a session but no particular role: every member of a tenant may
+        see which tenant they are in, its residency region and whether it is
+        suspended.
+      responses:
+        "200":
+          description: The tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+              examples:
+                default:
+                  summary: An active tenant
+                  value:
+                    id: ztn_01JBQ0S9C3X8Q1H6M2KX5R7F4A
+                    slug: acme
+                    displayName: Acme Telecom
+                    residencyRegion: eu-west
+                    status: ACTIVE
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/admin/users:
+    get:
+      operationId: listUsers
+      tags:
+        - administration
+      summary: List the tenant's users
+      description: Readable by `ADMIN`, `ANALYST` and `AUDITOR`.
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The tenant's users.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - users
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+              examples:
+                default:
+                  summary: Two users
+                  value:
+                    users:
+                      - id: ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4B
+                        email: admin@acme.example
+                        displayName: Ada Lovelace
+                        status: ACTIVE
+                        roles:
+                          - ADMIN
+                        createdAt: 2026-09-01T09:14:22.104000Z
+                      - id: ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C
+                        email: analyst@acme.example
+                        displayName: Grace Hopper
+                        status: INVITED
+                        roles:
+                          - ANALYST
+                        createdAt: 2026-09-02T11:02:00.000000Z
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: createUser
+      tags:
+        - administration
+      summary: Create a user
+      description: |
+        `ADMIN` only. A user created without a password is `INVITED` and cannot
+        sign in until one is set.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+            examples:
+              invited:
+                summary: An invited auditor with no password yet
+                value:
+                  email: auditor@acme.example
+                  displayName: Katherine Johnson
+                  roles:
+                    - AUDITOR
+      responses:
+        "201":
+          description: The created user.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+              examples:
+                default:
+                  summary: The invited auditor
+                  value:
+                    id: ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4D
+                    email: auditor@acme.example
+                    displayName: Katherine Johnson
+                    status: INVITED
+                    roles:
+                      - AUDITOR
+                    createdAt: 2026-09-23T12:00:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/admin/users/{userId}/status:
+    post:
+      operationId: setUserStatus
+      tags:
+        - administration
+      summary: Enable or disable a user
+      description: |
+        `ADMIN` only. Disabling a user revokes their sessions: an account whose
+        access has been withdrawn and whose session still works is an account
+        whose access has not been withdrawn.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetUserStatusRequest"
+            examples:
+              disable:
+                summary: Withdrawing access
+                value:
+                  status: DISABLED
+      responses:
+        "204":
+          description: The status is set.
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/admin/users/{userId}/roles:
+    post:
+      operationId: grantRole
+      tags:
+        - administration
+      summary: Grant a role
+      description: "`ADMIN` only. Granting a role a user already holds is not an error."
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleRequest"
+            examples:
+              default:
+                summary: Granting the auditor role
+                value:
+                  role: AUDITOR
+      responses:
+        "204":
+          description: The role is granted.
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/admin/users/{userId}/roles/{role}:
+    delete:
+      operationId: revokeRole
+      tags:
+        - administration
+      summary: Revoke a role
+      description: |
+        `ADMIN` only. Revoking the last `ADMIN` role in a tenant is refused with
+        `STATE_TRANSITION_INVALID`: a tenant with no administrator cannot be
+        administered, and recovering from it is a support incident.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - name: role
+          in: path
+          required: true
+          description: The role to revoke.
+          schema:
+            $ref: "#/components/schemas/Role"
+          example: AUDITOR
+      responses:
+        "204":
+          description: The role is revoked.
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/admin/sessions:
+    get:
+      operationId: listSessions
+      tags:
+        - administration
+      summary: List the tenant's sessions
+      description: |
+        `ADMIN` only. `current` marks the caller's own session, so an
+        administrative screen can warn before revoking it rather than signing
+        the administrator out with no explanation.
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The tenant's sessions.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - sessions
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SessionSummary"
+              examples:
+                default:
+                  summary: The caller's session and a revoked one
+                  value:
+                    sessions:
+                      - id: zts_01JBQ0S9C3X8Q1H6M2KX5R7F4E
+                        userId: ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4B
+                        createdAt: 2026-09-23T09:14:22.104000Z
+                        expiresAt: 2026-09-24T09:14:22.104000Z
+                        userAgent: Mozilla/5.0
+                        clientIp: 203.0.113.7
+                        revoked: false
+                        current: true
+                      - id: zts_01JBQ0S9C3X8Q1H6M2KX5R7F4F
+                        userId: ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C
+                        createdAt: 2026-09-20T08:00:00.000000Z
+                        expiresAt: 2026-09-21T08:00:00.000000Z
+                        revoked: true
+                        current: false
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/admin/sessions/{sessionId}:
+    delete:
+      operationId: revokeSession
+      tags:
+        - administration
+      summary: Revoke a session
+      description: "`ADMIN` only. The session is marked revoked, never deleted."
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          description: The session identifier.
+          schema:
+            $ref: "#/components/schemas/SessionId"
+          example: zts_01JBQ0S9C3X8Q1H6M2KX5R7F4F
+      responses:
+        "204":
+          description: The session is revoked.
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/admin/audit:
+    get:
+      operationId: listAudit
+      tags:
+        - administration
+      summary: Read the tenant's audit trail
+      description: |
+        Readable by `ADMIN` and `AUDITOR`. Append-only: records are written, never
+        amended, and a correction is a new record (ADR-0003).
+
+        `detail` is a canonical JSON document as a string. It is a string rather
+        than an object because it is the exact bytes that were recorded and
+        digested — re-encoding it through this API would mean the value a reader
+        sees is this build's serializer's opinion of what was written, rather
+        than what was written (ADR-0011 §2.7).
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The audit records, most recent first.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                  - records
+                properties:
+                  records:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AuditRecord"
+              examples:
+                default:
+                  summary: A role grant
+                  value:
+                    records:
+                      - id: zta_01JBQ0S9C3X8Q1H6M2KX5R7F4G
+                        actorUserId: ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4B
+                        action: user.role.granted
+                        subjectType: user
+                        subjectId: ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C
+                        detail: "{\"role\":\"AUDITOR\"}"
+                        recordedAt: 2026-09-23T12:00:00.000000Z
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-ztax_session
+      description: |
+        An opaque, server-side session. The cookie is `HttpOnly` and
+        `SameSite=Strict`, so it is sent by a browser automatically and is not
+        readable by script. There is no bearer token and no JWT: a token a
+        client can read is a token a client can leak, and a stateless token
+        cannot be revoked (ADR-0020).
+
+        On plain HTTP in local development the cookie is named `ztax_session`,
+        because a browser silently drops a `__Host-` cookie that is not
+        `Secure`.
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: |
+        Maximum number of items to return. The server caps this independently,
+        so a larger value is not an error and does not return more.
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 500
+        default: 100
+      example: 50
+    UserId:
+      name: userId
+      in: path
+      required: true
+      description: The user identifier.
+      schema:
+        $ref: "#/components/schemas/UserId"
+      example: ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C
+  responses:
+    Validation:
+      description: The request was malformed or violated the contract.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            unknownField:
+              summary: An undeclared field, rejected rather than ignored
+              value:
+                type: https://errors.zoikotax.com/v1/unknown-field
+                title: Unknown field
+                status: 400
+                detail: The request contained a field the contract does not declare.
+                instance: /v1/admin/users
+                ztx_reason_code: UNKNOWN_FIELD
+                ztx_request_id: 01JBQ0S9C3X8Q1H6M2KX5R7F4H
+                ztx_field: displayname
+                ztx_retryable: false
+    Unauthenticated:
+      description: No valid session, or a session that has expired or been revoked.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            expired:
+              summary: An expired session
+              value:
+                type: https://errors.zoikotax.com/v1/session-expired
+                title: Session expired
+                status: 401
+                detail: The session has expired. Sign in again.
+                instance: /v1/auth/session
+                ztx_reason_code: SESSION_EXPIRED
+                ztx_request_id: 01JBQ0S9C3X8Q1H6M2KX5R7F4J
+                ztx_retryable: false
+    Forbidden:
+      description: The subject is known and does not hold a role permitting this action.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            forbidden:
+              summary: An analyst calling an administrative endpoint
+              value:
+                type: https://errors.zoikotax.com/v1/forbidden
+                title: Forbidden
+                status: 403
+                detail: The authenticated subject does not hold a role permitting this action.
+                instance: /v1/admin/users
+                ztx_reason_code: FORBIDDEN
+                ztx_request_id: 01JBQ0S9C3X8Q1H6M2KX5R7F4K
+                ztx_retryable: false
+    NotFound:
+      description: |
+        The resource does not exist, or is outside the caller's tenant. The two
+        are one answer on purpose: distinguishing them would tell a caller what
+        exists in a tenant they cannot see.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            notFound:
+              summary: A user in another tenant
+              value:
+                type: https://errors.zoikotax.com/v1/not-found
+                title: Not found
+                status: 404
+                detail: The referenced resource does not exist, or is outside the caller's tenant.
+                instance: /v1/admin/users/ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4Z/roles
+                ztx_reason_code: NOT_FOUND
+                ztx_request_id: 01JBQ0S9C3X8Q1H6M2KX5R7F4M
+                ztx_retryable: false
+    Conflict:
+      description: A uniqueness violation, an optimistic conflict or a state-machine violation.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            lastAdmin:
+              summary: Revoking the last administrator
+              value:
+                type: https://errors.zoikotax.com/v1/state-transition-invalid
+                title: Invalid state transition
+                status: 409
+                detail: The requested transition is not permitted from the resource's current state.
+                instance: /v1/admin/users/ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4B/roles/ADMIN
+                ztx_reason_code: STATE_TRANSITION_INVALID
+                ztx_request_id: 01JBQ0S9C3X8Q1H6M2KX5R7F4N
+                ztx_retryable: false
+    Internal:
+      description: |
+        A defect. The cause is recorded and alerted; it is deliberately not in
+        the response, because an error string from a driver carries table names,
+        query fragments and values (ADR-0016 §2.6).
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            internal:
+              summary: An unclassified failure
+              value:
+                type: https://errors.zoikotax.com/v1/internal-error
+                title: Internal error
+                status: 500
+                detail: An unexpected condition prevented the request from completing.
+                instance: /v1/admin/users
+                ztx_reason_code: INTERNAL_ERROR
+                ztx_request_id: 01JBQ0S9C3X8Q1H6M2KX5R7F4P
+                ztx_retryable: false
+    Unavailable:
+      description: |
+        A transient failure. The request was not applied and may be retried
+        unchanged — `ztx_retryable` is `true`, and `Retry-After` says when.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+          example: 2
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            databaseUnavailable:
+              summary: The cell store was unreachable
+              value:
+                type: https://errors.zoikotax.com/v1/database-unavailable
+                title: Database unavailable
+                status: 503
+                detail: The cell database was unreachable. The request was not applied and may be retried unchanged.
+                instance: /v1/admin/users
+                ztx_reason_code: DATABASE_UNAVAILABLE
+                ztx_request_id: 01JBQ0S9C3X8Q1H6M2KX5R7F4Q
+                ztx_retryable: true
+  schemas:
+    Problem:
+      type: object
+      title: Problem
+      description: |
+        RFC 9457 Problem Details, with the `ztx_` extensions from ADR-0016 §2.5.
+        The extensions carry identifiers rather than data: an error that needs
+        data to be understood names a decision or a request, and the data is
+        fetched through an audited path.
+      additionalProperties: false
+      required:
+        - type
+        - title
+        - status
+        - ztx_reason_code
+        - ztx_retryable
+      properties:
+        type:
+          type: string
+          format: uri
+          description: A stable, versioned, documented URI for this reason code.
+          example: https://errors.zoikotax.com/v1/forbidden
+        title:
+          type: string
+          description: A short summary. **Do not match on this**; it may be reworded.
+          example: Forbidden
+        status:
+          type: integer
+          format: int32
+          minimum: 100
+          maximum: 599
+          example: 403
+        detail:
+          type: string
+          description: What happened and what to do about it. Also not for matching.
+        instance:
+          type: string
+          description: The request path this occurred on.
+          example: /v1/admin/users
+        ztx_reason_code:
+          $ref: "#/components/schemas/ReasonCode"
+        ztx_request_id:
+          type: string
+          description: |
+            This request's identifier, also returned in the `X-Request-Id`
+            header. Quote it in a support request; it is what correlates the
+            response with the server-side log.
+          example: 01JBQ0S9C3X8Q1H6M2KX5R7F4H
+        ztx_trace_id:
+          type: string
+          description: The OpenTelemetry trace identifier, where tracing is enabled.
+        ztx_decision_id:
+          type: string
+          description: The decision this error concerns, where there is one.
+        ztx_field:
+          type: string
+          description: |
+            The contract field at fault, for a validation failure. A field name,
+            never a value — a value in an error message is a value in a log.
+          example: email
+        ztx_retryable:
+          type: boolean
+          description: |
+            Whether retrying this request unchanged could succeed. Only a
+            transient failure is retryable; everything else fails identically,
+            and a client that retries a validation failure is generating load
+            rather than making progress.
+          example: false
+    ReasonCode:
+      type: string
+      title: ReasonCode
+      description: |
+        A registered code from a closed vocabulary (ADR-0016 §2.4). Codes are
+        never renumbered, never reused and never redefined; a retired code stops
+        being emitted and keeps its meaning so historical evidence still
+        resolves.
+
+        This is the field to branch on. The set this deployment can emit is
+        reported by `GET /v1/capabilities`; the enum is deliberately not closed
+        here, because the register grows by addition and a client that rejects
+        an unrecognised code would break on an additive change (ADR-0010 §2.6).
+      pattern: ^[A-Z][A-Z0-9_]*$
+      example: FORBIDDEN
+    Timestamp:
+      type: string
+      title: Timestamp
+      format: date-time
+      description: |
+        RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+        (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+        encodings of one instant must not produce two digests.
+      pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$
+      example: 2026-09-23T12:00:00.000000Z
+    Digest:
+      type: string
+      title: Digest
+      description: |
+        A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+        carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+        not decoration — a future `zt2:` digest of the same document is a
+        different digest, and comparing the two without it would be wrong.
+      pattern: ^zt1:[0-9a-f]{64}$
+      example: zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b
+    TenantId:
+      type: string
+      title: TenantId
+      description: A tenant identifier (ADR-0012). Prefixed, sortable, never recycled.
+      pattern: ^ztn_[0-9A-HJKMNP-TV-Z]{26}$
+      example: ztn_01JBQ0S9C3X8Q1H6M2KX5R7F4A
+    UserId:
+      type: string
+      title: UserId
+      description: A user identifier (ADR-0012).
+      pattern: ^ztu_[0-9A-HJKMNP-TV-Z]{26}$
+      example: ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4B
+    SessionId:
+      type: string
+      title: SessionId
+      description: |
+        A session identifier (ADR-0012). It is **not** the session secret: the
+        secret is in the cookie, is never returned by this API, and is not
+        derivable from this.
+      pattern: ^zts_[0-9A-HJKMNP-TV-Z]{26}$
+      example: zts_01JBQ0S9C3X8Q1H6M2KX5R7F4E
+    AuditId:
+      type: string
+      title: AuditId
+      description: An audit record identifier (ADR-0012).
+      pattern: ^zta_[0-9A-HJKMNP-TV-Z]{26}$
+      example: zta_01JBQ0S9C3X8Q1H6M2KX5R7F4G
+    Role:
+      type: string
+      title: Role
+      description: |
+        A role within a tenant. Closed: adding one is a reviewed change with an
+        authorization matrix entry, not a string a caller may invent.
+      enum:
+        - ADMIN
+        - OPERATOR
+        - ANALYST
+        - AUDITOR
+      example: ADMIN
+    TenantStatus:
+      type: string
+      title: TenantStatus
+      enum:
+        - ACTIVE
+        - SUSPENDED
+        - CLOSED
+      example: ACTIVE
+    UserStatus:
+      type: string
+      title: UserStatus
+      description: |
+        `INVITED` is a user who exists and has no password, and therefore cannot
+        sign in. It is a distinct state rather than a disabled user, because the
+        two lead to different administrative actions.
+      enum:
+        - ACTIVE
+        - INVITED
+        - DISABLED
+      example: ACTIVE
+    Tenant:
+      type: object
+      title: Tenant
+      additionalProperties: false
+      required:
+        - id
+        - slug
+        - displayName
+        - residencyRegion
+        - status
+      properties:
+        id:
+          $ref: "#/components/schemas/TenantId"
+        slug:
+          type: string
+          description: The stable, human-usable name a client signs in with.
+          pattern: ^[a-z0-9][a-z0-9-]{1,62}$
+          example: acme
+        displayName:
+          type: string
+          example: Acme Telecom
+        residencyRegion:
+          type: string
+          description: |
+            The region whose cell holds this tenant's data. It never leaves it,
+            which is why this is reported rather than inferred.
+          example: eu-west
+        status:
+          $ref: "#/components/schemas/TenantStatus"
+    User:
+      type: object
+      title: User
+      description: |
+        A user as this API represents one. Note what is absent and always will
+        be: there is no password, no verifier, no salt and no parameter set. A
+        domain type serialized directly is a domain type whose every future
+        field becomes public API by accident.
+      additionalProperties: false
+      required:
+        - id
+        - email
+        - displayName
+        - status
+        - roles
+        - createdAt
+      properties:
+        id:
+          $ref: "#/components/schemas/UserId"
+        email:
+          type: string
+          format: email
+          example: analyst@acme.example
+        displayName:
+          type: string
+          example: Grace Hopper
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        roles:
+          type: array
+          description: The roles this user holds, which may be empty.
+          items:
+            $ref: "#/components/schemas/Role"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+    Session:
+      type: object
+      title: Session
+      description: |
+        The current session. It carries no token: the session secret is in an
+        `HttpOnly` cookie and is never in a response body.
+      additionalProperties: false
+      required:
+        - tenant
+        - user
+        - expiresAt
+      properties:
+        tenant:
+          $ref: "#/components/schemas/Tenant"
+        user:
+          $ref: "#/components/schemas/User"
+        expiresAt:
+          allOf:
+            - $ref: "#/components/schemas/Timestamp"
+          description: |
+            The session's absolute expiry. Absolute, not idle: activity does not
+            extend it, so a session ends at a time that was fixed when it began.
+    SessionSummary:
+      type: object
+      title: SessionSummary
+      additionalProperties: false
+      required:
+        - id
+        - userId
+        - createdAt
+        - expiresAt
+        - revoked
+        - current
+      properties:
+        id:
+          $ref: "#/components/schemas/SessionId"
+        userId:
+          $ref: "#/components/schemas/UserId"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        expiresAt:
+          $ref: "#/components/schemas/Timestamp"
+        userAgent:
+          type: string
+          description: The user agent recorded when the session opened, where one was sent.
+        clientIp:
+          type: string
+          description: The client address recorded when the session opened.
+        revoked:
+          type: boolean
+          description: |
+            Whether the session has been revoked. A revoked session is kept
+            rather than deleted; a session that vanished would leave nothing for
+            an audit to look at.
+        current:
+          type: boolean
+          description: Whether this is the calling session.
+    AuditRecord:
+      type: object
+      title: AuditRecord
+      additionalProperties: false
+      required:
+        - id
+        - action
+        - subjectType
+        - subjectId
+        - detail
+        - recordedAt
+      properties:
+        id:
+          $ref: "#/components/schemas/AuditId"
+        actorUserId:
+          allOf:
+            - $ref: "#/components/schemas/UserId"
+          description: |
+            Absent where the action had no human actor — a bootstrap at startup,
+            or a scheduled sweep. Absent rather than a placeholder identifier,
+            because "the system did this" and "some user did this" are different
+            facts.
+        action:
+          type: string
+          description: A dotted action name from a closed vocabulary.
+          example: user.role.granted
+        subjectType:
+          type: string
+          example: user
+        subjectId:
+          type: string
+          example: ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C
+        detail:
+          type: string
+          description: |
+            A canonical JSON document, as a string. It is the exact bytes that
+            were recorded and digested, so it is passed through rather than
+            re-encoded (ADR-0011 §2.7).
+          example: "{\"role\":\"AUDITOR\"}"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+    Capabilities:
+      type: object
+      title: Capabilities
+      additionalProperties: false
+      required:
+        - cell
+        - region
+        - environment
+        - trains
+        - canonProfile
+        - authoritative
+        - reasonCodes
+      properties:
+        cell:
+          type: string
+          description: The cell serving this request.
+          example: eu-west-1
+        region:
+          type: string
+          example: eu-west
+        environment:
+          type: string
+          example: production
+        trains:
+          $ref: "#/components/schemas/Trains"
+        canonProfile:
+          type: string
+          description: |
+            The canonicalization profile this deployment digests under. It is
+            never redefined: a change to any profile rule is a new profile, and
+            the old one stays implemented for as long as any record references
+            it (ADR-0011 §2.6).
+          example: canon/v1
+        authoritative:
+          type: boolean
+          description: |
+            **Whether this deployment may produce authoritative fiscal output.**
+            False until A4. A deployment reporting `false` produces advisory
+            figures that must not be filed, and says so here rather than leaving
+            a client to assume.
+          example: false
+        reasonCodes:
+          type: array
+          description: Every reason code this deployment can emit.
+          items:
+            $ref: "#/components/schemas/ReasonCode"
+        content:
+          $ref: "#/components/schemas/ContentCapability"
+    Trains:
+      type: object
+      title: Trains
+      description: |
+        The seven release-train versions. Together they name the exact
+        combination of code, content, models, adapters, infrastructure, schemas
+        and migrations that produced a response — which is what makes a decision
+        replayable years later.
+      additionalProperties: false
+      required:
+        - app
+        - content
+        - ai
+        - adapter
+        - infra
+        - schema
+        - migration
+      properties:
+        app:
+          type: string
+          example: 0.4.0
+        content:
+          type: string
+          example: 2026.09.1
+        ai:
+          type: string
+          example: 0.1.0
+        adapter:
+          type: string
+          example: 0.2.0
+        infra:
+          type: string
+          example: 0.3.0
+        schema:
+          type: string
+          example: 0.1.0
+        migration:
+          type: string
+          example: "6"
+    ContentCapability:
+      type: object
+      title: ContentCapability
+      description: |
+        The rule bundle this cell is running. Absent where no bundle is loaded.
+
+        The digest is here because it is what a replay names: quoting the bundle
+        identifier alone would not distinguish two builds of one pack, and the
+        difference between them is a difference in law.
+      additionalProperties: false
+      required:
+        - bundleId
+        - digest
+        - irVersion
+        - nodeCount
+      properties:
+        bundleId:
+          type: string
+          example: eu-vat-worked-2026.09
+        digest:
+          $ref: "#/components/schemas/Digest"
+        irVersion:
+          type: integer
+          format: int32
+          description: |
+            The rule-IR instruction-set version the bundle was compiled for. A
+            runtime that cannot execute a bundle refuses to load it and stays on
+            the previous one rather than degrading (ADR-0005 §2.8).
+          example: 1
+        nodeCount:
+          type: integer
+          format: int32
+          description: The size of the rule graph, for telemetry.
+          example: 22
+    SignInRequest:
+      type: object
+      title: SignInRequest
+      additionalProperties: false
+      required:
+        - tenant
+        - email
+        - password
+      properties:
+        tenant:
+          type: string
+          description: The tenant slug.
+          example: acme
+        email:
+          type: string
+          format: email
+          example: admin@acme.example
+        password:
+          type: string
+          format: password
+          minLength: 12
+          example: correct horse battery staple
+    ChangePasswordRequest:
+      type: object
+      title: ChangePasswordRequest
+      additionalProperties: false
+      required:
+        - currentPassword
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+          format: password
+          example: correct horse battery staple
+        newPassword:
+          type: string
+          format: password
+          minLength: 12
+          example: a considerably longer passphrase than that one
+    CreateUserRequest:
+      type: object
+      title: CreateUserRequest
+      additionalProperties: false
+      required:
+        - email
+        - displayName
+      properties:
+        email:
+          type: string
+          format: email
+          example: auditor@acme.example
+        displayName:
+          type: string
+          example: Katherine Johnson
+        roles:
+          type: array
+          description: Roles to grant on creation. A user may be created with none.
+          items:
+            $ref: "#/components/schemas/Role"
+        password:
+          type: string
+          format: password
+          minLength: 12
+          description: |
+            Optional. Omitting it creates an `INVITED` user who cannot sign in
+            until a password is set.
+    SetUserStatusRequest:
+      type: object
+      title: SetUserStatusRequest
+      additionalProperties: false
+      required:
+        - status
+      properties:
+        status:
+          $ref: "#/components/schemas/UserStatus"
+    RoleRequest:
+      type: object
+      title: RoleRequest
+      additionalProperties: false
+      required:
+        - role
+      properties:
+        role:
+          $ref: "#/components/schemas/Role"

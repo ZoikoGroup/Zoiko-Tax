@@ -21,12 +21,15 @@ import (
 	"syscall"
 	"time"
 
+	adaptercontent "github.com/zoikogroup/zoikotax/backend/internal/adapter/content"
 	"github.com/zoikogroup/zoikotax/backend/internal/adapter/postgres"
 	"github.com/zoikogroup/zoikotax/backend/internal/app"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/clock"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/config"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/idgen"
+	"github.com/zoikogroup/zoikotax/backend/internal/platform/kms"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/secrets"
 	ztaxhttp "github.com/zoikogroup/zoikotax/backend/internal/transport/http"
 )
@@ -89,7 +92,17 @@ func run() error {
 		return err
 	}
 
+	// Content is activated before the listener opens. ADR-0005 §2.6 makes bundle
+	// load warm, verified and atomic, and doing it here means the first request
+	// to reach this cell finds either a verified bundle or none — never a bundle
+	// mid-verification.
+	content := &rule.Holder{}
+	if err := activateContent(startCtx, cfg, content, log, clk); err != nil {
+		return err
+	}
+
 	router := ztaxhttp.NewRouter(auth, admin, store.Users(), readiness{store: store}, log, ids)
+	router.Content = content
 	router.SecureCookies = cfg.SecureCookies
 	router.TrustProxy = cfg.TrustProxy
 	router.Cell, router.Region, router.Environment = cfg.Cell, cfg.Region, cfg.Environment
@@ -266,4 +279,59 @@ func orElse(v, fallback string) string {
 		return fallback
 	}
 	return v
+}
+
+// activateContent loads and publishes this cell's rule bundle.
+//
+// A cell with no content configured starts anyway. That is not leniency: before
+// A4 no authoritative fiscal output is permitted at all, and a cell serving the
+// administrative surface with no pack loaded is a legitimate deployment. What it
+// must never do is serve determination as though it had content, and it does not
+// — rule.Evaluate refuses a nil bundle with NO_CONTENT_BUNDLE, which is
+// CategoryUnavailable and therefore safely retryable once content arrives.
+//
+// Everything else is fatal. A configured content directory that cannot be read,
+// a keyring that does not parse, a seal that does not verify: each of those is a
+// cell that would run without the content it was deployed to run, and starting
+// is worse than not starting.
+func activateContent(ctx context.Context, cfg config.Config, holder *rule.Holder, log *slog.Logger, clk clock.Clock) error {
+	if cfg.ContentDir == "" {
+		log.Warn("no content bundle configured; determination will refuse with " + string(errs.ReasonNoContentBundle))
+		return nil
+	}
+
+	// #nosec G304 -- a path from this process's own configuration.
+	keyringBytes, err := os.ReadFile(cfg.ContentKeyring)
+	if err != nil {
+		return fmt.Errorf("content keyring: %w", err)
+	}
+	keyring, err := kms.ParseKeyring(keyringBytes)
+	if err != nil {
+		return err
+	}
+
+	loader := &adaptercontent.Loader{
+		Dir:      cfg.ContentDir,
+		Verifier: keyring,
+		Clock:    clk,
+		Cell:     cfg.Cell,
+	}
+	loaded, err := loader.Activate(ctx, holder)
+	if err != nil {
+		return fmt.Errorf("content activation: %w", err)
+	}
+
+	// These seven values are what a decision names when it says which
+	// combination produced it, so they are logged once at startup in the same
+	// shape the evidence manifest records them (ADR-0011 §2.8).
+	log.Info("content activated",
+		"bundle.id", loaded.Seal.BundleID,
+		"bundle.digest", loaded.Digest,
+		"ir.version", loaded.Seal.IRVersion,
+		"canon.profile", loaded.Seal.CanonProfile,
+		"content.version", loaded.Seal.ContentVersion,
+		"key.id", loaded.KeyID,
+		"nodes", loaded.Bundle.NodeCount(),
+		"keyring.keys", keyring.KeyIDs())
+	return nil
 }
