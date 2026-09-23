@@ -78,6 +78,19 @@ type Config struct {
 	BootstrapAdminName        string
 	BootstrapAdminPasswordRef string
 
+	// Content names where this cell's signed rule bundle and the keyring that
+	// verifies it live. Both or neither: a bundle directory with no keyring
+	// would be content nobody could verify, and a keyring with no bundle
+	// verifies nothing. Neither set is a cell with no content, which is a
+	// legitimate deployment before A4 — it serves the administrative surface
+	// and refuses determination with NO_CONTENT_BUNDLE.
+	//
+	// The bundle itself is not configuration (ADR-0017's four-way table): these
+	// name *where* content lives, exactly as DatabaseURLRef names where a
+	// credential lives.
+	ContentDir     string
+	ContentKeyring string
+
 	// Authoritative records whether this deployment may emit authoritative
 	// fiscal output. It is false until A4 and is reported by /v1/capabilities,
 	// so a client discovers it from the service rather than from a release
@@ -128,6 +141,8 @@ var known = map[string]struct {
 	"ZTAX_SECURE_COOKIES":               {def: "true"},
 	"ZTAX_TRUST_PROXY":                  {def: "false"},
 	"ZTAX_AUTHORITATIVE":                {def: "false"},
+	"ZTAX_CONTENT_DIR":                  {def: ""},
+	"ZTAX_CONTENT_KEYRING":              {def: ""},
 	"ZTAX_BOOTSTRAP_TENANT":             {def: ""},
 	"ZTAX_BOOTSTRAP_TENANT_NAME":        {def: ""},
 	"ZTAX_BOOTSTRAP_ADMIN_EMAIL":        {def: ""},
@@ -216,6 +231,9 @@ func Load() (Config, error) {
 		OTLPEndpoint:        get("ZTAX_OTLP_ENDPOINT"),
 		LogLevel:            get("ZTAX_LOG_LEVEL"),
 
+		ContentDir:     get("ZTAX_CONTENT_DIR"),
+		ContentKeyring: get("ZTAX_CONTENT_KEYRING"),
+
 		SecureCookies: boolean("ZTAX_SECURE_COOKIES"),
 		TrustProxy:    boolean("ZTAX_TRUST_PROXY"),
 		Authoritative: boolean("ZTAX_AUTHORITATIVE"),
@@ -234,6 +252,14 @@ func Load() (Config, error) {
 	if c.Authoritative && c.Environment != "production" {
 		problems = append(problems, fmt.Sprintf(
 			"ZTAX_AUTHORITATIVE: refused in environment %q; authoritative output requires A4 in production", c.Environment))
+	}
+
+	if (c.ContentDir == "") != (c.ContentKeyring == "") {
+		// Failing closed here rather than at load: a cell that started with a
+		// content directory and no keyring would either run unverified content
+		// or refuse every bundle, and both are worse than not starting.
+		problems = append(problems,
+			"ZTAX_CONTENT_DIR and ZTAX_CONTENT_KEYRING are set together or not at all; content is never loaded unverified (ADR-0005 §2.6)")
 	}
 
 	// Plain-HTTP cookies are a development affordance, and saying so at startup
@@ -280,6 +306,8 @@ func (c Config) LogAttrs() []any {
 		"otlp.endpoint", c.OTLPEndpoint,
 		"log.level", c.LogLevel,
 		"database.url_ref", c.DatabaseURLRef,
+		"content.dir", c.ContentDir,
+		"content.keyring", c.ContentKeyring,
 		"secure_cookies", c.SecureCookies,
 		"trust_proxy", c.TrustProxy,
 		"authoritative", c.Authoritative,

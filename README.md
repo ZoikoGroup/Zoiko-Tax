@@ -28,9 +28,12 @@ Each service builds from **its own Dockerfile in its own directory**: [`backend/
 |---|---|---|
 | [`backend/`](backend/README.md) | The fiscal core. Go, layered, no I/O in the domain | `APP` · `ADAPTER` |
 | [`frontend/`](frontend/README.md) | The browser client. React + TypeScript + Vite | `APP` |
+| [`contracts/`](contracts/README.md) | The OpenAPI contract, its 3.1 export and the gates on both | `SCHEMA` |
+| [`content/`](content/README.md) | Rule DSL sources and the packs compiled from them | `CONTENT` |
+| [`sdk/typescript/`](sdk/typescript/README.md) | The TypeScript client, generated from the contract | `SCHEMA` |
 | [`.github/workflows/`](.github/workflows) | The pipeline: gates on every push, release on a tag | — |
 
-Directories for `contracts/`, `content/`, `infra/`, `policy/` and `runbooks/` are created when their lane opens, at the paths the topology already reserves for them, so nothing moves later.
+Directories for `infra/`, `policy/` and `runbooks/` are created when their lane opens, at the paths the topology already reserves for them, so nothing moves later.
 
 **The ADR set lives outside this repository**, in the estate workspace alongside the Build Plan and the Master Specification. Links of the form `../../adr/...` in the service READMEs resolve there. Nineteen records cover the decisions that shape everything here — the ones that explain the choices below.
 
@@ -51,8 +54,14 @@ Four that surprise people, each recorded in an ADR, each with the same shape: th
 Every gate runs in CI on each push and pull request, and each is one job named after the control it enforces, so a red run says which guarantee broke.
 
 ```bash
-cd backend && make check     # vet, analyzer, lint, tests, decimal cross-check
+cd backend && make check     # vet, analyzer, lint, tests, decimal cross-check, content, contract
 cd frontend && npm run lint && npm run build
 ```
 
-The one worth knowing about: the decimal corpus in `backend/testdata/golden/decimal` is evaluated twice — once by the Go runtime and once by an independent Python implementation reading nothing but the vectors. Two conformant decimal implementations disagree on a tax total if they round at different points, and both answers look plausible. ADR-0002 §5.1 c2.
+Three more that are worth knowing about beyond the usual.
+
+**The content pack is compiled, sealed and then loaded the way a cell loads it.** `make content` turns [`content/packs/eu-vat/eu-vat.ztax`](content/packs/eu-vat/eu-vat.ztax) into a canonical manifest and an ECDSA P-384 seal over its digest; `make content-verify` runs the *cell's own loading path* over the result, so a bundle that passes in CI is a bundle a cell will accept. CI also compiles it twice and compares the digests, because the bundle digest is what every replay names.
+
+**The contract is checked against the server in both directions.** `make contract-check` runs the API lint — no fiscal amount typed as a JSON number, every error response the shared Problem schema, every operation documented — and proves the 3.1 export was generated rather than hand-edited. On the Go side, [`contract_test.go`](backend/internal/transport/http/contract_test.go) fails on an endpoint the server serves and the contract does not declare, and on one the contract declares and nothing routes.
+
+**The decimal corpus is evaluated twice** — once by the Go runtime and once by an independent Python implementation, in a CI job with no Go toolchain in it, reading nothing but the vectors in `backend/testdata/golden/decimal`. Two conformant decimal implementations disagree on a tax total if they round at different points, and both answers look plausible. ADR-0002 §5.1 c2.
