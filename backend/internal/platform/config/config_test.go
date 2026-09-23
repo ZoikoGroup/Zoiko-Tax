@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"errors"
+	"os"
 	"strings"
 	"testing"
 
@@ -25,8 +26,39 @@ var required = map[string]string{
 	"ZTAX_SECURE_COOKIES":   "false",
 }
 
+// withEnv puts the process in a known environment, and that means *known*
+// rather than merely populated: it unsets every ZTAX_ variable the case did not
+// ask for, restoring them afterwards.
+//
+// That is not tidiness. config.Load refuses to start on an unrecognised ZTAX_
+// variable (ADR-0017 §2.1), and a CI job legitimately exports variables this
+// process does not recognise — ZTAX_TEST_DATABASE_URL and
+// ZTAX_MIGRATE_DATABASE_URL belong to the migration runner and the integration
+// tier, not to the cell. A test that read the ambient environment would pass on
+// a laptop and fail in CI, which is one instance of exactly the divergence this
+// package exists to prevent.
 func withEnv(t *testing.T, overrides map[string]string) {
 	t.Helper()
+
+	for _, entry := range os.Environ() {
+		name, value, ok := strings.Cut(entry, "=")
+		if !ok || !strings.HasPrefix(name, config.Prefix) {
+			continue
+		}
+		if _, asked := required[name]; asked {
+			continue
+		}
+		if _, asked := overrides[name]; asked {
+			continue
+		}
+		// name and value are declared inside the loop body, so each cleanup
+		// closure captures its own pair.
+		if err := os.Unsetenv(name); err != nil {
+			t.Fatalf("unset %s: %v", name, err)
+		}
+		t.Cleanup(func() { _ = os.Setenv(name, value) })
+	}
+
 	for name, value := range required {
 		t.Setenv(name, value)
 	}

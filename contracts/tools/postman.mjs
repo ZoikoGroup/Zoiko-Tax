@@ -499,7 +499,7 @@ function build(doc, overlay, scripts, sourceName) {
       description: [
         `**Generated from \`contracts/openapi/${basename(sourceName.path)}\` — do not edit.**`,
         "",
-        "Run `npm run postman` in `backend/contracts` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.",
+        "Run `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.",
         "",
         `Contract digest: \`${contractDigest}\``,
         "",

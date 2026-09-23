@@ -14,7 +14,7 @@
     "reported as 'not implemented yet' rather than as eighteen red rows hiding",
     "the rows that matter.",
     "",
-    "Edit this file, then run `npm run postman` in backend/contracts. Editing the",
+    "Edit this file, then run `npm run postman` in contracts/. Editing the",
     "generated collection directly fails CI (ADR-0010 §2.1)."
   ],
 

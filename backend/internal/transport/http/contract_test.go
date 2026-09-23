@@ -59,7 +59,7 @@ func loadContractRoutes(t *testing.T) map[string]contractRoute {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Clean(routesManifest))
 	if err != nil {
-		t.Fatalf("read %s: %v\nRun `npm run routes` in backend/contracts.", routesManifest, err)
+		t.Fatalf("read %s: %v\nRun `npm run routes` in contracts/.", routesManifest, err)
 	}
 	var doc struct {
 		Routes []contractRoute `json:"routes"`

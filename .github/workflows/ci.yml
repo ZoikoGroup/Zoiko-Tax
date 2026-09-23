@@ -211,8 +211,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: |
-            backend/contracts/package-lock.json
-            backend/sdk/typescript/package-lock.json
+            contracts/package-lock.json
+            sdk/typescript/package-lock.json
 
       # ADR-0010 §5.1 control 3: no `type: number` in a fiscal schema, every
       # error response references the shared Problem schema, every operation has
@@ -225,7 +225,7 @@ jobs:
       # same reason: each is a statement about the API, and a second statement
       # nobody generates is one that drifts.
       - name: contract lint, export, route manifest and collection
-        working-directory: backend/contracts
+        working-directory: contracts
         run: |
           npm ci
           npm run check
@@ -234,7 +234,7 @@ jobs:
       # the contract and committed, so a contract change the SDK has not been
       # regenerated for is a build failure rather than a discovery.
       - name: TypeScript SDK — generated types, types, tests
-        working-directory: backend/sdk/typescript
+        working-directory: sdk/typescript
         run: |
           npm ci
           npm run generate
