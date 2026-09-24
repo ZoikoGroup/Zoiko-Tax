@@ -1,6 +1,6 @@
 # Every gate in `backend/make check`, plus the frontend's own and the stack.
 #
-# Four real jobs, and the split is by *toolchain*, not by control. An earlier
+# The split is by *toolchain*, not by control. An earlier
 # version had eleven, six of which each paid a fresh checkout and Go setup to
 # run one command — so most of the wall-clock was spent installing Go, and a
 # contributor waiting on CI was mostly waiting on that.
@@ -16,6 +16,8 @@
 #   crosscheck   has no Go toolchain, and that absence IS the assertion
 #                (ADR-0002 c2). Merging it into `backend` would destroy the
 #                property it exists to demonstrate.
+#   sdk-*        one per SDK toolchain — Python, Go, JDK, .NET. The TypeScript
+#                SDK shares Node with `contracts` and runs there.
 #   frontend     Node, not Go.
 #   stack        builds every image through compose and asserts they answer
 #                together — the thing no single-service job can.
@@ -118,6 +120,14 @@ jobs:
       # ADR-0001 §3.1 rests on, and this is what detects one.
       - name: apd vendored and unpatched (ADR-0001 c6)
         run: make vendor-verify
+
+      # ADR-0010 §5.1 control 1. The handlers build their requests and
+      # responses from types generated out of the contract; this regenerates
+      # them and fails on any diff, so a contract change the server has not
+      # caught up with is a build failure rather than a response that quietly
+      # stops matching the SDKs.
+      - name: wire types generated from the contract (ADR-0010 c1)
+        run: make api-gen-check
 
       # --- the architectural controls -----------------------------------------
 
@@ -242,6 +252,78 @@ jobs:
           npm run build
           node --test test/*.test.js
 
+  # The other four SDKs (ADR-0010 §1, Build Plan lane K). One job each, because
+  # each is a different toolchain — the same split as the rest of this file.
+  # Every one regenerates its types from the contract's 3.1 export and fails on
+  # a diff, then builds and tests; the gate command is the SDK's own, so CI runs
+  # exactly what a developer runs.
+
+  sdk-python:
+    name: sdk · Python
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdk/python
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      # Development tools only, pinned with their whole graph. The SDK itself
+      # has no runtime dependency.
+      - run: python -m pip install -r requirements-dev.txt
+      - name: generated types, mypy --strict, tests
+        run: python scripts/check.py
+
+  sdk-go:
+    name: sdk · Go
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdk/go
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: sdk/go/go.mod
+          cache: false # no go.sum: the module has no dependencies to cache
+      - name: gofmt, vet, tidy, stdlib only, generated types, tests
+        run: make fmt-check vet tidy-check deps-check generate-check test
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          working-directory: sdk/go
+
+  sdk-java:
+    name: sdk · Java / Kotlin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          distribution: temurin
+          # The SDK compiles for 17; building on 17 proves that release target
+          # is real rather than merely declared.
+          java-version: "17"
+          cache: maven
+      # The model drift check is a test in this build, so verify is the gate.
+      - name: generated models, build, tests (Java and Kotlin)
+        run: mvn -B -f sdk/java/pom.xml verify
+
+  sdk-dotnet:
+    name: sdk · .NET
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdk/dotnet
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: sdk/dotnet/global.json
+      - name: generated models, locked restore, build, tests
+        run: sh scripts/check.sh
+
   frontend:
     name: frontend · constraints, types, bundle (ADR-0019)
     runs-on: ubuntu-latest
@@ -320,6 +402,17 @@ jobs:
             --cookie /tmp/ztax-cookies.txt \
             http://localhost:3000/api/v1/admin/users | grep -q 'admin@acme.example'
 
+      # The Postman collection, end to end against the running cell. The
+      # contracts job proves it is what the contract generates; this proves it
+      # passes — which it did not for a while, because nothing ran it: its
+      # default password was one the stack never set, and three conformance
+      # checks ran after sign-out and could only ever return 401.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: the Postman collection passes against the cell
+        run: npx --yes newman@6.2.2 run backend/postman/ZoikoTax.postman_collection.json
+
       - name: logs on failure
         if: failure()
         run: docker compose logs --no-color
@@ -331,7 +424,7 @@ jobs:
   ci:
     name: all gates green
     runs-on: ubuntu-latest
-    needs: [backend, crosscheck, contracts, frontend, stack]
+    needs: [backend, crosscheck, contracts, sdk-python, sdk-go, sdk-java, sdk-dotnet, frontend, stack]
     if: always()
     steps:
       # One check to require on the branch, so that adding a gate above does

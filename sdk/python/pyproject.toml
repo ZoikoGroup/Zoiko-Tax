@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zoikotax-sdk"
+version = "1.0.0"
+description = "Python client for the ZoikoTax v1 API. Types are generated from the contract; the client is a thin typed layer over urllib."
+readme = "README.md"
+license = "LicenseRef-ZoikoTax-Proprietary"
+requires-python = ">=3.10"
+# Deliberately empty. The client is the standard library, and the generated
+# types are TypedDicts, which cost nothing at runtime.
+dependencies = []
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Typing :: Typed",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+zoikotax = ["py.typed"]
+
+[tool.mypy]
+files = ["src", "tests", "scripts"]
+mypy_path = "src"
+# The oldest Python this SDK supports, so a 3.11-only construct in the
+# hand-written code fails here rather than on a customer's interpreter.
+python_version = "3.10"
+strict = true
+warn_unreachable = true

@@ -94,6 +94,14 @@ contract: ## Lint the contract and regenerate everything derived from it
 contract-check: ## ADR-0010 c3 and c4 — the contract's rules, and that the export was generated
 	cd $(CONTRACTS_DIR) && npm run check
 
+.PHONY: api-gen
+api-gen: ## ADR-0010 §2.1 — regenerate the wire types from the contract's 3.1 export
+	$(GO) generate ./internal/transport/http/gen
+
+.PHONY: api-gen-check
+api-gen-check: api-gen ## ADR-0010 c1 — fail if the committed wire types are not what the contract generates
+	git diff --exit-code -- internal/transport/http/gen/ || 		(echo "internal/transport/http/gen is stale or hand-edited — run 'make api-gen' and commit" && exit 1)
+
 .PHONY: sdk
 sdk: ## Regenerate the TypeScript SDK's types from the contract and test it
 	cd $(SDK_TS_DIR) && npm run generate && npm run build && node --test test/*.test.js
@@ -168,7 +176,7 @@ logs: ## Follow ztax-core logs
 	docker compose -f ../docker-compose.yml logs -f ztax-core
 
 .PHONY: check
-check: fmt-check vet fiscalfloat lint test golden-crosscheck vendor-verify content content-verify contract-check ## Everything that gates a commit
+check: fmt-check vet fiscalfloat lint test golden-crosscheck vendor-verify content content-verify contract-check api-gen-check ## Everything that gates a commit
 
 .PHONY: clean
 clean: ## Remove build output

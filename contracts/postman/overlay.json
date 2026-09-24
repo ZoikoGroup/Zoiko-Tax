@@ -4,7 +4,7 @@
     "",
     "Two kinds live here and they are kept apart deliberately.",
     "",
-    "The conformance folder asserts controls by sending requests a well-behaved",
+    "The conformance folders assert controls by sending requests a well-behaved",
     "client would never send. A contract describes what is allowed; these check",
     "what happens when something else arrives, which is where the interesting",
     "failures are. Every one of them runs against an endpoint that exists today.",
@@ -26,8 +26,8 @@
 
   "folders": [
     {
-      "name": "90 · Contract conformance — what arrives that should not",
-      "description": "Requests a well-behaved client would never send. Each asserts a control, and each runs against an endpoint that exists today — so a green row here is evidence rather than an aspiration.\n\nThese need a session: run `01 · Sign in` first, or run the whole collection.",
+      "name": "05 · Contract conformance — with a session",
+      "description": "Requests a well-behaved client would never send, to endpoints that need a session. Each asserts a control, and each runs against an endpoint that exists today — so a green row here is evidence rather than an aspiration.\n\nThey sit before `06 · Sign out` because they need the session it ends; after it they could only return 401, which is evidence of nothing but the run order.",
       "requests": [
         {
           "name": "Unknown field is rejected, not ignored",
@@ -62,6 +62,27 @@
             "});"
           ]
         },
+        {
+          "name": "A role outside the closed set is refused",
+          "method": "POST",
+          "path": "/v1/admin/users/{userId}/roles",
+          "body": {
+            "role": "SUPERUSER"
+          },
+          "description": "`Role` is a closed enum in the contract. Adding one is a reviewed change with an authorization-matrix entry, not a string a caller may invent — and a server that stored an unrecognised role would be a server whose authorization decisions nobody can audit.\n\nNeeds `userId`, which `06 · Create a user` captures.",
+          "test": [
+            "pm.test('an invented role is refused', function () {",
+            "  pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
+            "  pm.expect(pm.response.json()).to.have.property('ztx_reason_code');",
+            "});"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "90 · Contract conformance — without a session",
+      "description": "The same kind of request, for the controls that are about having no session at all — an unauthenticated caller, a sign-in that fails, a path nothing routes. They run after `06 · Sign out` so the cookie jar holds no session to send.",
+      "requests": [
         {
           "name": "An unrouted path is still a Problem",
           "method": "GET",
@@ -130,19 +151,6 @@
             "  pm.expect(pm.response.json().ztx_reason_code).to.eql(pm.collectionVariables.get('_unknownUserReason'));",
             "});"
           ]
-        },
-        {
-          "name": "A role outside the closed set is refused",
-          "method": "POST",
-          "path": "/v1/admin/users/{userId}/roles",
-          "body": { "role": "SUPERUSER" },
-          "description": "`Role` is a closed enum in the contract. Adding one is a reviewed change with an authorization-matrix entry, not a string a caller may invent — and a server that stored an unrecognised role would be a server whose authorization decisions nobody can audit.\n\nNeeds `userId`, which `06 · Create a user` captures.",
-          "test": [
-            "pm.test('an invented role is refused', function () {",
-            "  pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
-            "  pm.expect(pm.response.json()).to.have.property('ztx_reason_code');",
-            "});"
-          ]
         }
       ]
     },
@@ -154,14 +162,21 @@
           "name": "Idempotency · 1 · first commit with a fixed key",
           "method": "POST",
           "path": "/v1/transactions:commit",
-          "headers": { "Idempotency-Key": "{{reusedKey}}" },
+          "headers": {
+            "Idempotency-Key": "{{reusedKey}}"
+          },
           "body": {
             "tenantId": "{{tenantId}}",
             "eventTime": "{{eventTime}}",
             "decisionTime": "{{decisionTime}}",
             "documentReference": "INV-POSTMAN-0001",
             "lines": [
-              { "lineNumber": 1, "netAmount": "45.00", "currency": "EUR", "quantity": "1" }
+              {
+                "lineNumber": 1,
+                "netAmount": "45.00",
+                "currency": "EUR",
+                "quantity": "1"
+              }
             ]
           },
           "description": "ADR-0013 §2.4. The first of four: this one establishes the record, and requests 2 to 4 are the interesting ones."
@@ -170,14 +185,21 @@
           "name": "Idempotency · 2 · same key, same body",
           "method": "POST",
           "path": "/v1/transactions:commit",
-          "headers": { "Idempotency-Key": "{{reusedKey}}" },
+          "headers": {
+            "Idempotency-Key": "{{reusedKey}}"
+          },
           "body": {
             "tenantId": "{{tenantId}}",
             "eventTime": "{{eventTime}}",
             "decisionTime": "{{decisionTime}}",
             "documentReference": "INV-POSTMAN-0001",
             "lines": [
-              { "lineNumber": 1, "netAmount": "45.00", "currency": "EUR", "quantity": "1" }
+              {
+                "lineNumber": 1,
+                "netAmount": "45.00",
+                "currency": "EUR",
+                "quantity": "1"
+              }
             ]
           },
           "description": "Must return the *original* response, not a new one. A retry that produced a second decision would be a second fiscal record for one transaction, which is the Critical risk in Build Plan §8."
@@ -186,14 +208,21 @@
           "name": "Idempotency · 3 · same key, DIFFERENT body",
           "method": "POST",
           "path": "/v1/transactions:commit",
-          "headers": { "Idempotency-Key": "{{reusedKey}}" },
+          "headers": {
+            "Idempotency-Key": "{{reusedKey}}"
+          },
           "body": {
             "tenantId": "{{tenantId}}",
             "eventTime": "{{eventTime}}",
             "decisionTime": "{{decisionTime}}",
             "documentReference": "INV-POSTMAN-0001",
             "lines": [
-              { "lineNumber": 1, "netAmount": "99.00", "currency": "EUR", "quantity": "1" }
+              {
+                "lineNumber": 1,
+                "netAmount": "99.00",
+                "currency": "EUR",
+                "quantity": "1"
+              }
             ]
           },
           "description": "Must be a 409 `IDEMPOTENCY_KEY_REUSE` and must not execute (ADR-0013 §2.4).\n\nReplaying the original response would be worse than either alternative: the caller would believe the amount it sent was the amount recorded."
@@ -208,7 +237,12 @@
             "decisionTime": "{{decisionTime}}",
             "documentReference": "INV-POSTMAN-0002",
             "lines": [
-              { "lineNumber": 1, "netAmount": "45.00", "currency": "EUR", "quantity": "1" }
+              {
+                "lineNumber": 1,
+                "netAmount": "45.00",
+                "currency": "EUR",
+                "quantity": "1"
+              }
             ]
           },
           "description": "`Idempotency-Key` is mandatory on `:commit`, `:adjust`, `:refund` and `POST /v1/batches` (ADR-0013 §2.1). Rejected before any work begins.\n\nThe contract lint already enforces the other half of this: when those paths are added, an operation that does not declare a required `Idempotency-Key` header fails `npm run lint`."
@@ -217,7 +251,9 @@
           "name": "Canonical form · a fiscal amount sent as a JSON number",
           "method": "POST",
           "path": "/v1/transactions:commit",
-          "headers": { "Idempotency-Key": "{{$guid}}" },
+          "headers": {
+            "Idempotency-Key": "{{$guid}}"
+          },
           "rawBody": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"documentReference\": \"INV-POSTMAN-0003\",\n  \"lines\": [\n    { \"lineNumber\": 1, \"netAmount\": 45.0, \"currency\": \"EUR\", \"quantity\": \"1\" }\n  ]\n}",
           "description": "**The request in this collection that matters most.**\n\n`\"netAmount\": 45.0` must be rejected, never coerced. A 2xx here is a Critical finding rather than a test failure: RFC 8785 serializes JSON numbers through IEEE 754 doubles (ADR-0011 §1.1), so an amount that is ever a JSON number has lost precision before canonicalization sees it — and the loss is invisible, because 45.0 survives and 0.1 does not.\n\nThe body is raw text rather than a structured one, because the whole point is to send a token a correct client cannot produce."
         },
@@ -225,7 +261,9 @@
           "name": "Canonical form · explicit null in a fiscal position",
           "method": "POST",
           "path": "/v1/transactions:commit",
-          "headers": { "Idempotency-Key": "{{$guid}}" },
+          "headers": {
+            "Idempotency-Key": "{{$guid}}"
+          },
           "rawBody": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"documentReference\": \"INV-POSTMAN-0004\",\n  \"lines\": [\n    { \"lineNumber\": 1, \"netAmount\": null, \"currency\": \"EUR\", \"quantity\": \"1\" }\n  ]\n}",
           "description": "ADR-0011 §2.1 P3 on the path where it costs the most. \"The amount was explicitly cleared\" and \"the integration did not send an amount\" are different events with different fiscal consequences."
         }

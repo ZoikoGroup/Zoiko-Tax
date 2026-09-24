@@ -1,0 +1,17 @@
+<Project>
+  <!--
+    Shared by the SDK and its tests. Warnings are errors in the gate
+    (dotnet build -warnaserror) rather than here, so that a local edit-compile
+    loop is not blocked by an unused variable, and the gate still refuses one.
+  -->
+  <PropertyGroup>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <!-- Package versions are pinned and their resolved graph is committed, so
+         a restore in CI is the restore that was reviewed. The gate restores
+         with locked-mode, which fails rather than updates on a mismatch. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+</Project>

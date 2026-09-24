@@ -1,0 +1,49 @@
+# The SDK's own lint configuration. It is a separate module, so the backend's
+# .golangci.yml does not apply here; the general-purpose linters are the same,
+# and the backend's layering rules are replaced by the one rule that matters for
+# a published client: it stands alone.
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - depguard
+    - bodyclose
+    - errorlint
+    - gosec
+    - misspell
+    - revive
+
+  settings:
+    depguard:
+      rules:
+        # The SDK is published to integrators who do not have, and must not
+        # need, the backend. Anything shared is shared through the contract.
+        sdk-stands-alone:
+          list-mode: lax
+          files:
+            - "$all"
+          deny:
+            - pkg: "github.com/zoikogroup/zoikotax/backend"
+              desc: "the SDK is generated from the contract, never linked to the server"
+            - pkg: "github.com/oapi-codegen/runtime"
+              desc: "the SDK has no runtime dependencies; map the format in oapi-codegen.yaml instead"
+
+    revive:
+      rules:
+        - name: exported
+        - name: error-strings
+        - name: context-as-argument
+
+  exclusions:
+    rules:
+      # The stub transport and the test server are fixtures, not input
+      # handling.
+      - path: '_test\.go$'
+        linters:
+          - gosec
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

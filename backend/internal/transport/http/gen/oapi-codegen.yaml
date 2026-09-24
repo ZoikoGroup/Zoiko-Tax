@@ -1,0 +1,37 @@
+# oapi-codegen configuration for the cell's wire types (ADR-0010 §2.1, §2.3).
+#
+# Models only. The generator can also emit a net/http server interface, and that
+# output imports github.com/oapi-codegen/runtime for parameter binding — a new
+# module in the request path of a system whose replay guarantee names its
+# dependency graph (ADR-0001 §3.3). Routing stays the table in router.go, which
+# contract_test.go already holds to the contract in both directions; what this
+# file adds is the half that test could not check, the request and response
+# schemas.
+package: gen
+output: types.gen.go
+generate:
+  models: true
+output-options:
+  # Go initialisms (ID, not Id), matching the rest of the module.
+  name-normalizer: ToCamelCaseWithInitialisms
+  # An optional array is nil when absent. A pointer to a slice would make the
+  # handlers tell apart two states the contract does not distinguish.
+  prefer-skip-optional-pointer-on-container-types: true
+  # The three list responses are inline objects in the contract. Without this
+  # the generator names no type for them and the envelopes would be hand-written
+  # here — the one part of each response the drift gate could not see.
+  generate-types-for-anonymous-schemas: true
+  # Both formats are carried as strings, for different reasons.
+  #
+  #   email      The generator's default is openapi_types.Email, from the same
+  #              runtime module. The cell validates addresses itself, in the
+  #              domain, so the type would add a dependency and no check.
+  #   date-time  The default is time.Time, which marshals with variable
+  #              fractional precision. The contract's Timestamp is exactly six
+  #              digits and a literal Z (ADR-0011 §2.1 P2), which is what
+  #              canonical.FormatTime produces and time.Time does not.
+  type-mapping:
+    string:
+      formats:
+        email: {type: string}
+        date-time: {type: string}

@@ -1,0 +1,36 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{403CEFF8-6783-4F03-A335-B27E3B0A80D9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZoikoTax.Sdk", "src\ZoikoTax.Sdk\ZoikoTax.Sdk.csproj", "{C8FA9127-5B86-46BA-950F-92AC3143E14E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{03877EEF-A21E-4913-A937-8CA1F027B0FF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZoikoTax.Sdk.Tests", "tests\ZoikoTax.Sdk.Tests\ZoikoTax.Sdk.Tests.csproj", "{52749BD3-2F85-43A3-B53B-9092F9E3CE4B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C8FA9127-5B86-46BA-950F-92AC3143E14E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C8FA9127-5B86-46BA-950F-92AC3143E14E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C8FA9127-5B86-46BA-950F-92AC3143E14E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C8FA9127-5B86-46BA-950F-92AC3143E14E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{52749BD3-2F85-43A3-B53B-9092F9E3CE4B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{52749BD3-2F85-43A3-B53B-9092F9E3CE4B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{52749BD3-2F85-43A3-B53B-9092F9E3CE4B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{52749BD3-2F85-43A3-B53B-9092F9E3CE4B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{C8FA9127-5B86-46BA-950F-92AC3143E14E} = {403CEFF8-6783-4F03-A335-B27E3B0A80D9}
+		{52749BD3-2F85-43A3-B53B-9092F9E3CE4B} = {03877EEF-A21E-4913-A937-8CA1F027B0FF}
+	EndGlobalSection
+EndGlobal

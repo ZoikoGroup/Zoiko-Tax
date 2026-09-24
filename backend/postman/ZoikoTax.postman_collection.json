@@ -963,52 +963,8 @@
       ]
     },
     {
-      "name": "05 · Sign out",
-      "description": "Last, because everything above needs the session this ends.",
-      "item": [
-        {
-          "name": "POST /v1/auth/sign-out — End the current session",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/problem+json, application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/v1/auth/sign-out",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "auth",
-                "sign-out"
-              ]
-            },
-            "description": "End the current session\n\nRevokes this session server-side and clears the cookie. The session is\nrevoked rather than forgotten, so it appears in\n`GET /v1/admin/sessions` with `revoked: true` — a session that vanished\nwould leave nothing for an audit to look at."
-          },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('signOut returns a status the contract declares', function () {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([204]);",
-                  "});"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "90 · Contract conformance — what arrives that should not",
-      "description": "Requests a well-behaved client would never send. Each asserts a control, and each runs against an endpoint that exists today — so a green row here is evidence rather than an aspiration.\n\nThese need a session: run `01 · Sign in` first, or run the whole collection.",
+      "name": "05 · Contract conformance — with a session",
+      "description": "Requests a well-behaved client would never send, to endpoints that need a session. Each asserts a control, and each runs against an endpoint that exists today — so a green row here is evidence rather than an aspiration.\n\nThey sit before `06 · Sign out` because they need the session it ends; after it they could only return 401, which is evidence of nothing but the run order.",
       "item": [
         {
           "name": "Unknown field is rejected, not ignored",
@@ -1114,6 +1070,110 @@
             }
           ]
         },
+        {
+          "name": "A role outside the closed set is refused",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"SUPERUSER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/users/{{userId}}/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "users",
+                "{{userId}}",
+                "roles"
+              ]
+            },
+            "description": "`Role` is a closed enum in the contract. Adding one is a reviewed change with an authorization-matrix entry, not a string a caller may invent — and a server that stored an unrecognised role would be a server whose authorization decisions nobody can audit.\n\nNeeds `userId`, which `06 · Create a user` captures."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('an invented role is refused', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
+                  "  pm.expect(pm.response.json()).to.have.property('ztx_reason_code');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 · Sign out",
+      "description": "After everything that needs the session this ends — including `05 · Contract conformance — with a session`, which sits before it for that reason.",
+      "item": [
+        {
+          "name": "POST /v1/auth/sign-out — End the current session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/sign-out",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "sign-out"
+              ]
+            },
+            "description": "End the current session\n\nRevokes this session server-side and clears the cookie. The session is\nrevoked rather than forgotten, so it appears in\n`GET /v1/admin/sessions` with `revoked: true` — a session that vanished\nwould leave nothing for an audit to look at."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('signOut returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "90 · Contract conformance — without a session",
+      "description": "The same kind of request, for the controls that are about having no session at all — an unauthenticated caller, a sign-in that fails, a path nothing routes. They run after `06 · Sign out` so the cookie jar holds no session to send.",
+      "item": [
         {
           "name": "An unrouted path is still a Problem",
           "request": {
@@ -1350,60 +1410,6 @@
               }
             }
           ]
-        },
-        {
-          "name": "A role outside the closed set is refused",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/problem+json, application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"role\": \"SUPERUSER\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/v1/admin/users/{{userId}}/roles",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "admin",
-                "users",
-                "{{userId}}",
-                "roles"
-              ]
-            },
-            "description": "`Role` is a closed enum in the contract. Adding one is a reviewed change with an authorization-matrix entry, not a string a caller may invent — and a server that stored an unrecognised role would be a server whose authorization decisions nobody can audit.\n\nNeeds `userId`, which `06 · Create a user` captures."
-          },
-          "response": [],
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('an invented role is refused', function () {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([400, 404]);",
-                  "  pm.expect(pm.response.json()).to.have.property('ztx_reason_code');",
-                  "});"
-                ]
-              }
-            }
-          ]
         }
       ]
     },
@@ -1461,6 +1467,20 @@
               }
             }
           ]
+        }
+      ],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.variables.get('runDestructive') !== 'true') {",
+              "  console.info('skipped: set runDestructive=true and run this folder with 02 · Sign in');",
+              "  pm.execution.skipRequest();",
+              "}"
+            ]
+          }
         }
       ]
     },
@@ -1878,12 +1898,17 @@
     },
     {
       "key": "adminPassword",
-      "value": "local-dev-only-change-me",
+      "value": "local-dev-only-password",
       "type": "string"
     },
     {
       "key": "newPassword",
       "value": "a considerably longer passphrase than that one",
+      "type": "string"
+    },
+    {
+      "key": "runDestructive",
+      "value": "false",
       "type": "string"
     },
     {

@@ -107,10 +107,10 @@ func run() error {
 	router.TrustProxy = cfg.TrustProxy
 	router.Cell, router.Region, router.Environment = cfg.Cell, cfg.Region, cfg.Environment
 	router.Authoritative = cfg.Authoritative
-	router.Trains = map[string]string{
-		"app": cfg.TrainApp, "content": cfg.TrainContent, "ai": cfg.TrainAI,
-		"adapter": cfg.TrainAdapter, "infra": cfg.TrainInfra,
-		"schema": cfg.TrainSchema, "migration": cfg.TrainMigration,
+	router.Trains = ztaxhttp.Trains{
+		App: cfg.TrainApp, Content: cfg.TrainContent, Ai: cfg.TrainAI,
+		Adapter: cfg.TrainAdapter, Infra: cfg.TrainInfra,
+		Schema: cfg.TrainSchema, Migration: cfg.TrainMigration,
 	}
 
 	srv := &nethttp.Server{

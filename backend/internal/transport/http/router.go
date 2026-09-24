@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"log/slog"
+	"math"
 	"net/http"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/app"
@@ -11,6 +12,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/idgen"
 	"github.com/zoikogroup/zoikotax/backend/internal/port"
+	"github.com/zoikogroup/zoikotax/backend/internal/transport/http/gen"
 )
 
 // Readiness reports whether the cell can serve. It is an interface so the
@@ -38,8 +40,10 @@ type Router struct {
 	TrustProxy bool
 
 	// Trains are the seven release-train versions, reported by /v1/capabilities
-	// so a caller can name the exact combination that produced a response.
-	Trains map[string]string
+	// so a caller can name the exact combination that produced a response. A
+	// struct rather than a map, so a train the contract adds is a field the
+	// caller must set rather than a key it can forget.
+	Trains Trains
 	// Cell and Region identify this cell.
 	Cell, Region, Environment string
 	// Authoritative is false until A4. The Build Plan permits no authoritative
@@ -54,6 +58,9 @@ type Router struct {
 	Content *rule.Holder
 }
 
+// Trains are the seven release-train versions, as the contract names them.
+type Trains = gen.Trains
+
 // NewRouter wires the surface.
 func NewRouter(auth *app.AuthService, admin *app.AdminService, users port.UserRepository, ready Readiness, log *slog.Logger, ids idgen.Generator) *Router {
 	return &Router{auth: auth, admin: admin, users: users, ready: ready, log: mustLogger(log), ids: ids}
@@ -62,11 +69,12 @@ func NewRouter(auth *app.AuthService, admin *app.AdminService, users port.UserRe
 // Route is one entry in the surface.
 //
 // The routes are a table rather than a sequence of mux.Handle calls so that
-// they are *data*, and can be compared with the contract. ADR-0010 §2.1 closes
-// that gap by generating the handlers from contracts/openapi; until the
-// generator is wired up, contract_test.go compares this table against the same
-// contract in both directions — an endpoint the contract does not declare fails,
-// and so does a declared endpoint nothing routes.
+// they are *data*, and can be compared with the contract. The request and
+// response types are generated from contracts/openapi (package gen); routing is
+// not, because the generated server interface would bring a runtime module into
+// the request path. contract_test.go covers that half instead, comparing this
+// table against the same contract in both directions — an endpoint the contract
+// does not declare fails, and so does a declared endpoint nothing routes.
 //
 // Roles are part of the table for the same reason they were part of each
 // Handle call: an endpoint that forgets its authorization is a visibly missing
@@ -198,31 +206,6 @@ func (rt *Router) handleReadyz(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("ready\n"))
 }
 
-type capabilitiesResponse struct {
-	Cell          string            `json:"cell"`
-	Region        string            `json:"region"`
-	Environment   string            `json:"environment"`
-	Trains        map[string]string `json:"trains"`
-	CanonProfile  string            `json:"canonProfile"`
-	Authoritative bool              `json:"authoritative"`
-	ReasonCodes   []string          `json:"reasonCodes"`
-	// Content is absent in a cell with no bundle loaded. Absent rather than an
-	// empty object: "this cell has no content" and "this cell has a content
-	// bundle with no identity" are different facts, and a client that has to
-	// tell them apart should not have to guess (ADR-0011 P3, at the API).
-	Content *contentCapability `json:"content,omitempty"`
-}
-
-// contentCapability names the exact bundle serving this cell. It is what a
-// caller quotes in a support request and what a replay names, so it carries the
-// digest rather than only the identifier.
-type contentCapability struct {
-	BundleID  string `json:"bundleId"`
-	Digest    string `json:"digest"`
-	IRVersion int    `json:"irVersion"`
-	NodeCount int    `json:"nodeCount"`
-}
-
 // handleCapabilities is ADR-0010 §2.6's runtime discovery mechanism.
 //
 // It reports effective capability, and the field that matters most is
@@ -235,19 +218,23 @@ func (rt *Router) handleCapabilities(w http.ResponseWriter, r *http.Request) {
 	for _, c := range codes {
 		names = append(names, string(c))
 	}
-	var content *contentCapability
+	// Content is absent in a cell with no bundle loaded. Absent rather than an
+	// empty object: "this cell has no content" and "this cell has a content
+	// bundle with no identity" are different facts, and a client that has to
+	// tell them apart should not have to guess (ADR-0011 P3, at the API).
+	var content *gen.ContentCapability
 	if rt.Content != nil {
 		if b := rt.Content.Current(); b != nil {
-			content = &contentCapability{
+			content = &gen.ContentCapability{
 				BundleID:  b.ID(),
 				Digest:    b.Digest(),
-				IRVersion: b.IRVersion(),
-				NodeCount: b.NodeCount(),
+				IrVersion: saturate32(b.IRVersion()),
+				NodeCount: saturate32(b.NodeCount()),
 			}
 		}
 	}
 
-	writeJSON(w, r, rt.log, http.StatusOK, capabilitiesResponse{
+	writeJSON(w, r, rt.log, http.StatusOK, gen.Capabilities{
 		Cell:          rt.Cell,
 		Region:        rt.Region,
 		Environment:   rt.Environment,
@@ -257,4 +244,19 @@ func (rt *Router) handleCapabilities(w http.ResponseWriter, r *http.Request) {
 		ReasonCodes:   names,
 		Content:       content,
 	})
+}
+
+// saturate32 narrows a count to the contract's int32. Nothing a real bundle
+// holds comes near the limit, and nothing enforces one either, so an
+// out-of-range count is reported as the maximum rather than wrapped into a
+// negative number a client would have to explain.
+func saturate32(n int) int32 {
+	switch {
+	case n > math.MaxInt32:
+		return math.MaxInt32
+	case n < 0:
+		return 0
+	default:
+		return int32(n)
+	}
 }

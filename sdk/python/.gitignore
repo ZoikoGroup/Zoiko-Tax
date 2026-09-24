@@ -1,0 +1,10 @@
+# Virtual environments and caches. Nothing here is a build output that is
+# committed: the one generated file, src/zoikotax/schema.py, is committed.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+build/
+dist/
+*.egg-info/

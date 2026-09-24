@@ -11,6 +11,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/identity"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
+	"github.com/zoikogroup/zoikotax/backend/internal/transport/http/gen"
 )
 
 // The wire types.
@@ -19,74 +20,40 @@ import (
 // directly is a domain type whose every future field becomes public API by
 // accident — and in this estate that includes fields like a password verifier,
 // which must never appear in a response at all.
+//
+// They are generated from the contract (package gen, ADR-0010 §2.1) rather than
+// written here, so a field the contract renames or adds is a compile failure in
+// this file instead of a response that silently stops matching the SDKs. What
+// stays hand-written is the mapping from the domain, which is the part that
+// needs judgement.
 
-type signInRequest struct {
-	Tenant   string `json:"tenant"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-type sessionResponse struct {
-	Tenant    tenantResponse `json:"tenant"`
-	User      userResponse   `json:"user"`
-	ExpiresAt string         `json:"expiresAt"`
-}
-
-type tenantResponse struct {
-	ID              string `json:"id"`
-	Slug            string `json:"slug"`
-	DisplayName     string `json:"displayName"`
-	ResidencyRegion string `json:"residencyRegion"`
-	Status          string `json:"status"`
-}
-
-type userResponse struct {
-	ID          string   `json:"id"`
-	Email       string   `json:"email"`
-	DisplayName string   `json:"displayName"`
-	Status      string   `json:"status"`
-	Roles       []string `json:"roles"`
-	CreatedAt   string   `json:"createdAt"`
-}
-
-type sessionSummary struct {
-	ID        string `json:"id"`
-	UserID    string `json:"userId"`
-	CreatedAt string `json:"createdAt"`
-	ExpiresAt string `json:"expiresAt"`
-	UserAgent string `json:"userAgent,omitempty"`
-	ClientIP  string `json:"clientIp,omitempty"`
-	Revoked   bool   `json:"revoked"`
-	Current   bool   `json:"current"`
-}
-
-type auditResponse struct {
-	ID          string `json:"id"`
-	ActorUserID string `json:"actorUserId,omitempty"`
-	Action      string `json:"action"`
-	SubjectType string `json:"subjectType"`
-	SubjectID   string `json:"subjectId"`
-	Detail      string `json:"detail"`
-	RecordedAt  string `json:"recordedAt"`
-}
-
-func toTenant(t identity.Tenant) tenantResponse {
-	return tenantResponse{
+func toTenant(t identity.Tenant) gen.Tenant {
+	return gen.Tenant{
 		ID: t.ID.String(), Slug: t.Slug, DisplayName: t.DisplayName,
-		ResidencyRegion: t.ResidencyRegion, Status: string(t.Status),
+		ResidencyRegion: t.ResidencyRegion, Status: gen.TenantStatus(t.Status),
 	}
 }
 
-func toUser(u identity.User) userResponse {
-	roles := make([]string, 0, len(u.Roles))
+func toUser(u identity.User) gen.User {
+	roles := make([]gen.Role, 0, len(u.Roles))
 	for _, r := range u.Roles {
-		roles = append(roles, string(r))
+		roles = append(roles, gen.Role(r))
 	}
-	return userResponse{
+	return gen.User{
 		ID: u.ID.String(), Email: u.Email, DisplayName: u.DisplayName,
-		Status: string(u.Status), Roles: roles,
+		Status: gen.UserStatus(u.Status), Roles: roles,
 		CreatedAt: canonical.FormatTime(u.CreatedAt),
 	}
+}
+
+// optional renders an empty string as an absent field. The contract declares
+// these fields optional rather than nullable, so absence is the only way to say
+// "not recorded"; an empty string would claim a value was recorded and was empty.
+func optional(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }
 
 // ---------------------------------------------------------------------------
@@ -94,7 +61,7 @@ func toUser(u identity.User) userResponse {
 // ---------------------------------------------------------------------------
 
 func (rt *Router) handleSignIn(w http.ResponseWriter, r *http.Request) {
-	var req signInRequest
+	var req gen.SignInRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeProblem(w, r, rt.log, err)
 		return
@@ -121,7 +88,7 @@ func (rt *Router) handleSignIn(w http.ResponseWriter, r *http.Request) {
 	// stops sending a cookie that the server would refuse anyway.
 	setSessionCookie(w, result.Token.Cookie(), rt.SecureCookies, identity.AbsoluteTimeout)
 
-	writeJSON(w, r, rt.log, http.StatusOK, sessionResponse{
+	writeJSON(w, r, rt.log, http.StatusOK, gen.Session{
 		Tenant:    toTenant(result.Tenant),
 		User:      toUser(result.User),
 		ExpiresAt: canonical.FormatTime(result.Session.AbsoluteExpiresAt),
@@ -152,20 +119,15 @@ func (rt *Router) handleSession(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, r, rt.log, err)
 		return
 	}
-	writeJSON(w, r, rt.log, http.StatusOK, sessionResponse{
+	writeJSON(w, r, rt.log, http.StatusOK, gen.Session{
 		Tenant:    toTenant(tenant),
 		User:      toUser(user),
 		ExpiresAt: canonical.FormatTime(sc.AuthenticatedAt().Add(identity.AbsoluteTimeout)),
 	})
 }
 
-type changePasswordRequest struct {
-	CurrentPassword string `json:"currentPassword"`
-	NewPassword     string `json:"newPassword"`
-}
-
 func (rt *Router) handleChangePassword(w http.ResponseWriter, r *http.Request) {
-	var req changePasswordRequest
+	var req gen.ChangePasswordRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeProblem(w, r, rt.log, err)
 		return
@@ -200,22 +162,15 @@ func (rt *Router) handleListUsers(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, r, rt.log, err)
 		return
 	}
-	out := make([]userResponse, 0, len(users))
+	out := gen.ListUsers200JSONResponseBody{Users: make([]gen.User, 0, len(users))}
 	for _, u := range users {
-		out = append(out, toUser(u))
+		out.Users = append(out.Users, toUser(u))
 	}
-	writeJSON(w, r, rt.log, http.StatusOK, map[string]any{"users": out})
-}
-
-type createUserRequest struct {
-	Email       string   `json:"email"`
-	DisplayName string   `json:"displayName"`
-	Roles       []string `json:"roles"`
-	Password    string   `json:"password,omitempty"`
+	writeJSON(w, r, rt.log, http.StatusOK, out)
 }
 
 func (rt *Router) handleCreateUser(w http.ResponseWriter, r *http.Request) {
-	var req createUserRequest
+	var req gen.CreateUserRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeProblem(w, r, rt.log, err)
 		return
@@ -224,8 +179,12 @@ func (rt *Router) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	for _, s := range req.Roles {
 		roles = append(roles, security.Role(s))
 	}
+	var password string
+	if req.Password != nil {
+		password = *req.Password
+	}
 	user, err := rt.admin.CreateUser(r.Context(), app.CreateUserInput{
-		Email: req.Email, DisplayName: req.DisplayName, Roles: roles, Password: req.Password,
+		Email: req.Email, DisplayName: req.DisplayName, Roles: roles, Password: password,
 	})
 	if err != nil {
 		writeProblem(w, r, rt.log, err)
@@ -234,17 +193,13 @@ func (rt *Router) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, r, rt.log, http.StatusCreated, toUser(user))
 }
 
-type setStatusRequest struct {
-	Status string `json:"status"`
-}
-
 func (rt *Router) handleSetUserStatus(w http.ResponseWriter, r *http.Request) {
 	userID, err := id.ParseUserID(r.PathValue("userId"))
 	if err != nil {
 		writeProblem(w, r, rt.log, errs.Invalid("userId", errs.ReasonInvalidValue, "That is not a valid user identifier."))
 		return
 	}
-	var req setStatusRequest
+	var req gen.SetUserStatusRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeProblem(w, r, rt.log, err)
 		return
@@ -256,17 +211,13 @@ func (rt *Router) handleSetUserStatus(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-type roleRequest struct {
-	Role string `json:"role"`
-}
-
 func (rt *Router) handleGrantRole(w http.ResponseWriter, r *http.Request) {
 	userID, err := id.ParseUserID(r.PathValue("userId"))
 	if err != nil {
 		writeProblem(w, r, rt.log, errs.Invalid("userId", errs.ReasonInvalidValue, "That is not a valid user identifier."))
 		return
 	}
-	var req roleRequest
+	var req gen.RoleRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeProblem(w, r, rt.log, err)
 		return
@@ -298,15 +249,15 @@ func (rt *Router) handleListSessions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sc, _ := security.From(r.Context())
-	out := make([]sessionSummary, 0, len(sessions))
+	out := gen.ListSessions200JSONResponseBody{Sessions: make([]gen.SessionSummary, 0, len(sessions))}
 	for _, s := range sessions {
-		out = append(out, sessionSummary{
+		out.Sessions = append(out.Sessions, gen.SessionSummary{
 			ID:        s.ID.String(),
 			UserID:    s.UserID.String(),
 			CreatedAt: canonical.FormatTime(s.CreatedAt),
 			ExpiresAt: canonical.FormatTime(s.AbsoluteExpiresAt),
-			UserAgent: s.UserAgent,
-			ClientIP:  s.ClientIP,
+			UserAgent: optional(s.UserAgent),
+			ClientIP:  optional(s.ClientIP),
 			Revoked:   s.RevokedAt != nil,
 			// So the admin screen can mark "this is you" and warn before
 			// revoking it, rather than signing the administrator out with no
@@ -314,7 +265,7 @@ func (rt *Router) handleListSessions(w http.ResponseWriter, r *http.Request) {
 			Current: s.ID == sc.Session(),
 		})
 	}
-	writeJSON(w, r, rt.log, http.StatusOK, map[string]any{"sessions": out})
+	writeJSON(w, r, rt.log, http.StatusOK, out)
 }
 
 func (rt *Router) handleRevokeSession(w http.ResponseWriter, r *http.Request) {
@@ -336,20 +287,21 @@ func (rt *Router) handleListAudit(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, r, rt.log, err)
 		return
 	}
-	out := make([]auditResponse, 0, len(records))
+	out := gen.ListAudit200JSONResponseBody{Records: make([]gen.AuditRecord, 0, len(records))}
 	for _, rec := range records {
-		a := auditResponse{
+		a := gen.AuditRecord{
 			ID: rec.ID.String(), Action: rec.Action,
 			SubjectType: rec.SubjectType, SubjectID: rec.SubjectID,
 			Detail:     string(rec.Detail),
 			RecordedAt: canonical.FormatTime(rec.RecordedAt),
 		}
 		if rec.ActorUserID != nil {
-			a.ActorUserID = rec.ActorUserID.String()
+			actor := rec.ActorUserID.String()
+			a.ActorUserID = &actor
 		}
-		out = append(out, a)
+		out.Records = append(out.Records, a)
 	}
-	writeJSON(w, r, rt.log, http.StatusOK, map[string]any{"records": out})
+	writeJSON(w, r, rt.log, http.StatusOK, out)
 }
 
 // limitOf reads a page size, defaulting rather than erroring on nonsense. The
