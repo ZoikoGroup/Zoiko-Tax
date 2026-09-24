@@ -1,0 +1,3 @@
+# The generated models are compared with a fresh generation on every build.
+# LF on every checkout keeps that comparison about content, not line endings.
+src/main/java/com/zoikotax/sdk/model/** text eol=lf

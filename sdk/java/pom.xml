@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ZoikoTax Java SDK (usable from Kotlin).
+
+  One gate:   mvn -B verify
+  Regenerate: mvn -B -Pregenerate process-sources
+
+  `verify` regenerates the models from the contract into target/ on every
+  build and a test compares them with the committed copy, so a contract change
+  this SDK has not been regenerated for is a build failure rather than a
+  discovery (ADR-0010 §2.1, §5.1 control 1).
+
+  Every version below is pinned. A generator upgrade is a reviewed change to
+  this file, and the diff it produces in the committed models is reviewed with
+  it.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.zoikotax</groupId>
+  <artifactId>zoikotax-sdk</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+
+  <name>ZoikoTax SDK</name>
+  <description>Java client for the ZoikoTax v1 API, usable from Kotlin. Models are generated from the contract; the client is a thin layer over java.net.http.</description>
+
+  <licenses>
+    <license>
+      <name>LicenseRef-ZoikoTax-Proprietary</name>
+    </license>
+  </licenses>
+
+  <properties>
+    <maven.compiler.release>17</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <!-- A fixed timestamp makes the jar byte-reproducible. -->
+    <project.build.outputTimestamp>2026-09-24T00:00:00Z</project.build.outputTimestamp>
+
+    <!-- The 3.1 export, never the 3.2 contract: the generator is not 3.2-capable (ADR-0010 §2.2). -->
+    <zoikotax.contract>${project.basedir}/../../contracts/openapi/export/ztax.v1.3.1.yaml</zoikotax.contract>
+    <zoikotax.generated>${project.build.directory}/generated-models</zoikotax.generated>
+    <zoikotax.modelDir>com/zoikotax/sdk/model</zoikotax.modelDir>
+
+    <openapi-generator.version>7.25.0</openapi-generator.version>
+    <jackson.version>2.19.4</jackson.version>
+    <jakarta-annotation.version>3.0.0</jakarta-annotation.version>
+    <junit.version>5.14.4</junit.version>
+    <kotlin.version>2.4.20</kotlin.version>
+  </properties>
+
+  <dependencies>
+    <!-- JSON. The JDK has no JSON parser, and the generated models are Jackson-annotated. -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <!-- Nullability annotations only: no runtime behaviour. This is what gives Kotlin real nullable types. -->
+    <dependency>
+      <groupId>jakarta.annotation</groupId>
+      <artifactId>jakarta.annotation-api</artifactId>
+      <version>${jakarta-annotation.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Test only: the Kotlin usage test proves the API reads well from Kotlin. Not a runtime dependency. -->
+    <dependency>
+      <groupId>org.jetbrains.kotlin</groupId>
+      <artifactId>kotlin-stdlib</artifactId>
+      <version>${kotlin.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>3.5.0</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.5.0</version>
+      </plugin>
+
+      <!--
+        Models only. The generator writes into target/, never into src/: the
+        committed copy changes only through -Pregenerate, so an ordinary build
+        cannot quietly paper over drift.
+      -->
+      <plugin>
+        <groupId>org.openapitools</groupId>
+        <artifactId>openapi-generator-maven-plugin</artifactId>
+        <version>${openapi-generator.version}</version>
+        <executions>
+          <execution>
+            <id>models</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <inputSpec>${zoikotax.contract}</inputSpec>
+              <generatorName>java</generatorName>
+              <library>native</library>
+              <output>${zoikotax.generated}</output>
+              <modelPackage>com.zoikotax.sdk.model</modelPackage>
+              <generateApis>false</generateApis>
+              <generateApiTests>false</generateApiTests>
+              <generateApiDocumentation>false</generateApiDocumentation>
+              <generateModelTests>false</generateModelTests>
+              <generateModelDocumentation>false</generateModelDocumentation>
+              <generateSupportingFiles>false</generateSupportingFiles>
+              <addCompileSourceRoot>false</addCompileSourceRoot>
+              <skipIfSpecIsUnchanged>false</skipIfSpecIsUnchanged>
+              <typeMappings>
+                <!--
+                  Timestamps stay strings. The contract fixes their encoding
+                  exactly (six fractional digits, literal Z, ADR-0011 §2.1 P2)
+                  because two encodings of one instant digest differently; an
+                  OffsetDateTime would re-encode them on the way back out.
+                -->
+                <typeMapping>DateTime=String</typeMapping>
+              </typeMappings>
+              <inlineSchemaNameMappings>
+                <inlineSchemaNameMapping>listUsers_200_response=UserList</inlineSchemaNameMapping>
+                <inlineSchemaNameMapping>listSessions_200_response=SessionList</inlineSchemaNameMapping>
+                <inlineSchemaNameMapping>listAudit_200_response=AuditRecordList</inlineSchemaNameMapping>
+              </inlineSchemaNameMappings>
+              <configOptions>
+                <sourceFolder>src/main/java</sourceFolder>
+                <serializationLibrary>jackson</serializationLibrary>
+                <useJakartaEe>true</useJakartaEe>
+                <!-- Deterministic output: no generation date in any file. -->
+                <hideGenerationTimestamp>true</hideGenerationTimestamp>
+                <openApiNullable>false</openApiNullable>
+                <!-- toUrlQueryString would pull in the generator's ApiClient, which this SDK replaces. -->
+                <supportUrlQuery>false</supportUrlQuery>
+                <!--
+                  An enum value this release predates reads as
+                  UNKNOWN_DEFAULT_OPEN_API rather than failing the whole
+                  response: /v1 grows by addition (ADR-0010 §2.6).
+                -->
+                <enumUnknownDefaultCase>true</enumUnknownDefaultCase>
+                <!--
+                  An array the caller did not set is absent, not []. A request
+                  then carries what the caller wrote and nothing the generator
+                  decided on their behalf.
+                -->
+                <containerDefaultToNull>true</containerDefaultToNull>
+                <useBeanValidation>false</useBeanValidation>
+              </configOptions>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.14.0</version>
+        <configuration>
+          <compilerArgs>
+            <arg>-Xlint:all</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+
+      <!-- Compiles src/test/kotlin only. Main sources are Java and compiled by javac. -->
+      <plugin>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-maven-plugin</artifactId>
+        <version>${kotlin.version}</version>
+        <executions>
+          <execution>
+            <id>test-compile</id>
+            <phase>test-compile</phase>
+            <goals>
+              <goal>test-compile</goal>
+            </goals>
+            <configuration>
+              <sourceDirs>
+                <sourceDir>${project.basedir}/src/test/kotlin</sourceDir>
+              </sourceDirs>
+            </configuration>
+          </execution>
+        </executions>
+        <configuration>
+          <jvmTarget>17</jvmTarget>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.3</version>
+        <configuration>
+          <systemPropertyVariables>
+            <zoikotax.generated>${zoikotax.generated}/src/main/java/${zoikotax.modelDir}</zoikotax.generated>
+            <zoikotax.committed>${project.basedir}/src/main/java/${zoikotax.modelDir}</zoikotax.committed>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.4.2</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-install-plugin</artifactId>
+        <version>3.1.4</version>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <!--
+      mvn -B -Pregenerate process-sources
+
+      Replaces the committed models with what the contract generates now:
+      delete first, so a schema removed from the contract is removed here too,
+      then copy. Review the diff and commit it.
+    -->
+    <profile>
+      <id>regenerate</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-clean-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>remove-committed-models</id>
+                <phase>process-sources</phase>
+                <goals>
+                  <goal>clean</goal>
+                </goals>
+                <configuration>
+                  <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                  <filesets>
+                    <fileset>
+                      <directory>${project.basedir}/src/main/java/${zoikotax.modelDir}</directory>
+                    </fileset>
+                  </filesets>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-resources-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>copy-generated-models</id>
+                <phase>process-sources</phase>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${project.basedir}/src/main/java/${zoikotax.modelDir}</outputDirectory>
+                  <overwrite>true</overwrite>
+                  <resources>
+                    <resource>
+                      <directory>${zoikotax.generated}/src/main/java/${zoikotax.modelDir}</directory>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>
