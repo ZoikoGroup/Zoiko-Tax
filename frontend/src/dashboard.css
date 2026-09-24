@@ -1,0 +1,752 @@
+/* ZoikoTax Tax Command Center Dashboard Styles */
+
+.ztax-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f5f6fa;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: #111827;
+}
+
+/* Sidebar */
+.ztax-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 224px;
+  background-color: #21153b;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  border-right: 1px solid #2d1d4f;
+  user-select: none;
+}
+
+.ztax-sidebar-logo {
+  height: 58px;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.ztax-sidebar-logo img {
+  height: 32px;
+  width: auto;
+  object-fit: contain;
+}
+
+.ztax-sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 10px;
+}
+
+.ztax-sidebar-group {
+  margin-bottom: 16px;
+}
+
+.ztax-sidebar-group-title {
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #7e6d98;
+  text-transform: uppercase;
+}
+
+.ztax-nav-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  border: none;
+  background: transparent;
+  color: #a292be;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.ztax-nav-item:hover {
+  background-color: #2c1c4b;
+  color: #ffffff;
+}
+
+.ztax-nav-item.active {
+  background-color: #3d2f5a;
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.ztax-nav-item svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.ztax-sidebar-footer {
+  border-top: 1px solid #2d1d4f;
+  padding: 12px;
+  font-size: 9px;
+  color: #6b5a88;
+  line-height: 1.4;
+}
+
+/* Main Content Area */
+.ztax-main-container {
+  flex: 1;
+  margin-left: 224px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Header Tier 1 */
+.ztax-header-tier1 {
+  height: 58px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+}
+
+.ztax-selector-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.ztax-selector-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: #ffffff;
+  padding: 4px 12px;
+  cursor: pointer;
+  min-width: 140px;
+  text-align: left;
+}
+
+.ztax-selector-card:hover {
+  border-color: #d1d5db;
+}
+
+.ztax-selector-label {
+  font-size: 10px;
+  color: #9ca3af;
+  line-height: 1.2;
+}
+
+.ztax-selector-value {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+.ztax-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.ztax-icon-btn {
+  background: transparent;
+  border: none;
+  color: #374151;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.ztax-dot-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #ef4444;
+}
+
+.ztax-user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-left: 1px solid #e5e7eb;
+  padding-left: 12px;
+  cursor: pointer;
+}
+
+.ztax-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+}
+
+.ztax-user-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.ztax-user-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.ztax-user-role {
+  font-size: 9px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Header Tier 2 */
+.ztax-header-tier2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 24px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.ztax-scope-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ztax-scope-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: #ffffff;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.ztax-scope-card:hover {
+  border-color: #d1d5db;
+}
+
+.ztax-scope-card svg {
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.ztax-scope-texts {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.ztax-scope-label {
+  font-size: 9px;
+  color: #9ca3af;
+  line-height: 1.2;
+}
+
+.ztax-scope-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.ztax-scope-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #e5e7eb;
+  border-radius: 9999px;
+  background-color: #ffffff;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #065f46;
+}
+
+.ztax-green-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #10b981;
+}
+
+/* Dashboard Viewport */
+.ztax-dashboard-viewport {
+  padding: 20px 24px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Command Center Title Bar */
+.ztax-title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ztax-title-text {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.ztax-status-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+.ztax-live-text {
+  font-weight: 700;
+  color: #10b981;
+}
+
+.ztax-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ztax-attention-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+.ztax-btn-copper {
+  background-color: #c86a3b;
+  color: #ffffff;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.ztax-btn-copper:hover {
+  background-color: #b55d30;
+}
+
+/* Priority Action Center Alert Banner */
+.ztax-alert-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+}
+
+.ztax-alert-icon {
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.ztax-alert-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ztax-alert-title {
+  font-weight: 700;
+  color: #7f1d1d;
+}
+
+.ztax-alert-desc {
+  color: #991b1b;
+}
+
+/* Metric / KPI Cards Grid */
+.ztax-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.ztax-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.ztax-kpi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.ztax-kpi-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ztax-badge-p0 {
+  background-color: #fef3c7;
+  color: #d97706;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.ztax-kpi-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin-top: 8px;
+  letter-spacing: -0.02em;
+}
+
+.ztax-kpi-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  font-size: 12px;
+}
+
+.ztax-delta-green {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.ztax-delta-label {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.ztax-timestamp {
+  color: #9ca3af;
+  font-size: 10px;
+  font-family: ui-monospace, monospace;
+}
+
+/* Row 2: Trend Chart & Table */
+.ztax-split-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 1024px) {
+  .ztax-split-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ztax-chart-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.ztax-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ztax-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.ztax-time-toggles {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ztax-toggle-btn {
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  color: #9ca3af;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.ztax-toggle-btn.active {
+  background-color: #1c1236;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.ztax-sparkline-container {
+  margin-top: 16px;
+  height: 180px;
+  width: 100%;
+}
+
+.ztax-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 11px;
+  color: #4b5563;
+  margin-top: 8px;
+}
+
+.ztax-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ztax-legend-dot-blue {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #5065f6;
+}
+
+.ztax-legend-dot-orange {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #f97e28;
+}
+
+/* Priority Action Center Table */
+.ztax-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ztax-link-blue {
+  background: transparent;
+  border: none;
+  color: #3b82f6;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ztax-link-blue:hover {
+  text-decoration: underline;
+}
+
+.ztax-action-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin-top: 12px;
+}
+
+.ztax-action-table th {
+  text-align: left;
+  padding-bottom: 6px;
+  font-size: 10px;
+  font-weight: 400;
+  color: #9ca3af;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.ztax-action-table td {
+  padding: 8px 0;
+  border-bottom: 1px solid #f9fafb;
+  vertical-align: middle;
+}
+
+.ztax-badge-priority {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.ztax-badge-p0-red {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.ztax-badge-p1-yellow {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.ztax-badge-p2-teal {
+  background-color: #ccfbf1;
+  color: #0f766e;
+}
+
+.ztax-table-action-btn {
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: #111827;
+  cursor: pointer;
+  padding: 0;
+}
+
+.ztax-table-action-btn:hover {
+  color: #c86a3b;
+}
+
+/* Row 3: Gauges Grid */
+.ztax-gauges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.ztax-gauge-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.ztax-gauge-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 12px 0;
+  gap: 8px;
+}
+
+.ztax-gauge-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  min-width: 100px;
+}
+
+.ztax-breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ztax-breakdown-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #6b7280;
+}
+
+.ztax-breakdown-count {
+  font-weight: 700;
+  color: #111827;
+}
+
+/* AI Advisory Card */
+.ztax-ai-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ztax-ai-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #059669;
+  letter-spacing: 0.05em;
+}
+
+.ztax-ai-body {
+  font-size: 12px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.4;
+  margin-top: 8px;
+}
+
+.ztax-ai-source {
+  font-size: 10px;
+  color: #9ca3af;
+  line-height: 1.4;
+  margin-top: 8px;
+}
+
+.ztax-ai-action {
+  margin-top: 12px;
+}
+
+.ztax-link-green {
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: #059669;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ztax-link-green:hover {
+  text-decoration: underline;
+}
