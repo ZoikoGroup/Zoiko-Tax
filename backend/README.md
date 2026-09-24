@@ -15,7 +15,9 @@ Every structural choice here is recorded in [the ADR set](../../adr/README.md). 
 - The rule execution model (ADR-0005) — the typed IR, bundle load with acyclicity and type checking, and the deterministic evaluator.
 - The error taxonomy (ADR-0016), identifiers (ADR-0012), the transactional outbox (ADR-0014) and the authority adapter boundary (ADR-0009 §2.2).
 
-What does not: the content compiler and any actual tax content, the generated OpenAPI server, the Model Gateway, telemetry, and evidence sealing. Two of those wait on specifications that were never produced — `ZTAX-DET-001` and `ZTAX-JUR-001` — so the interfaces are here and the rule semantics are not, which is exactly where the Build Plan says W0 should leave them.
+The content compiler and bundle signing (`internal/content`, `cmd/ztax-contentc`) and the v1 API contract with its generated wire types (`internal/transport/http/gen`, ADR-0010 §2.1) have landed since.
+
+What does not: any actual tax content beyond the `eu-vat` sample pack, the Model Gateway, telemetry, and evidence sealing. Two of those wait on specifications that were never produced — `ZTAX-DET-001` and `ZTAX-JUR-001` — so the interfaces are here and the rule semantics are not, which is exactly where the Build Plan says W0 should leave them.
 
 **Both remaining W0 controls are closed.** ADR-0001 control 2 (`NUMERIC` bound to `apd.Decimal`, no path narrowing to `float64`) is discharged by the conformance suite in `internal/adapter/postgres`, which runs against a real PostgreSQL. Control 6 (`apd` vendored) is done, and `make vendor-verify` detects drift or a local patch.
 
@@ -55,7 +57,8 @@ migrations/             plain versioned SQL (ADR-0008)
 testdata/golden/        golden vectors — legal artifacts, not fixtures (ADR-0018)
   decimal/              the ADR-0002 corpus, with its own README
 postman/                one collection, generated from the contract (see below)
-vendor/                 committed deliberately (ADR-0001 c6) — not yet generated
+vendor/                 committed deliberately (ADR-0001 c6); CI builds from it and
+                        `make vendor-verify` fails on drift or a local patch
 ```
 
 Import direction, enforced by `depguard` in [.golangci.yml](.golangci.yml):
@@ -82,7 +85,8 @@ With a local Go toolchain (1.25+):
 
 ```bash
 make tidy              # resolve the module graph
-make vendor            # ADR-0001 control 6 — commit the apd source
+make vendor            # ADR-0001 control 6 — refresh vendor/ after any go.mod change
+make api-gen           # ADR-0010 §2.1 — regenerate the wire types from the contract
 make fiscalfloat-test  # the analyzer's own suite
 make golden            # tier 2 — the decimal vectors
 make golden-crosscheck # the same vectors under Python decimal (needs python3)
@@ -198,11 +202,8 @@ The collection is for exploration, not for CI. Contract testing is tier 4 in ADR
 
 ## Next, in order
 
-1. `Quantity`, `TimeInterval`, `ReasonCode` and the identity primitives — ADR-0012. `Quantity` is already named in the fiscalfloat analyzer's guarded type list and does not exist yet.
-2. `internal/platform/canonical` with its golden vectors — ADR-0011, a W1 exit gate.
-3. First migration and the pgx `NUMERIC` ↔ `apd.Decimal` conformance test — ADR-0008 §5.1 c1, which discharges ADR-0001 control 2. Compose already runs PostgreSQL 17 + PostGIS 3.5, so the dependency is waiting.
-4. `make vendor` and commit `vendor/` — ADR-0001 control 6, the last open W0 control.
-5. Signed-artifact admission in a regional cell, so that an unsigned or unattested workload cannot start — W1 lane B. The release workflow now signs; nothing yet refuses an image that is not signed.
-6. Content-side validation that rejects a `RuleVersion` applying a rate or a division without a rounding policy — ADR-0002 §5.1 c5, lane F, when `content/` opens.
+Done since this list was written: `Quantity`, `ReasonCode` and the identity primitives (ADR-0012); `internal/platform/canonical` with its vectors (ADR-0011); the migrations and the `NUMERIC` ↔ `apd.Decimal` conformance suite (ADR-0008 §5.1 c1, discharging ADR-0001 control 2); and `vendor/` (ADR-0001 control 6).
 
-`go mod tidy` dropped `google/uuid` because nothing imports it yet; it returns with `internal/platform/idgen` in step 3.
+1. `TimeInterval` — ADR-0012, the one primitive from the original step 1 still missing.
+2. Signed-artifact admission in a regional cell, so that an unsigned or unattested workload cannot start — W1 lane B. The release workflow now signs; nothing yet refuses an image that is not signed.
+3. Content-side validation that rejects a `RuleVersion` applying a rate or a division without a rounding policy — ADR-0002 §5.1 c5, lane F, when `content/` opens.

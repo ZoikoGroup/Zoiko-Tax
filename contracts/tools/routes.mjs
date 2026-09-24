@@ -1,9 +1,11 @@
 // Emit the contract's route table, for the server-side conformance gate.
 //
 // ADR-0010 §2.1 makes the contract the source of truth and generates the
-// handlers from it, with a regenerate-and-diff check so drift is a build
-// failure rather than a discovery. That generator is not wired up yet. This
-// closes the same gap from the other side, and does it mechanically:
+// server from it, with a regenerate-and-diff check so drift is a build failure
+// rather than a discovery. The wire types are generated (backend/internal/
+// transport/http/gen); the routing is not, because the generated server
+// interface would bring a runtime module into the request path. This closes
+// that half mechanically:
 //
 //   contract ──routes.mjs──► routes.json ──contract_test.go──► the Go router
 //
