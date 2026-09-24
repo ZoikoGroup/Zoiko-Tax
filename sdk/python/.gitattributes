@@ -1,0 +1,4 @@
+# The generated schema is written with LF on every platform by
+# scripts/generate.py; keep git from converting it, or the drift check would
+# report a line-ending change as drift.
+src/zoikotax/schema.py text eol=lf linguist-generated=true
