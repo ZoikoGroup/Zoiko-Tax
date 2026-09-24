@@ -1,6 +1,6 @@
 # Postman — ZoikoTax API
 
-`ZoikoTax.postman_collection.json` — **generated from the contract.** 29 requests in 9 folders, with every value carried as a collection variable. Import it and run; there is no environment to select.
+`ZoikoTax.postman_collection.json` — **generated from the contract.** 29 requests in 10 folders, with every value carried as a collection variable. Import it and run; there is no environment to select.
 
 ```bash
 cd ../../contracts && npm run postman        # regenerate
@@ -15,9 +15,9 @@ The previous version of this file said to regenerate from the contract once `con
 
 | Part | Source |
 |---|---|
-| Folders `01`–`05`, `98` | [`contracts/openapi/ztax.v1.yaml`](../../contracts/openapi/ztax.v1.yaml) — operations, bodies, saved response examples |
+| Folders `01`–`04`, `06`, `98` | [`contracts/openapi/ztax.v1.yaml`](../../contracts/openapi/ztax.v1.yaml) — operations, bodies, saved response examples |
 | Folder `00` (health probes) | The generator. They are served and deliberately not in the contract |
-| Folders `90`, `99` | [`contracts/postman/overlay.json`](../../contracts/postman/overlay.json) — what the contract cannot express |
+| Folders `05`, `90`, `99` | [`contracts/postman/overlay.json`](../../contracts/postman/overlay.json) — what the contract cannot express |
 | Collection scripts | [`contracts/postman/scripts/`](../../contracts/postman/scripts) — kept as JavaScript, not as a JSON array of strings |
 | The run order | `FOLDERS` in [`contracts/tools/postman.mjs`](../../contracts/tools/postman.mjs) |
 
@@ -38,7 +38,9 @@ npm install -g newman
 newman run ZoikoTax.postman_collection.json
 ```
 
-`adminPassword` defaults to the local stack's bootstrap value. Against any other cell, set `baseUrl`, `tenantSlug`, `adminEmail` and `adminPassword`:
+A full pass against the local stack is green: every request but one runs, and that one is `98 · Destructive`, skipped on purpose (below).
+
+`tenantSlug`, `adminEmail` and `adminPassword` default to the local stack's bootstrap values, which the generator reads from [`docker-compose.yml`](../../docker-compose.yml) rather than copying. An earlier copy drifted: the collection carried a password the stack never set, so every run failed at sign-in and everything after it was a 401. Against any other cell, set `baseUrl`, `tenantSlug`, `adminEmail` and `adminPassword`:
 
 ```bash
 newman run ZoikoTax.postman_collection.json \
@@ -50,7 +52,9 @@ Three variables capture themselves as the run proceeds — `userId` from `POST /
 
 ## The folders worth reading
 
-**`90 · Contract conformance`** is the point of this collection. Seven requests, each sending something a well-behaved client would never send, each asserting a control — and, unlike the previous version of this collection, **each running against an endpoint that exists today**, so a green row is evidence rather than an aspiration.
+**`05` and `90 · Contract conformance`** are the point of this collection. Seven requests, each sending something a well-behaved client would never send, each asserting a control — and, unlike the previous version of this collection, **each running against an endpoint that exists today**, so a green row is evidence rather than an aspiration.
+
+They are two folders because they need opposite things. Unknown field, explicit null and invented role need an administrator's session, so `05` runs before `06 · Sign out`; the rest are about having no session, so `90` runs after it, when the cookie jar has nothing to send. As a single folder after sign-out, the first three could only ever return 401 — and that hid a real defect: the cell accepted `displayname` as `displayName`, because `encoding/json` matches keys case-insensitively. It now refuses it with `UNKNOWN_FIELD`.
 
 | Request | Asserts | ADR |
 |---|---|---|
@@ -65,7 +69,13 @@ Three variables capture themselves as the run proceeds — `userId` from `POST /
 
 The request that matters most is still **`Canonical form · a fiscal amount sent as a JSON number`**. A `2xx` there is a **Critical finding, not a test failure**: RFC 8785 serializes JSON numbers through IEEE 754 doubles (ADR-0011 §1.1), so an amount that is ever a JSON number has lost precision before canonicalization sees it — and the loss is invisible, because `45.0` survives and `0.1` does not. The contract's own lint enforces the other half of this, rejecting `type: number` on any fiscal field.
 
-**`98 · Destructive`** holds `POST /v1/auth/password` alone. It revokes every session including the calling one, and it leaves the bootstrap administrator on a password the collection's variables no longer name — so a pass that included it would pass once and fail forever after. Run it deliberately, then update `adminPassword` or re-bootstrap the tenant.
+**`98 · Destructive`** holds `POST /v1/auth/password` alone. It revokes every session including the calling one, and it leaves the bootstrap administrator on a password the collection's variables no longer name — so a pass that included it would pass once and fail forever after. It is therefore **skipped unless `runDestructive` is `true`**. To run it, pair it with the sign-in it needs:
+
+```bash
+newman run ZoikoTax.postman_collection.json --env-var runDestructive=true   --folder "02 · Sign in" --folder "98 · Destructive — run deliberately, not as part of a pass"
+```
+
+Afterwards the administrator's password is `{{newPassword}}`: change it back, pass the new one as `adminPassword`, or re-bootstrap the tenant.
 
 ## Cross-cutting assertions
 

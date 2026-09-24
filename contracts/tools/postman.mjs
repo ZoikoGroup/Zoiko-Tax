@@ -110,8 +110,9 @@ const FOLDERS = [
     ],
   },
   {
-    name: "05 · Sign out",
-    description: "Last, because everything above needs the session this ends.",
+    name: "06 · Sign out",
+    description:
+      "After everything that needs the session this ends — including `05 · Contract conformance — with a session`, which sits before it for that reason.",
     operations: ["signOut"],
   },
   {
@@ -119,6 +120,15 @@ const FOLDERS = [
     description:
       "`changePassword` revokes every session for the subject, including the calling one — a password change is what you do when a credential is believed compromised, and leaving other sessions alive would defeat it.\n\nIt also leaves the bootstrap administrator on `{{newPassword}}`, which the collection's `adminPassword` no longer names. Run it when you mean to, then update `adminPassword` or re-bootstrap the tenant.",
     operations: ["changePassword"],
+    // Skipped unless asked for. It runs after sign-out, so in a full pass it
+    // could only ever 401 — a red row that says nothing about the API — and a
+    // pass where it succeeded would leave the next pass unable to sign in.
+    prerequest: [
+      "if (pm.variables.get('runDestructive') !== 'true') {",
+      "  console.info('skipped: set runDestructive=true and run this folder with 02 · Sign in');",
+      "  pm.execution.skipRequest();",
+      "}",
+    ],
   },
 ];
 
@@ -449,7 +459,11 @@ function build(doc, overlay, scripts, sourceName) {
       placed.add(id);
       children.push(requestFrom(doc, found.method, found.path, found.operation));
     }
-    items.push({ name: folder.name, description: folder.description, item: children });
+    const item = { name: folder.name, description: folder.description, item: children };
+    if (folder.prerequest) {
+      item.event = [{ listen: "prerequest", script: { type: "text/javascript", exec: folder.prerequest } }];
+    }
+    items.push(item);
   }
 
   const unplaced = [...byId.keys()].filter((id) => !placed.has(id));
@@ -536,6 +550,8 @@ function variables(overlay, contractDigest, local) {
     { key: "adminEmail", value: local.email, type: "string" },
     { key: "adminPassword", value: local.password, type: "string" },
     { key: "newPassword", value: "a considerably longer passphrase than that one", type: "string" },
+    // `98 · Destructive` runs only when this is "true".
+    { key: "runDestructive", value: "false", type: "string" },
 
     // Set by the pre-request script and by the requests that create things.
     { key: "newUserEmail", value: "", type: "string" },
