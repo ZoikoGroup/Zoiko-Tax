@@ -1878,7 +1878,7 @@
     },
     {
       "key": "adminPassword",
-      "value": "local-dev-only-change-me",
+      "value": "local-dev-only-password",
       "type": "string"
     },
     {

@@ -520,18 +520,21 @@ function build(doc, overlay, scripts, sourceName) {
       { listen: "prerequest", script: { type: "text/javascript", exec: scripts.pre } },
       { listen: "test", script: { type: "text/javascript", exec: scripts.test } },
     ],
-    variable: variables(overlay, contractDigest),
+    variable: variables(overlay, contractDigest, sourceName.local),
   };
 }
 
-function variables(overlay, contractDigest) {
+function variables(overlay, contractDigest, local) {
   return [
     { key: "baseUrl", value: "http://localhost:8080", type: "string" },
 
-    // The local stack's bootstrap tenant and administrator (docker-compose.yml).
-    { key: "tenantSlug", value: "acme", type: "string" },
-    { key: "adminEmail", value: "admin@acme.example", type: "string" },
-    { key: "adminPassword", value: "local-dev-only-change-me", type: "string" },
+    // The local stack's bootstrap tenant and administrator, read from
+    // docker-compose.yml rather than copied from it. A copy drifted once: the
+    // collection carried a password the stack never set, so a plain `newman run`
+    // failed at sign-in and every request after it was a 401.
+    { key: "tenantSlug", value: local.tenant, type: "string" },
+    { key: "adminEmail", value: local.email, type: "string" },
+    { key: "adminPassword", value: local.password, type: "string" },
     { key: "newPassword", value: "a considerably longer passphrase than that one", type: "string" },
 
     // Set by the pre-request script and by the requests that create things.
@@ -563,6 +566,27 @@ function uuidFrom(name) {
   return [h.slice(0, 8), h.slice(8, 12), "5" + h.slice(13, 16), "8" + h.slice(17, 20), h.slice(20, 32)].join("-");
 }
 
+/**
+ * The bootstrap tenant and administrator the local stack creates. A missing
+ * value is an error rather than a default, because a default is how the
+ * collection came to carry a password the stack does not use.
+ */
+function localBootstrap(composePath) {
+  const compose = parseDocument(readFileSync(composePath, "utf8")).toJS();
+  const env = compose?.services?.["ztax-core"]?.environment ?? {};
+  const local = {
+    tenant: env.ZTAX_BOOTSTRAP_TENANT,
+    email: env.ZTAX_BOOTSTRAP_ADMIN_EMAIL,
+    password: env.ZTAX_LOCAL_SECRET_BOOTSTRAP_ADMIN,
+  };
+  for (const [name, value] of Object.entries(local)) {
+    if (typeof value !== "string" || value === "") {
+      throw new Error(`${composePath}: ztax-core sets no bootstrap ${name}, and the collection cannot sign in without it.`);
+    }
+  }
+  return local;
+}
+
 function main(argv) {
   const check = argv.includes("--check");
   const [source, target] = argv.filter((a) => !a.startsWith("--"));
@@ -577,7 +601,8 @@ function main(argv) {
     test: readFileSync(join(here, "..", "postman", "scripts", "collection.test.js"), "utf8").replace(/\n$/, "").split("\n"),
   };
 
-  const rendered = JSON.stringify(build(doc, overlay, scripts, { path: source }), null, 2) + "\n";
+  const local = localBootstrap(join(here, "..", "..", "docker-compose.yml"));
+  const rendered = JSON.stringify(build(doc, overlay, scripts, { path: source, local }), null, 2) + "\n";
   const digest = createHash("sha256").update(rendered).digest("hex");
   const hashLine = `${digest}  ${basename(target)}\n`;
 
@@ -604,7 +629,7 @@ function main(argv) {
 
   writeFileSync(target, rendered);
   writeFileSync(`${target}.sha256`, hashLine);
-  const folders = build(doc, overlay, scripts, { path: source }).item;
+  const folders = build(doc, overlay, scripts, { path: source, local }).item;
   const requests = folders.reduce((n, f) => n + f.item.length, 0);
   process.stdout.write(`wrote ${target}: ${requests} requests in ${folders.length} folders (${digest})\n`);
 }
