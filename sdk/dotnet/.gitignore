@@ -1,0 +1,7 @@
+# Build output. Everything else under sdk/dotnet is source or a committed,
+# checked artifact (Generated/Models.g.cs, packages.lock.json).
+bin/
+obj/
+TestResults/
+*.user
+.vs/

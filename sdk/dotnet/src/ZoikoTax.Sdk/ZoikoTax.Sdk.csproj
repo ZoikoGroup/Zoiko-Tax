@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>ZoikoTax.Sdk</RootNamespace>
+    <AssemblyName>ZoikoTax.Sdk</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <AnalysisLevel>8.0-recommended</AnalysisLevel>
+
+    <PackageId>ZoikoTax.Sdk</PackageId>
+    <Version>1.0.0</Version>
+    <Description>.NET client for the ZoikoTax v1 API. Model types are generated from the contract; the client is a thin layer over HttpClient.</Description>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <!--
+    No PackageReference, on purpose. System.Net.Http and System.Text.Json are
+    in the shared framework, and a tax SDK that pulled a JSON library or a
+    resilience library into a customer's dependency graph would be choosing
+    their versions of both for them.
+  -->
+
+</Project>
