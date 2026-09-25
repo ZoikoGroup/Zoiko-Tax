@@ -32,7 +32,7 @@ from ztax_gateway.rag import (
 # Paths to the real spec documents
 # ---------------------------------------------------------------------------
 
-_REPO_ROOT = Path(__file__).parent.parent.parent.parent  # d:/zoiko/Zoiko-Tax
+_REPO_ROOT = Path(__file__).resolve().parents[2]  # intelligence/tests/test_rag.py -> Zoiko-Tax
 _SPECS_DIR = _REPO_ROOT / "docs" / "specs"
 _DET_SPEC = _SPECS_DIR / "ZTAX-DET-001-global-tax-determination-engine.md"
 _JUR_SPEC = _SPECS_DIR / "ZTAX-JUR-001-jurisdiction-situs-and-place-of-supply.md"
