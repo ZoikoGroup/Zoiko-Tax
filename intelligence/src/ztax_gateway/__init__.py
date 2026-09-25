@@ -18,7 +18,24 @@ contract exists. Building it the other way round produces a Gateway that can
 carry a request before it can refuse one.
 """
 
+from .classifier import (
+    ClassificationError,
+    ClassificationProposal,
+    ClassificationRecord,
+    Classifier,
+)
 from .decimal_wire import DecimalWireError, parse, render
+from .evaluation import (
+    EvaluationError,
+    EvaluationReport,
+    EvaluationRule,
+    EvaluationRuleset,
+    EvaluationVerdict,
+    Evaluator,
+    RuleOutcome,
+    RuleResult,
+    evaluate,
+)
 from .governance import (
     MAX_PERMITTED_AUTHORITY,
     GovernanceRefusedError,
@@ -46,18 +63,28 @@ from .tool_broker import (
 )
 
 __all__ = [
-    # Tool Registry & Broker
     "MAX_PERMITTED_ACTION_CLASS",
-    # Governance Gateway
     "MAX_PERMITTED_AUTHORITY",
     "ActionClass",
     "AgentAudit",
     "AuthorityOutcome",
+    "ClassificationError",
+    "ClassificationProposal",
+    "ClassificationRecord",
+    "Classifier",
     "DecimalWireError",
+    "EvaluationError",
+    "EvaluationReport",
+    "EvaluationRule",
+    "EvaluationRuleset",
+    "EvaluationVerdict",
+    "Evaluator",
     "GovernanceRefusedError",
     "Provenance",
     "Refusal",
     "RiskTier",
+    "RuleOutcome",
+    "RuleResult",
     "ToolBrokerRefusedError",
     "ToolCatalog",
     "ToolProfile",
@@ -67,6 +94,7 @@ __all__ = [
     "UseCaseRegistry",
     "authorise",
     "authorise_tool",
+    "evaluate",
     "guarded",
     "parse",
     "render",
