@@ -1,23 +1,34 @@
 """ZoikoTax Governed Model Gateway.
-
+ 
 The only path between the Go fiscal core and any model provider (ADR-0006
 §2.1). Nothing in the estate calls a provider directly; network policy in the
 regional cell denies Go workloads egress to provider endpoints, so this is
 enforced by the network rather than by anyone remembering.
-
+ 
 What is here today is the enforcement point — the part ADR-0006 §2.5 makes the
 Gateway's reason for existing — and the decimal boundary of §2.3. What is not
 here is the transport: gRPC service definitions are generated from
 ``contracts/schemas`` (ADR-0006 §2.2, ADR-0010 §2.1), and that pipeline opens in
 W2 lane K. ``service.py`` marks the seam.
-
+ 
 The ordering is deliberate rather than convenient. The governance logic is
 testable with no transport, no provider and no model, and it is the half that
 has to be right; the transport is plumbing that can be generated once the
 contract exists. Building it the other way round produces a Gateway that can
 carry a request before it can refuse one.
 """
-
+ 
+from .change_intelligence import (
+    AuthorityLevel,
+    CandidateStatus,
+    CandidateStatusRecord,
+    ChangeCandidate,
+    ChangeCandidateError,
+    ChangeIntelligenceEngine,
+    ChangeType,
+    CorpusEntry,
+    EffectiveDateEvidence,
+)
 from .classifier import (
     ClassificationError,
     ClassificationProposal,
@@ -44,6 +55,28 @@ from .governance import (
     UseCaseRegistry,
     authorise,
 )
+from .human_review import (
+    DecisionReasonCode,
+    EvidencePanel,
+    PromotedRecord,
+    ReviewDecision,
+    ReviewerProfile,
+    ReviewError,
+    ReviewItem,
+    ReviewOutcome,
+    ReviewPriority,
+    ReviewQueue,
+    ReviewStatus,
+)
+from .invocation_evidence import (
+    GuardrailResult,
+    InvocationEvidenceBuilder,
+    InvocationEvidenceError,
+    InvocationEvidenceRecord,
+    InvocationOutcome,
+    ToolCallRecord,
+    UsageMetrics,
+)
 from .provenance import AuthorityOutcome, Provenance, RiskTier
 from .tool_broker import (
     MAX_PERMITTED_ACTION_CLASS,
@@ -67,29 +100,56 @@ __all__ = [
     "MAX_PERMITTED_AUTHORITY",
     "ActionClass",
     "AgentAudit",
+    "AuthorityLevel",
     "AuthorityOutcome",
+    "CandidateStatus",
+    "CandidateStatusRecord",
+    "ChangeCandidate",
+    "ChangeCandidateError",
+    "ChangeIntelligenceEngine",
+    "ChangeType",
     "ClassificationError",
     "ClassificationProposal",
     "ClassificationRecord",
     "Classifier",
+    "CorpusEntry",
     "DecimalWireError",
+    "DecisionReasonCode",
+    "EffectiveDateEvidence",
     "EvaluationError",
     "EvaluationReport",
     "EvaluationRule",
     "EvaluationRuleset",
     "EvaluationVerdict",
     "Evaluator",
+    "EvidencePanel",
     "GovernanceRefusedError",
+    "GuardrailResult",
+    "InvocationEvidenceBuilder",
+    "InvocationEvidenceError",
+    "InvocationEvidenceRecord",
+    "InvocationOutcome",
+    "PromotedRecord",
     "Provenance",
     "Refusal",
+    "ReviewDecision",
+    "ReviewError",
+    "ReviewItem",
+    "ReviewOutcome",
+    "ReviewPriority",
+    "ReviewQueue",
+    "ReviewStatus",
+    "ReviewerProfile",
     "RiskTier",
     "RuleOutcome",
     "RuleResult",
     "ToolBrokerRefusedError",
+    "ToolCallRecord",
     "ToolCatalog",
     "ToolProfile",
     "ToolProvenance",
     "ToolRefusal",
+    "UsageMetrics",
     "UseCase",
     "UseCaseRegistry",
     "authorise",
@@ -99,3 +159,4 @@ __all__ = [
     "parse",
     "render",
 ]
+ 
