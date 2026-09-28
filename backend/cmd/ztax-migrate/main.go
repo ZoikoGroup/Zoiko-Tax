@@ -29,11 +29,12 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/adapter/postgres"
+	"github.com/zoikogroup/zoikotax/backend/internal/platform/telemetry"
 	"github.com/zoikogroup/zoikotax/backend/migrations"
 )
 
 func main() {
-	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})).
+	log := slog.New(telemetry.NewRedactingHandler(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))).
 		With("service.name", "ztax-migrate")
 
 	if err := run(log, os.Args[1:]); err != nil {

@@ -1,0 +1,61 @@
+{
+  "$comment": "ZTAX-PRIV-001's closed privacy vocabularies, as data. The contract lint (tools/lint.mjs, rule privacy-classified-fields) and the Go domain (backend/internal/domain/privacy, whose test reads this file) both take their vocabulary from here, so the two cannot drift. Adding a value is a reviewed privacy change: PRIV-001 §6 forbids reusing a purpose to legitimise different processing.",
+  "source": "ZTAX-PRIV-001 v1.0 §4 (classes), §6 (purposes), §14 (retention), §24 (field metadata)",
+  "classes": {
+    "P0": "Non-personal / public",
+    "P1": "Business contact",
+    "P2": "Account / customer personal",
+    "P3": "Telecom / usage identifier",
+    "P4": "Location / situs evidence",
+    "P5": "Financial / fiscal personal",
+    "P6": "Special / highly sensitive",
+    "P7": "Secrets / credentials"
+  },
+  "purposes": {
+    "PURP-TAX-CALC": "Calculate/classify tax, fees and telecom fiscal treatment",
+    "PURP-SITUS": "Resolve jurisdiction/place of supply/situs",
+    "PURP-OBL": "Determine registrations, reporting and regulatory obligations",
+    "PURP-FILE": "Prepare/submit returns, registrations, e-invoices or authority reports",
+    "PURP-RECON": "Reconcile calculated, invoiced, collected, reported and remitted positions",
+    "PURP-EVID": "Maintain legally required evidence, replay and dispute support",
+    "PURP-SEC": "Security, authentication, fraud/abuse prevention and incident response",
+    "PURP-SUPPORT": "Resolve customer support cases under scoped access",
+    "PURP-SVCOPS": "Operate, monitor and improve reliability using minimized telemetry",
+    "PURP-AI-ASSIST": "Approved AI-assisted classification/content/operations use case",
+    "PURP-ANALYTICS": "Approved aggregate/de-identified product/operations analytics",
+    "PURP-LEGAL": "Legal claims, regulator response, legal hold and legal obligations"
+  },
+  "retention": {
+    "RET-TRANSIENT": "Seconds/minutes/hours; raw evidence where derivation is sufficient",
+    "RET-SESSION": "Until workflow/session completion",
+    "RET-OPERATIONAL": "Active account/service/support requirement",
+    "RET-FISCAL": "Tax/regulatory record period determined by pack/legal profile",
+    "RET-EVIDENCE": "Replay/audit/dispute window under EVID",
+    "RET-SECURITY": "Security log/incident window",
+    "RET-LEGAL-HOLD": "Until hold release and re-evaluation",
+    "RET-CUSTOM": "Customer-specific lawful/contractual configuration within legal bounds"
+  },
+  "redaction": {
+    "NONE": "May appear in logs and telemetry as-is",
+    "REDACT": "Appears in logs and telemetry only in redacted form",
+    "NO_LOG": "Never appears in logs, telemetry or error messages, redacted or not"
+  },
+  "evidencePolicy": {
+    "RAW_REQUIRED": "The raw value is retained as evidence",
+    "DERIVED_ONLY": "Only the derived fact is retained; the raw value is discarded",
+    "SOURCE_HELD": "The customer or source holds the raw value; ZoikoTax holds a reference",
+    "NONE": "Not evidence"
+  },
+  "aiAllowed": {
+    "NONE": "Never sent to any model",
+    "DERIVED_ONLY": "Only derived, non-identifying facts may reach a model",
+    "APPROVED_MODEL_GATEWAY": "May reach an approved use case through the Governed Model Gateway"
+  },
+  "rules": {
+    "$comment": "Enforced by the lint and by privacy.Metadata.Validate.",
+    "personalClassesNeedPurposeAndRetention": ["P1", "P2", "P3", "P4", "P5", "P6", "P7"],
+    "mustNotBeLoggedAsIs": ["P2", "P3", "P4", "P5", "P6", "P7"],
+    "neverLogged": ["P7"],
+    "prohibitedWithoutDocumentedRequirement": ["P6"]
+  }
+}

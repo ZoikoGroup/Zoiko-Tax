@@ -40,10 +40,11 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/clock"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/kms"
+	"github.com/zoikogroup/zoikotax/backend/internal/platform/telemetry"
 )
 
 func main() {
-	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})).
+	log := slog.New(telemetry.NewRedactingHandler(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))).
 		With("service.name", "ztax-contentc")
 
 	if err := run(log, os.Args[1:]); err != nil {

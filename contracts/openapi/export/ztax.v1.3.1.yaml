@@ -919,30 +919,42 @@ components:
         - ztx_retryable
       properties:
         type:
+          x-ztax-privacy:
+            class: P0
           type: string
           format: uri
           description: A stable, versioned, documented URI for this reason code.
           example: https://errors.zoikotax.com/v1/forbidden
         title:
+          x-ztax-privacy:
+            class: P0
           type: string
           description: A short summary. **Do not match on this**; it may be reworded.
           example: Forbidden
         status:
+          x-ztax-privacy:
+            class: P0
           type: integer
           format: int32
           minimum: 100
           maximum: 599
           example: 403
         detail:
+          x-ztax-privacy:
+            class: P0
           type: string
           description: What happened and what to do about it. Also not for matching.
         instance:
+          x-ztax-privacy:
+            class: P0
           type: string
           description: The request path this occurred on.
           example: /v1/admin/users
         ztx_reason_code:
           $ref: "#/components/schemas/ReasonCode"
         ztx_request_id:
+          x-ztax-privacy:
+            class: P0
           type: string
           description: |
             This request's identifier, also returned in the `X-Request-Id`
@@ -950,18 +962,26 @@ components:
             response with the server-side log.
           example: 01JBQ0S9C3X8Q1H6M2KX5R7F4H
         ztx_trace_id:
+          x-ztax-privacy:
+            class: P0
           type: string
           description: The OpenTelemetry trace identifier, where tracing is enabled.
         ztx_decision_id:
+          x-ztax-privacy:
+            class: P0
           type: string
           description: The decision this error concerns, where there is one.
         ztx_field:
+          x-ztax-privacy:
+            class: P0
           type: string
           description: |
             The contract field at fault, for a validation failure. A field name,
             never a value — a value in an error message is a value in a log.
           example: email
         ztx_retryable:
+          x-ztax-privacy:
+            class: P0
           type: boolean
           description: |
             Whether retrying this request unchanged could succeed. Only a
@@ -970,6 +990,8 @@ components:
             rather than making progress.
           example: false
     ReasonCode:
+      x-ztax-privacy:
+        class: P0
       type: string
       title: ReasonCode
       description: |
@@ -985,6 +1007,8 @@ components:
       pattern: ^[A-Z][A-Z0-9_]*$
       example: FORBIDDEN
     Timestamp:
+      x-ztax-privacy:
+        class: P0
       type: string
       title: Timestamp
       format: date-time
@@ -995,6 +1019,8 @@ components:
       pattern: ^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$
       example: 2026-09-23T12:00:00.000000Z
     Digest:
+      x-ztax-privacy:
+        class: P0
       type: string
       title: Digest
       description: |
@@ -1005,18 +1031,34 @@ components:
       pattern: ^zt1:[0-9a-f]{64}$
       example: zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b
     TenantId:
+      x-ztax-privacy:
+        class: P0
       type: string
       title: TenantId
       description: A tenant identifier (ADR-0012). Prefixed, sortable, never recycled.
       pattern: ^ztn_[0-9A-HJKMNP-TV-Z]{26}$
       example: ztn_01JBQ0S9C3X8Q1H6M2KX5R7F4A
     UserId:
+      x-ztax-privacy:
+        class: P1
+        purposes:
+          - PURP-SEC
+          - PURP-SUPPORT
+        retention: RET-OPERATIONAL
+        redaction: NONE
       type: string
       title: UserId
       description: A user identifier (ADR-0012).
       pattern: ^ztu_[0-9A-HJKMNP-TV-Z]{26}$
       example: ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4B
     SessionId:
+      x-ztax-privacy:
+        class: P1
+        purposes:
+          - PURP-SEC
+          - PURP-SUPPORT
+        retention: RET-OPERATIONAL
+        redaction: NONE
       type: string
       title: SessionId
       description: |
@@ -1026,12 +1068,16 @@ components:
       pattern: ^zts_[0-9A-HJKMNP-TV-Z]{26}$
       example: zts_01JBQ0S9C3X8Q1H6M2KX5R7F4E
     AuditId:
+      x-ztax-privacy:
+        class: P0
       type: string
       title: AuditId
       description: An audit record identifier (ADR-0012).
       pattern: ^zta_[0-9A-HJKMNP-TV-Z]{26}$
       example: zta_01JBQ0S9C3X8Q1H6M2KX5R7F4G
     Role:
+      x-ztax-privacy:
+        class: P0
       type: string
       title: Role
       description: |
@@ -1044,6 +1090,8 @@ components:
         - AUDITOR
       example: ADMIN
     TenantStatus:
+      x-ztax-privacy:
+        class: P0
       type: string
       title: TenantStatus
       enum:
@@ -1052,6 +1100,8 @@ components:
         - CLOSED
       example: ACTIVE
     UserStatus:
+      x-ztax-privacy:
+        class: P0
       type: string
       title: UserStatus
       description: |
@@ -1077,14 +1127,20 @@ components:
         id:
           $ref: "#/components/schemas/TenantId"
         slug:
+          x-ztax-privacy:
+            class: P0
           type: string
           description: The stable, human-usable name a client signs in with.
           pattern: ^[a-z0-9][a-z0-9-]{1,62}$
           example: acme
         displayName:
+          x-ztax-privacy:
+            class: P0
           type: string
           example: Acme Telecom
         residencyRegion:
+          x-ztax-privacy:
+            class: P0
           type: string
           description: |
             The region whose cell holds this tenant's data. It never leaves it,
@@ -1112,10 +1168,26 @@ components:
         id:
           $ref: "#/components/schemas/UserId"
         email:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-SUPPORT
+            retention: RET-OPERATIONAL
+            redaction: REDACT
+            aiAllowed: NONE
           type: string
           format: email
           example: analyst@acme.example
         displayName:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-SUPPORT
+            retention: RET-OPERATIONAL
+            redaction: REDACT
+            aiAllowed: NONE
           type: string
           example: Grace Hopper
         status:
@@ -1170,18 +1242,36 @@ components:
         expiresAt:
           $ref: "#/components/schemas/Timestamp"
         userAgent:
+          x-ztax-privacy:
+            class: P3
+            purposes:
+              - PURP-SEC
+            retention: RET-SECURITY
+            redaction: REDACT
+            aiAllowed: NONE
           type: string
           description: The user agent recorded when the session opened, where one was sent.
         clientIp:
+          x-ztax-privacy:
+            class: P3
+            purposes:
+              - PURP-SEC
+            retention: RET-SECURITY
+            redaction: REDACT
+            aiAllowed: NONE
           type: string
           description: The client address recorded when the session opened.
         revoked:
+          x-ztax-privacy:
+            class: P0
           type: boolean
           description: |
             Whether the session has been revoked. A revoked session is kept
             rather than deleted; a session that vanished would leave nothing for
             an audit to look at.
         current:
+          x-ztax-privacy:
+            class: P0
           type: boolean
           description: Whether this is the calling session.
     AuditRecord:
@@ -1207,16 +1297,35 @@ components:
             because "the system did this" and "some user did this" are different
             facts.
         action:
+          x-ztax-privacy:
+            class: P0
           type: string
           description: A dotted action name from a closed vocabulary.
           example: user.role.granted
         subjectType:
+          x-ztax-privacy:
+            class: P0
           type: string
           example: user
         subjectId:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-LEGAL
+            retention: RET-SECURITY
+            redaction: NONE
           type: string
           example: ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C
         detail:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-LEGAL
+            retention: RET-SECURITY
+            redaction: REDACT
+            aiAllowed: NONE
           type: string
           description: |
             A canonical JSON document, as a string. It is the exact bytes that
@@ -1239,18 +1348,26 @@ components:
         - reasonCodes
       properties:
         cell:
+          x-ztax-privacy:
+            class: P0
           type: string
           description: The cell serving this request.
           example: eu-west-1
         region:
+          x-ztax-privacy:
+            class: P0
           type: string
           example: eu-west
         environment:
+          x-ztax-privacy:
+            class: P0
           type: string
           example: production
         trains:
           $ref: "#/components/schemas/Trains"
         canonProfile:
+          x-ztax-privacy:
+            class: P0
           type: string
           description: |
             The canonicalization profile this deployment digests under. It is
@@ -1259,6 +1376,8 @@ components:
             it (ADR-0011 §2.6).
           example: canon/v1
         authoritative:
+          x-ztax-privacy:
+            class: P0
           type: boolean
           description: |
             **Whether this deployment may produce authoritative fiscal output.**
@@ -1294,24 +1413,38 @@ components:
         app:
           type: string
           example: 0.4.0
+          x-ztax-privacy:
+            class: P0
         content:
           type: string
           example: 2026.09.1
+          x-ztax-privacy:
+            class: P0
         ai:
           type: string
           example: 0.1.0
+          x-ztax-privacy:
+            class: P0
         adapter:
           type: string
           example: 0.2.0
+          x-ztax-privacy:
+            class: P0
         infra:
           type: string
           example: 0.3.0
+          x-ztax-privacy:
+            class: P0
         schema:
           type: string
           example: 0.1.0
+          x-ztax-privacy:
+            class: P0
         migration:
           type: string
           example: "6"
+          x-ztax-privacy:
+            class: P0
     ContentCapability:
       type: object
       title: ContentCapability
@@ -1329,11 +1462,15 @@ components:
         - nodeCount
       properties:
         bundleId:
+          x-ztax-privacy:
+            class: P0
           type: string
           example: eu-vat-worked-2026.09
         digest:
           $ref: "#/components/schemas/Digest"
         irVersion:
+          x-ztax-privacy:
+            class: P0
           type: integer
           format: int32
           description: |
@@ -1342,6 +1479,8 @@ components:
             the previous one rather than degrading (ADR-0005 §2.8).
           example: 1
         nodeCount:
+          x-ztax-privacy:
+            class: P0
           type: integer
           format: int32
           description: The size of the rule graph, for telemetry.
@@ -1356,14 +1495,32 @@ components:
         - password
       properties:
         tenant:
+          x-ztax-privacy:
+            class: P0
           type: string
           description: The tenant slug.
           example: acme
         email:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-SUPPORT
+            retention: RET-TRANSIENT
+            redaction: REDACT
+            aiAllowed: NONE
           type: string
           format: email
           example: admin@acme.example
         password:
+          x-ztax-privacy:
+            class: P7
+            purposes:
+              - PURP-SEC
+            retention: RET-TRANSIENT
+            redaction: NO_LOG
+            aiAllowed: NONE
+            evidencePolicy: NONE
           type: string
           format: password
           minLength: 12
@@ -1377,10 +1534,26 @@ components:
         - newPassword
       properties:
         currentPassword:
+          x-ztax-privacy:
+            class: P7
+            purposes:
+              - PURP-SEC
+            retention: RET-TRANSIENT
+            redaction: NO_LOG
+            aiAllowed: NONE
+            evidencePolicy: NONE
           type: string
           format: password
           example: correct horse battery staple
         newPassword:
+          x-ztax-privacy:
+            class: P7
+            purposes:
+              - PURP-SEC
+            retention: RET-TRANSIENT
+            redaction: NO_LOG
+            aiAllowed: NONE
+            evidencePolicy: NONE
           type: string
           format: password
           minLength: 12
@@ -1394,10 +1567,26 @@ components:
         - displayName
       properties:
         email:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-SUPPORT
+            retention: RET-OPERATIONAL
+            redaction: REDACT
+            aiAllowed: NONE
           type: string
           format: email
           example: auditor@acme.example
         displayName:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-SUPPORT
+            retention: RET-OPERATIONAL
+            redaction: REDACT
+            aiAllowed: NONE
           type: string
           example: Katherine Johnson
         roles:
@@ -1406,6 +1595,14 @@ components:
           items:
             $ref: "#/components/schemas/Role"
         password:
+          x-ztax-privacy:
+            class: P7
+            purposes:
+              - PURP-SEC
+            retention: RET-TRANSIENT
+            redaction: NO_LOG
+            aiAllowed: NONE
+            evidencePolicy: NONE
           type: string
           format: password
           minLength: 12

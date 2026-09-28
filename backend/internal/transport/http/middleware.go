@@ -9,6 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/zoikogroup/zoikotax/backend/internal/app"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
@@ -17,14 +22,16 @@ import (
 
 // The chain is constructed in Router and reads top to bottom:
 //
-//	recovery → request id → logging → security context → authorization → handler
+//	recovery → request id → tracing → logging → security context → authorization → handler
 //
-// ADR-0010 §2.4 names tracing, residency and idempotency in this chain too.
-// Tracing waits on internal/platform/telemetry (ADR-0015 §2.1); residency is a
-// property of the session's tenant rather than a header, so it is enforced
+// ADR-0010 §2.4 names residency and idempotency in this chain too. Residency is
+// a property of the session's tenant rather than a header, so it is enforced
 // where the tenant is resolved; idempotency applies to the fiscal write path
 // and is wired there rather than globally, because applying it to reads would
 // make every GET take a write lock on a key.
+//
+// Tracing sits outside logging so that the request's log line carries the
+// span's trace id (ADR-0015 §2.7).
 
 // Middleware is a handler decorator.
 type Middleware func(http.Handler) http.Handler
@@ -87,6 +94,56 @@ func withRequestID(ids idgen.Generator) Middleware {
 			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), requestIDKey{}, value)))
 		})
 	}
+}
+
+// withTracing opens a server span per request (ADR-0015 §2.1).
+//
+// The route is resolved from the mux before the span starts, because the head
+// sampler decides at start and ADR-0015 §2.5 makes the decision depend on the
+// route: commit, adjust and refund are never sampled out. The span carries the
+// method, the route pattern, the status and the request id — identifiers and
+// timings, never a body, a query string or a value (§2.3, §2.4).
+func withTracing(tp trace.TracerProvider, mux *http.ServeMux) Middleware {
+	tracer := tp.Tracer("github.com/zoikogroup/zoikotax/backend/internal/transport/http")
+	propagator := propagation.TraceContext{}
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			route := routeOf(mux, r)
+			ctx := propagator.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+			ctx, span := tracer.Start(ctx, r.Method+" "+route,
+				trace.WithSpanKind(trace.SpanKindServer),
+				trace.WithAttributes(
+					attribute.String("http.request.method", r.Method),
+					attribute.String("http.route", route),
+					attribute.String("ztx.request_id", requestIDOf(r.Context())),
+				))
+			defer span.End()
+
+			rec := &statusRecorder{ResponseWriter: w}
+			next.ServeHTTP(rec, r.WithContext(ctx))
+			if rec.status == 0 {
+				rec.status = http.StatusOK
+			}
+			span.SetAttributes(attribute.Int("http.response.status_code", rec.status))
+			if rec.status >= http.StatusInternalServerError {
+				span.SetStatus(codes.Error, http.StatusText(rec.status))
+			}
+		})
+	}
+}
+
+// routeOf is the pattern the mux will dispatch r to, without its method. An
+// unrouted path reports "unrouted" rather than the raw path, which would put
+// caller-controlled text into span names and blow up their cardinality.
+func routeOf(mux *http.ServeMux, r *http.Request) string {
+	_, pattern := mux.Handler(r)
+	if _, path, ok := strings.Cut(pattern, " "); ok {
+		pattern = path
+	}
+	if pattern == "" || pattern == "/" {
+		return "unrouted"
+	}
+	return pattern
 }
 
 // statusRecorder captures the status for the access log.

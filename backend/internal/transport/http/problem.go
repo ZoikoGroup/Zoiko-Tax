@@ -15,6 +15,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -22,6 +23,8 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 )
@@ -139,6 +142,7 @@ func writeProblem(w http.ResponseWriter, r *http.Request, log *slog.Logger, err 
 		Instance:   r.URL.Path,
 		ReasonCode: string(e.Reason),
 		RequestID:  requestIDOf(r.Context()),
+		TraceID:    traceIDOf(r.Context()),
 		Field:      e.Field,
 		Retryable:  e.Retryable(),
 	}
@@ -296,4 +300,13 @@ func malformed(err error) error {
 func unknownField() error {
 	return errs.New(errs.CategoryValidation, errs.ReasonUnknownField,
 		"The request contained a field the contract does not declare. Field names are matched exactly, including case, and may not repeat.")
+}
+
+// traceIDOf is the request's trace id, where it is being traced. Quoting it in
+// a support request finds the span; it carries no data of its own.
+func traceIDOf(ctx context.Context) string {
+	if sc := trace.SpanContextFromContext(ctx); sc.IsValid() && sc.IsSampled() {
+		return sc.TraceID().String()
+	}
+	return ""
 }

@@ -116,9 +116,11 @@ services:
       ZTAX_HTTP_ADDR: ":8080"
       ZTAX_LOG_LEVEL: debug
 
-      # Inert until internal/platform/telemetry is wired (ADR-0015 §2.1). The
-      # collector belongs in this stack once it is.
-      ZTAX_OTLP_ENDPOINT: localhost:4317
+      # Tracing is off: this stack has no collector, and a cell exporting to
+      # one nobody deployed logs export failures forever. To trace locally, add
+      # an OpenTelemetry collector service and point this at it, with
+      # ZTAX_OTLP_INSECURE: "true" (ADR-0015 §2.1; refused outside development).
+      ZTAX_OTLP_ENDPOINT: ""
 
     # The binary writes nothing to disk. Enforcing that here means a future
     # change that starts writing fails loudly in development rather than in a

@@ -6,6 +6,9 @@ import (
 	"math"
 	"net/http"
 
+	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
+
 	"github.com/zoikogroup/zoikotax/backend/internal/app"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
@@ -50,6 +53,10 @@ type Router struct {
 	// fiscal output before then, and the capabilities surface says so rather
 	// than leaving a caller to assume.
 	Authoritative bool
+
+	// Tracer opens the request spans. Nil is a no-op provider, so a router
+	// built without telemetry traces nothing rather than failing.
+	Tracer trace.TracerProvider
 
 	// Content is the active rule bundle, or nil in a cell deployed without one.
 	// It is the Holder rather than the Bundle, so that a later activation swaps
@@ -169,9 +176,14 @@ func (rt *Router) Handler() http.Handler {
 			"No endpoint is routed at that path."))
 	})
 
+	tp := rt.Tracer
+	if tp == nil {
+		tp = noop.NewTracerProvider()
+	}
 	return chain(mux,
 		withRecovery(rt.log),
 		withRequestID(rt.ids),
+		withTracing(tp, mux),
 		withLogging(rt.log),
 		withAuthentication(rt.auth, rt.log),
 	)

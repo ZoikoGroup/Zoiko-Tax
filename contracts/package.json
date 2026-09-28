@@ -8,11 +8,12 @@
     "lint": "node tools/lint.mjs openapi/ztax.v1.yaml",
     "export": "node tools/downgrade.mjs openapi/ztax.v1.yaml openapi/export/ztax.v1.3.1.yaml",
     "export:check": "node tools/downgrade.mjs --check openapi/ztax.v1.yaml openapi/export/ztax.v1.3.1.yaml",
-    "check": "npm run lint && npm run export:check && npm run routes:check && npm run postman:check",
+    "check": "npm run lint && npm run test && npm run export:check && npm run routes:check && npm run postman:check",
     "routes": "node tools/routes.mjs openapi/ztax.v1.yaml openapi/export/ztax.v1.routes.json",
     "routes:check": "node tools/routes.mjs --check openapi/ztax.v1.yaml openapi/export/ztax.v1.routes.json",
     "postman": "node tools/postman.mjs openapi/ztax.v1.yaml ../backend/postman/ZoikoTax.postman_collection.json",
-    "postman:check": "node tools/postman.mjs --check openapi/ztax.v1.yaml ../backend/postman/ZoikoTax.postman_collection.json"
+    "postman:check": "node tools/postman.mjs --check openapi/ztax.v1.yaml ../backend/postman/ZoikoTax.postman_collection.json",
+    "test": "node --test tools/lint.test.mjs"
   },
   "devDependencies": {
     "yaml": "2.8.1"
