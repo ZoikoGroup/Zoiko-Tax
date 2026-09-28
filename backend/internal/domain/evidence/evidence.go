@@ -12,6 +12,17 @@
 // So the envelope is the operational definition of determinism for this estate.
 // A field added to it is a new thing a decision may depend on; a field left out
 // is a thing it may not. That is a governance decision, not a struct change.
+//
+// A decision is two canonical documents, each identified by its own digest:
+//
+//	envelope  what the determination was allowed to depend on
+//	result    what it concluded, with the execution trace that explains it,
+//	          naming the envelope by digest
+//
+// A replay rebuilds the result from the envelope alone and compares bytes. The
+// result's digest is also the leaf a period seal commits to (seal.go), so one
+// digest ties the decision to the seal, the seal to the envelope, and the
+// envelope to the input.
 package evidence
 
 import (
@@ -19,6 +30,7 @@ import (
 	"time"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/fiscal"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
@@ -80,6 +92,16 @@ const (
 // Filable reports whether an outcome may be used for a filing.
 func (o Outcome) Filable() bool { return o == OutcomeAuthoritative }
 
+// Valid reports whether o is one of the recorded outcomes.
+func (o Outcome) Valid() bool {
+	switch o {
+	case OutcomeAuthoritative, OutcomeAdvisory, OutcomeAmbiguous, OutcomeConflicted,
+		OutcomeUnsupported, OutcomeReviewRequired:
+		return true
+	}
+	return false
+}
+
 // Envelope is everything a replay is allowed to depend on.
 type Envelope struct {
 	DecisionTime time.Time
@@ -91,9 +113,19 @@ type Envelope struct {
 	CanonProfile string
 	Trains       Trains
 
-	// Input is the canonical input document. Its digest is what the idempotency
-	// record keys on (ADR-0013 §2.3) and what a replay is verified against.
-	Input canonical.Value
+	// Input is the canonical input. Its digest is what the idempotency record
+	// keys on (ADR-0013 §2.3) and what a replay is verified against.
+	Input Input
+
+	// Accumulators is the read set: every accumulator value the evaluation was
+	// given, read before it began (ZTAX-DET-REQ-0002). It is in the envelope
+	// because ZTAX-DET-REQ-0034 requires it there, and because a replay that
+	// re-read the accumulators would read today's totals and reach a
+	// different answer for a threshold rule that was right at the time.
+	//
+	// An empty read set is recorded as an empty object rather than omitted:
+	// "this decision read no accumulators" is a fact about it.
+	Accumulators map[string]fiscal.Money
 }
 
 // Validate refuses an envelope that cannot support a replay.
@@ -107,6 +139,12 @@ func (e Envelope) Validate() error {
 		return fmt.Errorf("evidence: envelope names no decision time")
 	case e.EventTime.IsZero():
 		return fmt.Errorf("evidence: envelope names no event time")
+	case !e.DecisionTime.Equal(e.DecisionTime.Truncate(time.Microsecond)),
+		!e.EventTime.Equal(e.EventTime.Truncate(time.Microsecond)):
+		// canon/v1 carries six fractional digits (ADR-0011 P2). An instant
+		// finer than that would be evaluated at one precision and replayed at
+		// another, so it is refused here rather than silently truncated.
+		return fmt.Errorf("evidence: envelope instants must be whole microseconds")
 	case e.BundleID == "" || e.BundleDigest == "":
 		return fmt.Errorf("evidence: envelope names no content bundle")
 	case e.IRVersion == 0:
@@ -115,8 +153,14 @@ func (e Envelope) Validate() error {
 		return fmt.Errorf("evidence: envelope names no canonicalization profile")
 	case !e.Trains.Complete():
 		return fmt.Errorf("evidence: envelope does not name all seven release trains")
-	case e.Input.IsAbsent():
-		return fmt.Errorf("evidence: envelope carries no canonical input")
+	}
+	if err := e.Input.Validate(); err != nil {
+		return err
+	}
+	for name := range e.Accumulators {
+		if name == "" {
+			return fmt.Errorf("evidence: envelope read set names an accumulator with no key")
+		}
 	}
 	return nil
 }
@@ -131,7 +175,8 @@ func (e Envelope) Canonical() canonical.Value {
 		canonical.F("irVersion", canonical.Integer(int64(e.IRVersion))),
 		canonical.F("canonProfile", canonical.String(e.CanonProfile)),
 		canonical.F("trains", e.Trains.Canonical()),
-		canonical.F("input", e.Input),
+		canonical.F("input", e.Input.Canonical()),
+		canonical.F("accumulators", moneySection(e.Accumulators, true)),
 	)
 }
 
@@ -148,10 +193,27 @@ func (e Envelope) Digest() (canonical.Digest, error) {
 // record keys on this rather than on the envelope, because two retries of one
 // request carry the same input at different decision times.
 func (e Envelope) InputDigest() (canonical.Digest, error) {
-	return canonical.Sum(e.Input)
+	return canonical.Sum(e.Input.Canonical())
 }
 
-// Decision is the record written for one determination.
+// Frame is the evaluation frame the envelope describes. Determination and
+// replay both build the frame here, from the envelope and nothing else — so
+// there is one construction, and a replay cannot see anything the original
+// evaluation did not.
+func (e Envelope) Frame() rule.Frame {
+	return rule.Frame{
+		DecisionTime: e.DecisionTime,
+		EventTime:    e.EventTime,
+		Money:        e.Input.Money,
+		Rates:        e.Input.Rates,
+		Quantities:   e.Input.Quantities,
+		Flags:        e.Input.Flags,
+		Strings:      e.Input.Strings,
+		Accumulators: e.Accumulators,
+	}
+}
+
+// Decision is one determination, as recorded.
 type Decision struct {
 	ID       id.DecisionID
 	TenantID id.TenantID
@@ -161,16 +223,34 @@ type Decision struct {
 	BusinessKey string
 	Supersedes  *id.DecisionID
 
-	Envelope Envelope
-	Outcome  Outcome
-	Reason   errs.ReasonCode
+	Envelope       Envelope
+	EnvelopeDigest canonical.Digest
 
-	// Trace is the execution trace (ADR-0005 §2.7): evidence, sealed and
-	// retained under statutory retention, not telemetry.
-	Trace []rule.TraceStep
+	Result       Result
+	ResultDigest canonical.Digest
+}
 
-	// Emitted are the result slots the content filled.
-	Emitted map[string]rule.Value
+// Conclude maps an evaluation to an outcome.
+//
+// This path cannot produce AUTHORITATIVE, and that is the point of writing it
+// this way rather than taking an "authoritative" flag. ZTAX-DET-REQ-0037
+// requires all five A4 conditions at once, and ZTAX-DET-REQ-0038 requires the
+// authoritative result to be a structurally distinct type rather than a
+// boolean on this one. Until both exist, every computed figure is ADVISORY and
+// says why.
+func Conclude(r rule.Result) (Outcome, errs.ReasonCode) {
+	if !r.Refused {
+		return OutcomeAdvisory, errs.ReasonNotAuthoritative
+	}
+	switch r.Reason {
+	case errs.ReasonAmbiguous:
+		return OutcomeAmbiguous, r.Reason
+	case errs.ReasonConflicted:
+		return OutcomeConflicted, r.Reason
+	case errs.ReasonReviewRequired:
+		return OutcomeReviewRequired, r.Reason
+	}
+	return OutcomeUnsupported, r.Reason
 }
 
 // CanonicalTrace renders the trace for digesting and for storage.

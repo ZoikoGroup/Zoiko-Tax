@@ -16,9 +16,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/identity"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
+	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 )
 
 // Tx is a transaction handle.
@@ -107,4 +109,54 @@ type AuditRepository interface {
 	Append(ctx context.Context, r AuditRecord) error
 	List(ctx context.Context, limit int) ([]AuditRecord, error)
 	ListForSubject(ctx context.Context, subjectType, subjectID string, limit int) ([]AuditRecord, error)
+}
+
+// ---------------------------------------------------------------------------
+// evidence
+// ---------------------------------------------------------------------------
+
+// EvidenceStore is the regional immutable evidence object store (Build Plan W1
+// lane D; ADR-0015 §2.4's "immutable regional object store").
+//
+// It is content-addressed and write-once. The key is the digest of the bytes,
+// computed by the store, so there is no call that can put different bytes
+// under an existing key — a second Put of the same bytes is a no-op, and there
+// is no Delete. Objects are scoped to the tenant in the context, so a tenant's
+// evidence can be retained, held and eventually disposed of as that tenant's.
+//
+// Get verifies what it returns: bytes that no longer hash to their key are an
+// integrity failure, reported as one, never returned.
+type EvidenceStore interface {
+	Put(ctx context.Context, data []byte) (canonical.Digest, error)
+	Get(ctx context.Context, digest canonical.Digest) ([]byte, error)
+}
+
+// DecisionRepository indexes recorded decisions (ADR-0003).
+//
+// Append-only by interface as well as by grant: there is no update and no
+// delete, and a correction is a new decision whose Supersedes names the old.
+type DecisionRepository interface {
+	Append(ctx context.Context, r evidence.Record) error
+	ByID(ctx context.Context, decisionID id.DecisionID) (evidence.Record, error)
+	// AsOf is ADR-0003 §2.3: the version of a business key that was current
+	// at decisionTime, for an event at eventTime. History is reconstructed by
+	// ordering, never by a closed range.
+	AsOf(ctx context.Context, businessKey string, decisionTime, eventTime time.Time) (evidence.Record, error)
+	// History is every version of a business key, oldest first.
+	History(ctx context.Context, businessKey string) ([]evidence.Record, error)
+	// SealLeaves returns the leaves of every decision recorded in
+	// [from, to), in evidence.LeafOrder.
+	SealLeaves(ctx context.Context, from, to time.Time) ([]evidence.SealLeaf, error)
+}
+
+// SealRepository indexes period seals.
+type SealRepository interface {
+	// LockSealing serialises sealing for the tenant in scope until the
+	// enclosing transaction ends, so two sealers cannot both find a period
+	// unsealed and both seal it.
+	LockSealing(ctx context.Context) error
+	// Overlapping reports seals whose period intersects [from, to).
+	Overlapping(ctx context.Context, from, to time.Time) ([]evidence.SealRecord, error)
+	Append(ctx context.Context, r evidence.SealRecord) error
+	ByID(ctx context.Context, sealID id.SealID) (evidence.SealRecord, error)
 }
