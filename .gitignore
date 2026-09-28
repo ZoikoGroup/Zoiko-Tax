@@ -34,3 +34,7 @@ Thumbs.db
 # a private key is never committed at all (ADR-0017 §2.4, §2.6).
 content/build/
 content/.keys/
+
+# Python
+__pycache__/
+*.pyc
