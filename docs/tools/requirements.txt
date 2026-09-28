@@ -1,0 +1,10 @@
+# The register gate's dependencies, pinned with their whole graph so that CI
+# validates the register with exactly the resolver a developer ran. The gate
+# itself is one file of standard library plus these two libraries.
+PyYAML==6.0.3
+jsonschema==4.26.0
+# transitive
+attrs==26.1.0
+jsonschema-specifications==2025.9.1
+referencing==0.37.0
+rpds-py==2026.6.3

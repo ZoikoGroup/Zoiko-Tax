@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.zoikotax.com/governance/waivers/v1",
+  "title": "ZoikoTax waiver register",
+  "description": "ZTAX-GOV-001 §16: an exception to an EFFECTIVE requirement needs a registered waiver with owner, scope, rationale, risk, compensating control, expiry and approver. Expiry, the requirement reference and independence of approval are enforced by docs/tools/check_registry.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["waivers"],
+  "properties": {
+    "waivers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/waiver" }
+    }
+  },
+  "$defs": {
+    "nonEmpty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "waiver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "waiver_id", "requirement_id", "scope", "reason", "risk", "risk_owner",
+        "compensating_control", "expires_at", "approvers", "approved_at"
+      ],
+      "properties": {
+        "waiver_id": {
+          "type": "string",
+          "pattern": "^ZTAX-WVR-[0-9]{4}-[0-9]{4}$"
+        },
+        "requirement_id": {
+          "type": "string",
+          "pattern": "^ZTAX-[A-Z][A-Z0-9]*-REQ-[0-9]{4}$"
+        },
+        "scope": { "$ref": "#/$defs/nonEmpty" },
+        "reason": { "$ref": "#/$defs/nonEmpty" },
+        "risk": { "$ref": "#/$defs/nonEmpty" },
+        "risk_owner": { "$ref": "#/$defs/nonEmpty" },
+        "compensating_control": { "$ref": "#/$defs/nonEmpty" },
+        "expires_at": {
+          "description": "RFC 3339 UTC. A waiver with no expiry is not a waiver; it is a change to the requirement.",
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "approvers": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/nonEmpty" },
+          "uniqueItems": true
+        },
+        "approved_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        }
+      }
+    }
+  }
+}
