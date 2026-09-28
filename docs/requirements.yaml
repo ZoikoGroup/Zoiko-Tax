@@ -1,0 +1,1334 @@
+# ZoikoTax — Requirement Registry
+#
+# Format: ZTAX-GOV-001 v3.0 §9 "Requirement Registry & Verification System",
+# read together with §9.4 "Registry implementation" and §19's example entry.
+#
+# Governance §9.3 — Verification authority rule:
+#   The normative specification states the required behaviour.
+#   The verification artefact proves whether the implementation conforms.
+#   If they disagree, NEITHER silently supersedes the other: the affected
+#   release fails until the defect is reconciled, the requirement is
+#   amended, or the verification is corrected — with a record of which.
+#
+# CI MUST reject (Governance §9.4) — enforced by docs/validate_registry.py:
+#   - a requirement id that is not globally unique
+#   - a document_id referenced here that is not in register.yaml
+#   - a requirement with no owner
+#   - a requirement status not in {PROPOSED, BASELINED, EFFECTIVE, RETIRED}
+#     (GOV §9.2 — different from the document status set §4.4)
+#   - a requirement with status EFFECTIVE and no verification_ref
+#   - a requirement with status EFFECTIVE whose source document is not EFFECTIVE
+#   - a requirement with status BASELINED whose source document is not in
+#     {BASELINED-FOR-BUILD, APPROVED, EFFECTIVE}
+#   - a verification_ref that is not a plain repo-relative file path
+#   - a verification_ref that does not resolve to an existing file in the repo
+#
+# id format: ZTAX-<DOC>-REQ-####, sequential per document, never reused
+# (Governance §9.1).
+#
+# VERIFICATION_REF RULE:
+#   verification_ref MUST be a plain repo-relative path and nothing else.
+#   Any description of what the file does goes in the "note" field.
+#   If no file exists, set null and ensure status is not EFFECTIVE.
+#
+# STATUS NOTES:
+#   - ARCH-REQ-0001: backend/tools/fiscalfloat/analyzer_test.go (test suite).
+#     Status PROPOSED pending ARCH-001 replacement.
+#   - ARCH-REQ-0002: INSPECTION; backend/Makefile (target: vendor-verify).
+#   - DOM-REQ-0001/0002: backend/internal/adapter/postgres/numeric_integration_test.go
+#   - DOM-REQ-0003: no grant-audit test file found in repo — null.
+#   - DOM-REQ-0004: INSPECTION; backend/.golangci.yml (partial: bans time.Now in domain/app;
+#     SQL now() not covered).
+#   - DOM-REQ-0005: INSPECTION; backend/.golangci.yml
+#   - EVID-REQ-0001: backend/internal/platform/canonical/canonical_test.go
+#   - AIGOV-REQ-0001: intelligence/tests/test_tool_broker.py
+#   - AIGOV-REQ-0002: intelligence/tests/test_citation.py
+#   - GOV-REQ-0001: docs/test_validate_registry.py (self-test suite for validator).
+#   - INT-REQ-0001: null (no test file; source doc ZTAX-INT-001 is PROPOSED).
+#   - All DET/JUR entries: null (source docs DRAFT, no tests exist).
+
+requirements:
+
+  # ---------------------------------------------------------------------------
+  # ZTAX-ARCH-001 requirements
+  # Source doc is SUPERSEDED; controls remain operative via ADR-0001.
+  # ---------------------------------------------------------------------------
+
+  - id: ZTAX-ARCH-REQ-0001
+    document_id: "ZTAX-ARCH-001"
+    version: "2.1"
+    statement: >
+      The Go fiscal core MUST NOT use float64 for any type reachable from
+      Money, Rate or Quantity, including telemetry attributes and log fields.
+    rationale: >
+      A binary float silently loses precision on decimal values; a tax
+      amount computed this way is wrong in a way that looks plausible.
+    source_authority: "ADR-0001 control 1; ADR-0002 §2.8"
+    owner: "Lane D — Domain & Evidence Core"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: "backend/tools/fiscalfloat/analyzer_test.go"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: >
+      Test suite for the float64 analyzer. Analyzer run in CI job 'float64 unreachable';
+      the full tool is at backend/tools/fiscalfloat/. Status downgraded from EFFECTIVE:
+      source document ZTAX-ARCH-001 is SUPERSEDED.
+
+  - id: ZTAX-ARCH-REQ-0002
+    document_id: "ZTAX-ARCH-001"
+    version: "2.1"
+    statement: >
+      The arithmetic dependency (cockroachdb/apd) MUST be vendored from
+      source, with no local patching, and drift MUST be detected in CI.
+    rationale: >
+      A years-long replay guarantee cannot depend on a third-party package
+      that can change or disappear upstream.
+    source_authority: "ADR-0001 control 6"
+    owner: "Lane D — Domain & Evidence Core"
+    applies_to: ["backend", "APP"]
+    verification_method: INSPECTION
+    verification_ref: "backend/Makefile"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: >
+      target: vendor-verify. Verified by 'make vendor-verify' target in backend/Makefile —
+      checks vendor/ matches go.mod with no patch. Status downgraded from EFFECTIVE:
+      source doc ZTAX-ARCH-001 is SUPERSEDED.
+
+  # ---------------------------------------------------------------------------
+  # ZTAX-DOM-001 requirements
+  # ---------------------------------------------------------------------------
+
+  - id: ZTAX-DOM-REQ-0001
+    document_id: "ZTAX-DOM-001"
+    version: "1.0"
+    statement: >
+      PostgreSQL NUMERIC MUST bind to apd.Decimal through explicit type
+      mapping; no driver path SHALL narrow a numeric value to float64.
+    rationale: >
+      Most Go data-access libraries silently scan NUMERIC into float64 if a
+      struct field invites it; this is the single most likely place for
+      precision loss to enter unnoticed.
+    source_authority: "ADR-0001 control 2; ADR-0008 §2.4"
+    owner: "Lane D — Domain & Evidence Core"
+    applies_to: ["backend", "APP", "SCHEMA"]
+    verification_method: TEST
+    verification_ref: "backend/internal/adapter/postgres/numeric_integration_test.go"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: >
+      NUMERIC conformance suite run against real PostgreSQL 17 / PostGIS 3.5.
+      verification_ref corrected from 'internal/adapter/postgres' (wrong root)
+      to the actual file. Integration test is numeric_integration_test.go in same dir.
+      Status downgraded from EFFECTIVE pending TODO-CONFIRM on source doc ZTAX-DOM-001.
+
+  - id: ZTAX-DOM-REQ-0002
+    document_id: "ZTAX-DOM-001"
+    version: "1.0"
+    statement: >
+      A value with no significant digits (e.g. 0.00) MUST round-trip through
+      the database with its scale preserved; scale is semantic and 0.00
+      MUST NOT be read back as 0.
+    rationale: >
+      Scale carries legal meaning (ADR-0002 §2.3, ADR-0011 §2.2): a zero-tax
+      line that loses its scale on read canonicalizes differently from the
+      one written, and the decision fails to replay against its own evidence.
+    source_authority: "ADR-0008 §2.4; ADR-0011 §2.2"
+    owner: "Lane D — Domain & Evidence Core"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: "backend/internal/adapter/postgres/numeric_integration_test.go"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: >
+      textNumericCodec boundary-value conformance test. verification_ref corrected
+      from 'internal/adapter/postgres/pool.go textNumericCodec …' to plain path.
+      Status downgraded from EFFECTIVE pending TODO-CONFIRM on source doc ZTAX-DOM-001.
+
+  - id: ZTAX-DOM-REQ-0003
+    document_id: "ZTAX-DOM-001"
+    version: "1.0"
+    statement: >
+      The application's database role MUST NOT hold UPDATE or DELETE grants
+      on fiscal, decision, content or evidence tables. Corrections MUST be
+      new rows linked by supersession.
+    rationale: >
+      A seal over data that can still be mutated is not a seal (EVID-001).
+    source_authority: "ADR-0003 §2.1, control 1; ADR-0008 §2.8"
+    owner: "Lane D — Domain & Evidence Core / Lane B — Platform"
+    applies_to: ["backend", "APP", "SCHEMA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: >
+      Requires a grant-audit integration test asserting app role has no UPDATE/DELETE
+      on evidence-bearing tables. No such test file was found in the repo.
+      verification_ref is null until the test file is created.
+
+  - id: ZTAX-DOM-REQ-0004
+    document_id: "ZTAX-DOM-001"
+    version: "1.0"
+    statement: >
+      No code under internal/domain or internal/app MAY call time.Now(),
+      now() in SQL, or any other unpinned clock. Decision time MUST arrive
+      as an explicit parameter from the request or replay envelope.
+    rationale: >
+      Replay must be parameter substitution against historical decision
+      time, exercising the same code path as production, not a simulation.
+    source_authority: "ADR-0003 §2.5, control 2; ADR-0018 §2.12"
+    owner: "Lane D — Domain & Evidence Core"
+    applies_to: ["backend", "APP"]
+    verification_method: INSPECTION
+    verification_ref: "backend/.golangci.yml"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "partial: bans time.Now in domain/app; SQL now() not covered"
+
+  - id: ZTAX-DOM-REQ-0005
+    document_id: "ZTAX-DOM-001"
+    version: "1.0"
+    statement: >
+      internal/domain/fiscal MUST NOT import internal/domain/ai. There MUST
+      be no function anywhere in the codebase that converts an AI-typed
+      record into a fiscal-typed record.
+    rationale: >
+      This is the control against the Build Plan's top AI risk — AI output
+      reaching an authoritative path — made a compile-time impossibility
+      rather than a review convention.
+    source_authority: "ADR-0006 §2.6, control 1; ADR-0007 §2.5"
+    owner: "Lane D — Domain & Evidence Core / Lane L — Intelligence Fabric"
+    applies_to: ["backend", "APP", "AI"]
+    verification_method: INSPECTION
+    verification_ref: "backend/.golangci.yml"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: >
+      Verified by golangci-lint depguard rule in CI job 'architectural controls'.
+      verification_ref points to the lint config file. Status downgraded from EFFECTIVE
+      pending TODO-CONFIRM on source doc ZTAX-DOM-001.
+
+  # ---------------------------------------------------------------------------
+  # ZTAX-EVID-001 requirements
+  # ---------------------------------------------------------------------------
+
+  - id: ZTAX-EVID-REQ-0001
+    document_id: "ZTAX-EVID-001"
+    version: "1.0"
+    statement: >
+      Every digest-bearing record MUST record the canonicalization profile
+      version (canon/v1) it was produced under. A record without it is
+      invalid.
+    rationale: >
+      canon/v1 is permanent once referenced by sealed evidence; future
+      profile changes are additive (canon/v2), never a silent redefinition.
+    source_authority: "ADR-0011 §2.6, control 5"
+    owner: "Lane D — Domain & Evidence Core"
+    applies_to: ["backend", "APP", "SCHEMA", "CONTENT"]
+    verification_method: TEST
+    verification_ref: "backend/internal/platform/canonical/canonical_test.go"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: >
+      Golden vectors in backend/internal/platform/canonical/. verification_ref
+      corrected from 'internal/platform/canonical golden vectors — testdata/golden/canonical'
+      to the actual test file path. Status downgraded from BASELINED pending
+      TODO-CONFIRM on source doc ZTAX-EVID-001.
+
+  # ---------------------------------------------------------------------------
+  # ZTAX-AIGOV-001 requirements
+  # ---------------------------------------------------------------------------
+
+  - id: ZTAX-AIGOV-REQ-0001
+    document_id: "ZTAX-AIGOV-001"
+    version: "1.0"
+    statement: >
+      A PRIVILEGED-class AI tool action MUST be rejected unconditionally,
+      regardless of use case, prompt content, or any model output.
+    rationale: >
+      The independent policy gate must hold even if a model is convinced,
+      tricked, or instructed otherwise — the refusal cannot be a property
+      of the model's judgement.
+    source_authority: "ADR-0006 §2.5; Intelligence tool_broker.py ActionClass"
+    owner: "Head of Intelligence"
+    applies_to: ["intelligence", "AI"]
+    verification_method: TEST
+    verification_ref: "intelligence/tests/test_tool_broker.py"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: >
+      35 Tool Broker tests, merged commit 7252336. Status downgraded from EFFECTIVE
+      pending TODO-CONFIRM on source doc ZTAX-AIGOV-001.
+
+  - id: ZTAX-AIGOV-REQ-0002
+    document_id: "ZTAX-AIGOV-001"
+    version: "1.0"
+    statement: >
+      Every AI-plane retrieval result presented as an answer MUST carry a
+      citation to a source with a content hash, verifiable against the
+      source document.
+    rationale: >
+      An AI answer with no traceable source cannot be trusted as authority
+      in a tax-compliance context, however plausible it reads.
+    source_authority: "ADR-0006 §2.7; Intelligence citation.py"
+    owner: "Head of Intelligence"
+    applies_to: ["intelligence", "AI"]
+    verification_method: TEST
+    verification_ref: "intelligence/tests/test_citation.py"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: >
+      SHA-256 content hashing and citation verification tests. Status downgraded
+      from EFFECTIVE pending TODO-CONFIRM on source doc ZTAX-AIGOV-001.
+
+  # ---------------------------------------------------------------------------
+  # ZTAX-INT-001 requirements
+  # ---------------------------------------------------------------------------
+
+  - id: ZTAX-INT-REQ-0001
+    document_id: "ZTAX-INT-001"
+    version: null
+    statement: >
+      Idempotency-Key MUST be mandatory and enforced on POST
+      /v1/transactions:commit, :adjust, :refund and POST /v1/batches. A
+      missing key on these endpoints MUST be rejected before any work begins.
+    rationale: >
+      Build Plan §8 rates duplicate legal submission as Critical; this is
+      the outer layer of a two-layer defence (the inner is the accumulator's
+      unique constraint, ADR-0004 §2.4).
+    source_authority: "ADR-0013 §2.1, control 1; ADR-0010 §5.1 control 6"
+    owner: "Lane K — Integration & SDK"
+    applies_to: ["backend", "APP", "SCHEMA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No test file exists yet. Source document ZTAX-INT-001 is PROPOSED."
+
+  # ---------------------------------------------------------------------------
+  # ZTAX-GOV-001 requirements
+  # ---------------------------------------------------------------------------
+
+  - id: ZTAX-GOV-REQ-0001
+    document_id: "ZTAX-GOV-001"
+    version: "3.0"
+    statement: >
+      CI MUST reject an unregistered primary document ID, a broken
+      requirement reference, a requirement with a missing owner, an expired
+      mandatory review, or a duplicate requirement ID.
+    rationale: >
+      This is the registry's own self-check — without it, register.yaml and
+      requirements.yaml degrade into unverified documentation rather than a
+      governed system.
+    source_authority: "Governance §9.4"
+    owner: "QA / CI & Security Automation"
+    applies_to: ["docs", "CI"]
+    verification_method: TEST
+    verification_ref: "docs/test_validate_registry.py"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: >
+      docs/validate_registry.py is the checker and docs/test_validate_registry.py
+      is its self-test suite. Status PROPOSED pending GOV-001 lifecycle mapping.
+
+  # ---------------------------------------------------------------------------
+  # ZTAX-DET-001 requirements — source: docs/specs/ZTAX-DET-001-*.md §13
+  # Document status: DRAFT. All PROPOSED; verification_ref null (no tests exist).
+  # ---------------------------------------------------------------------------
+
+  - id: ZTAX-DET-REQ-0001
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "The eight pipeline stages execute in the declared order."
+    rationale: >
+      Stage ordering is normative per DET-001 §2.1; any reordering changes
+      what accumulator values are visible to evaluation and breaks replay.
+    source_authority: "ZTAX-DET-001 §2.1, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0002
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Every accumulator is read before evaluation begins; the evaluator never queries."
+    rationale: >
+      Pre-reading the full accumulator set keeps evaluation pure and makes
+      the read set an explicit part of the replay envelope (DET-001 §2.2).
+    source_authority: "ZTAX-DET-001 §2.2, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0003
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "A base declaration names its kind; a bare amount is never a base."
+    rationale: "DET-001 §3.1: a TaxableBase is a Money amount plus a kind declaration."
+    source_authority: "ZTAX-DET-001 §3.1, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP", "SCHEMA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0004
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "A compounding base names its components explicitly, never \"all taxes so far\"."
+    rationale: "Explicit naming is required for the component DAG to be acyclic and auditable."
+    source_authority: "ZTAX-DET-001 §3, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0005
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Base adjustment order is declared; the runtime has no default."
+    rationale: "Undeclared order produces jurisdiction-specific ambiguity in compounding."
+    source_authority: "ZTAX-DET-001 §3, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0006
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "A base floors at zero unless content permits negative."
+    rationale: "Negative bases produce negative tax without content sanction, which is a legal defect."
+    source_authority: "ZTAX-DET-001 §3, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0007
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Every rate declares its basis."
+    rationale: "Without an explicit basis a rate is ambiguous between ad valorem, specific and compound."
+    source_authority: "ZTAX-DET-001 §4, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP", "SCHEMA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0008
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Every rate application carries a rounding policy; there is no default."
+    rationale: "A missing rounding policy makes the computed tax implementation-dependent."
+    source_authority: "ZTAX-DET-001 §4, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0009
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "A bracket schedule declares MARGINAL or CLIFF; neither is inferred."
+    rationale: "MARGINAL and CLIFF produce different tax amounts at the same rate schedule."
+    source_authority: "ZTAX-DET-001 §4.4, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0010
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Marginal tiers are contiguous and ascending, validated at bundle build."
+    rationale: "Gaps or inversions in tiers produce undefined behaviour at the boundary."
+    source_authority: "ZTAX-DET-001 §4.4, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP", "CONTENT"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0011
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "The component graph is acyclic, validated at bundle build."
+    rationale: "A cycle in the component DAG makes evaluation order indeterminate."
+    source_authority: "ZTAX-DET-001 §5, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0012
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Components evaluate in topological order with a deterministic tie-break."
+    rationale: "Without a deterministic tie-break, byte-identical traces cannot be guaranteed."
+    source_authority: "ZTAX-DET-001 §5, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0013
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Compounding order is never inferred from jurisdiction hierarchy."
+    rationale: "Jurisdiction hierarchy is a political fact, not an arithmetic instruction."
+    source_authority: "ZTAX-DET-001 §5, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0014
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "A base referencing an inapplicable component uses zero and records it."
+    rationale: "Silent substitution of zero without recording it breaks the audit trace."
+    source_authority: "ZTAX-DET-001 §5, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0015
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Compounding uses rounded component amounts, not raw values."
+    rationale: "Authority instruments specify rounding points; using raw values diverges from their worked examples."
+    source_authority: "ZTAX-DET-001 §6, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0016
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Exclusive calculation rounds exactly once, at the declared policy."
+    rationale: "Multiple rounding passes accumulate error; single-pass at declared point is the standard."
+    source_authority: "ZTAX-DET-001 §6, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0017
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Inclusive extraction is exact: net plus taxes equals gross, no residual."
+    rationale: "A residual cent is a legal defect in the tax amount."
+    source_authority: "ZTAX-DET-001 §7, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0018
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "The effective multiplier is carried at full precision and never rounded."
+    rationale: "Rounding the multiplier before applying it introduces systematic error in extraction."
+    source_authority: "ZTAX-DET-001 §7, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0019
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Extracted tax is computed by subtraction, never by re-applying rates."
+    rationale: "Re-applying rates to a rounded gross gives a different answer than extracting from it."
+    source_authority: "ZTAX-DET-001 §7, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0020
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Extracted tax is allocated by largest remainder with a deterministic tie-break."
+    rationale: "Largest-remainder allocation is the only method that guarantees allocation totality."
+    source_authority: "ZTAX-DET-001 §7, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0021
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Inclusive flat and specific amounts are subtracted before extraction, in declared order."
+    rationale: "Order matters because each subtraction changes the base for the next."
+    source_authority: "ZTAX-DET-001 §7, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0022
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Rounding occurs only at content-declared points."
+    rationale: "Unrestricted rounding produces implementation-dependent results that differ from authority instruments."
+    source_authority: "ZTAX-DET-001 §8, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0023
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "A coarse rounding basis allocates back to lines so lines sum to the rounded total."
+    rationale: "Without allocation, the sum of line taxes differs from the document-level rounded total."
+    source_authority: "ZTAX-DET-001 §8, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0024
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Intermediate values are not materialised at currency scale between rule steps."
+    rationale: "Premature materialisation at currency scale is equivalent to undeclared rounding."
+    source_authority: "ZTAX-DET-001 §8, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0025
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Accumulator keys are composed only of the permitted elements."
+    rationale: "A key including unpermitted elements creates phantom accumulators that do not replay."
+    source_authority: "ZTAX-DET-001 §9, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP", "SCHEMA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0026
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Threshold crossing mode is declared; CAP defaults to SPLIT."
+    rationale: "A missing crossing mode makes the split-vs-hard-stop decision implementation-dependent."
+    source_authority: "ZTAX-DET-001 §9, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0027
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "A crossing emits a record and an event in the decision's transaction."
+    rationale: "Downstream obligation and reporting systems depend on the crossing event."
+    source_authority: "ZTAX-DET-001 §9, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0028
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Accumulator contribution is idempotent on decision identity."
+    rationale: "A duplicate submission must not double-count the accumulator contribution."
+    source_authority: "ZTAX-DET-001 §9, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP", "SCHEMA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0029
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Threshold comparison declares whether it is strict."
+    rationale: "Strict vs non-strict at exact threshold produces different legal outcomes."
+    source_authority: "ZTAX-DET-001 §9, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0030
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "An adjustment evaluates against the original decision's content bundle."
+    rationale: "Using the current bundle for an adjustment changes the original tax basis, which is a legal defect."
+    source_authority: "ZTAX-DET-001 §10, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0031
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "A partial credit allocates; it never re-applies rates."
+    rationale: "Re-applying rates to a partial amount is only correct if rates have not changed, which cannot be assumed."
+    source_authority: "ZTAX-DET-001 §10, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0032
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "A correction supersedes; the original is never modified."
+    rationale: "Immutability of the original is required by the evidence seal (EVID-001)."
+    source_authority: "ZTAX-DET-001 §10, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP", "SCHEMA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0033
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "An adjustment chain sums to the intended net position."
+    rationale: "A chain that does not sum correctly leaves the tax account in an unreconcilable state."
+    source_authority: "ZTAX-DET-001 §10, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0034
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "The replay envelope carries the accumulator read set."
+    rationale: "Without the read set, replay must re-query, which defeats the purpose of the envelope."
+    source_authority: "ZTAX-DET-001 §11, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0035
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "The evaluator has no access to clock, randomness, network, storage or AI."
+    rationale: "Any external dependency makes the evaluation non-deterministic and breaks replay."
+    source_authority: "ZTAX-DET-001 §11.5, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0036
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Every outcome is a recorded decision returned 200, never an error response."
+    rationale: "An HTTP error for a tax outcome is not a decision; it cannot be audited or replayed."
+    source_authority: "ZTAX-DET-001 §12.2, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0037
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "AUTHORITATIVE requires all five A4 conditions simultaneously."
+    rationale: "Absent any one condition, the outcome must be ADVISORY (DET-001 §12.3)."
+    source_authority: "ZTAX-DET-001 §12.3, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  - id: ZTAX-DET-REQ-0038
+    document_id: "ZTAX-DET-001"
+    version: "1.0.0-draft"
+    statement: "Advisory and authoritative results are structurally distinct types."
+    rationale: "A boolean flag on a shared type is insufficient; the distinction must be structural (DET-001 §12.4)."
+    source_authority: "ZTAX-DET-001 §12.4, §13"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-DET-001 is DRAFT."
+
+  # ---------------------------------------------------------------------------
+  # ZTAX-JUR-001 requirements — source: docs/specs/ZTAX-JUR-001-*.md §11
+  # Document status: DRAFT. All PROPOSED; verification_ref null (no tests exist).
+  # ---------------------------------------------------------------------------
+
+  - id: ZTAX-JUR-REQ-0001
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "Every jurisdiction node carries a stable content identifier, a level, a country, a timezone and an effective period."
+    rationale: "All five fields are required for unambiguous cross-version identity and historical resolution."
+    source_authority: "ZTAX-JUR-001 §2.1, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP", "SCHEMA", "CONTENT"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0002
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "A jurisdiction is closed by effective date, never deleted."
+    rationale: "Historical decisions reference it and must continue to resolve (JUR-001 §2.4)."
+    source_authority: "ZTAX-JUR-001 §2.4, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP", "SCHEMA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0003
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "Every spatial resolution records the boundary dataset version it used."
+    rationale: "Without the dataset version, replay may use a different boundary and produce a different jurisdiction."
+    source_authority: "ZTAX-JUR-001 §2.5, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP", "SCHEMA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0004
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "A replay resolves against the recorded boundary dataset version."
+    rationale: "Using the current dataset for replay is a boundary-change-by-another-route (JUR-001 §14.1)."
+    source_authority: "ZTAX-JUR-001 §2.5, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0005
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "A boundary dataset version is immutable."
+    rationale: "Mutating a dataset version silently alters the meaning of every decision that recorded it."
+    source_authority: "ZTAX-JUR-001 §2.5, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP", "SCHEMA", "CONTENT"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0006
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "The evidence-type vocabulary is closed; an unknown type refuses the bundle."
+    rationale: "An open vocabulary allows untested evidence types to influence jurisdiction selection."
+    source_authority: "ZTAX-JUR-001 §3, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0007
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "Evidence reliability is assigned by the situs rule, never globally."
+    rationale: "A global reliability rank would prevent different jurisdictions from treating the same evidence differently."
+    source_authority: "ZTAX-JUR-001 §3, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP", "CONTENT"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0008
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "Unused evidence is recorded on the resolution."
+    rationale: "The audit trail must show what evidence was available but not used, and why."
+    source_authority: "ZTAX-JUR-001 §3.5, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0009
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "Absent evidence is never substituted or inferred."
+    rationale: "Substituting absent evidence changes the legal basis of the resolution without disclosure."
+    source_authority: "ZTAX-JUR-001 §3, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0010
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "A PRECEDENCE rule stops at the first usable item."
+    rationale: "Continuing after the first usable item violates the declared algorithm."
+    source_authority: "ZTAX-JUR-001 §4, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0011
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "A QUORUM rule distinguishes insufficient evidence from contradiction."
+    rationale: "The two outcomes have different legal consequences and must not be conflated."
+    source_authority: "ZTAX-JUR-001 §4, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0012
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "A QUORUM rule declares its agreement level."
+    rationale: "Without a declared level, the quorum threshold is implementation-dependent."
+    source_authority: "ZTAX-JUR-001 §4, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP", "CONTENT"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0013
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "Overlapping boundaries at one level return DATASET_DEFECT, never a silent pick."
+    rationale: "A silent pick would produce a legally questionable resolution with no audit record."
+    source_authority: "ZTAX-JUR-001 §4, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0014
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "Two situs rules selecting at equal specificity refuse the bundle at build."
+    rationale: "Equal-specificity ambiguity must be resolved in content, not at runtime."
+    source_authority: "ZTAX-JUR-001 §4, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP", "CONTENT"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0015
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "A PPU resolves against the period effective at event time, not decision time."
+    rationale: "Using decision time for PPU produces the wrong jurisdiction for historical transactions."
+    source_authority: "ZTAX-JUR-001 §5, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0016
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "A PPU change does not retroactively alter existing decisions."
+    rationale: "Retroactive change would break the evidence seal on prior decisions."
+    source_authority: "ZTAX-JUR-001 §5, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0017
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "Roaming is recorded as a derived fact on the resolution."
+    rationale: "Downstream systems (OBL-001) need to know whether roaming applied to determine filing obligations."
+    source_authority: "ZTAX-JUR-001 §6, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0018
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "Roaming sourcing is declared per pack; the runtime has no default."
+    rationale: "A runtime default would silently override jurisdiction-specific sourcing rules."
+    source_authority: "ZTAX-JUR-001 §6, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP", "CONTENT"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0019
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "Resolution never apportions between competing jurisdictions."
+    rationale: "Apportionment is a legal act that requires content authority; the runtime cannot assume it."
+    source_authority: "ZTAX-JUR-001 §8, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0020
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "customerRole admits UNDETERMINED, and its treatment is content."
+    rationale: "Forcing a determination where the role is genuinely unknown produces a legally unsupported outcome."
+    source_authority: "ZTAX-JUR-001 §7, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0021
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "VAT identification validation status is recorded, including unavailability."
+    rationale: "Unrecorded unavailability is indistinguishable from an untested system, which is a compliance defect."
+    source_authority: "ZTAX-JUR-001 §7, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0022
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "Resolution performs no clock, network, database or geocoding access."
+    rationale: "Any external access makes resolution non-deterministic and breaks replay."
+    source_authority: "ZTAX-JUR-001 §10, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0023
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "The applicable set is ordered outermost-first with a deterministic tie-break."
+    rationale: "Without a deterministic order, different runtime instances produce different applicable sets."
+    source_authority: "ZTAX-JUR-001 §8.7, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0024
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "Every refusal is a recorded decision returned 200, never an error response."
+    rationale: "An HTTP error for a jurisdiction refusal is not a decision; it cannot be audited or replayed."
+    source_authority: "ZTAX-JUR-001 §9, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0025
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "INSUFFICIENT_EVIDENCE names the evidence that would have satisfied the rule."
+    rationale: "Without naming the missing evidence, the caller cannot determine how to remedy the situation."
+    source_authority: "ZTAX-JUR-001 §9, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0026
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "Resolution is independent of the input order of evidence items."
+    rationale: "Order-dependence allows callers to influence outcome by sequencing, which is a legal defect."
+    source_authority: "ZTAX-JUR-001 §10.4, §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  - id: ZTAX-JUR-REQ-0027
+    document_id: "ZTAX-JUR-001"
+    version: "1.0.0-draft"
+    statement: "Every resolution emits a step-by-step trace."
+    rationale: "A trace is required for audit, replay and the golden-vector conformance corpus."
+    source_authority: "ZTAX-JUR-001 §11"
+    owner: "Lane H — Determination & Jurisdiction"
+    applies_to: ["backend", "APP"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
