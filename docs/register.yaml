@@ -1,342 +1,377 @@
-# ZoikoTax — Canonical Document Register
+# ZoikoTax documentation estate register — ZTAX-GOV-001 §9.4, §19.
 #
-# Format: ZTAX-GOV-001 v3.0 §19 "Canonical Register".
-# This file is the machine-readable authority; any human-readable estate index
-# is generated FROM this file, never edited alongside it.
+# This file is the authoritative index of primary documents. It is validated in
+# CI by docs/tools/check_registry.py against docs/schema/register.schema.json,
+# and the human-readable estate index (docs/ESTATE.md) is generated from it
+# rather than maintained beside it.
 #
-# Field meanings (Governance §19):
-#   document_id        stable ID, e.g. ZTAX-DOM-001
-#   title              document title
-#   class              C (Constitutional) | S (Specification) | L (Living) | A (Artefact)
-#   version            semantic version of the document itself
-#   status             PROPOSED | DRAFT | BASELINED-FOR-BUILD | APPROVED | EFFECTIVE |
-#                      SUPERSEDED | WITHDRAWN | TODO-CONFIRM
-#   owner              accountable owner (verbatim from document header)
-#   approvers          the roles who must sign off (verbatim from document header)
-#   effective_date     when this version takes effect (null if not yet effective)
-#   supersedes         document_id this replaces, or null
-#   dependencies       document_ids this document assumes/requires
-#   source_path        path to the source file in this repository
-#   publication_hash   sha256 of the published artefact (fill in once hashed)
-#   review_due         next scheduled review date
-#   applicable_release which release train(s)/wave(s) this governs (per GOV §7)
-#   retention_policy   PERMANENT | statutory horizon | operational
+# What CI rejects (GOV-001 §9.4):
+#   - a primary document ID used anywhere in the repository that is not here
+#   - a duplicate document ID
+#   - a document with no owner, or no review date once it is past PROPOSED
+#   - a review date in the past on a document that is still live
+#   - a publication_hash that does not match the file at source_path
+#   - an EFFECTIVE document with no version, hash or effective date, unless an
+#     open, in-date gap entry at the foot of this file says why
 #
-# STATUS NOTES
-# - "TODO-CONFIRM": 13 documents in complete-info-docs all carry "For approval" in
-#   their own headers, which does not map directly to any GOV §4.4 status. They are
-#   neither APPROVED (all required approvers have signed) nor EFFECTIVE. The user
-#   must confirm whether these map to APPROVED or BASELINED-FOR-BUILD.
-# - ZTAX-DOM-001 says "For approval / BASELINED-FOR-BUILD candidate" — still TODO-CONFIRM.
-# - ZTAX-EVID-001 says "For approval / build baseline" — still TODO-CONFIRM.
-# - ZTAX-ARCH-001 is SUPERSEDED per ADR README ("Status of the set").
-# - ZTAX-DET-001 and ZTAX-JUR-001 are DRAFT per their own spec headers.
-# - 11 documents from GOV §6 not yet supplied as files: registered as PROPOSED.
+# Statuses are GOV-001 §4.4's lifecycle and nothing else. They record what has
+# actually happened to a document. Nothing here is marked BASELINED-FOR-BUILD,
+# APPROVED or EFFECTIVE until the named approvers have approved the exact
+# version whose hash is registered — that is a human act, and this file records
+# it rather than performing it.
+#
+# Changing a DRAFT's source file changes its hash. Run
+#   python docs/tools/check_registry.py --rehash-drafts
+# to re-register DRAFT hashes. A document past DRAFT is never rehashed by tool:
+# a new version is a new registration.
 
 documents:
 
-  # ===========================================================================
-  # F0 — Constitutional & irreversible foundations (GOV §7)
-  # Source files in complete-info-docs/ — headers read verbatim
-  # ===========================================================================
-
-  - document_id: ZTAX-GOV-001
-    title: "Documentation Estate & Specification Governance Standard"
+  - document_id: ZTAX-STR-003
+    title: "Global Strategic Blueprint"
     class: C
-    version: "3.0"
-    status: TODO-CONFIRM
-    owner: "Chief Technology Officer, jointly with Chief Content & Regulatory Officer"
-    approvers: ["CTO", "CPO", "Chief Content & Regulatory Officer", "General Counsel"]
+    tranche: EXISTING
+    version: null
+    status: EFFECTIVE
+    owner: "Executive Strategy"
+    approvers: []
     effective_date: null
-    supersedes: "ZTAX-GOV-001 v2.0"
+    supersedes: "ZTAX-STR-002"
     dependencies: []
-    source_path: "complete-info-docs/ZoikoTax_Documentation_Estate_Governance.docx"
+    source_path: null
     publication_hash: null
     review_due: null
-    applicable_release: ["all"]
-    retention_policy: "PERMANENT"
-    note: >
-      Document header says "For approval" dated 29 August 2026. Mapped to TODO-CONFIRM
-      pending user confirmation of §4.4 mapping. Supersedes ZTAX-GOV-001 v2.0 draft
-      and the prior 22-document estate proposal.
+    applicable_release: null
+    retention_policy: PERMANENT
+    notes: "Existing baseline held outside this repository. GOV-001 §6 names it the current authoritative strategy; version, approvers, hash and effective date are tracked as an open gap below."
+
+  - document_id: ZTAX-STR-002
+    title: "Global Strategic Blueprint (prior)"
+    class: C
+    tranche: EXISTING
+    version: null
+    status: SUPERSEDED
+    owner: "Executive Strategy"
+    approvers: []
+    effective_date: null
+    supersedes: null
+    dependencies: []
+    source_path: null
+    publication_hash: null
+    review_due: null
+    applicable_release: null
+    retention_policy: PERMANENT
+    notes: "Superseded by ZTAX-STR-003 (GOV-001 §6, §20)."
+
+  - document_id: ZTAX-ARCH-001
+    title: "Global Backend Architecture"
+    class: C
+    tranche: EXISTING
+    version: "2.0"
+    status: EFFECTIVE
+    owner: "CTO / Chief Architect"
+    approvers: []
+    effective_date: null
+    supersedes: null
+    dependencies: []
+    source_path: null
+    publication_hash: null
+    review_due: null
+    applicable_release: null
+    retention_policy: PERMANENT
+    notes: "Existing baseline held outside this repository, registered at v2.0 per GOV-001 §20. Approvers, hash and effective date are tracked as an open gap below."
+
+  - document_id: ZTAX-GOV-001
+    title: "Documentation Estate & Specification Governance"
+    class: C
+    tranche: F0
+    version: "3.0"
+    status: DRAFT
+    owner: "CTO + CCRO"
+    approvers: ["CTO", "CPO", "CCRO", "General Counsel"]
+    effective_date: null
+    supersedes: null
+    dependencies: []
+    source_path: "complete-info-docs/ZoikoTax_Documentation_Estate_Governance.docx"
+    publication_hash: "sha256:bba0f5c8379fa0bbfa1400a389e67422303d2944d1aed155ab4f7c0a003b8d0f"
+    review_due: "2026-11-29"
+    applicable_release: null
+    retention_policy: PERMANENT
+    notes: "Source status reads \"For approval\". Registered as DRAFT until the named approvers approve this exact version."
 
   - document_id: ZTAX-PRD-000
     title: "Global Product Charter & Scope Boundary"
     class: C
+    tranche: F0
     version: "1.0"
-    status: TODO-CONFIRM
-    owner: "Chief Product Officer"
-    approvers: ["CPO", "CTO", "Chief Content & Regulatory Officer", "General Counsel"]
+    status: DRAFT
+    owner: "CPO"
+    approvers: ["CPO", "CTO", "CCRO", "General Counsel"]
     effective_date: null
     supersedes: null
     dependencies: ["ZTAX-STR-003", "ZTAX-ARCH-001", "ZTAX-GOV-001"]
     source_path: "complete-info-docs/ZTAX-PRD-000_ZoikoTax_Global_Product_Charter_and_Scope_Boundary.docx"
-    publication_hash: null
-    review_due: null
-    applicable_release: ["all"]
-    retention_policy: "PERMANENT"
-    note: "Document header says 'For approval' dated 29 August 2026. TODO-CONFIRM status mapping."
+    publication_hash: "sha256:b34ee97da4ccb7f3ac58eb4a579746d2a08bae7a848d31fa1ae63236b46a1a57"
+    review_due: "2026-11-29"
+    applicable_release: null
+    retention_policy: PERMANENT
+    notes: "Source status reads \"For approval\". Registered as DRAFT until the named approvers approve this exact version."
 
   - document_id: ZTAX-DOM-001
     title: "Canonical Domain Model, Data Model & Lifecycles"
     class: C
+    tranche: F0
     version: "1.0"
-    status: TODO-CONFIRM
+    status: DRAFT
     owner: "Chief Architect"
-    approvers: ["CTO", "CPO", "Chief Content & Regulatory Officer", "DPO", "General Counsel"]
+    approvers: ["CTO", "CPO", "CCRO", "DPO", "General Counsel"]
     effective_date: null
     supersedes: null
-    dependencies: ["ZTAX-STR-003", "ZTAX-ARCH-001", "ZTAX-GOV-001", "ZTAX-PRD-000"]
+    dependencies: ["ZTAX-PRD-000", "ZTAX-ARCH-001", "ZTAX-PRIV-001"]
     source_path: "complete-info-docs/ZTAX-DOM-001_ZoikoTax_Canonical_Domain_Model_Data_Model_and_Lifecycles.docx"
-    publication_hash: null
-    review_due: null
-    applicable_release: ["all"]
-    retention_policy: "PERMANENT"
-    note: >
-      Document header says "For approval / BASELINED-FOR-BUILD candidate" dated 29 August 2026.
-      TODO-CONFIRM: user to decide whether this is APPROVED or BASELINED-FOR-BUILD.
+    publication_hash: "sha256:4404510dbbfadabddce3b70bdcf0a77bf95159762ea80c9362b756a81574bc57"
+    review_due: "2026-11-29"
+    applicable_release: null
+    retention_policy: PERMANENT
+    notes: "Source status reads \"For approval / BASELINED-FOR-BUILD candidate\". Registered as DRAFT until the named approvers approve this exact version."
 
   - document_id: ZTAX-CONT-001
     title: "Global Tax & Regulatory Content / Country Pack Standard"
     class: C
+    tranche: F0
     version: "1.0"
-    status: TODO-CONFIRM
-    owner: "Chief Content & Regulatory Officer"
-    approvers: ["CTO", "CPO", "Chief Content & Regulatory Officer", "General Counsel"]
+    status: DRAFT
+    owner: "CCRO"
+    approvers: ["CTO", "CPO", "CCRO", "General Counsel"]
     effective_date: null
     supersedes: null
-    dependencies: ["ZTAX-STR-003", "ZTAX-ARCH-001", "ZTAX-PRD-000", "ZTAX-DOM-001"]
+    dependencies: ["ZTAX-STR-003", "ZTAX-GOV-001", "ZTAX-SRC-001"]
     source_path: "complete-info-docs/ZTAX-CONT-001_ZoikoTax_Global_Tax_Regulatory_Content_Country_Pack.docx"
-    publication_hash: null
-    review_due: null
-    applicable_release: ["all"]
-    retention_policy: "PERMANENT"
-    note: "Document header says 'For approval' dated 29 August 2026. TODO-CONFIRM status mapping."
+    publication_hash: "sha256:3ce7f1c43c98fc8f865be10494dbebc5a0ab7e8364019227deb73e59b2ef9307"
+    review_due: "2026-11-29"
+    applicable_release: null
+    retention_policy: PERMANENT
+    notes: "Source status reads \"For approval\". Registered as DRAFT until the named approvers approve this exact version."
 
   - document_id: ZTAX-EVID-001
     title: "Evidence Ledger, Replay, Retention & Legal Hold"
     class: C
+    tranche: F0
     version: "1.0"
-    status: TODO-CONFIRM
-    owner: "Chief Architect, jointly with Chief Content & Regulatory Officer"
-    approvers: ["CTO", "Chief Content & Regulatory Officer", "General Counsel", "CISO/DPO for relevant controls"]
+    status: DRAFT
+    owner: "Chief Architect + GC"
+    approvers: ["CTO", "CCRO", "General Counsel", "CISO / DPO"]
     effective_date: null
     supersedes: null
-    dependencies: ["ZTAX-GOV-001", "ZTAX-PRD-000", "ZTAX-DOM-001", "ZTAX-CONT-001", "ZTAX-SEC-001", "ZTAX-PRIV-001"]
+    dependencies: ["ZTAX-DOM-001", "ZTAX-PRIV-001", "ZTAX-LEG-001"]
     source_path: "complete-info-docs/ZTAX-EVID-001_ZoikoTax_Evidence_Ledger_Replay_Retention_Legal_Hold.docx"
-    publication_hash: null
-    review_due: null
-    applicable_release: ["all"]
-    retention_policy: "PERMANENT"
-    note: >
-      Document header says "For approval / build baseline" dated 29 August 2026.
-      TODO-CONFIRM: user to decide whether this is APPROVED or BASELINED-FOR-BUILD.
+    publication_hash: "sha256:aaf98fd0c990cf08cfa54df182a03bde2eeee529163be385a51118fc8b60dd66"
+    review_due: "2026-11-29"
+    applicable_release: null
+    retention_policy: PERMANENT
+    notes: "Source status reads \"For approval / build baseline\". Registered as DRAFT until the named approvers approve this exact version."
 
   - document_id: ZTAX-LEG-001
     title: "Legal, Liability & Regulatory Posture"
     class: C
+    tranche: F0
     version: "1.0"
-    status: TODO-CONFIRM
-    owner: "General Counsel, jointly with CTO and Chief Content & Regulatory Officer"
-    approvers: ["General Counsel", "CTO", "CPO", "Chief Content & Regulatory Officer", "CFO"]
+    status: DRAFT
+    owner: "General Counsel"
+    approvers: ["General Counsel", "CTO", "CPO", "CCRO", "CFO"]
     effective_date: null
     supersedes: null
-    dependencies: ["ZTAX-PRD-000"]
+    dependencies: []
     source_path: "complete-info-docs/ZTAX-LEG-001_ZoikoTax_Legal_Liability_Regulatory_Posture.docx"
-    publication_hash: null
-    review_due: null
-    applicable_release: ["all"]
-    retention_policy: "PERMANENT"
-    note: "Document header says 'For approval' dated 29 August 2026. TODO-CONFIRM status mapping."
+    publication_hash: "sha256:07be8d983d4ef86003a812bfe41a52e843d563d9e38d664e71797d30012ba7a4"
+    review_due: "2026-11-29"
+    applicable_release: null
+    retention_policy: PERMANENT
+    notes: "Source status reads \"For approval\". Registered as DRAFT until the named approvers approve this exact version."
 
   - document_id: ZTAX-SRC-001
     title: "Content Sourcing, Licensing & Redistribution"
     class: C
+    tranche: F0
     version: "1.0"
-    status: TODO-CONFIRM
-    owner: "Chief Content & Regulatory Officer, jointly with General Counsel and CTO"
-    approvers: ["Chief Content & Regulatory Officer", "General Counsel", "CTO", "CPO", "CISO"]
+    status: DRAFT
+    owner: "CCRO + GC"
+    approvers: ["CCRO", "General Counsel", "CTO", "CPO", "CISO"]
     effective_date: null
     supersedes: null
     dependencies: ["ZTAX-LEG-001", "ZTAX-CONT-001"]
     source_path: "complete-info-docs/ZTAX-SRC-001_ZoikoTax_Content_Sourcing_Licensing_Redistribution.docx"
-    publication_hash: null
-    review_due: null
-    applicable_release: ["all"]
-    retention_policy: "PERMANENT"
-    note: >
-      Document header says 'For approval' dated 29 August 2026. TODO-CONFIRM status mapping.
-      Note: GOV §6 lists this as class C; original docx header also says CONSTITUTIONAL — corrected from S.
+    publication_hash: "sha256:f769ccd220519d95e60c0099e4aebf09a33723d7c85e667c394276a7b334fae9"
+    review_due: "2026-11-29"
+    applicable_release: null
+    retention_policy: PERMANENT
+    notes: "Source status reads \"For approval\". Registered as DRAFT until the named approvers approve this exact version."
 
   - document_id: ZTAX-SEC-001
     title: "Security, IAM, Tenant Isolation & Residency"
     class: C
+    tranche: F0
     version: "1.0"
-    status: TODO-CONFIRM
-    owner: "Chief Information Security Officer, jointly with CTO / Chief Architect"
-    approvers: ["CISO", "CTO", "Chief Architect", "DPO", "General Counsel", "Chief Content & Regulatory Officer"]
+    status: DRAFT
+    owner: "CISO"
+    approvers: ["CISO", "CTO", "Chief Architect", "DPO", "General Counsel", "CCRO"]
     effective_date: null
     supersedes: null
-    dependencies: ["ZTAX-DOM-001"]
+    dependencies: []
     source_path: "complete-info-docs/ZTAX-SEC-001_ZoikoTax_Security_IAM_Tenant_Isolation_Residency.docx"
-    publication_hash: null
-    review_due: null
-    applicable_release: ["all"]
-    retention_policy: "PERMANENT"
-    note: "Document header says 'For approval' dated 29 August 2026. TODO-CONFIRM status mapping."
+    publication_hash: "sha256:05599a649ed373f30f0245ac4f0650445995391e84dd76d87d4461d2c3230f1e"
+    review_due: "2026-11-29"
+    applicable_release: null
+    retention_policy: PERMANENT
+    notes: "Source status reads \"For approval\". Registered as DRAFT until the named approvers approve this exact version."
 
   - document_id: ZTAX-PRIV-001
     title: "Privacy Engineering & Situs Evidence Handling"
     class: C
+    tranche: F0
     version: "1.0"
-    status: TODO-CONFIRM
-    owner: "Data Protection Officer, jointly with Chief Architect / CISO"
-    approvers: ["DPO", "CTO", "CISO", "Chief Architect", "General Counsel", "Chief Content & Regulatory Officer"]
+    status: DRAFT
+    owner: "DPO + Chief Architect"
+    approvers: ["DPO", "CTO", "CISO", "Chief Architect", "General Counsel", "CCRO"]
     effective_date: null
     supersedes: null
-    dependencies: ["ZTAX-DOM-001", "ZTAX-SEC-001"]
+    dependencies: []
     source_path: "complete-info-docs/ZTAX-PRIV-001_ZoikoTax_Privacy_Engineering_Situs_Evidence_Handling.docx"
-    publication_hash: null
-    review_due: null
-    applicable_release: ["all"]
-    retention_policy: "PERMANENT"
-    note: "Document header says 'For approval' dated 29 August 2026. TODO-CONFIRM status mapping."
+    publication_hash: "sha256:33014b47dba299a1952865e34dc39bdb0a784d4cace4e411e76e6f45fc2b95eb"
+    review_due: "2026-11-29"
+    applicable_release: null
+    retention_policy: PERMANENT
+    notes: "Source status reads \"For approval\". Registered as DRAFT until the named approvers approve this exact version."
 
   - document_id: ZTAX-AIGOV-001
     title: "AI Governance, Model Risk & Authority Boundary"
     class: C
+    tranche: F0
     version: "1.0"
-    status: TODO-CONFIRM
-    owner: "CTO + Chief Content & Regulatory Officer, jointly with General Counsel"
-    approvers: ["CTO", "Chief Content & Regulatory Officer", "General Counsel", "CISO", "DPO", "CPO"]
+    status: DRAFT
+    owner: "CTO + CCRO + GC"
+    approvers: ["CTO", "CCRO", "General Counsel", "CISO", "DPO", "CPO"]
     effective_date: null
     supersedes: null
     dependencies: ["ZTAX-STR-003", "ZTAX-LEG-001", "ZTAX-SEC-001", "ZTAX-PRIV-001"]
     source_path: "complete-info-docs/ZTAX-AIGOV-001_ZoikoTax_AI_Governance_Model_Risk_Authority_Boundary.docx"
-    publication_hash: null
-    review_due: null
-    applicable_release: ["all"]
-    retention_policy: "PERMANENT"
-    note: "Document header says 'For approval' dated 29 August 2026. TODO-CONFIRM status mapping."
-
-  # ===========================================================================
-  # F1 — Global core product contracts (GOV §7)
-  # ===========================================================================
+    publication_hash: "sha256:fffd6d6bd99847d73fcef91cf24505be1b4fc35b726716d82f19375582d2acd5"
+    review_due: "2026-11-29"
+    applicable_release: null
+    retention_policy: PERMANENT
+    notes: "Source status reads \"For approval\". Registered as DRAFT until the named approvers approve this exact version."
 
   - document_id: ZTAX-CLS-001
     title: "Telecom Product Ontology & Dual Classification"
     class: S
+    tranche: F1
     version: "1.0"
-    status: TODO-CONFIRM
+    status: DRAFT
     owner: "Head of Content Engineering"
-    approvers: ["Chief Content & Regulatory Officer", "Chief Architect", "Head of Determination", "Head of Obligation", "CPO"]
+    approvers: ["CCRO", "Chief Architect", "Head of Determination", "Head of Obligation", "CPO"]
     effective_date: null
     supersedes: null
-    dependencies: ["ZTAX-DOM-001", "ZTAX-CONT-001"]
+    dependencies: []
     source_path: "complete-info-docs/ZTAX-CLS-001_ZoikoTax_Telecom_Product_Ontology_Dual_Classification.docx"
-    publication_hash: null
-    review_due: null
-    applicable_release: ["W2"]
-    retention_policy: "PERMANENT"
-    note: "Document header says 'For approval' dated 29 August 2026. TODO-CONFIRM status mapping."
+    publication_hash: "sha256:313a2b943358d524398e905883158e793d53681be13ed37db0d2d0d5d6f6f712"
+    review_due: "2026-11-29"
+    applicable_release: null
+    retention_policy: 10Y_AFTER_SUPERSESSION
+    notes: "Source status reads \"For approval\". Registered as DRAFT until the named approvers approve this exact version."
 
   - document_id: ZTAX-DET-001
     title: "Global Tax Determination Engine"
     class: S
+    tranche: F1
     version: "1.0.0-draft"
     status: DRAFT
-    owner: "Lane H — Determination & Jurisdiction"
+    owner: "Head of Determination"
     approvers: []
     effective_date: null
     supersedes: null
     dependencies: ["ZTAX-DOM-001", "ZTAX-CONT-001", "ZTAX-CLS-001", "ZTAX-JUR-001", "ZTAX-EVID-001"]
     source_path: "docs/specs/ZTAX-DET-001-global-tax-determination-engine.md"
-    publication_hash: null
-    review_due: null
-    applicable_release: ["W2"]
-    retention_policy: "PERMANENT"
-    note: >
-      Status DRAFT per spec header dated 22 September 2026. Required EFFECTIVE for gate A4.
-      Blocks IR instruction freeze (ADR-0005) and threshold-equality semantics (ADR-0004).
-      GOV §6 row 14 lists class S; corrected from C.
+    publication_hash: "sha256:633a3a6dadbfa3865e83ae3c58f4fa1d3294c0d9dbbee6a6b9923266931ded89"
+    review_due: "2026-12-22"
+    applicable_release: null
+    retention_policy: 10Y_AFTER_SUPERSESSION
+    notes: "Commissioned to close Build Plan §2 gap register entry. Approvers not yet named."
 
   - document_id: ZTAX-JUR-001
-    title: "Jurisdiction, Situs and Place of Supply"
+    title: "Jurisdiction, Situs & Place-of-Supply"
     class: S
+    tranche: F1
     version: "1.0.0-draft"
     status: DRAFT
-    owner: "Lane H — Determination & Jurisdiction"
+    owner: "Head of Determination"
     approvers: []
     effective_date: null
     supersedes: null
     dependencies: ["ZTAX-CLS-001", "ZTAX-DOM-001"]
     source_path: "docs/specs/ZTAX-JUR-001-jurisdiction-situs-and-place-of-supply.md"
-    publication_hash: null
-    review_due: null
-    applicable_release: ["W2"]
-    retention_policy: "PERMANENT"
-    note: >
-      Status DRAFT per spec header dated 22 September 2026. Required EFFECTIVE for gate A4.
-      Blocks situs evidence precedence and place-of-supply resolution (ADR-0005, ADR-0011).
-      GOV §6 row 15 lists class S; corrected from C.
+    publication_hash: "sha256:87d4e214088249ffe33f199e513b02e11296f564dba31850c2befd6c04b1902d"
+    review_due: "2026-12-22"
+    applicable_release: null
+    retention_policy: 10Y_AFTER_SUPERSESSION
+    notes: "Commissioned to close Build Plan §2 gap register entry. Approvers not yet named."
 
   - document_id: ZTAX-OBL-001
     title: "Responsibility & Regulatory Obligation Engine"
     class: S
+    tranche: F1
     version: "1.0"
-    status: TODO-CONFIRM
-    owner: "Head of Obligation"
-    approvers: ["Chief Content & Regulatory Officer", "Chief Architect", "Head of Compliance Operations", "Head of Determination", "General Counsel", "CPO"]
+    status: DRAFT
+    owner: "Head of Obligations"
+    approvers: ["CCRO", "Chief Architect", "Head of Compliance Operations", "Head of Determination", "General Counsel", "CPO"]
     effective_date: null
     supersedes: null
     dependencies: ["ZTAX-DOM-001", "ZTAX-CONT-001", "ZTAX-CLS-001", "ZTAX-JUR-001", "ZTAX-LEG-001"]
     source_path: "complete-info-docs/ZTAX-OBL-001_ZoikoTax_Responsibility_Obligation_Engine.docx"
-    publication_hash: null
-    review_due: null
-    applicable_release: ["W2"]
-    retention_policy: "PERMANENT"
-    note: "Document header says 'For approval' dated 29 August 2026. TODO-CONFIRM status mapping."
+    publication_hash: "sha256:04179fd3305c4966c9cc4dec0584d8b284562045d8f048219d847853b8105bef"
+    review_due: "2026-11-29"
+    applicable_release: null
+    retention_policy: 10Y_AFTER_SUPERSESSION
+    notes: "Source status reads \"For approval\". Registered as DRAFT until the named approvers approve this exact version."
 
   - document_id: ZTAX-FIN-001
     title: "Fiscal Document Lifecycle, Tax Control Subledger & Reconciliation"
     class: S
+    tranche: F1
     version: "1.0"
-    status: TODO-CONFIRM
-    owner: "Head of Tax Platform Engineering + Controller / Tax Operations"
+    status: DRAFT
+    owner: "Head of Finance Systems"
     approvers: ["CTO", "CFO/Controller", "CCRO", "Chief Architect", "Head of Determination", "Head of Compliance"]
     effective_date: null
     supersedes: null
     dependencies: ["ZTAX-DOM-001", "ZTAX-DET-001", "ZTAX-OBL-001", "ZTAX-EVID-001"]
     source_path: "complete-info-docs/ZTAX-FIN-001_ZoikoTax_Fiscal_Document_Lifecycle_Tax_Control_Subledger_Reconciliation.docx"
-    publication_hash: null
-    review_due: null
-    applicable_release: ["W2"]
-    retention_policy: "PERMANENT"
-    note: "Document header says 'For approval' dated 29 August 2026. TODO-CONFIRM status mapping."
+    publication_hash: "sha256:9cf4eec36d9635dcc458167bc284cc720639c5f9414229b0a593a2b8bef4392e"
+    review_due: "2026-11-29"
+    applicable_release: null
+    retention_policy: 10Y_AFTER_SUPERSESSION
+    notes: "Source status reads \"For approval\". Registered as DRAFT until the named approvers approve this exact version."
 
   - document_id: ZTAX-INT-001
     title: "Global API, Event, Webhook, SDK & Integration Contracts"
     class: S
+    tranche: F1
     version: null
     status: PROPOSED
     owner: "Head of Platform"
     approvers: []
     effective_date: null
     supersedes: null
-    dependencies: ["ZTAX-DOM-001"]
+    dependencies: []
     source_path: null
     publication_hash: null
     review_due: null
-    applicable_release: ["W2"]
-    retention_policy: "PERMANENT"
-    note: >
-      Not yet supplied as a document. Referenced throughout the ADRs (ADR-0010, ADR-0013,
-      ADR-0014). Owner from GOV §6 row 18 ("Head of Platform"). Registered PROPOSED so
-      requirements tracing to it (ZTAX-INT-REQ-*) have a valid document_id.
+    applicable_release: null
+    retention_policy: 10Y_AFTER_SUPERSESSION
 
   - document_id: ZTAX-NFR-001
     title: "Non-Functional Requirements, Capacity, Availability & Resilience"
     class: S
+    tranche: F0-F1
     version: null
     status: PROPOSED
     owner: "Chief Architect"
@@ -347,13 +382,13 @@ documents:
     source_path: null
     publication_hash: null
     review_due: null
-    applicable_release: ["all"]
-    retention_policy: "PERMANENT"
-    note: "Not yet supplied. GOV §6 row 19 (F0→F1). Owner verbatim from §6."
+    applicable_release: null
+    retention_policy: 10Y_AFTER_SUPERSESSION
 
   - document_id: ZTAX-QA-001
     title: "Verification, Golden Testing & Certification Standard"
     class: S
+    tranche: F1
     version: null
     status: PROPOSED
     owner: "Head of Quality Engineering"
@@ -364,102 +399,98 @@ documents:
     source_path: null
     publication_hash: null
     review_due: null
-    applicable_release: ["W2"]
-    retention_policy: "PERMANENT"
-    note: "Not yet supplied. GOV §6 row 20 (F1). Owner verbatim from §6."
+    applicable_release: null
+    retention_policy: 10Y_AFTER_SUPERSESSION
 
   - document_id: ZTAX-AI-001
-    title: "ZoikoTax Intelligence Fabric™ Architecture"
+    title: "ZoikoTax Intelligence Fabric Architecture"
     class: L
+    tranche: F1
     version: null
     status: PROPOSED
     owner: "Head of AI"
     approvers: []
     effective_date: null
     supersedes: null
-    dependencies: ["ZTAX-AIGOV-001"]
+    dependencies: []
     source_path: null
     publication_hash: null
     review_due: null
-    applicable_release: ["W2"]
-    retention_policy: "PERMANENT"
-    note: "Not yet supplied. GOV §6 row 21 (F1). Class L (Living). Owner verbatim from §6."
-
-  # ===========================================================================
-  # F2 — Compliance execution & commercial operation (GOV §7)
-  # ===========================================================================
+    applicable_release: null
+    retention_policy: GIT_HISTORY
 
   - document_id: ZTAX-COMP-001
     title: "Global Compliance Operations"
     class: S
+    tranche: F2
     version: null
     status: PROPOSED
     owner: "Head of Global Compliance"
     approvers: []
     effective_date: null
     supersedes: null
-    dependencies: ["ZTAX-OBL-001", "ZTAX-FIN-001"]
+    dependencies: []
     source_path: null
     publication_hash: null
     review_due: null
-    applicable_release: ["W3"]
-    retention_policy: "PERMANENT"
-    note: "Not yet supplied. GOV §6 row 22 (F2). Owner verbatim from §6."
+    applicable_release: null
+    retention_policy: 10Y_AFTER_SUPERSESSION
 
   - document_id: ZTAX-REM-001
     title: "Remittance & Funds Control"
     class: S
+    tranche: F2
     version: null
     status: PROPOSED
-    owner: "General Counsel + Head of Compliance"
+    owner: "GC + Head of Compliance"
     approvers: []
     effective_date: null
     supersedes: null
-    dependencies: ["ZTAX-FIN-001", "ZTAX-COMP-001"]
+    dependencies: []
     source_path: null
     publication_hash: null
     review_due: null
-    applicable_release: ["W3"]
-    retention_policy: "PERMANENT"
-    note: "Not yet supplied. GOV §6 row 23 (F2). Owner verbatim from §6."
+    applicable_release: null
+    retention_policy: 10Y_AFTER_SUPERSESSION
 
   - document_id: ZTAX-CTC-001
     title: "Global E-Invoicing & Continuous Transaction Controls"
     class: S
+    tranche: F2
     version: null
     status: PROPOSED
     owner: "Head of Global Compliance"
     approvers: []
     effective_date: null
     supersedes: null
-    dependencies: ["ZTAX-FIN-001", "ZTAX-CONT-001"]
+    dependencies: []
     source_path: null
     publication_hash: null
     review_due: null
-    applicable_release: ["W3"]
-    retention_policy: "PERMANENT"
-    note: "Not yet supplied. GOV §6 row 24 (F2). Owner verbatim from §6."
+    applicable_release: null
+    retention_policy: 10Y_AFTER_SUPERSESSION
 
   - document_id: ZTAX-SHD-001
     title: "Shadow Assurance"
     class: S
+    tranche: F2
     version: null
     status: PROPOSED
     owner: "Head of Product"
     approvers: []
     effective_date: null
     supersedes: null
-    dependencies: ["ZTAX-DET-001", "ZTAX-OBL-001"]
+    dependencies: []
     source_path: null
     publication_hash: null
     review_due: null
-    applicable_release: ["W3"]
-    retention_policy: "PERMANENT"
-    note: "Not yet supplied. GOV §6 row 25 (F2). Owner verbatim from §6."
+    applicable_release: null
+    retention_policy: 10Y_AFTER_SUPERSESSION
 
   - document_id: ZTAX-MIG-001
     title: "Migration, Historical Conversion & Customer Onboarding"
     class: S
+    tranche: F2
     version: null
     status: PROPOSED
     owner: "Head of Delivery"
@@ -470,13 +501,13 @@ documents:
     source_path: null
     publication_hash: null
     review_due: null
-    applicable_release: ["W3"]
-    retention_policy: "PERMANENT"
-    note: "Not yet supplied. GOV §6 row 26 (F2). Owner verbatim from §6."
+    applicable_release: null
+    retention_policy: 10Y_AFTER_SUPERSESSION
 
   - document_id: ZTAX-UX-001
     title: "Application, Portal, Roles & Workflow Architecture"
     class: L
+    tranche: F2
     version: null
     status: PROPOSED
     owner: "Head of Design / Product"
@@ -487,16 +518,16 @@ documents:
     source_path: null
     publication_hash: null
     review_due: null
-    applicable_release: ["W3"]
-    retention_policy: "PERMANENT"
-    note: "Not yet supplied. GOV §6 row 27 (F2). Class L (Living). Owner verbatim from §6."
+    applicable_release: null
+    retention_policy: GIT_HISTORY
 
   - document_id: ZTAX-DEVOPS-001
     title: "Platform Engineering, DevSecOps, Release & Operations"
     class: L
+    tranche: F2
     version: null
     status: PROPOSED
-    owner: "Head of Platform / SRE"
+    owner: "Head of Platform/SRE"
     approvers: []
     effective_date: null
     supersedes: null
@@ -504,13 +535,13 @@ documents:
     source_path: null
     publication_hash: null
     review_due: null
-    applicable_release: ["W3"]
-    retention_policy: "PERMANENT"
-    note: "Not yet supplied. GOV §6 row 28 (F2). Class L (Living). Owner verbatim from §6."
+    applicable_release: null
+    retention_policy: GIT_HISTORY
 
   - document_id: ZTAX-COM-001
     title: "Commercial Entitlements, Licensing & Usage Enforcement"
     class: S
+    tranche: F2
     version: null
     status: PROPOSED
     owner: "CPO + Commercial"
@@ -521,48 +552,31 @@ documents:
     source_path: null
     publication_hash: null
     review_due: null
-    applicable_release: ["W3"]
-    retention_policy: "PERMANENT"
-    note: "Not yet supplied. GOV §6 row 29 (F2). Owner verbatim from §6."
+    applicable_release: null
+    retention_policy: 10Y_AFTER_SUPERSESSION
 
-  # ===========================================================================
-  # Existing / gap entries
-  # ===========================================================================
-
-  - document_id: ZTAX-ARCH-001
-    title: "Global Backend Architecture"
-    class: C
-    version: "2.1"
-    status: SUPERSEDED
-    owner: "CTO"
-    approvers: ["CTO"]
-    effective_date: null
-    supersedes: null
-    dependencies: []
-    source_path: null
-    publication_hash: null
-    review_due: null
-    applicable_release: ["all"]
-    retention_policy: "PERMANENT"
-    note: >
-      v2.0 was never supplied to the specification pipeline. ADR-0001 §7 (backend/adr)
-      took the third branch: ADR-0001 stands as the operative authority on the server-side
-      runtime, and ARCH-001 v2.1 is drafted around it. Closed as SUPERSEDED
-      (see backend ADR README, "Status of the set").
+# ---------------------------------------------------------------------------
+# Gap register — Build Plan §2.
+#
+# A gap is a registered, owned, dated statement that the register is
+# incomplete. It is not an approval and does not relax anything permanently:
+# once `due` passes, the check fails again until the gap is closed by
+# registering the missing fact.
+#
+# Only the two VERIFY entries remain. The two CRITICAL PATH entries (DET-001
+# and JUR-001) closed when both were commissioned and registered above as
+# DRAFT with hashes.
+# ---------------------------------------------------------------------------
+gaps:
 
   - document_id: ZTAX-STR-003
-    title: "Global Strategic Blueprint"
-    class: C
-    version: null
-    status: PROPOSED
-    owner: "CTO"
-    approvers: []
-    effective_date: null
-    supersedes: "ZTAX-STR-002"
-    dependencies: []
-    source_path: null
-    publication_hash: null
-    review_due: null
-    applicable_release: ["all"]
-    retention_policy: "PERMANENT"
-    note: "Register as current per ADR README; STR-002 marked superseded. Document not yet supplied."
+    kind: VERIFY
+    issue: "Existing baseline not held in this repository. Version, approvers, publication hash and effective date are not yet registered."
+    owner: "Executive Strategy"
+    due: "2026-10-09"
+
+  - document_id: ZTAX-ARCH-001
+    kind: VERIFY
+    issue: "Existing baseline not held in this repository. DOM-001 declares a hard dependency on it; the v2.0 approvers, publication hash and effective date are not yet registered."
+    owner: "CTO / Chief Architect"
+    due: "2026-10-09"

@@ -17,3 +17,6 @@ testdata/golden/** text eol=lf
 
 # Same reasoning for anything else whose bytes are hashed or signed as it lands.
 *.json text eol=lf
+
+# Generated from docs/register.yaml by docs/tools/check_registry.py --write-index.
+docs/ESTATE.md linguist-generated
