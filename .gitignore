@@ -14,9 +14,6 @@ bin/
 .env.local
 .env.*.local
 
-# Python bytecode, from the register gate and any other script
-__pycache__/
-
 # Test and coverage output
 coverage.out
 coverage/
