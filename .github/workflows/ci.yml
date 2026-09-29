@@ -431,10 +431,29 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: install pyyaml
         run: pip install pyyaml==6.0.3
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: install intelligence dev extras (for intelligence/tests/*.py)
+        working-directory: intelligence
+        run: pip install -e '.[dev]'
       - name: self-tests (docs/test_validate_registry.py)
         run: python -m unittest docs.test_validate_registry -v
       - name: registry validation (docs/validate_registry.py)
         run: python docs/validate_registry.py
+      - name: self-tests (docs/test_generate_traceability_report.py)
+        run: python -m unittest docs.test_generate_traceability_report -v
+      - name: generate traceability report
+        run: python docs/generate_traceability_report.py
+
+      - name: upload traceability evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: traceability-report
+          path: docs/evidence/
+          if-no-files-found: error
 
   ci:
     name: all gates green

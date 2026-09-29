@@ -38,3 +38,4 @@ content/.keys/
 # Python
 __pycache__/
 *.pyc
+docs/evidence/

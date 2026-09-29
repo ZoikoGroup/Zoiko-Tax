@@ -1332,3 +1332,281 @@ requirements:
     effective_from: null
     effective_to: null
     note: "No conformance test exists. Source doc ZTAX-JUR-001 is DRAFT."
+
+  # ---------------------------------------------------------------------------
+  # ZTAX-AI-001 requirements
+  # ---------------------------------------------------------------------------
+
+  - id: ZTAX-AI-REQ-0001
+    document_id: "ZTAX-AI-001"
+    version: "1.0"
+    statement: >
+      No tax logic in the AI plane. The classifier proposes; the Go fiscal core
+      decides. A ClassificationProposal with authority_outcome < A3 is advisory only.
+    rationale: >
+      Enforces the fiscal boundary to prevent AI from making authoritative
+      determinations without Go core validation.
+    source_authority: "intelligence/src/ztax_gateway/classifier.py"
+    owner: "Head of Intelligence"
+    applies_to: ["intelligence", "AI"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "No explicit test function found for advisory enforcement; status PROPOSED."
+
+  - id: ZTAX-AI-REQ-0002
+    document_id: "ZTAX-AI-001"
+    version: "1.0"
+    statement: >
+      A ClassificationProposal with no citation is a programming error, not a
+      runtime condition. The constructor refuses to create one.
+    rationale: >
+      An AI output with no ground truth is explicitly disallowed.
+    source_authority: "intelligence/src/ztax_gateway/classifier.py"
+    owner: "Head of Intelligence"
+    applies_to: ["intelligence", "AI"]
+    verification_method: TEST
+    verification_ref: "intelligence/tests/test_classifier.py"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "Verified by test_classify_proposals_carry_citations."
+
+  - id: ZTAX-AI-REQ-0003
+    document_id: "ZTAX-AI-001"
+    version: "1.0"
+    statement: >
+      Proposals are immutable (frozen). frozen=True on every data class - the
+      same object is evaluated as is emitted.
+    rationale: >
+      Guarantees that classification proposals cannot be altered downstream.
+    source_authority: "intelligence/src/ztax_gateway/classifier.py"
+    owner: "Head of Intelligence"
+    applies_to: ["intelligence", "AI"]
+    verification_method: TEST
+    verification_ref: "intelligence/tests/test_classifier.py"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "Verified by test_proposal_is_frozen and test_classification_record_is_frozen."
+
+  - id: ZTAX-AI-REQ-0004
+    document_id: "ZTAX-AI-001"
+    version: "1.0"
+    statement: >
+      Rules are pure functions with no side effects; they read the record and
+      return a verdict.
+    rationale: >
+      Ensures evaluation rules do not mutate state or cause side effects.
+    source_authority: "intelligence/src/ztax_gateway/evaluation.py"
+    owner: "Head of Intelligence"
+    applies_to: ["intelligence", "AI"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "Pure function property cannot be validated by a single test; status PROPOSED."
+
+  - id: ZTAX-AI-REQ-0005
+    document_id: "ZTAX-AI-001"
+    version: "1.0"
+    statement: >
+      Rulesets are immutable once built. Two rulesets with the same name and
+      version must carry identical rules (the constructor enforces this).
+    rationale: >
+      Prevents mid-flight modification of evaluation rules.
+    source_authority: "intelligence/src/ztax_gateway/evaluation.py"
+    owner: "Head of Intelligence"
+    applies_to: ["intelligence", "AI"]
+    verification_method: TEST
+    verification_ref: "intelligence/tests/test_evaluation.py"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "Verified by test_ruleset_is_immutable_after_construction."
+
+  - id: ZTAX-AI-REQ-0006
+    document_id: "ZTAX-AI-001"
+    version: "1.0"
+    statement: >
+      SKIP is not PASS. A skipped rule contributes nothing to the pass count but
+      does not fail the evaluation. This lets rules declare their own applicability.
+    rationale: >
+      Maintains clear distinction between successful validation and non-applicable rules.
+    source_authority: "intelligence/src/ztax_gateway/evaluation.py"
+    owner: "Head of Intelligence"
+    applies_to: ["intelligence", "AI"]
+    verification_method: TEST
+    verification_ref: "intelligence/tests/test_evaluation.py"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "Verified by test_skip_count and test_evaluate_skip_and_pass_gives_pass_verdict."
+
+  - id: ZTAX-AI-REQ-0007
+    document_id: "ZTAX-AI-001"
+    version: "1.0"
+    statement: >
+      An AI output that claims A1+ authority cannot advance to a ProvenanceSpan
+      sealed in the Evidence Ledger, or to a ChangeCandidate promoted to content,
+      without a human decision.
+    rationale: >
+      Enforces human-in-the-loop requirement for authoritative actions.
+    source_authority: "intelligence/src/ztax_gateway/human_review.py"
+    owner: "Head of Intelligence"
+    applies_to: ["intelligence", "AI"]
+    verification_method: TEST
+    verification_ref: "intelligence/tests/test_human_review.py"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "Verified by test_promote_refuses_pending_item and related promotion guards."
+
+  - id: ZTAX-AI-REQ-0008
+    document_id: "ZTAX-AI-001"
+    version: "1.0"
+    statement: >
+      A decision cannot be mutated after it is issued. Once created, a
+      ReviewDecision cannot be mutated.
+    rationale: >
+      Ensures the audit trail of human review decisions cannot be tampered with.
+    source_authority: "intelligence/src/ztax_gateway/human_review.py"
+    owner: "Head of Intelligence"
+    applies_to: ["intelligence", "AI"]
+    verification_method: TEST
+    verification_ref: "intelligence/tests/test_human_review.py"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "Verified by test_review_decision_is_frozen."
+
+  - id: ZTAX-AI-REQ-0009
+    document_id: "ZTAX-AI-001"
+    version: "1.0"
+    statement: >
+      Every AI action that crosses the governed boundary must produce exactly one
+      tamper-evident audit record before its output is consumed by any downstream system.
+    rationale: >
+      Guarantees end-to-end accountability for AI actions.
+    source_authority: "intelligence/src/ztax_gateway/invocation_evidence.py"
+    owner: "Head of Intelligence"
+    applies_to: ["intelligence", "AI"]
+    verification_method: TEST
+    verification_ref: "intelligence/tests/test_invocation_evidence.py"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "Verified by test_integration_propose_pipeline and integration suites."
+
+  - id: ZTAX-AI-REQ-0010
+    document_id: "ZTAX-AI-001"
+    version: "1.0"
+    statement: >
+      Raw bytes are never stored. The builder accepts bytes and immediately
+      computes the SHA-256 hex digest; the raw bytes are not held anywhere.
+    rationale: >
+      Prevents raw sensitive input from being copied into the audit record.
+    source_authority: "intelligence/src/ztax_gateway/invocation_evidence.py"
+    owner: "Head of Intelligence"
+    applies_to: ["intelligence", "AI"]
+    verification_method: TEST
+    verification_ref: "intelligence/tests/test_invocation_evidence.py"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "Verified by test_design_rule_1_builder_holds_no_raw_input_bytes."
+
+  - id: ZTAX-AI-REQ-0011
+    document_id: "ZTAX-AI-001"
+    version: "1.0"
+    statement: >
+      The record is frozen. No field may be mutated after build returns.
+    rationale: >
+      Ensures the immutability of the tamper-evident record.
+    source_authority: "intelligence/src/ztax_gateway/invocation_evidence.py"
+    owner: "Head of Intelligence"
+    applies_to: ["intelligence", "AI"]
+    verification_method: TEST
+    verification_ref: "intelligence/tests/test_invocation_evidence.py"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "Verified by test_invocation_evidence_record_is_frozen."
+
+  - id: ZTAX-AI-REQ-0012
+    document_id: "ZTAX-AI-001"
+    version: "1.0"
+    statement: >
+      review_ref requires REVIEW outcome. Supplying a review decision reference
+      when the outcome is anything other than REVIEW is a schema violation.
+    rationale: >
+      Maintains logical consistency of the audit record.
+    source_authority: "intelligence/src/ztax_gateway/invocation_evidence.py"
+    owner: "Head of Intelligence"
+    applies_to: ["intelligence", "AI"]
+    verification_method: TEST
+    verification_ref: "intelligence/tests/test_invocation_evidence.py"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "Verified by test_design_rule_3_review_ref_with_non_review_outcome_is_refused."
+
+  - id: ZTAX-AI-REQ-0013
+    document_id: "ZTAX-AI-001"
+    version: "1.0"
+    statement: >
+      AUTO_ACCEPT requires A0-A2. An invocation claiming to have automatically
+      accepted its own output at A3+ authority is refused.
+    rationale: >
+      A3+ actions require the human-review gate and cannot bypass it.
+    source_authority: "intelligence/src/ztax_gateway/invocation_evidence.py"
+    owner: "Head of Intelligence"
+    applies_to: ["intelligence", "AI"]
+    verification_method: TEST
+    verification_ref: "intelligence/tests/test_invocation_evidence.py"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "Verified by test_design_rule_4_auto_accept_at_a3_is_refused."
+
+  - id: ZTAX-AI-REQ-0048
+    document_id: "ZTAX-AI-001"
+    version: "1.0"
+    statement: >
+      Dual-citation mandatory. For a modification the candidate carries both
+      source_snapshot_before (prior citation) and source_snapshot_after
+      (incoming citation). For additions source_snapshot_before is None; for
+      deletions source_snapshot_after is None.
+    rationale: >
+      Guarantees exact traceability for what changed and from what baseline.
+    source_authority: "intelligence/src/ztax_gateway/change_intelligence.py"
+    owner: "Head of Intelligence"
+    applies_to: ["intelligence", "AI"]
+    verification_method: TEST
+    verification_ref: "intelligence/tests/test_change_intelligence.py"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "Verified by test_change_candidate_no_citation_at_all_refused."
+
+  - id: ZTAX-AI-REQ-0049
+    document_id: "ZTAX-AI-001"
+    version: "1.0"
+    statement: >
+      Structured evidence for the candidate effective date. Separates the
+      evidence for when a change takes effect from the extraction confidence for
+      what changed.
+    rationale: >
+      Ensures effective-date derivation is queryable and auditable.
+    source_authority: "intelligence/src/ztax_gateway/change_intelligence.py"
+    owner: "Head of Intelligence"
+    applies_to: ["intelligence", "AI"]
+    verification_method: TEST
+    verification_ref: "intelligence/tests/test_change_intelligence.py"
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+    note: "Verified by test_effective_date_evidence_with_date_and_text."
