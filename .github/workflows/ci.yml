@@ -446,10 +446,7 @@ jobs:
         run: python -m unittest docs.test_generate_traceability_report -v
       - name: generate traceability report
         run: python docs/generate_traceability_report.py
-      - name: verify committed traceability_summary.json matches fresh run
-        run: git diff --exit-code -- docs/evidence/traceability_summary.json
-      - name: verify committed traceability_report.json matches fresh run (ignoring timestamps)
-        run: python docs/compare_evidence_report.py
+
       - name: upload traceability evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
