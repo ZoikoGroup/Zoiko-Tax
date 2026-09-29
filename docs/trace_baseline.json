@@ -1,0 +1,10 @@
+{
+  "counts": {
+    "ERROR": 0,
+    "FAIL": 0,
+    "NOT_INDEPENDENTLY_VERIFIED": 3,
+    "NOT_SUPPORTED": 0,
+    "NO_VERIFICATION": 69,
+    "PASS": 20
+  }
+}
