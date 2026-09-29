@@ -137,6 +137,8 @@ func writeProblemBytes(w http.ResponseWriter, status int, body []byte, reason er
 	}
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(status)
+	// #nosec G705 -- a JSON document encoded by renderProblem, served as
+	// application/problem+json, never as HTML.
 	_, _ = w.Write(body)
 }
 

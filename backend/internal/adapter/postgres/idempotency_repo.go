@@ -166,14 +166,19 @@ func (r *IdempotencyRepo) Complete(ctx context.Context, rec idempotency.Record) 
 		return errs.New(errs.CategoryInternal, errs.ReasonInternal,
 			"An idempotency record is completed with a settled state, a response and a completion time.")
 	}
+	if rec.ResponseStatus < 100 || rec.ResponseStatus > 599 {
+		return errs.New(errs.CategoryInternal, errs.ReasonInternal,
+			"An idempotency record is completed with an HTTP status.")
+	}
 	var ref *uuid.UUID
 	if rec.ResultRef != nil {
 		u := rec.ResultRef.UUID()
 		ref = &u
 	}
+	status := int32(rec.ResponseStatus) // #nosec G115 -- bounded to 100..599 above
 	tag, err := r.s.db(ctx).Exec(ctx, sqlIdempotencyComplete,
 		tenant.UUID(), rec.Key.Endpoint, rec.Key.Value,
-		string(rec.State), int32(rec.ResponseStatus), rec.ResponseBody, canonical.SumBytes(rec.ResponseBody).String(),
+		string(rec.State), status, rec.ResponseBody, canonical.SumBytes(rec.ResponseBody).String(),
 		ref, *rec.CompletedAt)
 	if err != nil {
 		return mapError(err, "complete idempotency record")

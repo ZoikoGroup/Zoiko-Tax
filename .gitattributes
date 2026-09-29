@@ -31,5 +31,4 @@ backend/vendor/** linguist-vendored linguist-generated
 backend/internal/transport/http/gen/types.gen.go linguist-generated
 backend/postman/ZoikoTax.postman_collection.json* linguist-generated
 contracts/openapi/export/** linguist-generated
-docs/ESTATE.md linguist-generated
 sdk/**/types.gen.go linguist-generated
