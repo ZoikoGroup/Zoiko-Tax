@@ -45,9 +45,14 @@ from zoikotax.schema import (
     AuditRecord,
     Capabilities,
     ChangePasswordRequest,
+    CommitRequest,
     CreateUserRequest,
+    Decision,
     Problem,
+    Quote,
+    QuoteRequest,
     ReasonCode,
+    ReplayReport,
     Role,
     Session,
     SessionSummary,
@@ -64,7 +69,9 @@ __all__ = [
     "AuditRecord",
     "Capabilities",
     "ChangePasswordRequest",
+    "CommitRequest",
     "CreateUserRequest",
+    "Decision",
     "Err",
     "HttpRequest",
     "HttpResponse",
@@ -73,7 +80,10 @@ __all__ = [
     "ListUsersResponse",
     "Ok",
     "Problem",
+    "Quote",
+    "QuoteRequest",
     "ReasonCode",
+    "ReplayReport",
     "Result",
     "Role",
     "Session",
@@ -395,14 +405,58 @@ class ZoikoTaxClient:
         """Read the tenant's audit trail, most recent first."""
         return self._send("GET", "/v1/admin/audit" + _query(limit=limit))
 
+    # --- determination ------------------------------------------------------
+
+    def create_quote(self, body: QuoteRequest) -> Result[Quote]:
+        """Quote a transaction without recording it.
+
+        A quote is an estimate, never a decision: it is always
+        ``authoritative: false`` and must not be filed or invoiced from.
+        """
+        return self._send("POST", "/v1/quotes", body)
+
+    def commit_transaction(self, idempotency_key: str, body: CommitRequest) -> Result[Decision]:
+        """Commit a transaction and record its decision.
+
+        `idempotency_key` is mandatory. Mint it before the first attempt and
+        reuse it, unchanged, on every retry of the same request (ADR-0013):
+        that is what makes a retry safe, and this client never retries on its
+        own.
+        """
+        return self._send(
+            "POST",
+            "/v1/transactions:commit",
+            body,
+            extra_headers={"Idempotency-Key": idempotency_key},
+        )
+
+    def get_decision(self, decision_id: str) -> Result[Decision]:
+        """Read a recorded decision."""
+        return self._send("GET", f"/v1/decisions/{_segment(decision_id)}")
+
+    def replay_decision(self, decision_id: str) -> Result[ReplayReport]:
+        """Replay a recorded decision and compare it byte for byte.
+
+        The verdict is data, not an error; nothing is recorded.
+        """
+        return self._send("POST", f"/v1/replay/{_segment(decision_id)}")
+
     # --- transport ----------------------------------------------------------
 
-    def _send(self, method: str, path: str, body: Mapping[str, Any] | None = None) -> Result[Any]:
+    def _send(
+        self,
+        method: str,
+        path: str,
+        body: Mapping[str, Any] | None = None,
+        *,
+        extra_headers: Mapping[str, str] | None = None,
+    ) -> Result[Any]:
         headers = {
             # Problem Details first, because an error is the response whose
             # shape this client most needs to be sure of.
             "Accept": "application/problem+json, application/json",
             **self._headers,
+            **(extra_headers or {}),
         }
         payload: bytes | None = None
         if body is not None:

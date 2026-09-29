@@ -26,75 +26,104 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 
 /**
- * ChangePasswordRequest
+ * The content bundle an evaluation ran against.
  */
 @JsonPropertyOrder({
-  ChangePasswordRequest.JSON_PROPERTY_CURRENT_PASSWORD,
-  ChangePasswordRequest.JSON_PROPERTY_NEW_PASSWORD
+  BundleRef.JSON_PROPERTY_BUNDLE_ID,
+  BundleRef.JSON_PROPERTY_DIGEST,
+  BundleRef.JSON_PROPERTY_IR_VERSION
 })
 @jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen", comments = "Generator version: 7.25.0")
-public class ChangePasswordRequest {
-  public static final String JSON_PROPERTY_CURRENT_PASSWORD = "currentPassword";
+public class BundleRef {
+  public static final String JSON_PROPERTY_BUNDLE_ID = "bundleId";
   @jakarta.annotation.Nonnull
-  private String currentPassword;
+  private String bundleId;
 
-  public static final String JSON_PROPERTY_NEW_PASSWORD = "newPassword";
+  public static final String JSON_PROPERTY_DIGEST = "digest";
   @jakarta.annotation.Nonnull
-  private String newPassword;
+  private String digest;
 
-  public ChangePasswordRequest() { 
+  public static final String JSON_PROPERTY_IR_VERSION = "irVersion";
+  @jakarta.annotation.Nonnull
+  private Integer irVersion;
+
+  public BundleRef() { 
   }
 
-  public ChangePasswordRequest currentPassword(@jakarta.annotation.Nonnull String currentPassword) {
-    this.currentPassword = currentPassword;
+  public BundleRef bundleId(@jakarta.annotation.Nonnull String bundleId) {
+    this.bundleId = bundleId;
     return this;
   }
 
   /**
-   * Get currentPassword
-   * @return currentPassword
+   * Get bundleId
+   * @return bundleId
    */
   @jakarta.annotation.Nonnull
-  @JsonProperty(value = JSON_PROPERTY_CURRENT_PASSWORD, required = true)
+  @JsonProperty(value = JSON_PROPERTY_BUNDLE_ID, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public String getCurrentPassword() {
-    return currentPassword;
+  public String getBundleId() {
+    return bundleId;
   }
 
 
-  @JsonProperty(value = JSON_PROPERTY_CURRENT_PASSWORD, required = true)
+  @JsonProperty(value = JSON_PROPERTY_BUNDLE_ID, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setCurrentPassword(@jakarta.annotation.Nonnull String currentPassword) {
-    this.currentPassword = currentPassword;
+  public void setBundleId(@jakarta.annotation.Nonnull String bundleId) {
+    this.bundleId = bundleId;
   }
 
 
-  public ChangePasswordRequest newPassword(@jakarta.annotation.Nonnull String newPassword) {
-    this.newPassword = newPassword;
+  public BundleRef digest(@jakarta.annotation.Nonnull String digest) {
+    this.digest = digest;
     return this;
   }
 
   /**
-   * Get newPassword
-   * @return newPassword
+   * A canonical digest: SHA-256 over the canonical bytes, lowercase hex, carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is not decoration — a future &#x60;zt2:&#x60; digest of the same document is a different digest, and comparing the two without it would be wrong. 
+   * @return digest
    */
   @jakarta.annotation.Nonnull
-  @JsonProperty(value = JSON_PROPERTY_NEW_PASSWORD, required = true)
+  @JsonProperty(value = JSON_PROPERTY_DIGEST, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public String getNewPassword() {
-    return newPassword;
+  public String getDigest() {
+    return digest;
   }
 
 
-  @JsonProperty(value = JSON_PROPERTY_NEW_PASSWORD, required = true)
+  @JsonProperty(value = JSON_PROPERTY_DIGEST, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setNewPassword(@jakarta.annotation.Nonnull String newPassword) {
-    this.newPassword = newPassword;
+  public void setDigest(@jakarta.annotation.Nonnull String digest) {
+    this.digest = digest;
+  }
+
+
+  public BundleRef irVersion(@jakarta.annotation.Nonnull Integer irVersion) {
+    this.irVersion = irVersion;
+    return this;
+  }
+
+  /**
+   * Get irVersion
+   * @return irVersion
+   */
+  @jakarta.annotation.Nonnull
+  @JsonProperty(value = JSON_PROPERTY_IR_VERSION, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public Integer getIrVersion() {
+    return irVersion;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_IR_VERSION, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public void setIrVersion(@jakarta.annotation.Nonnull Integer irVersion) {
+    this.irVersion = irVersion;
   }
 
 
   /**
-   * Return true if this ChangePasswordRequest object is equal to o.
+   * Return true if this BundleRef object is equal to o.
    */
   @Override
   public boolean equals(Object o) {
@@ -104,22 +133,24 @@ public class ChangePasswordRequest {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ChangePasswordRequest changePasswordRequest = (ChangePasswordRequest) o;
-    return Objects.equals(this.currentPassword, changePasswordRequest.currentPassword) &&
-        Objects.equals(this.newPassword, changePasswordRequest.newPassword);
+    BundleRef bundleRef = (BundleRef) o;
+    return Objects.equals(this.bundleId, bundleRef.bundleId) &&
+        Objects.equals(this.digest, bundleRef.digest) &&
+        Objects.equals(this.irVersion, bundleRef.irVersion);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(currentPassword, newPassword);
+    return Objects.hash(bundleId, digest, irVersion);
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class ChangePasswordRequest {\n");
-    sb.append("    currentPassword: ").append("*").append("\n");
-    sb.append("    newPassword: ").append("*").append("\n");
+    sb.append("class BundleRef {\n");
+    sb.append("    bundleId: ").append(toIndentedString(bundleId)).append("\n");
+    sb.append("    digest: ").append(toIndentedString(digest)).append("\n");
+    sb.append("    irVersion: ").append(toIndentedString(irVersion)).append("\n");
     sb.append("}");
     return sb.toString();
   }

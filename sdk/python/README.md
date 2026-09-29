@@ -83,7 +83,7 @@ float("0.1") + float("0.2")   # 0.30000000000000004
 
 A float subtotal is a binary-float tax calculation with no rounding policy, no evidence record and no replay. Python does have a decimal type, and `Decimal("12.50")` is exact — but it is still arithmetic outside a cell, under a rounding context this process chose rather than one that came from signed content ([ADR-0002](../../../adr/ADR-0002-decimal-rounding-context-policy.md)). Amounts arrive as strings and are displayed or passed on as strings; arithmetic on them happens in a cell. Trailing zeros are significant: `"1.50"` and `"1.5"` are different assertions about precision, and `Decimal` preserves that where `float` cannot.
 
-This version of the surface carries no fiscal amounts. The rule is stated because it governs every addition to it.
+Quotes, commits and decisions carry them: every `amount` and `value` in those operations is a string in this SDK's types, and stays one.
 
 ## Testing against it
 

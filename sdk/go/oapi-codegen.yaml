@@ -37,11 +37,13 @@ output-options:
   # for a string with a validating UnmarshalJSON. The server validates email
   # addresses; a client that also did would reject a response the contract
   # later relaxes. So `email` is a plain string. `date-time` stays time.Time,
-  # which is the standard library.
+  # which is the standard library. `uuid` is a plain string for the same reason.
   type-mapping:
     string:
       formats:
         email:
+          type: string
+        uuid:
           type: string
 
   # The stock imports.tmpl lists every package any generator mode might use,

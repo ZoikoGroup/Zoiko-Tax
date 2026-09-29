@@ -21,80 +21,121 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.zoikotax.sdk.model.DeterminationInput;
+import com.zoikotax.sdk.model.MoneyValue;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 
 /**
- * ChangePasswordRequest
+ * QuoteRequest
  */
 @JsonPropertyOrder({
-  ChangePasswordRequest.JSON_PROPERTY_CURRENT_PASSWORD,
-  ChangePasswordRequest.JSON_PROPERTY_NEW_PASSWORD
+  QuoteRequest.JSON_PROPERTY_EVENT_TIME,
+  QuoteRequest.JSON_PROPERTY_INPUT,
+  QuoteRequest.JSON_PROPERTY_ACCUMULATORS
 })
 @jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen", comments = "Generator version: 7.25.0")
-public class ChangePasswordRequest {
-  public static final String JSON_PROPERTY_CURRENT_PASSWORD = "currentPassword";
+public class QuoteRequest {
+  public static final String JSON_PROPERTY_EVENT_TIME = "eventTime";
   @jakarta.annotation.Nonnull
-  private String currentPassword;
+  private String eventTime;
 
-  public static final String JSON_PROPERTY_NEW_PASSWORD = "newPassword";
+  public static final String JSON_PROPERTY_INPUT = "input";
   @jakarta.annotation.Nonnull
-  private String newPassword;
+  private DeterminationInput input;
 
-  public ChangePasswordRequest() { 
+  public static final String JSON_PROPERTY_ACCUMULATORS = "accumulators";
+  @jakarta.annotation.Nullable
+  private Map<String, MoneyValue> accumulators;
+
+  public QuoteRequest() { 
   }
 
-  public ChangePasswordRequest currentPassword(@jakarta.annotation.Nonnull String currentPassword) {
-    this.currentPassword = currentPassword;
+  public QuoteRequest eventTime(@jakarta.annotation.Nonnull String eventTime) {
+    this.eventTime = eventTime;
     return this;
   }
 
   /**
-   * Get currentPassword
-   * @return currentPassword
+   * RFC 3339 UTC with exactly six fractional digits and a literal &#x60;Z&#x60; (ADR-0011 §2.1 P2). No offsets and no variable precision, because two encodings of one instant must not produce two digests. 
+   * @return eventTime
    */
   @jakarta.annotation.Nonnull
-  @JsonProperty(value = JSON_PROPERTY_CURRENT_PASSWORD, required = true)
+  @JsonProperty(value = JSON_PROPERTY_EVENT_TIME, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public String getCurrentPassword() {
-    return currentPassword;
+  public String getEventTime() {
+    return eventTime;
   }
 
 
-  @JsonProperty(value = JSON_PROPERTY_CURRENT_PASSWORD, required = true)
+  @JsonProperty(value = JSON_PROPERTY_EVENT_TIME, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setCurrentPassword(@jakarta.annotation.Nonnull String currentPassword) {
-    this.currentPassword = currentPassword;
+  public void setEventTime(@jakarta.annotation.Nonnull String eventTime) {
+    this.eventTime = eventTime;
   }
 
 
-  public ChangePasswordRequest newPassword(@jakarta.annotation.Nonnull String newPassword) {
-    this.newPassword = newPassword;
+  public QuoteRequest input(@jakarta.annotation.Nonnull DeterminationInput input) {
+    this.input = input;
     return this;
   }
 
   /**
-   * Get newPassword
-   * @return newPassword
+   * Get input
+   * @return input
    */
   @jakarta.annotation.Nonnull
-  @JsonProperty(value = JSON_PROPERTY_NEW_PASSWORD, required = true)
+  @JsonProperty(value = JSON_PROPERTY_INPUT, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public String getNewPassword() {
-    return newPassword;
+  public DeterminationInput getInput() {
+    return input;
   }
 
 
-  @JsonProperty(value = JSON_PROPERTY_NEW_PASSWORD, required = true)
+  @JsonProperty(value = JSON_PROPERTY_INPUT, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setNewPassword(@jakarta.annotation.Nonnull String newPassword) {
-    this.newPassword = newPassword;
+  public void setInput(@jakarta.annotation.Nonnull DeterminationInput input) {
+    this.input = input;
+  }
+
+
+  public QuoteRequest accumulators(@jakarta.annotation.Nullable Map<String, MoneyValue> accumulators) {
+    this.accumulators = accumulators;
+    return this;
+  }
+
+  public QuoteRequest putAccumulatorsItem(String key, MoneyValue accumulatorsItem) {
+    if (this.accumulators == null) {
+      this.accumulators = new HashMap<>();
+    }
+    this.accumulators.put(key, accumulatorsItem);
+    return this;
+  }
+
+  /**
+   * The accumulator values the evaluation reads — exactly the ones the active bundle declares, no more and no fewer. They are supplied by the caller until the accumulator store of ADR-0004 lands, and are recorded in the decision&#39;s envelope either way (ZTAX-DET-REQ-0034). 
+   * @return accumulators
+   */
+  @jakarta.annotation.Nullable
+  @JsonProperty(value = JSON_PROPERTY_ACCUMULATORS, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public Map<String, MoneyValue> getAccumulators() {
+    return accumulators;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_ACCUMULATORS, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public void setAccumulators(@jakarta.annotation.Nullable Map<String, MoneyValue> accumulators) {
+    this.accumulators = accumulators;
   }
 
 
   /**
-   * Return true if this ChangePasswordRequest object is equal to o.
+   * Return true if this QuoteRequest object is equal to o.
    */
   @Override
   public boolean equals(Object o) {
@@ -104,22 +145,24 @@ public class ChangePasswordRequest {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ChangePasswordRequest changePasswordRequest = (ChangePasswordRequest) o;
-    return Objects.equals(this.currentPassword, changePasswordRequest.currentPassword) &&
-        Objects.equals(this.newPassword, changePasswordRequest.newPassword);
+    QuoteRequest quoteRequest = (QuoteRequest) o;
+    return Objects.equals(this.eventTime, quoteRequest.eventTime) &&
+        Objects.equals(this.input, quoteRequest.input) &&
+        Objects.equals(this.accumulators, quoteRequest.accumulators);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(currentPassword, newPassword);
+    return Objects.hash(eventTime, input, accumulators);
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class ChangePasswordRequest {\n");
-    sb.append("    currentPassword: ").append("*").append("\n");
-    sb.append("    newPassword: ").append("*").append("\n");
+    sb.append("class QuoteRequest {\n");
+    sb.append("    eventTime: ").append(toIndentedString(eventTime)).append("\n");
+    sb.append("    input: ").append(toIndentedString(input)).append("\n");
+    sb.append("    accumulators: ").append(toIndentedString(accumulators)).append("\n");
     sb.append("}");
     return sb.toString();
   }

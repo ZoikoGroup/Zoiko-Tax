@@ -91,7 +91,7 @@ Where you must compute with one — to reconcile against a ledger, say — use `
 
 Timestamps are strings too. The contract fixes their encoding exactly — six fractional digits and a literal `Z` ([ADR-0011](../../../adr/ADR-0011-canonicalization-digest-and-evidence-sealing.md) §2.1 P2) — because two encodings of one instant digest differently, and an `OffsetDateTime` would re-encode them. Parse with `Instant.parse` when you need an instant; pass the string through when you need the value.
 
-This version of the surface carries no fiscal amounts. The rule is stated because it governs every addition to it.
+Quotes, commits and decisions carry them: every `amount` and `value` in those operations is a string in this SDK's types, and stays one.
 
 ## Additions do not break you
 

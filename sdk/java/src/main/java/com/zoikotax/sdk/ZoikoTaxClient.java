@@ -9,8 +9,13 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.zoikotax.sdk.model.AuditRecordList;
 import com.zoikotax.sdk.model.Capabilities;
 import com.zoikotax.sdk.model.ChangePasswordRequest;
+import com.zoikotax.sdk.model.CommitRequest;
 import com.zoikotax.sdk.model.CreateUserRequest;
+import com.zoikotax.sdk.model.Decision;
 import com.zoikotax.sdk.model.Problem;
+import com.zoikotax.sdk.model.Quote;
+import com.zoikotax.sdk.model.QuoteRequest;
+import com.zoikotax.sdk.model.ReplayReport;
 import com.zoikotax.sdk.model.Role;
 import com.zoikotax.sdk.model.RoleRequest;
 import com.zoikotax.sdk.model.Session;
@@ -30,6 +35,7 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 /**
  * A client for one cell.
@@ -227,12 +233,70 @@ public final class ZoikoTaxClient {
     return send("GET", "/v1/admin/audit" + limit(limit), null, AuditRecordList.class);
   }
 
+  // --- determination ------------------------------------------------------
+
+  /**
+   * Quote a transaction without recording it.
+   *
+   * <p>A quote is an estimate, never a decision: it is always {@code
+   * authoritative: false} and must not be filed or invoiced from.
+   */
+  @Nonnull
+  public Result<Quote> createQuote(@Nonnull QuoteRequest body) {
+    return send("POST", "/v1/quotes", body, Quote.class);
+  }
+
+  /**
+   * Commit a transaction and record its decision.
+   *
+   * <p>{@code idempotencyKey} is mandatory. Mint it before the first attempt and
+   * reuse it, unchanged, on every retry of the same request (ADR-0013): that is
+   * what makes a retry safe, and this client never retries on its own.
+   */
+  @Nonnull
+  public Result<Decision> commitTransaction(
+      @Nonnull String idempotencyKey, @Nonnull CommitRequest body) {
+    Objects.requireNonNull(idempotencyKey, "idempotencyKey");
+    return send(
+        "POST",
+        "/v1/transactions:commit",
+        Map.of("Idempotency-Key", idempotencyKey),
+        body,
+        Decision.class);
+  }
+
+  /** Read a recorded decision. */
+  @Nonnull
+  public Result<Decision> getDecision(@Nonnull UUID decisionId) {
+    return send("GET", "/v1/decisions/" + encode(decisionId.toString()), null, Decision.class);
+  }
+
+  /**
+   * Replay a recorded decision and compare it byte for byte. The verdict is
+   * data, not an error; nothing is recorded.
+   */
+  @Nonnull
+  public Result<ReplayReport> replayDecision(@Nonnull UUID decisionId) {
+    return send("POST", "/v1/replay/" + encode(decisionId.toString()), null, ReplayReport.class);
+  }
+
   // --- transport ----------------------------------------------------------
 
   private <T> Result<T> send(String method, String path, @Nullable Object body, Class<T> type) {
+    return send(method, path, Map.of(), body, type);
+  }
+
+  /** {@code operationHeaders} are this request's own, such as an {@code Idempotency-Key}. */
+  private <T> Result<T> send(
+      String method,
+      String path,
+      Map<String, String> operationHeaders,
+      @Nullable Object body,
+      Class<T> type) {
     Map<String, String> requestHeaders = new LinkedHashMap<>();
     requestHeaders.put("Accept", ACCEPT);
     requestHeaders.putAll(headers);
+    requestHeaders.putAll(operationHeaders);
 
     Transport.Response response;
     try {

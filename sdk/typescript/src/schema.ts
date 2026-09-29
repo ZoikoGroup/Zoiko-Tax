@@ -314,6 +314,137 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Quote a transaction without recording it
+         * @description `OPERATOR` or `ANALYST`. Evaluates the input against the cell's active
+         *     content bundle by exactly the path a commit takes, then discards it:
+         *     no decision, no evidence, no idempotency record.
+         *
+         *     **A quote is an estimate; only a commit is a decision** (ADR-0004
+         *     §2.7). Every quote is `authoritative: false`, whatever the
+         *     deployment's authorization level, and must not be filed or invoiced
+         *     from.
+         *
+         *     The input is named the way content reads it. Which values a line
+         *     carries, and what they are called, is decided by the active pack, not
+         *     by this contract — the worked pack reads `line.netAmount`,
+         *     `line.quantity` and two flags, and a read set holding
+         *     `threshold.ecoLevyYtd`. A value the pack reads and the request omits is
+         *     a `400`; so is an accumulator the pack does not read.
+         */
+        post: operations["createQuote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/transactions:commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Commit a transaction and record its decision
+         * @description `OPERATOR` only. Evaluates the input against the active content bundle
+         *     and records the result as an immutable decision, with the two evidence
+         *     objects that let it replay exactly (ADR-0011 §2.8).
+         *
+         *     **`Idempotency-Key` is mandatory** (ADR-0013 §2.1). A retry with the
+         *     same key and the same body returns the original response verbatim,
+         *     with `Idempotent-Replay: true`, and records nothing new. The same key
+         *     with a different body is `409 IDEMPOTENCY_KEY_REUSE`; a key whose first
+         *     request is still running is `409 REQUEST_IN_PROGRESS` with
+         *     `Retry-After`. Neither executes. Bodies are compared in canonical form,
+         *     so member order and whitespace do not matter and a decimal's scale
+         *     does — `"45.00"` and `"45.0"` are different requests.
+         *
+         *     A validation failure is recorded against the key and replayed on
+         *     retry, because the same request fails the same way. A transient
+         *     failure (`503`) is not: the key is released and a retry is a genuine
+         *     new attempt.
+         *
+         *     `supersedes` corrects an earlier decision for the same `businessKey`.
+         *     It must name the current version; a decision is never edited, and a
+         *     correction is a new decision linked to the old (ADR-0003).
+         *
+         *     Before A4 every decision is `ADVISORY` and `authoritative: false`.
+         */
+        post: operations["commitTransaction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/decisions/{decisionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a recorded decision
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. What the decision emitted is read
+         *     from its result evidence and verified against the digest the decision
+         *     names, so a response is never built from a record that has come apart
+         *     from its evidence — that is a `500 EVIDENCE_INTEGRITY` instead.
+         */
+        get: operations["getDecision"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/replay/{decisionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replay a recorded decision and compare it byte for byte
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. Rebuilds the decision's result from
+         *     its envelope alone, against the content bundle the envelope names —
+         *     never the one active now — and compares the canonical bytes with the
+         *     result that was recorded (ADR-0003 §3.3, ADR-0011 §2.8).
+         *
+         *     The verdict is data, not an error. `DIVERGED` names the first path at
+         *     which the two results differ; `BUNDLE_UNAVAILABLE` means this cell no
+         *     longer holds the bundle the decision was made under, which is a fact
+         *     about the cell rather than about the decision. Evidence that no longer
+         *     matches its digest, or a record that disagrees with its envelope, is a
+         *     `500 EVIDENCE_INTEGRITY` instead: that is an incident, not a verdict.
+         *
+         *     Nothing is recorded. Replaying twice gives the same answer.
+         */
+        post: operations["replayDecision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -696,8 +827,261 @@ export interface components {
         RoleRequest: {
             role: components["schemas"]["Role"];
         };
+        /**
+         * DecisionId
+         * Format: uuid
+         * @description A decision identifier: a UUIDv7 in lowercase canonical form
+         *     (ADR-0012 §2.1). Sortable by creation, never recycled.
+         * @example 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+         */
+        DecisionId: string;
+        /**
+         * Decimal
+         * @description A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+         *     digits, and an optional fraction. No exponent, no leading `+`, no
+         *     leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+         *     different assertions and digest differently.
+         *
+         *     Classified as fiscal personal data because on a consumer transaction
+         *     it is: logs carry it redacted, and it is kept for the fiscal record
+         *     period as evidence.
+         * @example 100.00
+         */
+        Decimal: string;
+        /**
+         * CurrencyCode
+         * @description An ISO 4217 alphabetic currency code.
+         * @example EUR
+         */
+        CurrencyCode: string;
+        /**
+         * RateBasis
+         * @description What a rate applies to (ADR-0002). A rate without a basis is not a rate.
+         * @example NET
+         * @enum {string}
+         */
+        RateBasis: "NET" | "GROSS" | "PER_UNIT" | "COMPOUND";
+        /**
+         * UnitCode
+         * @description A unit of measure, as the content pack names it.
+         * @example EA
+         */
+        UnitCode: string;
+        /**
+         * ValueType
+         * @description The type of an emitted value. It says which of a value's other members are present.
+         * @example MONEY
+         * @enum {string}
+         */
+        ValueType: "MONEY" | "RATE" | "QUANTITY" | "BOOL" | "STRING" | "REASON_CODE";
+        /**
+         * Outcome
+         * @description What a determination concluded (ADR-0016 §2.1). Only `AUTHORITATIVE`
+         *     may be filed, and nothing produces it before A4. The refusals —
+         *     `AMBIGUOUS`, `CONFLICTED`, `UNSUPPORTED`, `REVIEW_REQUIRED` — are
+         *     outcomes with evidence, not errors: "we do not support this" is a fact
+         *     about coverage that is recorded against the transaction.
+         * @example ADVISORY
+         * @enum {string}
+         */
+        Outcome: "AUTHORITATIVE" | "ADVISORY" | "AMBIGUOUS" | "CONFLICTED" | "UNSUPPORTED" | "REVIEW_REQUIRED";
+        /**
+         * ReplayVerdict
+         * @example MATCH
+         * @enum {string}
+         */
+        ReplayVerdict: "MATCH" | "DIVERGED" | "BUNDLE_UNAVAILABLE";
+        /**
+         * BusinessKey
+         * @description The caller's stable reference for what is being determined — a line, a
+         *     transaction. It is the identity across corrections: every version of a
+         *     decision shares it (ADR-0003). Not an identifier this service
+         *     interprets.
+         * @example INV-0001/1
+         */
+        BusinessKey: string;
+        /**
+         * MoneyValue
+         * @description An amount and its currency, never one without the other.
+         */
+        MoneyValue: {
+            amount: components["schemas"]["Decimal"];
+            currency: components["schemas"]["CurrencyCode"];
+        };
+        /** RateValue */
+        RateValue: {
+            value: components["schemas"]["Decimal"];
+            basis: components["schemas"]["RateBasis"];
+        };
+        /** QuantityValue */
+        QuantityValue: {
+            value: components["schemas"]["Decimal"];
+            unit: components["schemas"]["UnitCode"];
+        };
+        /**
+         * DeterminationInput
+         * @description The named values the active content reads, grouped by type. The names
+         *     are the pack's — `line.netAmount`, not a field this contract defines —
+         *     because which values a transaction carries is decided by content, and
+         *     a transaction shape fixed here would be tax logic in the API
+         *     (ZTAX-DET-001 §0.2). At least one value is required.
+         */
+        DeterminationInput: {
+            money?: {
+                [key: string]: components["schemas"]["MoneyValue"];
+            };
+            rates?: {
+                [key: string]: components["schemas"]["RateValue"];
+            };
+            quantities?: {
+                [key: string]: components["schemas"]["QuantityValue"];
+            };
+            flags?: {
+                [key: string]: boolean;
+            };
+            /**
+             * @description Free-text values, such as a situs attribute. Classified as location
+             *     evidence because that is what content most often reads here.
+             */
+            strings?: {
+                [key: string]: string;
+            };
+        };
+        /**
+         * ReadSet
+         * @description The accumulator values the evaluation reads — exactly the ones the
+         *     active bundle declares, no more and no fewer. They are supplied by the
+         *     caller until the accumulator store of ADR-0004 lands, and are recorded
+         *     in the decision's envelope either way (ZTAX-DET-REQ-0034).
+         */
+        ReadSet: {
+            [key: string]: components["schemas"]["MoneyValue"];
+        };
+        /** QuoteRequest */
+        QuoteRequest: {
+            eventTime: components["schemas"]["Timestamp"];
+            input: components["schemas"]["DeterminationInput"];
+            accumulators?: components["schemas"]["ReadSet"];
+        };
+        /** CommitRequest */
+        CommitRequest: {
+            businessKey: components["schemas"]["BusinessKey"];
+            supersedes?: components["schemas"]["DecisionId"];
+            eventTime: components["schemas"]["Timestamp"];
+            input: components["schemas"]["DeterminationInput"];
+            accumulators?: components["schemas"]["ReadSet"];
+        };
+        /**
+         * ResultValue
+         * @description One emitted value. `type` says which other members are present:
+         *     `amount` and `currency` for `MONEY`; `value` and `basis` for `RATE`;
+         *     `value` and `unit` for `QUANTITY`; `flag` for `BOOL`; `text` for
+         *     `STRING`; `reasonCode` for `REASON_CODE`.
+         */
+        ResultValue: {
+            type: components["schemas"]["ValueType"];
+            amount?: components["schemas"]["Decimal"];
+            currency?: components["schemas"]["CurrencyCode"];
+            value?: components["schemas"]["Decimal"];
+            basis?: components["schemas"]["RateBasis"];
+            unit?: components["schemas"]["UnitCode"];
+            flag?: boolean;
+            text?: string;
+            reasonCode?: components["schemas"]["ReasonCode"];
+        };
+        /**
+         * Emitted
+         * @description What the content emitted, by result slot. The slots are the pack's.
+         */
+        Emitted: {
+            [key: string]: components["schemas"]["ResultValue"];
+        };
+        /**
+         * BundleRef
+         * @description The content bundle an evaluation ran against.
+         */
+        BundleRef: {
+            /** @example eu-vat-worked-2026.09 */
+            bundleId: string;
+            digest: components["schemas"]["Digest"];
+            /**
+             * Format: int32
+             * @example 1
+             */
+            irVersion: number;
+        };
+        /** Quote */
+        Quote: {
+            /** @description Always `false`. A quote is an estimate at every authorization level (ADR-0004 §2.7). */
+            authoritative: boolean;
+            outcome: components["schemas"]["Outcome"];
+            reasonCode: components["schemas"]["ReasonCode"];
+            quotedAt: components["schemas"]["Timestamp"];
+            bundle: components["schemas"]["BundleRef"];
+            emitted: components["schemas"]["Emitted"];
+        };
+        /**
+         * DecisionDigests
+         * @description The digests a decision names (ADR-0011 §2.8). `envelope` and `result`
+         *     are the evidence objects; `input` is the canonical input inside the
+         *     envelope, which is what a search by input matches.
+         */
+        DecisionDigests: {
+            input: components["schemas"]["Digest"];
+            envelope: components["schemas"]["Digest"];
+            result: components["schemas"]["Digest"];
+        };
+        /**
+         * Decision
+         * @description One recorded decision. Immutable; a correction is a new decision whose `supersedes` names this one.
+         */
+        Decision: {
+            id: components["schemas"]["DecisionId"];
+            businessKey: components["schemas"]["BusinessKey"];
+            supersedes?: components["schemas"]["DecisionId"];
+            /** @description Whether this decision may be filed. `false` for every decision before A4. */
+            authoritative: boolean;
+            outcome: components["schemas"]["Outcome"];
+            reasonCode: components["schemas"]["ReasonCode"];
+            eventTime: components["schemas"]["Timestamp"];
+            recordedAt: components["schemas"]["Timestamp"];
+            bundle: components["schemas"]["BundleRef"];
+            digests: components["schemas"]["DecisionDigests"];
+            emitted: components["schemas"]["Emitted"];
+        };
+        /** ReplayReport */
+        ReplayReport: {
+            decisionId: components["schemas"]["DecisionId"];
+            verdict: components["schemas"]["ReplayVerdict"];
+            envelopeDigest: components["schemas"]["Digest"];
+            recordedResult: components["schemas"]["Digest"];
+            replayedResult?: components["schemas"]["Digest"];
+            /**
+             * @description For `DIVERGED`, the first path at which the results differ. A path, never a value.
+             * @example $.emitted.TAX_VAT.amount
+             */
+            divergence?: string;
+        };
     };
     responses: {
+        /**
+         * @description The idempotency key was reused with a different request, or its first
+         *     request is still running. In both cases **the request was not
+         *     executed** (ADR-0013 §2.4).
+         */
+        IdempotencyConflict: {
+            headers: {
+                /**
+                 * @description Seconds to wait, for `REQUEST_IN_PROGRESS`.
+                 * @example 2
+                 */
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
         /** @description The request was malformed or violated the contract. */
         Validation: {
             headers: {
@@ -779,6 +1163,19 @@ export interface components {
         };
     };
     parameters: {
+        /**
+         * @description A key the client mints before the first attempt and reuses, unchanged,
+         *     on every retry of the same request (ADR-0013). Opaque to the server: it
+         *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+         *     a key used for a commit can never match an adjust.
+         * @example 5f0c2a1e-commit-INV-0001-1
+         */
+        IdempotencyKey: string;
+        /**
+         * @description The decision identifier.
+         * @example 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+         */
+        DecisionId: components["schemas"]["DecisionId"];
         /**
          * @description Maximum number of items to return. The server caps this independently,
          *     so a larger value is not an error and does not return more.
@@ -1214,6 +1611,145 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createQuote: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteRequest"];
+            };
+        };
+        responses: {
+            /** @description The estimate. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Quote"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    commitTransaction: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommitRequest"];
+            };
+        };
+        responses: {
+            /**
+             * @description The recorded decision. A replayed response carries
+             *     `Idempotent-Replay: true` and is byte-for-byte the original.
+             */
+            201: {
+                headers: {
+                    /**
+                     * @description Present, and `true`, when this is the stored response to an earlier request with the same key.
+                     * @example true
+                     */
+                    "Idempotent-Replay"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Decision"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["IdempotencyConflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getDecision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The decision identifier.
+                 * @example 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                 */
+                decisionId: components["parameters"]["DecisionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The decision. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Decision"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    replayDecision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The decision identifier.
+                 * @example 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                 */
+                decisionId: components["parameters"]["DecisionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The replay verdict. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplayReport"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };

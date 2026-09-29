@@ -613,6 +613,486 @@ namespace ZoikoTax.Sdk
 
     }
 
+    /// <summary>
+    /// What a rate applies to (ADR-0002). A rate without a basis is not a rate.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum RateBasis
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"NET")]
+        NET = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"GROSS")]
+        GROSS = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PER_UNIT")]
+        PER_UNIT = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"COMPOUND")]
+        COMPOUND = 3,
+
+    }
+
+    /// <summary>
+    /// The type of an emitted value. It says which of a value's other members are present.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ValueType
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"MONEY")]
+        MONEY = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RATE")]
+        RATE = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"QUANTITY")]
+        QUANTITY = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"BOOL")]
+        BOOL = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"STRING")]
+        STRING = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REASON_CODE")]
+        REASON_CODE = 5,
+
+    }
+
+    /// <summary>
+    /// What a determination concluded (ADR-0016 §2.1). Only `AUTHORITATIVE`
+    /// <br/>may be filed, and nothing produces it before A4. The refusals —
+    /// <br/>`AMBIGUOUS`, `CONFLICTED`, `UNSUPPORTED`, `REVIEW_REQUIRED` — are
+    /// <br/>outcomes with evidence, not errors: "we do not support this" is a fact
+    /// <br/>about coverage that is recorded against the transaction.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum Outcome
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AUTHORITATIVE")]
+        AUTHORITATIVE = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ADVISORY")]
+        ADVISORY = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AMBIGUOUS")]
+        AMBIGUOUS = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CONFLICTED")]
+        CONFLICTED = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"UNSUPPORTED")]
+        UNSUPPORTED = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REVIEW_REQUIRED")]
+        REVIEW_REQUIRED = 5,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ReplayVerdict
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"MATCH")]
+        MATCH = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DIVERGED")]
+        DIVERGED = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"BUNDLE_UNAVAILABLE")]
+        BUNDLE_UNAVAILABLE = 2,
+
+    }
+
+    /// <summary>
+    /// An amount and its currency, never one without the other.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class MoneyValue
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(64)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$")]
+        public string Amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z]{3}$")]
+        public string Currency { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RateValue
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(64)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$")]
+        public string Value { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("basis")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RateBasis>))]
+        public RateBasis Basis { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class QuantityValue
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(64)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$")]
+        public string Value { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("unit")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(32, MinimumLength = 1)]
+        public string Unit { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// The named values the active content reads, grouped by type. The names
+    /// <br/>are the pack's — `line.netAmount`, not a field this contract defines —
+    /// <br/>because which values a transaction carries is decided by content, and
+    /// <br/>a transaction shape fixed here would be tax logic in the API
+    /// <br/>(ZTAX-DET-001 §0.2). At least one value is required.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DeterminationInput
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("money")]
+        public System.Collections.Generic.IDictionary<string, MoneyValue>? Money { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("rates")]
+        public System.Collections.Generic.IDictionary<string, RateValue>? Rates { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("quantities")]
+        public System.Collections.Generic.IDictionary<string, QuantityValue>? Quantities { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("flags")]
+        public System.Collections.Generic.IDictionary<string, bool>? Flags { get; set; } = default!;
+
+        /// <summary>
+        /// Free-text values, such as a situs attribute. Classified as location
+        /// <br/>evidence because that is what content most often reads here.
+        /// <br/>
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("strings")]
+        public System.Collections.Generic.IDictionary<string, string>? Strings { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// The accumulator values the evaluation reads — exactly the ones the
+    /// <br/>active bundle declares, no more and no fewer. They are supplied by the
+    /// <br/>caller until the accumulator store of ADR-0004 lands, and are recorded
+    /// <br/>in the decision's envelope either way (ZTAX-DET-REQ-0034).
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReadSet : System.Collections.Generic.Dictionary<string, MoneyValue>
+    {
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class QuoteRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("eventTime")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string EventTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("input")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public DeterminationInput Input { get; set; } = new DeterminationInput();
+
+        [System.Text.Json.Serialization.JsonPropertyName("accumulators")]
+        public ReadSet? Accumulators { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CommitRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("businessKey")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(255, MinimumLength = 1)]
+        public string BusinessKey { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("supersedes")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
+        public System.Guid? Supersedes { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("eventTime")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string EventTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("input")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public DeterminationInput Input { get; set; } = new DeterminationInput();
+
+        [System.Text.Json.Serialization.JsonPropertyName("accumulators")]
+        public ReadSet? Accumulators { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// One emitted value. `type` says which other members are present:
+    /// <br/>`amount` and `currency` for `MONEY`; `value` and `basis` for `RATE`;
+    /// <br/>`value` and `unit` for `QUANTITY`; `flag` for `BOOL`; `text` for
+    /// <br/>`STRING`; `reasonCode` for `REASON_CODE`.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ResultValue
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ValueType>))]
+        public ValueType Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount")]
+        [System.ComponentModel.DataAnnotations.StringLength(64)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$")]
+        public string? Amount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z]{3}$")]
+        public string? Currency { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        [System.ComponentModel.DataAnnotations.StringLength(64)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$")]
+        public string? Value { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("basis")]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RateBasis>))]
+        public RateBasis? Basis { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("unit")]
+        [System.ComponentModel.DataAnnotations.StringLength(32, MinimumLength = 1)]
+        public string? Unit { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("flag")]
+        public bool? Flag { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("text")]
+        public string? Text { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reasonCode")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z][A-Z0-9_]*$")]
+        public string? ReasonCode { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// What the content emitted, by result slot. The slots are the pack's.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Emitted : System.Collections.Generic.Dictionary<string, ResultValue>
+    {
+
+    }
+
+    /// <summary>
+    /// The content bundle an evaluation ran against.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class BundleRef
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("bundleId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string BundleId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("digest")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string Digest { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("irVersion")]
+        public int IrVersion { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Quote
+    {
+
+        /// <summary>
+        /// Always `false`. A quote is an estimate at every authorization level (ADR-0004 §2.7).
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("authoritative")]
+        public bool Authoritative { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("outcome")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<Outcome>))]
+        public Outcome Outcome { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reasonCode")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z][A-Z0-9_]*$")]
+        public string ReasonCode { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("quotedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string QuotedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("bundle")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public BundleRef Bundle { get; set; } = new BundleRef();
+
+        [System.Text.Json.Serialization.JsonPropertyName("emitted")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public Emitted Emitted { get; set; } = new Emitted();
+
+    }
+
+    /// <summary>
+    /// The digests a decision names (ADR-0011 §2.8). `envelope` and `result`
+    /// <br/>are the evidence objects; `input` is the canonical input inside the
+    /// <br/>envelope, which is what a search by input matches.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DecisionDigests
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("input")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string Input { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("envelope")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string Envelope { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("result")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string Result { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// One recorded decision. Immutable; a correction is a new decision whose `supersedes` names this one.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Decision
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("businessKey")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(255, MinimumLength = 1)]
+        public string BusinessKey { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("supersedes")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
+        public System.Guid? Supersedes { get; set; } = default!;
+
+        /// <summary>
+        /// Whether this decision may be filed. `false` for every decision before A4.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("authoritative")]
+        public bool Authoritative { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("outcome")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<Outcome>))]
+        public Outcome Outcome { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reasonCode")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z][A-Z0-9_]*$")]
+        public string ReasonCode { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("eventTime")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string EventTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RecordedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("bundle")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public BundleRef Bundle { get; set; } = new BundleRef();
+
+        [System.Text.Json.Serialization.JsonPropertyName("digests")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public DecisionDigests Digests { get; set; } = new DecisionDigests();
+
+        [System.Text.Json.Serialization.JsonPropertyName("emitted")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public Emitted Emitted { get; set; } = new Emitted();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReplayReport
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("decisionId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
+        public System.Guid DecisionId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("verdict")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ReplayVerdict>))]
+        public ReplayVerdict Verdict { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("envelopeDigest")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string EnvelopeDigest { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedResult")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string RecordedResult { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("replayedResult")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string? ReplayedResult { get; set; } = default!;
+
+        /// <summary>
+        /// For `DIVERGED`, the first path at which the results differ. A path, never a value.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("divergence")]
+        public string? Divergence { get; set; } = default!;
+
+    }
+
 
 }
 

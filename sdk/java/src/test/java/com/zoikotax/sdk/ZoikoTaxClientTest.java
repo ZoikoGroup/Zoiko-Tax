@@ -24,7 +24,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sun.net.httpserver.HttpServer;
 import com.zoikotax.sdk.model.Capabilities;
+import com.zoikotax.sdk.model.CommitRequest;
 import com.zoikotax.sdk.model.CreateUserRequest;
+import com.zoikotax.sdk.model.DeterminationInput;
+import com.zoikotax.sdk.model.MoneyValue;
+import com.zoikotax.sdk.model.QuoteRequest;
 import com.zoikotax.sdk.model.Role;
 import com.zoikotax.sdk.model.Session;
 import com.zoikotax.sdk.model.SignInRequest;
@@ -38,6 +42,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 
@@ -259,6 +264,60 @@ class ZoikoTaxClientTest {
             "{\"tenant\":\"acme\",\"email\":\"admin@acme.example\","
                 + "\"password\":\"correct horse battery staple\"}"),
         JSON.readTree(stub.calls.get(0).body()));
+  }
+
+  @Test
+  void aCommitSendsTheCallersIdempotencyKey() throws IOException {
+    Stub stub = new Stub(json(201, Map.of("id", "01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f")));
+    ZoikoTaxClient client = client(stub);
+
+    client.commitTransaction(
+        "5f0c2a1e-commit-INV-0001-1",
+        new CommitRequest()
+            .businessKey("INV-0001/1")
+            .eventTime("2026-09-24T18:00:00.000000Z")
+            .input(
+                new DeterminationInput()
+                    .putMoneyItem("line.netAmount", new MoneyValue().amount("100.00").currency("EUR"))));
+
+    Transport.Request sent = stub.calls.get(0);
+    assertEquals("POST", sent.method());
+    assertEquals(BASE + "/v1/transactions:commit", sent.uri().toString());
+    assertEquals("5f0c2a1e-commit-INV-0001-1", sent.header("Idempotency-Key"));
+    // An amount is a string on the wire, with its scale intact.
+    assertEquals(
+        JSON.readTree(
+            "{\"businessKey\":\"INV-0001/1\",\"eventTime\":\"2026-09-24T18:00:00.000000Z\","
+                + "\"input\":{\"money\":{\"line.netAmount\":{\"amount\":\"100.00\",\"currency\":\"EUR\"}}}}"),
+        JSON.readTree(sent.body()));
+  }
+
+  @Test
+  void theDeterminationOperationsSendTheirMethodAndPath() {
+    UUID decision = UUID.fromString("01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f");
+    Stub stub = new Stub(empty(204));
+    ZoikoTaxClient client = client(stub);
+
+    client.createQuote(
+        new QuoteRequest()
+            .eventTime("2026-09-24T18:00:00.000000Z")
+            .input(new DeterminationInput().putFlagsItem("line.reducedRateApplies", false)));
+    client.getDecision(decision);
+    client.replayDecision(decision);
+
+    assertEquals("POST " + BASE + "/v1/quotes", describe(stub.calls.get(0)));
+    assertEquals(
+        "GET " + BASE + "/v1/decisions/01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f",
+        describe(stub.calls.get(1)));
+    assertEquals(
+        "POST " + BASE + "/v1/replay/01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f",
+        describe(stub.calls.get(2)));
+    // Only a commit carries a key; a quote records nothing to be idempotent about.
+    assertNull(stub.calls.get(0).header("Idempotency-Key"));
+  }
+
+  private static String describe(Transport.Request request) {
+    return request.method() + " " + request.uri();
   }
 
   @Test

@@ -279,6 +279,235 @@ class RoleRequest(TypedDict):
     role: Role
 
 
+DecisionId: TypeAlias = str
+"""
+A decision identifier: a UUIDv7 in lowercase canonical form
+(ADR-0012 §2.1). Sortable by creation, never recycled.
+
+"""
+
+
+Decimal: TypeAlias = str
+"""
+A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+digits, and an optional fraction. No exponent, no leading `+`, no
+leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+different assertions and digest differently.
+
+Classified as fiscal personal data because on a consumer transaction
+it is: logs carry it redacted, and it is kept for the fiscal record
+period as evidence.
+
+"""
+
+
+CurrencyCode: TypeAlias = str
+"""
+An ISO 4217 alphabetic currency code.
+"""
+
+
+RateBasis: TypeAlias = Literal['NET', 'GROSS', 'PER_UNIT', 'COMPOUND']
+"""
+What a rate applies to (ADR-0002). A rate without a basis is not a rate.
+"""
+
+
+UnitCode: TypeAlias = str
+"""
+A unit of measure, as the content pack names it.
+"""
+
+
+ValueType: TypeAlias = Literal['MONEY', 'RATE', 'QUANTITY', 'BOOL', 'STRING', 'REASON_CODE']
+"""
+The type of an emitted value. It says which of a value's other members are present.
+"""
+
+
+Outcome: TypeAlias = Literal['AUTHORITATIVE', 'ADVISORY', 'AMBIGUOUS', 'CONFLICTED', 'UNSUPPORTED', 'REVIEW_REQUIRED']
+"""
+What a determination concluded (ADR-0016 §2.1). Only `AUTHORITATIVE`
+may be filed, and nothing produces it before A4. The refusals —
+`AMBIGUOUS`, `CONFLICTED`, `UNSUPPORTED`, `REVIEW_REQUIRED` — are
+outcomes with evidence, not errors: "we do not support this" is a fact
+about coverage that is recorded against the transaction.
+
+"""
+
+
+ReplayVerdict: TypeAlias = Literal['MATCH', 'DIVERGED', 'BUNDLE_UNAVAILABLE']
+
+
+BusinessKey: TypeAlias = str
+"""
+The caller's stable reference for what is being determined — a line, a
+transaction. It is the identity across corrections: every version of a
+decision shares it (ADR-0003). Not an identifier this service
+interprets.
+
+"""
+
+
+class MoneyValue(TypedDict):
+    """
+    An amount and its currency, never one without the other.
+    """
+
+    amount: Decimal
+    currency: CurrencyCode
+
+
+class RateValue(TypedDict):
+    value: Decimal
+    basis: RateBasis
+
+
+class QuantityValue(TypedDict):
+    value: Decimal
+    unit: UnitCode
+
+
+class DeterminationInput(TypedDict):
+    """
+    The named values the active content reads, grouped by type. The names
+    are the pack's — `line.netAmount`, not a field this contract defines —
+    because which values a transaction carries is decided by content, and
+    a transaction shape fixed here would be tax logic in the API
+    (ZTAX-DET-001 §0.2). At least one value is required.
+
+    """
+
+    money: NotRequired[dict[str, MoneyValue]]
+    rates: NotRequired[dict[str, RateValue]]
+    quantities: NotRequired[dict[str, QuantityValue]]
+    flags: NotRequired[dict[str, bool]]
+    strings: NotRequired[dict[str, str]]
+    """
+    Free-text values, such as a situs attribute. Classified as location
+    evidence because that is what content most often reads here.
+
+    """
+
+
+ReadSet: TypeAlias = dict[str, MoneyValue]
+"""
+The accumulator values the evaluation reads — exactly the ones the
+active bundle declares, no more and no fewer. They are supplied by the
+caller until the accumulator store of ADR-0004 lands, and are recorded
+in the decision's envelope either way (ZTAX-DET-REQ-0034).
+
+"""
+
+
+class QuoteRequest(TypedDict):
+    eventTime: Timestamp
+    input: DeterminationInput
+    accumulators: NotRequired[ReadSet]
+
+
+class CommitRequest(TypedDict):
+    businessKey: BusinessKey
+    supersedes: NotRequired[DecisionId]
+    eventTime: Timestamp
+    input: DeterminationInput
+    accumulators: NotRequired[ReadSet]
+
+
+class ResultValue(TypedDict):
+    """
+    One emitted value. `type` says which other members are present:
+    `amount` and `currency` for `MONEY`; `value` and `basis` for `RATE`;
+    `value` and `unit` for `QUANTITY`; `flag` for `BOOL`; `text` for
+    `STRING`; `reasonCode` for `REASON_CODE`.
+
+    """
+
+    type: ValueType
+    amount: NotRequired[Decimal]
+    currency: NotRequired[CurrencyCode]
+    value: NotRequired[Decimal]
+    basis: NotRequired[RateBasis]
+    unit: NotRequired[UnitCode]
+    flag: NotRequired[bool]
+    text: NotRequired[str]
+    reasonCode: NotRequired[ReasonCode]
+
+
+Emitted: TypeAlias = dict[str, ResultValue]
+"""
+What the content emitted, by result slot. The slots are the pack's.
+"""
+
+
+class BundleRef(TypedDict):
+    """
+    The content bundle an evaluation ran against.
+    """
+
+    bundleId: str
+    digest: Digest
+    irVersion: int
+
+
+class Quote(TypedDict):
+    authoritative: bool
+    """
+    Always `false`. A quote is an estimate at every authorization level (ADR-0004 §2.7).
+    """
+    outcome: Outcome
+    reasonCode: ReasonCode
+    quotedAt: Timestamp
+    bundle: BundleRef
+    emitted: Emitted
+
+
+class DecisionDigests(TypedDict):
+    """
+    The digests a decision names (ADR-0011 §2.8). `envelope` and `result`
+    are the evidence objects; `input` is the canonical input inside the
+    envelope, which is what a search by input matches.
+
+    """
+
+    input: Digest
+    envelope: Digest
+    result: Digest
+
+
+class Decision(TypedDict):
+    """
+    One recorded decision. Immutable; a correction is a new decision whose `supersedes` names this one.
+    """
+
+    id: DecisionId
+    businessKey: BusinessKey
+    supersedes: NotRequired[DecisionId]
+    authoritative: bool
+    """
+    Whether this decision may be filed. `false` for every decision before A4.
+    """
+    outcome: Outcome
+    reasonCode: ReasonCode
+    eventTime: Timestamp
+    recordedAt: Timestamp
+    bundle: BundleRef
+    digests: DecisionDigests
+    emitted: Emitted
+
+
+class ReplayReport(TypedDict):
+    decisionId: DecisionId
+    verdict: ReplayVerdict
+    envelopeDigest: Digest
+    recordedResult: Digest
+    replayedResult: NotRequired[Digest]
+    divergence: NotRequired[str]
+    """
+    For `DIVERGED`, the first path at which the results differ. A path, never a value.
+    """
+
+
 class V1AdminUsersGetResponse(TypedDict):
     users: list[User]
 

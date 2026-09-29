@@ -26,75 +26,104 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 
 /**
- * ChangePasswordRequest
+ * The digests a decision names (ADR-0011 §2.8). &#x60;envelope&#x60; and &#x60;result&#x60; are the evidence objects; &#x60;input&#x60; is the canonical input inside the envelope, which is what a search by input matches. 
  */
 @JsonPropertyOrder({
-  ChangePasswordRequest.JSON_PROPERTY_CURRENT_PASSWORD,
-  ChangePasswordRequest.JSON_PROPERTY_NEW_PASSWORD
+  DecisionDigests.JSON_PROPERTY_INPUT,
+  DecisionDigests.JSON_PROPERTY_ENVELOPE,
+  DecisionDigests.JSON_PROPERTY_RESULT
 })
 @jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen", comments = "Generator version: 7.25.0")
-public class ChangePasswordRequest {
-  public static final String JSON_PROPERTY_CURRENT_PASSWORD = "currentPassword";
+public class DecisionDigests {
+  public static final String JSON_PROPERTY_INPUT = "input";
   @jakarta.annotation.Nonnull
-  private String currentPassword;
+  private String input;
 
-  public static final String JSON_PROPERTY_NEW_PASSWORD = "newPassword";
+  public static final String JSON_PROPERTY_ENVELOPE = "envelope";
   @jakarta.annotation.Nonnull
-  private String newPassword;
+  private String envelope;
 
-  public ChangePasswordRequest() { 
+  public static final String JSON_PROPERTY_RESULT = "result";
+  @jakarta.annotation.Nonnull
+  private String result;
+
+  public DecisionDigests() { 
   }
 
-  public ChangePasswordRequest currentPassword(@jakarta.annotation.Nonnull String currentPassword) {
-    this.currentPassword = currentPassword;
+  public DecisionDigests input(@jakarta.annotation.Nonnull String input) {
+    this.input = input;
     return this;
   }
 
   /**
-   * Get currentPassword
-   * @return currentPassword
+   * A canonical digest: SHA-256 over the canonical bytes, lowercase hex, carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is not decoration — a future &#x60;zt2:&#x60; digest of the same document is a different digest, and comparing the two without it would be wrong. 
+   * @return input
    */
   @jakarta.annotation.Nonnull
-  @JsonProperty(value = JSON_PROPERTY_CURRENT_PASSWORD, required = true)
+  @JsonProperty(value = JSON_PROPERTY_INPUT, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public String getCurrentPassword() {
-    return currentPassword;
+  public String getInput() {
+    return input;
   }
 
 
-  @JsonProperty(value = JSON_PROPERTY_CURRENT_PASSWORD, required = true)
+  @JsonProperty(value = JSON_PROPERTY_INPUT, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setCurrentPassword(@jakarta.annotation.Nonnull String currentPassword) {
-    this.currentPassword = currentPassword;
+  public void setInput(@jakarta.annotation.Nonnull String input) {
+    this.input = input;
   }
 
 
-  public ChangePasswordRequest newPassword(@jakarta.annotation.Nonnull String newPassword) {
-    this.newPassword = newPassword;
+  public DecisionDigests envelope(@jakarta.annotation.Nonnull String envelope) {
+    this.envelope = envelope;
     return this;
   }
 
   /**
-   * Get newPassword
-   * @return newPassword
+   * A canonical digest: SHA-256 over the canonical bytes, lowercase hex, carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is not decoration — a future &#x60;zt2:&#x60; digest of the same document is a different digest, and comparing the two without it would be wrong. 
+   * @return envelope
    */
   @jakarta.annotation.Nonnull
-  @JsonProperty(value = JSON_PROPERTY_NEW_PASSWORD, required = true)
+  @JsonProperty(value = JSON_PROPERTY_ENVELOPE, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public String getNewPassword() {
-    return newPassword;
+  public String getEnvelope() {
+    return envelope;
   }
 
 
-  @JsonProperty(value = JSON_PROPERTY_NEW_PASSWORD, required = true)
+  @JsonProperty(value = JSON_PROPERTY_ENVELOPE, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setNewPassword(@jakarta.annotation.Nonnull String newPassword) {
-    this.newPassword = newPassword;
+  public void setEnvelope(@jakarta.annotation.Nonnull String envelope) {
+    this.envelope = envelope;
+  }
+
+
+  public DecisionDigests result(@jakarta.annotation.Nonnull String result) {
+    this.result = result;
+    return this;
+  }
+
+  /**
+   * A canonical digest: SHA-256 over the canonical bytes, lowercase hex, carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is not decoration — a future &#x60;zt2:&#x60; digest of the same document is a different digest, and comparing the two without it would be wrong. 
+   * @return result
+   */
+  @jakarta.annotation.Nonnull
+  @JsonProperty(value = JSON_PROPERTY_RESULT, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public String getResult() {
+    return result;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_RESULT, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public void setResult(@jakarta.annotation.Nonnull String result) {
+    this.result = result;
   }
 
 
   /**
-   * Return true if this ChangePasswordRequest object is equal to o.
+   * Return true if this DecisionDigests object is equal to o.
    */
   @Override
   public boolean equals(Object o) {
@@ -104,22 +133,24 @@ public class ChangePasswordRequest {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ChangePasswordRequest changePasswordRequest = (ChangePasswordRequest) o;
-    return Objects.equals(this.currentPassword, changePasswordRequest.currentPassword) &&
-        Objects.equals(this.newPassword, changePasswordRequest.newPassword);
+    DecisionDigests decisionDigests = (DecisionDigests) o;
+    return Objects.equals(this.input, decisionDigests.input) &&
+        Objects.equals(this.envelope, decisionDigests.envelope) &&
+        Objects.equals(this.result, decisionDigests.result);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(currentPassword, newPassword);
+    return Objects.hash(input, envelope, result);
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class ChangePasswordRequest {\n");
-    sb.append("    currentPassword: ").append("*").append("\n");
-    sb.append("    newPassword: ").append("*").append("\n");
+    sb.append("class DecisionDigests {\n");
+    sb.append("    input: ").append(toIndentedString(input)).append("\n");
+    sb.append("    envelope: ").append(toIndentedString(envelope)).append("\n");
+    sb.append("    result: ").append(toIndentedString(result)).append("\n");
     sb.append("}");
     return sb.toString();
   }

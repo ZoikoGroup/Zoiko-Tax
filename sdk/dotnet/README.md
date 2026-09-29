@@ -104,7 +104,7 @@ Even then, arithmetic on amounts belongs in a cell, under a rounding policy that
 
 Timestamps are strings for a related reason. A `Timestamp` is RFC 3339 with exactly six fractional digits ([ADR-0011](../../../adr/ADR-0011-canonicalization-digest-and-evidence-sealing.md) §2.1 P2); a `DateTimeOffset` would re-encode it differently on the way back out, and two encodings of one instant are two digests. Parse one with `DateTimeOffset.Parse(value, CultureInfo.InvariantCulture)` when you need to compare it.
 
-This version of the surface carries no fiscal amounts. The rule is stated because it governs every addition to it.
+Quotes, commits and decisions carry them: every `amount` and `value` in those operations is a string in this SDK's types, and stays one.
 
 ## How the types stay true
 

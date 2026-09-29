@@ -16,90 +16,52 @@ package com.zoikotax.sdk.model;
 import java.util.Objects;
 import java.util.Map;
 import java.util.HashMap;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.fasterxml.jackson.annotation.JsonValue;
-import com.zoikotax.sdk.model.UserStatus;
-import java.util.Arrays;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 /**
- * SetUserStatusRequest
+ * What a rate applies to (ADR-0002). A rate without a basis is not a rate.
  */
-@JsonPropertyOrder({
-  SetUserStatusRequest.JSON_PROPERTY_STATUS
-})
-@jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen", comments = "Generator version: 7.25.0")
-public class SetUserStatusRequest {
-  public static final String JSON_PROPERTY_STATUS = "status";
-  @jakarta.annotation.Nonnull
-  private UserStatus status;
+public enum RateBasis {
+  
+  NET("NET"),
+  
+  GROSS("GROSS"),
+  
+  PER_UNIT("PER_UNIT"),
+  
+  COMPOUND("COMPOUND"),
+  
+  UNKNOWN_DEFAULT_OPEN_API("unknown_default_open_api");
 
-  public SetUserStatusRequest() { 
+  private String value;
+
+  RateBasis(String value) {
+    this.value = value;
   }
 
-  public SetUserStatusRequest status(@jakarta.annotation.Nonnull UserStatus status) {
-    this.status = status;
-    return this;
-  }
-
-  /**
-   * Get status
-   * @return status
-   */
-  @jakarta.annotation.Nonnull
-  @JsonProperty(value = JSON_PROPERTY_STATUS, required = true)
-  @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public UserStatus getStatus() {
-    return status;
-  }
-
-
-  @JsonProperty(value = JSON_PROPERTY_STATUS, required = true)
-  @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setStatus(@jakarta.annotation.Nonnull UserStatus status) {
-    this.status = status;
-  }
-
-
-  /**
-   * Return true if this SetUserStatusRequest object is equal to o.
-   */
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    SetUserStatusRequest setUserStatusRequest = (SetUserStatusRequest) o;
-    return Objects.equals(this.status, setUserStatusRequest.status);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(status);
+  @JsonValue
+  public String getValue() {
+    return value;
   }
 
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append("class SetUserStatusRequest {\n");
-    sb.append("    status: ").append(toIndentedString(status)).append("\n");
-    sb.append("}");
-    return sb.toString();
+    return String.valueOf(value);
   }
 
-  /**
-   * Convert the given object to string with each line indented by 4 spaces
-   * (except the first line).
-   */
-  private String toIndentedString(Object o) {
-    return o == null ? "null" : o.toString().replace("\n", "\n    ");
+  @JsonCreator
+  public static RateBasis fromValue(String value) {
+    for (RateBasis b : RateBasis.values()) {
+      if (b.value.equals(value)) {
+        return b;
+      }
+    }
+    return UNKNOWN_DEFAULT_OPEN_API;
   }
+
 }
 

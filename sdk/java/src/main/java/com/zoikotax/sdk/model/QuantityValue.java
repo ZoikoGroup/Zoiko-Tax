@@ -26,75 +26,75 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 
 /**
- * ChangePasswordRequest
+ * QuantityValue
  */
 @JsonPropertyOrder({
-  ChangePasswordRequest.JSON_PROPERTY_CURRENT_PASSWORD,
-  ChangePasswordRequest.JSON_PROPERTY_NEW_PASSWORD
+  QuantityValue.JSON_PROPERTY_VALUE,
+  QuantityValue.JSON_PROPERTY_UNIT
 })
 @jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen", comments = "Generator version: 7.25.0")
-public class ChangePasswordRequest {
-  public static final String JSON_PROPERTY_CURRENT_PASSWORD = "currentPassword";
+public class QuantityValue {
+  public static final String JSON_PROPERTY_VALUE = "value";
   @jakarta.annotation.Nonnull
-  private String currentPassword;
+  private String value;
 
-  public static final String JSON_PROPERTY_NEW_PASSWORD = "newPassword";
+  public static final String JSON_PROPERTY_UNIT = "unit";
   @jakarta.annotation.Nonnull
-  private String newPassword;
+  private String unit;
 
-  public ChangePasswordRequest() { 
+  public QuantityValue() { 
   }
 
-  public ChangePasswordRequest currentPassword(@jakarta.annotation.Nonnull String currentPassword) {
-    this.currentPassword = currentPassword;
+  public QuantityValue value(@jakarta.annotation.Nonnull String value) {
+    this.value = value;
     return this;
   }
 
   /**
-   * Get currentPassword
-   * @return currentPassword
+   * A decimal in canonical string form (ADR-0010 §2.9): an optional minus, digits, and an optional fraction. No exponent, no leading &#x60;+&#x60;, no leading zeros. **Scale is significant**: &#x60;\&quot;1.50\&quot;&#x60; and &#x60;\&quot;1.5\&quot;&#x60; are different assertions and digest differently.  Classified as fiscal personal data because on a consumer transaction it is: logs carry it redacted, and it is kept for the fiscal record period as evidence. 
+   * @return value
    */
   @jakarta.annotation.Nonnull
-  @JsonProperty(value = JSON_PROPERTY_CURRENT_PASSWORD, required = true)
+  @JsonProperty(value = JSON_PROPERTY_VALUE, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public String getCurrentPassword() {
-    return currentPassword;
+  public String getValue() {
+    return value;
   }
 
 
-  @JsonProperty(value = JSON_PROPERTY_CURRENT_PASSWORD, required = true)
+  @JsonProperty(value = JSON_PROPERTY_VALUE, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setCurrentPassword(@jakarta.annotation.Nonnull String currentPassword) {
-    this.currentPassword = currentPassword;
+  public void setValue(@jakarta.annotation.Nonnull String value) {
+    this.value = value;
   }
 
 
-  public ChangePasswordRequest newPassword(@jakarta.annotation.Nonnull String newPassword) {
-    this.newPassword = newPassword;
+  public QuantityValue unit(@jakarta.annotation.Nonnull String unit) {
+    this.unit = unit;
     return this;
   }
 
   /**
-   * Get newPassword
-   * @return newPassword
+   * A unit of measure, as the content pack names it.
+   * @return unit
    */
   @jakarta.annotation.Nonnull
-  @JsonProperty(value = JSON_PROPERTY_NEW_PASSWORD, required = true)
+  @JsonProperty(value = JSON_PROPERTY_UNIT, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public String getNewPassword() {
-    return newPassword;
+  public String getUnit() {
+    return unit;
   }
 
 
-  @JsonProperty(value = JSON_PROPERTY_NEW_PASSWORD, required = true)
+  @JsonProperty(value = JSON_PROPERTY_UNIT, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setNewPassword(@jakarta.annotation.Nonnull String newPassword) {
-    this.newPassword = newPassword;
+  public void setUnit(@jakarta.annotation.Nonnull String unit) {
+    this.unit = unit;
   }
 
 
   /**
-   * Return true if this ChangePasswordRequest object is equal to o.
+   * Return true if this QuantityValue object is equal to o.
    */
   @Override
   public boolean equals(Object o) {
@@ -104,22 +104,22 @@ public class ChangePasswordRequest {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ChangePasswordRequest changePasswordRequest = (ChangePasswordRequest) o;
-    return Objects.equals(this.currentPassword, changePasswordRequest.currentPassword) &&
-        Objects.equals(this.newPassword, changePasswordRequest.newPassword);
+    QuantityValue quantityValue = (QuantityValue) o;
+    return Objects.equals(this.value, quantityValue.value) &&
+        Objects.equals(this.unit, quantityValue.unit);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(currentPassword, newPassword);
+    return Objects.hash(value, unit);
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class ChangePasswordRequest {\n");
-    sb.append("    currentPassword: ").append("*").append("\n");
-    sb.append("    newPassword: ").append("*").append("\n");
+    sb.append("class QuantityValue {\n");
+    sb.append("    value: ").append(toIndentedString(value)).append("\n");
+    sb.append("    unit: ").append(toIndentedString(unit)).append("\n");
     sb.append("}");
     return sb.toString();
   }
