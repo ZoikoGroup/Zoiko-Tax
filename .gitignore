@@ -37,3 +37,7 @@ content/.keys/
 
 # The local evidence store (ZTAX_EVIDENCE_DIR in .env.local.example).
 .evidence/
+
+# Python
+__pycache__/
+*.pyc
