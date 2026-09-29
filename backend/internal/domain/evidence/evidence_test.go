@@ -274,3 +274,84 @@ func TestCompareResultsNamesTheFirstDivergence(t *testing.T) {
 		t.Fatal("identical bytes did not match")
 	}
 }
+
+func result(t *testing.T) evidence.Result {
+	t.Helper()
+	rate, err := fiscal.ParseRate("0.2100", fiscal.RateBasis("NET"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	qty, err := fiscal.ParseQuantity("3", "EA")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return evidence.Result{
+		EnvelopeDigest: canonical.SumBytes([]byte("envelope")),
+		Outcome:        evidence.OutcomeAdvisory,
+		Reason:         errs.ReasonNotAuthoritative,
+		Emitted: map[string]rule.Value{
+			"TAX_VAT":   {Type: rule.TypeMoney, Money: fiscaltest.Money(t, "21.11", "EUR")},
+			"RATE":      {Type: rule.TypeRate, Rate: rate},
+			"UNITS":     {Type: rule.TypeQuantity, Quantity: qty},
+			"EXEMPT":    {Type: rule.TypeBool, Bool: false},
+			"LABEL":     {Type: rule.TypeString, String: "standard"},
+			"WHY_NOT":   {Type: rule.TypeReason, Reason: errs.ReasonNotAuthoritative},
+			"ZERO_RATE": {Type: rule.TypeMoney, Money: fiscaltest.Money(t, "0.00", "EUR")},
+		},
+		Trace: []rule.TraceStep{
+			{Node: "vat/net", Op: rule.OpInput, Output: "100.50", OutputType: rule.TypeMoney,
+				RuleVersion: "2026.09.1", RuleSemanticID: "ZTAX-RULE-WORKED-VAT"},
+			{Node: "vat/vat", Op: rule.OpApplyRate, Args: []rule.NodeID{"vat/net", "vat/applicable"},
+				Output: "21.11", OutputType: rule.TypeMoney, RuleVersion: "2026.09.1",
+				RuleSemanticID: "ZTAX-RULE-WORKED-VAT", Policy: "line2"},
+		},
+	}
+}
+
+func TestResultRoundTripsExactly(t *testing.T) {
+	encoded, err := result(t).Encode()
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := evidence.DecodeResult(encoded)
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	again, err := decoded.Encode()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(encoded, again) {
+		t.Fatalf("round trip changed the result:\n%s\n%s", encoded, again)
+	}
+	// Scale survives: a zero-rated line reads back as 0.00, not 0.
+	if got := decoded.Emitted["ZERO_RATE"].Money.String(); got != "0.00" {
+		t.Fatalf("0.00 read back as %s", got)
+	}
+}
+
+func TestDecodeResultRefusesReinterpretation(t *testing.T) {
+	encoded, err := result(t).Encode()
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(encoded)
+	cases := map[string]string{
+		"a fiscal amount as a JSON number (P1)": strings.Replace(s, `"amount":"21.11"`, `"amount":21.11`, 1),
+		"an unknown member (P5)":                strings.Replace(s, `"outcome":"ADVISORY"`, `"outcome":"ADVISORY","extra":true`, 1),
+		"a boolean carried as a string":         strings.Replace(s, `"type":"BOOL","value":false`, `"type":"BOOL","value":"false"`, 1),
+		"an unknown value type":                 strings.Replace(s, `"type":"STRING"`, `"type":"TEXT"`, 1),
+		"insignificant whitespace":              strings.Replace(s, `"outcome":"ADVISORY"`, `"outcome": "ADVISORY"`, 1),
+		"trailing content":                      s + `{}`,
+	}
+	for name, doc := range cases {
+		t.Run(name, func(t *testing.T) {
+			if doc == s {
+				t.Fatal("the case did not alter the document; fix the test")
+			}
+			if _, err := evidence.DecodeResult([]byte(doc)); err == nil {
+				t.Fatalf("accepted %s", doc)
+			}
+		})
+	}
+}

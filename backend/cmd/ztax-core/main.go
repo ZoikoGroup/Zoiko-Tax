@@ -24,9 +24,11 @@ import (
 	"go.opentelemetry.io/otel"
 
 	adaptercontent "github.com/zoikogroup/zoikotax/backend/internal/adapter/content"
+	adapterevidence "github.com/zoikogroup/zoikotax/backend/internal/adapter/evidence"
 	"github.com/zoikogroup/zoikotax/backend/internal/adapter/postgres"
 	"github.com/zoikogroup/zoikotax/backend/internal/app"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
@@ -123,6 +125,9 @@ func run() error {
 	router := ztaxhttp.NewRouter(auth, admin, store.Users(), readiness{store: store}, log, ids)
 	router.Tracer = tracing.Provider
 	router.Content = content
+	if router.Determination, err = wireDetermination(cfg, store, content, clk, ids, log); err != nil {
+		return err
+	}
 	router.SecureCookies = cfg.SecureCookies
 	router.TrustProxy = cfg.TrustProxy
 	router.Cell, router.Region, router.Environment = cfg.Cell, cfg.Region, cfg.Environment
@@ -393,4 +398,35 @@ func setupTracing(ctx context.Context, cfg config.Config, content *rule.Holder, 
 		log.Info("tracing to collector", "otlp.endpoint", cfg.OTLPEndpoint, "trace.sample_ratio", cfg.TraceSampleRatio)
 	}
 	return tracing, nil
+}
+
+// wireDetermination builds the quote, commit, decision and replay service, or
+// returns nil in a cell with no evidence store — which then answers that
+// surface with 503 rather than evaluating what it cannot record.
+//
+// The library holds the bundle this process started with, so a decision made
+// under it replays here. A decision made under an earlier bundle replays as
+// BUNDLE_UNAVAILABLE until the library is populated from the content store,
+// which is a verdict about this cell rather than about the decision.
+func wireDetermination(cfg config.Config, store *postgres.Store, content *rule.Holder, clk clock.Clock, ids idgen.Generator, log *slog.Logger) (*app.DeterminationService, error) {
+	if cfg.EvidenceDir == "" {
+		log.Warn("no evidence store configured; the determination surface will refuse with " + string(errs.ReasonNoContentBundle))
+		return nil, nil
+	}
+	objects, err := adapterevidence.NewFileStore(cfg.EvidenceDir)
+	if err != nil {
+		return nil, err
+	}
+	library := &rule.Library{}
+	if b := content.Current(); b != nil {
+		library.Add(b)
+	}
+	trains := evidence.Trains{
+		App: cfg.TrainApp, Content: cfg.TrainContent, AI: cfg.TrainAI, Adapter: cfg.TrainAdapter,
+		Infra: cfg.TrainInfra, Schema: cfg.TrainSchema, Migration: cfg.TrainMigration,
+	}
+	svc := app.NewDeterminationService(content, library, store.Decisions(), objects, store, clk, ids, trains).
+		WithIdempotency(app.NewIdempotency(store.Idempotency(), store, clk))
+	log.Info("determination surface enabled", "evidence.dir", cfg.EvidenceDir)
+	return svc, nil
 }

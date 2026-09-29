@@ -18,6 +18,7 @@ import (
 
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/idempotency"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/identity"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
@@ -147,6 +148,36 @@ type DecisionRepository interface {
 	// SealLeaves returns the leaves of every decision recorded in
 	// [from, to), in evidence.LeafOrder.
 	SealLeaves(ctx context.Context, from, to time.Time) ([]evidence.SealLeaf, error)
+}
+
+// ---------------------------------------------------------------------------
+// idempotency
+// ---------------------------------------------------------------------------
+
+// IdempotencyRepository reads and writes idempotency records (ADR-0013).
+//
+// The record's key carries a tenant because the domain type does; every
+// implementation refuses a key whose tenant is not the one in the context,
+// rather than trusting it.
+type IdempotencyRepository interface {
+	// Insert writes a PENDING record. It reports false, and no error, when a
+	// record for the key already exists: the primary key refusing the insert is
+	// the concurrency control of ADR-0013 §2.5, not a failure.
+	Insert(ctx context.Context, r idempotency.Record) (bool, error)
+	// Get reads the record for a key, verifying a settled body against its
+	// digest. A missing record is CategoryNotFound.
+	Get(ctx context.Context, key idempotency.Key) (idempotency.Record, error)
+	// Complete settles a PENDING record. It runs in the transaction that
+	// applies the domain effect (ADR-0013 §2.6), and refuses a record that is
+	// no longer PENDING.
+	Complete(ctx context.Context, r idempotency.Record) error
+	// Release deletes a PENDING record after a transient failure, so a retry is
+	// a genuine new attempt (ADR-0013 §2.7). A settled record is never deleted
+	// by this.
+	Release(ctx context.Context, key idempotency.Key) error
+	// Expire deletes the record for a key if it expired at or before now, and
+	// reports whether it did. An expired key behaves as a new key (§2.9).
+	Expire(ctx context.Context, key idempotency.Key, now time.Time) (bool, error)
 }
 
 // SealRepository indexes period seals.

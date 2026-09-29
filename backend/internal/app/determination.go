@@ -12,6 +12,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/fiscal"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/idempotency"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
@@ -25,9 +26,9 @@ import (
 // This is the W1 exit gate's "one decision type replays exactly": a decision
 // from the active content bundle is recorded as two evidence objects and an
 // index row, and Replay rebuilds its result from the envelope alone and
-// compares bytes. It is internal and test use only — A2, not A3 — and it is not
-// on the transport surface: the quote and commit endpoints that will call it
-// are W2 lane K.
+// compares bytes. It is internal and test use only — A2, not A3. The transport
+// reaches it through POST /v1/quotes, POST /v1/transactions:commit,
+// GET /v1/decisions/{id} and POST /v1/replay/{id} (W2 lane K).
 //
 // Every figure it records is ADVISORY (evidence.Conclude). That is structural
 // rather than configured: there is no path through this service that can
@@ -41,6 +42,10 @@ type DeterminationService struct {
 	clock     clock.Clock
 	ids       idgen.Generator
 	trains    evidence.Trains
+
+	// idempotency guards Commit. Nil in a service built only to determine and
+	// replay, whose Commit then refuses rather than committing unguarded.
+	idempotency *Idempotency
 }
 
 // NewDeterminationService wires the service. trains are the seven release-train
@@ -59,6 +64,12 @@ func NewDeterminationService(
 		content: content, library: library, decisions: decisions, evidence: store,
 		tx: tx, clock: clk, ids: ids, trains: trains,
 	}
+}
+
+// WithIdempotency returns the service with Commit guarded by g.
+func (s *DeterminationService) WithIdempotency(g *Idempotency) *DeterminationService {
+	s.idempotency = g
+	return s
 }
 
 // DetermineInput is one determination request.
@@ -92,42 +103,31 @@ func (s *DeterminationService) Determine(ctx context.Context, in DetermineInput)
 	if err != nil {
 		return evidence.Decision{}, err
 	}
+	tx, txCtx, err := s.tx.Begin(ctx)
+	if err != nil {
+		return evidence.Decision{}, err
+	}
+	defer func() { _ = tx.Rollback(txCtx) }()
+
+	d, err := s.determine(txCtx, sc, in)
+	if err != nil {
+		return evidence.Decision{}, err
+	}
+	if err := tx.Commit(txCtx); err != nil {
+		return evidence.Decision{}, err
+	}
+	return d, nil
+}
+
+// determine records a decision inside the caller's transaction. Determine and
+// Commit differ only in what else commits with the row.
+func (s *DeterminationService) determine(ctx context.Context, sc security.Context, in DetermineInput) (evidence.Decision, error) {
 	if strings.TrimSpace(in.BusinessKey) == "" {
 		return evidence.Decision{}, errs.Invalid("businessKey", errs.ReasonMissingField, "A business key is required.")
 	}
-	if in.EventTime.IsZero() {
-		return evidence.Decision{}, errs.Invalid("eventTime", errs.ReasonMissingField, "An event time is required.")
-	}
-	b := s.content.Current()
-	if b == nil {
-		return evidence.Decision{}, errs.New(errs.CategoryUnavailable, errs.ReasonNoContentBundle,
-			"The cell has no active content bundle. The request was not applied and may be retried.")
-	}
-	if err := matchReadSet(b.AccumulatorKeys(), in.Accumulators); err != nil {
-		return evidence.Decision{}, err
-	}
-
-	// Both instants at canon/v1's precision before anything uses them, so the
-	// evaluation sees exactly the instants the envelope will record and a
-	// replay will read back (ADR-0011 P2).
-	env := evidence.Envelope{
-		DecisionTime: s.clock.Now().UTC().Truncate(time.Microsecond),
-		EventTime:    in.EventTime.UTC().Truncate(time.Microsecond),
-		BundleID:     b.ID(),
-		BundleDigest: b.Digest(),
-		IRVersion:    b.IRVersion(),
-		CanonProfile: canonical.ProfileVersion,
-		Trains:       s.trains,
-		Input:        in.Input,
-		Accumulators: in.Accumulators,
-	}
-	if err := env.Validate(); err != nil {
-		return evidence.Decision{}, errs.Wrap(err, errs.CategoryValidation, errs.ReasonInvalidValue,
-			"The determination request cannot be recorded as evidence.")
-	}
-	envBytes, err := evidence.EncodeEnvelope(env)
+	b, env, envBytes, err := s.envelope(in.EventTime, in.Input, in.Accumulators)
 	if err != nil {
-		return evidence.Decision{}, internal(err, "The determination could not be recorded.")
+		return evidence.Decision{}, err
 	}
 	envDigest := canonical.SumBytes(envBytes)
 
@@ -173,12 +173,6 @@ func (s *DeterminationService) Determine(ctx context.Context, in DetermineInput)
 		}
 	}
 
-	tx, ctx, err := s.tx.Begin(ctx)
-	if err != nil {
-		return evidence.Decision{}, err
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-
 	if in.Supersedes != nil {
 		if err := s.checkSupersedes(ctx, *in.Supersedes, in.BusinessKey); err != nil {
 			return evidence.Decision{}, err
@@ -187,10 +181,217 @@ func (s *DeterminationService) Determine(ctx context.Context, in DetermineInput)
 	if err := s.decisions.Append(ctx, rec); err != nil {
 		return evidence.Decision{}, err
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return evidence.Decision{}, err
+	return d, nil
+}
+
+// envelope builds the envelope a determination at eventTime would record,
+// against the active bundle, and encodes it.
+func (s *DeterminationService) envelope(eventTime time.Time, input evidence.Input, accumulators map[string]fiscal.Money) (*rule.Bundle, evidence.Envelope, []byte, error) {
+	if eventTime.IsZero() {
+		return nil, evidence.Envelope{}, nil, errs.Invalid("eventTime", errs.ReasonMissingField, "An event time is required.")
+	}
+	b := s.content.Current()
+	if b == nil {
+		return nil, evidence.Envelope{}, nil, errs.New(errs.CategoryUnavailable, errs.ReasonNoContentBundle,
+			"The cell has no active content bundle. The request was not applied and may be retried.")
+	}
+	if err := matchReadSet(b.AccumulatorKeys(), accumulators); err != nil {
+		return nil, evidence.Envelope{}, nil, err
+	}
+
+	// Both instants at canon/v1's precision before anything uses them, so the
+	// evaluation sees exactly the instants the envelope will record and a
+	// replay will read back (ADR-0011 P2).
+	env := evidence.Envelope{
+		DecisionTime: s.clock.Now().UTC().Truncate(time.Microsecond),
+		EventTime:    eventTime.UTC().Truncate(time.Microsecond),
+		BundleID:     b.ID(),
+		BundleDigest: b.Digest(),
+		IRVersion:    b.IRVersion(),
+		CanonProfile: canonical.ProfileVersion,
+		Trains:       s.trains,
+		Input:        input,
+		Accumulators: accumulators,
+	}
+	if err := env.Validate(); err != nil {
+		return nil, evidence.Envelope{}, nil, errs.Wrap(err, errs.CategoryValidation, errs.ReasonInvalidValue,
+			"The determination request cannot be recorded as evidence.")
+	}
+	envBytes, err := evidence.EncodeEnvelope(env)
+	if err != nil {
+		return nil, evidence.Envelope{}, nil, internal(err, "The determination could not be recorded.")
+	}
+	return b, env, envBytes, nil
+}
+
+// ---------------------------------------------------------------------------
+// quote — ADR-0004 §2.7
+// ---------------------------------------------------------------------------
+
+// QuoteInput is one quote request: a determination with nothing recorded.
+type QuoteInput struct {
+	EventTime    time.Time
+	Input        evidence.Input
+	Accumulators map[string]fiscal.Money
+}
+
+// Quote is an estimate. It is evaluated by exactly the path a commit takes and
+// then discarded: no evidence object, no decision row, no idempotency record.
+type Quote struct {
+	// QuotedAt is the decision time the evaluation ran at. A commit of the
+	// same input later runs at a later one, and may differ.
+	QuotedAt     time.Time
+	BundleID     string
+	BundleDigest string
+	IRVersion    int
+	Result       evidence.Result
+}
+
+// Quote evaluates the input against the active bundle without recording it.
+//
+// ADR-0004 §2.7: a quote is an estimate and only a commit is a decision. Its
+// outcome is ADVISORY for the same structural reason every outcome is before
+// A4 (evidence.Conclude), and a quote would be non-authoritative even after
+// A4 — the transport says so on every response rather than leaving a caller
+// to infer it.
+func (s *DeterminationService) Quote(ctx context.Context, in QuoteInput) (Quote, error) {
+	if _, err := requireRoleOrSystem(ctx, security.RoleOperator, security.RoleAnalyst); err != nil {
+		return Quote{}, err
+	}
+	b, env, envBytes, err := s.envelope(in.EventTime, in.Input, in.Accumulators)
+	if err != nil {
+		return Quote{}, err
+	}
+	result, _, err := evaluate(b, env, canonical.SumBytes(envBytes))
+	if err != nil {
+		return Quote{}, err
+	}
+	return Quote{
+		QuotedAt: env.DecisionTime, BundleID: env.BundleID, BundleDigest: env.BundleDigest,
+		IRVersion: env.IRVersion, Result: result,
+	}, nil
+}
+
+// ---------------------------------------------------------------------------
+// commit — ADR-0013
+// ---------------------------------------------------------------------------
+
+// CommitEndpoint scopes commit's idempotency keys (ADR-0013 §2.2), so a key
+// used here can never match one used for an adjust.
+const CommitEndpoint = "POST /v1/transactions:commit"
+
+// CommitRetention is how long a commit's idempotency record is kept.
+//
+// ADR-0013 §2.9 ties it to the statutory retention of the decision created,
+// which a pack's legal profile will supply and nothing supplies yet. Ten years
+// is at or beyond the fiscal record period the pack standard contemplates; it
+// errs toward keeping a key live, because a key that expires while its
+// decision is still retained is a key a late retry can use to create a second
+// decision. §5.1 control 5 stays open until the profile replaces this.
+const CommitRetention = 10 * 365 * 24 * time.Hour
+
+// CommitInput is one commit request.
+type CommitInput struct {
+	IdempotencyKey string
+	Determination  DetermineInput
+	// Render produces the response a successful commit returns. It is the
+	// transport's, and its bytes are what every retry of this key receives.
+	Render func(evidence.Decision) ([]byte, error)
+	// RenderFailure renders a deterministic failure the same way.
+	RenderFailure func(error) Response
+}
+
+// Commit records a decision at most once per idempotency key.
+func (s *DeterminationService) Commit(ctx context.Context, in CommitInput) (Settled, error) {
+	sc, err := requireRoleOrSystem(ctx, security.RoleOperator)
+	if err != nil {
+		return Settled{}, err
+	}
+	if s.idempotency == nil {
+		return Settled{}, errs.New(errs.CategoryInternal, errs.ReasonInternal,
+			"The determination service was wired without an idempotency guard.")
+	}
+	digest, err := commitDigest(in.Determination)
+	if err != nil {
+		return Settled{}, err
+	}
+	return s.idempotency.Do(ctx, Call{
+		Key:       idempotency.Key{TenantID: sc.Tenant(), Endpoint: CommitEndpoint, Value: in.IdempotencyKey},
+		Digest:    digest,
+		Retention: CommitRetention,
+		Execute: func(ctx context.Context) (Response, error) {
+			d, err := s.determine(ctx, sc, in.Determination)
+			if err != nil {
+				return Response{}, err
+			}
+			body, err := in.Render(d)
+			if err != nil {
+				return Response{}, internal(err, "The committed decision could not be rendered.")
+			}
+			return Response{Status: 201, Body: body, ResultRef: &d.ID}, nil
+		},
+		RenderFailure: in.RenderFailure,
+	})
+}
+
+// commitDigest is the ADR-0013 §2.3 request digest: the canonical form of what
+// was asked, so two retries that differ only in JSON member order, whitespace
+// or an SDK's formatting match, and two that differ in any value — "45.00"
+// against "45.0" included, because scale is semantic — do not.
+func commitDigest(in DetermineInput) (canonical.Digest, error) {
+	supersedes := canonical.Absent()
+	if in.Supersedes != nil {
+		supersedes = canonical.String(in.Supersedes.String())
+	}
+	d, err := canonical.Sum(canonical.Object(
+		canonical.F("businessKey", canonical.String(in.BusinessKey)),
+		canonical.F("supersedes", supersedes),
+		canonical.F("eventTime", canonical.Time(in.EventTime.UTC().Truncate(time.Microsecond))),
+		canonical.F("input", in.Input.Canonical()),
+		canonical.F("accumulators", evidence.ReadSetCanonical(in.Accumulators)),
+	))
+	if err != nil {
+		return canonical.Digest{}, errs.Wrap(err, errs.CategoryValidation, errs.ReasonInvalidValue,
+			"The request cannot be put in canonical form.")
 	}
 	return d, nil
+}
+
+// ---------------------------------------------------------------------------
+// read
+// ---------------------------------------------------------------------------
+
+// RecordedDecision is a decision as read back: its index row, and the result
+// it names, read from evidence and verified against the row's digest.
+type RecordedDecision struct {
+	Record evidence.Record
+	Result evidence.Result
+}
+
+// Decision reads one recorded decision.
+func (s *DeterminationService) Decision(ctx context.Context, decisionID id.DecisionID) (RecordedDecision, error) {
+	if _, err := requireRoleOrSystem(ctx, security.RoleOperator, security.RoleAnalyst, security.RoleAuditor); err != nil {
+		return RecordedDecision{}, err
+	}
+	rec, err := s.decisions.ByID(ctx, decisionID)
+	if err != nil {
+		return RecordedDecision{}, err
+	}
+	// Get verifies the bytes against the digest, so what is decoded here is
+	// the result the row names and not whatever the store now holds.
+	data, err := s.evidence.Get(ctx, rec.ResultDigest)
+	if err != nil {
+		return RecordedDecision{}, err
+	}
+	result, err := evidence.DecodeResult(data)
+	if err != nil {
+		return RecordedDecision{}, integrity(err, "The recorded result cannot be read as canonical evidence.")
+	}
+	if !result.EnvelopeDigest.Equal(rec.EnvelopeDigest) || result.Outcome != rec.Outcome {
+		return RecordedDecision{}, errs.New(errs.CategoryInternal, errs.ReasonEvidenceIntegrity,
+			"The decision's record disagrees with the result it names.")
+	}
+	return RecordedDecision{Record: rec, Result: result}, nil
 }
 
 // Replay rebuilds a recorded decision's result from its envelope and compares

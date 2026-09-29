@@ -65,6 +65,13 @@ func (in Input) Canonical() canonical.Value {
 	)
 }
 
+// ReadSetCanonical renders an accumulator read set exactly as an envelope
+// records it, empty set included, for anything else that must digest one the
+// same way — an idempotency record's request digest.
+func ReadSetCanonical(m map[string]fiscal.Money) canonical.Value {
+	return moneySection(m, true)
+}
+
 // moneyValue is the one rendering of an amount in evidence: the decimal as a
 // string (ADR-0011 P1) beside its currency, never one without the other.
 func moneyValue(m fiscal.Money) canonical.Value {

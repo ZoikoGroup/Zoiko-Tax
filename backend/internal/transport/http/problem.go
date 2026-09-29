@@ -122,6 +122,27 @@ func kebab(s string) string {
 // exactly the kind of thing that carries a table name, a query fragment or a
 // value (ADR-0016 §2.6).
 func writeProblem(w http.ResponseWriter, r *http.Request, log *slog.Logger, err error) {
+	status, body, reason := renderProblem(r, log, err)
+	writeProblemBytes(w, status, body, reason)
+}
+
+// writeProblemBytes writes a Problem that has already been rendered — by
+// writeProblem, or read back from an idempotency record, in which case these
+// are the bytes the first caller was given.
+func writeProblemBytes(w http.ResponseWriter, status int, body []byte, reason errs.ReasonCode) {
+	// Retry-After is what makes a 503 or a 429 actionable rather than a hint.
+	if status == http.StatusServiceUnavailable || status == http.StatusTooManyRequests ||
+		reason == errs.ReasonRequestInProgress {
+		w.Header().Set("Retry-After", "2")
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(status)
+	_, _ = w.Write(body)
+}
+
+// renderProblem builds the Problem for err, logs the cause, and returns the
+// status and the encoded document.
+func renderProblem(r *http.Request, log *slog.Logger, err error) (int, []byte, errs.ReasonCode) {
 	var e *errs.Error
 	if !asError(err, &e) {
 		e = errs.Wrap(err, errs.CategoryInternal, errs.ReasonInternal,
@@ -161,19 +182,13 @@ func writeProblem(w http.ResponseWriter, r *http.Request, log *slog.Logger, err 
 		"error", err.Error(),
 	)
 
-	// Retry-After is what makes a 503 or a 429 actionable rather than a hint.
-	if status == http.StatusServiceUnavailable || status == http.StatusTooManyRequests ||
-		e.Reason == errs.ReasonRequestInProgress {
-		w.Header().Set("Retry-After", "2")
-	}
-
-	w.Header().Set("Content-Type", "application/problem+json")
-	w.WriteHeader(status)
 	// encoding/json is correct here: this is a transport representation, not
 	// evidence. ADR-0011 §2.7's prohibition is on digesting through it.
-	if err := json.NewEncoder(w).Encode(p); err != nil {
-		log.ErrorContext(r.Context(), "could not write problem response", "error", err.Error())
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(p); err != nil {
+		log.ErrorContext(r.Context(), "could not encode problem response", "error", err.Error())
 	}
+	return status, buf.Bytes(), e.Reason
 }
 
 // writeJSON renders a success response.
@@ -230,48 +245,85 @@ func decodeJSON(r *http.Request, dst any) error {
 	return exactKeys(body, dst)
 }
 
-// exactKeys refuses a top-level key that is not, byte for byte, one of dst's
-// JSON field names, and a key that appears twice. Only the top level is
-// checked: every request body in the contract is a flat object, and a nested
-// object added later would need this to recurse.
+// exactKeys refuses a key that is not, byte for byte, one of the JSON field
+// names its struct declares, and a key that appears twice — at every depth.
+//
+// Every depth, because the determination bodies nest: a miscased `Currency`
+// beside `currency` inside one amount is the same defect as a miscased
+// top-level field, and there it decides which currency a decision is recorded
+// in. Map keys are the pack's names and are not checked against anything, but
+// a map key that repeats is refused for the same reason a field that repeats
+// is.
 func exactKeys(body []byte, dst any) error {
-	declared := jsonNames(reflect.TypeOf(dst))
-	if declared == nil {
+	return exactKeysOf(body, reflect.TypeOf(dst))
+}
+
+func exactKeysOf(raw []byte, t reflect.Type) error {
+	for t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	var fields map[string]reflect.Type
+	switch t.Kind() {
+	case reflect.Struct:
+		fields = jsonFields(t)
+	case reflect.Map:
+		if t.Key().Kind() != reflect.String {
+			return nil
+		}
+	case reflect.Slice:
+		return exactKeysOfArray(raw, t.Elem())
+	default:
 		return nil
 	}
-	dec := json.NewDecoder(bytes.NewReader(body))
+
+	dec := json.NewDecoder(bytes.NewReader(raw))
 	if tok, err := dec.Token(); err != nil || tok != json.Delim('{') {
 		return nil // not an object; Decode has already accepted or refused it
 	}
-	seen := make(map[string]bool, len(declared))
+	seen := make(map[string]bool)
 	for dec.More() {
 		tok, err := dec.Token()
 		if err != nil {
 			return malformed(err)
 		}
 		key, _ := tok.(string)
-		if !declared[key] || seen[key] {
+		if seen[key] {
 			return unknownField()
 		}
 		seen[key] = true
-		var skip json.RawMessage
-		if err := dec.Decode(&skip); err != nil {
+		var elem reflect.Type
+		if fields == nil {
+			elem = t.Elem()
+		} else if elem = fields[key]; elem == nil {
+			return unknownField()
+		}
+		var value json.RawMessage
+		if err := dec.Decode(&value); err != nil {
 			return malformed(err)
+		}
+		if err := exactKeysOf(value, elem); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-// jsonNames is the set of JSON field names a struct declares, or nil when t is
-// not a struct or a pointer to one.
-func jsonNames(t reflect.Type) map[string]bool {
-	for t.Kind() == reflect.Pointer {
-		t = t.Elem()
+func exactKeysOfArray(raw []byte, elem reflect.Type) error {
+	var items []json.RawMessage
+	if err := json.Unmarshal(raw, &items); err != nil {
+		return nil // not an array; Decode has already accepted or refused it
 	}
-	if t.Kind() != reflect.Struct {
-		return nil
+	for _, item := range items {
+		if err := exactKeysOf(item, elem); err != nil {
+			return err
+		}
 	}
-	names := make(map[string]bool, t.NumField())
+	return nil
+}
+
+// jsonFields maps the JSON field names a struct declares to their types.
+func jsonFields(t reflect.Type) map[string]reflect.Type {
+	fields := make(map[string]reflect.Type, t.NumField())
 	for i := range t.NumField() {
 		f := t.Field(i)
 		if !f.IsExported() {
@@ -284,9 +336,9 @@ func jsonNames(t reflect.Type) map[string]bool {
 		case "":
 			name = f.Name
 		}
-		names[name] = true
+		fields[name] = f.Type
 	}
-	return names
+	return fields
 }
 
 func malformed(err error) error {

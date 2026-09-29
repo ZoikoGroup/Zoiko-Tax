@@ -20,6 +20,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/fiscal"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/idempotency"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
 	"github.com/zoikogroup/zoikotax/backend/internal/fiscaltest"
@@ -326,6 +327,74 @@ func (r *memSeals) rewrite(sealID id.SealID, f func(*evidence.SealRecord)) {
 	}
 }
 
+// memIdempotency keeps the property the primary key gives the real table: an
+// insert for a key that exists is refused, never overwritten.
+type memIdempotency struct {
+	mu   sync.Mutex
+	rows map[idempotency.Key]idempotency.Record
+}
+
+var _ port.IdempotencyRepository = (*memIdempotency)(nil)
+
+func newMemIdempotency() *memIdempotency {
+	return &memIdempotency{rows: map[idempotency.Key]idempotency.Record{}}
+}
+
+func (r *memIdempotency) Insert(_ context.Context, rec idempotency.Record) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.rows[rec.Key]; ok {
+		return false, nil
+	}
+	r.rows[rec.Key] = rec
+	return true, nil
+}
+
+func (r *memIdempotency) Get(_ context.Context, key idempotency.Key) (idempotency.Record, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	rec, ok := r.rows[key]
+	if !ok {
+		return idempotency.Record{}, errs.New(errs.CategoryNotFound, errs.ReasonNotFound, "no record")
+	}
+	return rec, nil
+}
+
+func (r *memIdempotency) Complete(_ context.Context, rec idempotency.Record) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if old, ok := r.rows[rec.Key]; !ok || old.State != idempotency.StatePending {
+		return errs.New(errs.CategoryInternal, errs.ReasonInternal, "not pending")
+	}
+	r.rows[rec.Key] = rec
+	return nil
+}
+
+func (r *memIdempotency) Release(_ context.Context, key idempotency.Key) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if rec, ok := r.rows[key]; ok && rec.State == idempotency.StatePending {
+		delete(r.rows, key)
+	}
+	return nil
+}
+
+func (r *memIdempotency) Expire(_ context.Context, key idempotency.Key, now time.Time) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if rec, ok := r.rows[key]; ok && !rec.ExpiresAt.After(now) {
+		delete(r.rows, key)
+		return true, nil
+	}
+	return false, nil
+}
+
+func (r *memIdempotency) count() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return len(r.rows)
+}
+
 type noTx struct{}
 
 func (noTx) Begin(ctx context.Context) (port.Tx, context.Context, error) { return noTx{}, ctx, nil }
@@ -340,6 +409,7 @@ type harness struct {
 	library   *rule.Library
 	store     *memStore
 	decisions *memDecisions
+	idem      *memIdempotency
 	clock     *settableClock
 }
 
@@ -350,12 +420,14 @@ func newHarness(t testing.TB) *harness {
 		library:   &rule.Library{},
 		store:     newMemStore(),
 		decisions: &memDecisions{},
+		idem:      newMemIdempotency(),
 		clock:     &settableClock{t: time.Date(2026, 9, 25, 9, 0, 0, 0, time.UTC)},
 	}
 	b := workedBundle(t)
 	h.holder.Publish(b)
 	h.library.Add(b)
-	h.svc = app.NewDeterminationService(h.holder, h.library, h.decisions, h.store, noTx{}, h.clock, &idgen.Sequential{}, trains)
+	h.svc = app.NewDeterminationService(h.holder, h.library, h.decisions, h.store, noTx{}, h.clock, &idgen.Sequential{}, trains).
+		WithIdempotency(app.NewIdempotency(h.idem, noTx{}, h.clock))
 	return h
 }
 

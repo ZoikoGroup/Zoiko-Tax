@@ -99,6 +99,13 @@ type Config struct {
 	ContentDir     string
 	ContentKeyring string
 
+	// EvidenceDir roots the regional evidence object store — the filesystem
+	// prototype of the retention-locked store (W1 lane D). A cell with content
+	// must have one: a cell that can evaluate but not record would serve
+	// quotes and fail every commit, which is a cell that looks healthy until
+	// the first fiscal write. A cell with neither serves no determination.
+	EvidenceDir string
+
 	// Authoritative records whether this deployment may emit authoritative
 	// fiscal output. It is false until A4 and is reported by /v1/capabilities,
 	// so a client discovers it from the service rather than from a release
@@ -153,6 +160,7 @@ var known = map[string]struct {
 	"ZTAX_AUTHORITATIVE":                {def: "false"},
 	"ZTAX_CONTENT_DIR":                  {def: ""},
 	"ZTAX_CONTENT_KEYRING":              {def: ""},
+	"ZTAX_EVIDENCE_DIR":                 {def: ""},
 	"ZTAX_BOOTSTRAP_TENANT":             {def: ""},
 	"ZTAX_BOOTSTRAP_TENANT_NAME":        {def: ""},
 	"ZTAX_BOOTSTRAP_ADMIN_EMAIL":        {def: ""},
@@ -254,6 +262,7 @@ func Load() (Config, error) {
 
 		ContentDir:     get("ZTAX_CONTENT_DIR"),
 		ContentKeyring: get("ZTAX_CONTENT_KEYRING"),
+		EvidenceDir:    get("ZTAX_EVIDENCE_DIR"),
 
 		SecureCookies: boolean("ZTAX_SECURE_COOKIES"),
 		TrustProxy:    boolean("ZTAX_TRUST_PROXY"),
@@ -281,6 +290,10 @@ func Load() (Config, error) {
 		// or refuse every bundle, and both are worse than not starting.
 		problems = append(problems,
 			"ZTAX_CONTENT_DIR and ZTAX_CONTENT_KEYRING are set together or not at all; content is never loaded unverified (ADR-0005 §2.6)")
+	}
+	if c.ContentDir != "" && c.EvidenceDir == "" {
+		problems = append(problems,
+			"ZTAX_EVIDENCE_DIR is required with ZTAX_CONTENT_DIR; a cell that can evaluate records what it decides (ADR-0011 §2.8)")
 	}
 
 	// Telemetry in clear is a development affordance for the same reason.
@@ -337,6 +350,7 @@ func (c Config) LogAttrs() []any {
 		"database.url_ref", c.DatabaseURLRef,
 		"content.dir", c.ContentDir,
 		"content.keyring", c.ContentKeyring,
+		"evidence.dir", c.EvidenceDir,
 		"secure_cookies", c.SecureCookies,
 		"trust_proxy", c.TrustProxy,
 		"authoritative", c.Authoritative,

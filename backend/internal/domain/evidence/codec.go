@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/fiscal"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 )
 
@@ -90,9 +92,136 @@ func DecodeEnvelope(data []byte) (Envelope, error) {
 	return e, nil
 }
 
+// DecodeResult reads a result written by Result.Encode, under the same rules as
+// DecodeEnvelope: unknown members and JSON numbers are refused, and the decoded
+// result must re-encode to the input byte for byte.
+//
+// It exists for reading a recorded decision back — what it emitted, and why —
+// and never for replay. A replay re-evaluates and compares bytes; it does not
+// need to understand the recorded result, and would be weaker if it did.
+func DecodeResult(data []byte) (Result, error) {
+	var w resultWire
+	if err := strictDecode(data, &w); err != nil {
+		return Result{}, fmt.Errorf("evidence: decode result: %w", err)
+	}
+	envDigest, err := canonical.ParseDigest(w.EnvelopeDigest)
+	if err != nil {
+		return Result{}, fmt.Errorf("evidence: result envelopeDigest: %w", err)
+	}
+	r := Result{
+		EnvelopeDigest: envDigest,
+		Outcome:        Outcome(w.Outcome),
+		Reason:         errs.ReasonCode(w.Reason),
+		Emitted:        make(map[string]rule.Value, len(w.Emitted)),
+		Trace:          make([]rule.TraceStep, 0, len(w.Trace)),
+	}
+	for slot, v := range w.Emitted {
+		decoded, err := v.decode()
+		if err != nil {
+			return Result{}, fmt.Errorf("evidence: result emitted slot %q: %w", slot, err)
+		}
+		r.Emitted[slot] = decoded
+	}
+	for _, s := range w.Trace {
+		args := make([]rule.NodeID, 0, len(s.Args))
+		for _, a := range s.Args {
+			args = append(args, rule.NodeID(a))
+		}
+		if len(args) == 0 {
+			args = nil
+		}
+		r.Trace = append(r.Trace, rule.TraceStep{
+			Node: rule.NodeID(s.Node), Op: rule.Op(s.Op), Args: args,
+			Output: s.Output, OutputType: rule.Type(s.OutputType),
+			RuleVersion: s.RuleVersion, RuleSemanticID: s.RuleSemanticID, Policy: s.Policy,
+		})
+	}
+
+	again, err := r.Encode()
+	if err != nil {
+		return Result{}, err
+	}
+	if !bytes.Equal(again, data) {
+		return Result{}, fmt.Errorf("evidence: result is not in %s form", canonical.ProfileVersion)
+	}
+	return r, nil
+}
+
 // ---------------------------------------------------------------------------
 // wire forms — read-only
 // ---------------------------------------------------------------------------
+
+type resultWire struct {
+	EnvelopeDigest string               `json:"envelopeDigest"`
+	Outcome        string               `json:"outcome"`
+	Reason         string               `json:"reason"`
+	Emitted        map[string]valueWire `json:"emitted"`
+	Trace          []traceWire          `json:"trace"`
+}
+
+// valueWire is every member a typed value can carry. Which ones are present is
+// decided by the type, and decode refuses a combination valueOf would not
+// write — the round-trip check would catch it anyway, but not by name.
+type valueWire struct {
+	Type     string `json:"type"`
+	Amount   string `json:"amount"`
+	Currency string `json:"currency"`
+	Basis    string `json:"basis"`
+	Unit     string `json:"unit"`
+	// Value is a string for every type but BOOL. RawMessage keeps the two
+	// apart until the type says which it is.
+	Value json.RawMessage `json:"value"`
+}
+
+func (w valueWire) decode() (rule.Value, error) {
+	v := rule.Value{Type: rule.Type(w.Type)}
+	text := func() (string, error) {
+		var s string
+		if err := json.Unmarshal(w.Value, &s); err != nil {
+			return "", fmt.Errorf("%s value is not a string", w.Type)
+		}
+		return s, nil
+	}
+	var err error
+	switch v.Type {
+	case rule.TypeMoney:
+		v.Money, err = fiscal.ParseMoney(w.Amount, fiscal.Currency(w.Currency))
+	case rule.TypeRate:
+		var s string
+		if s, err = text(); err == nil {
+			v.Rate, err = fiscal.ParseRate(s, fiscal.RateBasis(w.Basis))
+		}
+	case rule.TypeQuantity:
+		var s string
+		if s, err = text(); err == nil {
+			v.Quantity, err = fiscal.ParseQuantity(s, fiscal.Unit(w.Unit))
+		}
+	case rule.TypeBool:
+		if json.Unmarshal(w.Value, &v.Bool) != nil {
+			err = fmt.Errorf("BOOL value is not a boolean")
+		}
+	case rule.TypeString:
+		v.String, err = text()
+	case rule.TypeReason:
+		var s string
+		s, err = text()
+		v.Reason = errs.ReasonCode(s)
+	default:
+		err = fmt.Errorf("unsupported value type %q", w.Type)
+	}
+	return v, err
+}
+
+type traceWire struct {
+	Node           string   `json:"node"`
+	Op             string   `json:"op"`
+	Args           []string `json:"args"`
+	Output         string   `json:"output"`
+	OutputType     string   `json:"outputType"`
+	RuleVersion    string   `json:"ruleVersion"`
+	RuleSemanticID string   `json:"ruleSemanticId"`
+	Policy         string   `json:"policy"`
+}
 
 type envelopeWire struct {
 	DecisionTime string               `json:"decisionTime"`
