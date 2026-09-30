@@ -3,6 +3,7 @@ package rule
 import (
 	"fmt"
 	"sort"
+	"sync"
 	"sync/atomic"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/fiscal"
@@ -44,6 +45,29 @@ func (b *Bundle) IRVersion() int { return b.irVersion }
 
 // NodeCount reports the size of the graph, for telemetry.
 func (b *Bundle) NodeCount() int { return len(b.nodes) }
+
+// AccumulatorKeys reports every accumulator the bundle's evaluation reads,
+// sorted.
+//
+// ZTAX-DET-REQ-0002: every accumulator is read before evaluation begins, and
+// the evaluator never queries. That needs the read set to be known before the
+// evaluator runs — which it is, because it is a property of the compiled
+// graph rather than of the data. The caller reads exactly these, passes them
+// in, and records them in the envelope.
+func (b *Bundle) AccumulatorKeys() []string {
+	seen := map[string]bool{}
+	for _, n := range b.nodes {
+		if n.Op == OpAccumulator {
+			seen[n.Field] = true
+		}
+	}
+	out := make([]string, 0, len(seen))
+	for k := range seen {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
 
 // Manifest is the wire form of a bundle, as the content plane signs it.
 type Manifest struct {
@@ -275,3 +299,40 @@ func (h *Holder) Publish(b *Bundle) { h.current.Store(b) }
 // result is CategoryUnavailable rather than an internal error: a cell that has
 // not yet loaded content will, and retry is genuinely safe.
 func (h *Holder) Current() *Bundle { return h.current.Load() }
+
+// Library holds every verified bundle a cell may be asked to replay against,
+// by digest.
+//
+// A replay evaluates against the bundle the decision names, never the active
+// one (ZTAX-DET-REQ-0030 makes the same point for adjustments): a decision
+// made last month under last month's content must replay under last month's
+// content, even though the cell now serves this month's. The Holder answers
+// "what runs now"; the Library answers "what ran then".
+//
+// Bundles enter only after full verification by the content loader, so
+// nothing reachable from here is unsigned.
+type Library struct {
+	mu      sync.RWMutex
+	bundles map[string]*Bundle
+}
+
+// Add records a verified bundle under its digest.
+func (l *Library) Add(b *Bundle) {
+	if b == nil {
+		return
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.bundles == nil {
+		l.bundles = map[string]*Bundle{}
+	}
+	l.bundles[b.digest] = b
+}
+
+// ByDigest returns the bundle with this digest, if the library holds it.
+func (l *Library) ByDigest(digest string) (*Bundle, bool) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	b, ok := l.bundles[digest]
+	return b, ok
+}

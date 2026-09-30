@@ -59,7 +59,7 @@ Number("0.1") + Number("0.2")   // 0.30000000000000004
 
 JavaScript has no decimal type, so a browser-side subtotal is a binary-float tax calculation with no rounding policy, no evidence record and no replay ([ADR-0019](../../../adr/ADR-0019-frontend-stack-deferred.md) C1). Amounts arrive as strings and are displayed; arithmetic on them happens in a cell, under a rounding policy that came from signed content.
 
-This version of the surface carries no fiscal amounts. The rule is stated because it governs every addition to it.
+Quotes, commits and decisions carry them: every `amount` and `value` in those operations is a string in this SDK's types, and stays one.
 
 ## How the types stay true
 

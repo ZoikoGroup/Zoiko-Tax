@@ -172,3 +172,12 @@ func AuditID(g Generator) (id.AuditID, error) {
 	}
 	return id.NewAuditID(u), nil
 }
+
+// SealID returns a fresh SealID.
+func SealID(g Generator) (id.SealID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.SealID{}, err
+	}
+	return id.NewSealID(u), nil
+}

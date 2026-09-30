@@ -181,6 +181,50 @@ public sealed class ClientTests
             JsonSerializer.Deserialize<Dictionary<string, string>>(stub.Calls[0].Body!));
     }
 
+    [Fact(DisplayName = "a commit sends the caller's Idempotency-Key")]
+    public async Task ACommitSendsTheIdempotencyKey()
+    {
+        var (client, stub) = Stub.Client(() => Stub.Json(HttpStatusCode.Created, new { id = "01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f" }));
+
+        var result = await client.CommitTransactionAsync("5f0c2a1e-commit-INV-0001-1", new CommitRequest
+        {
+            BusinessKey = "INV-0001/1",
+            EventTime = "2026-09-24T18:00:00.000000Z",
+            Input = new DeterminationInput
+            {
+                Money = new Dictionary<string, MoneyValue> { ["line.netAmount"] = new() { Amount = "100.00", Currency = "EUR" } },
+            },
+        });
+
+        Assert.True(result.IsOk);
+        Assert.Equal(Guid.Parse("01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f"), result.Data.Id);
+        Assert.Equal(HttpMethod.Post, stub.Calls[0].Method);
+        Assert.EndsWith("/v1/transactions:commit", stub.Calls[0].Uri.AbsoluteUri, StringComparison.Ordinal);
+        Assert.Equal("5f0c2a1e-commit-INV-0001-1", stub.Calls[0].Headers["Idempotency-Key"]);
+
+        // An amount is a string on the wire, with its scale intact.
+        using var sent = JsonDocument.Parse(stub.Calls[0].Body!);
+        var amount = sent.RootElement.GetProperty("input").GetProperty("money").GetProperty("line.netAmount").GetProperty("amount");
+        Assert.Equal(JsonValueKind.String, amount.ValueKind);
+        Assert.Equal("100.00", amount.GetString());
+    }
+
+    [Fact(DisplayName = "a decision identifier reaches the path in canonical form")]
+    public async Task ADecisionIdReachesThePath()
+    {
+        var (client, stub) = Stub.Client(Stub.NoContent);
+        var decision = Guid.Parse("01920A4B-7C3E-7D21-9F40-3C1A2B4D5E6F");
+
+        await client.GetDecisionAsync(decision);
+        await client.ReplayDecisionAsync(decision);
+
+        Assert.Equal(HttpMethod.Get, stub.Calls[0].Method);
+        Assert.EndsWith("/v1/decisions/01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f", stub.Calls[0].Uri.AbsoluteUri, StringComparison.Ordinal);
+        Assert.Equal(HttpMethod.Post, stub.Calls[1].Method);
+        Assert.EndsWith("/v1/replay/01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f", stub.Calls[1].Uri.AbsoluteUri, StringComparison.Ordinal);
+        Assert.False(stub.Calls[0].Headers.ContainsKey("Idempotency-Key"));
+    }
+
     [Fact(DisplayName = "unwrap throws the error for callers who prefer exceptions")]
     public async Task UnwrapThrowsTheError()
     {
@@ -272,7 +316,11 @@ public sealed class ClientTests
         // name, which is the only reason the client's name-based converter is
         // right; this is what notices if it ever stops. The bodies themselves
         // are asserted in AGrantAndAStatusChangeSendTheContractsBodies.
-        foreach (var type in new[] { typeof(Role), typeof(UserStatus), typeof(TenantStatus) })
+        foreach (var type in new[]
+        {
+            typeof(Role), typeof(UserStatus), typeof(TenantStatus),
+            typeof(Outcome), typeof(RateBasis), typeof(ReplayVerdict), typeof(ValueType),
+        })
         {
             foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Static))
             {
@@ -381,6 +429,7 @@ public sealed class ClientTests
             "GetCapabilitiesAsync", "SignInAsync", "SignOutAsync", "GetSessionAsync", "ChangePasswordAsync",
             "GetTenantAsync", "ListUsersAsync", "CreateUserAsync", "SetUserStatusAsync", "GrantRoleAsync",
             "RevokeRoleAsync", "ListSessionsAsync", "RevokeSessionAsync", "ListAuditAsync",
+            "CreateQuoteAsync", "CommitTransactionAsync", "GetDecisionAsync", "ReplayDecisionAsync",
         };
         var methods = typeof(ZoikoTaxClient).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
             .Where(m => m.Name.EndsWith("Async", StringComparison.Ordinal))

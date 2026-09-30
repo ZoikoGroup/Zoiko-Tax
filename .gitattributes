@@ -18,5 +18,20 @@ testdata/golden/** text eol=lf
 # Same reasoning for anything else whose bytes are hashed or signed as it lands.
 *.json text eol=lf
 
+# Review noise, not content. GitHub collapses these in a pull request's diff
+# and leaves them out of the language statistics; they are still diffed,
+# committed and gated exactly as before.
+#
+# vendor/ is upstream's code, committed on purpose (ADR-0001 control 6) and
+# verified by `make vendor-verify` rather than by reading it. The rest is
+# generated from the contract or the register, and CI fails if any of it
+# differs from what its generator produces — so the thing to review is the
+# source it came from, which stays expanded.
+backend/vendor/** linguist-vendored linguist-generated
+backend/internal/transport/http/gen/types.gen.go linguist-generated
+backend/postman/ZoikoTax.postman_collection.json* linguist-generated
+contracts/openapi/export/** linguist-generated
+sdk/**/types.gen.go linguist-generated
+
 # Generated from docs/register.yaml by docs/tools/check_registry.py --write-index.
 docs/ESTATE.md linguist-generated

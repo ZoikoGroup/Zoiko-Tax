@@ -20,12 +20,24 @@
 //                                (§5.1 control 6).
 //   no-orphan-schemas            A component nothing references is a component
 //                                nobody reviewed the effect of removing.
+//   privacy-classified-fields    Every field carries ZTAX-PRIV-001 §24 privacy
+//                                metadata, directly or through the schema it
+//                                references, from the closed vocabulary in
+//                                privacy/vocabulary.json. This is PRIV-001 §29's
+//                                PRIV-FIELD-CONF: "every personal field has
+//                                class, purpose and retention; unclassified
+//                                field fails."
 //
 // Failures are reported all at once rather than one per run: a contract author
 // fixing five rule violations should see five, not run the gate five times.
 
 import { readFileSync } from "node:fs";
 import { parseDocument } from "yaml";
+
+// The privacy vocabulary is data, shared with the Go domain
+// (backend/internal/domain/privacy), so the two cannot disagree about what a
+// class or a purpose is.
+const VOCABULARY = JSON.parse(readFileSync(new URL("../privacy/vocabulary.json", import.meta.url), "utf8"));
 
 const PROBLEM_REF = "#/components/schemas/Problem";
 
@@ -215,6 +227,117 @@ function checkNoOrphanSchemas(doc) {
   }
 }
 
+const PRIVACY_KEY = "x-ztax-privacy";
+const PRIVACY_FIELDS = new Set([
+  "class", "purposes", "retention", "redaction", "evidencePolicy", "aiAllowed",
+  "sensitivityFlags", "residencyScope", "subjectType",
+]);
+
+const isObjectSchema = (s) => !!s && typeof s === "object" && (s.type === "object" || !!s.properties);
+
+/**
+ * What classifies a property: its own metadata, or the metadata of the scalar
+ * schema it references. A property that is itself an object — inline or by
+ * reference — is a container, and its own properties are classified instead.
+ */
+function classificationOf(doc, prop) {
+  if (prop?.[PRIVACY_KEY]) return { meta: prop[PRIVACY_KEY] };
+  let target = prop;
+  if (target?.type === "array" && target.items) target = target.items;
+  if (Array.isArray(target?.allOf) && target.allOf.length === 1) target = target.allOf[0];
+  if (typeof target?.$ref === "string") {
+    const resolved = resolve(doc, target);
+    if (isObjectSchema(resolved)) return { container: true };
+    return resolved?.[PRIVACY_KEY] ? { meta: resolved[PRIVACY_KEY], via: target.$ref } : null;
+  }
+  if (isObjectSchema(target)) return { container: true };
+  return null;
+}
+
+function validatePrivacy(meta, where) {
+  const v = VOCABULARY;
+  const rule = "privacy-classified-fields";
+  if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
+    fail(where, rule, `${PRIVACY_KEY} must be an object.`);
+    return;
+  }
+  for (const key of Object.keys(meta)) {
+    if (!PRIVACY_FIELDS.has(key)) {
+      fail(where, rule, `unknown privacy metadata "${key}". Unknown metadata is refused rather than ignored, for the same reason unknown fields are (ADR-0011 P5).`);
+    }
+  }
+  const cls = meta.class;
+  if (!(cls in v.classes)) {
+    fail(where, rule, `privacy class "${cls}" is not one of ${Object.keys(v.classes).join(", ")} (PRIV-001 §4).`);
+    return;
+  }
+  for (const p of meta.purposes ?? []) {
+    if (!(p in v.purposes)) fail(where, rule, `purpose "${p}" is not an approved purpose (PRIV-001 §6).`);
+  }
+  if (meta.retention !== undefined && !(meta.retention in v.retention)) {
+    fail(where, rule, `retention "${meta.retention}" is not a registered retention policy (PRIV-001 §14).`);
+  }
+  if (meta.redaction !== undefined && !(meta.redaction in v.redaction)) {
+    fail(where, rule, `redaction "${meta.redaction}" is not one of ${Object.keys(v.redaction).join(", ")}.`);
+  }
+  if (meta.evidencePolicy !== undefined && !(meta.evidencePolicy in v.evidencePolicy)) {
+    fail(where, rule, `evidencePolicy "${meta.evidencePolicy}" is not one of ${Object.keys(v.evidencePolicy).join(", ")}.`);
+  }
+  if (meta.aiAllowed !== undefined && !(meta.aiAllowed in v.aiAllowed)) {
+    fail(where, rule, `aiAllowed "${meta.aiAllowed}" is not one of ${Object.keys(v.aiAllowed).join(", ")}.`);
+  }
+
+  if (v.rules.personalClassesNeedPurposeAndRetention.includes(cls)) {
+    if (!Array.isArray(meta.purposes) || meta.purposes.length === 0) {
+      fail(where, rule, `class ${cls} is personal data and names no purpose. PRIV-001 §7: every personal field maps to at least one approved purpose.`);
+    }
+    if (!meta.retention) {
+      fail(where, rule, `class ${cls} is personal data and names no retention policy (PRIV-001 §7).`);
+    }
+    if (!meta.redaction) {
+      fail(where, rule, `class ${cls} is personal data and does not say how logs treat it.`);
+    }
+  }
+  if (v.rules.mustNotBeLoggedAsIs.includes(cls) && meta.redaction === "NONE") {
+    fail(where, rule, `class ${cls} may not be logged as-is; redaction must be REDACT or NO_LOG (ADR-0015 §2.2).`);
+  }
+  if (v.rules.neverLogged.includes(cls) && meta.redaction !== "NO_LOG") {
+    fail(where, rule, `class ${cls} is a secret; redaction must be NO_LOG.`);
+  }
+  if (v.rules.prohibitedWithoutDocumentedRequirement.includes(cls)) {
+    fail(where, rule, `class ${cls} is prohibited from ordinary schemas unless a documented legal requirement exists (PRIV-001 §7). That is a privacy review, not a lint exception.`);
+  }
+}
+
+function checkPrivacy(doc) {
+  // Every scalar component schema is classified at the schema, so that every
+  // property referencing it inherits one answer rather than restating it.
+  for (const [name, schema] of Object.entries(doc.components?.schemas ?? {})) {
+    if (isObjectSchema(schema)) continue;
+    const where = `#/components/schemas/${name}`;
+    if (!schema?.[PRIVACY_KEY]) {
+      fail(where, "privacy-classified-fields", "a scalar schema with no privacy classification. Every property that references it would be unclassified.");
+    } else {
+      validatePrivacy(schema[PRIVACY_KEY], where);
+    }
+  }
+  // Every property of every object schema, wherever it is declared —
+  // components and inline response bodies alike.
+  for (const [node, path] of walk(doc)) {
+    if (!node || typeof node !== "object" || Array.isArray(node)) continue;
+    if (path.at(-1) !== "properties" || path.includes("example") || path.includes("examples")) continue;
+    for (const [field, prop] of Object.entries(node)) {
+      const where = pointer([...path, field]);
+      const found = classificationOf(doc, prop);
+      if (found === null) {
+        fail(where, "privacy-classified-fields", `"${field}" is unclassified. PRIV-001 §29 (PRIV-FIELD-CONF): an unclassified field fails.`);
+      } else if (found.meta && !found.via) {
+        validatePrivacy(found.meta, where);
+      }
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 
 const HTTP_METHODS = ["get", "put", "post", "delete", "options", "head", "patch", "trace"];
@@ -254,6 +377,7 @@ function main(argv) {
   checkOperationsAreDocumented(doc);
   checkIdempotentWrites(doc);
   checkNoOrphanSchemas(doc);
+  checkPrivacy(doc);
 
   if (problems.length > 0) {
     const byRule = new Map();

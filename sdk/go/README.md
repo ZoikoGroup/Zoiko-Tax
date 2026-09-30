@@ -74,11 +74,11 @@ fmt.Println(a + b) // 0.30000000000000004
 
 A client-side subtotal is a binary-float tax calculation with no rounding policy, no evidence record and no replay. Amounts arrive as strings and are displayed or passed on; arithmetic on them happens in a cell, under a rounding policy that came from signed content ([ADR-0002](../../../adr/ADR-0002-decimal-rounding-context-policy.md)). Trailing zeros are significant: `"1.50"` and `"1.5"` are different assertions about precision.
 
-This version of the surface carries no fiscal amounts. The rule is stated because it governs every addition to it.
+Quotes, commits and decisions carry them: every `amount` and `value` in those operations is a string in this SDK's types, and stays one.
 
 ## Timestamps and recorded bytes
 
-`Timestamp` is `time.Time`. Decoding is exact — the contract's six fractional digits fit in a `time.Time` with room to spare — but `encoding/json` re-encodes with *variable* precision, so `2026-09-23T12:00:00.000000Z` comes back out as `2026-09-23T12:00:00Z`. That is the same instant and not the same bytes, and the contract fixes the bytes because two encodings of one instant must not produce two digests ([ADR-0011](../../../adr/ADR-0011-canonicalization-digest-and-evidence-sealing.md) §2.1). No request in this version carries a timestamp; if you forward one, format it with `t.UTC().Format("2006-01-02T15:04:05.000000Z")`.
+`Timestamp` is `time.Time`. Decoding is exact — the contract's six fractional digits fit in a `time.Time` with room to spare — but `encoding/json` re-encodes with *variable* precision, so `2026-09-23T12:00:00.000000Z` comes back out as `2026-09-23T12:00:00Z`. That is the same instant and not the same bytes, and the contract fixes the bytes because two encodings of one instant must not produce two digests ([ADR-0011](../../../adr/ADR-0011-canonicalization-digest-and-evidence-sealing.md) §2.1). `CreateQuote` and `CommitTransaction` send `EventTime` in exactly that form, whatever its location or precision. If you forward a timestamp anywhere else, format it with `t.UTC().Format("2006-01-02T15:04:05.000000Z")`.
 
 `AuditRecord.Detail` is a string for the same reason: it is the exact canonical JSON that was recorded and digested. Pass it on as it is (§2.7).
 

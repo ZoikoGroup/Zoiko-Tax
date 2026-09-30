@@ -17,12 +17,14 @@ The API contract and the gates that keep it honest. Train: `SCHEMA`.
 
 ```bash
 npm ci
-npm run check     # lint + export:check + routes:check + postman:check
+npm run check     # lint + test + export:check + routes:check + postman:check
 ```
 
 | Gate | What it refuses | ADR |
 |---|---|---|
 | `lint` | A fiscal amount typed as a JSON number; an error response that is not the shared Problem schema; an operation with no `operationId`, summary or example; an idempotent endpoint that does not declare `Idempotency-Key`; an orphan schema | §5.1 c3, c6 |
+| `lint` · `privacy-classified-fields` | A field with no PRIV-001 §24 privacy metadata, directly or through the schema it references; a personal class with no purpose or retention; a value outside the closed vocabulary in [`privacy/vocabulary.json`](privacy/vocabulary.json); account-level personal data logged as-is; a secret that is not `NO_LOG`; special-category data at all | PRIV-001 §29 PRIV-FIELD-CONF |
+| `test` | A lint rule that no longer fires — each case breaks the real contract one way and asserts the refusal | ADR-0018 |
 | `export:check` | An export that was hand-edited, or that the contract no longer generates | §5.1 c4 |
 | `routes:check` | A route manifest that the contract no longer generates | §2.1 |
 

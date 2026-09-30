@@ -6,6 +6,81 @@ import (
 	"time"
 )
 
+// Defines values for Outcome.
+const (
+	OutcomeADVISORY       Outcome = "ADVISORY"
+	OutcomeAMBIGUOUS      Outcome = "AMBIGUOUS"
+	OutcomeAUTHORITATIVE  Outcome = "AUTHORITATIVE"
+	OutcomeCONFLICTED     Outcome = "CONFLICTED"
+	OutcomeREVIEWREQUIRED Outcome = "REVIEW_REQUIRED"
+	OutcomeUNSUPPORTED    Outcome = "UNSUPPORTED"
+)
+
+// Valid indicates whether the value is a known member of the Outcome enum.
+func (e Outcome) Valid() bool {
+	switch e {
+	case OutcomeADVISORY:
+		return true
+	case OutcomeAMBIGUOUS:
+		return true
+	case OutcomeAUTHORITATIVE:
+		return true
+	case OutcomeCONFLICTED:
+		return true
+	case OutcomeREVIEWREQUIRED:
+		return true
+	case OutcomeUNSUPPORTED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RateBasis.
+const (
+	RateBasisCOMPOUND RateBasis = "COMPOUND"
+	RateBasisGROSS    RateBasis = "GROSS"
+	RateBasisNET      RateBasis = "NET"
+	RateBasisPERUNIT  RateBasis = "PER_UNIT"
+)
+
+// Valid indicates whether the value is a known member of the RateBasis enum.
+func (e RateBasis) Valid() bool {
+	switch e {
+	case RateBasisCOMPOUND:
+		return true
+	case RateBasisGROSS:
+		return true
+	case RateBasisNET:
+		return true
+	case RateBasisPERUNIT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReplayVerdict.
+const (
+	ReplayVerdictBUNDLEUNAVAILABLE ReplayVerdict = "BUNDLE_UNAVAILABLE"
+	ReplayVerdictDIVERGED          ReplayVerdict = "DIVERGED"
+	ReplayVerdictMATCH             ReplayVerdict = "MATCH"
+)
+
+// Valid indicates whether the value is a known member of the ReplayVerdict enum.
+func (e ReplayVerdict) Valid() bool {
+	switch e {
+	case ReplayVerdictBUNDLEUNAVAILABLE:
+		return true
+	case ReplayVerdictDIVERGED:
+		return true
+	case ReplayVerdictMATCH:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Role.
 const (
 	RoleADMIN    Role = "ADMIN"
@@ -72,6 +147,36 @@ func (e UserStatus) Valid() bool {
 	}
 }
 
+// Defines values for ValueType.
+const (
+	ValueTypeBOOL       ValueType = "BOOL"
+	ValueTypeMONEY      ValueType = "MONEY"
+	ValueTypeQUANTITY   ValueType = "QUANTITY"
+	ValueTypeRATE       ValueType = "RATE"
+	ValueTypeREASONCODE ValueType = "REASON_CODE"
+	ValueTypeSTRING     ValueType = "STRING"
+)
+
+// Valid indicates whether the value is a known member of the ValueType enum.
+func (e ValueType) Valid() bool {
+	switch e {
+	case ValueTypeBOOL:
+		return true
+	case ValueTypeMONEY:
+		return true
+	case ValueTypeQUANTITY:
+		return true
+	case ValueTypeRATE:
+		return true
+	case ValueTypeREASONCODE:
+		return true
+	case ValueTypeSTRING:
+		return true
+	default:
+		return false
+	}
+}
+
 // AuditID An audit record identifier (ADR-0012).
 type AuditID = string
 
@@ -101,6 +206,24 @@ type AuditRecord struct {
 	SubjectID   string    `json:"subjectId"`
 	SubjectType string    `json:"subjectType"`
 }
+
+// BundleRef The content bundle an evaluation ran against.
+type BundleRef struct {
+	BundleID string `json:"bundleId"`
+
+	// Digest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	Digest    Digest `json:"digest"`
+	IrVersion int32  `json:"irVersion"`
+}
+
+// BusinessKey The caller's stable reference for what is being determined — a line, a
+// transaction. It is the identity across corrections: every version of a
+// decision shares it (ADR-0003). Not an identifier this service
+// interprets.
+type BusinessKey = string
 
 // Capabilities defines model for Capabilities.
 type Capabilities struct {
@@ -144,6 +267,37 @@ type ChangePasswordRequest struct {
 	NewPassword     string `json:"newPassword"`
 }
 
+// CommitRequest defines model for CommitRequest.
+type CommitRequest struct {
+	// Accumulators The accumulator values the evaluation reads — exactly the ones the
+	// active bundle declares, no more and no fewer. They are supplied by the
+	// caller until the accumulator store of ADR-0004 lands, and are recorded
+	// in the decision's envelope either way (ZTAX-DET-REQ-0034).
+	Accumulators *ReadSet `json:"accumulators,omitempty"`
+
+	// BusinessKey The caller's stable reference for what is being determined — a line, a
+	// transaction. It is the identity across corrections: every version of a
+	// decision shares it (ADR-0003). Not an identifier this service
+	// interprets.
+	BusinessKey BusinessKey `json:"businessKey"`
+
+	// EventTime RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	EventTime Timestamp `json:"eventTime"`
+
+	// Input The named values the active content reads, grouped by type. The names
+	// are the pack's — `line.netAmount`, not a field this contract defines —
+	// because which values a transaction carries is decided by content, and
+	// a transaction shape fixed here would be tax logic in the API
+	// (ZTAX-DET-001 §0.2). At least one value is required.
+	Input DeterminationInput `json:"input"`
+
+	// Supersedes A decision identifier: a UUIDv7 in lowercase canonical form
+	// (ADR-0012 §2.1). Sortable by creation, never recycled.
+	Supersedes *DecisionID `json:"supersedes,omitempty"`
+}
+
 // ContentCapability The rule bundle this cell is running. Absent where no bundle is loaded.
 //
 // The digest is here because it is what a replay names: quoting the bundle
@@ -180,11 +334,152 @@ type CreateUserRequest struct {
 	Roles []Role `json:"roles,omitempty"`
 }
 
+// CurrencyCode An ISO 4217 alphabetic currency code.
+type CurrencyCode = string
+
+// Decimal A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+// digits, and an optional fraction. No exponent, no leading `+`, no
+// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+// different assertions and digest differently.
+//
+// Classified as fiscal personal data because on a consumer transaction
+// it is: logs carry it redacted, and it is kept for the fiscal record
+// period as evidence.
+type Decimal = string
+
+// Decision One recorded decision. Immutable; a correction is a new decision whose `supersedes` names this one.
+type Decision struct {
+	// Authoritative Whether this decision may be filed. `false` for every decision before A4.
+	Authoritative bool `json:"authoritative"`
+
+	// Bundle The content bundle an evaluation ran against.
+	Bundle BundleRef `json:"bundle"`
+
+	// BusinessKey The caller's stable reference for what is being determined — a line, a
+	// transaction. It is the identity across corrections: every version of a
+	// decision shares it (ADR-0003). Not an identifier this service
+	// interprets.
+	BusinessKey BusinessKey `json:"businessKey"`
+
+	// Digests The digests a decision names (ADR-0011 §2.8). `envelope` and `result`
+	// are the evidence objects; `input` is the canonical input inside the
+	// envelope, which is what a search by input matches.
+	Digests DecisionDigests `json:"digests"`
+
+	// Emitted What the content emitted, by result slot. The slots are the pack's.
+	Emitted Emitted `json:"emitted"`
+
+	// EventTime RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	EventTime Timestamp `json:"eventTime"`
+
+	// ID A decision identifier: a UUIDv7 in lowercase canonical form
+	// (ADR-0012 §2.1). Sortable by creation, never recycled.
+	ID DecisionID `json:"id"`
+
+	// Outcome What a determination concluded (ADR-0016 §2.1). Only `AUTHORITATIVE`
+	// may be filed, and nothing produces it before A4. The refusals —
+	// `AMBIGUOUS`, `CONFLICTED`, `UNSUPPORTED`, `REVIEW_REQUIRED` — are
+	// outcomes with evidence, not errors: "we do not support this" is a fact
+	// about coverage that is recorded against the transaction.
+	Outcome Outcome `json:"outcome"`
+
+	// ReasonCode A registered code from a closed vocabulary (ADR-0016 §2.4). Codes are
+	// never renumbered, never reused and never redefined; a retired code stops
+	// being emitted and keeps its meaning so historical evidence still
+	// resolves.
+	//
+	// This is the field to branch on. The set this deployment can emit is
+	// reported by `GET /v1/capabilities`; the enum is deliberately not closed
+	// here, because the register grows by addition and a client that rejects
+	// an unrecognised code would break on an additive change (ADR-0010 §2.6).
+	ReasonCode ReasonCode `json:"reasonCode"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// Supersedes A decision identifier: a UUIDv7 in lowercase canonical form
+	// (ADR-0012 §2.1). Sortable by creation, never recycled.
+	Supersedes *DecisionID `json:"supersedes,omitempty"`
+}
+
+// DecisionDigests The digests a decision names (ADR-0011 §2.8). `envelope` and `result`
+// are the evidence objects; `input` is the canonical input inside the
+// envelope, which is what a search by input matches.
+type DecisionDigests struct {
+	// Envelope A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	Envelope Digest `json:"envelope"`
+
+	// Input A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	Input Digest `json:"input"`
+
+	// Result A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	Result Digest `json:"result"`
+}
+
+// DecisionID A decision identifier: a UUIDv7 in lowercase canonical form
+// (ADR-0012 §2.1). Sortable by creation, never recycled.
+type DecisionID = string
+
+// DeterminationInput The named values the active content reads, grouped by type. The names
+// are the pack's — `line.netAmount`, not a field this contract defines —
+// because which values a transaction carries is decided by content, and
+// a transaction shape fixed here would be tax logic in the API
+// (ZTAX-DET-001 §0.2). At least one value is required.
+type DeterminationInput struct {
+	Flags      map[string]bool          `json:"flags,omitempty"`
+	Money      map[string]MoneyValue    `json:"money,omitempty"`
+	Quantities map[string]QuantityValue `json:"quantities,omitempty"`
+	Rates      map[string]RateValue     `json:"rates,omitempty"`
+
+	// Strings Free-text values, such as a situs attribute. Classified as location
+	// evidence because that is what content most often reads here.
+	Strings map[string]string `json:"strings,omitempty"`
+}
+
 // Digest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
 // carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
 // not decoration — a future `zt2:` digest of the same document is a
 // different digest, and comparing the two without it would be wrong.
 type Digest = string
+
+// Emitted What the content emitted, by result slot. The slots are the pack's.
+type Emitted map[string]ResultValue
+
+// MoneyValue An amount and its currency, never one without the other.
+type MoneyValue struct {
+	// Amount A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Amount Decimal `json:"amount"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+}
+
+// Outcome What a determination concluded (ADR-0016 §2.1). Only `AUTHORITATIVE`
+// may be filed, and nothing produces it before A4. The refusals —
+// `AMBIGUOUS`, `CONFLICTED`, `UNSUPPORTED`, `REVIEW_REQUIRED` — are
+// outcomes with evidence, not errors: "we do not support this" is a fact
+// about coverage that is recorded against the transaction.
+type Outcome string
 
 // Problem RFC 9457 Problem Details, with the `ztx_` extensions from ADR-0016 §2.5.
 // The extensions carry identifiers rather than data: an error that needs
@@ -237,6 +532,103 @@ type Problem struct {
 	ZtxTraceID *string `json:"ztx_trace_id,omitempty"`
 }
 
+// QuantityValue defines model for QuantityValue.
+type QuantityValue struct {
+	// Unit A unit of measure, as the content pack names it.
+	Unit UnitCode `json:"unit"`
+
+	// Value A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Value Decimal `json:"value"`
+}
+
+// Quote defines model for Quote.
+type Quote struct {
+	// Authoritative Always `false`. A quote is an estimate at every authorization level (ADR-0004 §2.7).
+	Authoritative bool `json:"authoritative"`
+
+	// Bundle The content bundle an evaluation ran against.
+	Bundle BundleRef `json:"bundle"`
+
+	// Emitted What the content emitted, by result slot. The slots are the pack's.
+	Emitted Emitted `json:"emitted"`
+
+	// Outcome What a determination concluded (ADR-0016 §2.1). Only `AUTHORITATIVE`
+	// may be filed, and nothing produces it before A4. The refusals —
+	// `AMBIGUOUS`, `CONFLICTED`, `UNSUPPORTED`, `REVIEW_REQUIRED` — are
+	// outcomes with evidence, not errors: "we do not support this" is a fact
+	// about coverage that is recorded against the transaction.
+	Outcome Outcome `json:"outcome"`
+
+	// QuotedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	QuotedAt Timestamp `json:"quotedAt"`
+
+	// ReasonCode A registered code from a closed vocabulary (ADR-0016 §2.4). Codes are
+	// never renumbered, never reused and never redefined; a retired code stops
+	// being emitted and keeps its meaning so historical evidence still
+	// resolves.
+	//
+	// This is the field to branch on. The set this deployment can emit is
+	// reported by `GET /v1/capabilities`; the enum is deliberately not closed
+	// here, because the register grows by addition and a client that rejects
+	// an unrecognised code would break on an additive change (ADR-0010 §2.6).
+	ReasonCode ReasonCode `json:"reasonCode"`
+}
+
+// QuoteRequest defines model for QuoteRequest.
+type QuoteRequest struct {
+	// Accumulators The accumulator values the evaluation reads — exactly the ones the
+	// active bundle declares, no more and no fewer. They are supplied by the
+	// caller until the accumulator store of ADR-0004 lands, and are recorded
+	// in the decision's envelope either way (ZTAX-DET-REQ-0034).
+	Accumulators *ReadSet `json:"accumulators,omitempty"`
+
+	// EventTime RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	EventTime Timestamp `json:"eventTime"`
+
+	// Input The named values the active content reads, grouped by type. The names
+	// are the pack's — `line.netAmount`, not a field this contract defines —
+	// because which values a transaction carries is decided by content, and
+	// a transaction shape fixed here would be tax logic in the API
+	// (ZTAX-DET-001 §0.2). At least one value is required.
+	Input DeterminationInput `json:"input"`
+}
+
+// RateBasis What a rate applies to (ADR-0002). A rate without a basis is not a rate.
+type RateBasis string
+
+// RateValue defines model for RateValue.
+type RateValue struct {
+	// Basis What a rate applies to (ADR-0002). A rate without a basis is not a rate.
+	Basis RateBasis `json:"basis"`
+
+	// Value A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Value Decimal `json:"value"`
+}
+
+// ReadSet The accumulator values the evaluation reads — exactly the ones the
+// active bundle declares, no more and no fewer. They are supplied by the
+// caller until the accumulator store of ADR-0004 lands, and are recorded
+// in the decision's envelope either way (ZTAX-DET-REQ-0034).
+type ReadSet map[string]MoneyValue
+
 // ReasonCode A registered code from a closed vocabulary (ADR-0016 §2.4). Codes are
 // never renumbered, never reused and never redefined; a retired code stops
 // being emitted and keeps its meaning so historical evidence still
@@ -247,6 +639,89 @@ type Problem struct {
 // here, because the register grows by addition and a client that rejects
 // an unrecognised code would break on an additive change (ADR-0010 §2.6).
 type ReasonCode = string
+
+// ReplayReport defines model for ReplayReport.
+type ReplayReport struct {
+	// DecisionID A decision identifier: a UUIDv7 in lowercase canonical form
+	// (ADR-0012 §2.1). Sortable by creation, never recycled.
+	DecisionID DecisionID `json:"decisionId"`
+
+	// Divergence For `DIVERGED`, the first path at which the results differ. A path, never a value.
+	Divergence *string `json:"divergence,omitempty"`
+
+	// EnvelopeDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	EnvelopeDigest Digest `json:"envelopeDigest"`
+
+	// RecordedResult A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	RecordedResult Digest `json:"recordedResult"`
+
+	// ReplayedResult A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	ReplayedResult *Digest       `json:"replayedResult,omitempty"`
+	Verdict        ReplayVerdict `json:"verdict"`
+}
+
+// ReplayVerdict defines model for ReplayVerdict.
+type ReplayVerdict string
+
+// ResultValue One emitted value. `type` says which other members are present:
+// `amount` and `currency` for `MONEY`; `value` and `basis` for `RATE`;
+// `value` and `unit` for `QUANTITY`; `flag` for `BOOL`; `text` for
+// `STRING`; `reasonCode` for `REASON_CODE`.
+type ResultValue struct {
+	// Amount A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Amount *Decimal `json:"amount,omitempty"`
+
+	// Basis What a rate applies to (ADR-0002). A rate without a basis is not a rate.
+	Basis *RateBasis `json:"basis,omitempty"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency *CurrencyCode `json:"currency,omitempty"`
+	Flag     *bool         `json:"flag,omitempty"`
+
+	// ReasonCode A registered code from a closed vocabulary (ADR-0016 §2.4). Codes are
+	// never renumbered, never reused and never redefined; a retired code stops
+	// being emitted and keeps its meaning so historical evidence still
+	// resolves.
+	//
+	// This is the field to branch on. The set this deployment can emit is
+	// reported by `GET /v1/capabilities`; the enum is deliberately not closed
+	// here, because the register grows by addition and a client that rejects
+	// an unrecognised code would break on an additive change (ADR-0010 §2.6).
+	ReasonCode *ReasonCode `json:"reasonCode,omitempty"`
+	Text       *string     `json:"text,omitempty"`
+
+	// Type The type of an emitted value. It says which of a value's other members are present.
+	Type ValueType `json:"type"`
+
+	// Unit A unit of measure, as the content pack names it.
+	Unit *UnitCode `json:"unit,omitempty"`
+
+	// Value A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Value *Decimal `json:"value,omitempty"`
+}
 
 // Role A role within a tenant. Closed: adding one is a reviewed change with an
 // authorization matrix entry, not a string a caller may invent.
@@ -372,6 +847,9 @@ type Trains struct {
 	Schema    string `json:"schema"`
 }
 
+// UnitCode A unit of measure, as the content pack names it.
+type UnitCode = string
+
 // User A user as this API represents one. Note what is absent and always will
 // be: there is no password, no verifier, no salt and no parameter set. A
 // domain type serialized directly is a domain type whose every future
@@ -404,6 +882,12 @@ type UserID = string
 // two lead to different administrative actions.
 type UserStatus string
 
+// ValueType The type of an emitted value. It says which of a value's other members are present.
+type ValueType string
+
+// IdempotencyKey defines model for IdempotencyKey.
+type IdempotencyKey = string
+
 // Limit defines model for Limit.
 type Limit = int32
 
@@ -418,6 +902,12 @@ type Conflict = Problem
 // data to be understood names a decision or a request, and the data is
 // fetched through an audited path.
 type Forbidden = Problem
+
+// IdempotencyConflict RFC 9457 Problem Details, with the `ztx_` extensions from ADR-0016 §2.5.
+// The extensions carry identifiers rather than data: an error that needs
+// data to be understood names a decision or a request, and the data is
+// fetched through an audited path.
+type IdempotencyConflict = Problem
 
 // Internal RFC 9457 Problem Details, with the `ztx_` extensions from ADR-0016 §2.5.
 // The extensions carry identifiers rather than data: an error that needs
@@ -485,6 +975,15 @@ type ListUsers200JSONResponseBody struct {
 	Users []User `json:"users"`
 }
 
+// CommitTransactionParams defines parameters for CommitTransaction.
+type CommitTransactionParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
 // CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
 type CreateUserJSONRequestBody = CreateUserRequest
 
@@ -499,3 +998,9 @@ type ChangePasswordJSONRequestBody = ChangePasswordRequest
 
 // SignInJSONRequestBody defines body for SignIn for application/json ContentType.
 type SignInJSONRequestBody = SignInRequest
+
+// CreateQuoteJSONRequestBody defines body for CreateQuote for application/json ContentType.
+type CreateQuoteJSONRequestBody = QuoteRequest
+
+// CommitTransactionJSONRequestBody defines body for CommitTransaction for application/json ContentType.
+type CommitTransactionJSONRequestBody = CommitRequest

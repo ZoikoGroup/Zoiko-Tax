@@ -6,8 +6,8 @@ Generated from [`register.yaml`](register.yaml) and [`requirements.yaml`](requir
 |---|---|---|---|---|---|---|---|---|
 | `ZTAX-STR-003` | Global Strategic Blueprint | C | EXISTING | — | EFFECTIVE | Executive Strategy | — | — |
 | `ZTAX-STR-002` | Global Strategic Blueprint (prior) | C | EXISTING | — | SUPERSEDED | Executive Strategy | — | — |
-| `ZTAX-ARCH-001` | Global Backend Architecture | C | EXISTING | 2.0 | EFFECTIVE | CTO / Chief Architect | — | — |
-| `ZTAX-GOV-001` | Documentation Estate & Specification Governance | C | F0 | 3.0 | DRAFT | CTO + CCRO | 2026-11-29 | — |
+| `ZTAX-ARCH-001` | Global Backend Architecture | C | EXISTING | 2.0 | EFFECTIVE | CTO / Chief Architect | — | 2 PROPOSED |
+| `ZTAX-GOV-001` | Documentation Estate & Specification Governance | C | F0 | 3.0 | DRAFT | CTO + CCRO | 2026-11-29 | 1 PROPOSED |
 | `ZTAX-PRD-000` | Global Product Charter & Scope Boundary | C | F0 | 1.0 | DRAFT | CPO | 2026-11-29 | 50 PROPOSED |
 | `ZTAX-DOM-001` | Canonical Domain Model, Data Model & Lifecycles | C | F0 | 1.0 | DRAFT | Chief Architect | 2026-11-29 | 70 PROPOSED |
 | `ZTAX-CONT-001` | Global Tax & Regulatory Content / Country Pack Standard | C | F0 | 1.0 | DRAFT | CCRO | 2026-11-29 | 93 PROPOSED |
@@ -22,10 +22,10 @@ Generated from [`register.yaml`](register.yaml) and [`requirements.yaml`](requir
 | `ZTAX-JUR-001` | Jurisdiction, Situs & Place-of-Supply | S | F1 | 1.0.0-draft | DRAFT | Head of Determination | 2026-12-22 | 27 PROPOSED |
 | `ZTAX-OBL-001` | Responsibility & Regulatory Obligation Engine | S | F1 | 1.0 | DRAFT | Head of Obligations | 2026-11-29 | 142 PROPOSED |
 | `ZTAX-FIN-001` | Fiscal Document Lifecycle, Tax Control Subledger & Reconciliation | S | F1 | 1.0 | DRAFT | Head of Finance Systems | 2026-11-29 | 123 PROPOSED |
-| `ZTAX-INT-001` | Global API, Event, Webhook, SDK & Integration Contracts | S | F1 | — | PROPOSED | Head of Platform | — | — |
+| `ZTAX-INT-001` | Global API, Event, Webhook, SDK & Integration Contracts | S | F1 | — | PROPOSED | Head of Platform | — | 1 PROPOSED |
 | `ZTAX-NFR-001` | Non-Functional Requirements, Capacity, Availability & Resilience | S | F0-F1 | — | PROPOSED | Chief Architect | — | — |
 | `ZTAX-QA-001` | Verification, Golden Testing & Certification Standard | S | F1 | — | PROPOSED | Head of Quality Engineering | — | — |
-| `ZTAX-AI-001` | ZoikoTax Intelligence Fabric Architecture | L | F1 | — | PROPOSED | Head of AI | — | — |
+| `ZTAX-AI-001` | ZoikoTax Intelligence Fabric Architecture | L | F1 | — | PROPOSED | Head of AI | — | 15 PROPOSED |
 | `ZTAX-COMP-001` | Global Compliance Operations | S | F2 | — | PROPOSED | Head of Global Compliance | — | — |
 | `ZTAX-REM-001` | Remittance & Funds Control | S | F2 | — | PROPOSED | GC + Head of Compliance | — | — |
 | `ZTAX-CTC-001` | Global E-Invoicing & Continuous Transaction Controls | S | F2 | — | PROPOSED | Head of Global Compliance | — | — |
@@ -37,7 +37,7 @@ Generated from [`register.yaml`](register.yaml) and [`requirements.yaml`](requir
 
 ## Summary
 
-30 documents: 15 DRAFT, 2 EFFECTIVE, 12 PROPOSED, 1 SUPERSEDED. 1373 registered requirements.
+30 documents: 15 DRAFT, 2 EFFECTIVE, 12 PROPOSED, 1 SUPERSEDED. 1392 registered requirements.
 
 ## Open gaps
 

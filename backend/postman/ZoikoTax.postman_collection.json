@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:2815bbc9532f029090f92872491b136c7177550d6505cfd2c3468a598d05a93b`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolder `99` records the determination surface, which is specified and not built. Its paths are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:9449bc10f05985e4967ebe167e3895eabe74ac3b7a41a98ef05d6d3a0d5a3116`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -964,7 +964,7 @@
     },
     {
       "name": "05 · Contract conformance — with a session",
-      "description": "Requests a well-behaved client would never send, to endpoints that need a session. Each asserts a control, and each runs against an endpoint that exists today — so a green row here is evidence rather than an aspiration.\n\nThey sit before `06 · Sign out` because they need the session it ends; after it they could only return 401, which is evidence of nothing but the run order.",
+      "description": "Requests a well-behaved client would never send, to endpoints that need a session. Each asserts a control, and each runs against an endpoint that exists today — so a green row here is evidence rather than an aspiration.\n\nThey sit before `08 · Sign out` because they need the session it ends; after it they could only return 401, which is evidence of nothing but the run order.",
       "item": [
         {
           "name": "Unknown field is rejected, not ignored",
@@ -1106,7 +1106,7 @@
                 "roles"
               ]
             },
-            "description": "`Role` is a closed enum in the contract. Adding one is a reviewed change with an authorization-matrix entry, not a string a caller may invent — and a server that stored an unrecognised role would be a server whose authorization decisions nobody can audit.\n\nNeeds `userId`, which `06 · Create a user` captures."
+            "description": "`Role` is a closed enum in the contract. Adding one is a reviewed change with an authorization-matrix entry, not a string a caller may invent — and a server that stored an unrecognised role would be a server whose authorization decisions nobody can audit.\n\nNeeds `userId`, which `04 · Administration` captures."
           },
           "response": [],
           "event": [
@@ -1127,8 +1127,823 @@
       ]
     },
     {
-      "name": "06 · Sign out",
-      "description": "After everything that needs the session this ends — including `05 · Contract conformance — with a session`, which sits before it for that reason.",
+      "name": "06 · Determination — needs content and an OPERATOR",
+      "description": "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "item": [
+        {
+          "name": "POST /v1/quotes — Quote a transaction without recording it",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"100.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"3\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"9999.99\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/quotes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "quotes"
+              ]
+            },
+            "description": "Quote a transaction without recording it\n\n`OPERATOR` or `ANALYST`. Evaluates the input against the cell's active\ncontent bundle by exactly the path a commit takes, then discards it:\nno decision, no evidence, no idempotency record.\n\n**A quote is an estimate; only a commit is a decision** (ADR-0004\n§2.7). Every quote is `authoritative: false`, whatever the\ndeployment's authorization level, and must not be filed or invoiced\nfrom.\n\nThe input is named the way content reads it. Which values a line\ncarries, and what they are called, is decided by the active pack, not\nby this contract — the worked pack reads `line.netAmount`,\n`line.quantity` and two flags, and a read set holding\n`threshold.ecoLevyYtd`. A value the pack reads and the request omits is\na `400`; so is an accumulator the pack does not read."
+          },
+          "response": [
+            {
+              "name": "200 · VAT and the eco levy, advisory",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/quotes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "quotes"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"authoritative\": false,\n  \"outcome\": \"ADVISORY\",\n  \"reasonCode\": \"NOT_AUTHORITATIVE\",\n  \"quotedAt\": \"2026-09-25T09:00:00.000000Z\",\n  \"bundle\": {\n    \"bundleId\": \"eu-vat-worked-2026.09\",\n    \"digest\": \"zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b\",\n    \"irVersion\": 1\n  },\n  \"emitted\": {\n    \"TAX_VAT\": {\n      \"type\": \"MONEY\",\n      \"amount\": \"21.00\",\n      \"currency\": \"EUR\"\n    },\n    \"TAX_ECO_LEVY\": {\n      \"type\": \"MONEY\",\n      \"amount\": \"0.11\",\n      \"currency\": \"EUR\"\n    }\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('createQuote returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('ADR-0004 §2.7 — a quote is never authoritative', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().authoritative).to.eql(false);",
+                  "});",
+                  "pm.test('ADR-0010 §2.9 — every emitted amount is a decimal string', function () {",
+                  "  Object.values(pm.response.json().emitted).forEach(function (v) {",
+                  "    if (v.type === 'MONEY') { pm.expect(v.amount).to.be.a('string'); }",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/transactions:commit — Commit a transaction and record its decision",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessKey\": \"INV-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"100.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"3\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"9999.99\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "Commit a transaction and record its decision\n\n`OPERATOR` only. Evaluates the input against the active content bundle\nand records the result as an immutable decision, with the two evidence\nobjects that let it replay exactly (ADR-0011 §2.8).\n\n**`Idempotency-Key` is mandatory** (ADR-0013 §2.1). A retry with the\nsame key and the same body returns the original response verbatim,\nwith `Idempotent-Replay: true`, and records nothing new. The same key\nwith a different body is `409 IDEMPOTENCY_KEY_REUSE`; a key whose first\nrequest is still running is `409 REQUEST_IN_PROGRESS` with\n`Retry-After`. Neither executes. Bodies are compared in canonical form,\nso member order and whitespace do not matter and a decimal's scale\ndoes — `\"45.00\"` and `\"45.0\"` are different requests.\n\nA validation failure is recorded against the key and replayed on\nretry, because the same request fails the same way. A transient\nfailure (`503`) is not: the key is released and a retry is a genuine\nnew attempt.\n\n`supersedes` corrects an earlier decision for the same `businessKey`.\nIt must name the current version; a decision is never edited, and a\ncorrection is a new decision linked to the old (ADR-0003).\n\nBefore A4 every decision is `ADVISORY` and `authoritative: false`."
+          },
+          "response": [
+            {
+              "name": "201 · An advisory decision",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/transactions:commit",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "transactions:commit"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n  \"businessKey\": \"INV-0001/1\",\n  \"authoritative\": false,\n  \"outcome\": \"ADVISORY\",\n  \"reasonCode\": \"NOT_AUTHORITATIVE\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"recordedAt\": \"2026-09-25T09:00:00.000000Z\",\n  \"bundle\": {\n    \"bundleId\": \"eu-vat-worked-2026.09\",\n    \"digest\": \"zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b\",\n    \"irVersion\": 1\n  },\n  \"digests\": {\n    \"input\": \"zt1:4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d\",\n    \"envelope\": \"zt1:9c8d7e6f5a4b3c2d1e0f4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n    \"result\": \"zt1:1a0b9c8d7e6f5a4b3c2d4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\"\n  },\n  \"emitted\": {\n    \"TAX_VAT\": {\n      \"type\": \"MONEY\",\n      \"amount\": \"21.00\",\n      \"currency\": \"EUR\"\n    },\n    \"TAX_ECO_LEVY\": {\n      \"type\": \"MONEY\",\n      \"amount\": \"0.11\",\n      \"currency\": \"EUR\"\n    }\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('commitTransaction returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('the decision is recorded, and advisory before A4', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().authoritative).to.eql(false);",
+                  "});",
+                  "pm.collectionVariables.set('decisionId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/decisions/{decisionId} — Read a recorded decision",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/decisions/{{decisionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decisions",
+                "{{decisionId}}"
+              ]
+            },
+            "description": "Read a recorded decision\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. What the decision emitted is read\nfrom its result evidence and verified against the digest the decision\nnames, so a response is never built from a record that has come apart\nfrom its evidence — that is a `500 EVIDENCE_INTEGRITY` instead."
+          },
+          "response": [
+            {
+              "name": "200 · An advisory decision",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/decisions/{{decisionId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "decisions",
+                    "{{decisionId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n  \"businessKey\": \"INV-0001/1\",\n  \"authoritative\": false,\n  \"outcome\": \"ADVISORY\",\n  \"reasonCode\": \"NOT_AUTHORITATIVE\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"recordedAt\": \"2026-09-25T09:00:00.000000Z\",\n  \"bundle\": {\n    \"bundleId\": \"eu-vat-worked-2026.09\",\n    \"digest\": \"zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b\",\n    \"irVersion\": 1\n  },\n  \"digests\": {\n    \"input\": \"zt1:4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d\",\n    \"envelope\": \"zt1:9c8d7e6f5a4b3c2d1e0f4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n    \"result\": \"zt1:1a0b9c8d7e6f5a4b3c2d4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\"\n  },\n  \"emitted\": {\n    \"TAX_VAT\": {\n      \"type\": \"MONEY\",\n      \"amount\": \"21.00\",\n      \"currency\": \"EUR\"\n    },\n    \"TAX_ECO_LEVY\": {\n      \"type\": \"MONEY\",\n      \"amount\": \"0.11\",\n      \"currency\": \"EUR\"\n    }\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getDecision returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/replay/{decisionId} — Replay a recorded decision and compare it byte for byte",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/replay/{{decisionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "replay",
+                "{{decisionId}}"
+              ]
+            },
+            "description": "Replay a recorded decision and compare it byte for byte\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. Rebuilds the decision's result from\nits envelope alone, against the content bundle the envelope names —\nnever the one active now — and compares the canonical bytes with the\nresult that was recorded (ADR-0003 §3.3, ADR-0011 §2.8).\n\nThe verdict is data, not an error. `DIVERGED` names the first path at\nwhich the two results differ; `BUNDLE_UNAVAILABLE` means this cell no\nlonger holds the bundle the decision was made under, which is a fact\nabout the cell rather than about the decision. Evidence that no longer\nmatches its digest, or a record that disagrees with its envelope, is a\n`500 EVIDENCE_INTEGRITY` instead: that is an incident, not a verdict.\n\nNothing is recorded. Replaying twice gives the same answer."
+          },
+          "response": [
+            {
+              "name": "200 · The decision replays exactly",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/replay/{{decisionId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "replay",
+                    "{{decisionId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n  \"verdict\": \"MATCH\",\n  \"envelopeDigest\": \"zt1:9c8d7e6f5a4b3c2d1e0f4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n  \"recordedResult\": \"zt1:1a0b9c8d7e6f5a4b3c2d4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n  \"replayedResult\": \"zt1:1a0b9c8d7e6f5a4b3c2d4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\"\n}"
+            },
+            {
+              "name": "200 · The runtime no longer reproduces the recorded result",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/replay/{{decisionId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "replay",
+                    "{{decisionId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n  \"verdict\": \"DIVERGED\",\n  \"envelopeDigest\": \"zt1:9c8d7e6f5a4b3c2d1e0f4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n  \"recordedResult\": \"zt1:1a0b9c8d7e6f5a4b3c2d4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n  \"replayedResult\": \"zt1:7e6f5a4b3c2d1a0b9c8d4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n  \"divergence\": \"$.emitted.TAX_VAT.amount\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('replayDecision returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('ADR-0011 §2.8 — the decision just committed replays exactly', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().verdict).to.eql('MATCH');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.variables.get('runDetermination') !== 'true') {",
+              "  console.info('skipped: set runDetermination=true against a cell with content, signed in as an OPERATOR');",
+              "  pm.execution.skipRequest();",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 · Determination conformance — needs content and an OPERATOR",
+      "description": "The ADR-0013 and ADR-0011 controls on `POST /v1/transactions:commit`, each asserted against the running endpoint.\n\nRequests 1 to 4 share one idempotency key, minted once per run into `reusedKey`, so a second run against the same cell exercises the same four outcomes rather than replaying the first run's.\n\nSkipped unless `runDetermination` is `\"true\"`, for the reason `06` gives.",
+      "item": [
+        {
+          "name": "Idempotency · 1 · first commit with a fixed key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{reusedKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"0.00\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "ADR-0013 §2.4. The first of four: this one establishes the record, and requests 2 to 4 are the interesting ones."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('the first attempt executes', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.headers.get('Idempotent-Replay')).to.be.oneOf([undefined, null]);",
+                  "});",
+                  "pm.collectionVariables.set('_firstCommit', pm.response.text());"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Idempotency · 2 · same key, same body",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{reusedKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"0.00\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "Must return the *original* response, byte for byte, and record nothing. A retry that produced a second decision would be a second fiscal record for one transaction, which is the Critical risk in Build Plan §8."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('the retry is the original response, verbatim', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.headers.get('Idempotent-Replay')).to.eql('true');",
+                  "  pm.expect(pm.response.text()).to.eql(pm.collectionVariables.get('_firstCommit'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Idempotency · 3 · same key, DIFFERENT body",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{reusedKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"99.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"0.00\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "Must be a 409 `IDEMPOTENCY_KEY_REUSE` and must not execute (ADR-0013 §2.4).\n\nReplaying the original response would be worse than either alternative: the caller would believe the amount it sent was the amount recorded."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('a reused key is refused, not replayed', function () {",
+                  "  pm.response.to.have.status(409);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"IDEMPOTENCY_KEY_REUSE\"]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Idempotency · 4 · same key, same value at a different scale",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{reusedKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.0\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"0.00\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "`\"45.0\"` is not `\"45.00\"`. Scale is semantic (ADR-0011 §2.2), so the canonical request digest differs and this is a different request under a used key.\n\nA server that compared parsed numbers would replay request 1 here, and hand back a decision made at a precision the caller did not send."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('scale is part of the request', function () {",
+                  "  pm.response.to.have.status(409);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"IDEMPOTENCY_KEY_REUSE\"]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Idempotency · 5 · no key at all",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"0.00\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "`Idempotency-Key` is mandatory on `:commit`, `:adjust`, `:refund` and `POST /v1/batches` (ADR-0013 §2.1). Rejected before any work begins."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('a keyless commit is refused', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"IDEMPOTENCY_KEY_REQUIRED\"]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Canonical form · a fiscal amount sent as a JSON number",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": 45.0, \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  },\n  \"accumulators\": { \"threshold.ecoLevyYtd\": { \"amount\": \"0.00\", \"currency\": \"EUR\" } }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "**The request in this collection that matters most.**\n\n`\"amount\": 45.0` must be rejected, never coerced. A 2xx here is a Critical finding rather than a test failure: RFC 8785 serializes JSON numbers through IEEE 754 doubles (ADR-0011 §1.1), so an amount that is ever a JSON number has lost precision before canonicalization sees it — and the loss is invisible, because 45.0 survives and 0.1 does not.\n\nThe body is raw text rather than a structured one, because the whole point is to send a token a correct client cannot produce."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('a JSON number is never an amount', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"MALFORMED_REQUEST\", \"INVALID_VALUE\"]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Canonical form · explicit null in a fiscal position",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": null, \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  },\n  \"accumulators\": { \"threshold.ecoLevyYtd\": { \"amount\": \"0.00\", \"currency\": \"EUR\" } }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "ADR-0011 §2.1 P3 on the path where it costs the most. \"The amount was explicitly cleared\" and \"the integration did not send an amount\" are different events with different fiscal consequences."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('null is refused rather than normalised', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"MALFORMED_REQUEST\", \"INVALID_VALUE\", \"MISSING_FIELD\"]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Canonical form · a miscased field inside the input",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": \"45.00\", \"Currency\": \"USD\", \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  },\n  \"accumulators\": { \"threshold.ecoLevyYtd\": { \"amount\": \"0.00\", \"currency\": \"EUR\" } }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "ADR-0011 P5 below the top level. `Currency` beside `currency` is refused, not matched case-insensitively: encoding/json would otherwise let the later key win, and the decision would be recorded in whichever currency happened to come last."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('an undeclared nested field is refused', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"UNKNOWN_FIELD\"]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.variables.get('runDetermination') !== 'true') {",
+              "  pm.execution.skipRequest();",
+              "} else if (!pm.collectionVariables.get('reusedKey')) {",
+              "  pm.collectionVariables.set('reusedKey', 'postman-' + pm.variables.replaceIn('{{$guid}}'));",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 · Sign out",
+      "description": "After everything that needs the session this ends — including the conformance folders `05` and `07`, which sit before it for that reason.",
       "item": [
         {
           "name": "POST /v1/auth/sign-out — End the current session",
@@ -1172,7 +1987,7 @@
     },
     {
       "name": "90 · Contract conformance — without a session",
-      "description": "The same kind of request, for the controls that are about having no session at all — an unauthenticated caller, a sign-in that fails, a path nothing routes. They run after `06 · Sign out` so the cookie jar holds no session to send.",
+      "description": "The same kind of request, for the controls that are about having no session at all — an unauthenticated caller, a sign-in that fails, a path nothing routes. They run after `08 · Sign out` so the cookie jar holds no session to send.",
       "item": [
         {
           "name": "An unrouted path is still a Problem",
@@ -1483,254 +2298,6 @@
           }
         }
       ]
-    },
-    {
-      "name": "99 · Awaiting the determination surface",
-      "description": "The surface `ZTAX-INT-001` specifies and ADR-0010 §2.5 names: quotes, commit, adjust, refund, decisions, replay, classifications, obligations, batches and jobs.\n\nNone of it exists, none of it is in the contract, and the payloads below are derived from the domain model in the ADRs rather than from a published contract — so field names will change. They are here because the *controls* they assert are decided even though the endpoints are not, and because W2 lane K should have something to run on the day it builds them.\n\nThese paths are in `pendingPaths`, so a 404 is reported as \"not implemented yet\" rather than as a failure.",
-      "item": [
-        {
-          "name": "Idempotency · 1 · first commit with a fixed key",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/problem+json, application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{reusedKey}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"documentReference\": \"INV-POSTMAN-0001\",\n  \"lines\": [\n    {\n      \"lineNumber\": 1,\n      \"netAmount\": \"45.00\",\n      \"currency\": \"EUR\",\n      \"quantity\": \"1\"\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/v1/transactions:commit",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "transactions:commit"
-              ]
-            },
-            "description": "ADR-0013 §2.4. The first of four: this one establishes the record, and requests 2 to 4 are the interesting ones."
-          },
-          "response": []
-        },
-        {
-          "name": "Idempotency · 2 · same key, same body",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/problem+json, application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{reusedKey}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"documentReference\": \"INV-POSTMAN-0001\",\n  \"lines\": [\n    {\n      \"lineNumber\": 1,\n      \"netAmount\": \"45.00\",\n      \"currency\": \"EUR\",\n      \"quantity\": \"1\"\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/v1/transactions:commit",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "transactions:commit"
-              ]
-            },
-            "description": "Must return the *original* response, not a new one. A retry that produced a second decision would be a second fiscal record for one transaction, which is the Critical risk in Build Plan §8."
-          },
-          "response": []
-        },
-        {
-          "name": "Idempotency · 3 · same key, DIFFERENT body",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/problem+json, application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{reusedKey}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"documentReference\": \"INV-POSTMAN-0001\",\n  \"lines\": [\n    {\n      \"lineNumber\": 1,\n      \"netAmount\": \"99.00\",\n      \"currency\": \"EUR\",\n      \"quantity\": \"1\"\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/v1/transactions:commit",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "transactions:commit"
-              ]
-            },
-            "description": "Must be a 409 `IDEMPOTENCY_KEY_REUSE` and must not execute (ADR-0013 §2.4).\n\nReplaying the original response would be worse than either alternative: the caller would believe the amount it sent was the amount recorded."
-          },
-          "response": []
-        },
-        {
-          "name": "Idempotency · 4 · no key at all",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/problem+json, application/json"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"documentReference\": \"INV-POSTMAN-0002\",\n  \"lines\": [\n    {\n      \"lineNumber\": 1,\n      \"netAmount\": \"45.00\",\n      \"currency\": \"EUR\",\n      \"quantity\": \"1\"\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/v1/transactions:commit",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "transactions:commit"
-              ]
-            },
-            "description": "`Idempotency-Key` is mandatory on `:commit`, `:adjust`, `:refund` and `POST /v1/batches` (ADR-0013 §2.1). Rejected before any work begins.\n\nThe contract lint already enforces the other half of this: when those paths are added, an operation that does not declare a required `Idempotency-Key` header fails `npm run lint`."
-          },
-          "response": []
-        },
-        {
-          "name": "Canonical form · a fiscal amount sent as a JSON number",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/problem+json, application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{$guid}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"documentReference\": \"INV-POSTMAN-0003\",\n  \"lines\": [\n    { \"lineNumber\": 1, \"netAmount\": 45.0, \"currency\": \"EUR\", \"quantity\": \"1\" }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/v1/transactions:commit",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "transactions:commit"
-              ]
-            },
-            "description": "**The request in this collection that matters most.**\n\n`\"netAmount\": 45.0` must be rejected, never coerced. A 2xx here is a Critical finding rather than a test failure: RFC 8785 serializes JSON numbers through IEEE 754 doubles (ADR-0011 §1.1), so an amount that is ever a JSON number has lost precision before canonicalization sees it — and the loss is invisible, because 45.0 survives and 0.1 does not.\n\nThe body is raw text rather than a structured one, because the whole point is to send a token a correct client cannot produce."
-          },
-          "response": []
-        },
-        {
-          "name": "Canonical form · explicit null in a fiscal position",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/problem+json, application/json"
-              },
-              {
-                "key": "Idempotency-Key",
-                "value": "{{$guid}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"eventTime\": \"{{eventTime}}\",\n  \"decisionTime\": \"{{decisionTime}}\",\n  \"documentReference\": \"INV-POSTMAN-0004\",\n  \"lines\": [\n    { \"lineNumber\": 1, \"netAmount\": null, \"currency\": \"EUR\", \"quantity\": \"1\" }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseUrl}}/v1/transactions:commit",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "v1",
-                "transactions:commit"
-              ]
-            },
-            "description": "ADR-0011 §2.1 P3 on the path where it costs the most. \"The amount was explicitly cleared\" and \"the integration did not send an amount\" are different events with different fiscal consequences."
-          },
-          "response": []
-        }
-      ]
     }
   ],
   "event": [
@@ -1912,6 +2479,11 @@
       "type": "string"
     },
     {
+      "key": "runDetermination",
+      "value": "false",
+      "type": "string"
+    },
+    {
       "key": "newUserEmail",
       "value": "",
       "type": "string"
@@ -1952,23 +2524,23 @@
       "type": "string"
     },
     {
-      "key": "tenantId",
-      "value": "ztn_01JBQ0S9C3X8Q1H6M2KX5R7F4A",
+      "key": "decisionId",
+      "value": "",
       "type": "string"
     },
     {
       "key": "reusedKey",
-      "value": "postman-idempotency-0001",
+      "value": "",
       "type": "string"
     },
     {
       "key": "pendingPaths",
-      "value": "[\"/v1/transactions:commit\",\"/v1/transactions:adjust\",\"/v1/transactions:refund\"]",
+      "value": "[\"/v1/transactions:adjust\",\"/v1/transactions:refund\"]",
       "type": "string"
     },
     {
       "key": "contractDigest",
-      "value": "sha256:2815bbc9532f029090f92872491b136c7177550d6505cfd2c3468a598d05a93b",
+      "value": "sha256:9449bc10f05985e4967ebe167e3895eabe74ac3b7a41a98ef05d6d3a0d5a3116",
       "type": "string"
     }
   ]
