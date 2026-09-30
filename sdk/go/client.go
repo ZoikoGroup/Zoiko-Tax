@@ -257,6 +257,74 @@ func (c *Client) ListAudit(ctx context.Context, opts ListOptions) (*AuditList, e
 	return &out, nil
 }
 
+// --- determination -----------------------------------------------------------
+
+// CreateQuote quotes a transaction without recording it.
+//
+// A quote is an estimate, never a decision: it is always Authoritative false
+// and must not be filed or invoiced from.
+func (c *Client) CreateQuote(ctx context.Context, body QuoteRequest) (*Quote, error) {
+	var out Quote
+	wire := quoteWire{QuoteRequest: body, EventTime: formatTimestamp(body.EventTime)}
+	if err := c.send(ctx, http.MethodPost, "/v1/quotes", nil, wire, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// CommitTransaction commits a transaction and records its decision.
+//
+// idempotencyKey is mandatory. Mint it before the first attempt and reuse it,
+// unchanged, on every retry of the same request (ADR-0013): that is what makes
+// a retry safe, and this client never retries on its own.
+func (c *Client) CommitTransaction(ctx context.Context, idempotencyKey string, body CommitRequest) (*Decision, error) {
+	var out Decision
+	wire := commitWire{CommitRequest: body, EventTime: formatTimestamp(body.EventTime)}
+	header := http.Header{"Idempotency-Key": {idempotencyKey}}
+	if err := c.sendWithHeader(ctx, http.MethodPost, "/v1/transactions:commit", nil, header, wire, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// GetDecision reads a recorded decision.
+func (c *Client) GetDecision(ctx context.Context, decisionID DecisionID) (*Decision, error) {
+	var out Decision
+	if err := c.send(ctx, http.MethodGet, "/v1/decisions/"+url.PathEscape(decisionID), nil, nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// ReplayDecision replays a recorded decision and compares it byte for byte. The
+// verdict is data, not an error; nothing is recorded.
+func (c *Client) ReplayDecision(ctx context.Context, decisionID DecisionID) (*ReplayReport, error) {
+	var out ReplayReport
+	if err := c.send(ctx, http.MethodPost, "/v1/replay/"+url.PathEscape(decisionID), nil, nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// quoteWire and commitWire are the request bodies as sent. encoding/json writes
+// a time.Time with variable precision, and the contract's Timestamp is exactly
+// six fractional digits and a literal Z (ADR-0011 §2.1), so EventTime is
+// formatted here. The outer field shadows the embedded one; every other member
+// is encoded unchanged.
+type quoteWire struct {
+	QuoteRequest
+	EventTime string `json:"eventTime"`
+}
+
+type commitWire struct {
+	CommitRequest
+	EventTime string `json:"eventTime"`
+}
+
+func formatTimestamp(t time.Time) string {
+	return t.UTC().Format("2006-01-02T15:04:05.000000Z")
+}
+
 // --- transport ---------------------------------------------------------------
 
 func (o ListOptions) query() url.Values {
@@ -269,6 +337,12 @@ func (o ListOptions) query() url.Values {
 // send performs one request, once. out is nil for an operation whose success
 // has no body.
 func (c *Client) send(ctx context.Context, method, path string, query url.Values, body, out any) error {
+	return c.sendWithHeader(ctx, method, path, query, nil, body, out)
+}
+
+// sendWithHeader is send with headers for this request only, such as an
+// operation's Idempotency-Key.
+func (c *Client) sendWithHeader(ctx context.Context, method, path string, query url.Values, header http.Header, body, out any) error {
 	fail := func(status int, message string, cause error) error {
 		return &TransportError{Method: method, Path: path, Status: status, Message: message, Err: cause}
 	}
@@ -306,6 +380,9 @@ func (c *Client) send(ctx context.Context, method, path string, query url.Values
 		return fail(0, "could not be built", err)
 	}
 	for key, values := range c.headers {
+		req.Header[key] = append([]string(nil), values...)
+	}
+	for key, values := range header {
 		req.Header[key] = append([]string(nil), values...)
 	}
 	if body != nil {

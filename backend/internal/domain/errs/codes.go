@@ -221,6 +221,16 @@ var (
 		"lane-h",
 		"The content bundle requires a rule-IR version this runtime does not support.")
 
+	// ---- evidence (ADR-0011) ----------------------------------------------
+
+	// ReasonEvidenceIntegrity is an evidence object that no longer hashes to
+	// the digest it is stored under, or a record that disagrees with the
+	// evidence it names. It is never a caller's fault and never retryable:
+	// something changed evidence that the design says cannot change.
+	ReasonEvidenceIntegrity = Register("EVIDENCE_INTEGRITY", CategoryInternal,
+		"lane-d",
+		"Stored evidence did not match its registered digest. The failure is recorded and alerted as an integrity incident.")
+
 	// ---- determination outcomes (ADR-0016 §2.1) --------------------------
 	//
 	// These are decisions, not errors. They are registered here because a

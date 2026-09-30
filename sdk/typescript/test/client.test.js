@@ -163,6 +163,23 @@ test("a request body is sent as JSON with the right content type", async () => {
   });
 });
 
+test("a commit sends the caller's Idempotency-Key", async () => {
+  const { fetch, calls } = stub(json(201, { id: "01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f" }));
+  const client = new ZoikoTaxClient({ baseUrl: "https://eu-west-1.zoikotax.com", fetch });
+
+  await client.commitTransaction("5f0c2a1e-commit-INV-0001-1", {
+    businessKey: "INV-0001/1",
+    eventTime: "2026-09-24T18:00:00.000000Z",
+    input: { money: { "line.netAmount": { amount: "100.00", currency: "EUR" } } },
+  });
+
+  assert.equal(calls[0].url, "https://eu-west-1.zoikotax.com/v1/transactions:commit");
+  assert.equal(calls[0].init.method, "POST");
+  assert.equal(calls[0].init.headers["Idempotency-Key"], "5f0c2a1e-commit-INV-0001-1");
+  // An amount is a string on the wire, with its scale intact.
+  assert.equal(JSON.parse(calls[0].init.body).input.money["line.netAmount"].amount, "100.00");
+});
+
 test("unwrap throws the error for callers who prefer exceptions", async () => {
   const { fetch } = stub(json(403, problem()));
   const client = new ZoikoTaxClient({ baseUrl: "https://eu-west-1.zoikotax.com", fetch });

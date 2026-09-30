@@ -110,9 +110,21 @@ const FOLDERS = [
     ],
   },
   {
-    name: "06 · Sign out",
+    name: "06 · Determination — needs content and an OPERATOR",
     description:
-      "After everything that needs the session this ends — including `05 · Contract conformance — with a session`, which sits before it for that reason.",
+      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+    operations: ["createQuote", "commitTransaction", "getDecision", "replayDecision"],
+    prerequest: [
+      "if (pm.variables.get('runDetermination') !== 'true') {",
+      "  console.info('skipped: set runDetermination=true against a cell with content, signed in as an OPERATOR');",
+      "  pm.execution.skipRequest();",
+      "}",
+    ],
+  },
+  {
+    name: "08 · Sign out",
+    description:
+      "After everything that needs the session this ends — including the conformance folders `05` and `07`, which sit before it for that reason.",
     operations: ["signOut"],
   },
   {
@@ -183,6 +195,30 @@ const OPERATION_TESTS = {
     "pm.test('the session cookie is set HttpOnly', function () {",
     "  const header = pm.response.headers.get('Set-Cookie') || '';",
     "  pm.expect(header.toLowerCase()).to.include('httponly');",
+    "});",
+  ],
+  createQuote: [
+    "pm.test('ADR-0004 §2.7 — a quote is never authoritative', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().authoritative).to.eql(false);",
+    "});",
+    "pm.test('ADR-0010 §2.9 — every emitted amount is a decimal string', function () {",
+    "  Object.values(pm.response.json().emitted).forEach(function (v) {",
+    "    if (v.type === 'MONEY') { pm.expect(v.amount).to.be.a('string'); }",
+    "  });",
+    "});",
+  ],
+  commitTransaction: [
+    "pm.test('the decision is recorded, and advisory before A4', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().authoritative).to.eql(false);",
+    "});",
+    "pm.collectionVariables.set('decisionId', pm.response.json().id);",
+  ],
+  replayDecision: [
+    "pm.test('ADR-0011 §2.8 — the decision just committed replays exactly', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().verdict).to.eql('MATCH');",
     "});",
   ],
   createUser: [
@@ -309,6 +345,15 @@ function requestFrom(doc, method, path, operation) {
   }
 
   const header = [{ key: "Accept", value: "application/problem+json, application/json" }];
+  for (const parameter of operation.parameters ?? []) {
+    const p = resolve(doc, parameter);
+    if (p?.in !== "header") continue;
+    // A fresh key per request. The collection is run repeatedly against the
+    // same cell, and a fixed key would replay the first run's decision on every
+    // run after it — which is correct behaviour and a useless test.
+    const value = p.name.toLowerCase() === "idempotency-key" ? "{{$guid}}" : `{{${p.name}}}`;
+    header.push({ key: p.name, value, description: (p.description ?? "").trim() });
+  }
   const bodyExample = substitute(firstExample(resolve(doc, operation.requestBody)?.content?.["application/json"]));
   if (bodyExample !== undefined) {
     header.push({ key: "Content-Type", value: "application/json" });
@@ -479,11 +524,15 @@ function build(doc, overlay, scripts, sourceName) {
   }
 
   for (const folder of overlay.folders ?? []) {
-    items.push({
+    const item = {
       name: folder.name,
       description: folder.description,
       item: (folder.requests ?? []).map(overlayRequest),
-    });
+    };
+    if (folder.prerequest) {
+      item.event = [{ listen: "prerequest", script: { type: "text/javascript", exec: folder.prerequest } }];
+    }
+    items.push(item);
   }
 
   // One ordering for both sources. Every folder name starts with a two-digit
@@ -525,7 +574,7 @@ function build(doc, overlay, scripts, sourceName) {
         "",
         "Folder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.",
         "",
-        "Folder `99` records the determination surface, which is specified and not built. Its paths are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
+        "Folders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
       ].join("\n"),
       schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     },
@@ -552,6 +601,8 @@ function variables(overlay, contractDigest, local) {
     { key: "newPassword", value: "a considerably longer passphrase than that one", type: "string" },
     // `98 · Destructive` runs only when this is "true".
     { key: "runDestructive", value: "false", type: "string" },
+    // `06` and `07`, the determination folders, run only when this is "true".
+    { key: "runDetermination", value: "false", type: "string" },
 
     // Set by the pre-request script and by the requests that create things.
     { key: "newUserEmail", value: "", type: "string" },
@@ -562,10 +613,9 @@ function variables(overlay, contractDigest, local) {
     { key: "bundleDigest", value: "", type: "string" },
     { key: "decisionTime", value: "", type: "string" },
     { key: "eventTime", value: "", type: "string" },
-
-    // For the pending determination surface.
-    { key: "tenantId", value: "ztn_01JBQ0S9C3X8Q1H6M2KX5R7F4A", type: "string" },
-    { key: "reusedKey", value: "postman-idempotency-0001", type: "string" },
+    { key: "decisionId", value: "", type: "string" },
+    // Minted once per run by `07`, and reused by the requests that must share it.
+    { key: "reusedKey", value: "", type: "string" },
 
     {
       key: "pendingPaths",

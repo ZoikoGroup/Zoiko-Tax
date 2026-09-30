@@ -17,7 +17,17 @@ Every structural choice here is recorded in [the ADR set](../../adr/README.md). 
 
 The content compiler and bundle signing (`internal/content`, `cmd/ztax-contentc`) and the v1 API contract with its generated wire types (`internal/transport/http/gen`, ADR-0010 §2.1) have landed since.
 
-What does not: any actual tax content beyond the `eu-vat` sample pack, the Model Gateway, telemetry, and evidence sealing. Two of those wait on specifications that were never produced — `ZTAX-DET-001` and `ZTAX-JUR-001` — so the interfaces are here and the rule semantics are not, which is exactly where the Build Plan says W0 should leave them.
+**The backend half of the W1 exit gate is in:**
+
+- **One decision type replays exactly.** `app.DeterminationService` records a determination from the active bundle as two canonical evidence objects — the envelope (ADR-0011 §2.8, now carrying the accumulator read set of ZTAX-DET-REQ-0034) and the result with its trace — and an append-only `tax_decision` row with ADR-0003's as-of reads. `Replay` rebuilds the result from the envelope alone, against the bundle the envelope names rather than the active one, and compares bytes. Proven against the worked pack in unit tests and against a real PostgreSQL in the integration tier, including divergence, a later content release, a tampered object and a record that disagrees with its envelope.
+- **Evidence store and period sealing.** A content-addressed, write-once, tenant-scoped object store (`internal/adapter/evidence`, filesystem prototype of the retention-locked object store), and `app.SealService`: an RFC 6962 Merkle root over one leaf per decision, signed through `kms.Signer`, verified end to end. ADR-0011 control 4 — tamper with one record, the root changes and verification fails — is a test, against the real store too.
+- **Privacy metadata.** Every field of the API contract carries PRIV-001 §24 metadata (`x-ztax-privacy`), and the contract lint's `privacy-classified-fields` rule is PRIV-FIELD-CONF. The vocabulary is one file, `contracts/privacy/vocabulary.json`, shared by the lint and by `internal/domain/privacy`.
+- **Redaction.** Classified values travel as `privacy.Value`, whose only log, format, JSON and span-attribute form is redacted (ADR-0015 §2.2); every binary's logger sits on a redacting handler that is the denylist backstop and keeps fiscal amounts out of telemetry (§2.3).
+- **Tracing.** OpenTelemetry to a cell-local collector over OTLP/gRPC, all seven trains as resource attributes, a head sampler that never drops commit, adjust or refund, and trace ids on every log line and Problem. Off until a deployment names its collector (`ZTAX_OTLP_ENDPOINT`).
+
+Not wired to the HTTP surface yet: the decision and seal services have no endpoints. The quote and commit endpoints that call them are W2 lane K.
+
+What does not exist: any actual tax content beyond the `eu-vat` sample pack, and the Model Gateway client. The gateway's transport waits on the schema-to-proto pipeline ADR-0006 §2.2 requires, which is W2 lane K; the Python side is in the same position. `ZTAX-DET-001` and `ZTAX-JUR-001` are drafted and registered, still DRAFT, so rule semantics beyond the IR's current instructions are W2 lane H.
 
 **Both remaining W0 controls are closed.** ADR-0001 control 2 (`NUMERIC` bound to `apd.Decimal`, no path narrowing to `float64`) is discharged by the conformance suite in `internal/adapter/postgres`, which runs against a real PostgreSQL. Control 6 (`apd` vendored) is done, and `make vendor-verify` detects drift or a local patch.
 

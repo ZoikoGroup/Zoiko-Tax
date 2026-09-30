@@ -55,6 +55,9 @@ export type SessionSummary = components["schemas"]["SessionSummary"];
 export type AuditRecord = components["schemas"]["AuditRecord"];
 export type Role = components["schemas"]["Role"];
 export type UserStatus = components["schemas"]["UserStatus"];
+export type Quote = components["schemas"]["Quote"];
+export type Decision = components["schemas"]["Decision"];
+export type ReplayReport = components["schemas"]["ReplayReport"];
 
 /**
  * A failed request.
@@ -281,14 +284,66 @@ export class ZoikoTaxClient {
     return this.#send<{ records: AuditRecord[] }>("GET", `/v1/admin/audit${query(params)}`, undefined, signal);
   }
 
+  // --- determination ------------------------------------------------------
+
+  /**
+   * Quote a transaction without recording it.
+   *
+   * A quote is an estimate, never a decision: it is always
+   * `authoritative: false` and must not be filed or invoiced from.
+   */
+  createQuote(
+    body: operations["createQuote"]["requestBody"]["content"]["application/json"],
+    signal?: AbortSignal,
+  ): Promise<Result<Quote>> {
+    return this.#send<Quote>("POST", "/v1/quotes", body, signal);
+  }
+
+  /**
+   * Commit a transaction and record its decision.
+   *
+   * `idempotencyKey` is mandatory. Mint it before the first attempt and reuse
+   * it, unchanged, on every retry of the same request (ADR-0013): that is what
+   * makes a retry safe, and this client never retries on its own.
+   */
+  commitTransaction(
+    idempotencyKey: string,
+    body: operations["commitTransaction"]["requestBody"]["content"]["application/json"],
+    signal?: AbortSignal,
+  ): Promise<Result<Decision>> {
+    return this.#send<Decision>("POST", "/v1/transactions:commit", body, signal, {
+      "Idempotency-Key": idempotencyKey,
+    });
+  }
+
+  /** Read a recorded decision. */
+  getDecision(decisionId: string, signal?: AbortSignal): Promise<Result<Decision>> {
+    return this.#send<Decision>("GET", `/v1/decisions/${encodeURIComponent(decisionId)}`, undefined, signal);
+  }
+
+  /**
+   * Replay a recorded decision and compare it byte for byte. The verdict is
+   * data, not an error; nothing is recorded.
+   */
+  replayDecision(decisionId: string, signal?: AbortSignal): Promise<Result<ReplayReport>> {
+    return this.#send<ReplayReport>("POST", `/v1/replay/${encodeURIComponent(decisionId)}`, undefined, signal);
+  }
+
   // --- transport ----------------------------------------------------------
 
-  async #send<T>(method: string, path: string, body: Json, signal?: AbortSignal): Promise<Result<T>> {
+  async #send<T>(
+    method: string,
+    path: string,
+    body: Json,
+    signal?: AbortSignal,
+    extraHeaders?: Record<string, string>,
+  ): Promise<Result<T>> {
     const headers: Record<string, string> = {
       // Problem Details first, because an error is the response whose shape
       // this client most needs to be sure of.
       Accept: "application/problem+json, application/json",
       ...this.#headers,
+      ...extraHeaders,
     };
     if (body !== undefined) headers["Content-Type"] = "application/json";
 

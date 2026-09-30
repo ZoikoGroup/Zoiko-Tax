@@ -31,13 +31,13 @@ openapi: 3.2.0
 info:
   title: ZoikoTax
   version: "1.0.0"
-  summary: Tenant identity, session and administration surface of a ZoikoTax regional cell.
+  summary: Discovery, identity, administration and determination surface of a ZoikoTax regional cell.
   description: |
     This is the `/v1` surface a ZoikoTax regional cell serves today: discovery,
-    authentication and tenant administration. The determination surface named in
-    `ZTAX-INT-001` — quotes, transaction commit, adjust, refund, decisions,
-    replay, classifications, obligations, batches and jobs — is not here yet and
-    is added by addition under the same major version (ADR-0010 §2.6).
+    authentication, tenant administration, and the first part of the
+    determination surface named in `ZTAX-INT-001` — quotes, transaction commit,
+    decisions and replay. Adjust, refund, classifications, obligations, batches
+    and jobs are added by addition under the same major version (ADR-0010 §2.6).
 
     **No authoritative fiscal output is permitted before A4.** A client
     discovers whether this deployment may produce one from
@@ -70,8 +70,8 @@ info:
     precision. Do not parse one into a binary float; `JSON.parse` in a browser
     does exactly that and is the reason this rule exists.
 
-    This version of the surface carries no fiscal amounts. The rule is stated
-    here because it governs every addition to it.
+    The same holds for rates and quantities, and for every value a
+    determination emits. The `Decimal` schema is the one definition of the form.
   contact:
     name: ZoikoTax integration
     url: https://developers.zoikotax.com
@@ -96,6 +96,8 @@ tags:
     description: Sessions. Opaque, server-side, cookie-borne (ADR-0020).
   - name: administration
     description: Tenant, users, sessions and the audit trail.
+  - name: determination
+    description: Quotes, commits, decisions and replay. Advisory until A4.
 
 security:
   - sessionCookie: []
@@ -655,6 +657,272 @@ paths:
         "500": { $ref: "#/components/responses/Internal" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
+  /v1/quotes:
+    post:
+      operationId: createQuote
+      tags: [determination]
+      summary: Quote a transaction without recording it
+      description: |
+        `OPERATOR` or `ANALYST`. Evaluates the input against the cell's active
+        content bundle by exactly the path a commit takes, then discards it:
+        no decision, no evidence, no idempotency record.
+
+        **A quote is an estimate; only a commit is a decision** (ADR-0004
+        §2.7). Every quote is `authoritative: false`, whatever the
+        deployment's authorization level, and must not be filed or invoiced
+        from.
+
+        The input is named the way content reads it. Which values a line
+        carries, and what they are called, is decided by the active pack, not
+        by this contract — the worked pack reads `line.netAmount`,
+        `line.quantity` and two flags, and a read set holding
+        `threshold.ecoLevyYtd`. A value the pack reads and the request omits is
+        a `400`; so is an accumulator the pack does not read.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuoteRequest"
+            examples:
+              standardLine:
+                summary: One standard-rated line against the worked pack
+                value:
+                  eventTime: "2026-09-24T18:00:00.000000Z"
+                  input:
+                    money:
+                      line.netAmount: { amount: "100.00", currency: EUR }
+                    quantities:
+                      line.quantity: { value: "3", unit: EA }
+                    flags:
+                      line.reducedRateApplies: false
+                      line.exemptCertificateHeld: false
+                  accumulators:
+                    threshold.ecoLevyYtd: { amount: "9999.99", currency: EUR }
+      responses:
+        "200":
+          description: The estimate.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quote"
+              examples:
+                default:
+                  summary: VAT and the eco levy, advisory
+                  value:
+                    authoritative: false
+                    outcome: ADVISORY
+                    reasonCode: NOT_AUTHORITATIVE
+                    quotedAt: "2026-09-25T09:00:00.000000Z"
+                    bundle:
+                      bundleId: eu-vat-worked-2026.09
+                      digest: "zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b"
+                      irVersion: 1
+                    emitted:
+                      TAX_VAT: { type: MONEY, amount: "21.00", currency: EUR }
+                      TAX_ECO_LEVY: { type: MONEY, amount: "0.11", currency: EUR }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/transactions:commit:
+    post:
+      operationId: commitTransaction
+      tags: [determination]
+      summary: Commit a transaction and record its decision
+      description: |
+        `OPERATOR` only. Evaluates the input against the active content bundle
+        and records the result as an immutable decision, with the two evidence
+        objects that let it replay exactly (ADR-0011 §2.8).
+
+        **`Idempotency-Key` is mandatory** (ADR-0013 §2.1). A retry with the
+        same key and the same body returns the original response verbatim,
+        with `Idempotent-Replay: true`, and records nothing new. The same key
+        with a different body is `409 IDEMPOTENCY_KEY_REUSE`; a key whose first
+        request is still running is `409 REQUEST_IN_PROGRESS` with
+        `Retry-After`. Neither executes. Bodies are compared in canonical form,
+        so member order and whitespace do not matter and a decimal's scale
+        does — `"45.00"` and `"45.0"` are different requests.
+
+        A validation failure is recorded against the key and replayed on
+        retry, because the same request fails the same way. A transient
+        failure (`503`) is not: the key is released and a retry is a genuine
+        new attempt.
+
+        `supersedes` corrects an earlier decision for the same `businessKey`.
+        It must name the current version; a decision is never edited, and a
+        correction is a new decision linked to the old (ADR-0003).
+
+        Before A4 every decision is `ADVISORY` and `authoritative: false`.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommitRequest"
+            examples:
+              standardLine:
+                summary: One standard-rated line against the worked pack
+                value:
+                  businessKey: INV-0001/1
+                  eventTime: "2026-09-24T18:00:00.000000Z"
+                  input:
+                    money:
+                      line.netAmount: { amount: "100.00", currency: EUR }
+                    quantities:
+                      line.quantity: { value: "3", unit: EA }
+                    flags:
+                      line.reducedRateApplies: false
+                      line.exemptCertificateHeld: false
+                  accumulators:
+                    threshold.ecoLevyYtd: { amount: "9999.99", currency: EUR }
+      responses:
+        "201":
+          description: |
+            The recorded decision. A replayed response carries
+            `Idempotent-Replay: true` and is byte-for-byte the original.
+          headers:
+            Idempotent-Replay:
+              description: Present, and `true`, when this is the stored response to an earlier request with the same key.
+              schema: { type: boolean }
+              example: true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Decision"
+              examples:
+                default:
+                  summary: An advisory decision
+                  value:
+                    id: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    businessKey: INV-0001/1
+                    authoritative: false
+                    outcome: ADVISORY
+                    reasonCode: NOT_AUTHORITATIVE
+                    eventTime: "2026-09-24T18:00:00.000000Z"
+                    recordedAt: "2026-09-25T09:00:00.000000Z"
+                    bundle:
+                      bundleId: eu-vat-worked-2026.09
+                      digest: "zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b"
+                      irVersion: 1
+                    digests:
+                      input: "zt1:4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d"
+                      envelope: "zt1:9c8d7e6f5a4b3c2d1e0f4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                      result: "zt1:1a0b9c8d7e6f5a4b3c2d4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                    emitted:
+                      TAX_VAT: { type: MONEY, amount: "21.00", currency: EUR }
+                      TAX_ECO_LEVY: { type: MONEY, amount: "0.11", currency: EUR }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/decisions/{decisionId}:
+    get:
+      operationId: getDecision
+      tags: [determination]
+      summary: Read a recorded decision
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. What the decision emitted is read
+        from its result evidence and verified against the digest the decision
+        names, so a response is never built from a record that has come apart
+        from its evidence — that is a `500 EVIDENCE_INTEGRITY` instead.
+      parameters:
+        - $ref: "#/components/parameters/DecisionId"
+      responses:
+        "200":
+          description: The decision.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Decision"
+              examples:
+                default:
+                  summary: An advisory decision
+                  value:
+                    id: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    businessKey: INV-0001/1
+                    authoritative: false
+                    outcome: ADVISORY
+                    reasonCode: NOT_AUTHORITATIVE
+                    eventTime: "2026-09-24T18:00:00.000000Z"
+                    recordedAt: "2026-09-25T09:00:00.000000Z"
+                    bundle:
+                      bundleId: eu-vat-worked-2026.09
+                      digest: "zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b"
+                      irVersion: 1
+                    digests:
+                      input: "zt1:4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d"
+                      envelope: "zt1:9c8d7e6f5a4b3c2d1e0f4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                      result: "zt1:1a0b9c8d7e6f5a4b3c2d4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                    emitted:
+                      TAX_VAT: { type: MONEY, amount: "21.00", currency: EUR }
+                      TAX_ECO_LEVY: { type: MONEY, amount: "0.11", currency: EUR }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/replay/{decisionId}:
+    post:
+      operationId: replayDecision
+      tags: [determination]
+      summary: Replay a recorded decision and compare it byte for byte
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. Rebuilds the decision's result from
+        its envelope alone, against the content bundle the envelope names —
+        never the one active now — and compares the canonical bytes with the
+        result that was recorded (ADR-0003 §3.3, ADR-0011 §2.8).
+
+        The verdict is data, not an error. `DIVERGED` names the first path at
+        which the two results differ; `BUNDLE_UNAVAILABLE` means this cell no
+        longer holds the bundle the decision was made under, which is a fact
+        about the cell rather than about the decision. Evidence that no longer
+        matches its digest, or a record that disagrees with its envelope, is a
+        `500 EVIDENCE_INTEGRITY` instead: that is an incident, not a verdict.
+
+        Nothing is recorded. Replaying twice gives the same answer.
+      parameters:
+        - $ref: "#/components/parameters/DecisionId"
+      responses:
+        "200":
+          description: The replay verdict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReplayReport"
+              examples:
+                match:
+                  summary: The decision replays exactly
+                  value:
+                    decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    verdict: MATCH
+                    envelopeDigest: "zt1:9c8d7e6f5a4b3c2d1e0f4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                    recordedResult: "zt1:1a0b9c8d7e6f5a4b3c2d4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                    replayedResult: "zt1:1a0b9c8d7e6f5a4b3c2d4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                diverged:
+                  summary: The runtime no longer reproduces the recorded result
+                  value:
+                    decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    verdict: DIVERGED
+                    envelopeDigest: "zt1:9c8d7e6f5a4b3c2d1e0f4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                    recordedResult: "zt1:1a0b9c8d7e6f5a4b3c2d4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                    replayedResult: "zt1:7e6f5a4b3c2d1a0b9c8d4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                    divergence: $.emitted.TAX_VAT.amount
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
 components:
   securitySchemes:
     sessionCookie:
@@ -673,6 +941,29 @@ components:
         `Secure`.
 
   parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: |
+        A key the client mints before the first attempt and reuses, unchanged,
+        on every retry of the same request (ADR-0013). Opaque to the server: it
+        is compared, never parsed. Scoped to the tenant and to this endpoint, so
+        a key used for a commit can never match an adjust.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+      example: 5f0c2a1e-commit-INV-0001-1
+
+    DecisionId:
+      name: decisionId
+      in: path
+      required: true
+      description: The decision identifier.
+      schema: { $ref: "#/components/schemas/DecisionId" }
+      example: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+
     Limit:
       name: limit
       in: query
@@ -697,6 +988,43 @@ components:
       example: ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C
 
   responses:
+    IdempotencyConflict:
+      description: |
+        The idempotency key was reused with a different request, or its first
+        request is still running. In both cases **the request was not
+        executed** (ADR-0013 §2.4).
+      headers:
+        Retry-After:
+          description: Seconds to wait, for `REQUEST_IN_PROGRESS`.
+          schema: { type: integer, format: int32, minimum: 0 }
+          example: 2
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+          examples:
+            keyReuse:
+              summary: The same key with a different body
+              value:
+                type: https://errors.zoikotax.com/v1/idempotency-key-reuse
+                title: Idempotency key reuse
+                status: 409
+                detail: This idempotency key was already used for a different request. The request was not applied. Use a new key, or resend the original request unchanged.
+                instance: /v1/transactions:commit
+                ztx_reason_code: IDEMPOTENCY_KEY_REUSE
+                ztx_request_id: 01JBQ0S9C3X8Q1H6M2KX5R7F4R
+                ztx_retryable: false
+            inProgress:
+              summary: A retry that arrived while the first attempt was running
+              value:
+                type: https://errors.zoikotax.com/v1/request-in-progress
+                title: Request in progress
+                status: 409
+                detail: A request with this idempotency key is still being processed. The request was not applied. Retry after the interval given in Retry-After.
+                instance: /v1/transactions:commit
+                ztx_reason_code: REQUEST_IN_PROGRESS
+                ztx_request_id: 01JBQ0S9C3X8Q1H6M2KX5R7F4S
+                ztx_retryable: true
+
     Validation:
       description: The request was malformed or violated the contract.
       content:
@@ -850,30 +1178,36 @@ components:
       required: [type, title, status, ztx_reason_code, ztx_retryable]
       properties:
         type:
+          x-ztax-privacy: { class: P0 }
           type: string
           format: uri
           description: A stable, versioned, documented URI for this reason code.
           example: https://errors.zoikotax.com/v1/forbidden
         title:
+          x-ztax-privacy: { class: P0 }
           type: string
           description: A short summary. **Do not match on this**; it may be reworded.
           example: Forbidden
         status:
+          x-ztax-privacy: { class: P0 }
           type: integer
           format: int32
           minimum: 100
           maximum: 599
           example: 403
         detail:
+          x-ztax-privacy: { class: P0 }
           type: string
           description: What happened and what to do about it. Also not for matching.
         instance:
+          x-ztax-privacy: { class: P0 }
           type: string
           description: The request path this occurred on.
           example: /v1/admin/users
         ztx_reason_code:
           $ref: "#/components/schemas/ReasonCode"
         ztx_request_id:
+          x-ztax-privacy: { class: P0 }
           type: string
           description: |
             This request's identifier, also returned in the `X-Request-Id`
@@ -881,18 +1215,22 @@ components:
             response with the server-side log.
           example: 01JBQ0S9C3X8Q1H6M2KX5R7F4H
         ztx_trace_id:
+          x-ztax-privacy: { class: P0 }
           type: string
           description: The OpenTelemetry trace identifier, where tracing is enabled.
         ztx_decision_id:
+          x-ztax-privacy: { class: P0 }
           type: string
           description: The decision this error concerns, where there is one.
         ztx_field:
+          x-ztax-privacy: { class: P0 }
           type: string
           description: |
             The contract field at fault, for a validation failure. A field name,
             never a value — a value in an error message is a value in a log.
           example: email
         ztx_retryable:
+          x-ztax-privacy: { class: P0 }
           type: boolean
           description: |
             Whether retrying this request unchanged could succeed. Only a
@@ -902,6 +1240,7 @@ components:
           example: false
 
     ReasonCode:
+      x-ztax-privacy: { class: P0 }
       type: string
       title: ReasonCode
       description: |
@@ -918,6 +1257,7 @@ components:
       example: FORBIDDEN
 
     Timestamp:
+      x-ztax-privacy: { class: P0 }
       type: string
       title: Timestamp
       format: date-time
@@ -929,6 +1269,7 @@ components:
       example: "2026-09-23T12:00:00.000000Z"
 
     Digest:
+      x-ztax-privacy: { class: P0 }
       type: string
       title: Digest
       description: |
@@ -940,6 +1281,7 @@ components:
       example: "zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b"
 
     TenantId:
+      x-ztax-privacy: { class: P0 }
       type: string
       title: TenantId
       description: A tenant identifier (ADR-0012). Prefixed, sortable, never recycled.
@@ -947,6 +1289,7 @@ components:
       example: ztn_01JBQ0S9C3X8Q1H6M2KX5R7F4A
 
     UserId:
+      x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-SUPPORT], retention: RET-OPERATIONAL, redaction: NONE }
       type: string
       title: UserId
       description: A user identifier (ADR-0012).
@@ -954,6 +1297,7 @@ components:
       example: ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4B
 
     SessionId:
+      x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-SUPPORT], retention: RET-OPERATIONAL, redaction: NONE }
       type: string
       title: SessionId
       description: |
@@ -964,6 +1308,7 @@ components:
       example: zts_01JBQ0S9C3X8Q1H6M2KX5R7F4E
 
     AuditId:
+      x-ztax-privacy: { class: P0 }
       type: string
       title: AuditId
       description: An audit record identifier (ADR-0012).
@@ -971,6 +1316,7 @@ components:
       example: zta_01JBQ0S9C3X8Q1H6M2KX5R7F4G
 
     Role:
+      x-ztax-privacy: { class: P0 }
       type: string
       title: Role
       description: |
@@ -980,12 +1326,14 @@ components:
       example: ADMIN
 
     TenantStatus:
+      x-ztax-privacy: { class: P0 }
       type: string
       title: TenantStatus
       enum: [ACTIVE, SUSPENDED, CLOSED]
       example: ACTIVE
 
     UserStatus:
+      x-ztax-privacy: { class: P0 }
       type: string
       title: UserStatus
       description: |
@@ -1003,14 +1351,17 @@ components:
       properties:
         id: { $ref: "#/components/schemas/TenantId" }
         slug:
+          x-ztax-privacy: { class: P0 }
           type: string
           description: The stable, human-usable name a client signs in with.
           pattern: "^[a-z0-9][a-z0-9-]{1,62}$"
           example: acme
         displayName:
+          x-ztax-privacy: { class: P0 }
           type: string
           example: Acme Telecom
         residencyRegion:
+          x-ztax-privacy: { class: P0 }
           type: string
           description: |
             The region whose cell holds this tenant's data. It never leaves it,
@@ -1031,10 +1382,12 @@ components:
       properties:
         id: { $ref: "#/components/schemas/UserId" }
         email:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-SUPPORT], retention: RET-OPERATIONAL, redaction: REDACT, aiAllowed: NONE }
           type: string
           format: email
           example: analyst@acme.example
         displayName:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-SUPPORT], retention: RET-OPERATIONAL, redaction: REDACT, aiAllowed: NONE }
           type: string
           example: Grace Hopper
         status: { $ref: "#/components/schemas/UserStatus" }
@@ -1073,18 +1426,22 @@ components:
         createdAt: { $ref: "#/components/schemas/Timestamp" }
         expiresAt: { $ref: "#/components/schemas/Timestamp" }
         userAgent:
+          x-ztax-privacy: { class: P3, purposes: [PURP-SEC], retention: RET-SECURITY, redaction: REDACT, aiAllowed: NONE }
           type: string
           description: The user agent recorded when the session opened, where one was sent.
         clientIp:
+          x-ztax-privacy: { class: P3, purposes: [PURP-SEC], retention: RET-SECURITY, redaction: REDACT, aiAllowed: NONE }
           type: string
           description: The client address recorded when the session opened.
         revoked:
+          x-ztax-privacy: { class: P0 }
           type: boolean
           description: |
             Whether the session has been revoked. A revoked session is kept
             rather than deleted; a session that vanished would leave nothing for
             an audit to look at.
         current:
+          x-ztax-privacy: { class: P0 }
           type: boolean
           description: Whether this is the calling session.
 
@@ -1104,16 +1461,20 @@ components:
             because "the system did this" and "some user did this" are different
             facts.
         action:
+          x-ztax-privacy: { class: P0 }
           type: string
           description: A dotted action name from a closed vocabulary.
           example: user.role.granted
         subjectType:
+          x-ztax-privacy: { class: P0 }
           type: string
           example: user
         subjectId:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-LEGAL], retention: RET-SECURITY, redaction: NONE }
           type: string
           example: ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C
         detail:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-LEGAL], retention: RET-SECURITY, redaction: REDACT, aiAllowed: NONE }
           type: string
           description: |
             A canonical JSON document, as a string. It is the exact bytes that
@@ -1129,18 +1490,22 @@ components:
       required: [cell, region, environment, trains, canonProfile, authoritative, reasonCodes]
       properties:
         cell:
+          x-ztax-privacy: { class: P0 }
           type: string
           description: The cell serving this request.
           example: eu-west-1
         region:
+          x-ztax-privacy: { class: P0 }
           type: string
           example: eu-west
         environment:
+          x-ztax-privacy: { class: P0 }
           type: string
           example: production
         trains:
           $ref: "#/components/schemas/Trains"
         canonProfile:
+          x-ztax-privacy: { class: P0 }
           type: string
           description: |
             The canonicalization profile this deployment digests under. It is
@@ -1149,6 +1514,7 @@ components:
             it (ADR-0011 §2.6).
           example: canon/v1
         authoritative:
+          x-ztax-privacy: { class: P0 }
           type: boolean
           description: |
             **Whether this deployment may produce authoritative fiscal output.**
@@ -1174,13 +1540,13 @@ components:
       additionalProperties: false
       required: [app, content, ai, adapter, infra, schema, migration]
       properties:
-        app: { type: string, example: 0.4.0 }
-        content: { type: string, example: 2026.09.1 }
-        ai: { type: string, example: 0.1.0 }
-        adapter: { type: string, example: 0.2.0 }
-        infra: { type: string, example: 0.3.0 }
-        schema: { type: string, example: 0.1.0 }
-        migration: { type: string, example: "6" }
+        app: { type: string, example: 0.4.0, x-ztax-privacy: { class: P0 } }
+        content: { type: string, example: 2026.09.1, x-ztax-privacy: { class: P0 } }
+        ai: { type: string, example: 0.1.0, x-ztax-privacy: { class: P0 } }
+        adapter: { type: string, example: 0.2.0, x-ztax-privacy: { class: P0 } }
+        infra: { type: string, example: 0.3.0, x-ztax-privacy: { class: P0 } }
+        schema: { type: string, example: 0.1.0, x-ztax-privacy: { class: P0 } }
+        migration: { type: string, example: "6", x-ztax-privacy: { class: P0 } }
 
     ContentCapability:
       type: object
@@ -1195,10 +1561,12 @@ components:
       required: [bundleId, digest, irVersion, nodeCount]
       properties:
         bundleId:
+          x-ztax-privacy: { class: P0 }
           type: string
           example: eu-vat-worked-2026.09
         digest: { $ref: "#/components/schemas/Digest" }
         irVersion:
+          x-ztax-privacy: { class: P0 }
           type: integer
           format: int32
           description: |
@@ -1207,6 +1575,7 @@ components:
             the previous one rather than degrading (ADR-0005 §2.8).
           example: 1
         nodeCount:
+          x-ztax-privacy: { class: P0 }
           type: integer
           format: int32
           description: The size of the rule graph, for telemetry.
@@ -1219,14 +1588,17 @@ components:
       required: [tenant, email, password]
       properties:
         tenant:
+          x-ztax-privacy: { class: P0 }
           type: string
           description: The tenant slug.
           example: acme
         email:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-SUPPORT], retention: RET-TRANSIENT, redaction: REDACT, aiAllowed: NONE }
           type: string
           format: email
           example: admin@acme.example
         password:
+          x-ztax-privacy: { class: P7, purposes: [PURP-SEC], retention: RET-TRANSIENT, redaction: NO_LOG, aiAllowed: NONE, evidencePolicy: NONE }
           type: string
           format: password
           minLength: 12
@@ -1239,10 +1611,12 @@ components:
       required: [currentPassword, newPassword]
       properties:
         currentPassword:
+          x-ztax-privacy: { class: P7, purposes: [PURP-SEC], retention: RET-TRANSIENT, redaction: NO_LOG, aiAllowed: NONE, evidencePolicy: NONE }
           type: string
           format: password
           example: "correct horse battery staple"
         newPassword:
+          x-ztax-privacy: { class: P7, purposes: [PURP-SEC], retention: RET-TRANSIENT, redaction: NO_LOG, aiAllowed: NONE, evidencePolicy: NONE }
           type: string
           format: password
           minLength: 12
@@ -1255,10 +1629,12 @@ components:
       required: [email, displayName]
       properties:
         email:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-SUPPORT], retention: RET-OPERATIONAL, redaction: REDACT, aiAllowed: NONE }
           type: string
           format: email
           example: auditor@acme.example
         displayName:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-SUPPORT], retention: RET-OPERATIONAL, redaction: REDACT, aiAllowed: NONE }
           type: string
           example: Katherine Johnson
         roles:
@@ -1266,6 +1642,7 @@ components:
           description: Roles to grant on creation. A user may be created with none.
           items: { $ref: "#/components/schemas/Role" }
         password:
+          x-ztax-privacy: { class: P7, purposes: [PURP-SEC], retention: RET-TRANSIENT, redaction: NO_LOG, aiAllowed: NONE, evidencePolicy: NONE }
           type: string
           format: password
           minLength: 12
@@ -1288,3 +1665,307 @@ components:
       required: [role]
       properties:
         role: { $ref: "#/components/schemas/Role" }
+
+    DecisionId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: DecisionId
+      description: |
+        A decision identifier: a UUIDv7 in lowercase canonical form
+        (ADR-0012 §2.1). Sortable by creation, never recycled.
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      example: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+
+    Decimal:
+      x-ztax-privacy: { class: P5, purposes: [PURP-TAX-CALC, PURP-EVID], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE, evidencePolicy: RAW_REQUIRED }
+      type: string
+      title: Decimal
+      description: |
+        A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+        digits, and an optional fraction. No exponent, no leading `+`, no
+        leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+        different assertions and digest differently.
+
+        Classified as fiscal personal data because on a consumer transaction
+        it is: logs carry it redacted, and it is kept for the fiscal record
+        period as evidence.
+      pattern: "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+      maxLength: 64
+      example: "100.00"
+
+    CurrencyCode:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: CurrencyCode
+      description: An ISO 4217 alphabetic currency code.
+      pattern: "^[A-Z]{3}$"
+      example: EUR
+
+    RateBasis:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: RateBasis
+      description: What a rate applies to (ADR-0002). A rate without a basis is not a rate.
+      enum: [NET, GROSS, PER_UNIT, COMPOUND]
+      example: NET
+
+    UnitCode:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: UnitCode
+      description: A unit of measure, as the content pack names it.
+      minLength: 1
+      maxLength: 32
+      example: EA
+
+    ValueType:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: ValueType
+      description: The type of an emitted value. It says which of a value's other members are present.
+      enum: [MONEY, RATE, QUANTITY, BOOL, STRING, REASON_CODE]
+      example: MONEY
+
+    Outcome:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: Outcome
+      description: |
+        What a determination concluded (ADR-0016 §2.1). Only `AUTHORITATIVE`
+        may be filed, and nothing produces it before A4. The refusals —
+        `AMBIGUOUS`, `CONFLICTED`, `UNSUPPORTED`, `REVIEW_REQUIRED` — are
+        outcomes with evidence, not errors: "we do not support this" is a fact
+        about coverage that is recorded against the transaction.
+      enum: [AUTHORITATIVE, ADVISORY, AMBIGUOUS, CONFLICTED, UNSUPPORTED, REVIEW_REQUIRED]
+      example: ADVISORY
+
+    ReplayVerdict:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: ReplayVerdict
+      enum: [MATCH, DIVERGED, BUNDLE_UNAVAILABLE]
+      example: MATCH
+
+    BusinessKey:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: BusinessKey
+      description: |
+        The caller's stable reference for what is being determined — a line, a
+        transaction. It is the identity across corrections: every version of a
+        decision shares it (ADR-0003). Not an identifier this service
+        interprets.
+      minLength: 1
+      maxLength: 255
+      example: INV-0001/1
+
+    MoneyValue:
+      type: object
+      title: MoneyValue
+      description: An amount and its currency, never one without the other.
+      additionalProperties: false
+      required: [amount, currency]
+      properties:
+        amount: { $ref: "#/components/schemas/Decimal" }
+        currency: { $ref: "#/components/schemas/CurrencyCode" }
+
+    RateValue:
+      type: object
+      title: RateValue
+      additionalProperties: false
+      required: [value, basis]
+      properties:
+        value: { $ref: "#/components/schemas/Decimal" }
+        basis: { $ref: "#/components/schemas/RateBasis" }
+
+    QuantityValue:
+      type: object
+      title: QuantityValue
+      additionalProperties: false
+      required: [value, unit]
+      properties:
+        value: { $ref: "#/components/schemas/Decimal" }
+        unit: { $ref: "#/components/schemas/UnitCode" }
+
+    DeterminationInput:
+      type: object
+      title: DeterminationInput
+      description: |
+        The named values the active content reads, grouped by type. The names
+        are the pack's — `line.netAmount`, not a field this contract defines —
+        because which values a transaction carries is decided by content, and
+        a transaction shape fixed here would be tax logic in the API
+        (ZTAX-DET-001 §0.2). At least one value is required.
+      additionalProperties: false
+      properties:
+        money:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/MoneyValue" }
+        rates:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/RateValue" }
+        quantities:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/QuantityValue" }
+        flags:
+          x-ztax-privacy: { class: P0 }
+          type: object
+          additionalProperties: { type: boolean }
+        strings:
+          x-ztax-privacy: { class: P4, purposes: [PURP-TAX-CALC, PURP-SITUS, PURP-EVID], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE, evidencePolicy: RAW_REQUIRED }
+          type: object
+          description: |
+            Free-text values, such as a situs attribute. Classified as location
+            evidence because that is what content most often reads here.
+          additionalProperties: { type: string, maxLength: 1024 }
+
+    ReadSet:
+      type: object
+      title: ReadSet
+      description: |
+        The accumulator values the evaluation reads — exactly the ones the
+        active bundle declares, no more and no fewer. They are supplied by the
+        caller until the accumulator store of ADR-0004 lands, and are recorded
+        in the decision's envelope either way (ZTAX-DET-REQ-0034).
+      additionalProperties: { $ref: "#/components/schemas/MoneyValue" }
+
+    QuoteRequest:
+      type: object
+      title: QuoteRequest
+      additionalProperties: false
+      required: [eventTime, input]
+      properties:
+        eventTime: { $ref: "#/components/schemas/Timestamp" }
+        input: { $ref: "#/components/schemas/DeterminationInput" }
+        accumulators: { $ref: "#/components/schemas/ReadSet" }
+
+    CommitRequest:
+      type: object
+      title: CommitRequest
+      additionalProperties: false
+      required: [businessKey, eventTime, input]
+      properties:
+        businessKey: { $ref: "#/components/schemas/BusinessKey" }
+        supersedes: { $ref: "#/components/schemas/DecisionId" }
+        eventTime: { $ref: "#/components/schemas/Timestamp" }
+        input: { $ref: "#/components/schemas/DeterminationInput" }
+        accumulators: { $ref: "#/components/schemas/ReadSet" }
+
+    ResultValue:
+      type: object
+      title: ResultValue
+      description: |
+        One emitted value. `type` says which other members are present:
+        `amount` and `currency` for `MONEY`; `value` and `basis` for `RATE`;
+        `value` and `unit` for `QUANTITY`; `flag` for `BOOL`; `text` for
+        `STRING`; `reasonCode` for `REASON_CODE`.
+      additionalProperties: false
+      required: [type]
+      properties:
+        type: { $ref: "#/components/schemas/ValueType" }
+        amount: { $ref: "#/components/schemas/Decimal" }
+        currency: { $ref: "#/components/schemas/CurrencyCode" }
+        value: { $ref: "#/components/schemas/Decimal" }
+        basis: { $ref: "#/components/schemas/RateBasis" }
+        unit: { $ref: "#/components/schemas/UnitCode" }
+        flag:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+        text:
+          x-ztax-privacy: { class: P4, purposes: [PURP-TAX-CALC, PURP-EVID], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE, evidencePolicy: RAW_REQUIRED }
+          type: string
+        reasonCode: { $ref: "#/components/schemas/ReasonCode" }
+
+    Emitted:
+      type: object
+      title: Emitted
+      description: What the content emitted, by result slot. The slots are the pack's.
+      additionalProperties: { $ref: "#/components/schemas/ResultValue" }
+
+    BundleRef:
+      type: object
+      title: BundleRef
+      description: The content bundle an evaluation ran against.
+      additionalProperties: false
+      required: [bundleId, digest, irVersion]
+      properties:
+        bundleId:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          example: eu-vat-worked-2026.09
+        digest: { $ref: "#/components/schemas/Digest" }
+        irVersion:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          example: 1
+
+    Quote:
+      type: object
+      title: Quote
+      additionalProperties: false
+      required: [authoritative, outcome, reasonCode, quotedAt, bundle, emitted]
+      properties:
+        authoritative:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: Always `false`. A quote is an estimate at every authorization level (ADR-0004 §2.7).
+        outcome: { $ref: "#/components/schemas/Outcome" }
+        reasonCode: { $ref: "#/components/schemas/ReasonCode" }
+        quotedAt: { $ref: "#/components/schemas/Timestamp" }
+        bundle: { $ref: "#/components/schemas/BundleRef" }
+        emitted: { $ref: "#/components/schemas/Emitted" }
+
+    DecisionDigests:
+      type: object
+      title: DecisionDigests
+      description: |
+        The digests a decision names (ADR-0011 §2.8). `envelope` and `result`
+        are the evidence objects; `input` is the canonical input inside the
+        envelope, which is what a search by input matches.
+      additionalProperties: false
+      required: [input, envelope, result]
+      properties:
+        input: { $ref: "#/components/schemas/Digest" }
+        envelope: { $ref: "#/components/schemas/Digest" }
+        result: { $ref: "#/components/schemas/Digest" }
+
+    Decision:
+      type: object
+      title: Decision
+      description: One recorded decision. Immutable; a correction is a new decision whose `supersedes` names this one.
+      additionalProperties: false
+      required: [id, businessKey, authoritative, outcome, reasonCode, eventTime, recordedAt, bundle, digests, emitted]
+      properties:
+        id: { $ref: "#/components/schemas/DecisionId" }
+        businessKey: { $ref: "#/components/schemas/BusinessKey" }
+        supersedes: { $ref: "#/components/schemas/DecisionId" }
+        authoritative:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: Whether this decision may be filed. `false` for every decision before A4.
+        outcome: { $ref: "#/components/schemas/Outcome" }
+        reasonCode: { $ref: "#/components/schemas/ReasonCode" }
+        eventTime: { $ref: "#/components/schemas/Timestamp" }
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        bundle: { $ref: "#/components/schemas/BundleRef" }
+        digests: { $ref: "#/components/schemas/DecisionDigests" }
+        emitted: { $ref: "#/components/schemas/Emitted" }
+
+    ReplayReport:
+      type: object
+      title: ReplayReport
+      additionalProperties: false
+      required: [decisionId, verdict, envelopeDigest, recordedResult]
+      properties:
+        decisionId: { $ref: "#/components/schemas/DecisionId" }
+        verdict: { $ref: "#/components/schemas/ReplayVerdict" }
+        envelopeDigest: { $ref: "#/components/schemas/Digest" }
+        recordedResult: { $ref: "#/components/schemas/Digest" }
+        replayedResult: { $ref: "#/components/schemas/Digest" }
+        divergence:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: For `DIVERGED`, the first path at which the results differ. A path, never a value.
+          example: $.emitted.TAX_VAT.amount

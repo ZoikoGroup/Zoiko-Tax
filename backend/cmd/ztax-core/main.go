@@ -21,16 +21,23 @@ import (
 	"syscall"
 	"time"
 
+	"go.opentelemetry.io/otel"
+
 	adaptercontent "github.com/zoikogroup/zoikotax/backend/internal/adapter/content"
+	adapterevidence "github.com/zoikogroup/zoikotax/backend/internal/adapter/evidence"
 	"github.com/zoikogroup/zoikotax/backend/internal/adapter/postgres"
 	"github.com/zoikogroup/zoikotax/backend/internal/app"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
+	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/clock"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/config"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/idgen"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/kms"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/secrets"
+	"github.com/zoikogroup/zoikotax/backend/internal/platform/telemetry"
 	ztaxhttp "github.com/zoikogroup/zoikotax/backend/internal/transport/http"
 )
 
@@ -101,8 +108,26 @@ func run() error {
 		return err
 	}
 
+	tracing, err := setupTracing(startCtx, cfg, content, log)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		// Flush what the batcher holds, bounded: a collector that has gone
+		// away must not hold the process open past its shutdown budget.
+		flushCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := tracing.Shutdown(flushCtx); err != nil {
+			log.Warn("trace flush failed", "error", err.Error())
+		}
+	}()
+
 	router := ztaxhttp.NewRouter(auth, admin, store.Users(), readiness{store: store}, log, ids)
+	router.Tracer = tracing.Provider
 	router.Content = content
+	if router.Determination, err = wireDetermination(cfg, store, content, clk, ids, log); err != nil {
+		return err
+	}
 	router.SecureCookies = cfg.SecureCookies
 	router.TrustProxy = cfg.TrustProxy
 	router.Cell, router.Region, router.Environment = cfg.Cell, cfg.Region, cfg.Environment
@@ -170,7 +195,8 @@ func (r readiness) Ready(ctx context.Context) error {
 //
 // JSON to stdout, structured only (ADR-0015 §2.7). The cell, region and
 // environment are bound once as resource attributes so that every line carries
-// them and no call site has to remember.
+// them and no call site has to remember. Every record passes through the
+// redaction backstop (ADR-0015 §2.2) before it is written.
 func newLogger(cfg config.Config) *slog.Logger {
 	var level slog.Level
 	switch cfg.LogLevel {
@@ -183,7 +209,7 @@ func newLogger(cfg config.Config) *slog.Logger {
 	default:
 		level = slog.LevelInfo
 	}
-	return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level})).With(
+	return slog.New(telemetry.NewLogHandler(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level}))).With(
 		"service.name", "ztax-core",
 		"ztax.cell", cfg.Cell,
 		"ztax.region", cfg.Region,
@@ -235,7 +261,10 @@ func bootstrap(ctx context.Context, cfg config.Config, admin *app.AdminService, 
 		"tenant", tenant.Slug,
 		"tenant_id", tenant.ID.String(),
 		"admin_user_id", user.ID.String(),
-		"admin_email", user.Email,
+		// Classified, so the log carries its redacted form: a bootstrap line is
+		// retained as operational telemetry, not under the user record's own
+		// retention (ADR-0015 §2.2).
+		"admin_email", privacy.Email(user.Email),
 	)
 	return nil
 }
@@ -334,4 +363,70 @@ func activateContent(ctx context.Context, cfg config.Config, holder *rule.Holder
 		"nodes", loaded.Bundle.NodeCount(),
 		"keyring.keys", keyring.KeyIDs())
 	return nil
+}
+
+// setupTracing builds the tracer provider (ADR-0015 §2.1). It runs after
+// content activation so the resource can name the bundle this process started
+// with; a later activation is visible in /v1/capabilities, and a restart
+// refreshes the resource.
+func setupTracing(ctx context.Context, cfg config.Config, content *rule.Holder, log *slog.Logger) (telemetry.Tracing, error) {
+	res := telemetry.Resource{
+		ServiceName: "ztax-core", Environment: cfg.Environment, Cell: cfg.Cell, Region: cfg.Region,
+		TrainApp: cfg.TrainApp, TrainContent: cfg.TrainContent, TrainAI: cfg.TrainAI,
+		TrainAdapter: cfg.TrainAdapter, TrainInfra: cfg.TrainInfra, TrainSchema: cfg.TrainSchema,
+		TrainMigration: cfg.TrainMigration, CanonProfile: canonical.ProfileVersion,
+	}
+	if b := content.Current(); b != nil {
+		res.BundleDigest, res.IRVersion = b.Digest(), b.IRVersion()
+	}
+	// The exporter's own failures — a collector that is down, a batch that
+	// was dropped — go to the structured log rather than to stderr through the
+	// SDK's default handler, so they are redacted and correlated like
+	// everything else.
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		log.Warn("telemetry export failed", "error", err.Error())
+	}))
+	tracing, err := telemetry.SetupTracing(ctx, telemetry.TracingConfig{
+		Endpoint: cfg.OTLPEndpoint, Insecure: cfg.OTLPInsecure, SampleRatio: cfg.TraceSampleRatio,
+	}, res)
+	if err != nil {
+		return telemetry.Tracing{}, err
+	}
+	if cfg.OTLPEndpoint == "" {
+		log.Info("tracing disabled; no collector configured")
+	} else {
+		log.Info("tracing to collector", "otlp.endpoint", cfg.OTLPEndpoint, "trace.sample_ratio", cfg.TraceSampleRatio)
+	}
+	return tracing, nil
+}
+
+// wireDetermination builds the quote, commit, decision and replay service, or
+// returns nil in a cell with no evidence store — which then answers that
+// surface with 503 rather than evaluating what it cannot record.
+//
+// The library holds the bundle this process started with, so a decision made
+// under it replays here. A decision made under an earlier bundle replays as
+// BUNDLE_UNAVAILABLE until the library is populated from the content store,
+// which is a verdict about this cell rather than about the decision.
+func wireDetermination(cfg config.Config, store *postgres.Store, content *rule.Holder, clk clock.Clock, ids idgen.Generator, log *slog.Logger) (*app.DeterminationService, error) {
+	if cfg.EvidenceDir == "" {
+		log.Warn("no evidence store configured; the determination surface will refuse with " + string(errs.ReasonNoContentBundle))
+		return nil, nil
+	}
+	objects, err := adapterevidence.NewFileStore(cfg.EvidenceDir)
+	if err != nil {
+		return nil, err
+	}
+	library := &rule.Library{}
+	if b := content.Current(); b != nil {
+		library.Add(b)
+	}
+	trains := evidence.Trains{
+		App: cfg.TrainApp, Content: cfg.TrainContent, AI: cfg.TrainAI, Adapter: cfg.TrainAdapter,
+		Infra: cfg.TrainInfra, Schema: cfg.TrainSchema, Migration: cfg.TrainMigration,
+	}
+	svc := app.NewDeterminationService(content, library, store.Decisions(), objects, store, clk, ids, trains).
+		WithIdempotency(app.NewIdempotency(store.Idempotency(), store, clk))
+	log.Info("determination surface enabled", "evidence.dir", cfg.EvidenceDir)
+	return svc, nil
 }

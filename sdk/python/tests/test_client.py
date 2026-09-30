@@ -188,6 +188,25 @@ class PortedFromTypeScript(unittest.TestCase):
             {"tenant": "acme", "email": "admin@acme.example", "password": "correct horse battery staple"},
         )
 
+    def test_a_commit_sends_the_callers_idempotency_key(self) -> None:
+        stub = Stub(json_response(201, {"id": "01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f"}))
+
+        client(stub).commit_transaction(
+            "5f0c2a1e-commit-INV-0001-1",
+            {
+                "businessKey": "INV-0001/1",
+                "eventTime": "2026-09-24T18:00:00.000000Z",
+                "input": {"money": {"line.netAmount": {"amount": "100.00", "currency": "EUR"}}},
+            },
+        )
+
+        sent = stub.calls[0]
+        self.assertEqual((sent.method, sent.url), ("POST", BASE + "/v1/transactions:commit"))
+        self.assertEqual(sent.headers["Idempotency-Key"], "5f0c2a1e-commit-INV-0001-1")
+        # An amount is a string on the wire, with its scale intact.
+        assert sent.body is not None
+        self.assertEqual(json.loads(sent.body)["input"]["money"]["line.netAmount"]["amount"], "100.00")
+
     def test_unwrap_raises_the_error_for_callers_who_prefer_exceptions(self) -> None:
         stub = Stub(json_response(403, problem()))
 
@@ -207,6 +226,12 @@ class PythonSpecific(unittest.TestCase):
     def test_every_operation_sends_its_contract_method_and_path(self) -> None:
         user = "ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C"
         session = "zts_01JBQ0S9C3X8Q1H6M2KX5R7F4F"
+        decision = "01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f"
+        quote = {
+            "eventTime": "2026-09-24T18:00:00.000000Z",
+            "input": {"money": {"line.netAmount": {"amount": "100.00", "currency": "EUR"}}},
+        }
+        commit = {"businessKey": "INV-0001/1", **quote}
         cases: list[tuple[str, Any, str, str, Any]] = [
             ("get_capabilities", lambda c: c.get_capabilities(), "GET", "/v1/capabilities", None),
             (
@@ -264,9 +289,37 @@ class PythonSpecific(unittest.TestCase):
                 None,
             ),
             ("list_audit", lambda c: c.list_audit(), "GET", "/v1/admin/audit", None),
+            (
+                "create_quote",
+                lambda c: c.create_quote(quote),
+                "POST",
+                "/v1/quotes",
+                quote,
+            ),
+            (
+                "commit_transaction",
+                lambda c: c.commit_transaction("5f0c2a1e-commit-INV-0001-1", commit),
+                "POST",
+                "/v1/transactions:commit",
+                commit,
+            ),
+            (
+                "get_decision",
+                lambda c: c.get_decision(decision),
+                "GET",
+                f"/v1/decisions/{decision}",
+                None,
+            ),
+            (
+                "replay_decision",
+                lambda c: c.replay_decision(decision),
+                "POST",
+                f"/v1/replay/{decision}",
+                None,
+            ),
         ]
-        # Fourteen operations in the contract, fourteen here.
-        self.assertEqual(len(cases), 14)
+        # Eighteen operations in the contract, eighteen here.
+        self.assertEqual(len(cases), 18)
         for name, call, method, path, body in cases:
             with self.subTest(name):
                 stub = Stub(HttpResponse(204))

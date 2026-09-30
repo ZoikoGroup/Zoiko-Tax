@@ -6,6 +6,9 @@ import (
 	"math"
 	"net/http"
 
+	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
+
 	"github.com/zoikogroup/zoikotax/backend/internal/app"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
@@ -51,11 +54,20 @@ type Router struct {
 	// than leaving a caller to assume.
 	Authoritative bool
 
+	// Tracer opens the request spans. Nil is a no-op provider, so a router
+	// built without telemetry traces nothing rather than failing.
+	Tracer trace.TracerProvider
+
 	// Content is the active rule bundle, or nil in a cell deployed without one.
 	// It is the Holder rather than the Bundle, so that a later activation swaps
 	// under a live process and /v1/capabilities reports what is running now
 	// rather than what was running at boot (ADR-0005 §2.6).
 	Content *rule.Holder
+
+	// Determination serves quote, commit, decisions and replay. Nil in a cell
+	// deployed without an evidence store, which answers all four with 503
+	// rather than serving the parts that happen not to write.
+	Determination *app.DeterminationService
 }
 
 // Trains are the seven release-train versions, as the contract names them.
@@ -96,6 +108,7 @@ func (rt *Router) routes() []struct {
 	handler http.HandlerFunc
 } {
 	admin := security.RoleAdmin
+	operator, analyst, auditor := security.RoleOperator, security.RoleAnalyst, security.RoleAuditor
 	return []struct {
 		Route
 		handler http.HandlerFunc
@@ -128,6 +141,14 @@ func (rt *Router) routes() []struct {
 		{Route{"GET", "/v1/admin/sessions", false, []security.Role{admin}}, rt.handleListSessions},
 		{Route{"DELETE", "/v1/admin/sessions/{sessionId}", false, []security.Role{admin}}, rt.handleRevokeSession},
 		{Route{"GET", "/v1/admin/audit", false, []security.Role{admin, security.RoleAuditor}}, rt.handleListAudit},
+
+		// Determination. ADMIN is on none of them: administering a tenant's
+		// users is not a fiscal operation, and a role that could do both
+		// could grant itself the approval it then exercises.
+		{Route{"POST", "/v1/quotes", false, []security.Role{operator, analyst}}, rt.handleQuote},
+		{Route{"POST", "/v1/transactions:commit", false, []security.Role{operator}}, rt.handleCommit},
+		{Route{"GET", "/v1/decisions/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetDecision},
+		{Route{"POST", "/v1/replay/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleReplay},
 	}
 }
 
@@ -169,9 +190,14 @@ func (rt *Router) Handler() http.Handler {
 			"No endpoint is routed at that path."))
 	})
 
+	tp := rt.Tracer
+	if tp == nil {
+		tp = noop.NewTracerProvider()
+	}
 	return chain(mux,
 		withRecovery(rt.log),
 		withRequestID(rt.ids),
+		withTracing(tp, mux),
 		withLogging(rt.log),
 		withAuthentication(rt.auth, rt.log),
 	)

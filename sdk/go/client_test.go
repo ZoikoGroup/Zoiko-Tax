@@ -492,7 +492,10 @@ func TestAnInjectedHTTPClientIsUsed(t *testing.T) {
 func TestEveryOperationSendsItsMethodAndPath(t *testing.T) {
 	const user = "ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C"
 	const session = "zts_01JBQ0S9C3X8Q1H6M2KX5R7F4F"
+	const decision = "01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f"
 	ctx := context.Background()
+	input := zoikotax.DeterminationInput{Money: map[string]zoikotax.MoneyValue{"line.netAmount": {Amount: "100.00", Currency: "EUR"}}}
+	eventTime := time.Date(2026, 9, 24, 18, 0, 0, 0, time.UTC)
 	cases := []struct {
 		name, method, path string
 		body               string
@@ -537,9 +540,25 @@ func TestEveryOperationSendsItsMethodAndPath(t *testing.T) {
 			_, err := c.ListAudit(ctx, zoikotax.ListOptions{})
 			return err
 		}},
+		{"CreateQuote", "POST", "/v1/quotes", `{"input":{"money":{"line.netAmount":{"amount":"100.00","currency":"EUR"}}},"eventTime":"2026-09-24T18:00:00.000000Z"}`, func(c *zoikotax.Client) error {
+			_, err := c.CreateQuote(ctx, zoikotax.QuoteRequest{EventTime: eventTime, Input: input})
+			return err
+		}},
+		{"CommitTransaction", "POST", "/v1/transactions:commit", `{"businessKey":"INV-0001/1","input":{"money":{"line.netAmount":{"amount":"100.00","currency":"EUR"}}},"eventTime":"2026-09-24T18:00:00.000000Z"}`, func(c *zoikotax.Client) error {
+			_, err := c.CommitTransaction(ctx, "5f0c2a1e-commit-INV-0001-1", zoikotax.CommitRequest{BusinessKey: "INV-0001/1", EventTime: eventTime, Input: input})
+			return err
+		}},
+		{"GetDecision", "GET", "/v1/decisions/" + decision, "", func(c *zoikotax.Client) error {
+			_, err := c.GetDecision(ctx, decision)
+			return err
+		}},
+		{"ReplayDecision", "POST", "/v1/replay/" + decision, "", func(c *zoikotax.Client) error {
+			_, err := c.ReplayDecision(ctx, decision)
+			return err
+		}},
 	}
-	if len(cases) != 14 {
-		t.Fatalf("cases = %d, want the contract's 14 operations", len(cases))
+	if len(cases) != 18 {
+		t.Fatalf("cases = %d, want the contract's 18 operations", len(cases))
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -562,6 +581,47 @@ func TestEveryOperationSendsItsMethodAndPath(t *testing.T) {
 				t.Errorf("Content-Type = %q with body %q", got.header.Get("Content-Type"), got.body)
 			}
 		})
+	}
+}
+
+func TestACommitSendsTheCallersIdempotencyKey(t *testing.T) {
+	s := answer(201, "application/json", `{"id":"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f"}`)
+	c := newClient(t, s)
+
+	decision, err := c.CommitTransaction(context.Background(), "5f0c2a1e-commit-INV-0001-1", zoikotax.CommitRequest{
+		BusinessKey: "INV-0001/1",
+		// Not UTC and whole seconds: what goes on the wire is still the
+		// contract's form, six fractional digits and a literal Z.
+		EventTime: time.Date(2026, 9, 24, 20, 0, 0, 0, time.FixedZone("CEST", 2*60*60)),
+		Input:     zoikotax.DeterminationInput{Money: map[string]zoikotax.MoneyValue{"line.netAmount": {Amount: "100.00", Currency: "EUR"}}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got := s.calls[0].header.Get("Idempotency-Key"); got != "5f0c2a1e-commit-INV-0001-1" {
+		t.Errorf("Idempotency-Key = %q", got)
+	}
+	var sent struct {
+		EventTime string `json:"eventTime"`
+		Input     struct {
+			Money map[string]struct {
+				Amount string `json:"amount"`
+			} `json:"money"`
+		} `json:"input"`
+	}
+	if err := json.Unmarshal([]byte(s.calls[0].body), &sent); err != nil {
+		t.Fatal(err)
+	}
+	if sent.EventTime != "2026-09-24T18:00:00.000000Z" {
+		t.Errorf("eventTime = %q", sent.EventTime)
+	}
+	// An amount is a string on the wire, with its scale intact.
+	if got := sent.Input.Money["line.netAmount"].Amount; got != "100.00" {
+		t.Errorf("amount = %q", got)
+	}
+	if decision.ID != "01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f" {
+		t.Errorf("id = %q", decision.ID)
 	}
 }
 

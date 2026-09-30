@@ -81,6 +81,9 @@ type (
 
 	// SubmissionAttemptID identifies one attempt to file with an authority.
 	SubmissionAttemptID struct{ base }
+
+	// SealID identifies one evidence period seal (ADR-0011 §2.5).
+	SealID struct{ base }
 )
 
 // The constructors. Each takes a uuid.UUID that idgen produced, or that the
@@ -126,6 +129,9 @@ func NewAuditID(u uuid.UUID) AuditID { return AuditID{base{u}} }
 
 // NewSubmissionAttemptID wraps a raw UUID as a SubmissionAttemptID.
 func NewSubmissionAttemptID(u uuid.UUID) SubmissionAttemptID { return SubmissionAttemptID{base{u}} }
+
+// NewSealID wraps a raw UUID as a SealID.
+func NewSealID(u uuid.UUID) SealID { return SealID{base{u}} }
 
 // parse is the shared text ingress. Identifiers arrive from a URL path, a
 // cookie lookup or a database column, and all three can carry something that is
@@ -190,4 +196,13 @@ func ParseObligationID(s string) (ObligationID, error) {
 		return ObligationID{}, err
 	}
 	return NewObligationID(u), nil
+}
+
+// ParseSealID reads a SealID from its canonical string form.
+func ParseSealID(s string) (SealID, error) {
+	u, err := parse("seal id", s)
+	if err != nil {
+		return SealID{}, err
+	}
+	return NewSealID(u), nil
 }

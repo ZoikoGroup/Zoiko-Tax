@@ -76,20 +76,24 @@ func withEnv(t *testing.T, overrides map[string]string) {
 // the shape a partial rollout takes.
 func TestContentIsConfiguredInPairs(t *testing.T) {
 	for _, tc := range []struct {
-		name    string
-		dir     string
-		keyring string
-		wantErr bool
+		name     string
+		dir      string
+		keyring  string
+		evidence string
+		wantErr  bool
 	}{
 		{name: "neither, which is a cell with no content", wantErr: false},
-		{name: "both", dir: "/srv/content", keyring: "/srv/keyring.json", wantErr: false},
-		{name: "a directory with no keyring", dir: "/srv/content", wantErr: true},
+		{name: "both, with an evidence store", dir: "/srv/content", keyring: "/srv/keyring.json", evidence: "/srv/evidence", wantErr: false},
+		{name: "both, with nowhere to record a decision", dir: "/srv/content", keyring: "/srv/keyring.json", wantErr: true},
+		{name: "an evidence store alone, which reads what was recorded", evidence: "/srv/evidence", wantErr: false},
+		{name: "a directory with no keyring", dir: "/srv/content", evidence: "/srv/evidence", wantErr: true},
 		{name: "a keyring with no directory", keyring: "/srv/keyring.json", wantErr: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			withEnv(t, map[string]string{
 				"ZTAX_CONTENT_DIR":     tc.dir,
 				"ZTAX_CONTENT_KEYRING": tc.keyring,
+				"ZTAX_EVIDENCE_DIR":    tc.evidence,
 			})
 
 			cfg, err := config.Load()
@@ -100,7 +104,7 @@ func TestContentIsConfiguredInPairs(t *testing.T) {
 				if !errors.Is(err, config.ErrInvalid) {
 					t.Errorf("error %v is not ErrInvalid", err)
 				}
-				if !strings.Contains(err.Error(), "ZTAX_CONTENT_DIR") {
+				if !strings.Contains(err.Error(), "ZTAX_CONTENT_DIR") && !strings.Contains(err.Error(), "ZTAX_EVIDENCE_DIR") {
 					t.Errorf("error %q does not name the variables at fault", err)
 				}
 				return
@@ -108,7 +112,7 @@ func TestContentIsConfiguredInPairs(t *testing.T) {
 			if err != nil {
 				t.Fatalf("did not start: %v", err)
 			}
-			if cfg.ContentDir != tc.dir || cfg.ContentKeyring != tc.keyring {
+			if cfg.ContentDir != tc.dir || cfg.ContentKeyring != tc.keyring || cfg.EvidenceDir != tc.evidence {
 				t.Errorf("read %q/%q, set %q/%q", cfg.ContentDir, cfg.ContentKeyring, tc.dir, tc.keyring)
 			}
 		})
@@ -128,5 +132,37 @@ func TestUnknownVariablesRefuseToStart(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "ZTAX_CONTENT_DIRECTORY") {
 		t.Errorf("error %q does not name the variable", err)
+	}
+}
+
+// TestTelemetryConfiguration covers ADR-0015's settings: tracing is off until a
+// deployment names its collector, OTLP in clear is a development affordance,
+// and a sample ratio outside [0, 1] refuses to start rather than being clamped.
+func TestTelemetryConfiguration(t *testing.T) {
+	t.Run("off by default", func(t *testing.T) {
+		withEnv(t, nil)
+		cfg, err := config.Load()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.OTLPEndpoint != "" || cfg.OTLPInsecure || cfg.TraceSampleRatio != 0.1 {
+			t.Fatalf("defaults: endpoint %q insecure %v ratio %v", cfg.OTLPEndpoint, cfg.OTLPInsecure, cfg.TraceSampleRatio)
+		}
+	})
+	t.Run("insecure outside development", func(t *testing.T) {
+		withEnv(t, map[string]string{
+			"ZTAX_ENVIRONMENT": "staging", "ZTAX_SECURE_COOKIES": "true", "ZTAX_OTLP_INSECURE": "true",
+		})
+		if _, err := config.Load(); err == nil || !strings.Contains(err.Error(), "ZTAX_OTLP_INSECURE") {
+			t.Fatalf("started with OTLP in clear outside development: %v", err)
+		}
+	})
+	for _, bad := range []string{"1.5", "-0.1", "half"} {
+		t.Run("ratio "+bad, func(t *testing.T) {
+			withEnv(t, map[string]string{"ZTAX_TRACE_SAMPLE_RATIO": bad})
+			if _, err := config.Load(); err == nil || !strings.Contains(err.Error(), "ZTAX_TRACE_SAMPLE_RATIO") {
+				t.Fatalf("accepted ratio %q: %v", bad, err)
+			}
+		})
 	}
 }

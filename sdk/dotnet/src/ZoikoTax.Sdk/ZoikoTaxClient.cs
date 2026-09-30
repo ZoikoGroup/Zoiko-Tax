@@ -263,6 +263,43 @@ public sealed class ZoikoTaxClient : IDisposable
     public Task<Result<AuditRecordList>> ListAuditAsync(int? limit = null, CancellationToken cancellationToken = default)
         => SendAsync<AuditRecordList>(HttpMethod.Get, "/v1/admin/audit" + Query(limit), null, cancellationToken);
 
+    // --- determination ------------------------------------------------------
+
+    /// <summary>Quote a transaction without recording it.</summary>
+    /// <remarks>
+    /// A quote is an estimate, never a decision: it is always
+    /// <c>authoritative: false</c> and must not be filed or invoiced from.
+    /// </remarks>
+    public Task<Result<Quote>> CreateQuoteAsync(QuoteRequest body, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(body);
+        return SendAsync<Quote>(HttpMethod.Post, "/v1/quotes", body, cancellationToken);
+    }
+
+    /// <summary>Commit a transaction and record its decision.</summary>
+    /// <param name="idempotencyKey">
+    /// Mandatory. Mint it before the first attempt and reuse it, unchanged, on
+    /// every retry of the same request (ADR-0013): that is what makes a retry
+    /// safe, and this client never retries on its own.
+    /// </param>
+    /// <param name="body">The transaction.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    public Task<Result<Decision>> CommitTransactionAsync(string idempotencyKey, CommitRequest body, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(idempotencyKey);
+        ArgumentNullException.ThrowIfNull(body);
+        return SendAsync<Decision>(HttpMethod.Post, "/v1/transactions:commit", body, cancellationToken, ("Idempotency-Key", idempotencyKey));
+    }
+
+    /// <summary>Read a recorded decision.</summary>
+    public Task<Result<Decision>> GetDecisionAsync(Guid decisionId, CancellationToken cancellationToken = default)
+        => SendAsync<Decision>(HttpMethod.Get, $"/v1/decisions/{Segment(decisionId.ToString("D", CultureInfo.InvariantCulture))}", null, cancellationToken);
+
+    /// <summary>Replay a recorded decision and compare it byte for byte.</summary>
+    /// <remarks>The verdict is data, not an error; nothing is recorded.</remarks>
+    public Task<Result<ReplayReport>> ReplayDecisionAsync(Guid decisionId, CancellationToken cancellationToken = default)
+        => SendAsync<ReplayReport>(HttpMethod.Post, $"/v1/replay/{Segment(decisionId.ToString("D", CultureInfo.InvariantCulture))}", null, cancellationToken);
+
     /// <summary>Releases the client's own <see cref="HttpClient"/>. A supplied one is left alone.</summary>
     public void Dispose()
     {
@@ -274,10 +311,10 @@ public sealed class ZoikoTaxClient : IDisposable
 
     // --- transport ----------------------------------------------------------
 
-    private async Task<Result<T>> SendAsync<T>(HttpMethod method, string path, object? body, CancellationToken cancellationToken)
+    private async Task<Result<T>> SendAsync<T>(HttpMethod method, string path, object? body, CancellationToken cancellationToken, params (string Name, string Value)[] operationHeaders)
         where T : class
     {
-        var exchange = await ExchangeAsync(method, path, body, cancellationToken).ConfigureAwait(false);
+        var exchange = await ExchangeAsync(method, path, body, operationHeaders, cancellationToken).ConfigureAwait(false);
         if (exchange.Error is not null)
         {
             return Result.Fail<T>(exchange.Error);
@@ -310,15 +347,22 @@ public sealed class ZoikoTaxClient : IDisposable
 
     private async Task<Result> SendAsync(HttpMethod method, string path, object? body, CancellationToken cancellationToken)
     {
-        var exchange = await ExchangeAsync(method, path, body, cancellationToken).ConfigureAwait(false);
+        var exchange = await ExchangeAsync(method, path, body, [], cancellationToken).ConfigureAwait(false);
         return exchange.Error is null ? Result.Ok() : Result.Fail(exchange.Error);
     }
 
-    private async Task<Exchange> ExchangeAsync(HttpMethod method, string path, object? body, CancellationToken cancellationToken)
+    // operationHeaders are this request's own, such as an Idempotency-Key.
+    private async Task<Exchange> ExchangeAsync(HttpMethod method, string path, object? body, (string Name, string Value)[] operationHeaders, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(method, new Uri(_baseUrl + path, UriKind.Absolute));
         request.Headers.TryAddWithoutValidation("Accept", Accept);
         foreach (var (name, value) in _headers)
+        {
+            request.Headers.Remove(name);
+            request.Headers.TryAddWithoutValidation(name, value);
+        }
+
+        foreach (var (name, value) in operationHeaders)
         {
             request.Headers.Remove(name);
             request.Headers.TryAddWithoutValidation(name, value);

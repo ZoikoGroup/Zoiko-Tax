@@ -27,6 +27,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/config"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/secrets"
+	"github.com/zoikogroup/zoikotax/backend/internal/platform/telemetry"
 )
 
 const (
@@ -52,7 +53,7 @@ func run() error {
 		return err
 	}
 
-	log := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})).With(
+	log := slog.New(telemetry.NewLogHandler(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))).With(
 		"service.name", "ztax-outbox-relay",
 		"ztax.cell", cfg.Cell,
 		"ztax.region", cfg.Region,

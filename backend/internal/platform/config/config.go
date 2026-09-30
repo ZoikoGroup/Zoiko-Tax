@@ -50,9 +50,17 @@ type Config struct {
 	// ADR-0017 §2.4.
 	DatabaseURLRef string
 
-	// Observability.
+	// Observability (ADR-0015). OTLPEndpoint is the cell-local collector's
+	// OTLP/gRPC address; empty disables tracing, because a cell that exports
+	// to a collector nobody deployed is a cell logging export failures forever.
+	// A deployment opts in by naming its collector.
 	OTLPEndpoint string
-	LogLevel     string
+	// OTLPInsecure sends OTLP without TLS. Refused outside development.
+	OTLPInsecure bool
+	// TraceSampleRatio is the head-sampling ratio for everything ADR-0015
+	// §2.5 does not force to be kept.
+	TraceSampleRatio float64
+	LogLevel         string
 
 	// Session and cookie behaviour.
 	//
@@ -90,6 +98,13 @@ type Config struct {
 	// credential lives.
 	ContentDir     string
 	ContentKeyring string
+
+	// EvidenceDir roots the regional evidence object store — the filesystem
+	// prototype of the retention-locked store (W1 lane D). A cell with content
+	// must have one: a cell that can evaluate but not record would serve
+	// quotes and fail every commit, which is a cell that looks healthy until
+	// the first fiscal write. A cell with neither serves no determination.
+	EvidenceDir string
 
 	// Authoritative records whether this deployment may emit authoritative
 	// fiscal output. It is false until A4 and is reported by /v1/capabilities,
@@ -136,13 +151,16 @@ var known = map[string]struct {
 	"ZTAX_HTTP_READ_TIMEOUT":            {def: "10s"},
 	"ZTAX_HTTP_WRITE_TIMEOUT":           {def: "30s"},
 	"ZTAX_HTTP_SHUTDOWN_TIMEOUT":        {def: "30s"},
-	"ZTAX_OTLP_ENDPOINT":                {def: "localhost:4317"},
+	"ZTAX_OTLP_ENDPOINT":                {def: ""},
+	"ZTAX_OTLP_INSECURE":                {def: "false"},
+	"ZTAX_TRACE_SAMPLE_RATIO":           {def: "0.1"},
 	"ZTAX_LOG_LEVEL":                    {def: "info"},
 	"ZTAX_SECURE_COOKIES":               {def: "true"},
 	"ZTAX_TRUST_PROXY":                  {def: "false"},
 	"ZTAX_AUTHORITATIVE":                {def: "false"},
 	"ZTAX_CONTENT_DIR":                  {def: ""},
 	"ZTAX_CONTENT_KEYRING":              {def: ""},
+	"ZTAX_EVIDENCE_DIR":                 {def: ""},
 	"ZTAX_BOOTSTRAP_TENANT":             {def: ""},
 	"ZTAX_BOOTSTRAP_TENANT_NAME":        {def: ""},
 	"ZTAX_BOOTSTRAP_ADMIN_EMAIL":        {def: ""},
@@ -197,6 +215,15 @@ func Load() (Config, error) {
 		return d
 	}
 
+	ratio := func(name string) float64 {
+		raw := get(name)
+		r, err := strconv.ParseFloat(raw, 64)
+		if err != nil || r < 0 || r > 1 {
+			problems = append(problems, fmt.Sprintf("%s: %q is not a ratio between 0 and 1", name, raw))
+			return 0
+		}
+		return r
+	}
 	boolean := func(name string) bool {
 		switch v := get(name); v {
 		case "true":
@@ -229,10 +256,13 @@ func Load() (Config, error) {
 		HTTPWriteTimeout:    duration("ZTAX_HTTP_WRITE_TIMEOUT"),
 		HTTPShutdownTimeout: duration("ZTAX_HTTP_SHUTDOWN_TIMEOUT"),
 		OTLPEndpoint:        get("ZTAX_OTLP_ENDPOINT"),
+		OTLPInsecure:        boolean("ZTAX_OTLP_INSECURE"),
+		TraceSampleRatio:    ratio("ZTAX_TRACE_SAMPLE_RATIO"),
 		LogLevel:            get("ZTAX_LOG_LEVEL"),
 
 		ContentDir:     get("ZTAX_CONTENT_DIR"),
 		ContentKeyring: get("ZTAX_CONTENT_KEYRING"),
+		EvidenceDir:    get("ZTAX_EVIDENCE_DIR"),
 
 		SecureCookies: boolean("ZTAX_SECURE_COOKIES"),
 		TrustProxy:    boolean("ZTAX_TRUST_PROXY"),
@@ -260,6 +290,16 @@ func Load() (Config, error) {
 		// or refuse every bundle, and both are worse than not starting.
 		problems = append(problems,
 			"ZTAX_CONTENT_DIR and ZTAX_CONTENT_KEYRING are set together or not at all; content is never loaded unverified (ADR-0005 §2.6)")
+	}
+	if c.ContentDir != "" && c.EvidenceDir == "" {
+		problems = append(problems,
+			"ZTAX_EVIDENCE_DIR is required with ZTAX_CONTENT_DIR; a cell that can evaluate records what it decides (ADR-0011 §2.8)")
+	}
+
+	// Telemetry in clear is a development affordance for the same reason.
+	if c.OTLPInsecure && c.Environment != "development" {
+		problems = append(problems, fmt.Sprintf(
+			"ZTAX_OTLP_INSECURE: refused in environment %q; telemetry leaves the process and is sent over TLS", c.Environment))
 	}
 
 	// Plain-HTTP cookies are a development affordance, and saying so at startup
@@ -304,10 +344,13 @@ func (c Config) LogAttrs() []any {
 		"http.read_timeout", c.HTTPReadTimeout.String(),
 		"http.write_timeout", c.HTTPWriteTimeout.String(),
 		"otlp.endpoint", c.OTLPEndpoint,
+		"otlp.insecure", c.OTLPInsecure,
+		"trace.sample_ratio", strconv.FormatFloat(c.TraceSampleRatio, 'f', -1, 64),
 		"log.level", c.LogLevel,
 		"database.url_ref", c.DatabaseURLRef,
 		"content.dir", c.ContentDir,
 		"content.keyring", c.ContentKeyring,
+		"evidence.dir", c.EvidenceDir,
 		"secure_cookies", c.SecureCookies,
 		"trust_proxy", c.TrustProxy,
 		"authoritative", c.Authoritative,

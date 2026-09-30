@@ -30,8 +30,12 @@ output-options:
   #              fractional precision. The contract's Timestamp is exactly six
   #              digits and a literal Z (ADR-0011 §2.1 P2), which is what
   #              canonical.FormatTime produces and time.Time does not.
+  #   uuid       The default is openapi_types.UUID, from the same runtime
+  #              module again. Identifiers are parsed into their own types by
+  #              internal/domain/id, which is where a malformed one is refused.
   type-mapping:
     string:
       formats:
         email: {type: string}
         date-time: {type: string}
+        uuid: {type: string}
