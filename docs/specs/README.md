@@ -26,7 +26,7 @@ Neither names a jurisdiction, a rate, an evidence rank or an ordering. Those are
 
 ## Status and what happens next
 
-**DRAFT.** They are commissioned to close a gap register entry, not approved. The lifecycle is DRAFT → REVIEW → APPROVED → EFFECTIVE, and A4 requires EFFECTIVE.
+**DRAFT.** They are commissioned to close a gap register entry, not approved. Both are registered in [`../register.yaml`](../register.yaml) with their publication hashes, and their 65 requirements are in [`../requirements.yaml`](../requirements.yaml); editing either file changes its hash, and `python docs/tools/check_registry.py --rehash-drafts` re-registers it. The lifecycle is DRAFT → REVIEW → APPROVED → EFFECTIVE, and A4 requires EFFECTIVE.
 
 Before REVIEW, three things are owed:
 

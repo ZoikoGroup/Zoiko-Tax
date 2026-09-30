@@ -1,11 +1,16 @@
 """Generate a traceability report linking requirements to their verification evidence.
 
 Reads docs/requirements.yaml and for each requirement:
-  - TEST refs under intelligence/tests/: runs pytest for the named test functions,
-    and uses --collect-only to detect any note-named tests not actually found in the
-    file (sets partial_verification=true if any are missing).
-  - TEST ref docs/test_validate_registry.py: runs via python -m unittest.
-  - TEST refs under backend/: runs go test, detecting nested go.mod modules.
+  A verification_ref is a repository path, optionally path::TestName
+  (docs/requirements.yaml). With a test name only that test runs; without one,
+  the whole file does.
+
+  - TEST refs under intelligence/tests/: runs pytest, and uses --collect-only to
+    detect a named test not actually found in the file (sets
+    partial_verification=true if it is missing).
+  - TEST refs under docs/tools/tests/: runs via python -m unittest.
+  - TEST refs under backend/: runs go test (-run TestName when one is named),
+    detecting nested go.mod modules.
   - INSPECTION refs: confirms the file exists (NOT_INDEPENDENTLY_VERIFIED).
   - sdk/ refs: NOT_SUPPORTED (no runner configured yet).
   - null refs: NO_VERIFICATION.
@@ -34,6 +39,16 @@ import os
 import datetime
 import json
 import re
+
+
+def split_ref(ref):
+    """Split a verification_ref into its path and the test names it selects.
+
+    "intelligence/tests/test_x.py::test_y" -> ("intelligence/tests/test_x.py", ["test_y"])
+    "backend/internal/app/seal_test.go"     -> ("backend/internal/app/seal_test.go", [])
+    """
+    path, _, name = ref.partition("::")
+    return path, [name] if name else []
 
 
 def _baseline_path(repo_root):
@@ -146,7 +161,6 @@ def main():
         doc_id = req.get("document_id")
         vm = req.get("verification_method")
         vr = req.get("verification_ref")
-        note = req.get("note", "") or ""
 
         result = "NO_VERIFICATION"
         detail = "No verification ref provided."
@@ -156,7 +170,7 @@ def main():
             detail = "verification_ref is null."
             partial_verification = False
         elif vm == "INSPECTION":
-            path = os.path.join(repo_root, vr.replace("/", os.sep))
+            path = os.path.join(repo_root, split_ref(vr)[0].replace("/", os.sep))
             if os.path.exists(path):
                 result = "NOT_INDEPENDENTLY_VERIFIED"
                 detail = "file exists (this only confirms the file exists, not that the rule holds)"
@@ -165,11 +179,11 @@ def main():
                 detail = "file not found"
             partial_verification = False
         elif vm == "TEST":
+            vr_path, test_funcs = split_ref(vr)
             # Case A: intelligence/tests/
-            if vr.startswith("intelligence/tests/"):
-                test_funcs = re.findall(r"test_[a-zA-Z0-9_]+", note)
+            if vr_path.startswith("intelligence/tests/"):
                 # rel_path is relative to intelligence/: e.g. "tests/test_classifier.py"
-                rel_path = vr[len("intelligence/"):]
+                rel_path = vr_path[len("intelligence/"):]
                 cmd = ["python", "-m", "pytest"]
                 if test_funcs:
                     for t in test_funcs:
@@ -218,10 +232,11 @@ def main():
                     result = "ERROR"
                     detail = str(e)
 
-            # Case B: docs/test_validate_registry.py
-            elif vr == "docs/test_validate_registry.py":
+            # Case B: the register gate's own suite, docs/tools/tests/
+            elif vr_path.startswith("docs/tools/tests/"):
                 partial_verification = False
-                cmd = ["python", "-m", "unittest", "docs.test_validate_registry"]
+                cmd = ["python", "-m", "unittest", "discover",
+                       "-s", os.path.dirname(vr_path), "-p", os.path.basename(vr_path)]
                 try:
                     proc = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True)
                     detail = proc.stdout + proc.stderr
@@ -234,20 +249,22 @@ def main():
                     detail = str(e)
 
             # Go tests under backend/
-            elif vr.startswith("backend/"):
+            elif vr_path.startswith("backend/"):
                 partial_verification = False
                 # This logic has not been tested against a real nested go.mod case.
                 # Review carefully before trusting it for a new backend test path.
-                file_dir = os.path.join(repo_root, os.path.dirname(vr))
+                file_dir = os.path.join(repo_root, os.path.dirname(vr_path))
                 if os.path.exists(os.path.join(file_dir, "go.mod")):
                     # The subdirectory is its own Go module — run `go test .` from there
                     cmd = ["go", "test", "-v", "."]
                     run_dir = file_dir
                 else:
                     # Part of the main backend module — run from backend/
-                    test_dir = "./" + os.path.dirname(vr[len("backend/"):])
+                    test_dir = "./" + os.path.dirname(vr_path[len("backend/"):])
                     cmd = ["go", "test", "-v", test_dir]
                     run_dir = os.path.join(repo_root, "backend")
+                if test_funcs:
+                    cmd[3:3] = ["-run", "^" + test_funcs[0] + "$"]
                 try:
                     proc = subprocess.run(cmd, cwd=run_dir, capture_output=True, text=True)
                     detail = proc.stdout + proc.stderr
@@ -259,7 +276,7 @@ def main():
                     result = "ERROR"
                     detail = str(e)
 
-            elif any(vr.startswith(p) for p in ("sdk/python/", "sdk/go/", "sdk/java/", "sdk/dotnet/")):
+            elif any(vr_path.startswith(p) for p in ("sdk/python/", "sdk/go/", "sdk/java/", "sdk/dotnet/")):
                 partial_verification = False
                 result = "NOT_SUPPORTED"
                 detail = "No test runner configured for this SDK path yet."

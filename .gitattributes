@@ -32,3 +32,6 @@ backend/internal/transport/http/gen/types.gen.go linguist-generated
 backend/postman/ZoikoTax.postman_collection.json* linguist-generated
 contracts/openapi/export/** linguist-generated
 sdk/**/types.gen.go linguist-generated
+
+# Generated from docs/register.yaml by docs/tools/check_registry.py --write-index.
+docs/ESTATE.md linguist-generated

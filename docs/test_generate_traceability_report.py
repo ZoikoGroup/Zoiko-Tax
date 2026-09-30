@@ -1,8 +1,8 @@
 """Unit tests for docs/generate_traceability_report.py.
 
 Tests cover:
-  - A note listing 2 test function names results in both being appended to cmd
-  - A note naming a test that doesn't exist in the file sets partial_verification=True
+  - A path::name ref selects that test; a bare path selects none (the whole file)
+  - A ref naming a test that doesn't exist in the file sets partial_verification=True
   - A ref starting with sdk/python/ returns NOT_SUPPORTED, not ERROR
   - An INSPECTION ref that exists returns NOT_INDEPENDENTLY_VERIFIED; missing returns ERROR
   - Running the summary-file logic twice produces identical (byte-for-byte) files
@@ -30,21 +30,27 @@ spec.loader.exec_module(_mod)
 # ---------------------------------------------------------------------------
 # Helper to build a minimal fake requirement dict
 # ---------------------------------------------------------------------------
-def _req(req_id="TST-REQ-0001", vm="TEST", vr=None, note=""):
-    return {
-        "id": req_id,
-        "document_id": "TST-DOC-001",
-        "verification_method": vm,
-        "verification_ref": vr,
-        "note": note,
-    }
+class TestSplitRef(unittest.TestCase):
+    """Item: a path::name ref selects that test; a bare path selects the whole file."""
+
+    def test_named_test(self):
+        self.assertEqual(
+            _mod.split_ref("intelligence/tests/test_classifier.py::test_foo"),
+            ("intelligence/tests/test_classifier.py", ["test_foo"]),
+        )
+
+    def test_bare_path(self):
+        self.assertEqual(
+            _mod.split_ref("backend/internal/app/seal_test.go"),
+            ("backend/internal/app/seal_test.go", []),
+        )
 
 
 class TestPytestCmdBuilding(unittest.TestCase):
-    """Item: a note listing 2 test function names results in both being run."""
+    """Item: the named test from a path::name ref is what pytest runs."""
 
-    def test_two_note_test_funcs_both_appended_to_cmd(self):
-        """Verify that both test_foo and test_bar from note appear in the pytest call."""
+    def test_named_test_appended_to_cmd(self):
+        """Verify that test_foo from the ref appears in the pytest call."""
         captured_cmds = []
 
         def fake_run(cmd, **kwargs):
@@ -55,15 +61,13 @@ class TestPytestCmdBuilding(unittest.TestCase):
             m.stderr = ""
             return m
 
-        vr = "intelligence/tests/test_classifier.py"
-        note = "Verified by test_foo and test_bar."
+        vr = "intelligence/tests/test_classifier.py::test_foo"
 
-        req = _req(vr=vr, note=note)
         # Patch subprocess.run so no real process is spawned
         with patch("subprocess.run", side_effect=fake_run):
-            # Directly exercise the same regex + cmd-building logic as the module
-            test_funcs = re.findall(r"test_[a-zA-Z0-9_]+", note)
-            rel_path = vr[len("intelligence/"):]
+            # Directly exercise the same ref-splitting + cmd-building logic as the module
+            vr_path, test_funcs = _mod.split_ref(vr)
+            rel_path = vr_path[len("intelligence/"):]
             cmd = ["pytest"]
             for t in test_funcs:
                 cmd.append(f"{rel_path}::{t}")
@@ -73,14 +77,13 @@ class TestPytestCmdBuilding(unittest.TestCase):
         self.assertEqual(len(captured_cmds), 1)
         built_cmd = captured_cmds[0]
         self.assertIn("tests/test_classifier.py::test_foo", built_cmd)
-        self.assertIn("tests/test_classifier.py::test_bar", built_cmd)
 
 
 class TestPartialVerification(unittest.TestCase):
-    """Item: a note naming a test that doesn't exist in the file sets partial_verification=True."""
+    """Item: a ref naming a test that doesn't exist in the file sets partial_verification=True."""
 
     def test_missing_test_name_sets_partial_verification_true_flat_format(self):
-        """--collect-only returns flat names that don't include a note-mentioned name -> partial=True."""
+        """--collect-only returns flat names that don't include the ref's name -> partial=True."""
         collect_stdout = "tests/test_classifier.py::test_real\n"
 
         def fake_run(cmd, **kwargs):
@@ -95,8 +98,7 @@ class TestPartialVerification(unittest.TestCase):
                 m.stderr = ""
             return m
 
-        note = "Verified by test_real and test_ghost_does_not_exist."
-        test_funcs = re.findall(r"test_[a-zA-Z0-9_]+", note)
+        _, test_funcs = _mod.split_ref("intelligence/tests/test_classifier.py::test_ghost_does_not_exist")
 
         with patch("subprocess.run", side_effect=fake_run):
             collected_names = set()
@@ -119,8 +121,8 @@ class TestPartialVerification(unittest.TestCase):
 
         self.assertTrue(partial_verification)
 
-    def test_all_note_names_found_sets_partial_verification_false_tree_format(self):
-        """When all note-mentioned names appear in --collect-only (tree format), partial=False."""
+    def test_named_test_found_sets_partial_verification_false_tree_format(self):
+        """When the ref's name appears in --collect-only (tree format), partial=False."""
         collect_stdout = "<Module tests/test_classifier.py>\n  <Function test_real>\n  <Function test_also_real>\n"
 
         def fake_run(cmd, **kwargs):
@@ -130,8 +132,7 @@ class TestPartialVerification(unittest.TestCase):
             m.stderr = ""
             return m
 
-        note = "Verified by test_real and test_also_real."
-        test_funcs = re.findall(r"test_[a-zA-Z0-9_]+", note)
+        _, test_funcs = _mod.split_ref("intelligence/tests/test_classifier.py::test_also_real")
 
         with patch("subprocess.run", side_effect=fake_run):
             collected_names = set()
