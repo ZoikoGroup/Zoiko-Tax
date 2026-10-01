@@ -7,12 +7,18 @@
 //
 // The order of operations is ADR-0005 §2.6, and it is the whole design:
 //
-//	verify the seal → verify the digest → load and check the graph → swap
+//	verify the seal → verify the digest → check four-eyes → load and check the graph → swap
 //
 // Nothing is published until every step has passed, so a replacement that fails
 // verification never reaches the Holder and the cell keeps serving the bundle it
 // already had. There is no partial activation, and no request blocks on any of
 // it.
+//
+// Four-eyes is a load-time check, not only a build-time one (ZTAX-DOM-001 Z4,
+// CONT-001 §8). The build plane can refuse to seal an unapproved bundle, but
+// the build plane is not the only thing that can put two files in a directory;
+// a cell that accepted any well-signed bundle would make the release signer
+// the sole pair of eyes in practice, whatever the pipeline intended.
 package content
 
 import (
@@ -26,6 +32,7 @@ import (
 	"time"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/content/bundle"
+	domaincontent "github.com/zoikogroup/zoikotax/backend/internal/domain/content"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/clock"
@@ -55,7 +62,23 @@ type Loader struct {
 	// Cell is this cell's identity. A bundle sealed for another cell is refused
 	// here rather than at the point it would have produced a figure.
 	Cell string
+	// Environment is the process's ZTAX_ENVIRONMENT. Outside "development" a
+	// bundle is refused unless its seal carries four-eyes approvals — an
+	// AUTHOR and an APPROVER, distinct people with distinct keys, neither
+	// holding the release key (domain/content.CheckFourEyes).
+	//
+	// The comparison is against "development" and nothing else, so an empty or
+	// misspelled environment lands on the strict side. That is the shape every
+	// environment guard in the estate has (kms.NewLocalSigner, the config
+	// validators): the permissive branch has to be asked for by name.
+	// Development stays usable — a locally built, unapproved bundle loads — but
+	// approvals that *are* present are verified in every environment, because
+	// a forged approval is not a development convenience.
+	Environment string
 }
+
+// Development is the one environment in which an unapproved bundle loads.
+const Development = "development"
 
 // Loaded is a verified bundle and the seal that vouches for it.
 type Loaded struct {
@@ -68,6 +91,13 @@ type Loaded struct {
 	// release evidence manifest (ADR-0017 §2.8), so the loader reports it
 	// rather than leaving a caller to re-read the seal for it.
 	KeyID string
+	// Approvals are the verified four-eyes approvals the seal carries, which
+	// release evidence records as author, reviewer and approver
+	// (ZTAX-CONT-REQ-0058). Empty only for an unapproved development bundle.
+	Approvals []domaincontent.Approval
+	// Pack is the signed pack section, or nil for a bundle compiled before
+	// packs existed.
+	Pack *domaincontent.PackManifest
 }
 
 // Load reads, verifies and builds the bundle. It publishes nothing.
@@ -142,11 +172,34 @@ func (l *Loader) Load(ctx context.Context) (Loaded, error) {
 	// vouches for, and Verify has already established the two agree.
 	manifest.Digest = digest.String()
 
+	// Verify has already checked every approval present is genuine and covers
+	// this digest; this re-reads them to apply the policy. Re-verifying costs
+	// one signature check per approval at startup and keeps "the approvals a
+	// caller acts on are verified ones" true without trusting the order of two
+	// calls.
+	approvals, err := bundle.VerifyApprovals(ctx, l.Verifier, payload, at)
+	if err != nil {
+		return Loaded{}, err
+	}
+	if l.Environment != Development || len(approvals) > 0 {
+		// Outside development four-eyes is required. Inside it, a bundle that
+		// carries approvals is held to them: a half-approved bundle is not an
+		// unapproved one, and loading it quietly would teach the wrong lesson
+		// about which of the two it is.
+		if err := domaincontent.CheckFourEyes(approvals, seal.Signature.KeyID); err != nil {
+			return Loaded{}, fmt.Errorf("content: bundle %s is not four-eyes approved (environment %q): %w",
+				payload.BundleID, l.Environment, err)
+		}
+	}
+
 	b, err := rule.Load(manifest)
 	if err != nil {
 		return Loaded{}, err
 	}
-	return Loaded{Bundle: b, Seal: payload, Digest: digest.String(), KeyID: seal.Signature.KeyID}, nil
+	return Loaded{
+		Bundle: b, Seal: payload, Digest: digest.String(), KeyID: seal.Signature.KeyID,
+		Approvals: approvals, Pack: manifest.Pack,
+	}, nil
 }
 
 // Activate loads and, only if every step passed, publishes by atomic pointer

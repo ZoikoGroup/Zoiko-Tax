@@ -6,6 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/content"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/fiscal"
 )
 
@@ -79,6 +80,17 @@ type Manifest struct {
 	// Constants are canonical decimal strings with their currency or unit, so
 	// a constant pool cannot smuggle a float into content.
 	Constants []Constant `json:"constants"`
+	// Pack is what this bundle is a release of: pack identity and version,
+	// package level, dependencies, sources and permitted deployments
+	// (ZTAX-CONT-001 §11, ZTAX-SRC-REQ-0049). It is signed with the rest of the
+	// manifest.
+	//
+	// Optional, and absent from the canonical bytes when nil, so that a bundle
+	// compiled before packs existed still decodes, re-encodes to the same bytes
+	// and verifies. Load does not read it: what a pack depends on and whom it
+	// may be distributed to are release questions, answered before the bundle
+	// is signed, and the evaluator has no use for either.
+	Pack *content.PackManifest `json:"pack,omitempty"`
 }
 
 // Constant is one entry in the pool.

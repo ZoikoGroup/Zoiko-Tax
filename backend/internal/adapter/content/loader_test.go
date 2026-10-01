@@ -110,12 +110,16 @@ func write(t *testing.T, path string, data []byte) {
 	}
 }
 
+// loaderFor is a development loader: these tests are about the seal, the
+// digest and the graph, and the unapproved fixture is a development bundle.
+// The four-eyes tests below construct their own loaders per environment.
 func loaderFor(dir string, ring kms.Verifier, cell string) *adaptercontent.Loader {
 	return &adaptercontent.Loader{
-		Dir:      dir,
-		Verifier: ring,
-		Clock:    clock.Fixed{Instant: loadAt},
-		Cell:     cell,
+		Dir:         dir,
+		Verifier:    ring,
+		Clock:       clock.Fixed{Instant: loadAt},
+		Cell:        cell,
+		Environment: adaptercontent.Development,
 	}
 }
 

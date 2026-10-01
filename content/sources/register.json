@@ -1,0 +1,44 @@
+{
+  "sources": [
+    {
+      "sourceId": "SRC-ZOIKO-WORKED-0001",
+      "providerLegalName": "Zoiko Group",
+      "sourceName": "ZoikoTax worked-pack content (synthetic; no real jurisdiction, rate or threshold)",
+      "sourceVersion": "2026.09",
+      "class": "S7",
+      "acquisition": "MANUAL",
+      "licenceRef": "ZOIKO-AUTHORED",
+      "rights": {
+        "internal_use": "ALLOW",
+        "cache": "ALLOW",
+        "archive": "ALLOW",
+        "transform": "ALLOW",
+        "quote": "ALLOW",
+        "customer_display": "ALLOW",
+        "derived_output": "ALLOW",
+        "evaluation": "ALLOW",
+        "commercial_use": "ALLOW",
+        "backup_dr": "ALLOW",
+        "historical_replay": "ALLOW",
+        "audit_disclosure": "ALLOW",
+        "rag_retrieval": "UNKNOWN",
+        "embedding": "UNKNOWN",
+        "model_training": "DENY"
+      },
+      "attributionRequired": "NOT_REQUIRED",
+      "shareAlikeTrigger": "NOT_REQUIRED",
+      "environments": ["P0_ZOIKO_ONLY"],
+      "term": { "start": "2026-09-01T00:00:00Z", "autoRenew": false, "noticeDays": 0 },
+      "termination": {
+        "survivingRights": ["archive", "historical_replay", "audit_disclosure"],
+        "deleteRawWithinDays": 0,
+        "notes": "Zoiko-authored; there is no third-party licence to terminate. Recorded so the worked pack exercises the same gate a licensed source does."
+      },
+      "costModel": "NONE",
+      "legalOwner": "team:content-legal",
+      "technicalOwner": "team:content-engineering",
+      "reviewDue": "2027-09-30T00:00:00Z",
+      "state": "PRODUCTION"
+    }
+  ]
+}

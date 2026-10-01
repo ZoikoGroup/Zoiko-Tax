@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/content"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/fiscal"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
@@ -154,12 +155,113 @@ func canonicalManifest(m rule.Manifest) (canonical.Value, error) {
 	roots := append([]rule.NodeID(nil), m.Roots...)
 	sort.Slice(roots, func(i, j int) bool { return roots[i] < roots[j] })
 
+	pack, err := canonicalPack(m.Pack)
+	if err != nil {
+		return canonical.Value{}, fmt.Errorf("bundle: manifest %s: %w", m.BundleID, err)
+	}
+
 	return canonical.Object(
 		canonical.F("bundleId", canonical.String(m.BundleID)),
 		canonical.F("irVersion", canonical.Integer(int64(m.IRVersion))),
 		canonical.F("constants", canonical.Array(constValues...)),
 		canonical.F("nodes", canonical.Array(nodeValues...)),
 		canonical.F("roots", canonicalNodeIDs(roots)),
+		canonical.F("pack", pack),
+	), nil
+}
+
+// canonicalPack renders the pack section, or Absent for a bundle that has none.
+//
+// Absent rather than required is what keeps the change additive: a manifest
+// written before packs existed has no "pack" member, decodes to a nil Pack,
+// and re-encodes to the bytes it was read from, so DecodeManifest's
+// canonical-form check still passes and its digest — the one every replay of
+// a decision made under it names — is unchanged.
+//
+// A pack that is present is validated before it is encoded. Encoding is the
+// last step before bytes are digested and signed, and an invalid pack section
+// that reached a signature would be a signed claim nobody can act on; a cell
+// decoding the manifest runs the same validation through this same function,
+// so it refuses what the compiler would have.
+//
+// Every collection is ordered by its key (content.PackManifest.Normalize), for
+// the reason EncodeManifest gives: none carries meaning in its order. Empty
+// collections are Absent, for the reason canonicalNodeIDs gives.
+func canonicalPack(p *content.PackManifest) (canonical.Value, error) {
+	if p == nil {
+		return canonical.Absent(), nil
+	}
+	if err := p.Validate(); err != nil {
+		return canonical.Value{}, err
+	}
+	m := p.Normalize()
+
+	strs := func(ss []string) canonical.Value {
+		if len(ss) == 0 {
+			return canonical.Absent()
+		}
+		items := make([]canonical.Value, len(ss))
+		for i, s := range ss {
+			items[i] = canonical.String(s)
+		}
+		return canonical.Array(items...)
+	}
+	caps := make([]string, len(m.Capabilities))
+	for i, c := range m.Capabilities {
+		caps[i] = string(c)
+	}
+	modes := make([]string, len(m.DeploymentModes))
+	for i, d := range m.DeploymentModes {
+		modes[i] = string(d)
+	}
+
+	var deps []canonical.Value
+	for _, d := range m.Dependencies {
+		deps = append(deps, canonical.Object(
+			canonical.F("packId", canonical.String(string(d.Pack))),
+			canonical.F("version", canonical.String(d.Constraint.String())),
+		))
+	}
+	var conflicts []canonical.Value
+	for _, c := range m.Conflicts {
+		conflicts = append(conflicts, canonical.Object(
+			canonical.F("packId", canonical.String(string(c.Pack))),
+			canonical.F("version", canonical.String(c.Constraint.String())),
+		))
+	}
+	var sources []canonical.Value
+	for _, s := range m.Sources {
+		uses := make([]string, len(s.Uses))
+		for i, u := range s.Uses {
+			uses[i] = string(u)
+		}
+		sources = append(sources, canonical.Object(
+			canonical.F("sourceId", canonical.String(string(s.Source))),
+			canonical.F("licenceRef", canonical.String(s.LicenceRef)),
+			canonical.F("recordDigest", canonical.String(s.RecordDigest)),
+			canonical.F("uses", strs(uses)),
+		))
+	}
+	array := func(vs []canonical.Value) canonical.Value {
+		if len(vs) == 0 {
+			return canonical.Absent()
+		}
+		return canonical.Array(vs...)
+	}
+
+	return canonical.Object(
+		canonical.F("packId", canonical.String(string(m.ID))),
+		canonical.F("version", canonical.String(m.Version.String())),
+		canonical.F("level", canonical.String(string(m.Level))),
+		canonical.F("status", canonical.String(string(m.Status))),
+		canonical.F("capabilities", strs(caps)),
+		canonical.F("territories", strs(m.Territories)),
+		canonical.F("deploymentModes", strs(modes)),
+		canonical.F("dependencies", array(deps)),
+		canonical.F("conflicts", array(conflicts)),
+		canonical.F("sources", array(sources)),
+		canonical.F("owner", canonical.OptString(m.Owner)),
+		canonical.F("withdrawalPlanRef", canonical.OptString(m.WithdrawalPlanRef)),
 	), nil
 }
 
