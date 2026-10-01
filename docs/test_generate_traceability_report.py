@@ -426,5 +426,52 @@ class TestRatchet(unittest.TestCase):
             self.assertIsInstance(v, int)
 
 
+class TestMainExitCode(unittest.TestCase):
+    def test_main_exits_0_on_empty_ratchet(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "generate_traceability_report",
+            os.path.join(os.path.dirname(__file__), "generate_traceability_report.py"),
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            docs_dir = os.path.join(tmpdir, "docs")
+            os.makedirs(docs_dir)
+            with open(os.path.join(docs_dir, "requirements.yaml"), "w") as f:
+                f.write("requirements: []\n")
+
+            with patch("os.path.abspath", return_value=tmpdir):
+                with patch.object(mod, "_run_ratchet", return_value=[]):
+                    with patch("sys.exit", side_effect=SystemExit) as mock_exit:
+                        with patch("sys.argv", ["generate_traceability_report.py"]):
+                            with self.assertRaises(SystemExit):
+                                mod.main()
+                        mock_exit.assert_called_with(0)
+
+    def test_main_exits_1_on_ratchet_regression(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "generate_traceability_report",
+            os.path.join(os.path.dirname(__file__), "generate_traceability_report.py"),
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            docs_dir = os.path.join(tmpdir, "docs")
+            os.makedirs(docs_dir)
+            with open(os.path.join(docs_dir, "requirements.yaml"), "w") as f:
+                f.write("requirements: []\n")
+
+            with patch("os.path.abspath", return_value=tmpdir):
+                with patch.object(mod, "_run_ratchet", return_value=["Ratchet regression: PASS dropped"]):
+                    with patch("sys.exit", side_effect=SystemExit) as mock_exit:
+                        with patch("sys.argv", ["generate_traceability_report.py"]):
+                            with self.assertRaises(SystemExit):
+                                mod.main()
+                        mock_exit.assert_called_with(1)
+
 if __name__ == "__main__":
     unittest.main()
