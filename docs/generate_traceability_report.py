@@ -71,14 +71,14 @@ def _run_ratchet(results_counts, repo_root):
     # Rule 1: PASS must not decrease
     if results_counts.get("PASS", 0) < bc.get("PASS", 0):
         regressions.append(
-            f"NOTICE: Ratchet regression: PASS dropped from {bc.get('PASS', 0)} to "
+            f"Ratchet regression: PASS dropped from {bc.get('PASS', 0)} to "
             f"{results_counts.get('PASS', 0)} versus {bp}"
         )
 
     # Rule 2: NO_VERIFICATION must not increase
     if results_counts.get("NO_VERIFICATION", 0) > bc.get("NO_VERIFICATION", 0):
         regressions.append(
-            f"NOTICE: Ratchet regression: NO_VERIFICATION increased from {bc.get('NO_VERIFICATION', 0)} to "
+            f"Ratchet regression: NO_VERIFICATION increased from {bc.get('NO_VERIFICATION', 0)} to "
             f"{results_counts.get('NO_VERIFICATION', 0)} versus {bp}"
         )
 
@@ -87,12 +87,8 @@ def _run_ratchet(results_counts, repo_root):
     base_bad = bc.get("FAIL", 0) + bc.get("ERROR", 0)
     if cur_bad > base_bad:
         regressions.append(
-            f"NOTICE: Ratchet regression: (FAIL+ERROR) increased from {base_bad} to {cur_bad} versus {bp}"
+            f"Ratchet regression: (FAIL+ERROR) increased from {base_bad} to {cur_bad} versus {bp}"
         )
-
-    if regressions:
-        for msg in regressions:
-            print(msg)
 
     # Check for improvements and hint
     improved = False
@@ -346,10 +342,13 @@ def main():
     # Ratchet check
     ratchet_notices = _run_ratchet(results_counts, repo_root)
 
+    if ratchet_notices:
+        for notice in ratchet_notices:
+            print(f"::error::{notice}")
+
     for item in fail_or_error_reqs:
         # e.g., ::warning::Requirement REQ-1 verification FAILED (docs/some_file.py)
-        res_word = "FAILED" if item["result"] == "FAIL" else "ERRORED"
-        print(f"::warning::Requirement {item['id']} verification {res_word} ({item['vr']})")
+        print(f"::warning::Requirement {item['id']} verification FAILED ({item['vr']})")
 
     step_summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
     if step_summary_file:
@@ -363,7 +362,7 @@ def main():
             
             if ratchet_notices:
                 for notice in ratchet_notices:
-                    f.write(f"**NOTICE**: {notice}\n\n")
+                    f.write(f"**BLOCKING REGRESSION**: {notice}\n\n")
             
             if fail_or_error_reqs:
                 f.write("### Failed / Errored Requirements\n\n")
@@ -373,7 +372,10 @@ def main():
                 f.write("No requirements failed or errored.\n")
 
     print("\nTraceability report completed.")
-    sys.exit(0)
+    if ratchet_notices:
+        sys.exit(1)
+    else:
+        sys.exit(0)
 
 
 if __name__ == "__main__":

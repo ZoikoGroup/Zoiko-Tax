@@ -452,9 +452,9 @@ jobs:
         run: python docs/tools/check_registry.py
 
       # Requirement → test → evidence (#18). Runs each registered
-      # verification_ref and uploads the result; non-blocking by design, it
-      # reports a ratchet regression against docs/trace_baseline.json but
-      # does not fail the job. It needs Go and the intelligence test extras
+      # verification_ref and uploads the result; non-blocking by design for individual
+      # FAIL/ERROR counts, but a ratchet regression against docs/trace_baseline.json
+      # is a hard gate that fails the job. It needs Go and the intelligence test extras
       # because it runs their tests.
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
