@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AIUseCase",
+  "description": "A registered AI use case (ZTAX-AIGOV-001 §3; ADR-0006 §2.5). Registration is the whole control: the Gateway refuses an unregistered use case, so a new AI capability cannot ship by deploying code that calls the Gateway, only by a reviewed registry change on the AI train with a named owner.",
+  "$comment": "Required fields are exactly ztax_gateway.governance.UseCase, which the Python schema test serializes and validates. The optional fields are the remainder of the AIGOV-001 §3 inventory. permitted_data_classes is enforced by the Go policy gate (ai.UseCasePolicy) and, when absent, means no data class is permitted.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "use_case_id",
+    "owner",
+    "description",
+    "max_risk_tier",
+    "max_authority",
+    "permitted_regions",
+    "suspended"
+  ],
+  "properties": {
+    "use_case_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "owner": { "$ref": "common.schema.json#/$defs/owner" },
+    "description": { "type": "string" },
+    "max_risk_tier": {
+      "description": "The highest tier this use case may operate at. A request above it is refused, never downgraded.",
+      "$ref": "risk-tier.schema.json"
+    },
+    "max_authority": {
+      "description": "The highest authority outcome this use case may produce. Never A5.",
+      "allOf": [{ "$ref": "authority-outcome.schema.json" }, { "not": { "const": "A5" } }]
+    },
+    "permitted_regions": { "$ref": "common.schema.json#/$defs/regions" },
+    "suspended": {
+      "description": "Takes the use case out of service without removing its registration, so the history of what it was remains readable. The per-use-case kill switch.",
+      "type": "boolean"
+    },
+    "name": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "system_owner": { "$ref": "common.schema.json#/$defs/owner" },
+    "purpose": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "capability": {
+      "enum": ["EXTRACT", "CLASSIFY", "RANK", "RECOMMEND", "DRAFT", "EXPLAIN", "FORECAST", "DETECT", "AGENT", "OTHER"]
+    },
+    "affected_domain": {
+      "enum": ["CONTENT", "CLASSIFICATION", "OBLIGATION", "TAXOPS", "FILING", "RECON", "SUPPORT", "SECURITY", "OTHER"]
+    },
+    "model_profile_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "prompt_profile_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "agent_profile_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "permitted_data_classes": {
+      "description": "The PRIV-001 classes this use case may send to a model. Deny by default: a class not listed is refused.",
+      "$ref": "common.schema.json#/$defs/privacyClasses"
+    },
+    "human_review": { "enum": ["NONE", "SAMPLE", "EXCEPTION", "MANDATORY", "DUAL"] },
+    "abstention_policy": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "evaluation_profile_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "monitoring_profile_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "regulatory_profile_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "release_status": { "enum": ["RESEARCH", "VALIDATION", "PILOT", "PRODUCTION", "SUSPENDED", "RETIRED"] },
+    "review_due": { "type": "string", "format": "date" }
+  }
+}

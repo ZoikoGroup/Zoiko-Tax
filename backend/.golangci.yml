@@ -126,6 +126,66 @@ linters:
             - pkg: "github.com/cockroachdb/apd"
               desc: "decimal arithmetic goes through internal/domain/fiscal (ADR-0002 §5.1 c1)"
 
+        # ADR-0006 §2.1 — no direct call from Go to any model provider. Every AI
+        # call goes through internal/adapter/gateway to the Governed Model
+        # Gateway. Network policy denies the egress; this denies the import.
+        # internal/adapter/gateway/nodirect_test.go also catches raw hostnames.
+        no-direct-provider-call:
+          list-mode: lax
+          files:
+            - "$all"
+          deny:
+            - pkg: "github.com/openai"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "github.com/sashabaranov/go-openai"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "github.com/anthropics"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "github.com/liushuangls/go-anthropic"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "google.golang.org/genai"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "github.com/google/generative-ai-go"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "cloud.google.com/go/vertexai"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "cloud.google.com/go/aiplatform"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "github.com/aws/aws-sdk-go-v2/service/bedrock"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "github.com/aws/aws-sdk-go/service/bedrock"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "github.com/aws/aws-sdk-go-v2/service/sagemakerruntime"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "github.com/Azure/azure-sdk-for-go/sdk/ai"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "github.com/Azure/azure-sdk-for-go/sdk/cognitiveservices"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "github.com/cohere-ai"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "github.com/gage-technologies/mistral-go"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "github.com/replicate/replicate-go"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "github.com/ollama/ollama"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "github.com/tmc/langchaingo"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "github.com/firebase/genkit"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+            - pkg: "github.com/cloudwego/eino"
+              desc: "no direct model-provider calls; use port.ModelGateway (ADR-0006 §2.1)"
+
+        # The in-memory Gateway transport returns canned model output with no
+        # Gateway, governance or evidence behind it. Test-only, like fiscaltest.
+        gateway-fakes-are-test-only:
+          list-mode: lax
+          files:
+            - "!$test"
+          deny:
+            - pkg: "github.com/zoikogroup/zoikotax/backend/internal/adapter/gateway/gatewaytest"
+              desc: "test-only transport; production uses gateway.Unconfigured or the gRPC transport (ADR-0006 §2.1)"
+
     forbidigo:
       analyze-types: true
       forbid:

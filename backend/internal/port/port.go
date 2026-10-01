@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/accumulator"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/idempotency"
@@ -270,6 +271,33 @@ type AccumulatorRepository interface {
 	// type so that it cannot be passed to accumulator.Apply. A key nothing
 	// has contributed to reads as an empty total in the named currency.
 	ReadUnlocked(ctx context.Context, ref accumulator.Ref) (accumulator.Observation, error)
+}
+
+// ---------------------------------------------------------------------------
+// model gateway
+// ---------------------------------------------------------------------------
+
+// ModelGateway is the only route from the app layer to the AI plane (ADR-0006;
+// Build Plan W1 lane L). internal/adapter/gateway implements it.
+//
+// Every method runs the ai.Evaluate policy gate before anything leaves the
+// process, then calls the Governed Model Gateway, which decides again on the
+// same governance context and is the enforcement point (§2.5). The tenant
+// comes from the security context in ctx and the region from the cell, so
+// neither is a parameter (ADR-0012 §2.7, ADR-0006 §2.8).
+//
+// Results are advisory records only (§2.6). Nothing here returns, accepts or
+// can be converted into a fiscal type; the route from a suggestion to a
+// decision is a human review workflow.
+//
+// Synchronous calls are for operator-initiated flows off the C0 path (§2.4).
+// An AI_GATEWAY_UNAVAILABLE or AI_GATEWAY_NOT_CONFIGURED error is a degraded
+// product state the caller renders as such, not a failure of the request it
+// was assisting.
+type ModelGateway interface {
+	Suggest(ctx context.Context, inv ai.Invocation) (ai.AiSuggestion, error)
+	Extract(ctx context.Context, inv ai.Invocation) (ai.AiExtraction, error)
+	ProposeClassification(ctx context.Context, inv ai.Invocation) (ai.AiClassificationProposal, error)
 }
 
 // ---------------------------------------------------------------------------

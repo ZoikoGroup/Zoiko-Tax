@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GovernanceRefusal",
+  "description": "The closed vocabulary of AI governance refusal reason codes (ADR-0006 §2.5, ADR-0016 §2.4). These strings appear in logs, metrics, evidence and responses on both sides of the boundary and mean the same thing in all of them.",
+  "$comment": "Go: ai.RefusalCodes (tested equal). Python: ztax_gateway.governance.Refusal (tested to be a subset; AI_DATA_CLASS_REFUSED is enforced by the Go pre-check and is not yet raised by the Python Gateway, whose UseCase has no data-class allowlist).",
+  "enum": [
+    "AI_MALFORMED_CONTEXT",
+    "AI_KILL_SWITCH_ENGAGED",
+    "AI_UNKNOWN_USE_CASE",
+    "AI_USE_CASE_SUSPENDED",
+    "AI_AUTHORITY_REFUSED",
+    "AI_RISK_TIER_EXCEEDED",
+    "AI_RESIDENCY_REFUSED",
+    "AI_DATA_CLASS_REFUSED"
+  ]
+}
