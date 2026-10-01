@@ -61,7 +61,7 @@ func openCell(t *testing.T) *cell {
 	tenant := id.NewTenantID(uuid.Must(uuid.NewV7()))
 	if err := store.Tenants().Create(ctx, identity.Tenant{
 		ID: tenant, Slug: "evidence-" + strings.ReplaceAll(tenant.String(), "-", ""),
-		DisplayName: "Evidence integration", ResidencyRegion: "local",
+		DisplayName: "Evidence integration", ResidencyRegion: "local", HomeCell: "local-dev",
 		Status: identity.TenantActive, CreatedAt: time.Now().UTC(),
 	}); err != nil {
 		t.Fatalf("tenant: %v", err)

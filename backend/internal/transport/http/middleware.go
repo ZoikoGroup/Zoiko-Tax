@@ -22,11 +22,12 @@ import (
 
 // The chain is constructed in Router and reads top to bottom:
 //
-//	recovery → request id → tracing → logging → security context → authorization → handler
+//	recovery → request id → tracing → logging → security context → residency → authorization → handler
 //
 // ADR-0010 §2.4 names residency and idempotency in this chain too. Residency is
 // a property of the session's tenant rather than a header, so it is enforced
-// where the tenant is resolved; idempotency applies to the fiscal write path
+// immediately after the tenant is resolved (withResidency, residency.go);
+// idempotency applies to the fiscal write path
 // and is wired there rather than globally, because applying it to reads would
 // make every GET take a write lock on a key.
 //

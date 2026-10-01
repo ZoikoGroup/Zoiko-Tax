@@ -67,6 +67,11 @@ type Context struct {
 	// request arrived. Re-authentication for a consequential action (ADR-0019
 	// C5) compares against it.
 	authenticatedAt time.Time
+	// homeCell is SEC-001 §4's cell_id: the authoritative residency and
+	// execution cell of the tenant. It is set from the tenant row when the
+	// session is resolved, and the residency middleware compares it with the
+	// cell this process is. Empty means unknown, and unknown is refused.
+	homeCell string
 }
 
 // New builds a security context. It is called by the authentication middleware
@@ -90,6 +95,20 @@ func New(tenant id.TenantID, subject id.UserID, session id.SessionID, roles []Ro
 		authenticatedAt: authenticatedAt.UTC(),
 	}
 }
+
+// WithHomeCell returns a copy of c naming the tenant's home cell.
+//
+// It is a separate step from New because the cell is a property of the tenant,
+// read from the tenant row, rather than of the session — and because a copy is
+// the only way to add it without making Context mutable. It is called once, by
+// the authentication path, with the value the database holds.
+func (c Context) WithHomeCell(cell string) Context {
+	c.homeCell = cell
+	return c
+}
+
+// HomeCell returns the tenant's home cell, or "" when it is not known.
+func (c Context) HomeCell() string { return c.homeCell }
 
 // Tenant returns the tenant this request acts for.
 func (c Context) Tenant() id.TenantID { return c.tenant }

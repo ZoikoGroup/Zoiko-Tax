@@ -32,6 +32,11 @@ type AdminService struct {
 	// here, and nothing may create one claiming to live somewhere else
 	// (ADR-0017 §2.10).
 	region string
+	// cell is the cell's own ZTAX_CELL, stamped on every tenant provisioned
+	// here as its home cell (ADR-0009 §2.6). Set by InCell; a service with no
+	// cell provisions nothing, because a tenant with no home is a tenant no
+	// cell will serve.
+	cell string
 }
 
 // NewAdminService wires the service.
@@ -46,6 +51,15 @@ func NewAdminService(
 	region string,
 ) *AdminService {
 	return &AdminService{tenants: tenants, users: users, sessions: sessions, audit: audit, tx: tx, clock: clk, ids: ids, region: region}
+}
+
+// InCell names the cell this service provisions tenants into, and returns the
+// service. It is separate from NewAdminService so that adding residency did
+// not change a constructor every caller depends on; ProvisionTenant refuses to
+// run without it rather than inventing a default.
+func (s *AdminService) InCell(cell string) *AdminService {
+	s.cell = cell
+	return s
 }
 
 // requireAdmin is the authorization check every method below starts with.
@@ -409,6 +423,14 @@ func (s *AdminService) ProvisionTenant(ctx context.Context, in ProvisionTenantIn
 			"The password does not meet the minimum length policy.")
 	}
 
+	// The home cell is this cell, and it is checked before anything is
+	// generated: a tenant provisioned with no home, or under a name that is
+	// not a cell, would be refused by every request it ever made.
+	if err := security.ValidateCellID(s.cell); err != nil {
+		return identity.Tenant{}, identity.User{}, errs.Wrap(err, errs.CategoryInternal, errs.ReasonInternal,
+			"This cell does not know its own identity, so it cannot home a tenant.")
+	}
+
 	now := s.clock.Now()
 	tenantID, err := idgen.TenantID(s.ids)
 	if err != nil {
@@ -428,6 +450,7 @@ func (s *AdminService) ProvisionTenant(ctx context.Context, in ProvisionTenantIn
 		Slug:            in.Slug,
 		DisplayName:     in.DisplayName,
 		ResidencyRegion: s.region,
+		HomeCell:        s.cell,
 		Status:          identity.TenantActive,
 		CreatedAt:       now,
 	}
@@ -467,6 +490,7 @@ func (s *AdminService) ProvisionTenant(ctx context.Context, in ProvisionTenantIn
 	detail, err := canonical.Encode(canonical.Object(
 		canonical.F("slug", canonical.String(tenant.Slug)),
 		canonical.F("residencyRegion", canonical.String(tenant.ResidencyRegion)),
+		canonical.F("homeCell", canonical.String(tenant.HomeCell)),
 		canonical.F("firstAdmin", canonical.String(admin.ID.String())),
 	))
 	if err != nil {

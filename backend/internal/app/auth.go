@@ -245,7 +245,11 @@ func (s *AuthService) Authenticate(ctx context.Context, cookie string) (Authenti
 		}
 	}
 
-	sc := security.New(session.TenantID, user.ID, session.ID, user.Roles, session.CreatedAt)
+	// The home cell comes from the tenant row, like the tenant itself. The
+	// transport's residency stage compares it with this process's cell; it is
+	// carried rather than re-read so that the check costs nothing per request.
+	sc := security.New(session.TenantID, user.ID, session.ID, user.Roles, session.CreatedAt).
+		WithHomeCell(tenant.HomeCell)
 	return Authenticated{Security: sc, User: user, Tenant: tenant}, nil
 }
 

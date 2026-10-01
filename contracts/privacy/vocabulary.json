@@ -1,6 +1,6 @@
 {
   "$comment": "ZTAX-PRIV-001's closed privacy vocabularies, as data. The contract lint (tools/lint.mjs, rule privacy-classified-fields) and the Go domain (backend/internal/domain/privacy, whose test reads this file) both take their vocabulary from here, so the two cannot drift. Adding a value is a reviewed privacy change: PRIV-001 §6 forbids reusing a purpose to legitimise different processing.",
-  "source": "ZTAX-PRIV-001 v1.0 §4 (classes), §6 (purposes), §14 (retention), §24 (field metadata)",
+  "source": "ZTAX-PRIV-001 v1.0 §3 (processing roles), §4 (classes), §5 (ProcessingActivity: DPIA status, collection source), §6 (purposes), §11 (legal basis), §14 (retention), §16 (transfer mechanism), §24 (field metadata)",
   "classes": {
     "P0": "Non-personal / public",
     "P1": "Business contact",
@@ -50,6 +50,46 @@
     "NONE": "Never sent to any model",
     "DERIVED_ONLY": "Only derived, non-identifying facts may reach a model",
     "APPROVED_MODEL_GATEWAY": "May reach an approved use case through the Governed Model Gateway"
+  },
+  "processingRole": {
+    "PROCESSOR": "Zoiko processes customer personal data solely on documented customer instructions",
+    "CONTROLLER": "Zoiko determines purposes and means for its own workforce, security, telemetry, administration or legally required processing",
+    "INDEPENDENT_CONTROLLER": "Zoiko and customer/partner each independently determine purposes; expressly identified, never assumed",
+    "JOINT_CONTROLLER": "Joint determination established by legal analysis, with an allocation arrangement",
+    "SUBPROCESSOR": "A third party processing personal data on Zoiko's behalf under contractual and technical controls",
+    "RECIPIENT_AUTHORITY": "A tax, telecom, payment, court or other authority receiving data under filing or legal process"
+  },
+  "legalBasis": {
+    "CONTRACT": "Necessary for the contracted service, where applicable law supports it",
+    "LEGAL_OBLIGATION": "A jurisdiction-specific legal obligation, never generalised globally",
+    "LEGITIMATE_INTERESTS": "Documented necessity and balancing where applicable",
+    "CONSENT": "Specific, informed, revocable and granular where legally required",
+    "PUBLIC_TASK": "Public task or authority mandate, only where the role and law support it",
+    "CUSTOMER_INSTRUCTION": "A documented customer instruction, Zoiko acting as processor",
+    "LOCAL_STATUTORY": "Another local statutory basis, represented in the jurisdiction PrivacyProfile"
+  },
+  "dpiaStatus": {
+    "NOT_REQUIRED": "Screening concluded no assessment is required",
+    "SCREEN_REQUIRED": "Screening has not yet been completed",
+    "REQUIRED": "An assessment is required and not yet approved",
+    "APPROVED": "The assessment is approved",
+    "REVIEW_DUE": "The approved assessment is due for reassessment"
+  },
+  "collectionSource": {
+    "CUSTOMER": "Supplied by the customer",
+    "AUTHORITY": "Supplied by an authority",
+    "SUBSCRIBER": "Supplied by the customer's subscriber",
+    "NETWORK": "Observed from network or service signalling",
+    "INTEGRATION": "Received through an integration",
+    "DERIVED": "Generated or derived by ZoikoTax"
+  },
+  "transferMechanism": {
+    "NOT_RESTRICTED": "Movement the applicable legal profile does not treat as a restricted transfer; still recorded",
+    "ADEQUACY": "An adequacy decision or equivalent recognised by the exporting jurisdiction",
+    "CONTRACTUAL_SAFEGUARDS": "Approved contractual clauses or equivalent appropriate safeguards",
+    "BINDING_CORPORATE_RULES": "Approved binding corporate rules",
+    "DEROGATION": "A specific derogation or exception permitted by the exporting jurisdiction",
+    "LOCAL_STATUTORY": "Another mechanism defined by the exporting jurisdiction's PrivacyProfile"
   },
   "rules": {
     "$comment": "Enforced by the lint and by privacy.Metadata.Validate.",

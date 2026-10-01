@@ -30,6 +30,12 @@ func TestVocabularyMatchesTheSharedFile(t *testing.T) {
 		Redaction      map[string]string `json:"redaction"`
 		EvidencePolicy map[string]string `json:"evidencePolicy"`
 		AIAllowed      map[string]string `json:"aiAllowed"`
+		// The governance-record vocabularies (privacy/schemas.go).
+		ProcessingRole    map[string]string `json:"processingRole"`
+		LegalBasis        map[string]string `json:"legalBasis"`
+		DPIAStatus        map[string]string `json:"dpiaStatus"`
+		CollectionSource  map[string]string `json:"collectionSource"`
+		TransferMechanism map[string]string `json:"transferMechanism"`
 	}
 	if err := json.Unmarshal(raw, &v); err != nil {
 		t.Fatal(err)
@@ -53,6 +59,11 @@ func TestVocabularyMatchesTheSharedFile(t *testing.T) {
 	check("redaction", v.Redaction, strs(privacy.Redactions))
 	check("evidencePolicy", v.EvidencePolicy, strs(privacy.EvidencePolicies))
 	check("aiAllowed", v.AIAllowed, strs(privacy.AIAllowances))
+	check("processingRole", v.ProcessingRole, strs(privacy.ProcessingRoles))
+	check("legalBasis", v.LegalBasis, strs(privacy.LegalBases))
+	check("dpiaStatus", v.DPIAStatus, strs(privacy.DPIAStatuses))
+	check("collectionSource", v.CollectionSource, strs(privacy.CollectionSources))
+	check("transferMechanism", v.TransferMechanism, strs(privacy.TransferMechanisms))
 }
 
 func strs[T ~string](xs []T) []string {

@@ -21,10 +21,13 @@ import (
 
 const (
 	sqlTenantInsert = `
-		INSERT INTO ztax.tenant (tenant_id, slug, display_name, residency_region, status, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)`
+		INSERT INTO ztax.tenant (tenant_id, slug, display_name, residency_region, home_cell, status, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
-	sqlTenantColumns = `tenant_id, slug, display_name, residency_region, status, created_at`
+	// home_cell is read through COALESCE because rows from before migration
+	// 000008 hold NULL there, and NULL is "no home cell" — which the residency
+	// check refuses — rather than a scan error.
+	sqlTenantColumns = `tenant_id, slug, display_name, residency_region, COALESCE(home_cell, ''), status, created_at`
 
 	sqlTenantByID   = `SELECT ` + sqlTenantColumns + ` FROM ztax.tenant WHERE tenant_id = $1`
 	sqlTenantBySlug = `SELECT ` + sqlTenantColumns + ` FROM ztax.tenant WHERE slug = $1`
@@ -50,7 +53,7 @@ var _ port.TenantRepository = (*TenantRepo)(nil)
 // Create inserts a tenant.
 func (r *TenantRepo) Create(ctx context.Context, t identity.Tenant) error {
 	_, err := r.s.db(ctx).Exec(ctx, sqlTenantInsert,
-		t.ID.UUID(), t.Slug, t.DisplayName, t.ResidencyRegion, string(t.Status), t.CreatedAt)
+		t.ID.UUID(), t.Slug, t.DisplayName, t.ResidencyRegion, t.HomeCell, string(t.Status), t.CreatedAt)
 	return mapError(err, "insert tenant")
 }
 
@@ -107,7 +110,7 @@ func scanTenant(row scanner) (identity.Tenant, error) {
 		status     string
 		t          identity.Tenant
 	)
-	err := row.Scan(&tenantUUID, &t.Slug, &t.DisplayName, &t.ResidencyRegion, &status, &t.CreatedAt)
+	err := row.Scan(&tenantUUID, &t.Slug, &t.DisplayName, &t.ResidencyRegion, &t.HomeCell, &status, &t.CreatedAt)
 	if err != nil {
 		return identity.Tenant{}, mapError(err, "scan tenant")
 	}

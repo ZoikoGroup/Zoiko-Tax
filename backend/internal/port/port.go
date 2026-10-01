@@ -21,6 +21,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/idempotency"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/identity"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 )
@@ -269,4 +270,28 @@ type AccumulatorRepository interface {
 	// type so that it cannot be passed to accumulator.Apply. A key nothing
 	// has contributed to reads as an empty total in the named currency.
 	ReadUnlocked(ctx context.Context, ref accumulator.Ref) (accumulator.Observation, error)
+}
+
+// ---------------------------------------------------------------------------
+// cross-cell transfer
+// ---------------------------------------------------------------------------
+
+// TransferLog records cross-cell transfers (ADR-0009 §2.6, SEC-REQ-0042).
+//
+// Append-only by interface as well as by grant: there is no update and no
+// delete, because the record is the evidence that a copy was authorized, and
+// evidence that can be edited after the fact is not evidence. The record is
+// appended in the source cell, in the transaction that releases the data, so a
+// copy with no record cannot commit.
+//
+// Append takes a privacy.CrossCellTransfer, which only NewCrossCellTransfer
+// builds — and that refuses a transfer its TransferProfile does not permit —
+// and every implementation re-validates its shape and refuses a record whose
+// tenant is not the one in the context.
+type TransferLog interface {
+	Append(ctx context.Context, t privacy.CrossCellTransfer) error
+	ByID(ctx context.Context, transferID id.TransferID) (privacy.CrossCellTransfer, error)
+	// List returns the tenant's transfers, newest first — the "what of this
+	// tenant's data has left this cell, and on whose approval" query.
+	List(ctx context.Context, limit int) ([]privacy.CrossCellTransfer, error)
 }
