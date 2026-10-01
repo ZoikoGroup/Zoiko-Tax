@@ -1,0 +1,67 @@
+# Workloads the admission policy is tested against. Each is a pod in the cell
+# namespace except the last, which is in a namespace that has not opted in.
+# The images are hardened like the real cell workloads, so a refusal here is
+# the admission policy refusing, not Pod Security.
+
+# An image from a public registry that nothing in this repository signed.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: unsigned-public-image
+  namespace: ztax-cell
+spec:
+  containers:
+    - name: app
+      image: docker.io/library/nginx@sha256:0000000000000000000000000000000000000000000000000000000000000001
+---
+# The right registry path, referenced by a tag. A tag can be re-pointed at any
+# image after the signature was checked, so it is refused before any signature
+# is looked at.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: release-image-by-tag
+  namespace: ztax-cell
+spec:
+  containers:
+    - name: ztax-core
+      image: ghcr.io/zoikogroup/zoiko-tax/ztax-core:1.0.0
+---
+# A legitimate main container with an unsigned init container riding along.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: unsigned-init-container
+  namespace: ztax-cell
+spec:
+  initContainers:
+    - name: setup
+      image: docker.io/library/busybox:latest
+  containers:
+    - name: ztax-core
+      image: ghcr.io/zoikogroup/zoiko-tax/ztax-core@sha256:0000000000000000000000000000000000000000000000000000000000000002
+---
+# A look-alike path: the right registry host, another owner.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: lookalike-repository
+  namespace: ztax-cell
+spec:
+  containers:
+    - name: ztax-core
+      image: ghcr.io/zoikogroup/zoiko-tax-fork/ztax-core@sha256:0000000000000000000000000000000000000000000000000000000000000003
+---
+# The shape every cell workload has: this repository's path, by digest. It
+# passes the origin rule; whether it admits is then decided by the signature
+# and provenance rule, which needs the registry and Rekor and so is proven in
+# a cell (see policy/README.md), not here.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: release-image-by-digest
+  namespace: ztax-cell
+spec:
+  containers:
+    - name: ztax-core
+      image: ghcr.io/zoikogroup/zoiko-tax/ztax-core@sha256:0000000000000000000000000000000000000000000000000000000000000004

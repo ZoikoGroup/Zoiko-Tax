@@ -1,0 +1,6 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Values
+namespaceSelector:
+  - name: ztax-cell
+    labels:
+      ztax.zoikogroup.com/admission: signed-only

@@ -110,6 +110,18 @@ jobs:
         if: steps.ref.outputs.publish == 'true'
         run: cosign sign --yes "${{ steps.ref.outputs.image }}@${{ steps.build.outputs.digest }}"
 
+      # BuildKit attaches provenance unsigned, and an unsigned attestation is a
+      # claim anyone could have pushed. The cell's admission policy
+      # (policy/admission/cell-release-signature.yaml) admits only an image whose
+      # SLSA provenance is signed by this workflow's identity, so without this
+      # step every release is refused at admission — fail-closed by design.
+      - name: attest the provenance
+        if: steps.ref.outputs.publish == 'true'
+        run: |
+          ref="${{ steps.ref.outputs.image }}@${{ steps.build.outputs.digest }}"
+          docker buildx imagetools inspect "$ref" --format '{{ json .Provenance.SLSA }}' > provenance.json
+          cosign attest --yes --type slsaprovenance --predicate provenance.json "$ref"
+
       # ADR-0001 control 3 and ADR-0011 §2.6 require a release to name every
       # version it was built from. This records the ones that exist today and
       # says plainly which are still missing, so the gap is visible in the

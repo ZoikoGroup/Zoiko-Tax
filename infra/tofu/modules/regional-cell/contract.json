@@ -1,0 +1,27 @@
+{
+  "description": "The provider-neutral interface of one regional execution cell (ADR-0009 §2.6). Every implementation under modules/regional-cell/<provider>/ declares exactly these input variables and outputs, no more and no fewer. infra/tools/check_tofu.py enforces it, so a second provider implements the same contract or fails CI.",
+  "variables": [
+    "cell_id",
+    "environment",
+    "region",
+    "residency",
+    "zones",
+    "network",
+    "database",
+    "kubernetes",
+    "evidence",
+    "workload_namespace",
+    "labels"
+  ],
+  "outputs": [
+    "cell_id",
+    "region",
+    "network",
+    "kubernetes",
+    "database",
+    "keys",
+    "evidence_store",
+    "workload_identities",
+    "secret_refs"
+  ]
+}

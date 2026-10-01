@@ -1,0 +1,95 @@
+# Cell identity and deployment facts (ADR-0017 §2.1, §2.10). Merged into the
+# base containers' env by name.
+#
+# ZTAX_ENVIRONMENT is "dev", deliberately not "development": the binary treats
+# "development" as a laptop and unlocks local:// secret references, plain-HTTP
+# cookies and insecure OTLP for it. A cloud cell is never a laptop.
+#
+# The seven train versions are stamped by the deploy pipeline from the release
+# evidence of what is actually being deployed (ADR-0015 §2.6); the values here
+# are the shape, not a release. A missing one fails readiness rather than
+# starting a process that cannot say which combination produced a decision.
+#
+# ZTAX_DATABASE_URL_REF is a reference (tofu output: cell.secret_refs
+# .app_database), never a DSN.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ztax-core
+  namespace: ztax-cell
+spec:
+  template:
+    spec:
+      containers:
+        - name: ztax-core
+          env:
+            - name: ZTAX_CELL
+              value: euc1-dev-01
+            - name: ZTAX_REGION
+              value: eu-central-1
+            - name: ZTAX_ENVIRONMENT
+              value: dev
+            - name: ZTAX_DATABASE_URL_REF
+              value: aws-sm://ztax/euc1-dev-01/database/app
+            - name: ZTAX_TRAIN_APP
+              value: 0.0.0-unreleased
+            - name: ZTAX_TRAIN_CONTENT
+              value: 0.0.0-unreleased
+            - name: ZTAX_TRAIN_AI
+              value: 0.0.0-unreleased
+            - name: ZTAX_TRAIN_ADAPTER
+              value: 0.0.0-unreleased
+            - name: ZTAX_TRAIN_INFRA
+              value: 0.0.0-unreleased
+            - name: ZTAX_TRAIN_SCHEMA
+              value: 0.0.0-unreleased
+            - name: ZTAX_TRAIN_MIGRATION
+              value: 0.0.0-unreleased
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ztax-outbox-relay
+  namespace: ztax-cell
+spec:
+  template:
+    spec:
+      containers:
+        - name: ztax-outbox-relay
+          env:
+            - name: ZTAX_CELL
+              value: euc1-dev-01
+            - name: ZTAX_REGION
+              value: eu-central-1
+            - name: ZTAX_ENVIRONMENT
+              value: dev
+            - name: ZTAX_DATABASE_URL_REF
+              value: aws-sm://ztax/euc1-dev-01/database/app
+            - name: ZTAX_TRAIN_APP
+              value: 0.0.0-unreleased
+            - name: ZTAX_TRAIN_CONTENT
+              value: 0.0.0-unreleased
+            - name: ZTAX_TRAIN_AI
+              value: 0.0.0-unreleased
+            - name: ZTAX_TRAIN_ADAPTER
+              value: 0.0.0-unreleased
+            - name: ZTAX_TRAIN_INFRA
+              value: 0.0.0-unreleased
+            - name: ZTAX_TRAIN_SCHEMA
+              value: 0.0.0-unreleased
+            - name: ZTAX_TRAIN_MIGRATION
+              value: 0.0.0-unreleased
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ztax-migrate
+  namespace: ztax-cell
+spec:
+  template:
+    spec:
+      containers:
+        - name: ztax-migrate
+          env:
+            - name: ZTAX_ENVIRONMENT
+              value: dev

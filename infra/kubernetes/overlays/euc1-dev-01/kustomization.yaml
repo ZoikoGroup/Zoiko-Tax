@@ -1,0 +1,24 @@
+# Cell euc1-dev-01: eu-central-1, EU residency envelope, environment "dev".
+#
+# Every value here is either an output of infra/tofu/envs/dev/cell-euc1-dev-01
+# (`tofu output cell`) or a release fact the deploy pipeline stamps. The
+# account number 111122223333 is a documentation placeholder; the real role
+# ARNs come from workload_identities.
+#
+# Image digests are set by the deploy pipeline from the release evidence
+# (`kustomize edit set image ...@sha256:<digest>`), never by tag: admission
+# verifies a signature over a digest.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - egress.yaml
+  - migrate-credential.yaml
+labels:
+  - pairs:
+      ztax.zoikogroup.com/cell: euc1-dev-01
+    includeSelectors: false
+    includeTemplates: true
+patches:
+  - path: identity.yaml
+  - path: configuration.yaml

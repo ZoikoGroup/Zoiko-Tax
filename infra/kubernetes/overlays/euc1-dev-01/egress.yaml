@@ -1,0 +1,105 @@
+# Cell-specific egress for euc1-dev-01 (eu-central-1, 10.40.0.0/16).
+#
+# Values come from `tofu output cell` in infra/tofu/envs/dev/cell-euc1-dev-01:
+# network.cidr, network.database_cidrs and region. They are written out here
+# rather than templated so the reviewed manifest is the applied manifest.
+#
+# Cilium, because the allow-list names AWS regional services by DNS name and
+# the deny is explicit; vanilla NetworkPolicy can do neither. Three layers stand
+# between a Go workload and a model provider (ADR-0006 §2.1), each sufficient
+# on its own:
+#
+#   1. Default deny (base/networkpolicies.yaml). No allow rule has a
+#      destination outside the cell, so no provider is reachable.
+#   2. DNS allow-list (below). Cilium's DNS proxy answers only the names listed
+#      for Go workloads; a lookup of api.openai.com, bedrock-runtime.<region>
+#      .amazonaws.com or any other name in policy/egress/ai-provider-endpoints
+#      .json is refused before a connection is possible.
+#   3. Explicit deny of every address outside the cell CIDR. egressDeny takes
+#      precedence over any allow, so a future allow rule that names a public
+#      destination is overridden rather than obeyed. The regional KMS, Secrets
+#      Manager and STS names resolve to interface endpoints inside the CIDR
+#      (private DNS), which is why they survive this deny.
+#
+# infra/tools/check_manifests.py proves that no name allowed here matches a
+# host in policy/egress/ai-provider-endpoints.json, and the cell conformance
+# suite proves the same thing on a live cell (ADR-0006 control 3).
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: go-workloads-egress
+  namespace: ztax-cell
+spec:
+  description: Go workloads may resolve only cell names, reach only the cell database, and nothing outside the cell CIDR.
+  endpointSelector:
+    matchLabels:
+      ztax.zoikogroup.com/runtime: go
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s:k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: ANY
+          rules:
+            dns:
+              - matchPattern: "*.*.svc.cluster.local"
+              # This cell's database instance only (tofu output:
+              # cell.database.host), not any RDS endpoint in the region.
+              - matchPattern: "ztax-euc1-dev-01.*.eu-central-1.rds.amazonaws.com"
+              - matchName: kms.eu-central-1.amazonaws.com
+              - matchName: secretsmanager.eu-central-1.amazonaws.com
+              - matchName: sts.eu-central-1.amazonaws.com
+    - toCIDRSet:
+        - cidr: 10.40.128.0/22
+        - cidr: 10.40.132.0/22
+      toPorts:
+        - ports:
+            - port: "5432"
+              protocol: TCP
+  egressDeny:
+    - toCIDRSet:
+        - cidr: 0.0.0.0/0
+          except:
+            - 10.40.0.0/16
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ztax-core-egress
+  namespace: ztax-cell
+spec:
+  description: ztax-core resolves its credential reference and signs seals in its own region.
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: ztax-core
+  egress:
+    - toFQDNs:
+        - matchName: kms.eu-central-1.amazonaws.com
+        - matchName: secretsmanager.eu-central-1.amazonaws.com
+        - matchName: sts.eu-central-1.amazonaws.com
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ztax-outbox-relay-egress
+  namespace: ztax-cell
+spec:
+  description: ztax-outbox-relay resolves its credential reference. No KMS, no Model Gateway.
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: ztax-outbox-relay
+  egress:
+    - toFQDNs:
+        - matchName: secretsmanager.eu-central-1.amazonaws.com
+        - matchName: sts.eu-central-1.amazonaws.com
+      toPorts:
+        - ports:
+            - port: "443"
+              protocol: TCP

@@ -1,0 +1,24 @@
+# Workload identities for this cell (tofu output: cell.workload_identities).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ztax-core
+  namespace: ztax-cell
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::111122223333:role/ztax-euc1-dev-01-ztax-core
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ztax-outbox-relay
+  namespace: ztax-cell
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::111122223333:role/ztax-euc1-dev-01-ztax-outbox-relay
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ztax-migrate
+  namespace: ztax-cell
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::111122223333:role/ztax-euc1-dev-01-ztax-migrate
