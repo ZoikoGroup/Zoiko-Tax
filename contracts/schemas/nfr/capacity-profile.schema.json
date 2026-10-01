@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CapacityProfile",
+  "description": "A reproducible reference workload and the envelope a cell is certified to carry under it (ZTAX-NFR-001 §5, §8). A published performance claim is invalid if its CapacityProfile cannot be reproduced. Values not yet measured are listed in `placeholders` by JSON pointer; a profile with any placeholder cannot be approved, and an approved SLO cannot reference it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind", "capacity_profile_id", "version", "owner", "service", "service_class", "status",
+    "topology", "runtime", "request_type", "line_count", "bundle", "payload_bytes", "load",
+    "tenant_distribution", "cache_state", "external_dependency_mode", "dataset", "test_duration",
+    "success_criteria", "benchmark_ref", "placeholders"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "kind": { "const": "CapacityProfile" },
+    "capacity_profile_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "version": { "$ref": "common.schema.json#/$defs/version" },
+    "owner": { "$ref": "common.schema.json#/$defs/owner" },
+    "service": { "$ref": "common.schema.json#/$defs/service" },
+    "service_class": { "$ref": "common.schema.json#/$defs/serviceClass" },
+    "status": {
+      "description": "placeholder: shape only, numbers pending the load test. measured: produced by a reproducible run. approved: measured and signed off.",
+      "type": "string",
+      "enum": ["placeholder", "measured", "approved"]
+    },
+    "topology": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["zones", "database", "broker", "object_store"],
+      "properties": {
+        "zones": { "type": "integer", "minimum": 1 },
+        "database": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "broker": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        "object_store": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node_size", "replicas_min", "replicas_max", "cpu_request_millicores", "memory_limit_mib", "autoscale_signals"],
+      "properties": {
+        "node_size": { "type": "string", "enum": ["small", "medium", "large"] },
+        "replicas_min": { "type": "integer", "minimum": 1 },
+        "replicas_max": { "type": "integer", "minimum": 1 },
+        "cpu_request_millicores": { "type": "integer", "minimum": 1 },
+        "memory_limit_mib": { "type": "integer", "minimum": 1 },
+        "autoscale_signals": { "$ref": "common.schema.json#/$defs/stringList" }
+      }
+    },
+    "request_type": { "type": "string", "enum": ["quote", "commit", "quote_and_commit", "replay", "bulk", "obligation", "filing"] },
+    "line_count": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["p50", "p95", "max"],
+      "properties": {
+        "p50": { "type": "integer", "minimum": 1 },
+        "p95": { "type": "integer", "minimum": 1 },
+        "max": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["content_bundle_ref", "jurisdictions", "components_per_line"],
+      "properties": {
+        "content_bundle_ref": {
+          "description": "Digest of the pinned content bundle, or null until one is pinned.",
+          "type": ["string", "null"]
+        },
+        "jurisdictions": { "type": "integer", "minimum": 1 },
+        "components_per_line": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "payload_bytes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["typical", "max"],
+      "properties": {
+        "typical": { "type": "integer", "minimum": 1 },
+        "max": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "load": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["steady_rps", "burst_rps", "concurrency"],
+      "properties": {
+        "steady_rps": { "type": "number", "exclusiveMinimum": 0 },
+        "burst_rps": { "type": "number", "exclusiveMinimum": 0 },
+        "concurrency": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "tenant_distribution": { "type": "string", "enum": ["single_large", "multi_tenant_mix", "noisy_neighbour"] },
+    "cache_state": { "type": "string", "enum": ["warm", "cold", "steady_state"] },
+    "external_dependency_mode": {
+      "description": "How each external dependency is treated in the run. NFR-001 §5: must identify whether excluded, stubbed or real.",
+      "type": "object",
+      "additionalProperties": { "type": "string", "enum": ["real", "stubbed", "excluded"] }
+    },
+    "dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["transactions", "obligations", "evidence_objects"],
+      "properties": {
+        "transactions": { "type": "integer", "minimum": 0 },
+        "obligations": { "type": "integer", "minimum": 0 },
+        "evidence_objects": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "test_duration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["warmup", "steady", "spike", "soak"],
+      "properties": {
+        "warmup": { "$ref": "common.schema.json#/$defs/duration" },
+        "steady": { "$ref": "common.schema.json#/$defs/duration" },
+        "spike": { "$ref": "common.schema.json#/$defs/duration" },
+        "soak": { "$ref": "common.schema.json#/$defs/duration" }
+      }
+    },
+    "success_criteria": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["server_p99_ms", "server_p95_ms", "single_line_runtime_p99_ms", "max_error_ratio", "min_headroom_percent"],
+      "properties": {
+        "server_p99_ms": { "type": "number", "exclusiveMinimum": 0 },
+        "server_p95_ms": { "type": "number", "exclusiveMinimum": 0 },
+        "single_line_runtime_p99_ms": { "type": "number", "exclusiveMinimum": 0 },
+        "max_error_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "min_headroom_percent": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "benchmark_ref": {
+      "description": "Where the reproducible benchmark configuration and its last run live; null until one exists.",
+      "type": ["string", "null"]
+    },
+    "placeholders": {
+      "description": "JSON pointers (RFC 6901) to values in this document that are not measured. Each must resolve.",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^/" },
+      "uniqueItems": true
+    }
+  }
+}

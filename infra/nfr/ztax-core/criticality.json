@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../contracts/schemas/nfr/service-criticality.schema.json",
+  "kind": "ServiceCriticality",
+  "service_criticality_id": "ztax-core",
+  "version": "0.1.0",
+  "owner": "lane-b-platform",
+  "service": "ztax-core",
+  "class": "C0",
+  "journeys": [
+    {
+      "journey_id": "c0-quote-commit",
+      "class": "C0",
+      "description": "Synchronous determination and authoritative commit: quote, commit, and the decision read that follows a commit.",
+      "operations": ["POST /v1/quotes", "POST /v1/transactions:commit", "GET /v1/decisions/{decisionId}"]
+    },
+    {
+      "journey_id": "c1-replay",
+      "class": "C1",
+      "description": "Exact replay of a recorded decision against its pinned manifest. Durability and correctness dominate latency.",
+      "operations": ["POST /v1/replay/{decisionId}"]
+    },
+    {
+      "journey_id": "c2-administration",
+      "class": "C2",
+      "description": "Tenant administration, sessions and audit reads. May degrade while C0 and C1 continue.",
+      "operations": ["GET /v1/admin/tenant", "GET /v1/admin/users", "GET /v1/admin/audit"]
+    }
+  ],
+  "dependencies": [
+    { "name": "cell-postgres", "kind": "database", "synchronous_on": ["c0-quote-commit", "c1-replay", "c2-administration"], "on_failure": "fail_closed" },
+    { "name": "cell-kms", "kind": "kms", "synchronous_on": ["c0-quote-commit"], "on_failure": "fail_closed" },
+    { "name": "cell-secrets", "kind": "secrets", "synchronous_on": [], "on_failure": "fail_closed" },
+    { "name": "cell-evidence-store", "kind": "object_store", "synchronous_on": ["c0-quote-commit"], "on_failure": "fail_closed" },
+    { "name": "cell-broker", "kind": "broker", "synchronous_on": [], "on_failure": "queue" },
+    { "name": "content-plane", "kind": "content_plane", "synchronous_on": [], "on_failure": "last_known_good" },
+    { "name": "model-gateway", "kind": "model_gateway", "synchronous_on": [], "on_failure": "degrade" },
+    { "name": "otel-collector", "kind": "telemetry_collector", "synchronous_on": [], "on_failure": "degrade" }
+  ]
+}

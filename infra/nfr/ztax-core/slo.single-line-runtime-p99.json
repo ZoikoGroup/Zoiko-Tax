@@ -1,0 +1,18 @@
+{
+  "$schema": "../../../contracts/schemas/nfr/slo.schema.json",
+  "kind": "SLO",
+  "slo_id": "ztax-core.single-line-runtime-p99",
+  "version": "0.1.0",
+  "owner": "lane-b-platform",
+  "service": "ztax-core",
+  "class": "C0",
+  "sli_ref": "ztax-core.single-line-runtime",
+  "capacity_profile_ref": "ztax-core.c0-typical-invoice",
+  "objective": { "type": "latency", "percentile": 99, "threshold_ms": 10 },
+  "window": "28d",
+  "eligible_requests": "Every line evaluated by the deterministic runtime on the C0 path.",
+  "exclusions": ["Bundle activation (warm swap) intervals, measured separately as content load outcome"],
+  "status": "proposed",
+  "source": "Build Plan W2 exit gate; ZTAX-NFR-001 §6: in-process deterministic single-line runtime p99 < 10 ms",
+  "alerting": { "severity": "P2", "for": "10m" }
+}

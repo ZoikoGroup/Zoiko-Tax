@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../contracts/schemas/nfr/sli.schema.json",
+  "kind": "SLI",
+  "sli_id": "ztax-core.single-line-runtime",
+  "version": "0.1.0",
+  "owner": "lane-b-platform",
+  "service": "ztax-core",
+  "family": "latency",
+  "description": "In-process deterministic rule evaluation time for one line, with resident approved rules and local reference data. No I/O is inside the measured interval.",
+  "measurement": {
+    "type": "distribution",
+    "histogram": "ztax_rule_evaluation_line_duration_seconds",
+    "selector": "service_name=\"ztax-core\"",
+    "unit": "seconds",
+    "instrumented": false
+  }
+}

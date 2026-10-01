@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NFR shared definitions",
+  "$comment": "Definitions shared by the ZTAX-NFR-001 schemas in this directory (ServiceCriticality, SLI, SLO, CapacityProfile, ResilienceProfile). Instances live on the INFRA train under infra/nfr/ (ADR-0015 §2.10) and are validated, cross-referenced and turned into alert rules by infra/tools/nfr.py.",
+  "$defs": {
+    "identifier": {
+      "description": "A stable identifier, never reused: an SLO report from last year still names it.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9.-]*[a-z0-9]$",
+      "maxLength": 128
+    },
+    "version": {
+      "description": "Semantic version of this document.",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$"
+    },
+    "owner": {
+      "description": "The accountable team. An unowned objective is one nobody answers for when it burns.",
+      "type": "string",
+      "minLength": 1
+    },
+    "service": {
+      "description": "A deployable (ADR-0009 §2.2).",
+      "type": "string",
+      "pattern": "^ztax-[a-z0-9-]+$"
+    },
+    "serviceClass": {
+      "description": "ZTAX-NFR-001 §3 service criticality class. C0 synchronous fiscal; C1 authoritative durable async; C2 operational support; C3 AI/advisory; C4 development/analytics.",
+      "type": "string",
+      "enum": ["C0", "C1", "C2", "C3", "C4"]
+    },
+    "duration": {
+      "description": "A duration: integer and unit (ms, s, m, h, d).",
+      "type": "string",
+      "pattern": "^[0-9]+(ms|s|m|h|d)$"
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringList": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonEmptyString" },
+      "uniqueItems": true
+    },
+    "status": {
+      "description": "proposed: written, not yet backed by measurement or approval. approved: signed off against measured evidence.",
+      "type": "string",
+      "enum": ["proposed", "approved"]
+    },
+    "dependencyKind": {
+      "type": "string",
+      "enum": ["database", "broker", "object_store", "kms", "secrets", "model_gateway", "telemetry_collector", "control_plane", "content_plane", "authority", "geocoder"]
+    },
+    "failureBehavior": {
+      "description": "ZTAX-NFR-001 §11. fail_closed: the operation refuses rather than proceeds without the dependency. last_known_good: continues on bounded cached approved state. queue: durable local state, propagation delayed. degrade: the feature degrades, the fiscal core does not. none: not a dependency of this path.",
+      "type": "string",
+      "enum": ["fail_closed", "last_known_good", "queue", "degrade", "none"]
+    }
+  }
+}

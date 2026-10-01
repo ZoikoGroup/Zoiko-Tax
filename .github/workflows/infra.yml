@@ -1,0 +1,217 @@
+# The INFRA train's pipeline: OpenTofu, the Kubernetes cell baseline, the
+# signed-artifact admission policy, and the NFR documents with the alert rules
+# derived from them.
+#
+# A separate workflow for the reason intelligence.yml gives: ADR-0007 §2.2
+# requires per-path pipelines as the compensating control for implementing the
+# repository classes as directories, and infra/ and policy/ have their own
+# approvers (Platform/CISO) and their own cadence. The `paths` filter is
+# load-bearing in both directions — and it includes the two backend files the
+# manifest check reads (config.go and ztax-migrate's main.go), because a new
+# required variable there changes whether the cell's manifests can start.
+#
+# Every tool is a pinned release binary verified against its published SHA-256
+# before it runs; no third-party action is introduced. The actions used are the
+# ones ci.yml already pins.
+name: Infra
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - 'policy/**'
+      - 'contracts/schemas/nfr/**'
+      - 'backend/internal/platform/config/config.go'
+      - 'backend/cmd/ztax-migrate/main.go'
+      - '.github/workflows/infra.yml'
+  pull_request:
+    paths:
+      - 'infra/**'
+      - 'policy/**'
+      - 'contracts/schemas/nfr/**'
+      - 'backend/internal/platform/config/config.go'
+      - 'backend/cmd/ztax-migrate/main.go'
+      - '.github/workflows/infra.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # ADR-0007 §2.7: a directory belongs to exactly one train.
+  ZTAX_TRAIN: INFRA
+  PYTHON_VERSION: "3.12"
+  TOFU_VERSION: "1.13.0"
+  TOFU_SHA256: "1f0cb37fc85dea4e7633a72aca2332b801f72650a32be911b8b9b32907f214fb"
+  KUSTOMIZE_VERSION: "5.8.2"
+  KUSTOMIZE_SHA256: "06af0a202c2b831207d0173f9c9cdb1b30abceca0747cb3fbb72792d26055c95"
+  KUBECONFORM_VERSION: "0.8.0"
+  KUBECONFORM_SHA256: "9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883"
+  KYVERNO_VERSION: "1.19.1"
+  KYVERNO_SHA256: "b38228f367fc0fdc2b08f4c83ea50ac5f16c60ff8d62d76a66157c33c47b70ae"
+  KUBERNETES_VERSION: "1.33.0"
+  # CRD schemas for Cilium, External Secrets and Kyverno, pinned to a commit
+  # so a schema change upstream cannot change what this gate accepts.
+  CRD_SCHEMAS: "https://raw.githubusercontent.com/datreeio/CRDs-catalog/d373c2da9702bc9509a004db83e57263fe3bdfc1/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
+
+jobs:
+  tofu:
+    name: tofu · fmt, validate, residency tests, cell contract
+    runs-on: ubuntu-latest
+    env:
+      TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.tofu-plugin-cache
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: install opentofu
+        run: |
+          set -euo pipefail
+          f="tofu_${TOFU_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL --retry 5 --retry-all-errors -o "/tmp/$f" "https://github.com/opentofu/opentofu/releases/download/v${TOFU_VERSION}/$f"
+          echo "${TOFU_SHA256}  /tmp/$f" | sha256sum -c -
+          mkdir -p "$HOME/.local/bin" "$TF_PLUGIN_CACHE_DIR"
+          tar -xzf "/tmp/$f" -C "$HOME/.local/bin" tofu
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: fmt
+        run: tofu fmt -check -recursive -diff infra/tofu
+
+      # Each root and each module is initialised without a backend — no cloud
+      # credentials exist in this job, by design — and validated.
+      - name: validate
+        run: |
+          set -euo pipefail
+          for d in infra/tofu/envs/*/* infra/tofu/modules/*/*; do
+            [ -d "$d" ] || continue
+            echo "::group::$d"
+            tofu -chdir="$d" init -backend=false -input=false -no-color
+            tofu -chdir="$d" validate -no-color
+            echo "::endgroup::"
+          done
+
+      # The residency guards, proven against a mocked provider: a region
+      # outside the envelope, a zone in another region and a provider
+      # configured for another region are each refused.
+      - name: residency tests
+        run: tofu -chdir=infra/tofu/modules/regional-cell/aws test -no-color
+
+      - name: cell contract and residency scan
+        run: python3 infra/tools/check_tofu.py
+
+  kubernetes:
+    name: kubernetes · render, kubeconform, cell invariants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: install kustomize and kubeconform
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          k="kustomize_v${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL --retry 5 --retry-all-errors -o "/tmp/$k" "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v${KUSTOMIZE_VERSION}/$k"
+          echo "${KUSTOMIZE_SHA256}  /tmp/$k" | sha256sum -c -
+          tar -xzf "/tmp/$k" -C "$HOME/.local/bin" kustomize
+          c="kubeconform-linux-amd64.tar.gz"
+          curl -fsSL --retry 5 --retry-all-errors -o "/tmp/$c" "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/$c"
+          echo "${KUBECONFORM_SHA256}  /tmp/$c" | sha256sum -c -
+          tar -xzf "/tmp/$c" -C "$HOME/.local/bin" kubeconform
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: install the manifest check's one dependency
+        run: python -m pip install --require-hashes --only-binary ':all:' -r infra/tools/requirements.txt
+
+      - name: render
+        run: |
+          set -euo pipefail
+          mkdir -p infra/kubernetes/rendered
+          kustomize build infra/kubernetes/base > infra/kubernetes/rendered/base.yaml
+          for o in infra/kubernetes/overlays/*/; do
+            kustomize build "$o" > "infra/kubernetes/rendered/$(basename "$o").yaml"
+          done
+
+      # -strict refuses unknown fields. CRDs (Cilium, External Secrets) are
+      # validated against their published schemas; -ignore-missing-schemas
+      # covers only a kind with no schema anywhere, and -summary says how many
+      # were skipped so a silent skip is visible.
+      - name: kubeconform
+        run: |
+          kubeconform -strict -summary -ignore-missing-schemas \
+            -kubernetes-version "${KUBERNETES_VERSION}" \
+            -schema-location default -schema-location "${CRD_SCHEMAS}" \
+            infra/kubernetes/rendered/
+
+      # Overlays only: the base deliberately cannot start (no cell identity),
+      # and this check would say so.
+      - name: cell invariants
+        run: |
+          set -euo pipefail
+          for f in infra/kubernetes/rendered/*.yaml; do
+            [ "$(basename "$f")" = "base.yaml" ] && continue
+            echo "::group::$f"
+            python infra/tools/check_manifests.py "$f"
+            echo "::endgroup::"
+          done
+
+  policy:
+    name: policy · admission policy tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: install kyverno CLI and kubeconform
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          k="kyverno-cli_v${KYVERNO_VERSION}_linux_x86_64.tar.gz"
+          curl -fsSL --retry 5 --retry-all-errors -o "/tmp/$k" "https://github.com/kyverno/kyverno/releases/download/v${KYVERNO_VERSION}/$k"
+          echo "${KYVERNO_SHA256}  /tmp/$k" | sha256sum -c -
+          tar -xzf "/tmp/$k" -C "$HOME/.local/bin" kyverno
+          c="kubeconform-linux-amd64.tar.gz"
+          curl -fsSL --retry 5 --retry-all-errors -o "/tmp/$c" "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/$c"
+          echo "${KUBECONFORM_SHA256}  /tmp/$c" | sha256sum -c -
+          tar -xzf "/tmp/$c" -C "$HOME/.local/bin" kubeconform
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: policies are well-formed
+        run: |
+          kubeconform -strict -summary -kubernetes-version "${KUBERNETES_VERSION}" \
+            -schema-location default -schema-location "${CRD_SCHEMAS}" \
+            policy/admission/cell-image-origin.yaml policy/admission/cell-release-signature.yaml
+
+      # Offline and deterministic: image origin and digest pinning.
+      - name: origin rule
+        run: kyverno test policy/admission/tests/offline --remove-color
+
+      # Against real images, through the registry and Rekor: an unsigned image
+      # and an image genuinely signed by another identity are both refused.
+      - name: signature rule
+        run: kyverno test policy/admission/tests/online --remove-color
+
+  nfr:
+    name: nfr · schemas, cross-references, alert rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: validate
+        run: python infra/tools/nfr.py validate
+
+      - name: alert rules match the SLOs
+        run: python infra/tools/nfr.py rules --check
+
+      # The tools' own tests: each check is broken one way and must refuse.
+      # Standard library only; the manifest tests use in-memory documents.
+      - name: tool tests
+        run: python -m unittest discover -s infra/tools -p "test_*.py" -v

@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../contracts/schemas/nfr/sli.schema.json",
+  "kind": "SLI",
+  "sli_id": "ztax-core.c0-server-latency",
+  "version": "0.1.0",
+  "owner": "lane-b-platform",
+  "service": "ztax-core",
+  "family": "latency",
+  "description": "Server-side time for successful quote and commit requests, from request read to response written, including the authoritative local commit required for acknowledgement. Excludes client network time (NFR-001 §6).",
+  "measurement": {
+    "type": "distribution",
+    "histogram": "http_server_request_duration_seconds",
+    "selector": "service_name=\"ztax-core\",http_route=~\"/v1/quotes|/v1/transactions:commit\",http_response_status_code=~\"2..\"",
+    "unit": "seconds",
+    "instrumented": false
+  }
+}

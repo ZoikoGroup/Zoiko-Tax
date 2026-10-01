@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SLI",
+  "description": "A service level indicator: what is measured and exactly how (ZTAX-NFR-001 §4). An SLI says nothing about what is good enough; that is the SLO's job.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "sli_id", "version", "owner", "service", "family", "description", "measurement"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "kind": { "const": "SLI" },
+    "sli_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "version": { "$ref": "common.schema.json#/$defs/version" },
+    "owner": { "$ref": "common.schema.json#/$defs/owner" },
+    "service": { "$ref": "common.schema.json#/$defs/service" },
+    "family": {
+      "description": "ZTAX-NFR-001 §4 SLI families.",
+      "type": "string",
+      "enum": ["availability", "latency", "correctness", "durability", "freshness", "queue_delay", "recovery", "capacity", "dependency_health", "cost"]
+    },
+    "description": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "description": "ratio: good events over valid events. distribution: a histogram, judged at a percentile. count: a monotonic counter of bad events, judged by its increase.",
+          "type": "string",
+          "enum": ["ratio", "distribution", "count"]
+        },
+        "good_events": {
+          "description": "PromQL selector-level expression for good events (ratio).",
+          "$ref": "common.schema.json#/$defs/nonEmptyString"
+        },
+        "valid_events": {
+          "description": "PromQL expression for eligible events (ratio).",
+          "$ref": "common.schema.json#/$defs/nonEmptyString"
+        },
+        "histogram": {
+          "description": "Prometheus histogram metric name without the _bucket suffix (distribution).",
+          "type": "string",
+          "pattern": "^[a-zA-Z_:][a-zA-Z0-9_:]*$"
+        },
+        "counter": {
+          "description": "Prometheus counter metric name (count).",
+          "type": "string",
+          "pattern": "^[a-zA-Z_:][a-zA-Z0-9_:]*$"
+        },
+        "selector": {
+          "description": "Label matchers restricting the histogram or counter to the eligible events, e.g. http_route=~\"...\".",
+          "type": "string"
+        },
+        "unit": { "type": "string", "enum": ["ratio", "seconds", "events"] },
+        "instrumented": {
+          "description": "false while the metric is declared here but not yet emitted by the service. An SLO over an uninstrumented SLI cannot be approved.",
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "ratio" } } }, "then": { "required": ["good_events", "valid_events"] } },
+        { "if": { "properties": { "type": { "const": "distribution" } } }, "then": { "required": ["histogram", "unit"] } },
+        { "if": { "properties": { "type": { "const": "count" } } }, "then": { "required": ["counter"] } }
+      ]
+    }
+  }
+}
