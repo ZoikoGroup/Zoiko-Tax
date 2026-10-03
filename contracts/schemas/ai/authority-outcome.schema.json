@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AuthorityOutcome",
+  "description": "The A0-A5 authority outcome carried on every call across the Go/Python boundary (ADR-0006 §2.5; ZTAX-AIGOV-001 §4). A5 is a member rather than being absent, because a request can arrive claiming A5 and the governance layer has to be able to name what it refused. A5 is technically blocked: the Go policy gate (backend/internal/domain/ai) and the Python Gateway (ztax_gateway.governance) both refuse it unconditionally, and no registry object may declare it as a ceiling.",
+  "$comment": "The order of the enum is the order of the levels. Go: ai.AuthorityOutcomes. Python: ztax_gateway.provenance.AuthorityOutcome. Both are tested equal to this list.",
+  "enum": ["A0", "A1", "A2", "A3", "A4", "A5"],
+  "x-ztax-labels": {
+    "A0": "OBSERVE",
+    "A1": "PROPOSE",
+    "A2": "PRIORITIZE",
+    "A3": "CONSTRAINED_AUTOMATION",
+    "A4": "ADVISORY_FORECAST",
+    "A5": "PROHIBITED_AUTHORITY"
+  },
+  "x-ztax-prohibited": ["A5"]
+}

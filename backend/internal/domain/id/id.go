@@ -84,6 +84,10 @@ type (
 
 	// SealID identifies one evidence period seal (ADR-0011 §2.5).
 	SealID struct{ base }
+
+	// TransferID identifies one recorded cross-cell transfer (ADR-0009 §2.6,
+	// SEC-REQ-0042).
+	TransferID struct{ base }
 )
 
 // The constructors. Each takes a uuid.UUID that idgen produced, or that the
@@ -132,6 +136,9 @@ func NewSubmissionAttemptID(u uuid.UUID) SubmissionAttemptID { return Submission
 
 // NewSealID wraps a raw UUID as a SealID.
 func NewSealID(u uuid.UUID) SealID { return SealID{base{u}} }
+
+// NewTransferID wraps a raw UUID as a TransferID.
+func NewTransferID(u uuid.UUID) TransferID { return TransferID{base{u}} }
 
 // parse is the shared text ingress. Identifiers arrive from a URL path, a
 // cookie lookup or a database column, and all three can carry something that is

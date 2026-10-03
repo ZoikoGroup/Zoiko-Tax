@@ -1,0 +1,43 @@
+{
+  "description": "Model-provider endpoints no Go workload may reach (ADR-0006 §2.1; AIGOV-001 no-direct-provider-call). The single source for this list. It is not an allow-list for anything: Go workloads are default-deny on egress and this list is what infra/tools/check_manifests.py proves none of their allowances can reach. Only the Model Gateway (intelligence/) has provider egress, scoped by its ProviderProfile api_hosts (contracts/schemas/ai/provider-profile.schema.json). Patterns use '*' for any run of DNS characters, dots included.",
+  "owner": "Lane L — AI governance, with Lane B — Platform",
+  "hosts": [
+    "api.openai.com",
+    "*.openai.azure.com",
+    "*.cognitiveservices.azure.com",
+    "*.services.ai.azure.com",
+    "models.inference.ai.azure.com",
+    "api.anthropic.com",
+    "generativelanguage.googleapis.com",
+    "aiplatform.googleapis.com",
+    "*-aiplatform.googleapis.com",
+    "bedrock.*.amazonaws.com",
+    "bedrock-fips.*.amazonaws.com",
+    "bedrock-runtime.*.amazonaws.com",
+    "bedrock-runtime-fips.*.amazonaws.com",
+    "bedrock-agent-runtime.*.amazonaws.com",
+    "bedrock-agent-runtime-fips.*.amazonaws.com",
+    "runtime.sagemaker.*.amazonaws.com",
+    "api.cohere.ai",
+    "api.cohere.com",
+    "api.mistral.ai",
+    "api.groq.com",
+    "api.together.xyz",
+    "api.together.ai",
+    "api.deepseek.com",
+    "api.x.ai",
+    "api.perplexity.ai",
+    "api.fireworks.ai",
+    "api-inference.huggingface.co",
+    "router.huggingface.co",
+    "api.replicate.com",
+    "openrouter.ai"
+  ],
+  "aws_vpc_endpoint_services": [
+    "bedrock",
+    "bedrock-runtime",
+    "bedrock-agent",
+    "bedrock-agent-runtime",
+    "sagemaker.runtime"
+  ]
+}

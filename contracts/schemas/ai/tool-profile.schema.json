@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ToolProfile",
+  "description": "A tool registered with the Tool Broker (ZTAX-AIGOV-001 §7; Master Specification Chapter 17 §16). The PRIVILEGED action class is the tool-plane analogue of A5: the catalog refuses to register it, so no registered ToolProfile carries it.",
+  "$comment": "Required fields are exactly ztax_gateway.tool_broker.ToolProfile. max_duration is a timedelta in Python and crosses as seconds. max_monetary_cost is a budget ceiling, not a fiscal amount, which is why it is a number here; a fiscal amount is always a canonical decimal string (ADR-0006 §2.3). The optional fields are the AIGOV-001 §7 remainder.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tool_id",
+    "owner",
+    "description",
+    "action_class",
+    "required_scopes",
+    "idempotent",
+    "max_steps",
+    "max_duration",
+    "max_token_cost",
+    "max_monetary_cost",
+    "suspended"
+  ],
+  "properties": {
+    "tool_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "owner": { "$ref": "common.schema.json#/$defs/owner" },
+    "description": { "type": "string" },
+    "action_class": {
+      "allOf": [
+        { "enum": ["READ", "PREPARE", "MUTATE", "COMMIT", "PRIVILEGED"] },
+        { "not": { "const": "PRIVILEGED" } }
+      ]
+    },
+    "required_scopes": { "$ref": "common.schema.json#/$defs/stringList" },
+    "idempotent": { "type": "boolean" },
+    "max_steps": { "$ref": "common.schema.json#/$defs/positiveIntegerOrNull" },
+    "max_duration": {
+      "description": "Seconds. null means not enforced.",
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "max_token_cost": { "type": ["integer", "null"], "minimum": 0 },
+    "max_monetary_cost": { "type": ["number", "null"], "minimum": 0 },
+    "suspended": { "type": "boolean" },
+    "input_schema": { "type": "object" },
+    "output_schema": { "type": "object" },
+    "side_effects": { "$ref": "common.schema.json#/$defs/stringList" },
+    "data_classes": { "$ref": "common.schema.json#/$defs/privacyClasses" },
+    "authorization_model": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+  }
+}

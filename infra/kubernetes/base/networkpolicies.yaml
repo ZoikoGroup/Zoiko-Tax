@@ -1,0 +1,146 @@
+# Provider-neutral network baseline for the cell namespace.
+#
+# Everything is denied, in both directions, and then each flow the cell needs
+# is named. Vanilla NetworkPolicy cannot name a destination by DNS and cannot
+# express a deny, so the cell-specific allowances that leave the namespace —
+# database, KMS, secrets, STS — and the explicit deny of everything outside
+# the cell's CIDR are CiliumNetworkPolicies in the cell's overlay. What is here
+# holds on any conformant CNI: with only this file applied, a Go workload can
+# resolve names and talk to its sibling inside the namespace, and nothing else.
+#
+# ADR-0006 §2.1 (Go workloads denied egress to model providers) therefore holds
+# by construction even on a CNI with no FQDN support: there is no allow rule
+# whose destination is outside the cluster, so no provider is reachable.
+
+# 1. Default deny, ingress and egress, every pod in the namespace.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: ztax-cell
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# 2. DNS to the cluster resolver only. Not to 0.0.0.0/0:53 — an open port 53
+# is a tunnel.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-to-cluster-resolver
+  namespace: ztax-cell
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+# 3. ztax-web -> ztax-core, the only caller of the cell's API inside the
+# cluster. Ingress side.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ztax-core-ingress-from-web
+  namespace: ztax-cell
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: ztax-core
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ztax-web
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+# ...and the egress side, because the namespace denies egress too.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ztax-web-egress-to-core
+  namespace: ztax-cell
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: ztax-web
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ztax-core
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+# 4. Go workloads -> the cell-local OpenTelemetry collector (ADR-0015 §2.1).
+# OTLP/gRPC only. The collector, not the workload, decides where telemetry
+# goes, and it exports only to backends permitted for the cell (§2.9).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: go-workloads-egress-to-otel-collector
+  namespace: ztax-cell
+spec:
+  podSelector:
+    matchLabels:
+      ztax.zoikogroup.com/runtime: go
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ztax-observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: otel-collector
+      ports:
+        - protocol: TCP
+          port: 4317
+---
+# 5. ztax-core -> the regional Model Gateway, gRPC over mTLS (ADR-0006 §2.1).
+# The only route from Go to anything AI, and it terminates at the Gateway, not
+# at a provider. Port 8443 is provisional until the Gateway's server lands
+# (intelligence/Dockerfile: transport pending W2 lane K).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ztax-core-egress-to-model-gateway
+  namespace: ztax-cell
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: ztax-core
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ztax-intelligence
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ztax-model-gateway
+      ports:
+        - protocol: TCP
+          port: 8443

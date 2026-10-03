@@ -68,18 +68,23 @@ jobs:
         image: postgis/postgis:17-3.5
         env:
           POSTGRES_DB: ztax
-          POSTGRES_USER: ztax_app
+          POSTGRES_USER: ztax_owner
           POSTGRES_PASSWORD: ci-only
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U ztax_app -d ztax"
+          --health-cmd "pg_isready -U ztax_owner -d ztax"
           --health-interval 5s --health-timeout 5s --health-retries 20
 
+    # The container superuser is ztax_owner, not ztax_app. It owns the schema
+    # and runs the migrations, standing in for a cell's DDL role (ADR-0008
+    # §2.8), so ztax_app stays the grant holder 000001 creates and the grant
+    # tests see what the migrations granted rather than a superuser's
+    # everything.
     env:
       ZTAX_ENVIRONMENT: development
-      ZTAX_MIGRATE_DATABASE_URL: postgres://ztax_app:ci-only@localhost:5432/ztax?sslmode=disable&search_path=ztax,public
-      ZTAX_TEST_DATABASE_URL: postgres://ztax_app:ci-only@localhost:5432/ztax?sslmode=disable&search_path=ztax,public
+      ZTAX_MIGRATE_DATABASE_URL: postgres://ztax_owner:ci-only@localhost:5432/ztax?sslmode=disable&search_path=ztax,public
+      ZTAX_TEST_DATABASE_URL: postgres://ztax_owner:ci-only@localhost:5432/ztax?sslmode=disable&search_path=ztax,public
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

@@ -1,0 +1,1031 @@
+{
+  "$comment": "Field-level privacy classification of every column the migrations create (ZTAX-PRIV-001 §24, §33; G-PRIV-01; ZTAX-PRIV-REQ-0001 to 0003). migrations/catalog_test.go replays the up migrations and fails on any column missing here, any entry for a column that does not exist, and any entry that is not valid privacy.Metadata: the rules the contract lint applies to API fields. A column is classified in the same change that creates it. The vocabulary is contracts/privacy/vocabulary.json. Columns with only a class are P0.",
+  "tables": {
+    "accumulator_snapshot": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "accumulator_key": {
+        "class": "P0",
+        "note": "Opaque key (ADR-0004 §7.2, grammar pending OBL-001). A key that ever encodes a customer identity is reclassified here first."
+      },
+      "running_total": {
+        "class": "P0",
+        "note": "An aggregate across a tenant's transactions for one key."
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "last_seq": {
+        "class": "P0"
+      },
+      "crossed_thresholds": {
+        "class": "P0"
+      },
+      "updated_at": {
+        "class": "P0"
+      }
+    },
+    "admin_audit": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "audit_id": {
+        "class": "P0"
+      },
+      "actor_user_id": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC"
+        ],
+        "retention": "RET-SECURITY",
+        "redaction": "NONE",
+        "aiAllowed": "NONE"
+      },
+      "action": {
+        "class": "P0"
+      },
+      "subject_type": {
+        "class": "P0"
+      },
+      "subject_id": {
+        "class": "P0",
+        "note": "A user id, session id or tenant slug as text; the subject itself is resolved through the audited path."
+      },
+      "detail": {
+        "class": "P3",
+        "purposes": [
+          "PURP-SEC"
+        ],
+        "retention": "RET-SECURITY",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Canonical JSON of what changed. The sign-in record carries user agent and client IP, so the column takes the highest class it can hold. No credential material and no fiscal amount."
+      },
+      "recorded_at": {
+        "class": "P0"
+      }
+    },
+    "app_user": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "user_id": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "Identifies a human principal. Logged as ztx.subject."
+      },
+      "email": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Work email and sign-in handle; carried in Go as privacy.Value."
+      },
+      "display_name": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE"
+      },
+      "password_verifier": {
+        "class": "P7",
+        "purposes": [
+          "PURP-SEC"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "NO_LOG",
+        "aiAllowed": "NONE",
+        "note": "Argon2id PHC string. Not replayable, and still a credential."
+      },
+      "status": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      }
+    },
+    "classification": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "classification_id": {
+        "class": "P0"
+      },
+      "business_key": {
+        "class": "P0"
+      },
+      "valid_from": {
+        "class": "P0"
+      },
+      "valid_to": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "supersedes_id": {
+        "class": "P0"
+      },
+      "item_ref": {
+        "class": "P0"
+      },
+      "ontology_id": {
+        "class": "P0"
+      },
+      "outcome": {
+        "class": "P0"
+      },
+      "reason_code": {
+        "class": "P0"
+      },
+      "source": {
+        "class": "P0"
+      },
+      "confidence": {
+        "class": "P0"
+      },
+      "confirmed_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The human who confirmed an AI-sourced classification (ADR-0006 §2.6)."
+      },
+      "confirmed_at": {
+        "class": "P0"
+      }
+    },
+    "contribution_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "accumulator_key": {
+        "class": "P0",
+        "note": "See accumulator_snapshot.accumulator_key."
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "source_decision_id": {
+        "class": "P0"
+      },
+      "amount": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "One decision's contribution, not an aggregate."
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "event_time": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      }
+    },
+    "cross_cell_transfer": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "transfer_id": {
+        "class": "P0"
+      },
+      "source_cell": {
+        "class": "P0"
+      },
+      "destination_cell": {
+        "class": "P0"
+      },
+      "profile_id": {
+        "class": "P0"
+      },
+      "profile_version": {
+        "class": "P0"
+      },
+      "mechanism": {
+        "class": "P0"
+      },
+      "purpose": {
+        "class": "P0"
+      },
+      "data_classes": {
+        "class": "P0"
+      },
+      "content_digest": {
+        "class": "P0"
+      },
+      "requested_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE"
+      },
+      "approved_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE"
+      },
+      "recorded_at": {
+        "class": "P0"
+      }
+    },
+    "evidence_period_seal": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "seal_id": {
+        "class": "P0"
+      },
+      "cell": {
+        "class": "P0"
+      },
+      "period_start": {
+        "class": "P0"
+      },
+      "period_end": {
+        "class": "P0"
+      },
+      "leaf_count": {
+        "class": "P0"
+      },
+      "merkle_root": {
+        "class": "P0"
+      },
+      "seal_object_digest": {
+        "class": "P0"
+      },
+      "key_id": {
+        "class": "P0"
+      },
+      "sealed_at": {
+        "class": "P0"
+      }
+    },
+    "fiscal_document": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "document_id": {
+        "class": "P0"
+      },
+      "decision_id": {
+        "class": "P0"
+      },
+      "business_key": {
+        "class": "P0"
+      },
+      "valid_from": {
+        "class": "P0"
+      },
+      "valid_to": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "supersedes_id": {
+        "class": "P0"
+      },
+      "document_type": {
+        "class": "P0"
+      },
+      "ext_source_system": {
+        "class": "P0"
+      },
+      "ext_namespace": {
+        "class": "P0"
+      },
+      "ext_value": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "The customer's own document reference; may be a subscriber account or invoice number."
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "net_total": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE"
+      },
+      "tax_total": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE"
+      },
+      "gross_total": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE"
+      },
+      "event_time": {
+        "class": "P0"
+      }
+    },
+    "fiscal_line": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "line_id": {
+        "class": "P0"
+      },
+      "document_id": {
+        "class": "P0"
+      },
+      "ordinal": {
+        "class": "P0"
+      },
+      "item_ref": {
+        "class": "P0"
+      },
+      "classification_id": {
+        "class": "P0"
+      },
+      "quantity": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "Per-line quantity; for a telecom line, an individual's usage."
+      },
+      "unit": {
+        "class": "P0"
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "net_amount": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE"
+      },
+      "tax_amount": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE"
+      },
+      "rounding_mode": {
+        "class": "P0"
+      },
+      "rounding_scale": {
+        "class": "P0"
+      },
+      "rounding_basis": {
+        "class": "P0"
+      }
+    },
+    "idempotency_record": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "endpoint": {
+        "class": "P0"
+      },
+      "idempotency_key": {
+        "class": "P0"
+      },
+      "request_digest": {
+        "class": "P0"
+      },
+      "state": {
+        "class": "P0"
+      },
+      "response_status": {
+        "class": "P0"
+      },
+      "response_digest": {
+        "class": "P0"
+      },
+      "result_ref": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "completed_at": {
+        "class": "P0"
+      },
+      "expires_at": {
+        "class": "P0"
+      },
+      "response_body": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "The verbatim response replayed to a retry; carries whatever the fiscal response carried."
+      }
+    },
+    "jurisdiction": {
+      "jurisdiction_id": {
+        "class": "P0"
+      },
+      "parent_id": {
+        "class": "P0"
+      },
+      "level": {
+        "class": "P0"
+      },
+      "name": {
+        "class": "P0"
+      },
+      "country_code": {
+        "class": "P0"
+      },
+      "timezone": {
+        "class": "P0"
+      },
+      "boundary": {
+        "class": "P0",
+        "note": "Public geography."
+      },
+      "effective_from": {
+        "class": "P0"
+      },
+      "effective_to": {
+        "class": "P0"
+      }
+    },
+    "ledger_entry": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "entry_id": {
+        "class": "P0"
+      },
+      "transaction_key": {
+        "class": "P0"
+      },
+      "source_decision_id": {
+        "class": "P0"
+      },
+      "account": {
+        "class": "P0"
+      },
+      "jurisdiction_id": {
+        "class": "P0"
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "amount": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "A per-decision entry, not an aggregate."
+      },
+      "event_time": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "reverses_id": {
+        "class": "P0"
+      }
+    },
+    "obligation": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "obligation_id": {
+        "class": "P0"
+      },
+      "business_key": {
+        "class": "P0"
+      },
+      "valid_from": {
+        "class": "P0"
+      },
+      "valid_to": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "supersedes_id": {
+        "class": "P0"
+      },
+      "jurisdiction_id": {
+        "class": "P0"
+      },
+      "obligation_type": {
+        "class": "P0"
+      },
+      "period_start": {
+        "class": "P0"
+      },
+      "period_end": {
+        "class": "P0"
+      },
+      "due_date": {
+        "class": "P0"
+      },
+      "status": {
+        "class": "P0"
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "assessed_amount": {
+        "class": "P0",
+        "note": "A tenant's liability for a period; an aggregate."
+      }
+    },
+    "outbox": {
+      "id": {
+        "class": "P0"
+      },
+      "tenant_id": {
+        "class": "P0"
+      },
+      "aggregate_key": {
+        "class": "P0"
+      },
+      "event_type": {
+        "class": "P0"
+      },
+      "schema_ref": {
+        "class": "P0"
+      },
+      "payload": {
+        "class": "P5",
+        "purposes": [
+          "PURP-OBL",
+          "PURP-RECON"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "Event payload; may carry decision facts until relayed."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "published_at": {
+        "class": "P0"
+      },
+      "attempts": {
+        "class": "P0"
+      },
+      "last_error": {
+        "class": "P0",
+        "note": "Relay transport error text; the relay records broker errors, never payload values."
+      }
+    },
+    "session": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "session_id": {
+        "class": "P0"
+      },
+      "user_id": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC"
+        ],
+        "retention": "RET-SESSION",
+        "redaction": "NONE",
+        "aiAllowed": "NONE"
+      },
+      "token_digest": {
+        "class": "P7",
+        "purposes": [
+          "PURP-SEC"
+        ],
+        "retention": "RET-SESSION",
+        "redaction": "NO_LOG",
+        "aiAllowed": "NONE",
+        "note": "SHA-256 of the session secret. It resolves a session, so it is treated as the credential."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "idle_expires_at": {
+        "class": "P0"
+      },
+      "absolute_expires_at": {
+        "class": "P0"
+      },
+      "revoked_at": {
+        "class": "P0"
+      },
+      "revoked_reason": {
+        "class": "P0",
+        "note": "System-chosen text such as 'signed out'; no user input."
+      },
+      "user_agent": {
+        "class": "P3",
+        "purposes": [
+          "PURP-SEC"
+        ],
+        "retention": "RET-SESSION",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Client identifier, recorded for the admin session list only."
+      },
+      "client_ip": {
+        "class": "P3",
+        "purposes": [
+          "PURP-SEC"
+        ],
+        "retention": "RET-SESSION",
+        "redaction": "REDACT",
+        "evidencePolicy": "NONE",
+        "aiAllowed": "NONE",
+        "note": "IP address, recorded for the admin session list only; never used for authentication or situs."
+      }
+    },
+    "submission_attempt": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "attempt_id": {
+        "class": "P0"
+      },
+      "obligation_id": {
+        "class": "P0"
+      },
+      "adapter_id": {
+        "class": "P0"
+      },
+      "state": {
+        "class": "P0"
+      },
+      "authority_ref": {
+        "class": "P0"
+      },
+      "request_digest": {
+        "class": "P0"
+      },
+      "started_at": {
+        "class": "P0"
+      },
+      "settled_at": {
+        "class": "P0"
+      },
+      "reason_code": {
+        "class": "P0"
+      }
+    },
+    "tax_decision": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "decision_id": {
+        "class": "P0"
+      },
+      "business_key": {
+        "class": "P0"
+      },
+      "valid_from": {
+        "class": "P0"
+      },
+      "valid_to": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "supersedes_id": {
+        "class": "P0"
+      },
+      "event_time": {
+        "class": "P0"
+      },
+      "outcome": {
+        "class": "P0"
+      },
+      "reason_code": {
+        "class": "P0"
+      },
+      "bundle_id": {
+        "class": "P0"
+      },
+      "bundle_digest": {
+        "class": "P0"
+      },
+      "ir_version": {
+        "class": "P0"
+      },
+      "canon_profile": {
+        "class": "P0"
+      },
+      "train_app": {
+        "class": "P0"
+      },
+      "train_content": {
+        "class": "P0"
+      },
+      "train_ai": {
+        "class": "P0"
+      },
+      "train_adapter": {
+        "class": "P0"
+      },
+      "train_infra": {
+        "class": "P0"
+      },
+      "train_schema": {
+        "class": "P0"
+      },
+      "train_migration": {
+        "class": "P0"
+      },
+      "input_digest": {
+        "class": "P0"
+      },
+      "input_canonical": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "The canonical determination input; may carry a natural person's transaction facts."
+      },
+      "trace": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "Execution trace (ADR-0005 §2.7); evidence, retained with the decision."
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "total_tax": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE"
+      },
+      "taxable_base": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE"
+      },
+      "envelope_digest": {
+        "class": "P0"
+      },
+      "result_digest": {
+        "class": "P0"
+      }
+    },
+    "tenant": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "slug": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "Tenant handle; may carry a sole trader's name. Logged as-is by bootstrap and sign-in audit, which P1 permits."
+      },
+      "display_name": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Business name; a natural person's name for a sole trader."
+      },
+      "residency_region": {
+        "class": "P0"
+      },
+      "status": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "home_cell": {
+        "class": "P0"
+      }
+    },
+    "tenant_status_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "status": {
+        "class": "P0"
+      },
+      "reason": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC"
+        ],
+        "retention": "RET-SECURITY",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by an administrator."
+      },
+      "actor_user_id": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC"
+        ],
+        "retention": "RET-SECURITY",
+        "redaction": "NONE",
+        "aiAllowed": "NONE"
+      },
+      "recorded_at": {
+        "class": "P0"
+      }
+    },
+    "threshold_crossing": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "accumulator_key": {
+        "class": "P0",
+        "note": "See accumulator_snapshot.accumulator_key."
+      },
+      "threshold_id": {
+        "class": "P0"
+      },
+      "crossed_at_seq": {
+        "class": "P0"
+      },
+      "source_decision_id": {
+        "class": "P0"
+      },
+      "running_total": {
+        "class": "P0",
+        "note": "An aggregate across a tenant's transactions for one key."
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "threshold_amount": {
+        "class": "P0",
+        "note": "A limit from content, not a customer value."
+      },
+      "comparison": {
+        "class": "P0"
+      }
+    },
+    "user_role": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "user_id": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "NONE",
+        "aiAllowed": "NONE"
+      },
+      "role": {
+        "class": "P0"
+      },
+      "granted_at": {
+        "class": "P0"
+      },
+      "granted_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "NONE",
+        "aiAllowed": "NONE"
+      }
+    }
+  }
+}

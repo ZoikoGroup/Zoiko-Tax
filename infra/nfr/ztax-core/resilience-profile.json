@@ -1,0 +1,28 @@
+{
+  "$schema": "../../../contracts/schemas/nfr/resilience-profile.schema.json",
+  "kind": "ResilienceProfile",
+  "resilience_profile_id": "ztax-core.cell",
+  "version": "0.1.0",
+  "owner": "lane-b-platform",
+  "service": "ztax-core",
+  "service_class": "C0",
+  "zones_min": 3,
+  "zone_failure": "full",
+  "recovery": { "rpo": "1m", "rto": "15m", "acknowledged_evidence_rpo": "0s" },
+  "residency": { "cross_region_failover": false, "recovery_scope": "same_cell" },
+  "dependency_failure": [
+    { "dependency": "cell-postgres", "behavior": "fail_closed", "observable_as": "503 with Retry-After; readiness fails and the replica leaves rotation; liveness does not restart it" },
+    { "dependency": "cell-kms", "behavior": "fail_closed", "observable_as": "503 on commit; no plaintext or unsigned fallback" },
+    { "dependency": "cell-evidence-store", "behavior": "fail_closed", "observable_as": "503 on commit; nothing is acknowledged without its evidence" },
+    { "dependency": "cell-broker", "behavior": "queue", "observable_as": "Commits succeed; outbox lag rises and alerts (ADR-0014 §2.11)" },
+    { "dependency": "content-plane", "behavior": "last_known_good", "observable_as": "Active signed bundle keeps serving; no unverified bundle activates" },
+    { "dependency": "model-gateway", "behavior": "degrade", "observable_as": "AI-assisted features unavailable; determination unaffected" }
+  ],
+  "drills": [
+    { "kind": "restore", "frequency": "30d" },
+    { "kind": "zone_failover", "frequency": "90d" },
+    { "kind": "database_failover", "frequency": "90d" },
+    { "kind": "key_unavailable", "frequency": "90d" }
+  ],
+  "status": "proposed"
+}

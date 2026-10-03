@@ -44,8 +44,15 @@ type Tenant struct {
 	Slug            string
 	DisplayName     string
 	ResidencyRegion string
-	Status          TenantStatus
-	CreatedAt       time.Time
+	// HomeCell is the one cell the tenant is homed in (ADR-0009 §2.6,
+	// SEC-001 §11). It is set when the tenant is provisioned, from the
+	// provisioning cell's own ZTAX_CELL, and the application role cannot
+	// change it: moving a tenant between cells is a migration, not an update.
+	// Empty means a row from before home cells were recorded, and such a
+	// tenant is served by no cell until one is assigned.
+	HomeCell  string
+	Status    TenantStatus
+	CreatedAt time.Time
 }
 
 // CanAuthenticate reports whether sign-in is permitted for this tenant.

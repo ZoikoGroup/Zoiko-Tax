@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ProviderProfile",
+  "description": "A model provider that has passed due diligence (ZTAX-AIGOV-001 §7, §12). api_hosts is the complete set of hosts the Gateway may reach for this provider; the regional cell's egress policy is derived from it, and Go workloads may reach none of them (ADR-0006 §2.1).",
+  "$comment": "No Python registry exists for this object yet; the Gateway carries provider_profile as an opaque name on Provenance.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "provider_profile_id",
+    "owner",
+    "version",
+    "legal_entity",
+    "dpa_ref",
+    "security_assurance",
+    "permitted_regions",
+    "subprocessors",
+    "retention_days",
+    "zero_data_retention",
+    "trains_on_customer_data",
+    "deprecation_notice_days",
+    "outage_terms_ref",
+    "audit_assurance_ref",
+    "api_hosts",
+    "suspended"
+  ],
+  "properties": {
+    "provider_profile_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "owner": { "$ref": "common.schema.json#/$defs/owner" },
+    "version": { "$ref": "common.schema.json#/$defs/version" },
+    "legal_entity": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "dpa_ref": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "security_assurance": { "$ref": "common.schema.json#/$defs/stringList" },
+    "permitted_regions": { "$ref": "common.schema.json#/$defs/regions" },
+    "subprocessors": { "$ref": "common.schema.json#/$defs/stringList" },
+    "retention_days": {
+      "description": "How long the provider retains prompts and outputs.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "zero_data_retention": { "type": "boolean" },
+    "trains_on_customer_data": { "type": "boolean" },
+    "deprecation_notice_days": { "type": "integer", "minimum": 0 },
+    "outage_terms_ref": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "audit_assurance_ref": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "api_hosts": {
+      "description": "Lower-case DNS host names. The only egress this provider is granted, and only from the Gateway.",
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$" },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "suspended": { "type": "boolean" }
+  }
+}

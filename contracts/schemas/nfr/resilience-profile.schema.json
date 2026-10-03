@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ResilienceProfile",
+  "description": "How a service survives failure inside its cell: zone tolerance, recovery objectives, behaviour per failed dependency, and the drills that prove each (ZTAX-NFR-001 §11–§15). Recovery never crosses the residency envelope: cross_region_failover is false by schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "resilience_profile_id", "version", "owner", "service", "service_class", "zones_min", "zone_failure", "recovery", "residency", "dependency_failure", "drills", "status"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "kind": { "const": "ResilienceProfile" },
+    "resilience_profile_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "version": { "$ref": "common.schema.json#/$defs/version" },
+    "owner": { "$ref": "common.schema.json#/$defs/owner" },
+    "service": { "$ref": "common.schema.json#/$defs/service" },
+    "service_class": { "$ref": "common.schema.json#/$defs/serviceClass" },
+    "zones_min": {
+      "description": "Availability zones a production cell spans for this service.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "zone_failure": {
+      "description": "Behaviour on loss of one zone: full target, or degraded within the declared envelope (NFR-001 §8).",
+      "type": "string",
+      "enum": ["full", "degraded"]
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rpo", "rto", "acknowledged_evidence_rpo"],
+      "properties": {
+        "rpo": { "$ref": "common.schema.json#/$defs/duration" },
+        "rto": { "$ref": "common.schema.json#/$defs/duration" },
+        "acknowledged_evidence_rpo": {
+          "description": "NFR-001 §12: acknowledgement-critical evidence has RPO 0.",
+          "$ref": "common.schema.json#/$defs/duration"
+        }
+      }
+    },
+    "residency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cross_region_failover", "recovery_scope"],
+      "properties": {
+        "cross_region_failover": {
+          "description": "Disaster recovery may not silently fail data into a prohibited geography. Recovery into another cell is an explicit evidenced transfer, not a failover setting.",
+          "const": false
+        },
+        "recovery_scope": { "type": "string", "enum": ["same_cell", "same_region_new_cell"] }
+      }
+    },
+    "dependency_failure": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["dependency", "behavior", "observable_as"],
+        "properties": {
+          "dependency": {
+            "description": "A dependency name from the service's ServiceCriticality.",
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "behavior": { "$ref": "common.schema.json#/$defs/failureBehavior" },
+          "observable_as": {
+            "description": "The response or state a client sees. NFR-001: an explicit 429/503 or DEGRADED state over a fabricated success.",
+            "$ref": "common.schema.json#/$defs/nonEmptyString"
+          }
+        }
+      }
+    },
+    "drills": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "frequency"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["restore", "zone_failover", "database_failover", "dependency_fault_injection", "cell_rebuild", "key_unavailable"] },
+          "frequency": { "$ref": "common.schema.json#/$defs/duration" }
+        }
+      }
+    },
+    "status": { "$ref": "common.schema.json#/$defs/status" }
+  }
+}

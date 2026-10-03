@@ -1,0 +1,16 @@
+# OpenTofu working directories and any state that lands locally by mistake.
+# State lives in the cell's own regional backend, never in the tree: it holds
+# endpoints and identifiers for a cell, and a copy in git is a copy in every
+# clone. The provider lock files (.terraform.lock.hcl) of the roots under
+# tofu/envs are committed; a module's lock file is not, because a module does
+# not choose provider versions — the root that instantiates it does.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+backend.hcl
+tofu/modules/**/.terraform.lock.hcl
+
+# Rendered kustomize output from local checks.
+kubernetes/rendered/

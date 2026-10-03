@@ -1,0 +1,25 @@
+# The cell's workload namespace.
+#
+# Pod Security "restricted" is enforced, not merely warned: a pod that runs as
+# root, keeps a capability, escalates privilege or runs without a seccomp
+# profile is refused by the API server before it exists. The version is pinned
+# to the cluster's minor version so a control-plane upgrade cannot silently
+# change what "restricted" means for this namespace.
+#
+# ztax.zoikogroup.com/admission: signed-only opts the namespace into the
+# signed-artifact admission policy (policy/admission). Everything in it must be
+# an image signed keylessly by this repository's release workflow and carrying
+# its SLSA provenance attestation.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ztax-cell
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.33
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: v1.33
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: v1.33
+    ztax.zoikogroup.com/admission: signed-only
+    ztax.zoikogroup.com/train: INFRA

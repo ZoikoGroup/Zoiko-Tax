@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ModelProfile",
+  "description": "An approved model, pinned to an exact version (ZTAX-AIGOV-001 §7). The Gateway routes a use case only to a model profile whose regions and data classes admit the call (ADR-0006 §2.8).",
+  "$comment": "No Python registry exists for this object yet; the Gateway carries model_profile as an opaque name on Provenance. This schema is the shape that registry must take.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "model_profile_id",
+    "owner",
+    "version",
+    "provider_profile_id",
+    "model_id",
+    "model_version",
+    "hosting",
+    "context_window_tokens",
+    "max_output_tokens",
+    "modalities",
+    "tool_capable",
+    "permitted_regions",
+    "permitted_data_classes",
+    "terms_ref",
+    "known_limitations",
+    "deprecation_date",
+    "suspended"
+  ],
+  "properties": {
+    "model_profile_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "owner": { "$ref": "common.schema.json#/$defs/owner" },
+    "version": { "$ref": "common.schema.json#/$defs/version" },
+    "provider_profile_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "model_id": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "model_version": {
+      "description": "The exact provider model version. Floating aliases are refused: AIGOV-001 §12 prohibits provider aliases such as latest for material use cases, and a silent backend revision is treated as a model change.",
+      "allOf": [
+        { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+        { "not": { "enum": ["latest", "default", "stable", "preview"] } }
+      ]
+    },
+    "hosting": { "enum": ["PROVIDER_HOSTED", "PRIVATE_CLOUD", "SELF_HOSTED"] },
+    "context_window_tokens": { "type": "integer", "minimum": 1 },
+    "max_output_tokens": { "type": "integer", "minimum": 1 },
+    "modalities": {
+      "type": "array",
+      "items": { "enum": ["TEXT", "IMAGE", "AUDIO", "DOCUMENT", "EMBEDDING"] },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "tool_capable": { "type": "boolean" },
+    "permitted_regions": { "$ref": "common.schema.json#/$defs/regions" },
+    "permitted_data_classes": { "$ref": "common.schema.json#/$defs/privacyClasses" },
+    "terms_ref": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "known_limitations": { "$ref": "common.schema.json#/$defs/stringList" },
+    "deprecation_date": { "type": ["string", "null"], "format": "date" },
+    "suspended": { "type": "boolean" }
+  }
+}

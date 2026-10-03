@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PromptProfile",
+  "description": "A versioned, owner-declared prompt template with its variable and output schemas (ZTAX-AIGOV-001 §7; Master Specification Chapter 17 §14.3). Nothing may construct a Provenance naming a prompt profile that is not registered.",
+  "$comment": "Required fields are exactly ztax_gateway.production_registries.PromptProfile. prompt_hash and evaluation_profile_id are the AIGOV-001 §7 fields the Python dataclass does not yet carry.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile_id",
+    "owner",
+    "version",
+    "system_prompt",
+    "variable_schema",
+    "output_schema",
+    "max_risk_tier",
+    "authority_ceiling",
+    "safety_rules",
+    "deprecated"
+  ],
+  "properties": {
+    "profile_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "owner": { "$ref": "common.schema.json#/$defs/owner" },
+    "version": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "system_prompt": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "variable_schema": { "type": "object" },
+    "output_schema": { "type": "object" },
+    "max_risk_tier": { "$ref": "risk-tier.schema.json" },
+    "authority_ceiling": {
+      "description": "The highest authority outcome this prompt may produce. Never A5.",
+      "allOf": [{ "$ref": "authority-outcome.schema.json" }, { "not": { "const": "A5" } }]
+    },
+    "safety_rules": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/nonEmptyString" }
+    },
+    "deprecated": {
+      "description": "A deprecated profile may not appear in a new release manifest.",
+      "type": "boolean"
+    },
+    "prompt_hash": { "$ref": "common.schema.json#/$defs/sha256" },
+    "evaluation_profile_id": { "$ref": "common.schema.json#/$defs/identifier" }
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AI governance shared definitions",
+  "$comment": "Definitions shared by the AI registry schemas in this directory. ADR-0006 §2.2 makes JSON Schema the schema authority across REST, events and gRPC; these files are the canonical form of the ZTAX-AIGOV-001 §3/§7 registry objects, and both halves of the Go/Python boundary are tested against them (backend/internal/adapter/gateway/schema_vocabulary_test.go, intelligence/tests/test_ai_schemas.py).",
+  "$defs": {
+    "identifier": {
+      "description": "A stable, opaque registry identifier. Never reused once retired, for the reason ADR-0012 §2.9 gives for identifiers generally: historical evidence still names it.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "owner": {
+      "description": "The named team or individual accountable for the object. AIGOV-001 §3 and §10 make an unowned registry entry a defect: the first question an incident asks is who owns it.",
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "description": "The version of this registry entry. A semantic version; 'latest' and other floating aliases are deliberately not expressible (AIGOV-001 §12).",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$"
+    },
+    "region": {
+      "description": "A regional cell identifier (ADR-0006 §2.8). Residency is per cell and does not follow the model.",
+      "type": "string",
+      "minLength": 1
+    },
+    "regions": {
+      "description": "A residency allowlist. Empty means no region is permitted, which is the correct default: an object that has not declared where it may run has not been through residency review.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/region" },
+      "uniqueItems": true
+    },
+    "privacyClass": {
+      "description": "A ZTAX-PRIV-001 §4 privacy class. Must equal the classes in contracts/privacy/vocabulary.json; the Python schema test asserts it.",
+      "enum": ["P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7"]
+    },
+    "privacyClasses": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/privacyClass" },
+      "uniqueItems": true
+    },
+    "sha256": {
+      "description": "A lower-case hexadecimal SHA-256 digest.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "unitInterval": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "positiveIntegerOrNull": {
+      "description": "A hard cap. null means the cap is not declared, which is distinct from zero.",
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "identifierOrNull": {
+      "anyOf": [{ "$ref": "#/$defs/identifier" }, { "type": "null" }]
+    },
+    "stringList": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonEmptyString" },
+      "uniqueItems": true
+    }
+  }
+}

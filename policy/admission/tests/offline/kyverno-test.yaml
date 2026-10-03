@@ -1,0 +1,32 @@
+# Offline proof of cell-image-origin: no network, no cluster, deterministic.
+#
+#   kyverno test policy/admission/tests/offline
+#
+# cell-release-signature is not in this file. Its verdict depends on the
+# registry and Rekor, so it has its own test against real images
+# (../online/) and is proven end to end in a live cell (policy/README.md).
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: cell-image-origin
+policies:
+  - ../../cell-image-origin.yaml
+resources:
+  - resources.yaml
+variables: values.yaml
+results:
+  - policy: cell-image-origin
+    kind: Pod
+    isValidatingPolicy: true
+    resources:
+      - unsigned-public-image
+      - release-image-by-tag
+      - unsigned-init-container
+      - lookalike-repository
+    result: fail
+  - policy: cell-image-origin
+    kind: Pod
+    isValidatingPolicy: true
+    resources:
+      - release-image-by-digest
+    result: pass

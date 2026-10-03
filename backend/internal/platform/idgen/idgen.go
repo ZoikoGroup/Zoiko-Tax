@@ -181,3 +181,12 @@ func SealID(g Generator) (id.SealID, error) {
 	}
 	return id.NewSealID(u), nil
 }
+
+// TransferID returns a fresh TransferID.
+func TransferID(g Generator) (id.TransferID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.TransferID{}, err
+	}
+	return id.NewTransferID(u), nil
+}

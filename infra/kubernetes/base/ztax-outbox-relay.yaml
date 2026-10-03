@@ -1,0 +1,78 @@
+# ztax-outbox-relay — publishes committed outbox rows (ADR-0014 §2.2).
+#
+# A separate deployable because it has a different lifecycle and failure mode
+# from request handling (ADR-0009 §2.2). Several replicas are safe — the claim
+# is FOR UPDATE SKIP LOCKED with no leader election — but one is enough until
+# the broker exists.
+#
+# No probes: the binary serves no HTTP and the image has no shell to exec. Its
+# health is the outbox-lag SLI (infra/nfr, ADR-0014 §2.11), which is the thing
+# that actually says whether it is doing its job.
+#
+# The image is not yet produced by the release workflow (backend/Dockerfile has
+# no ztax-outbox-relay stage). Until it is, admission rejects this Deployment —
+# which is the correct outcome for an image nothing has signed.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ztax-outbox-relay
+  namespace: ztax-cell
+  labels:
+    app.kubernetes.io/name: ztax-outbox-relay
+    app.kubernetes.io/part-of: zoikotax
+    ztax.zoikogroup.com/train: APP
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ztax-outbox-relay
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ztax-outbox-relay
+        app.kubernetes.io/part-of: zoikotax
+        ztax.zoikogroup.com/runtime: go
+    spec:
+      serviceAccountName: ztax-outbox-relay
+      automountServiceAccountToken: false
+      # See ztax-core.yaml: service links would inject ZTAX_-prefixed names
+      # config.Load refuses.
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: ztax-outbox-relay
+          image: ghcr.io/zoikogroup/zoiko-tax/ztax-outbox-relay@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ZTAX_LOG_LEVEL
+              value: info
+            - name: ZTAX_OTLP_ENDPOINT
+              value: otel-collector.ztax-observability.svc:4317
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            privileged: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DatasetProfile",
+  "description": "A versioned gold set or retrieval corpus snapshot (ZTAX-AIGOV-001 §7; Master Specification Chapter 17 §14.6).",
+  "$comment": "Required fields are exactly ztax_gateway.production_registries.DatasetProfile. data_class is a free string there (fixtures use INTERNAL) rather than a PRIV-001 class; it is left a non-empty string here until that vocabulary is settled, and privacy_class is the PRIV-001 form. source, rights and intended_use are AIGOV-001 §7 fields the Python dataclass does not yet carry.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "dataset_id",
+    "owner",
+    "version",
+    "description",
+    "data_class",
+    "case_count",
+    "deprecated"
+  ],
+  "properties": {
+    "dataset_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "owner": { "$ref": "common.schema.json#/$defs/owner" },
+    "version": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "description": { "type": "string", "pattern": "\\S" },
+    "data_class": { "type": "string", "pattern": "\\S" },
+    "case_count": { "type": "integer", "minimum": 2 },
+    "deprecated": { "type": "boolean" },
+    "privacy_class": { "$ref": "common.schema.json#/$defs/privacyClass" },
+    "source": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "rights": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "intended_use": { "enum": ["EVALUATION", "RETRIEVAL", "TRAINING"] }
+  }
+}

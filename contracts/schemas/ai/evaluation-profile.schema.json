@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EvaluationProfile",
+  "description": "The minimum quality thresholds a release must meet (ZTAX-AIGOV-001 §7, §9; Master Specification Chapter 17 §14.5). Thresholds are use-case specific: there is no universal accuracy bar.",
+  "$comment": "Required fields are exactly ztax_gateway.production_registries.EvaluationProfile.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile_id",
+    "owner",
+    "version",
+    "dataset_id",
+    "min_accuracy",
+    "min_f1",
+    "max_calibration_error",
+    "adversarial_suite_required"
+  ],
+  "properties": {
+    "profile_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "owner": { "$ref": "common.schema.json#/$defs/owner" },
+    "version": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "dataset_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "min_accuracy": { "$ref": "common.schema.json#/$defs/unitInterval" },
+    "min_f1": {
+      "anyOf": [{ "$ref": "common.schema.json#/$defs/unitInterval" }, { "type": "null" }]
+    },
+    "max_calibration_error": {
+      "anyOf": [{ "$ref": "common.schema.json#/$defs/unitInterval" }, { "type": "null" }]
+    },
+    "adversarial_suite_required": { "type": "boolean" }
+  }
+}

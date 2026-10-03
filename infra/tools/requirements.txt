@@ -1,0 +1,6 @@
+# check_manifests.py reads rendered Kubernetes YAML; the standard library has
+# no YAML parser. Everything else in infra/tools is stdlib only.
+# Hash-pinned for CPython 3.12 on linux x86_64 (the CI runner).
+#   pip install --require-hashes --only-binary=:all: -r infra/tools/requirements.txt
+pyyaml==6.0.3 \
+    --hash=sha256:ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc

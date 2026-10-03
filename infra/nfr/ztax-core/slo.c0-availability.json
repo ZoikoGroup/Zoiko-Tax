@@ -1,0 +1,27 @@
+{
+  "$schema": "../../../contracts/schemas/nfr/slo.schema.json",
+  "kind": "SLO",
+  "slo_id": "ztax-core.c0-availability",
+  "version": "0.1.0",
+  "owner": "lane-b-platform",
+  "service": "ztax-core",
+  "class": "C0",
+  "sli_ref": "ztax-core.c0-availability",
+  "objective": { "type": "ratio", "target_percent": 99.99 },
+  "window": "28d",
+  "eligible_requests": "POST /v1/quotes and POST /v1/transactions:commit from authenticated tenants, measured per regional cell.",
+  "exclusions": [
+    "Client-caused invalid requests (400, 401, 403, 404, 409, 422)",
+    "Planned customer-approved isolation, recorded as such"
+  ],
+  "status": "proposed",
+  "source": "ZTAX-NFR-001 §6: SLO 99.99% for eligible C0 requests, per regional cell and service window",
+  "alerting": {
+    "severity": "P1",
+    "burn_rates": [
+      { "long_window": "1h", "short_window": "5m", "factor": 14.4, "severity": "P1" },
+      { "long_window": "6h", "short_window": "30m", "factor": 6, "severity": "P1" },
+      { "long_window": "3d", "short_window": "6h", "factor": 1, "severity": "P2" }
+    ]
+  }
+}
