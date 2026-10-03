@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"regexp"
@@ -270,6 +271,20 @@ func (rt *Router) handleQuote(w http.ResponseWriter, r *http.Request) {
 }
 
 func (rt *Router) handleCommit(w http.ResponseWriter, r *http.Request) {
+	rt.recordDecision(w, r, rt.Determination.Commit)
+}
+
+// handleAdjust is POST /v1/transactions:adjust: a correction evaluated under
+// the content bundle that made the decision it supersedes
+// (ZTAX-DET-REQ-0030). It shares commit's body, idempotency and rendering;
+// the service is what differs.
+func (rt *Router) handleAdjust(w http.ResponseWriter, r *http.Request) {
+	rt.recordDecision(w, r, rt.Determination.Adjust)
+}
+
+// recordDecision is the shared shape of commit and adjust: an idempotent
+// request whose success is a recorded decision.
+func (rt *Router) recordDecision(w http.ResponseWriter, r *http.Request, record func(context.Context, app.CommitInput) (app.Settled, error)) {
 	if rt.determinationUnavailable(w, r) {
 		return
 	}
@@ -292,7 +307,7 @@ func (rt *Router) handleCommit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	settled, err := rt.Determination.Commit(r.Context(), app.CommitInput{
+	settled, err := record(r.Context(), app.CommitInput{
 		IdempotencyKey: key,
 		Determination:  in,
 		Render: func(d evidence.Decision) ([]byte, error) {

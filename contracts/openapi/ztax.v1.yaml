@@ -824,6 +824,100 @@ paths:
         "500": { $ref: "#/components/responses/Internal" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
+  /v1/transactions:adjust:
+    post:
+      operationId: adjustTransaction
+      tags: [determination]
+      summary: Correct a recorded decision under the content that made it
+      description: |
+        `OPERATOR` only. Records a CORRECTION of an earlier decision
+        (ZTAX-DET-001 §10.4) as a new decision superseding it. `supersedes` is
+        required and must name the current version for the `businessKey`.
+
+        The correction is evaluated against the content bundle that made the
+        decision it supersedes — the bundle its replay envelope names — and
+        never against the active one (ZTAX-DET-REQ-0030). A credit issued
+        today against an invoice from an earlier content release corrects tax
+        charged under that release's rates and rules. If that bundle is not
+        loaded in the cell, the request is refused with
+        `503 NO_CONTENT_BUNDLE` and nothing is recorded; it is never quietly
+        re-evaluated under current content.
+
+        Idempotency works as on `:commit`, with its own key scope: the same
+        `Idempotency-Key` value on `:commit` and `:adjust` names two different
+        keys (ADR-0013 §2.2).
+
+        Before A4 every decision is `ADVISORY` and `authoritative: false`.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommitRequest"
+            examples:
+              correction:
+                summary: Correct line 1's net amount
+                value:
+                  businessKey: INV-0001/1
+                  supersedes: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                  eventTime: "2026-09-24T18:00:00.000000Z"
+                  input:
+                    money:
+                      line.netAmount: { amount: "50.00", currency: EUR }
+                    quantities:
+                      line.quantity: { value: "3", unit: EA }
+                    flags:
+                      line.reducedRateApplies: false
+                      line.exemptCertificateHeld: false
+                  accumulators:
+                    threshold.ecoLevyYtd: { amount: "9999.99", currency: EUR }
+      responses:
+        "201":
+          description: |
+            The recorded correction. A replayed response carries
+            `Idempotent-Replay: true` and is byte-for-byte the original.
+          headers:
+            Idempotent-Replay:
+              description: Present, and `true`, when this is the stored response to an earlier request with the same key.
+              schema: { type: boolean }
+              example: true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Decision"
+              examples:
+                default:
+                  summary: An advisory correction, made under the original bundle
+                  value:
+                    id: 01920a4c-1d2e-7f30-8a41-5b6c7d8e9f01
+                    businessKey: INV-0001/1
+                    supersedes: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    authoritative: false
+                    outcome: ADVISORY
+                    reasonCode: NOT_AUTHORITATIVE
+                    eventTime: "2026-09-24T18:00:00.000000Z"
+                    recordedAt: "2026-10-03T09:00:00.000000Z"
+                    bundle:
+                      bundleId: eu-vat-worked-2026.09
+                      digest: "zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b"
+                      irVersion: 1
+                    digests:
+                      input: "zt1:5c3e2f1a0b9c8d7e6f4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a"
+                      envelope: "zt1:0d9e8f7a6b5c4d3e2f1a5c3e2f1a0b9c8d7e6f4b2d1e0f9a8c7b6d5e4f3a2b1c"
+                      result: "zt1:2b1c0d9e8f7a6b5c4d3e5c3e2f1a0b9c8d7e6f4b2d1e0f9a8c7b6d5e4f3a2b1c"
+                    emitted:
+                      TAX_VAT: { type: MONEY, amount: "10.50", currency: EUR }
+                      TAX_ECO_LEVY: { type: MONEY, amount: "0.11", currency: EUR }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
   /v1/decisions/{decisionId}:
     get:
       operationId: getDecision

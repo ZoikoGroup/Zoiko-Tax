@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:9449bc10f05985e4967ebe167e3895eabe74ac3b7a41a98ef05d6d3a0d5a3116`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:9d29a04512947c4b4a47e89a21a9ccebca2683f70f6d0c629965f6b2e915b7ba`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -1128,7 +1128,7 @@
     },
     {
       "name": "06 · Determination — needs content and an OPERATOR",
-      "description": "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "description": "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `adjustTransaction` then corrects that decision under the bundle that made it (ZTAX-DET-REQ-0030).\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
       "item": [
         {
           "name": "POST /v1/quotes — Quote a transaction without recording it",
@@ -1460,6 +1460,93 @@
                   "pm.test('ADR-0011 §2.8 — the decision just committed replays exactly', function () {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.json().verdict).to.eql('MATCH');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/transactions:adjust — Correct a recorded decision under the content that made it",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessKey\": \"INV-0001/1\",\n  \"supersedes\": \"{{decisionId}}\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"50.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"3\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"9999.99\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:adjust",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:adjust"
+              ]
+            },
+            "description": "Correct a recorded decision under the content that made it\n\n`OPERATOR` only. Records a CORRECTION of an earlier decision\n(ZTAX-DET-001 §10.4) as a new decision superseding it. `supersedes` is\nrequired and must name the current version for the `businessKey`.\n\nThe correction is evaluated against the content bundle that made the\ndecision it supersedes — the bundle its replay envelope names — and\nnever against the active one (ZTAX-DET-REQ-0030). A credit issued\ntoday against an invoice from an earlier content release corrects tax\ncharged under that release's rates and rules. If that bundle is not\nloaded in the cell, the request is refused with\n`503 NO_CONTENT_BUNDLE` and nothing is recorded; it is never quietly\nre-evaluated under current content.\n\nIdempotency works as on `:commit`, with its own key scope: the same\n`Idempotency-Key` value on `:commit` and `:adjust` names two different\nkeys (ADR-0013 §2.2).\n\nBefore A4 every decision is `ADVISORY` and `authoritative: false`."
+          },
+          "response": [
+            {
+              "name": "201 · An advisory correction, made under the original bundle",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/transactions:adjust",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "transactions:adjust"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a4c-1d2e-7f30-8a41-5b6c7d8e9f01\",\n  \"businessKey\": \"INV-0001/1\",\n  \"supersedes\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n  \"authoritative\": false,\n  \"outcome\": \"ADVISORY\",\n  \"reasonCode\": \"NOT_AUTHORITATIVE\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"recordedAt\": \"2026-10-03T09:00:00.000000Z\",\n  \"bundle\": {\n    \"bundleId\": \"eu-vat-worked-2026.09\",\n    \"digest\": \"zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b\",\n    \"irVersion\": 1\n  },\n  \"digests\": {\n    \"input\": \"zt1:5c3e2f1a0b9c8d7e6f4b2d1e0f9a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a\",\n    \"envelope\": \"zt1:0d9e8f7a6b5c4d3e2f1a5c3e2f1a0b9c8d7e6f4b2d1e0f9a8c7b6d5e4f3a2b1c\",\n    \"result\": \"zt1:2b1c0d9e8f7a6b5c4d3e5c3e2f1a0b9c8d7e6f4b2d1e0f9a8c7b6d5e4f3a2b1c\"\n  },\n  \"emitted\": {\n    \"TAX_VAT\": {\n      \"type\": \"MONEY\",\n      \"amount\": \"10.50\",\n      \"currency\": \"EUR\"\n    },\n    \"TAX_ECO_LEVY\": {\n      \"type\": \"MONEY\",\n      \"amount\": \"0.11\",\n      \"currency\": \"EUR\"\n    }\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('adjustTransaction returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('ZTAX-DET-REQ-0030 — the correction is recorded against the original decision', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().authoritative).to.eql(false);",
+                  "  pm.expect(pm.response.json().id).to.not.eql(pm.collectionVariables.get('decisionId'));",
                   "});"
                 ]
               }
@@ -2540,7 +2627,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:9449bc10f05985e4967ebe167e3895eabe74ac3b7a41a98ef05d6d3a0d5a3116",
+      "value": "sha256:9d29a04512947c4b4a47e89a21a9ccebca2683f70f6d0c629965f6b2e915b7ba",
       "type": "string"
     }
   ]

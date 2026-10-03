@@ -112,8 +112,8 @@ const FOLDERS = [
   {
     name: "06 · Determination — needs content and an OPERATOR",
     description:
-      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
-    operations: ["createQuote", "commitTransaction", "getDecision", "replayDecision"],
+      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `adjustTransaction` then corrects that decision under the bundle that made it (ZTAX-DET-REQ-0030).\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+    operations: ["createQuote", "commitTransaction", "getDecision", "replayDecision", "adjustTransaction"],
     prerequest: [
       "if (pm.variables.get('runDetermination') !== 'true') {",
       "  console.info('skipped: set runDetermination=true against a cell with content, signed in as an OPERATOR');",
@@ -155,6 +155,8 @@ const VALUE_VARIABLES = {
   "correct horse battery staple": "{{adminPassword}}",
   "a considerably longer passphrase than that one": "{{newPassword}}",
   "auditor@acme.example": "{{newUserEmail}}",
+  // The adjust example's supersedes: the decision the folder just committed.
+  "01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f": "{{decisionId}}",
 };
 
 // Per-operation test scripts, beyond the status assertion every request gets.
@@ -214,6 +216,13 @@ const OPERATION_TESTS = {
     "  pm.expect(pm.response.json().authoritative).to.eql(false);",
     "});",
     "pm.collectionVariables.set('decisionId', pm.response.json().id);",
+  ],
+  adjustTransaction: [
+    "pm.test('ZTAX-DET-REQ-0030 — the correction is recorded against the original decision', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().authoritative).to.eql(false);",
+    "  pm.expect(pm.response.json().id).to.not.eql(pm.collectionVariables.get('decisionId'));",
+    "});",
   ],
   replayDecision: [
     "pm.test('ADR-0011 §2.8 — the decision just committed replays exactly', function () {",

@@ -972,6 +972,15 @@ type ListUsers200JSONResponseBody struct {
 	Users []User `json:"users"`
 }
 
+// AdjustTransactionParams defines parameters for AdjustTransaction.
+type AdjustTransactionParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
 // CommitTransactionParams defines parameters for CommitTransaction.
 type CommitTransactionParams struct {
 	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
@@ -998,6 +1007,9 @@ type SignInJSONRequestBody = SignInRequest
 
 // CreateQuoteJSONRequestBody defines body for CreateQuote for application/json ContentType.
 type CreateQuoteJSONRequestBody = QuoteRequest
+
+// AdjustTransactionJSONRequestBody defines body for AdjustTransaction for application/json ContentType.
+type AdjustTransactionJSONRequestBody = CommitRequest
 
 // CommitTransactionJSONRequestBody defines body for CommitTransaction for application/json ContentType.
 type CommitTransactionJSONRequestBody = CommitRequest

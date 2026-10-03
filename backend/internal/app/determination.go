@@ -119,13 +119,24 @@ func (s *DeterminationService) Determine(ctx context.Context, in DetermineInput)
 	return d, nil
 }
 
-// determine records a decision inside the caller's transaction. Determine and
-// Commit differ only in what else commits with the row.
+// determine records a decision inside the caller's transaction, against the
+// active bundle. Determine and Commit differ only in what else commits with
+// the row.
 func (s *DeterminationService) determine(ctx context.Context, sc security.Context, in DetermineInput) (evidence.Decision, error) {
+	b, err := s.active()
+	if err != nil {
+		return evidence.Decision{}, err
+	}
+	return s.determineWith(ctx, sc, in, b)
+}
+
+// determineWith records a decision against a given bundle: the active one for
+// a commit, the original decision's for an adjustment.
+func (s *DeterminationService) determineWith(ctx context.Context, sc security.Context, in DetermineInput, bundle *rule.Bundle) (evidence.Decision, error) {
 	if strings.TrimSpace(in.BusinessKey) == "" {
 		return evidence.Decision{}, errs.Invalid("businessKey", errs.ReasonMissingField, "A business key is required.")
 	}
-	b, env, envBytes, err := s.envelope(in.EventTime, in.Input, in.Accumulators)
+	b, env, envBytes, err := s.envelopeFor(bundle, in.EventTime, in.Input, in.Accumulators)
 	if err != nil {
 		return evidence.Decision{}, err
 	}
@@ -184,16 +195,33 @@ func (s *DeterminationService) determine(ctx context.Context, sc security.Contex
 	return d, nil
 }
 
+// active returns the active bundle, or the refusal a cell with none gives.
+func (s *DeterminationService) active() (*rule.Bundle, error) {
+	b := s.content.Current()
+	if b == nil {
+		return nil, errs.New(errs.CategoryUnavailable, errs.ReasonNoContentBundle,
+			"The cell has no active content bundle. The request was not applied and may be retried.")
+	}
+	return b, nil
+}
+
 // envelope builds the envelope a determination at eventTime would record,
 // against the active bundle, and encodes it.
 func (s *DeterminationService) envelope(eventTime time.Time, input evidence.Input, accumulators map[string]fiscal.Money) (*rule.Bundle, evidence.Envelope, []byte, error) {
+	b, err := s.active()
+	if err != nil {
+		if eventTime.IsZero() {
+			return nil, evidence.Envelope{}, nil, errs.Invalid("eventTime", errs.ReasonMissingField, "An event time is required.")
+		}
+		return nil, evidence.Envelope{}, nil, err
+	}
+	return s.envelopeFor(b, eventTime, input, accumulators)
+}
+
+// envelopeFor builds and encodes the envelope against a given bundle.
+func (s *DeterminationService) envelopeFor(b *rule.Bundle, eventTime time.Time, input evidence.Input, accumulators map[string]fiscal.Money) (*rule.Bundle, evidence.Envelope, []byte, error) {
 	if eventTime.IsZero() {
 		return nil, evidence.Envelope{}, nil, errs.Invalid("eventTime", errs.ReasonMissingField, "An event time is required.")
-	}
-	b := s.content.Current()
-	if b == nil {
-		return nil, evidence.Envelope{}, nil, errs.New(errs.CategoryUnavailable, errs.ReasonNoContentBundle,
-			"The cell has no active content bundle. The request was not applied and may be retried.")
 	}
 	if err := matchReadSet(b.AccumulatorKeys(), accumulators); err != nil {
 		return nil, evidence.Envelope{}, nil, err
@@ -332,6 +360,80 @@ func (s *DeterminationService) Commit(ctx context.Context, in CommitInput) (Sett
 		},
 		RenderFailure: in.RenderFailure,
 	})
+}
+
+// ---------------------------------------------------------------------------
+// adjust — ZTAX-DET-001 §10
+// ---------------------------------------------------------------------------
+
+// AdjustEndpoint scopes adjust's idempotency keys, apart from commit's.
+const AdjustEndpoint = "POST /v1/transactions:adjust"
+
+// Adjust records a CORRECTION of an earlier decision (ZTAX-DET-001 §10.4),
+// at most once per idempotency key.
+//
+// It differs from a commit that names supersedes in one way, and it is the
+// way DET-001 calls the single most consequential rule it has: the correction
+// is evaluated against the content bundle that made the original decision,
+// not the active one (ZTAX-DET-REQ-0030). A credit issued in 2029 against a
+// 2027 invoice corrects tax charged at 2027 rates under 2027 rules; evaluating
+// it under 2029 content would credit an amount that was never charged. The
+// original bundle is the one the original's envelope names, so this needs no
+// new machinery — only the discipline of using it. When that bundle is not
+// loaded in this cell, the adjustment is refused as unavailable rather than
+// quietly re-evaluated under whatever is active.
+func (s *DeterminationService) Adjust(ctx context.Context, in CommitInput) (Settled, error) {
+	sc, err := requireRoleOrSystem(ctx, security.RoleOperator)
+	if err != nil {
+		return Settled{}, err
+	}
+	if s.idempotency == nil {
+		return Settled{}, errs.New(errs.CategoryInternal, errs.ReasonInternal,
+			"The determination service was wired without an idempotency guard.")
+	}
+	if in.Determination.Supersedes == nil {
+		return Settled{}, errs.Invalid("supersedes", errs.ReasonMissingField,
+			"An adjustment names the decision it corrects.")
+	}
+	digest, err := commitDigest(in.Determination)
+	if err != nil {
+		return Settled{}, err
+	}
+	return s.idempotency.Do(ctx, Call{
+		Key:       idempotency.Key{TenantID: sc.Tenant(), Endpoint: AdjustEndpoint, Value: in.IdempotencyKey},
+		Digest:    digest,
+		Retention: CommitRetention,
+		Execute: func(ctx context.Context) (Response, error) {
+			b, err := s.originalBundle(ctx, *in.Determination.Supersedes)
+			if err != nil {
+				return Response{}, err
+			}
+			d, err := s.determineWith(ctx, sc, in.Determination, b)
+			if err != nil {
+				return Response{}, err
+			}
+			body, err := in.Render(d)
+			if err != nil {
+				return Response{}, internal(err, "The adjustment could not be rendered.")
+			}
+			return Response{Status: 201, Body: body, ResultRef: &d.ID}, nil
+		},
+		RenderFailure: in.RenderFailure,
+	})
+}
+
+// originalBundle returns the bundle that made a recorded decision.
+func (s *DeterminationService) originalBundle(ctx context.Context, prior id.DecisionID) (*rule.Bundle, error) {
+	rec, err := s.decisions.ByID(ctx, prior)
+	if err != nil {
+		return nil, err
+	}
+	b, ok := s.library.ByDigest(rec.BundleDigest)
+	if !ok {
+		return nil, errs.New(errs.CategoryUnavailable, errs.ReasonNoContentBundle,
+			"The content bundle that made the original decision is not loaded in this cell, and an adjustment is never re-evaluated under other content. The request was not applied and may be retried.")
+	}
+	return b, nil
 }
 
 // commitDigest is the ADR-0013 §2.3 request digest: the canonical form of what

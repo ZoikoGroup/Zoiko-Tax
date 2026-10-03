@@ -390,6 +390,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/transactions:adjust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Correct a recorded decision under the content that made it
+         * @description `OPERATOR` only. Records a CORRECTION of an earlier decision
+         *     (ZTAX-DET-001 §10.4) as a new decision superseding it. `supersedes` is
+         *     required and must name the current version for the `businessKey`.
+         *
+         *     The correction is evaluated against the content bundle that made the
+         *     decision it supersedes — the bundle its replay envelope names — and
+         *     never against the active one (ZTAX-DET-REQ-0030). A credit issued
+         *     today against an invoice from an earlier content release corrects tax
+         *     charged under that release's rates and rules. If that bundle is not
+         *     loaded in the cell, the request is refused with
+         *     `503 NO_CONTENT_BUNDLE` and nothing is recorded; it is never quietly
+         *     re-evaluated under current content.
+         *
+         *     Idempotency works as on `:commit`, with its own key scope: the same
+         *     `Idempotency-Key` value on `:commit` and `:adjust` names two different
+         *     keys (ADR-0013 §2.2).
+         *
+         *     Before A4 every decision is `ADVISORY` and `authoritative: false`.
+         */
+        post: operations["adjustTransaction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/decisions/{decisionId}": {
         parameters: {
             query?: never;
@@ -1668,6 +1705,54 @@ export interface operations {
         responses: {
             /**
              * @description The recorded decision. A replayed response carries
+             *     `Idempotent-Replay: true` and is byte-for-byte the original.
+             */
+            201: {
+                headers: {
+                    /**
+                     * @description Present, and `true`, when this is the stored response to an earlier request with the same key.
+                     * @example true
+                     */
+                    "Idempotent-Replay"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Decision"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["IdempotencyConflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    adjustTransaction: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommitRequest"];
+            };
+        };
+        responses: {
+            /**
+             * @description The recorded correction. A replayed response carries
              *     `Idempotent-Replay: true` and is byte-for-byte the original.
              */
             201: {

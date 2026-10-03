@@ -147,6 +147,7 @@ func (rt *Router) routes() []struct {
 		// could grant itself the approval it then exercises.
 		{Route{"POST", "/v1/quotes", false, []security.Role{operator, analyst}}, rt.handleQuote},
 		{Route{"POST", "/v1/transactions:commit", false, []security.Role{operator}}, rt.handleCommit},
+		{Route{"POST", "/v1/transactions:adjust", false, []security.Role{operator}}, rt.handleAdjust},
 		{Route{"GET", "/v1/decisions/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetDecision},
 		{Route{"POST", "/v1/replay/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleReplay},
 	}

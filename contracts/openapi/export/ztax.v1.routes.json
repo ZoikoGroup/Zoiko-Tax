@@ -105,6 +105,12 @@
     },
     {
       "method": "POST",
+      "path": "/v1/transactions:adjust",
+      "operationId": "adjustTransaction",
+      "public": false
+    },
+    {
+      "method": "POST",
       "path": "/v1/transactions:commit",
       "operationId": "commitTransaction",
       "public": false
