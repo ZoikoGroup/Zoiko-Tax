@@ -119,6 +119,27 @@
         "class": "P0"
       }
     },
+    "boundary_dataset": {
+      "dataset_id": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "published_at": {
+        "class": "P0"
+      },
+      "source": {
+        "class": "P0",
+        "note": "Attribution of reference geography; names a publisher, never a person."
+      },
+      "digest": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      }
+    },
     "classification": {
       "tenant_id": {
         "class": "P0"
@@ -533,6 +554,24 @@
       },
       "effective_to": {
         "class": "P0"
+      }
+    },
+    "jurisdiction_boundary": {
+      "dataset_id": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "jurisdiction_id": {
+        "class": "P0"
+      },
+      "level": {
+        "class": "P0"
+      },
+      "boundary": {
+        "class": "P0",
+        "note": "Reference geography of a taxing jurisdiction, not a customer location."
       }
     },
     "ledger_entry": {
