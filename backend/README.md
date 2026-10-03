@@ -137,7 +137,7 @@ Open <http://localhost:3000> and sign in. The cell is on <http://localhost:8080>
 
 ```
 # Tier 3 — the NUMERIC conformance suite and the repository tests
-export ZTAX_TEST_DATABASE_URL='postgres://ztax_app:local-dev-only@localhost:5432/ztax?sslmode=disable&search_path=ztax,public'
+export ZTAX_TEST_DATABASE_URL='postgres://ztax_owner:local-dev-only@localhost:5432/ztax?sslmode=disable&search_path=ztax,public'
 make test-integration
 
 # Apply or inspect the schema by hand

@@ -28,14 +28,14 @@ services:
     image: postgis/postgis:17-3.5
     environment:
       POSTGRES_DB: ztax
-      POSTGRES_USER: ztax_app
+      POSTGRES_USER: ztax_owner
       POSTGRES_PASSWORD: local-dev-only
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ztax_app -d ztax"]
+      test: ["CMD-SHELL", "pg_isready -U ztax_owner -d ztax"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -53,7 +53,7 @@ services:
         condition: service_healthy
     environment:
       ZTAX_ENVIRONMENT: development
-      ZTAX_MIGRATE_DATABASE_URL: postgres://ztax_app:local-dev-only@postgres:5432/ztax?sslmode=disable&search_path=ztax,public
+      ZTAX_MIGRATE_DATABASE_URL: postgres://ztax_owner:local-dev-only@postgres:5432/ztax?sslmode=disable&search_path=ztax,public
     command: ["up"]
     restart: "no"
 
@@ -92,7 +92,7 @@ services:
       # forbids in a cell — a credential in an environment variable at rest —
       # and internal/platform/secrets refuses local:// references outside
       # development so it cannot be the thing that ships.
-      ZTAX_LOCAL_SECRET_POSTGRES: postgres://ztax_app:local-dev-only@postgres:5432/ztax?sslmode=disable
+      ZTAX_LOCAL_SECRET_POSTGRES: postgres://ztax_owner:local-dev-only@postgres:5432/ztax?sslmode=disable
 
       # Plain HTTP locally, so the session cookie cannot carry Secure and the
       # __Host- prefix has to come off with it (see setSessionCookie). Refused
