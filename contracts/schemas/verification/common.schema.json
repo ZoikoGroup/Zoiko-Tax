@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Verification common definitions",
+  "description": "Shared definitions for the ZTAX-QA-001 verification schemas (Build Plan W2 lane A).",
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "requirementId": {
+      "type": "string",
+      "pattern": "^ZTAX-[A-Z]+-REQ-[0-9]{4}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^(zt1:|sha256:)[0-9a-f]{64}$"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "decimal": {
+      "description": "A canonical decimal string. Never a JSON number: a number is parsed as a float on the way in, which is the failure the corpus exists to detect.",
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "PASS",
+        "FAIL",
+        "ERROR",
+        "NO_VERIFICATION",
+        "NOT_INDEPENDENTLY_VERIFIED",
+        "NOT_SUPPORTED"
+      ]
+    },
+    "evidenceRef": {
+      "$ref": "evidence-ref.schema.json"
+    }
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReleaseCertificationManifest",
+  "description": "What a release was certified against: the commit, the trains, every requirement's verification, the golden sets and their digests, and the evidence root.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "release_id",
+    "commit",
+    "trains",
+    "verifications",
+    "golden_sets",
+    "evidence_root",
+    "certified_at",
+    "certified_by"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "kind": {
+      "const": "ReleaseCertificationManifest"
+    },
+    "release_id": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "trains": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "common.schema.json#/$defs/nonEmptyString"
+      },
+      "minProperties": 1
+    },
+    "verifications": {
+      "type": "array",
+      "items": {
+        "$ref": "requirement-verification.schema.json"
+      }
+    },
+    "golden_sets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "set",
+          "version",
+          "sha256"
+        ],
+        "properties": {
+          "set": {
+            "$ref": "common.schema.json#/$defs/nonEmptyString"
+          },
+          "version": {
+            "$ref": "common.schema.json#/$defs/nonEmptyString"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    "evidence_root": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "certified_at": {
+      "$ref": "common.schema.json#/$defs/date"
+    },
+    "certified_by": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    }
+  }
+}

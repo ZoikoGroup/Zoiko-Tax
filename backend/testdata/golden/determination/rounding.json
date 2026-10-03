@@ -1,0 +1,156 @@
+{
+  "set": "rounding",
+  "version": "1.0.0",
+  "description": "Rounding points coarser than the line (DET-001 §8): the rounded total allocated back so the lines sum to it exactly.",
+  "provenance": {
+    "oracle": "Hand computation from ZTAX-DET-001 §6-§8, written beside each case and checked by a second reviewer.",
+    "source": "docs/specs/ZTAX-DET-001-global-tax-determination-engine.md §14.1",
+    "reviewer": "lane-a (pending second review at DET-001 baseline)",
+    "registered": "2026-10-03",
+    "contentVersion": "ZTAX-DET-001 1.0.0-draft"
+  },
+  "cases": [
+    {
+      "id": "document-basis",
+      "oracle": "Three lines of 1.05 at 10%: raw 0.105 each, 0.315 total -> 0.32. Back by raw weight: 10 units each, 2 residual to the first two on the ordinal tie-break: 0.11, 0.11, 0.10. Line rounding would give 0.33.",
+      "requirements": [
+        "ZTAX-DET-REQ-0023"
+      ],
+      "schedule": {
+        "components": [
+          {
+            "id": "vat",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "LINE_NET"
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.1",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "DOCUMENT"
+            }
+          }
+        ]
+      },
+      "currency": "EUR",
+      "lines": [
+        {
+          "key": "1",
+          "amount": "1.05",
+          "applicable": [
+            "vat"
+          ]
+        },
+        {
+          "key": "2",
+          "amount": "1.05",
+          "applicable": [
+            "vat"
+          ]
+        },
+        {
+          "key": "3",
+          "amount": "1.05",
+          "applicable": [
+            "vat"
+          ]
+        }
+      ],
+      "expect": {
+        "lines": [
+          {
+            "key": "1",
+            "net": "1.05",
+            "amounts": {
+              "vat": "0.11"
+            }
+          },
+          {
+            "key": "2",
+            "net": "1.05",
+            "amounts": {
+              "vat": "0.11"
+            }
+          },
+          {
+            "key": "3",
+            "net": "1.05",
+            "amounts": {
+              "vat": "0.10"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "document-net-base",
+      "oracle": "A 1% levy on a document net of 300.00 = 3.00, back to lines of 100.00 and 200.00 as 1.00 and 2.00.",
+      "requirements": [],
+      "schedule": {
+        "components": [
+          {
+            "id": "levy",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "DOCUMENT_NET"
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.01",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "TAX_COMPONENT"
+            }
+          }
+        ]
+      },
+      "currency": "EUR",
+      "lines": [
+        {
+          "key": "1",
+          "amount": "100.00",
+          "applicable": [
+            "levy"
+          ]
+        },
+        {
+          "key": "2",
+          "amount": "200.00",
+          "applicable": [
+            "levy"
+          ]
+        }
+      ],
+      "expect": {
+        "lines": [
+          {
+            "key": "1",
+            "net": "100.00",
+            "amounts": {
+              "levy": "1.00"
+            }
+          },
+          {
+            "key": "2",
+            "net": "200.00",
+            "amounts": {
+              "levy": "2.00"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

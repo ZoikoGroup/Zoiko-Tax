@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RequirementVerification",
+  "description": "The verification result for one requirement at one commit.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "requirement_id",
+    "result",
+    "commit",
+    "cases"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "kind": {
+      "const": "RequirementVerification"
+    },
+    "requirement_id": {
+      "$ref": "common.schema.json#/$defs/requirementId"
+    },
+    "result": {
+      "$ref": "common.schema.json#/$defs/result"
+    },
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,40}$"
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/nonEmptyString"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/evidenceRef"
+      }
+    }
+  }
+}

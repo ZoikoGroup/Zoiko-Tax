@@ -1,0 +1,383 @@
+{
+  "set": "inclusive",
+  "version": "1.0.0",
+  "description": "Inclusive extraction of DET-001 §7: exact to the minor unit, by the effective multiplier, with tax by subtraction and allocation by largest remainder.",
+  "provenance": {
+    "oracle": "Hand computation from ZTAX-DET-001 §6-§8, written beside each case and checked by a second reviewer.",
+    "source": "docs/specs/ZTAX-DET-001-global-tax-determination-engine.md §14.1",
+    "reviewer": "lane-a (pending second review at DET-001 baseline)",
+    "registered": "2026-10-03",
+    "contentVersion": "ZTAX-DET-001 1.0.0-draft"
+  },
+  "cases": [
+    {
+      "id": "one-component",
+      "oracle": "G 121.00, M 1.21: N = 100.00, T = 21.00.",
+      "requirements": [
+        "ZTAX-DET-REQ-0017"
+      ],
+      "schedule": {
+        "components": [
+          {
+            "id": "vat",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": true,
+            "base": {
+              "kind": "LINE_NET"
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.21",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          }
+        ],
+        "extractionPolicy": {
+          "mode": "HALF_UP",
+          "scale": 2,
+          "basis": "LINE"
+        }
+      },
+      "currency": "EUR",
+      "lines": [
+        {
+          "key": "1",
+          "amount": "121.00",
+          "applicable": [
+            "vat"
+          ]
+        }
+      ],
+      "expect": {
+        "lines": [
+          {
+            "key": "1",
+            "net": "100.00",
+            "amounts": {
+              "vat": "21.00"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "naive-rates-leave-a-residual",
+      "oracle": "G 100.00, rates 0.10 and 0.11 on net: M = 1.21, N = 82.6446.. -> 82.64, T = 17.36. Largest remainder on m: 8.2666.. and 9.0933.., 1735 units placed, 1 to a: 8.27 and 9.09. Per-rate computation on N gives 8.26 + 9.09 + 82.64 = 99.99.",
+      "requirements": [
+        "ZTAX-DET-REQ-0017",
+        "ZTAX-DET-REQ-0019",
+        "ZTAX-DET-REQ-0020"
+      ],
+      "schedule": {
+        "components": [
+          {
+            "id": "a",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": true,
+            "base": {
+              "kind": "LINE_NET"
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.10",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          },
+          {
+            "id": "b",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": true,
+            "base": {
+              "kind": "LINE_NET"
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.11",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          }
+        ],
+        "extractionPolicy": {
+          "mode": "HALF_UP",
+          "scale": 2,
+          "basis": "LINE"
+        }
+      },
+      "currency": "EUR",
+      "lines": [
+        {
+          "key": "1",
+          "amount": "100.00",
+          "applicable": [
+            "a",
+            "b"
+          ]
+        }
+      ],
+      "expect": {
+        "lines": [
+          {
+            "key": "1",
+            "net": "82.64",
+            "amounts": {
+              "a": "8.27",
+              "b": "9.09"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "compounding",
+      "oracle": "a on net 0.10; b on net + a 0.05: m_b = 0.05 x 1.10 = 0.055; M = 1.155. G 115.50 -> N 100.00, T 15.50 split 0.10 : 0.055 = 10.00 and 5.50.",
+      "requirements": [
+        "ZTAX-DET-REQ-0018"
+      ],
+      "schedule": {
+        "components": [
+          {
+            "id": "a",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": true,
+            "base": {
+              "kind": "LINE_NET"
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.10",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          },
+          {
+            "id": "b",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": true,
+            "base": {
+              "kind": "NET_PLUS_COMPONENTS",
+              "components": [
+                "a"
+              ]
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.05",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          }
+        ],
+        "extractionPolicy": {
+          "mode": "HALF_UP",
+          "scale": 2,
+          "basis": "LINE"
+        }
+      },
+      "currency": "EUR",
+      "lines": [
+        {
+          "key": "1",
+          "amount": "115.50",
+          "applicable": [
+            "a",
+            "b"
+          ]
+        }
+      ],
+      "expect": {
+        "lines": [
+          {
+            "key": "1",
+            "net": "100.00",
+            "amounts": {
+              "a": "10.00",
+              "b": "5.50"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "flat-subtracted-first",
+      "oracle": "G 125.00 less an inclusive 4.00 levy = 121.00; then VAT 21%: N 100.00, VAT 21.00.",
+      "requirements": [
+        "ZTAX-DET-REQ-0021"
+      ],
+      "schedule": {
+        "components": [
+          {
+            "id": "levy",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": true,
+            "base": {
+              "kind": "LINE_NET"
+            },
+            "rate": {
+              "kind": "FLAT",
+              "flat": "4.00"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          },
+          {
+            "id": "vat",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": true,
+            "base": {
+              "kind": "LINE_NET"
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.21",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          }
+        ],
+        "extractionPolicy": {
+          "mode": "HALF_UP",
+          "scale": 2,
+          "basis": "LINE"
+        },
+        "inclusiveSubtractionOrder": [
+          "levy"
+        ]
+      },
+      "currency": "EUR",
+      "lines": [
+        {
+          "key": "1",
+          "amount": "125.00",
+          "applicable": [
+            "levy",
+            "vat"
+          ]
+        }
+      ],
+      "expect": {
+        "lines": [
+          {
+            "key": "1",
+            "net": "100.00",
+            "amounts": {
+              "levy": "4.00",
+              "vat": "21.00"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "mixed-inclusive-and-exclusive",
+      "oracle": "Inclusive VAT extracted first: 121.00 -> 100.00 + 21.00. The exclusive 2% levy then runs on the extracted net: 2.00.",
+      "requirements": [],
+      "schedule": {
+        "components": [
+          {
+            "id": "vat",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": true,
+            "base": {
+              "kind": "LINE_NET"
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.21",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          },
+          {
+            "id": "levy",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "LINE_NET"
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.02",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          }
+        ],
+        "extractionPolicy": {
+          "mode": "HALF_UP",
+          "scale": 2,
+          "basis": "LINE"
+        }
+      },
+      "currency": "EUR",
+      "lines": [
+        {
+          "key": "1",
+          "amount": "121.00",
+          "applicable": [
+            "vat",
+            "levy"
+          ]
+        }
+      ],
+      "expect": {
+        "lines": [
+          {
+            "key": "1",
+            "net": "100.00",
+            "amounts": {
+              "vat": "21.00",
+              "levy": "2.00"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

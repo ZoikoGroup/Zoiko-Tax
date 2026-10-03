@@ -1,0 +1,13 @@
+{
+  "schema": "ztax.golden.classification/v1",
+  "note": "Digests are sha256 over the exact bytes of each set. internal/goldentest verifies them before the classification runner reads a set, so an unreviewed edit fails the build rather than relaxing an assertion. Re-register with `make golden-register-w2` — a reviewed act (ADR-0002 §6).",
+  "sets": [
+    {
+      "file": "launch-corpus.json",
+      "set": "launch-corpus",
+      "version": "1.0.0",
+      "cases": 27,
+      "sha256": "796e812a6d04e22879677fbccec1480a53d2376240ca1e0944797c28a5f539de"
+    }
+  ]
+}
