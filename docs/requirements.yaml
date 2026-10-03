@@ -14691,7 +14691,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0003BaseDeclaresItsKind"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14705,7 +14705,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0004CompoundingBaseNamesItsComponents"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14719,7 +14719,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0005BaseAdjustmentOrderIsDeclared"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14733,7 +14733,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0006BaseFloorsAtZeroUnlessPermitted"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14747,7 +14747,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0007EveryRateDeclaresItsBasis"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14761,7 +14761,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0008EveryRateCarriesAPolicy"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14775,7 +14775,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0009BracketModeIsNeverInferred"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14789,7 +14789,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0010MarginalTiersAscendFromZero"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14803,7 +14803,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0011CyclicGraphRefusedAtBuild"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14817,7 +14817,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0012TopologicalOrderBreaksTiesOnComponentID"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14831,7 +14831,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0013OrderIsNeverInferredFromJurisdictionLevel"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14845,7 +14845,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0014InapplicableComponentIsZeroAndRecorded"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14859,7 +14859,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0015CompoundingUsesRoundedAmounts"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14873,7 +14873,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0016ExclusiveRoundsExactlyOnce"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14887,7 +14887,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0017InclusiveExtractionIsExactWhereNaiveRatesLeaveAResidual"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14901,7 +14901,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0018InclusiveCompoundingMultiplier"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14915,7 +14915,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0019ExtractedTaxIsComputedBySubtraction"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14929,7 +14929,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0020ExtractedTaxAllocatesByLargestRemainder"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14943,7 +14943,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0021InclusiveFlatNeedsDeclaredSubtractionOrder"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14957,7 +14957,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0022RoundingOnlyAtDeclaredPoints"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14971,7 +14971,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0023DocumentRoundingAllocatesBackExactly"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15083,7 +15083,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0031PartialCreditAllocatesAndNeverReappliesRates"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15111,7 +15111,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0033AdjustmentChainSumsToItsPosition"
     status: PROPOSED
     effective_from: null
     effective_to: null
