@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TaxabilityDecision",
+  "description": "The taxability classification of one component in one jurisdiction (ZTAX-CLS-REQ-0004, -0063 to -0066). It carries no amount (ZTAX-CLS-REQ-0071).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "component_id",
+    "ontology_id",
+    "ontology_version",
+    "jurisdiction_id",
+    "status",
+    "provenance",
+    "effective"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "kind": {
+      "const": "TaxabilityDecision"
+    },
+    "component_id": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "ontology_id": {
+      "$ref": "common.schema.json#/$defs/ontologyId"
+    },
+    "ontology_version": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "jurisdiction_id": {
+      "type": "string",
+      "pattern": "^jurisdiction:.+"
+    },
+    "category": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "status": {
+      "$ref": "common.schema.json#/$defs/status"
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/contentRef"
+    },
+    "effective": {
+      "$ref": "common.schema.json#/$defs/effective"
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/nonEmptyString"
+      }
+    }
+  }
+}

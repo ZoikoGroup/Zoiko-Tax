@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Classification common definitions",
+  "description": "Shared definitions for the ZTAX-CLS-001 canonical schemas. The closed vocabularies here are checked against the Go domain by backend/internal/schemas, so the schema and the runtime cannot drift.",
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ontologyId": {
+      "description": "Canonical ontology identity under the ontology: grammar. Never a SKU name, a vendor id or a TM Forum id (ZTAX-CLS-REQ-0009 to -0012).",
+      "type": "string",
+      "pattern": "^ontology:.+"
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "family": {
+      "type": "string",
+      "enum": [
+        "CCAAS",
+        "CONTENT_MEDIA",
+        "CPAAS",
+        "EQUIPMENT_RENTAL",
+        "EQUIPMENT_SALE",
+        "FIXED_BROADBAND",
+        "FIXED_VOICE",
+        "INSTALLATION_ACTIVATION",
+        "INTERCONNECT",
+        "IOT_CONNECTIVITY",
+        "MESSAGING",
+        "MOBILE_DATA",
+        "MOBILE_VOICE",
+        "OTHER_NON_TELECOM",
+        "PROFESSIONAL_SERVICES",
+        "ROAMING_RETAIL",
+        "ROAMING_WHOLESALE",
+        "SATELLITE_CONNECTIVITY",
+        "SIP_TRUNKING",
+        "SOFTWARE",
+        "SUBSCRIPTION_IDENTITY",
+        "UCAAS",
+        "VOIP",
+        "WHOLESALE_ACCESS"
+      ]
+    },
+    "qualifier": {
+      "description": "A technical qualifier. Technology is never a family (ZTAX-CLS-REQ-0016 to -0021).",
+      "type": "string",
+      "enum": [
+        "4G",
+        "5G",
+        "CABLE",
+        "DSL",
+        "ESIM",
+        "FIBER",
+        "FWA",
+        "LTE_M",
+        "NB_IOT",
+        "PSIM",
+        "VOLTE",
+        "VONR"
+      ]
+    },
+    "chargeType": {
+      "type": "string",
+      "enum": [
+        "ACTIVATION",
+        "CREDIT",
+        "DISCOUNT",
+        "EQUIPMENT",
+        "INSTALLATION",
+        "NUMBER_RESOURCE",
+        "ONE_TIME",
+        "RECURRING_ACCESS",
+        "TERMINATION",
+        "USAGE"
+      ]
+    },
+    "mappingSource": {
+      "type": "string",
+      "enum": [
+        "AI_PROPOSAL",
+        "INCUMBENT",
+        "TENANT",
+        "TMF620",
+        "VENDOR_TEMPLATE"
+      ]
+    },
+    "status": {
+      "description": "Classification resolution status (ZTAX-CLS-REQ-0073 to -0077).",
+      "type": "string",
+      "enum": [
+        "RESOLVED",
+        "AMBIGUOUS",
+        "CONFLICTED",
+        "UNSUPPORTED",
+        "REVIEW_REQUIRED"
+      ]
+    },
+    "revenueTreatment": {
+      "type": "string",
+      "enum": [
+        "INCLUDED",
+        "EXCLUDED",
+        "PARTIAL",
+        "CONDITIONAL",
+        "AMBIGUOUS",
+        "UNSUPPORTED"
+      ]
+    },
+    "contentRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bundle_id",
+        "bundle_digest",
+        "rule_id"
+      ],
+      "properties": {
+        "bundle_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "bundle_digest": {
+          "type": "string",
+          "pattern": "^zt1:"
+        },
+        "rule_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "effective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from"
+      ],
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/date"
+        },
+        "to": {
+          "$ref": "#/$defs/date"
+        }
+      }
+    },
+    "externalCode": {
+      "description": "An identifier from outside ZoikoTax, always with its source system and version (ZTAX-CLS-REQ-0103).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "system",
+        "system_version",
+        "code"
+      ],
+      "properties": {
+        "system": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "system_version": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "code": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  }
+}

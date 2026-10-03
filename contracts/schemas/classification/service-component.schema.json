@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ServiceComponent",
+  "description": "A classified component instance on a transaction: the canonical node and version it is, its qualifiers and its resource identity, which never classifies it (ZTAX-CLS-REQ-0037 to -0040).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "component_id",
+    "charge_type"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "kind": {
+      "const": "ServiceComponent"
+    },
+    "component_id": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "ontology_id": {
+      "$ref": "common.schema.json#/$defs/ontologyId"
+    },
+    "ontology_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "charge_type": {
+      "$ref": "common.schema.json#/$defs/chargeType"
+    },
+    "qualifiers": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/qualifier"
+      },
+      "uniqueItems": true
+    },
+    "free": {
+      "type": "boolean"
+    },
+    "adjusts": {
+      "description": "For a DISCOUNT or CREDIT charge, the component it adjusts (ZTAX-CLS-REQ-0044).",
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "resource_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "e164": {
+          "type": "string"
+        },
+        "imsi": {
+          "type": "string"
+        },
+        "ip": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

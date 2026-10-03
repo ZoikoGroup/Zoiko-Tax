@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ExternalCodeMapping",
+  "description": "A mapping from a vendor, TM Forum or incumbent tax-engine code to an ontology node. The external code stays external (ZTAX-CLS-REQ-0010 to -0012).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "external",
+    "target",
+    "source"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "kind": {
+      "const": "ExternalCodeMapping"
+    },
+    "external": {
+      "$ref": "common.schema.json#/$defs/externalCode"
+    },
+    "target": {
+      "$ref": "common.schema.json#/$defs/ontologyId"
+    },
+    "source": {
+      "$ref": "common.schema.json#/$defs/mappingSource"
+    }
+  }
+}

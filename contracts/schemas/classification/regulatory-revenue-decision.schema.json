@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RegulatoryRevenueDecision",
+  "description": "Whether a component's revenue counts toward one regulatory regime's base (ZTAX-CLS-REQ-0005, -0067 to -0070). Separate from taxability and never inferred from it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "component_id",
+    "ontology_id",
+    "ontology_version",
+    "regime",
+    "treatment",
+    "status",
+    "provenance",
+    "effective"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "kind": {
+      "const": "RegulatoryRevenueDecision"
+    },
+    "component_id": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "ontology_id": {
+      "$ref": "common.schema.json#/$defs/ontologyId"
+    },
+    "ontology_version": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "regime": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "treatment": {
+      "$ref": "common.schema.json#/$defs/revenueTreatment"
+    },
+    "allocation_basis": {
+      "description": "Required for PARTIAL (ZTAX-CLS-REQ-0069).",
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "condition": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "status": {
+      "$ref": "common.schema.json#/$defs/status"
+    },
+    "provenance": {
+      "$ref": "common.schema.json#/$defs/contentRef"
+    },
+    "effective": {
+      "$ref": "common.schema.json#/$defs/effective"
+    }
+  }
+}

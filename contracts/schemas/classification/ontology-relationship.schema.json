@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OntologyRelationship",
+  "description": "A typed edge between ontology nodes. Split and merge edges keep historical references resolvable (ZTAX-CLS-REQ-0097).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "from",
+    "to",
+    "relationship"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "kind": {
+      "const": "OntologyRelationship"
+    },
+    "from": {
+      "$ref": "common.schema.json#/$defs/ontologyId"
+    },
+    "to": {
+      "$ref": "common.schema.json#/$defs/ontologyId"
+    },
+    "relationship": {
+      "type": "string",
+      "enum": [
+        "PART_OF",
+        "SPLIT_INTO",
+        "MERGED_INTO"
+      ]
+    }
+  }
+}
