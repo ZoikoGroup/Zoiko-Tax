@@ -179,3 +179,18 @@ func AllocateByFactors(total Money, weights []Factor, p RoundingPolicy) ([]Money
 	}
 	return Allocate(total, ws, p)
 }
+
+// ConvertAt returns m converted into currency to at rate, rounded under p.
+// It is the one operation that changes a Money's currency, and it takes a
+// policy because a conversion lands at the target currency's scale. The rate
+// is the caller's pinned rate; this package fetches nothing (ZTAX-FIN-REQ-0029).
+func (m Money) ConvertAt(r Rate, to Currency, p RoundingPolicy) (Money, error) {
+	if to == "" {
+		return Money{}, errors.New("fiscal: convert: empty target currency")
+	}
+	var out apd.Decimal
+	if err := ApplyRate(&out, &m.amount, &r.value, p); err != nil {
+		return Money{}, err
+	}
+	return Money{amount: out, currency: to}, nil
+}

@@ -17567,7 +17567,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0001And0002AQuoteIsNotAFiscalDocument"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17581,7 +17581,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0001And0002AQuoteIsNotAFiscalDocument"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17595,7 +17595,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0003And0004CorrectionIsALinkedSuccessor"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17609,7 +17609,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0003And0004CorrectionIsALinkedSuccessor"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17623,7 +17623,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0005AndFINREQ0013CorrectionsUseFreshIDsAndNamePredecessorLines"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17637,7 +17637,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0006And0009NumberTaxPointAndIssueDateAreSeparate"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17651,7 +17651,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0016And0007RebillPreservesTheChain"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17665,7 +17665,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0008CorrectionReasonIsMachineReadable"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17679,7 +17679,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0006And0009NumberTaxPointAndIssueDateAreSeparate"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17707,7 +17707,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0011And0098DocumentTaxMustAgreeWithItsDecision"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17749,7 +17749,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0014VoidPreservesTheOriginal"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17763,7 +17763,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0015RefundIsNotACredit"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17777,7 +17777,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0016And0007RebillPreservesTheChain"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17805,7 +17805,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0018RestatementIsDistinguishedFromHistory"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17861,7 +17861,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0022RoundingAdjustmentIsExplicitAndBounded"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17945,7 +17945,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/fx/fx_test.go::TestFINREQ0028ConversionStoresSourceRateDateAndMethod"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17973,7 +17973,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/fx/fx_test.go::TestFINREQ0030RateSourceIsChosenByPolicy"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17987,7 +17987,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0031And0032NativeCurrencyFirstAndFXClassifiedSeparately"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18001,7 +18001,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0031And0032NativeCurrencyFirstAndFXClassifiedSeparately"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18043,7 +18043,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0035And0043And0096UnbalancedJournalIsBlocked"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18057,7 +18057,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0036To0038CorrectionIsAReversalNotAnEdit"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18071,7 +18071,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0036To0038CorrectionIsAReversalNotAnEdit"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18085,7 +18085,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Security"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0036To0038CorrectionIsAReversalNotAnEdit"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18099,7 +18099,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0039To0042JournalCarriesScopeCurrencySourceAndAccounts"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18113,7 +18113,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0039To0042JournalCarriesScopeCurrencySourceAndAccounts"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18127,7 +18127,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0039To0042JournalCarriesScopeCurrencySourceAndAccounts"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18141,7 +18141,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0039To0042JournalCarriesScopeCurrencySourceAndAccounts"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18155,7 +18155,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0035And0043And0096UnbalancedJournalIsBlocked"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18169,7 +18169,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["API"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0044And0108SignSemanticsAreUnambiguous"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18197,7 +18197,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0046SuspenseHasOwnerAndAge"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18211,7 +18211,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0047To0050AccountTaxonomyCoversTheControls"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18225,7 +18225,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0047To0050AccountTaxonomyCoversTheControls"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18239,7 +18239,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0047To0050AccountTaxonomyCoversTheControls"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18253,7 +18253,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0047To0050AccountTaxonomyCoversTheControls"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18267,7 +18267,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Integration"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0051And0053And0054GLExportIsLayeredTraceableAndNeverInventsAccounts"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18281,7 +18281,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0052PostingProfileIsVersionedAndEffectiveDated"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18295,7 +18295,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Integration"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0051And0053And0054GLExportIsLayeredTraceableAndNeverInventsAccounts"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18309,7 +18309,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Integration"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0051And0053And0054GLExportIsLayeredTraceableAndNeverInventsAccounts"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18323,7 +18323,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0055And0056CollectionIsItsOwnEventWithSourceAndStatus"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18337,7 +18337,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0055And0056CollectionIsItsOwnEventWithSourceAndStatus"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18351,7 +18351,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0057PartialCollectionAllocatesByExplicitPolicy"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18365,7 +18365,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0058TimeoutIsNeverCollected"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18393,7 +18393,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0060ChargebackReopensReconciliation"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18407,7 +18407,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["COMP"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0061And0065PopulationIsImmutableIDsWithAStableHash"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18421,7 +18421,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["COMP"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0062And0063FiledReturnIsImmutableAndAmendmentIsANewVersion"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18435,7 +18435,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["COMP"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0062And0063FiledReturnIsImmutableAndAmendmentIsANewVersion"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18463,7 +18463,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0061And0065PopulationIsImmutableIDsWithAStableHash"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18477,7 +18477,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["REM"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0066RemittanceDerivesFromAnApprovedReturn"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18505,7 +18505,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["REM"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0068And0070UncertainRemittanceNeverClearsAndEvidenceIsComplete"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18519,7 +18519,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["REM"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0069PartialRemittanceAndOffsets"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18533,7 +18533,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0068And0070UncertainRemittanceNeverClearsAndEvidenceIsComplete"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18547,7 +18547,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0071To0077EveryStageIsModelledAndTraced"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18561,7 +18561,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0071To0077EveryStageIsModelledAndTraced"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18575,7 +18575,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0071To0077EveryStageIsModelledAndTraced"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18589,7 +18589,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0071To0077EveryStageIsModelledAndTraced"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18603,7 +18603,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0071To0077EveryStageIsModelledAndTraced"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18617,7 +18617,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0071To0077EveryStageIsModelledAndTraced"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18631,7 +18631,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0071To0077EveryStageIsModelledAndTraced"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18645,7 +18645,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0078And0081ToleranceMatchIsNotAMatchAndKeepsItsVariance"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18659,7 +18659,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0079StatusesCoverMissingPartialAndUnmatched"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18673,7 +18673,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0080ToleranceIsExplicitByStage"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18687,7 +18687,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0078And0081ToleranceMatchIsNotAMatchAndKeepsItsVariance"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18701,7 +18701,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0082StatutoryExactnessOverridesTolerance"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18715,7 +18715,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0083RootCauseTaxonomyIsComplete"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18729,7 +18729,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0084And0086ResolutionIsRecordedAndAICannotResolveMaterialExceptions"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18757,7 +18757,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["AI"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0084And0086ResolutionIsRecordedAndAICannotResolveMaterialExceptions"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18771,7 +18771,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0087DuplicatesAreDetected"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18785,7 +18785,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0088And0104HardClosedPeriodBlocksNormalPosting"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18897,7 +18897,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0035And0043And0096UnbalancedJournalIsBlocked"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18911,7 +18911,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0097MissingDecisionBlocksCommit"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18925,7 +18925,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0011And0098DocumentTaxMustAgreeWithItsDecision"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18939,7 +18939,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0099OrphanJournalsAreDetectable"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18995,7 +18995,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/fx/fx_test.go::TestFINREQ0103MissingRateIsExplicitNeverGuessed"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -19009,7 +19009,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0088And0104HardClosedPeriodBlocksNormalPosting"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -19065,7 +19065,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["API"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0044And0108SignSemanticsAreUnambiguous"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -19149,7 +19149,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Migration"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0114MigrationJournalsCarryProvenance"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -19247,7 +19247,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0121ControlBalancesReconcileToLines"
     status: PROPOSED
     effective_from: null
     effective_to: null
