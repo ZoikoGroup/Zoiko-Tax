@@ -36,7 +36,7 @@ ALTER TABLE ztax.contribution_event
   -- tidy — it makes Go's byte order, the "C" collation and every other
   -- collation agree on how keys sort, so the canonical lock order of §2.3 does
   -- not depend on a database setting. Mirrors accumulator.ParseKey.
-  ADD CONSTRAINT contribution_event_key_shape CHECK (accumulator_key ~ '^[!-~]{1,256}$'),
+  ADD CONSTRAINT contribution_event_key_shape CHECK (accumulator_key ~ '^[!-~]+$' AND char_length(accumulator_key) <= 256),
   ADD CONSTRAINT contribution_event_currency_shape CHECK (currency ~ '^[A-Z]{3}$'),
   -- A contribution is caused by a decision that exists, in the same tenant
   -- (ADR-0004 §2.1, "the fiscal decision that caused it"). Deferred to commit,
@@ -71,7 +71,7 @@ ALTER TABLE ztax.accumulator_snapshot
   ALTER COLUMN updated_at DROP NOT NULL,
   ADD CONSTRAINT accumulator_snapshot_seq_non_negative CHECK (last_seq >= 0),
   ADD CONSTRAINT accumulator_snapshot_empty_has_no_time CHECK ((last_seq = 0) = (updated_at IS NULL)),
-  ADD CONSTRAINT accumulator_snapshot_key_shape CHECK (accumulator_key ~ '^[!-~]{1,256}$'),
+  ADD CONSTRAINT accumulator_snapshot_key_shape CHECK (accumulator_key ~ '^[!-~]+$' AND char_length(accumulator_key) <= 256),
   ADD CONSTRAINT accumulator_snapshot_currency_shape CHECK (currency ~ '^[A-Z]{3}$'),
   -- A sorted array of threshold ids. An object or a scalar here would be read
   -- as "nothing has fired", which is the direction that re-emits a crossing.
@@ -108,7 +108,7 @@ ALTER TABLE ztax.threshold_crossing
   ADD CONSTRAINT threshold_crossing_comparison_known CHECK (comparison IN ('GTE', 'GT')),
   ADD CONSTRAINT threshold_crossing_seq_positive CHECK (crossed_at_seq >= 1),
   ADD CONSTRAINT threshold_crossing_currency_shape CHECK (currency ~ '^[A-Z]{3}$'),
-  ADD CONSTRAINT threshold_crossing_id_shape CHECK (threshold_id ~ '^[!-~]{1,128}$'),
+  ADD CONSTRAINT threshold_crossing_id_shape CHECK (threshold_id ~ '^[!-~]+$' AND char_length(threshold_id) <= 128),
   -- The contribution that caused the crossing exists. Not deferred: §2.2
   -- writes the contribution before the crossing, and a crossing whose cause
   -- is not yet in the log is a crossing nobody can explain.
