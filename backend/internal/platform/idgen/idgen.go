@@ -190,3 +190,66 @@ func TransferID(g Generator) (id.TransferID, error) {
 	}
 	return id.NewTransferID(u), nil
 }
+
+// LegalEntityID returns a fresh LegalEntityID.
+func LegalEntityID(g Generator) (id.LegalEntityID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.LegalEntityID{}, err
+	}
+	return id.NewLegalEntityID(u), nil
+}
+
+// ResponsibilityDecisionID returns a fresh ResponsibilityDecisionID.
+func ResponsibilityDecisionID(g Generator) (id.ResponsibilityDecisionID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.ResponsibilityDecisionID{}, err
+	}
+	return id.NewResponsibilityDecisionID(u), nil
+}
+
+// ForecastID returns a fresh ForecastID.
+func ForecastID(g Generator) (id.ForecastID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.ForecastID{}, err
+	}
+	return id.NewForecastID(u), nil
+}
+
+// RegistrationID returns a fresh RegistrationID.
+func RegistrationID(g Generator) (id.RegistrationID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.RegistrationID{}, err
+	}
+	return id.NewRegistrationID(u), nil
+}
+
+// PeriodCloseID returns a fresh PeriodCloseID.
+func PeriodCloseID(g Generator) (id.PeriodCloseID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.PeriodCloseID{}, err
+	}
+	return id.NewPeriodCloseID(u), nil
+}
+
+// JournalID returns a fresh JournalID.
+func JournalID(g Generator) (id.JournalID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.JournalID{}, err
+	}
+	return id.NewJournalID(u), nil
+}
+
+// ReconciliationID returns a fresh ReconciliationID.
+func ReconciliationID(g Generator) (id.ReconciliationID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.ReconciliationID{}, err
+	}
+	return id.NewReconciliationID(u), nil
+}

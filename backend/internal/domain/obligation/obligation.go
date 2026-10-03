@@ -43,7 +43,28 @@ const (
 	StatusUncertain Status = "UNCERTAIN"
 	// StatusClosed is settled.
 	StatusClosed Status = "CLOSED"
+	// StatusDataRequired is triggered but missing a fact it needs. It is not
+	// READY, and nothing files from it (ZTAX-OBL-REQ-0084).
+	StatusDataRequired Status = "DATA_REQUIRED"
+	// StatusPaymentDue was accepted and owes money that has not been paid.
+	// Filed is not paid (ZTAX-OBL-REQ-0086).
+	StatusPaymentDue Status = "PAYMENT_DUE"
+	// StatusPaid has been paid.
+	StatusPaid Status = "PAID"
+	// StatusAmendmentRequired was filed and must be amended
+	// (ZTAX-OBL-REQ-0088).
+	StatusAmendmentRequired Status = "AMENDMENT_REQUIRED"
+	// StatusSuspended is held because the capability it depends on is
+	// suspended. No authoritative transition leaves it except back to where
+	// the work resumes (ZTAX-OBL-REQ-0089).
+	StatusSuspended Status = "SUSPENDED"
 )
+
+// StatusOverdue is a derived state, never stored: an obligation past its legal
+// due date and not yet filed (ZTAX-OBL-REQ-0087). It is computed as of an
+// instant by EffectiveStatus, because overdue is true of a date, and storing
+// it would make a row's status change with nobody writing it.
+const StatusOverdue Status = "OVERDUE"
 
 // transitions is the state machine, as an explicit table.
 //
@@ -58,14 +79,26 @@ const (
 //   - FILED leads to UNCERTAIN, which is how a timed-out submission is
 //     recorded. The alternative — going back to READY — is the duplicate-filing
 //     bug written down.
+//
+// The W2 states extend it without loosening either rule. ACCEPTED leads to
+// PAYMENT_DUE for a monetary duty and to CLOSED for one with nothing to pay;
+// SUSPENDED leads only back to the pre-filing states, so a suspended
+// capability cannot file, pay or close (ZTAX-OBL-REQ-0089); and CLOSED leads
+// nowhere through Transition: reopening is Reopen, which demands a reason and
+// an authorizer (ZTAX-OBL-REQ-0094).
 var transitions = map[Status][]Status{
-	StatusOpen:      {StatusReady, StatusClosed},
-	StatusReady:     {StatusFiled, StatusOpen, StatusClosed},
-	StatusFiled:     {StatusAccepted, StatusRejected, StatusUncertain},
-	StatusRejected:  {StatusReady, StatusClosed},
-	StatusAccepted:  {StatusClosed},
-	StatusUncertain: {StatusAccepted, StatusRejected, StatusClosed},
-	StatusClosed:    nil,
+	StatusOpen:              {StatusDataRequired, StatusReady, StatusClosed, StatusSuspended},
+	StatusDataRequired:      {StatusOpen, StatusReady, StatusSuspended},
+	StatusReady:             {StatusFiled, StatusOpen, StatusDataRequired, StatusClosed, StatusSuspended},
+	StatusFiled:             {StatusAccepted, StatusRejected, StatusUncertain},
+	StatusRejected:          {StatusReady, StatusClosed},
+	StatusAccepted:          {StatusPaymentDue, StatusClosed, StatusAmendmentRequired},
+	StatusPaymentDue:        {StatusPaid, StatusAmendmentRequired},
+	StatusPaid:              {StatusClosed, StatusAmendmentRequired},
+	StatusUncertain:         {StatusAccepted, StatusRejected, StatusClosed},
+	StatusAmendmentRequired: {StatusReady},
+	StatusSuspended:         {StatusOpen, StatusDataRequired, StatusReady},
+	StatusClosed:            nil,
 }
 
 // CanTransition reports whether a move is permitted.
@@ -132,6 +165,93 @@ type Obligation struct {
 	// would say "we assessed nothing owed", which is a different fact.
 	Assessed *fiscal.Money
 	Reason   errs.ReasonCode
+
+	// The decision fields (ZTAX-OBL-REQ-0039 to -0045). An obligation is the
+	// ObligationDecision: it names the legal entity and authority it is owed
+	// by and to, the definition and content it was decided under, and the
+	// ResponsibilityDecision that settled who holds each role.
+	LegalEntity    id.LegalEntityID
+	Authority      string
+	Definition     DefinitionRef
+	Content        ContentRef
+	Responsibility id.ResponsibilityDecisionID
+	// Duty distinguishes a monetary duty from a non-monetary one, so a
+	// registration or an information return is never a zero-amount tax line
+	// (ZTAX-OBL-REQ-0042, -0141).
+	Duty DutyKind
+	// Due carries the legal due date apart from the extension window and
+	// our internal cutoff (ZTAX-OBL-REQ-0043). Period.Due is the legal date.
+	Due DueDates
+	// Threshold and Registration are set where the definition has them
+	// (ZTAX-OBL-REQ-0044, -0045).
+	Threshold    *ThresholdState
+	Registration *RegistrationState
+}
+
+// DefinitionRef pins the definition version an obligation was decided under.
+type DefinitionRef struct {
+	ID      string
+	Version string
+}
+
+// ValidateDecision refuses an obligation that cannot be issued as an
+// ObligationDecision: one missing what the decision must reference.
+func (o Obligation) ValidateDecision() error {
+	if err := o.Validate(); err != nil {
+		return err
+	}
+	switch {
+	case o.LegalEntity.IsZero():
+		return fmt.Errorf("obligation: decision names no legal entity")
+	case o.Authority == "":
+		return fmt.Errorf("obligation: decision names no authority")
+	case o.Definition.ID == "" || o.Definition.Version == "":
+		return fmt.Errorf("obligation: decision pins no definition version")
+	case o.Responsibility.IsZero():
+		return fmt.Errorf("obligation: decision references no responsibility decision")
+	case !o.Duty.valid():
+		return fmt.Errorf("obligation: decision has duty %q", o.Duty)
+	case !o.Due.Legal.IsZero() && !o.Due.Legal.Equal(o.Period.Due):
+		return fmt.Errorf("obligation: the legal due date and the period's due date disagree")
+	}
+	if err := o.Content.Validate(); err != nil {
+		return err
+	}
+	if !o.Duty.Monetary() && o.Assessed != nil {
+		return fmt.Errorf("obligation: a %s duty carries an amount", o.Duty)
+	}
+	return nil
+}
+
+// EffectiveStatus is the status as of an instant, with OVERDUE derived.
+func (o Obligation) EffectiveStatus(asOf time.Time) Status {
+	if o.Overdue(asOf) {
+		return StatusOverdue
+	}
+	return o.Status
+}
+
+// Reopen moves a CLOSED obligation to AMENDMENT_REQUIRED. It is the one way
+// out of CLOSED, and it requires a reason and the user authorizing it
+// (ZTAX-OBL-REQ-0094, -0122): reopening a closed period is a governed act,
+// and the record of who did it and why is part of the new row.
+func (o Obligation) Reopen(reason errs.ReasonCode, by id.UserID, at time.Time, newID id.ObligationID) (Obligation, error) {
+	if o.Status != StatusClosed {
+		return Obligation{}, errs.New(errs.CategoryConflict, errs.ReasonStateTransitionInvalid,
+			fmt.Sprintf("Only a closed obligation is reopened; this one is %s.", o.Status))
+	}
+	if reason == "" || !errs.Registered(reason) || by.IsZero() {
+		return Obligation{}, errs.New(errs.CategoryPolicy, errs.ReasonForbidden,
+			"Reopening a closed obligation requires a registered reason and an authorizing user.")
+	}
+	prior := o.ID
+	next := o
+	next.ID = newID
+	next.Supersedes = &prior
+	next.Status = StatusAmendmentRequired
+	next.Reason = reason
+	next.RecordedAt = at.UTC()
+	return next, nil
 }
 
 // Transition returns a corrected copy in a new state.
@@ -144,7 +264,7 @@ func (o Obligation) Transition(to Status, at time.Time, newID id.ObligationID) (
 		return Obligation{}, errs.New(errs.CategoryConflict, errs.ReasonStateTransitionInvalid,
 			fmt.Sprintf("An obligation cannot move from %s to %s.", o.Status, to))
 	}
-	if to == StatusFiled && o.Assessed == nil {
+	if to == StatusFiled && o.Assessed == nil && (o.Duty == "" || o.Duty.Monetary()) {
 		// Filing an obligation with no assessment would submit a return with no
 		// figure in it.
 		return Obligation{}, errs.New(errs.CategoryConflict, errs.ReasonStateTransitionInvalid,
@@ -165,8 +285,14 @@ func (o Obligation) Transition(to Status, at time.Time, newID id.ObligationID) (
 // time out of the domain, and a report run "as of" a past date has to get the
 // answer for that date rather than for today.
 func (o Obligation) Overdue(asOf time.Time) bool {
-	if o.Status.Terminal() || o.Status == StatusAccepted || o.Status == StatusFiled {
+	switch o.Status {
+	case StatusClosed, StatusAccepted, StatusFiled, StatusPaymentDue, StatusPaid, StatusUncertain:
+		// Filed or further: an unpaid PAYMENT_DUE is a payment matter, and an
+		// UNCERTAIN submission may already have landed.
 		return false
+	}
+	if !o.Due.Legal.IsZero() {
+		return asOf.After(o.Due.Legal)
 	}
 	return asOf.After(o.Period.Due)
 }
