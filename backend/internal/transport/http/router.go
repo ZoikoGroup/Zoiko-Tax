@@ -68,6 +68,12 @@ type Router struct {
 	// deployed without an evidence store, which answers all four with 503
 	// rather than serving the parts that happen not to write.
 	Determination *app.DeterminationService
+
+	// Models is the Governed Model Gateway client (ADR-0006): the only route
+	// from this process to the AI plane. Every result it returns is an
+	// advisory type, and nothing in the transport converts one into a fiscal
+	// value (ADR-0006 §2.6). Nil in a router built without one.
+	Models port.ModelGateway
 }
 
 // Trains are the seven release-train versions, as the contract names them.
@@ -147,6 +153,7 @@ func (rt *Router) routes() []struct {
 		// could grant itself the approval it then exercises.
 		{Route{"POST", "/v1/quotes", false, []security.Role{operator, analyst}}, rt.handleQuote},
 		{Route{"POST", "/v1/transactions:commit", false, []security.Role{operator}}, rt.handleCommit},
+		{Route{"POST", "/v1/transactions:adjust", false, []security.Role{operator}}, rt.handleAdjust},
 		{Route{"GET", "/v1/decisions/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetDecision},
 		{Route{"POST", "/v1/replay/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleReplay},
 	}

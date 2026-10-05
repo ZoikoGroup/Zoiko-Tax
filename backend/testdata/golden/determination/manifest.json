@@ -1,0 +1,27 @@
+{
+  "schema": "ztax.golden.determination/v1",
+  "note": "Digests are sha256 over the exact bytes of each set. internal/goldentest verifies them before the determination runner reads a set, so an unreviewed edit fails the build rather than relaxing an assertion. Re-register with `make golden-register-w2` — a reviewed act, as for the decimal corpus (ADR-0002 §6).",
+  "sets": [
+    {
+      "file": "exclusive.json",
+      "set": "exclusive",
+      "version": "1.0.0",
+      "cases": 10,
+      "sha256": "1bc2a7a6e490e2d6f89b8c794caaf2fe5325912f5d3a1db0ebedb992175fbaad"
+    },
+    {
+      "file": "inclusive.json",
+      "set": "inclusive",
+      "version": "1.0.0",
+      "cases": 5,
+      "sha256": "0f19740539d3e03838190b1a6720d11fe1f9a5d7375c44bb6c0ed94d0b6ce15f"
+    },
+    {
+      "file": "rounding.json",
+      "set": "rounding",
+      "version": "1.0.0",
+      "cases": 2,
+      "sha256": "0be80c84e7f674774d9a1784a83552cec807eb7a6b60e56a94f9949ab2b89c2d"
+    }
+  ]
+}

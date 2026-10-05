@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CatalogMapping",
+  "description": "A tenant-scoped, effective-dated mapping from a customer catalog code to an ontology node (ZTAX-CLS-REQ-0053 to -0056). Immutable once used authoritatively; a correction supersedes it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "mapping_id",
+    "version",
+    "external",
+    "target",
+    "source",
+    "status",
+    "effective_from"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "kind": {
+      "const": "CatalogMapping"
+    },
+    "mapping_id": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "tenant_id": {
+      "description": "Absent for a reusable template, which is usable only once promoted.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "promoted": {
+      "type": "boolean"
+    },
+    "external": {
+      "$ref": "common.schema.json#/$defs/externalCode"
+    },
+    "target": {
+      "$ref": "common.schema.json#/$defs/ontologyId"
+    },
+    "charge_type": {
+      "$ref": "common.schema.json#/$defs/chargeType"
+    },
+    "source": {
+      "$ref": "common.schema.json#/$defs/mappingSource"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "STAGED",
+        "ACTIVE",
+        "RETIRED"
+      ]
+    },
+    "effective_from": {
+      "$ref": "common.schema.json#/$defs/date"
+    },
+    "effective_to": {
+      "$ref": "common.schema.json#/$defs/date"
+    },
+    "evidence": {
+      "description": "Proposal evidence; an AIReleaseManifest reference for an AI proposal (ZTAX-CLS-REQ-0089).",
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "supersedes": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    }
+  }
+}

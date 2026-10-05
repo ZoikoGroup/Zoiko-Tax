@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GoldenCase",
+  "description": "One golden vector with its oracle, source, content, reviewer, version and hash (Build Plan W2 lane A). Inputs and expectations are canonical decimal strings.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "case_id",
+    "set",
+    "version",
+    "oracle",
+    "source",
+    "content_version",
+    "reviewer",
+    "inputs",
+    "expect"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "kind": {
+      "const": "GoldenCase"
+    },
+    "case_id": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "set": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "version": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "oracle": {
+      "description": "Where the expected answer comes from: an authority worked example, an independent calculation, a reviewed hand computation.",
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "source": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "content_version": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "reviewer": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/requirementId"
+      }
+    },
+    "inputs": {
+      "type": "object"
+    },
+    "expect": {
+      "type": "object"
+    },
+    "hash": {
+      "$ref": "common.schema.json#/$defs/digest"
+    }
+  }
+}

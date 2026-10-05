@@ -88,6 +88,32 @@ type (
 	// TransferID identifies one recorded cross-cell transfer (ADR-0009 §2.6,
 	// SEC-REQ-0042).
 	TransferID struct{ base }
+
+	// LegalEntityID identifies a legal entity within a tenant: the statutory person that owns
+	// obligations. It is distinct from the tenant, the account and any brand
+	// (ZTAX-OBL-REQ-0018) — one tenant may hold several legal entities, and an
+	// affiliate is a separate statutory filer unless content says otherwise.
+	LegalEntityID struct{ base }
+
+	// ResponsibilityDecisionID identifies one ResponsibilityDecision (ZTAX-OBL-REQ-0001).
+	ResponsibilityDecisionID struct{ base }
+
+	// ForecastID identifies one ForecastObligation. It is a distinct type from ObligationID
+	// so that a forecast's identifier cannot be passed where an authoritative
+	// obligation's is required (ZTAX-OBL-REQ-0047).
+	ForecastID struct{ base }
+
+	// RegistrationID identifies one registration record with an authority.
+	RegistrationID struct{ base }
+
+	// PeriodCloseID identifies one PeriodCloseManifest (ZTAX-OBL-REQ-0090).
+	PeriodCloseID struct{ base }
+
+	// JournalID identifies one posted journal in the tax control subledger.
+	JournalID struct{ base }
+
+	// ReconciliationID identifies one reconciliation run.
+	ReconciliationID struct{ base }
 )
 
 // The constructors. Each takes a uuid.UUID that idgen produced, or that the
@@ -139,6 +165,29 @@ func NewSealID(u uuid.UUID) SealID { return SealID{base{u}} }
 
 // NewTransferID wraps a raw UUID as a TransferID.
 func NewTransferID(u uuid.UUID) TransferID { return TransferID{base{u}} }
+
+// NewLegalEntityID wraps a raw UUID as a LegalEntityID.
+func NewLegalEntityID(u uuid.UUID) LegalEntityID { return LegalEntityID{base{u}} }
+
+// NewResponsibilityDecisionID wraps a raw UUID as a ResponsibilityDecisionID.
+func NewResponsibilityDecisionID(u uuid.UUID) ResponsibilityDecisionID {
+	return ResponsibilityDecisionID{base{u}}
+}
+
+// NewForecastID wraps a raw UUID as a ForecastID.
+func NewForecastID(u uuid.UUID) ForecastID { return ForecastID{base{u}} }
+
+// NewRegistrationID wraps a raw UUID as a RegistrationID.
+func NewRegistrationID(u uuid.UUID) RegistrationID { return RegistrationID{base{u}} }
+
+// NewPeriodCloseID wraps a raw UUID as a PeriodCloseID.
+func NewPeriodCloseID(u uuid.UUID) PeriodCloseID { return PeriodCloseID{base{u}} }
+
+// NewJournalID wraps a raw UUID as a JournalID.
+func NewJournalID(u uuid.UUID) JournalID { return JournalID{base{u}} }
+
+// NewReconciliationID wraps a raw UUID as a ReconciliationID.
+func NewReconciliationID(u uuid.UUID) ReconciliationID { return ReconciliationID{base{u}} }
 
 // parse is the shared text ingress. Identifiers arrive from a URL path, a
 // cookie lookup or a database column, and all three can carry something that is
@@ -212,4 +261,67 @@ func ParseSealID(s string) (SealID, error) {
 		return SealID{}, err
 	}
 	return NewSealID(u), nil
+}
+
+// ParseLegalEntityID reads a LegalEntityID from its canonical string form.
+func ParseLegalEntityID(s string) (LegalEntityID, error) {
+	u, err := parse("legal entity id", s)
+	if err != nil {
+		return LegalEntityID{}, err
+	}
+	return NewLegalEntityID(u), nil
+}
+
+// ParseResponsibilityDecisionID reads a ResponsibilityDecisionID from its canonical string form.
+func ParseResponsibilityDecisionID(s string) (ResponsibilityDecisionID, error) {
+	u, err := parse("responsibility decision id", s)
+	if err != nil {
+		return ResponsibilityDecisionID{}, err
+	}
+	return NewResponsibilityDecisionID(u), nil
+}
+
+// ParseForecastID reads a ForecastID from its canonical string form.
+func ParseForecastID(s string) (ForecastID, error) {
+	u, err := parse("forecast id", s)
+	if err != nil {
+		return ForecastID{}, err
+	}
+	return NewForecastID(u), nil
+}
+
+// ParseRegistrationID reads a RegistrationID from its canonical string form.
+func ParseRegistrationID(s string) (RegistrationID, error) {
+	u, err := parse("registration id", s)
+	if err != nil {
+		return RegistrationID{}, err
+	}
+	return NewRegistrationID(u), nil
+}
+
+// ParsePeriodCloseID reads a PeriodCloseID from its canonical string form.
+func ParsePeriodCloseID(s string) (PeriodCloseID, error) {
+	u, err := parse("period close id", s)
+	if err != nil {
+		return PeriodCloseID{}, err
+	}
+	return NewPeriodCloseID(u), nil
+}
+
+// ParseJournalID reads a JournalID from its canonical string form.
+func ParseJournalID(s string) (JournalID, error) {
+	u, err := parse("journal id", s)
+	if err != nil {
+		return JournalID{}, err
+	}
+	return NewJournalID(u), nil
+}
+
+// ParseReconciliationID reads a ReconciliationID from its canonical string form.
+func ParseReconciliationID(s string) (ReconciliationID, error) {
+	u, err := parse("reconciliation id", s)
+	if err != nil {
+		return ReconciliationID{}, err
+	}
+	return NewReconciliationID(u), nil
 }

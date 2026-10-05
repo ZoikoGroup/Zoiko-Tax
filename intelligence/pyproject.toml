@@ -5,13 +5,17 @@
 # train rather than this one, a Gateway that sits in the authorization path of
 # every AI call is not the place to accumulate transitive dependencies. The
 # runtime below uses the standard library only; everything listed is a
-# development tool.
+# development tool — with one exception, grpcio, the transport ADR-0006 §2.1
+# mandates for this boundary. It is pinned exactly, because the Gateway's
+# dependency graph is the Gateway's attack surface.
 [project]
 name = "ztax-gateway"
 version = "0.1.0"
 description = "ZoikoTax Governed Model Gateway - the only path between the fiscal core and any model provider"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+  "grpcio==1.84.0",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -47,3 +51,9 @@ mypy_path = "src"
 # The Gateway decides whether a call may proceed. A type error here is an
 # authorization bug, so nothing is waived.
 warn_unreachable = true
+
+# grpcio ships no type information. The boundary it carries is typed by
+# ztax_gateway.wire instead, which decodes every byte that crosses it.
+[[tool.mypy.overrides]]
+module = ["grpc", "grpc.*"]
+ignore_missing_imports = true

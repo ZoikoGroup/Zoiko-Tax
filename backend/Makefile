@@ -52,6 +52,11 @@ golden-crosscheck: ## ADR-0002 c2 — the same vectors under Python decimal, no 
 golden-register: ## Re-baseline vector digests. A reviewed act, not a test fix (ADR-0002 §6)
 	$(PYTHON) tools/decimalcrosscheck/register.py testdata/golden/decimal
 
+.PHONY: golden-register-w2
+golden-register-w2: ## Re-baseline the determination and classification corpora. Reviewed, like golden-register
+	$(PYTHON) tools/decimalcrosscheck/register.py testdata/golden/determination
+	$(PYTHON) tools/decimalcrosscheck/register.py testdata/golden/classification
+
 # --- content (CONTENT train) ------------------------------------------------
 #
 # The development signing key is generated on demand into content/.keys, which

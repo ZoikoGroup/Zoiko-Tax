@@ -112,6 +112,21 @@ type Config struct {
 	// note. Setting it true is an authorization act, not a configuration
 	// convenience.
 	Authoritative bool
+
+	// The Governed Model Gateway (ADR-0006). AIGatewayTarget is the Gateway's
+	// gRPC address; empty is a cell with no Gateway, which answers every AI
+	// call AI_GATEWAY_NOT_CONFIGURED and is a legitimate deployment.
+	// AIGatewayTLSDir holds the workload's mTLS material (tls.crt, tls.key and
+	// the Gateway CA, ca.crt), mounted from the cell's secret store; it names
+	// where the material is, never the material. AIGatewayInsecure is a plain
+	// connection, refused outside development. AIPolicyFile is the reviewed
+	// AI-train registry the Go pre-check evaluates against — the same file the
+	// Python Gateway loads.
+	AIGatewayTarget   string
+	AIGatewayTLSDir   string
+	AIGatewayInsecure bool
+	AIGatewayDeadline time.Duration
+	AIPolicyFile      string
 }
 
 // LocalSecretPrefix is the one recognised variable family whose members are not
@@ -161,6 +176,11 @@ var known = map[string]struct {
 	"ZTAX_CONTENT_DIR":                  {def: ""},
 	"ZTAX_CONTENT_KEYRING":              {def: ""},
 	"ZTAX_EVIDENCE_DIR":                 {def: ""},
+	"ZTAX_AI_GATEWAY_TARGET":            {def: ""},
+	"ZTAX_AI_GATEWAY_TLS_DIR":           {def: ""},
+	"ZTAX_AI_GATEWAY_INSECURE":          {def: "false"},
+	"ZTAX_AI_GATEWAY_DEADLINE":          {def: "5s"},
+	"ZTAX_AI_POLICY_FILE":               {def: ""},
 	"ZTAX_BOOTSTRAP_TENANT":             {def: ""},
 	"ZTAX_BOOTSTRAP_TENANT_NAME":        {def: ""},
 	"ZTAX_BOOTSTRAP_ADMIN_EMAIL":        {def: ""},
@@ -268,6 +288,12 @@ func Load() (Config, error) {
 		TrustProxy:    boolean("ZTAX_TRUST_PROXY"),
 		Authoritative: boolean("ZTAX_AUTHORITATIVE"),
 
+		AIGatewayTarget:   get("ZTAX_AI_GATEWAY_TARGET"),
+		AIGatewayTLSDir:   get("ZTAX_AI_GATEWAY_TLS_DIR"),
+		AIGatewayInsecure: boolean("ZTAX_AI_GATEWAY_INSECURE"),
+		AIGatewayDeadline: duration("ZTAX_AI_GATEWAY_DEADLINE"),
+		AIPolicyFile:      get("ZTAX_AI_POLICY_FILE"),
+
 		BootstrapTenant:           get("ZTAX_BOOTSTRAP_TENANT"),
 		BootstrapTenantName:       get("ZTAX_BOOTSTRAP_TENANT_NAME"),
 		BootstrapAdminEmail:       get("ZTAX_BOOTSTRAP_ADMIN_EMAIL"),
@@ -294,6 +320,27 @@ func Load() (Config, error) {
 	if c.ContentDir != "" && c.EvidenceDir == "" {
 		problems = append(problems,
 			"ZTAX_EVIDENCE_DIR is required with ZTAX_CONTENT_DIR; a cell that can evaluate records what it decides (ADR-0011 §2.8)")
+	}
+
+	// The Gateway boundary is mTLS (ADR-0006 §2.1). A target needs either the
+	// mTLS material or, in development only, the explicit plaintext flag, and
+	// a registry to pre-check against.
+	if c.AIGatewayTarget != "" {
+		switch {
+		case c.AIGatewayTLSDir != "" && c.AIGatewayInsecure:
+			problems = append(problems, "ZTAX_AI_GATEWAY_TLS_DIR and ZTAX_AI_GATEWAY_INSECURE are exclusive")
+		case c.AIGatewayTLSDir == "" && !c.AIGatewayInsecure:
+			problems = append(problems,
+				"ZTAX_AI_GATEWAY_TARGET needs ZTAX_AI_GATEWAY_TLS_DIR; the Gateway boundary is mTLS (ADR-0006 §2.1)")
+		}
+		if c.AIPolicyFile == "" {
+			problems = append(problems,
+				"ZTAX_AI_GATEWAY_TARGET needs ZTAX_AI_POLICY_FILE; the pre-check evaluates against the reviewed registry")
+		}
+	}
+	if c.AIGatewayInsecure && c.Environment != "development" {
+		problems = append(problems, fmt.Sprintf(
+			"ZTAX_AI_GATEWAY_INSECURE: refused in environment %q; the Gateway boundary is mTLS", c.Environment))
 	}
 
 	// Telemetry in clear is a development affordance for the same reason.
@@ -354,6 +401,10 @@ func (c Config) LogAttrs() []any {
 		"secure_cookies", c.SecureCookies,
 		"trust_proxy", c.TrustProxy,
 		"authoritative", c.Authoritative,
+		"ai_gateway.target", c.AIGatewayTarget,
+		"ai_gateway.mtls", c.AIGatewayTLSDir != "",
+		"ai_gateway.deadline", c.AIGatewayDeadline.String(),
+		"ai_policy.file", c.AIPolicyFile,
 		"known_vars", strconv.Itoa(len(known)),
 	}
 }

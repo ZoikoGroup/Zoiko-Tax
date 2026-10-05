@@ -24,16 +24,15 @@
 //  5. Returns the result only as an internal/domain/ai advisory type. There is
 //     no path from this package to a fiscal type (ADR-0006 §2.6).
 //
-// # Why the transport is an interface with nothing real behind it yet
+// # The transports
 //
-// ADR-0006 §2.1 names gRPC over mTLS as the only transport, with protobuf
-// derived from contracts/schemas/ (§2.2). Neither half exists yet: there is no
-// proto toolchain in this repository and the Python Gateway has no server. The
-// gRPC Transport lands with the Python server, generated from the same
-// schemas, and nothing in Client changes when it does.
+// GRPC (grpc.go) is the production transport: gRPC over mTLS to the Python
+// Gateway (ADR-0006 §2.1), carrying the JSON messages of
+// contracts/schemas/ai/gateway-call and gateway-reply. intelligence/README.md
+// ("The transport") records why the codec is JSON rather than protobuf.
 //
-// Until then the production Transport is Unconfigured, which refuses every
-// call with AI_GATEWAY_NOT_CONFIGURED — a visible "this capability is not
+// Unconfigured is the transport for a cell with no Gateway target. It refuses
+// every call with AI_GATEWAY_NOT_CONFIGURED — a visible "this capability is not
 // available in this cell" rather than a silent no-op or, worse, a stand-in
 // that talks to a provider directly. gatewaytest.Fake is the in-memory
 // Transport for tests, and is test-only.

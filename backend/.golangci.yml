@@ -113,6 +113,8 @@ linters:
           deny:
             - pkg: "github.com/zoikogroup/zoikotax/backend/internal/fiscaltest"
               desc: "test-only constructors; a production policy comes from content (ADR-0002 §2.3)"
+            - pkg: "github.com/zoikogroup/zoikotax/backend/internal/goldentest"
+              desc: "test-only golden corpus loader; production never reads a test corpus (ZTAX-QA-001)"
 
         # ADR-0002 — the only decimal library, and only through internal/domain/fiscal.
         one-decimal-library:
@@ -217,9 +219,10 @@ linters:
       # Test code reads its own golden vectors from paths it computes, which
       # gosec reads as file inclusion from a variable. That rule is about
       # untrusted input reaching a file path, and there is none here —
-      # production code cannot import internal/fiscaltest at all (depguard
-      # rule policy-literals-are-test-only above).
-      - path: "(_test\\.go|internal/fiscaltest/)"
+      # production code cannot import internal/fiscaltest or
+      # internal/goldentest at all (depguard rule policy-literals-are-test-only
+      # above).
+      - path: "(_test\\.go|internal/fiscaltest/|internal/goldentest/)"
         linters:
           - gosec
 

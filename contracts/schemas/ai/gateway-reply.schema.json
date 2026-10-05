@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GatewayReply",
+  "description": "The Gateway's reply to a permitted call. It carries the routing the Gateway resolved and the advisory content, and nothing that could widen its own authority: use case, region, risk tier and authority on the resulting record are the ones the caller sent (ADR-0006 §2.7). A reply missing any routing field is discarded by the Go client as unevidenced.",
+  "$comment": "Go: backend/internal/adapter/gateway/grpc.go (wireReply). Python: ztax_gateway.wire.encode_reply. Decimal values are canonical strings, never JSON numbers (ADR-0006 §2.3).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "model_profile",
+    "provider_profile",
+    "prompt_profile",
+    "ai_train_version"
+  ],
+  "properties": {
+    "model_profile": {
+      "$ref": "common.schema.json#/$defs/identifier"
+    },
+    "provider_profile": {
+      "$ref": "common.schema.json#/$defs/identifier"
+    },
+    "prompt_profile": {
+      "$ref": "common.schema.json#/$defs/identifier"
+    },
+    "ai_train_version": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "text": {
+      "type": "string"
+    },
+    "payload": {
+      "type": "string"
+    },
+    "fields": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "proposed_code": {
+      "type": "string"
+    },
+    "confidence": {
+      "description": "A canonical decimal string in [0, 1], or empty.",
+      "type": "string",
+      "pattern": "^$|^(0(\\.[0-9]+)?|1(\\.0+)?)$"
+    }
+  }
+}

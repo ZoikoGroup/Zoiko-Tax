@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OntologyNode",
+  "description": "One version of a canonical ontology node (ZTAX-CLS-001). A semantic change is a new version, never an edit (ZTAX-CLS-REQ-0094).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "ontology_id",
+    "version",
+    "family",
+    "name",
+    "definition",
+    "owner",
+    "lifecycle",
+    "economic_nature",
+    "valid_from",
+    "recorded_at"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "kind": {
+      "const": "OntologyNode"
+    },
+    "ontology_id": {
+      "$ref": "common.schema.json#/$defs/ontologyId"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "family": {
+      "$ref": "common.schema.json#/$defs/family"
+    },
+    "name": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "definition": {
+      "description": "Precise non-tax definition (ZTAX-CLS-REQ-0013).",
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "owner": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "lifecycle": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "ACTIVE",
+        "DEPRECATED",
+        "RETIRED"
+      ]
+    },
+    "economic_nature": {
+      "type": "string",
+      "enum": [
+        "SERVICE",
+        "GOOD_SALE",
+        "GOOD_RENTAL",
+        "RIGHT",
+        "DIGITAL_GOOD"
+      ]
+    },
+    "communication_mode": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "network_role": {
+      "type": "string",
+      "enum": [
+        "RETAIL",
+        "WHOLESALE"
+      ]
+    },
+    "meter_basis": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/nonEmptyString"
+      }
+    },
+    "valid_from": {
+      "$ref": "common.schema.json#/$defs/date"
+    },
+    "valid_to": {
+      "$ref": "common.schema.json#/$defs/date"
+    },
+    "recorded_at": {
+      "$ref": "common.schema.json#/$defs/date"
+    },
+    "replaced_by": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/ontologyId"
+      }
+    }
+  }
+}

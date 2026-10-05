@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VerificationCase",
+  "description": "One executable check of one or more requirements: a test, a golden set, a replay certification or an inspection.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "case_id",
+    "requirements",
+    "method",
+    "ref"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "kind": {
+      "const": "VerificationCase"
+    },
+    "case_id": {
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "requirements": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "common.schema.json#/$defs/requirementId"
+      },
+      "uniqueItems": true
+    },
+    "method": {
+      "type": "string",
+      "enum": [
+        "TEST",
+        "GOLDEN",
+        "REPLAY",
+        "PROPERTY",
+        "INSPECTION",
+        "AUDIT"
+      ]
+    },
+    "ref": {
+      "description": "Repository path, optionally path::TestName (docs/requirements.yaml).",
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    }
+  }
+}

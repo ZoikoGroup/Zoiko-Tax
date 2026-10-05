@@ -12939,7 +12939,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0002IDsAreNeverRepointedAtAnotherThing"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12967,7 +12967,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0004To0006DualDecisionsAreSeparateAndEachEffectiveDated"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12981,7 +12981,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0004To0006DualDecisionsAreSeparateAndEachEffectiveDated"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12995,7 +12995,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0004To0006DualDecisionsAreSeparateAndEachEffectiveDated"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13135,7 +13135,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0016To0021TechnologyIsAQualifierNotAFamily"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13149,7 +13149,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0016To0021TechnologyIsAQualifierNotAFamily"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13163,7 +13163,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0016To0021TechnologyIsAQualifierNotAFamily"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13177,7 +13177,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0016To0021TechnologyIsAQualifierNotAFamily"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13205,7 +13205,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0016To0021TechnologyIsAQualifierNotAFamily"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13219,7 +13219,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0022To0031OntologyCoversTheLaunchFamilies"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13233,7 +13233,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0022To0031OntologyCoversTheLaunchFamilies"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13247,7 +13247,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0022To0031OntologyCoversTheLaunchFamilies"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13261,7 +13261,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0022To0031OntologyCoversTheLaunchFamilies"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13275,7 +13275,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0022To0031OntologyCoversTheLaunchFamilies"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13289,7 +13289,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0022To0031OntologyCoversTheLaunchFamilies"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13303,7 +13303,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0022To0031OntologyCoversTheLaunchFamilies"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13317,7 +13317,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0022To0031OntologyCoversTheLaunchFamilies"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13331,7 +13331,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0022To0031OntologyCoversTheLaunchFamilies"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13345,7 +13345,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0022To0031OntologyCoversTheLaunchFamilies"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13429,7 +13429,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0037To0040IdentityAttributesAreNotClassification"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13443,7 +13443,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["JUR"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0037To0040IdentityAttributesAreNotClassification"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13457,7 +13457,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0037To0040IdentityAttributesAreNotClassification"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13471,7 +13471,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0037To0040IdentityAttributesAreNotClassification"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13485,7 +13485,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0041To0044ChargesAreIndependentAndAdjustmentsAreNotSupplies"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13499,7 +13499,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0041To0044ChargesAreIndependentAndAdjustmentsAreNotSupplies"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13513,7 +13513,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0041To0044ChargesAreIndependentAndAdjustmentsAreNotSupplies"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13527,7 +13527,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0041To0044ChargesAreIndependentAndAdjustmentsAreNotSupplies"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13541,7 +13541,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0045To0049BundleDecomposesPreservingTheLine"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13555,7 +13555,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0045To0049BundleDecomposesPreservingTheLine"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13569,7 +13569,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0045To0049BundleDecomposesPreservingTheLine"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13583,7 +13583,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0045To0049BundleDecomposesPreservingTheLine"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13597,7 +13597,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0045To0049BundleDecomposesPreservingTheLine"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13611,7 +13611,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0050And0051BundleGraphIsAcyclicAndNeverInventsAllocation"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13625,7 +13625,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0050And0051BundleGraphIsAcyclicAndNeverInventsAllocation"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13653,7 +13653,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0053And0057MappingsAreTenantScopedAndNeverLeak"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13667,7 +13667,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0054And0056MappingsAreEffectiveDated"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13695,7 +13695,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0054And0056MappingsAreEffectiveDated"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13709,7 +13709,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Security"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0053And0057MappingsAreTenantScopedAndNeverLeak"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13737,7 +13737,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0059And0062PrecedenceIsDeterministicAndCollisionsConflict"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13765,7 +13765,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Migration"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0061And0082ProposalsNeverResolveOnTheirOwn"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13779,7 +13779,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0059And0062PrecedenceIsDeterministicAndCollisionsConflict"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13793,7 +13793,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0063To0066TaxabilityPinsComponentOntologyAndContent"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13807,7 +13807,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0063To0066TaxabilityPinsComponentOntologyAndContent"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13821,7 +13821,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0063To0066TaxabilityPinsComponentOntologyAndContent"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13835,7 +13835,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["API"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0063To0066TaxabilityPinsComponentOntologyAndContent"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13849,7 +13849,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0067To0070RegulatoryRevenueTreatments"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13863,7 +13863,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0067To0070RegulatoryRevenueTreatments"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13877,7 +13877,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0067To0070RegulatoryRevenueTreatments"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13891,7 +13891,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0067To0070RegulatoryRevenueTreatments"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13933,7 +13933,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0073To0078StatusesAndOnlyResolvedFeedsAuthority"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13947,7 +13947,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0073To0078StatusesAndOnlyResolvedFeedsAuthority"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13961,7 +13961,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0073To0078StatusesAndOnlyResolvedFeedsAuthority"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13975,7 +13975,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0073To0078StatusesAndOnlyResolvedFeedsAuthority"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -13989,7 +13989,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0073To0078StatusesAndOnlyResolvedFeedsAuthority"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14003,7 +14003,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0073To0078StatusesAndOnlyResolvedFeedsAuthority"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14017,7 +14017,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0079And0081UnresolvedDecisionsCarryNoPickAndKeepCandidates"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14031,7 +14031,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0080UnmappedIsUnsupportedNotOtherNonTelecom"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14045,7 +14045,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0079And0081UnresolvedDecisionsCarryNoPickAndKeepCandidates"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14059,7 +14059,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["AI"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0061And0082ProposalsNeverResolveOnTheirOwn"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14073,7 +14073,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["AI"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0083To0089A3AutoMappingIsBoundedAndAbstains"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14087,7 +14087,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["AI"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0083To0089A3AutoMappingIsBoundedAndAbstains"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14101,7 +14101,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["AI"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0083To0089A3AutoMappingIsBoundedAndAbstains"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14115,7 +14115,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["AI"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0086MappingsTargetExistingNodesOnly"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14129,7 +14129,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["AI"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0083To0089A3AutoMappingIsBoundedAndAbstains"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14143,7 +14143,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["AI"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0083To0089A3AutoMappingIsBoundedAndAbstains"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14157,7 +14157,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/classification/decision_test.go::TestCLSREQ0083To0089A3AutoMappingIsBoundedAndAbstains"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14227,7 +14227,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0094To0099VersionsAreValidTimedAndHistoryStaysResolvable"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14241,7 +14241,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0094To0099VersionsAreValidTimedAndHistoryStaysResolvable"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14255,7 +14255,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0094To0099VersionsAreValidTimedAndHistoryStaysResolvable"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14269,7 +14269,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0094To0099VersionsAreValidTimedAndHistoryStaysResolvable"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14283,7 +14283,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0094To0099VersionsAreValidTimedAndHistoryStaysResolvable"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14297,7 +14297,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0094To0099VersionsAreValidTimedAndHistoryStaysResolvable"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14353,7 +14353,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Integration"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0103And0104TMF620IdsStayExternalCodes"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14367,7 +14367,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Integration"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0103And0104TMF620IdsStayExternalCodes"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14395,7 +14395,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0106To0108ImportsStageActivateWholeAndReportImpact"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14409,7 +14409,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0106To0108ImportsStageActivateWholeAndReportImpact"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14423,7 +14423,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/ontology_test.go::TestCLSREQ0106To0108ImportsStageActivateWholeAndReportImpact"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14591,7 +14591,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["QA"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/golden_test.go::TestGoldenClassificationLaunchCorpus"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14605,7 +14605,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["QA"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/golden_test.go::TestGoldenClassificationLaunchCorpus"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14619,7 +14619,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["QA"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/golden_test.go::TestGoldenClassificationLaunchCorpus"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14633,7 +14633,7 @@ requirements:
     owner: "Head of Content Engineering"
     applies_to: ["QA"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/ontology/golden_test.go::TestGoldenClassificationLaunchCorpus"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14691,7 +14691,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0003BaseDeclaresItsKind"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14705,7 +14705,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0004CompoundingBaseNamesItsComponents"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14719,7 +14719,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0005BaseAdjustmentOrderIsDeclared"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14733,7 +14733,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0006BaseFloorsAtZeroUnlessPermitted"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14747,7 +14747,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0007EveryRateDeclaresItsBasis"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14761,7 +14761,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0008EveryRateCarriesAPolicy"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14775,7 +14775,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0009BracketModeIsNeverInferred"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14789,7 +14789,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0010MarginalTiersAscendFromZero"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14803,7 +14803,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0011CyclicGraphRefusedAtBuild"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14817,7 +14817,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0012TopologicalOrderBreaksTiesOnComponentID"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14831,7 +14831,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0013OrderIsNeverInferredFromJurisdictionLevel"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14845,7 +14845,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0014InapplicableComponentIsZeroAndRecorded"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14859,7 +14859,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0015CompoundingUsesRoundedAmounts"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14873,7 +14873,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0016ExclusiveRoundsExactlyOnce"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14887,7 +14887,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0017InclusiveExtractionIsExactWhereNaiveRatesLeaveAResidual"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14901,7 +14901,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0018InclusiveCompoundingMultiplier"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14915,7 +14915,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0019ExtractedTaxIsComputedBySubtraction"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14929,7 +14929,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0020ExtractedTaxAllocatesByLargestRemainder"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14943,7 +14943,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0021InclusiveFlatNeedsDeclaredSubtractionOrder"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14957,7 +14957,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0022RoundingOnlyAtDeclaredPoints"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -14971,7 +14971,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0023DocumentRoundingAllocatesBackExactly"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15013,7 +15013,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestDETREQ0026CrossingModeIsDeclaredAndCapDefaultsToSplit"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15069,7 +15069,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/app/adjust_test.go::TestDETREQ0030AdjustmentEvaluatesAgainstTheOriginalBundle"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15083,7 +15083,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0031PartialCreditAllocatesAndNeverReappliesRates"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15111,7 +15111,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["native-determination"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/determination/determination_test.go::TestDETREQ0033AdjustmentChainSumsToItsPosition"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15197,7 +15197,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0001EveryNodeCarriesIdentityLevelCountryTimezoneAndPeriod"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15211,7 +15211,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0002AClosedJurisdictionStillResolvesHistorically"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15225,7 +15225,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0003SpatialResolutionRecordsTheDatasetVersion"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15239,7 +15239,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0004ReplayResolvesAgainstTheRecordedDatasetVersion"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15253,7 +15253,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0005ADatasetVersionIsImmutable"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15267,7 +15267,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0006UnknownEvidenceTypeRefusesTheBundle"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15281,7 +15281,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0007ReliabilityIsAssignedByTheRule"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15295,7 +15295,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0008UnusedEvidenceIsRecorded"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15309,7 +15309,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0009AbsentEvidenceIsNeverSubstituted"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15323,7 +15323,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0010PrecedenceStopsAtTheFirstUsableItem"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15337,7 +15337,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0011QuorumDistinguishesInsufficientFromAmbiguous"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15351,7 +15351,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0012QuorumDeclaresItsAgreementLevel"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15365,7 +15365,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0013OverlappingBoundariesAreADatasetDefect"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15379,7 +15379,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0014EqualSpecificityRefusesTheBundle"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15393,7 +15393,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0015PPUResolvesAtEventTimeNotDecisionTime"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15421,7 +15421,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0017RoamingIsRecordedAsADerivedFact"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15435,7 +15435,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0018RoamingSourcingHasNoRuntimeDefault"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15449,7 +15449,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0019ResolutionNeverApportions"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15463,7 +15463,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0020UndeterminedIsARoleAndItsTreatmentIsContent"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15477,7 +15477,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0021VATValidationStatusIsRecordedIncludingUnavailability"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15505,7 +15505,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0023ApplicableSetIsOutermostFirst"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15519,7 +15519,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0024EveryRefusalIsARecordedOutcomeNotAnError"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15533,7 +15533,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0025InsufficientEvidenceNamesWhatWouldSatisfyTheRule"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15547,7 +15547,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0026ResolutionIsIndependentOfEvidenceOrder"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15561,7 +15561,7 @@ requirements:
     owner: "Head of Determination"
     applies_to: ["jurisdiction-resolution"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/jurisdiction/situs_test.go::TestJURREQ0027EveryResolutionEmitsATrace"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15591,7 +15591,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0002To0006EachRoleIsResolvedIndependently"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15605,7 +15605,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0002To0006EachRoleIsResolvedIndependently"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15619,7 +15619,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0002To0006EachRoleIsResolvedIndependently"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15633,7 +15633,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0002To0006EachRoleIsResolvedIndependently"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15647,7 +15647,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0002To0006EachRoleIsResolvedIndependently"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15661,7 +15661,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0007OnePartyHoldingSeveralRolesIsRecordedPerRole"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15675,7 +15675,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0008ConfigurationCannotDelegateWhatTheLawDoesNot"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15689,7 +15689,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0009AnAgentNeverBecomesTheStatutoryParty"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15703,7 +15703,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Security"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0010To0012DecisionIsScopedEffectiveDatedAndPinned"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15717,7 +15717,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0010To0012DecisionIsScopedEffectiveDatedAndPinned"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15731,7 +15731,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0010To0012DecisionIsScopedEffectiveDatedAndPinned"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15745,7 +15745,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0013To0016DecisionExposesEveryStatus"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15759,7 +15759,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0013To0016DecisionExposesEveryStatus"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15773,7 +15773,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0013To0016DecisionExposesEveryStatus"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15787,7 +15787,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0013To0016DecisionExposesEveryStatus"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15801,7 +15801,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0017UnresolvedResponsibilityNeverDefaults"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15829,7 +15829,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0019AffiliatesAreNotOneFilerByDefault"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15871,7 +15871,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0022To0030DefinitionIdentifiesEverythingItMust"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15885,7 +15885,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0022To0030DefinitionIdentifiesEverythingItMust"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15899,7 +15899,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0022To0030DefinitionIdentifiesEverythingItMust"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15913,7 +15913,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0022To0030DefinitionIdentifiesEverythingItMust"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15927,7 +15927,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0022To0030DefinitionIdentifiesEverythingItMust"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15941,7 +15941,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0022To0030DefinitionIdentifiesEverythingItMust"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15955,7 +15955,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0022To0030DefinitionIdentifiesEverythingItMust"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15969,7 +15969,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0022To0030DefinitionIdentifiesEverythingItMust"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15983,7 +15983,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0022To0030DefinitionIdentifiesEverythingItMust"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -15997,7 +15997,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0031To0036DefinitionSupportsEveryDutyKind"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16011,7 +16011,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0031To0036DefinitionSupportsEveryDutyKind"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16025,7 +16025,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0031To0036DefinitionSupportsEveryDutyKind"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16039,7 +16039,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0031To0036DefinitionSupportsEveryDutyKind"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16053,7 +16053,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0031To0036DefinitionSupportsEveryDutyKind"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16067,7 +16067,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0031To0036DefinitionSupportsEveryDutyKind"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16081,7 +16081,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0037And0038CorrectionsAreSuccessorsNotMutations"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16095,7 +16095,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0037And0038CorrectionsAreSuccessorsNotMutations"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16109,7 +16109,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0039To0043DecisionReferencesWhatItMust"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16123,7 +16123,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0039To0043DecisionReferencesWhatItMust"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16137,7 +16137,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0039To0043DecisionReferencesWhatItMust"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16151,7 +16151,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0039To0043DecisionReferencesWhatItMust"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16165,7 +16165,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0039To0043DecisionReferencesWhatItMust"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16207,7 +16207,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0046To0048ForecastIsASeparateNonAuthoritativeType"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16221,7 +16221,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Compliance"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0046To0048ForecastIsASeparateNonAuthoritativeType"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16235,7 +16235,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["AI"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0046To0048ForecastIsASeparateNonAuthoritativeType"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16263,7 +16263,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0050TriggerKindsAreClosedAndAllSupported"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16277,7 +16277,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0051CompositeTriggersAreCycleSafe"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16291,7 +16291,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0052UnknownFactIsNotFalse"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16431,7 +16431,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Data"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0062And0063LateEventsBelongToTheirLegalPeriod"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16445,7 +16445,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Data"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0062And0063LateEventsBelongToTheirLegalPeriod"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16487,7 +16487,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0066ComparatorIsExplicit"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16501,7 +16501,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0067RollingWindowIsExact"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16515,7 +16515,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Events"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0068CrossingRecordsBeforeAndAfter"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16529,7 +16529,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0069FallingBelowDoesNotCancelADuty"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16543,7 +16543,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0070DeMinimisIsAPackDefinedLegalState"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16557,7 +16557,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0071UnknownIsNeverBelow"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16571,7 +16571,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Registration"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0072To0077RegistrationLifecycle"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16585,7 +16585,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Registration"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0072To0077RegistrationLifecycle"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16599,7 +16599,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Registration"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0072To0077RegistrationLifecycle"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16613,7 +16613,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Registration"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0072To0077RegistrationLifecycle"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16627,7 +16627,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Registration"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0072To0077RegistrationLifecycle"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16641,7 +16641,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Registration"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0072To0077RegistrationLifecycle"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16655,7 +16655,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Calendar"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0078PeriodEngineSupportsEveryKind"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16669,7 +16669,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Calendar"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0079LegalTimezoneIsExplicit"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16683,7 +16683,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Calendar"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0080And0081BusinessDayAdjustmentIsContentAndPinsItsCalendar"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16697,7 +16697,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Calendar"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0080And0081BusinessDayAdjustmentIsContentAndPinsItsCalendar"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16711,7 +16711,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Calendar"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0082And0083ExtensionAndCutoffNeverReplaceTheLegalDate"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16725,7 +16725,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Calendar"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0082And0083ExtensionAndCutoffNeverReplaceTheLegalDate"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16739,7 +16739,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Workflow"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0084To0088LifecycleDistinguishesItsStates"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16753,7 +16753,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Workflow"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0084To0088LifecycleDistinguishesItsStates"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16767,7 +16767,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Workflow"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0084To0088LifecycleDistinguishesItsStates"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16781,7 +16781,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Workflow"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0084To0088LifecycleDistinguishesItsStates"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16795,7 +16795,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Workflow"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0084To0088LifecycleDistinguishesItsStates"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16809,7 +16809,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Workflow"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0089SuspendedBlocksAuthoritativeTransitions"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16823,7 +16823,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0090And0091CloseManifestIsSealedAndReferencesItsState"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16837,7 +16837,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0090And0091CloseManifestIsSealedAndReferencesItsState"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16851,7 +16851,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0092To0098LateChangesRouteWithoutMutatingTheClose"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16865,7 +16865,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Workflow"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0092To0098LateChangesRouteWithoutMutatingTheClose"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16893,7 +16893,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Workflow"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0092To0098LateChangesRouteWithoutMutatingTheClose"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16907,7 +16907,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Workflow"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0092To0098LateChangesRouteWithoutMutatingTheClose"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16921,7 +16921,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Workflow"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0092To0098LateChangesRouteWithoutMutatingTheClose"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16935,7 +16935,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Workflow"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0092To0098LateChangesRouteWithoutMutatingTheClose"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16949,7 +16949,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Content"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0099And0101DependenciesAreAcyclicAndCheckState"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -16977,7 +16977,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Workflow"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0099And0101DependenciesAreAcyclicAndCheckState"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17019,7 +17019,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0104ContributionBasisIsRegulatoryRevenueNotTaxability"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17271,7 +17271,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["API"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0094And0122ReopeningRequiresReasonAndAuthority"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17537,7 +17537,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/obligation/obligation_test.go::TestOBLREQ0141NonMonetaryDutyHasNoAmountAndFilesWithoutOne"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17567,7 +17567,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0001And0002AQuoteIsNotAFiscalDocument"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17581,7 +17581,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0001And0002AQuoteIsNotAFiscalDocument"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17595,7 +17595,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0003And0004CorrectionIsALinkedSuccessor"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17609,7 +17609,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0003And0004CorrectionIsALinkedSuccessor"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17623,7 +17623,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0005AndFINREQ0013CorrectionsUseFreshIDsAndNamePredecessorLines"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17637,7 +17637,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0006And0009NumberTaxPointAndIssueDateAreSeparate"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17651,7 +17651,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0016And0007RebillPreservesTheChain"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17665,7 +17665,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0008CorrectionReasonIsMachineReadable"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17679,7 +17679,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Domain"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0006And0009NumberTaxPointAndIssueDateAreSeparate"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17707,7 +17707,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0011And0098DocumentTaxMustAgreeWithItsDecision"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17749,7 +17749,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0014VoidPreservesTheOriginal"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17763,7 +17763,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0015RefundIsNotACredit"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17777,7 +17777,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0016And0007RebillPreservesTheChain"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17805,7 +17805,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0018RestatementIsDistinguishedFromHistory"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17861,7 +17861,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0022RoundingAdjustmentIsExplicitAndBounded"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17945,7 +17945,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/fx/fx_test.go::TestFINREQ0028ConversionStoresSourceRateDateAndMethod"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17973,7 +17973,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/fx/fx_test.go::TestFINREQ0030RateSourceIsChosenByPolicy"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17987,7 +17987,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0031And0032NativeCurrencyFirstAndFXClassifiedSeparately"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18001,7 +18001,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0031And0032NativeCurrencyFirstAndFXClassifiedSeparately"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18043,7 +18043,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0035And0043And0096UnbalancedJournalIsBlocked"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18057,7 +18057,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0036To0038CorrectionIsAReversalNotAnEdit"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18071,7 +18071,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0036To0038CorrectionIsAReversalNotAnEdit"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18085,7 +18085,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Security"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0036To0038CorrectionIsAReversalNotAnEdit"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18099,7 +18099,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0039To0042JournalCarriesScopeCurrencySourceAndAccounts"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18113,7 +18113,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0039To0042JournalCarriesScopeCurrencySourceAndAccounts"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18127,7 +18127,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0039To0042JournalCarriesScopeCurrencySourceAndAccounts"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18141,7 +18141,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0039To0042JournalCarriesScopeCurrencySourceAndAccounts"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18155,7 +18155,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0035And0043And0096UnbalancedJournalIsBlocked"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18169,7 +18169,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["API"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0044And0108SignSemanticsAreUnambiguous"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18197,7 +18197,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0046SuspenseHasOwnerAndAge"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18211,7 +18211,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0047To0050AccountTaxonomyCoversTheControls"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18225,7 +18225,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0047To0050AccountTaxonomyCoversTheControls"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18239,7 +18239,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0047To0050AccountTaxonomyCoversTheControls"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18253,7 +18253,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0047To0050AccountTaxonomyCoversTheControls"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18267,7 +18267,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Integration"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0051And0053And0054GLExportIsLayeredTraceableAndNeverInventsAccounts"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18281,7 +18281,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0052PostingProfileIsVersionedAndEffectiveDated"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18295,7 +18295,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Integration"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0051And0053And0054GLExportIsLayeredTraceableAndNeverInventsAccounts"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18309,7 +18309,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Integration"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0051And0053And0054GLExportIsLayeredTraceableAndNeverInventsAccounts"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18323,7 +18323,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0055And0056CollectionIsItsOwnEventWithSourceAndStatus"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18337,7 +18337,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0055And0056CollectionIsItsOwnEventWithSourceAndStatus"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18351,7 +18351,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0057PartialCollectionAllocatesByExplicitPolicy"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18365,7 +18365,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0058TimeoutIsNeverCollected"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18393,7 +18393,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0060ChargebackReopensReconciliation"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18407,7 +18407,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["COMP"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0061And0065PopulationIsImmutableIDsWithAStableHash"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18421,7 +18421,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["COMP"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0062And0063FiledReturnIsImmutableAndAmendmentIsANewVersion"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18435,7 +18435,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["COMP"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0062And0063FiledReturnIsImmutableAndAmendmentIsANewVersion"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18463,7 +18463,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0061And0065PopulationIsImmutableIDsWithAStableHash"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18477,7 +18477,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["REM"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0066RemittanceDerivesFromAnApprovedReturn"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18505,7 +18505,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["REM"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0068And0070UncertainRemittanceNeverClearsAndEvidenceIsComplete"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18519,7 +18519,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["REM"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0069PartialRemittanceAndOffsets"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18533,7 +18533,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/settlement_test.go::TestFINREQ0068And0070UncertainRemittanceNeverClearsAndEvidenceIsComplete"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18547,7 +18547,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0071To0077EveryStageIsModelledAndTraced"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18561,7 +18561,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0071To0077EveryStageIsModelledAndTraced"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18575,7 +18575,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0071To0077EveryStageIsModelledAndTraced"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18589,7 +18589,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0071To0077EveryStageIsModelledAndTraced"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18603,7 +18603,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0071To0077EveryStageIsModelledAndTraced"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18617,7 +18617,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0071To0077EveryStageIsModelledAndTraced"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18631,7 +18631,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0071To0077EveryStageIsModelledAndTraced"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18645,7 +18645,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0078And0081ToleranceMatchIsNotAMatchAndKeepsItsVariance"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18659,7 +18659,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0079StatusesCoverMissingPartialAndUnmatched"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18673,7 +18673,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0080ToleranceIsExplicitByStage"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18687,7 +18687,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0078And0081ToleranceMatchIsNotAMatchAndKeepsItsVariance"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18701,7 +18701,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0082StatutoryExactnessOverridesTolerance"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18715,7 +18715,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0083RootCauseTaxonomyIsComplete"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18729,7 +18729,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0084And0086ResolutionIsRecordedAndAICannotResolveMaterialExceptions"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18757,7 +18757,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["AI"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0084And0086ResolutionIsRecordedAndAICannotResolveMaterialExceptions"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18771,7 +18771,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/reconciliation/reconciliation_test.go::TestFINREQ0087DuplicatesAreDetected"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18785,7 +18785,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0088And0104HardClosedPeriodBlocksNormalPosting"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18897,7 +18897,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0035And0043And0096UnbalancedJournalIsBlocked"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18911,7 +18911,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0097MissingDecisionBlocksCommit"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18925,7 +18925,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/document_test.go::TestFINREQ0011And0098DocumentTaxMustAgreeWithItsDecision"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18939,7 +18939,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Recon"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0099OrphanJournalsAreDetectable"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18995,7 +18995,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/fx/fx_test.go::TestFINREQ0103MissingRateIsExplicitNeverGuessed"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -19009,7 +19009,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0088And0104HardClosedPeriodBlocksNormalPosting"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -19065,7 +19065,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["API"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0044And0108SignSemanticsAreUnambiguous"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -19149,7 +19149,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Migration"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0114MigrationJournalsCarryProvenance"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -19247,7 +19247,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/journal_test.go::TestFINREQ0121ControlBalancesReconcileToLines"
     status: PROPOSED
     effective_from: null
     effective_to: null

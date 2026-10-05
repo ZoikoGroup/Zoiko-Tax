@@ -1,0 +1,750 @@
+{
+  "set": "exclusive",
+  "version": "1.0.0",
+  "description": "The exclusive calculation of DET-001 §6, every rate kind, the base declarations of §3 and the component graph of §5.",
+  "provenance": {
+    "oracle": "Hand computation from ZTAX-DET-001 §6-§8, written beside each case and checked by a second reviewer.",
+    "source": "docs/specs/ZTAX-DET-001-global-tax-determination-engine.md §14.1",
+    "reviewer": "lane-a (pending second review at DET-001 baseline)",
+    "registered": "2026-10-03",
+    "contentVersion": "ZTAX-DET-001 1.0.0-draft"
+  },
+  "cases": [
+    {
+      "id": "ad-valorem-rounds-once",
+      "oracle": "10.05 x 0.075 = 0.75375 at full precision; one HALF_UP rounding at scale 2 gives 0.75.",
+      "requirements": [
+        "ZTAX-DET-REQ-0016"
+      ],
+      "schedule": {
+        "components": [
+          {
+            "id": "vat",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "LINE_NET"
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.075",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          }
+        ]
+      },
+      "currency": "EUR",
+      "lines": [
+        {
+          "key": "1",
+          "amount": "10.05",
+          "applicable": [
+            "vat"
+          ]
+        }
+      ],
+      "expect": {
+        "lines": [
+          {
+            "key": "1",
+            "net": "10.05",
+            "amounts": {
+              "vat": "0.75"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "compound-on-rounded",
+      "oracle": "b = 10.03 x 0.15 = 1.5045 -> 1.50. a = 1 x COMPONENT_SUM(b) at scale 4 compounds on the rounded 1.50, giving 1.5000; on the raw value it would be 1.5045.",
+      "requirements": [
+        "ZTAX-DET-REQ-0015"
+      ],
+      "schedule": {
+        "components": [
+          {
+            "id": "b",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "LINE_NET"
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.15",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          },
+          {
+            "id": "a",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "COMPONENT_SUM",
+              "components": [
+                "b"
+              ]
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "1",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 4,
+              "basis": "LINE"
+            }
+          }
+        ]
+      },
+      "currency": "EUR",
+      "lines": [
+        {
+          "key": "1",
+          "amount": "10.03",
+          "applicable": [
+            "a",
+            "b"
+          ]
+        }
+      ],
+      "expect": {
+        "lines": [
+          {
+            "key": "1",
+            "net": "10.03",
+            "amounts": {
+              "a": "1.5000",
+              "b": "1.50"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "diamond",
+      "oracle": "a = 10.00, b = 5.00 on 100.00; c = 0.1 x (a + b) = 1.50; d = 0.01 x (100 + a + c) = 1.115 -> 1.12.",
+      "requirements": [
+        "ZTAX-DET-REQ-0012"
+      ],
+      "schedule": {
+        "components": [
+          {
+            "id": "d",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "NET_PLUS_COMPONENTS",
+              "components": [
+                "a",
+                "c"
+              ]
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.01",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          },
+          {
+            "id": "c",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "COMPONENT_SUM",
+              "components": [
+                "a",
+                "b"
+              ]
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.1",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          },
+          {
+            "id": "b",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "LINE_NET"
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.05",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          },
+          {
+            "id": "a",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "LINE_NET"
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.1",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          }
+        ]
+      },
+      "currency": "EUR",
+      "lines": [
+        {
+          "key": "1",
+          "amount": "100.00",
+          "applicable": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ]
+        }
+      ],
+      "expect": {
+        "lines": [
+          {
+            "key": "1",
+            "net": "100.00",
+            "amounts": {
+              "a": "10.00",
+              "b": "5.00",
+              "c": "1.50",
+              "d": "1.12"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "bracket-marginal-and-cliff",
+      "oracle": "Base 1500.00 over tiers 0 at 0.1 and 1000 at 0.2. MARGINAL: 1000 x 0.1 + 500 x 0.2 = 200.00. CLIFF: 1500 x 0.2 = 300.00.",
+      "requirements": [
+        "ZTAX-DET-REQ-0009"
+      ],
+      "schedule": {
+        "components": [
+          {
+            "id": "marginal",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "LINE_NET"
+            },
+            "rate": {
+              "kind": "BRACKET",
+              "bracket": {
+                "mode": "MARGINAL",
+                "tiers": [
+                  {
+                    "from": "0",
+                    "rate": "0.1"
+                  },
+                  {
+                    "from": "1000",
+                    "rate": "0.2"
+                  }
+                ]
+              }
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          },
+          {
+            "id": "cliff",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "LINE_NET"
+            },
+            "rate": {
+              "kind": "BRACKET",
+              "bracket": {
+                "mode": "CLIFF",
+                "tiers": [
+                  {
+                    "from": "0",
+                    "rate": "0.1"
+                  },
+                  {
+                    "from": "1000",
+                    "rate": "0.2"
+                  }
+                ]
+              }
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          }
+        ]
+      },
+      "currency": "EUR",
+      "lines": [
+        {
+          "key": "1",
+          "amount": "1500.00",
+          "applicable": [
+            "marginal",
+            "cliff"
+          ]
+        }
+      ],
+      "expect": {
+        "lines": [
+          {
+            "key": "1",
+            "net": "1500.00",
+            "amounts": {
+              "marginal": "200.00",
+              "cliff": "300.00"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "specific-and-flat",
+      "oracle": "SPECIFIC: 3 units x 0.25 = 0.75. FLAT: 3.50 whatever the base.",
+      "requirements": [],
+      "schedule": {
+        "components": [
+          {
+            "id": "specific",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "QUANTITY"
+            },
+            "rate": {
+              "kind": "SPECIFIC",
+              "perUnit": "0.25"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          },
+          {
+            "id": "flat",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "LINE_NET"
+            },
+            "rate": {
+              "kind": "FLAT",
+              "flat": "3.50"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          }
+        ]
+      },
+      "currency": "EUR",
+      "lines": [
+        {
+          "key": "1",
+          "amount": "40.00",
+          "applicable": [
+            "specific",
+            "flat"
+          ],
+          "quantity": "3",
+          "unit": "EA"
+        }
+      ],
+      "expect": {
+        "lines": [
+          {
+            "key": "1",
+            "net": "40.00",
+            "amounts": {
+              "specific": "0.75",
+              "flat": "3.50"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "adjustments-discount-first",
+      "oracle": "1000.00, less 10% then less 50.00 = 850.00; at rate 1 the component is 850.00.",
+      "requirements": [
+        "ZTAX-DET-REQ-0005"
+      ],
+      "schedule": {
+        "components": [
+          {
+            "id": "a",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "LINE_NET",
+              "adjustments": [
+                {
+                  "kind": "SUBTRACT_PROPORTION",
+                  "name": "discount",
+                  "proportion": "0.1"
+                },
+                {
+                  "kind": "SUBTRACT_AMOUNT",
+                  "name": "exemption",
+                  "amount": "50"
+                }
+              ]
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "1",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          }
+        ]
+      },
+      "currency": "EUR",
+      "lines": [
+        {
+          "key": "1",
+          "amount": "1000.00",
+          "applicable": [
+            "a"
+          ]
+        }
+      ],
+      "expect": {
+        "lines": [
+          {
+            "key": "1",
+            "net": "1000.00",
+            "amounts": {
+              "a": "850.00"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "adjustments-exemption-first",
+      "oracle": "1000.00, less 50.00 then less 10% = 855.00. Same steps as the previous case, other order, other law.",
+      "requirements": [
+        "ZTAX-DET-REQ-0005"
+      ],
+      "schedule": {
+        "components": [
+          {
+            "id": "a",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "LINE_NET",
+              "adjustments": [
+                {
+                  "kind": "SUBTRACT_AMOUNT",
+                  "name": "exemption",
+                  "amount": "50"
+                },
+                {
+                  "kind": "SUBTRACT_PROPORTION",
+                  "name": "discount",
+                  "proportion": "0.1"
+                }
+              ]
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "1",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          }
+        ]
+      },
+      "currency": "EUR",
+      "lines": [
+        {
+          "key": "1",
+          "amount": "1000.00",
+          "applicable": [
+            "a"
+          ]
+        }
+      ],
+      "expect": {
+        "lines": [
+          {
+            "key": "1",
+            "net": "1000.00",
+            "amounts": {
+              "a": "855.00"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "base-floors-at-zero",
+      "oracle": "30.00 less a 50.00 exemption would be -20.00; the base floors at zero, so 0.1 x 0 = 0.00.",
+      "requirements": [
+        "ZTAX-DET-REQ-0006"
+      ],
+      "schedule": {
+        "components": [
+          {
+            "id": "a",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "LINE_NET",
+              "adjustments": [
+                {
+                  "kind": "SUBTRACT_AMOUNT",
+                  "name": "exemption",
+                  "amount": "50"
+                }
+              ]
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.1",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          }
+        ]
+      },
+      "currency": "EUR",
+      "lines": [
+        {
+          "key": "1",
+          "amount": "30.00",
+          "applicable": [
+            "a"
+          ]
+        }
+      ],
+      "expect": {
+        "lines": [
+          {
+            "key": "1",
+            "net": "30.00",
+            "amounts": {
+              "a": "0.00"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "inapplicable-component-is-zero",
+      "oracle": "a on NET_PLUS_COMPONENTS(b) with b not applied: 0.1 x (100.00 + 0) = 10.00.",
+      "requirements": [
+        "ZTAX-DET-REQ-0014"
+      ],
+      "schedule": {
+        "components": [
+          {
+            "id": "a",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "NET_PLUS_COMPONENTS",
+              "components": [
+                "b"
+              ]
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.1",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          },
+          {
+            "id": "b",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "LINE_NET"
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.5",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          }
+        ]
+      },
+      "currency": "EUR",
+      "lines": [
+        {
+          "key": "1",
+          "amount": "100.00",
+          "applicable": [
+            "a"
+          ]
+        }
+      ],
+      "expect": {
+        "lines": [
+          {
+            "key": "1",
+            "net": "100.00",
+            "amounts": {
+              "a": "10.00"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "cycle-refused",
+      "oracle": "a compounds on b and b on a: a fixed point, refused at build.",
+      "requirements": [
+        "ZTAX-DET-REQ-0011"
+      ],
+      "schedule": {
+        "components": [
+          {
+            "id": "a",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "NET_PLUS_COMPONENTS",
+              "components": [
+                "b"
+              ]
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.1",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          },
+          {
+            "id": "b",
+            "jurisdiction": "jurisdiction:xx",
+            "taxType": "T",
+            "inclusive": false,
+            "base": {
+              "kind": "NET_PLUS_COMPONENTS",
+              "components": [
+                "a"
+              ]
+            },
+            "rate": {
+              "kind": "AD_VALOREM",
+              "proportion": "0.1",
+              "basis": "NET"
+            },
+            "policy": {
+              "mode": "HALF_UP",
+              "scale": 2,
+              "basis": "LINE"
+            }
+          }
+        ]
+      },
+      "currency": "EUR",
+      "lines": [
+        {
+          "key": "1",
+          "amount": "100.00",
+          "applicable": [
+            "a",
+            "b"
+          ]
+        }
+      ],
+      "expectError": "cycle"
+    }
+  ]
+}

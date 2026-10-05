@@ -1,0 +1,712 @@
+{
+  "set": "launch-corpus",
+  "version": "1.0.0",
+  "description": "The launch-critical classification corpus: every launch service family resolves through the catalog, and the bundle, mixed, conflicting, unsupported and review cases behave as ZTAX-CLS-001 requires.",
+  "provenance": {
+    "oracle": "Each expectation follows from the fixture catalog and ZTAX-CLS-001's precedence and status rules, stated per case.",
+    "source": "ZTAX-CLS-001 §launch-critical corpus; Build Plan W2 lane G",
+    "reviewer": "lane-g (pending CLS-001 baseline review)",
+    "registered": "2026-10-03",
+    "contentVersion": "ont-2027.1"
+  },
+  "fixtures": {
+    "ontologyVersion": "ont-2027.1",
+    "nodes": [
+      {
+        "id": "ontology:telecom/voice/mobile",
+        "family": "MOBILE_VOICE"
+      },
+      {
+        "id": "ontology:telecom/voice/fixed",
+        "family": "FIXED_VOICE"
+      },
+      {
+        "id": "ontology:telecom/messaging/sms",
+        "family": "MESSAGING"
+      },
+      {
+        "id": "ontology:telecom/data/mobile",
+        "family": "MOBILE_DATA"
+      },
+      {
+        "id": "ontology:telecom/data/fixed-broadband",
+        "family": "FIXED_BROADBAND"
+      },
+      {
+        "id": "ontology:telecom/voip/interconnected",
+        "family": "VOIP"
+      },
+      {
+        "id": "ontology:telecom/voip/sip-trunk",
+        "family": "SIP_TRUNKING"
+      },
+      {
+        "id": "ontology:telecom/ucaas/seat",
+        "family": "UCAAS"
+      },
+      {
+        "id": "ontology:telecom/ccaas/seat",
+        "family": "CCAAS"
+      },
+      {
+        "id": "ontology:telecom/cpaas/api-messaging",
+        "family": "CPAAS"
+      },
+      {
+        "id": "ontology:telecom/iot/connectivity",
+        "family": "IOT_CONNECTIVITY"
+      },
+      {
+        "id": "ontology:telecom/identity/esim-profile",
+        "family": "SUBSCRIPTION_IDENTITY"
+      },
+      {
+        "id": "ontology:telecom/satellite/connectivity",
+        "family": "SATELLITE_CONNECTIVITY"
+      },
+      {
+        "id": "ontology:telecom/roaming/retail",
+        "family": "ROAMING_RETAIL"
+      },
+      {
+        "id": "ontology:telecom/roaming/wholesale",
+        "family": "ROAMING_WHOLESALE"
+      },
+      {
+        "id": "ontology:telecom/interconnect/termination",
+        "family": "INTERCONNECT"
+      },
+      {
+        "id": "ontology:telecom/wholesale/access",
+        "family": "WHOLESALE_ACCESS"
+      },
+      {
+        "id": "ontology:equipment/handset/sale",
+        "family": "EQUIPMENT_SALE"
+      },
+      {
+        "id": "ontology:equipment/router/rental",
+        "family": "EQUIPMENT_RENTAL"
+      },
+      {
+        "id": "ontology:services/installation",
+        "family": "INSTALLATION_ACTIVATION"
+      },
+      {
+        "id": "ontology:content/streaming-video",
+        "family": "CONTENT_MEDIA"
+      }
+    ],
+    "mappings": [
+      {
+        "id": "map-telecom-voice-mobile",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "TELECOM-VOICE-MOBILE",
+        "target": "ontology:telecom/voice/mobile",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-telecom-voice-fixed",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "TELECOM-VOICE-FIXED",
+        "target": "ontology:telecom/voice/fixed",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-telecom-messaging-sms",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "TELECOM-MESSAGING-SMS",
+        "target": "ontology:telecom/messaging/sms",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-telecom-data-mobile",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "TELECOM-DATA-MOBILE",
+        "target": "ontology:telecom/data/mobile",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-telecom-data-fixed-broadband",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "TELECOM-DATA-FIXED-BROADBAND",
+        "target": "ontology:telecom/data/fixed-broadband",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-telecom-voip-interconnected",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "TELECOM-VOIP-INTERCONNECTED",
+        "target": "ontology:telecom/voip/interconnected",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-telecom-voip-sip-trunk",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "TELECOM-VOIP-SIP-TRUNK",
+        "target": "ontology:telecom/voip/sip-trunk",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-telecom-ucaas-seat",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "TELECOM-UCAAS-SEAT",
+        "target": "ontology:telecom/ucaas/seat",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-telecom-ccaas-seat",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "TELECOM-CCAAS-SEAT",
+        "target": "ontology:telecom/ccaas/seat",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-telecom-cpaas-api-messaging",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "TELECOM-CPAAS-API-MESSAGING",
+        "target": "ontology:telecom/cpaas/api-messaging",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-telecom-iot-connectivity",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "TELECOM-IOT-CONNECTIVITY",
+        "target": "ontology:telecom/iot/connectivity",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-telecom-identity-esim-profile",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "TELECOM-IDENTITY-ESIM-PROFILE",
+        "target": "ontology:telecom/identity/esim-profile",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-telecom-satellite-connectivity",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "TELECOM-SATELLITE-CONNECTIVITY",
+        "target": "ontology:telecom/satellite/connectivity",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-telecom-roaming-retail",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "TELECOM-ROAMING-RETAIL",
+        "target": "ontology:telecom/roaming/retail",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-telecom-roaming-wholesale",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "TELECOM-ROAMING-WHOLESALE",
+        "target": "ontology:telecom/roaming/wholesale",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-telecom-interconnect-termination",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "TELECOM-INTERCONNECT-TERMINATION",
+        "target": "ontology:telecom/interconnect/termination",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-telecom-wholesale-access",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "TELECOM-WHOLESALE-ACCESS",
+        "target": "ontology:telecom/wholesale/access",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-equipment-handset-sale",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "EQUIPMENT-HANDSET-SALE",
+        "target": "ontology:equipment/handset/sale",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-equipment-router-rental",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "EQUIPMENT-ROUTER-RENTAL",
+        "target": "ontology:equipment/router/rental",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-services-installation",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "SERVICES-INSTALLATION",
+        "target": "ontology:services/installation",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-content-streaming-video",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "CONTENT-STREAMING-VIDEO",
+        "target": "ontology:content/streaming-video",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-clash-1",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "BUNDLE-PLUS",
+        "target": "ontology:telecom/voice/mobile",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-clash-2",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "BUNDLE-PLUS",
+        "target": "ontology:telecom/data/mobile",
+        "source": "TENANT",
+        "promoted": false
+      },
+      {
+        "id": "map-incumbent",
+        "tenant": "00000000-0000-7000-8000-00000000000a",
+        "code": "LEGACY-TX-77",
+        "target": "ontology:telecom/voip/interconnected",
+        "source": "INCUMBENT",
+        "promoted": false
+      },
+      {
+        "id": "map-b-only",
+        "tenant": "00000000-0000-7000-8000-00000000000b",
+        "code": "TENANT-B-PLAN",
+        "target": "ontology:telecom/data/mobile",
+        "source": "TENANT",
+        "promoted": false
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "resolve-telecom-voice-mobile",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for TELECOM-VOICE-MOBILE is the only mapping in its tier: RESOLVED to ontology:telecom/voice/mobile.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TELECOM-VOICE-MOBILE",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:telecom/voice/mobile"
+      }
+    },
+    {
+      "id": "resolve-telecom-voice-fixed",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for TELECOM-VOICE-FIXED is the only mapping in its tier: RESOLVED to ontology:telecom/voice/fixed.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TELECOM-VOICE-FIXED",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:telecom/voice/fixed"
+      }
+    },
+    {
+      "id": "resolve-telecom-messaging-sms",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for TELECOM-MESSAGING-SMS is the only mapping in its tier: RESOLVED to ontology:telecom/messaging/sms.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TELECOM-MESSAGING-SMS",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:telecom/messaging/sms"
+      }
+    },
+    {
+      "id": "resolve-telecom-data-mobile",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for TELECOM-DATA-MOBILE is the only mapping in its tier: RESOLVED to ontology:telecom/data/mobile.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TELECOM-DATA-MOBILE",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:telecom/data/mobile"
+      }
+    },
+    {
+      "id": "resolve-telecom-data-fixed-broadband",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for TELECOM-DATA-FIXED-BROADBAND is the only mapping in its tier: RESOLVED to ontology:telecom/data/fixed-broadband.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TELECOM-DATA-FIXED-BROADBAND",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:telecom/data/fixed-broadband"
+      }
+    },
+    {
+      "id": "resolve-telecom-voip-interconnected",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for TELECOM-VOIP-INTERCONNECTED is the only mapping in its tier: RESOLVED to ontology:telecom/voip/interconnected.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TELECOM-VOIP-INTERCONNECTED",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:telecom/voip/interconnected"
+      }
+    },
+    {
+      "id": "resolve-telecom-voip-sip-trunk",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for TELECOM-VOIP-SIP-TRUNK is the only mapping in its tier: RESOLVED to ontology:telecom/voip/sip-trunk.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TELECOM-VOIP-SIP-TRUNK",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:telecom/voip/sip-trunk"
+      }
+    },
+    {
+      "id": "resolve-telecom-ucaas-seat",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for TELECOM-UCAAS-SEAT is the only mapping in its tier: RESOLVED to ontology:telecom/ucaas/seat.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TELECOM-UCAAS-SEAT",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:telecom/ucaas/seat"
+      }
+    },
+    {
+      "id": "resolve-telecom-ccaas-seat",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for TELECOM-CCAAS-SEAT is the only mapping in its tier: RESOLVED to ontology:telecom/ccaas/seat.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TELECOM-CCAAS-SEAT",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:telecom/ccaas/seat"
+      }
+    },
+    {
+      "id": "resolve-telecom-cpaas-api-messaging",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for TELECOM-CPAAS-API-MESSAGING is the only mapping in its tier: RESOLVED to ontology:telecom/cpaas/api-messaging.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TELECOM-CPAAS-API-MESSAGING",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:telecom/cpaas/api-messaging"
+      }
+    },
+    {
+      "id": "resolve-telecom-iot-connectivity",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for TELECOM-IOT-CONNECTIVITY is the only mapping in its tier: RESOLVED to ontology:telecom/iot/connectivity.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TELECOM-IOT-CONNECTIVITY",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:telecom/iot/connectivity"
+      }
+    },
+    {
+      "id": "resolve-telecom-identity-esim-profile",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for TELECOM-IDENTITY-ESIM-PROFILE is the only mapping in its tier: RESOLVED to ontology:telecom/identity/esim-profile.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TELECOM-IDENTITY-ESIM-PROFILE",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:telecom/identity/esim-profile"
+      }
+    },
+    {
+      "id": "resolve-telecom-satellite-connectivity",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for TELECOM-SATELLITE-CONNECTIVITY is the only mapping in its tier: RESOLVED to ontology:telecom/satellite/connectivity.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TELECOM-SATELLITE-CONNECTIVITY",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:telecom/satellite/connectivity"
+      }
+    },
+    {
+      "id": "resolve-telecom-roaming-retail",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for TELECOM-ROAMING-RETAIL is the only mapping in its tier: RESOLVED to ontology:telecom/roaming/retail.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TELECOM-ROAMING-RETAIL",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:telecom/roaming/retail"
+      }
+    },
+    {
+      "id": "resolve-telecom-roaming-wholesale",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for TELECOM-ROAMING-WHOLESALE is the only mapping in its tier: RESOLVED to ontology:telecom/roaming/wholesale.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TELECOM-ROAMING-WHOLESALE",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:telecom/roaming/wholesale"
+      }
+    },
+    {
+      "id": "resolve-telecom-interconnect-termination",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for TELECOM-INTERCONNECT-TERMINATION is the only mapping in its tier: RESOLVED to ontology:telecom/interconnect/termination.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TELECOM-INTERCONNECT-TERMINATION",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:telecom/interconnect/termination"
+      }
+    },
+    {
+      "id": "resolve-telecom-wholesale-access",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for TELECOM-WHOLESALE-ACCESS is the only mapping in its tier: RESOLVED to ontology:telecom/wholesale/access.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TELECOM-WHOLESALE-ACCESS",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:telecom/wholesale/access"
+      }
+    },
+    {
+      "id": "resolve-equipment-handset-sale",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for EQUIPMENT-HANDSET-SALE is the only mapping in its tier: RESOLVED to ontology:equipment/handset/sale.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "EQUIPMENT-HANDSET-SALE",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:equipment/handset/sale"
+      }
+    },
+    {
+      "id": "resolve-equipment-router-rental",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for EQUIPMENT-ROUTER-RENTAL is the only mapping in its tier: RESOLVED to ontology:equipment/router/rental.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "EQUIPMENT-ROUTER-RENTAL",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:equipment/router/rental"
+      }
+    },
+    {
+      "id": "resolve-services-installation",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for SERVICES-INSTALLATION is the only mapping in its tier: RESOLVED to ontology:services/installation.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "SERVICES-INSTALLATION",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:services/installation"
+      }
+    },
+    {
+      "id": "resolve-content-streaming-video",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0120"
+      ],
+      "oracle": "The tenant's own active mapping for CONTENT-STREAMING-VIDEO is the only mapping in its tier: RESOLVED to ontology:content/streaming-video.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "CONTENT-STREAMING-VIDEO",
+      "expect": {
+        "status": "RESOLVED",
+        "target": "ontology:content/streaming-video"
+      }
+    },
+    {
+      "id": "conflicting-tenant-mappings",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0123",
+        "ZTAX-CLS-REQ-0062"
+      ],
+      "oracle": "Two tenant mappings for BUNDLE-PLUS point at different nodes in one tier: CONFLICTED, both kept.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "BUNDLE-PLUS",
+      "expect": {
+        "status": "CONFLICTED",
+        "candidates": 2
+      }
+    },
+    {
+      "id": "unsupported-code",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0123",
+        "ZTAX-CLS-REQ-0080"
+      ],
+      "oracle": "No mapping exists for NEVER-SEEN: UNSUPPORTED, not OTHER_NON_TELECOM.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "NEVER-SEEN",
+      "expect": {
+        "status": "UNSUPPORTED"
+      }
+    },
+    {
+      "id": "incumbent-code-needs-review",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0061"
+      ],
+      "oracle": "Only an incumbent tax-engine code maps LEGACY-TX-77: it seeds a proposal and REVIEW_REQUIRED.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "LEGACY-TX-77",
+      "expect": {
+        "status": "REVIEW_REQUIRED"
+      }
+    },
+    {
+      "id": "other-tenant-mapping-invisible",
+      "kind": "resolve",
+      "requirements": [
+        "ZTAX-CLS-REQ-0057"
+      ],
+      "oracle": "TENANT-B-PLAN is mapped by tenant B only; tenant A sees nothing: UNSUPPORTED.",
+      "tenant": "00000000-0000-7000-8000-00000000000a",
+      "code": "TENANT-B-PLAN",
+      "expect": {
+        "status": "UNSUPPORTED"
+      }
+    },
+    {
+      "id": "mixed-telecom-content-equipment-bundle",
+      "kind": "bundle",
+      "requirements": [
+        "ZTAX-CLS-REQ-0121",
+        "ZTAX-CLS-REQ-0048"
+      ],
+      "oracle": "A 99.00 bundle of mobile voice (standalone 30.00), streaming video (15.00) and a handset (55.00), total standalone 100.00: 99 x 0.30 = 29.70, 99 x 0.15 = 14.85, 99 x 0.55 = 54.45, exact, summing to 99.00.",
+      "line": "inv-7/line-1",
+      "amount": "99.00",
+      "parts": [
+        {
+          "node": "ontology:telecom/voice/mobile",
+          "standalone": "30.00"
+        },
+        {
+          "node": "ontology:content/streaming-video",
+          "standalone": "15.00"
+        },
+        {
+          "node": "ontology:equipment/handset/sale",
+          "standalone": "55.00"
+        }
+      ],
+      "expect": {
+        "amounts": [
+          "29.70",
+          "14.85",
+          "54.45"
+        ]
+      }
+    },
+    {
+      "id": "roaming-and-iot-bundle",
+      "kind": "bundle",
+      "requirements": [
+        "ZTAX-CLS-REQ-0122"
+      ],
+      "oracle": "A 10.00 bundle of IoT connectivity (standalone 2.00) and retail roaming (1.00): 10 x 2/3 = 6.666.. and 3.333..; 666 + 333 = 999 units, the residual to the larger remainder (IoT's .67): 6.67 and 3.33.",
+      "line": "inv-8/line-2",
+      "amount": "10.00",
+      "parts": [
+        {
+          "node": "ontology:telecom/iot/connectivity",
+          "standalone": "2.00"
+        },
+        {
+          "node": "ontology:telecom/roaming/retail",
+          "standalone": "1.00"
+        }
+      ],
+      "expect": {
+        "amounts": [
+          "6.67",
+          "3.33"
+        ]
+      }
+    }
+  ]
+}
