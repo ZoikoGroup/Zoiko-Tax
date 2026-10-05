@@ -41,6 +41,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Final
 
+from .ai_security_controls import AISecurityError, OutputSchemaValidator
 from .citation import Citation
 from .governance import UseCaseRegistry, authorise
 from .provenance import Provenance
@@ -207,6 +208,8 @@ class Classifier:
     """
 
     knowledge_base: KnowledgeBase = field(default_factory=KnowledgeBase)
+    output_validator: OutputSchemaValidator | None = None
+    output_schema_id: str = ""
 
     # ------------------------------------------------------------------
     # Public API
@@ -276,8 +279,21 @@ class Classifier:
             for result in search_results
         )
 
-        return ClassificationRecord(
+        record = ClassificationRecord(
             sku_description=sku_description,
             proposals=proposals,
             provenance=provenance,
         )
+
+        # 5. Output schema validation (§28 improper-output-handling control).
+        if self.output_validator is not None and self.output_schema_id:
+            try:
+                self.output_validator.validate_or_raise(
+                    self.output_schema_id, record.as_dict()
+                )
+            except AISecurityError as exc:
+                raise ClassificationError(
+                    f"classifier: output failed schema validation — {exc}"
+                ) from exc
+
+        return record
