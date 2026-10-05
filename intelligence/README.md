@@ -27,7 +27,10 @@ src/ztax_gateway/
   governance.py    the enforcement point — ADR-0006 §2.5's three refusals
   provenance.py    the governance context, mirroring ai.Provenance on the Go side
   decimal_wire.py  the fiscal boundary — ADR-0006 §2.3, canonical strings only
-  service.py       the transport seam (see below)
+  service.py       guarded(): the four steps every call takes
+  wire.py          the JSON wire form, strict both ways
+  runtime.py       routing and the model-runtime seam
+  server.py        the gRPC server (see "The transport")
 ```
 
 ### The enforcement point
@@ -54,13 +57,23 @@ It also refuses `int`, because an int carries no scale and cannot express whethe
 
 > The test suite caught a real bug here. `Context.create_decimal` applies its precision by **rounding**, and rounding to 34 digits is not a trapped condition — so a 35-digit value arrived silently truncated rather than refused. It now parses at arbitrary precision and checks the width explicitly, which is what the Go side does and for the same reason.
 
-### The transport seam
+### The transport
 
-`service.py` serves no traffic, and that is deliberate rather than unfinished.
+`server.py` serves the boundary: one gRPC method, `/ztax.gateway.v1.ModelGateway/Invoke`, over mTLS (ADR-0006 §2.1). Every call takes the four steps `service.guarded` enforces, in order — decode, `authorise` before the payload is touched, run, log the crossing — and leaves as a gRPC status with the estate reason code in the `ztax-reason` trailer, so the Go client (`backend/internal/adapter/gateway/grpc.go`) rebuilds the exact `errs.Error`.
 
-ADR-0006 §2.2 makes `contracts/schemas` the canonical schema authority with protobuf *derived* from it. Hand-writing `.proto` files here would create the second schema authority that clause exists to prevent — in the component where the two languages have to agree most precisely. So the transport waits on W2 lane K's contract pipeline.
+**The codec is JSON, not protobuf, and that is a deviation to record in ADR-0006.** §2.2 wants protobuf *derived* from `contracts/schemas` with a drift gate, so that there is one schema authority. No schema-to-proto generator exists, and hand-writing `.proto` files would create the second authority §2.2 forbids. So the messages are the JSON of `contracts/schemas/ai/gateway-call.schema.json` and `gateway-reply.schema.json`, carried by gRPC with a registered `ztax-json` codec. Everything §3.1 chose gRPC for survives: a typed client on both sides (the wire structs and `wire.py`, each tested against the schemas), deadline propagation, mTLS identity per call. What is deferred is protobuf's compact encoding. Replacing the codec later changes `wire.py` and the Go codec and nothing else.
 
-The ordering is not convenience. The governance logic is testable with no transport, no provider and no model, and it is the half that has to be right. Building it the other way round produces a Gateway that can carry a request before it can refuse one.
+Both decoders are strict: a JSON number anywhere is refused (ADR-0006 §2.3 — `json.loads` would make it a float), and so is an unknown field.
+
+**The model runtime is a seam.** `runtime.UnconfiguredRuntime` is the production default: a permitted call answers `AI_GATEWAY_NOT_CONFIGURED` until a provider adapter is approved and wired with credentials from the Gateway's own vault namespace (ADR-0017 §2.5). The governance path is real end to end; the model is not, yet.
+
+**One registry, two readers.** The use-case registry and routing are a reviewed AI-train file (`config/registry.dev.json` for the local stack). The Gateway loads it with `server.load_config`; the Go pre-check loads the same file with `gateway.LoadPolicy`, so the two decisions are made against one registry.
+
+```
+python -m ztax_gateway.server   # needs ZTAX_GATEWAY_CONFIG, _REGION, _AI_TRAIN and mTLS material
+```
+
+`backend/internal/adapter/gateway/e2e_python_test.go` drives the real server from Go when `ZTAX_E2E_PYTHON` names an interpreter with this package installed.
 
 ## Running it
 

@@ -20,8 +20,8 @@ FROM ${BASE_IMAGE} AS build
 
 WORKDIR /src
 
-# Dependencies resolve from pyproject; there are none at runtime today, and the
-# stage exists so that adding one does not mean restructuring the image.
+# Dependencies resolve from pyproject: grpcio, pinned, and nothing else at
+# runtime.
 COPY pyproject.toml ./
 COPY src/ ./src/
 
@@ -40,12 +40,12 @@ COPY --from=build /out /usr/local/lib/python3.12/site-packages
 
 USER ztax:ztax
 
-# No port yet: the transport waits on W2 lane K's contract pipeline, so this
-# image currently carries the governance layer and nothing that listens. The
-# EXPOSE and the entrypoint land with the generated server, and stating that
-# here is better than exposing a port nothing serves.
+# The Gateway's gRPC port (ADR-0006 §2.1). mTLS material and the registry
+# file are mounted by the deployment; server.main refuses to listen in clear
+# outside development.
+EXPOSE 8443
 
-# No HEALTHCHECK: liveness is an HTTP probe owned by the orchestrator, the same
+# No HEALTHCHECK: liveness is a probe owned by the orchestrator, the same
 # arrangement the ztax-core and ztax-web images document.
 
-ENTRYPOINT ["python", "-c", "import ztax_gateway; print('ztax-model-gateway: governance layer loaded; transport pending W2 lane K')"]
+ENTRYPOINT ["python", "-m", "ztax_gateway.server"]

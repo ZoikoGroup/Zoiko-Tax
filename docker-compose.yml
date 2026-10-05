@@ -122,12 +122,43 @@ services:
       # ZTAX_OTLP_INSECURE: "true" (ADR-0015 §2.1; refused outside development).
       ZTAX_OTLP_ENDPOINT: ""
 
+      # The Governed Model Gateway (ADR-0006). Plain gRPC locally; refused
+      # outside development by config.Load, where the boundary is mTLS. The
+      # registry file is the same one the Gateway loads.
+      ZTAX_AI_GATEWAY_TARGET: dns:///ztax-model-gateway:8443
+      ZTAX_AI_GATEWAY_INSECURE: "true"
+      ZTAX_AI_POLICY_FILE: /etc/ztax/ai/registry.json
+    volumes:
+      - ./intelligence/config/registry.dev.json:/etc/ztax/ai/registry.json:ro
+
     # The binary writes nothing to disk. Enforcing that here means a future
     # change that starts writing fails loudly in development rather than in a
     # cell.
     read_only: true
     tmpfs:
       - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  # The Governed Model Gateway (ADR-0006): the only path from the core to any
+  # model. Locally it has no approved provider, so a permitted call answers
+  # AI_GATEWAY_NOT_CONFIGURED — the governance path is real, the model is not.
+  ztax-model-gateway:
+    build:
+      context: ./intelligence
+      target: ztax-model-gateway
+    environment:
+      ZTAX_ENVIRONMENT: development
+      ZTAX_GATEWAY_CONFIG: /etc/ztax/ai/registry.json
+      ZTAX_GATEWAY_REGION: local
+      ZTAX_GATEWAY_AI_TRAIN: 0.0.0-dev
+      ZTAX_GATEWAY_ADDRESS: "[::]:8443"
+      ZTAX_GATEWAY_INSECURE_LOCAL: "true"
+    volumes:
+      - ./intelligence/config/registry.dev.json:/etc/ztax/ai/registry.json:ro
+    read_only: true
     cap_drop:
       - ALL
     security_opt:

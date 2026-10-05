@@ -68,6 +68,8 @@ _ALL_SCHEMAS = (
     "dataset-profile",
     "evaluation-profile",
     "ai-release-manifest",
+    "gateway-call",
+    "gateway-reply",
 )
 
 # ---------------------------------------------------------------------------

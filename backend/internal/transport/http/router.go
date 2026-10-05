@@ -68,6 +68,12 @@ type Router struct {
 	// deployed without an evidence store, which answers all four with 503
 	// rather than serving the parts that happen not to write.
 	Determination *app.DeterminationService
+
+	// Models is the Governed Model Gateway client (ADR-0006): the only route
+	// from this process to the AI plane. Every result it returns is an
+	// advisory type, and nothing in the transport converts one into a fiscal
+	// value (ADR-0006 §2.6). Nil in a router built without one.
+	Models port.ModelGateway
 }
 
 // Trains are the seven release-train versions, as the contract names them.

@@ -1,23 +1,9 @@
-"""The transport seam.
+"""The guarded call: the four steps every Gateway entry point takes.
 
-Nothing here serves traffic yet, and the reason is worth stating rather than
-leaving as a gap somebody discovers.
+``server.py`` is the transport; this is what it runs for each call, and the
+order is not negotiable:
 
-ADR-0006 §2.2 makes ``contracts/schemas`` the canonical schema authority, with
-protobuf *derived* from it and a CI job failing the build if a proto has drifted
-or if a hand edit introduced a field with no canonical counterpart. Writing
-``.proto`` files here by hand would create exactly the second schema authority
-that clause exists to prevent — and it would do so in the component where the
-two languages have to agree most precisely.
-
-So the transport waits on W2 lane K's contract pipeline. What exists now is the
-part that has to be right regardless of how bytes arrive: the governance gate in
-``governance.py`` and the decimal boundary in ``decimal_wire.py``.
-
-When the pipeline lands, the handler below is the shape of it. Every entry point
-follows the same four steps, and the order is not negotiable:
-
-    1. Reconstruct Provenance from the request metadata.
+    1. Reconstruct Provenance from the request.
     2. authorise(registry, provenance) - refuse before touching the payload.
     3. Do the work.
     4. Log the crossing with the redacted context (ADR-0006 §2.7).

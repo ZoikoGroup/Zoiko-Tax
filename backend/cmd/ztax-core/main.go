@@ -25,8 +25,10 @@ import (
 
 	adaptercontent "github.com/zoikogroup/zoikotax/backend/internal/adapter/content"
 	adapterevidence "github.com/zoikogroup/zoikotax/backend/internal/adapter/evidence"
+	"github.com/zoikogroup/zoikotax/backend/internal/adapter/gateway"
 	"github.com/zoikogroup/zoikotax/backend/internal/adapter/postgres"
 	"github.com/zoikogroup/zoikotax/backend/internal/app"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
@@ -128,6 +130,12 @@ func run() error {
 	if router.Determination, err = wireDetermination(cfg, store, content, clk, ids, log); err != nil {
 		return err
 	}
+	models, closeModels, err := wireModelGateway(cfg, clk, ids, log)
+	if err != nil {
+		return err
+	}
+	defer closeModels()
+	router.Models = models
 	router.SecureCookies = cfg.SecureCookies
 	router.TrustProxy = cfg.TrustProxy
 	router.Cell, router.Region, router.Environment = cfg.Cell, cfg.Region, cfg.Environment
@@ -432,4 +440,47 @@ func wireDetermination(cfg config.Config, store *postgres.Store, content *rule.H
 		WithIdempotency(app.NewIdempotency(store.Idempotency(), store, clk))
 	log.Info("determination surface enabled", "evidence.dir", cfg.EvidenceDir)
 	return svc, nil
+}
+
+// wireModelGateway builds the Governed Model Gateway client (ADR-0006). A cell
+// with no Gateway target gets a client over the Unconfigured transport: every
+// AI call answers AI_GATEWAY_NOT_CONFIGURED, deterministic processing is
+// unaffected, and the cell starts. A configured target is dialled lazily, so
+// a Gateway that is down at start-up degrades AI assistance rather than
+// stopping the cell.
+func wireModelGateway(cfg config.Config, clk clock.Clock, ids idgen.Generator, log *slog.Logger) (*gateway.Client, func(), error) {
+	transport := gateway.Transport(gateway.Unconfigured{})
+	closeFn := func() {}
+	var policy ai.Policy
+	if cfg.AIGatewayTarget != "" {
+		var err error
+		if policy, err = gateway.LoadPolicy(cfg.AIPolicyFile); err != nil {
+			return nil, nil, err
+		}
+		gc := gateway.GRPCConfig{Target: cfg.AIGatewayTarget, InsecureLocal: cfg.AIGatewayInsecure}
+		if cfg.AIGatewayTLSDir != "" {
+			if gc.TLS, err = gateway.LoadMTLS(cfg.AIGatewayTLSDir); err != nil {
+				return nil, nil, err
+			}
+		}
+		g, err := gateway.NewGRPC(gc)
+		if err != nil {
+			return nil, nil, err
+		}
+		transport = g
+		closeFn = func() { _ = g.Close() }
+		log.Info("ai gateway configured", "target", cfg.AIGatewayTarget, "mtls", gc.TLS != nil)
+	} else {
+		log.Warn("no ai gateway configured; AI assistance will answer " + string(gateway.ReasonGatewayNotConfigured))
+	}
+	client, err := gateway.New(gateway.Config{
+		Transport: transport, Policy: gateway.StaticPolicy{P: policy},
+		Recorder: gateway.SlogRecorder{Logger: log}, Clock: clk, IDs: ids,
+		Region: cfg.Region, Deadline: cfg.AIGatewayDeadline,
+	})
+	if err != nil {
+		closeFn()
+		return nil, nil, err
+	}
+	return client, closeFn, nil
 }

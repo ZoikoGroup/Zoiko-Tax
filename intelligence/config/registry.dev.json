@@ -1,0 +1,25 @@
+{
+  "use_cases": [
+    {
+      "use_case_id": "classification-review",
+      "owner": "lane-l",
+      "description": "Propose an ontology mapping for a catalog item, for human review (ZTAX-CLS-REQ-0082). Advisory only.",
+      "max_risk_tier": "T2",
+      "max_authority": "A1",
+      "permitted_regions": [
+        "local"
+      ],
+      "permitted_data_classes": [
+        "P0",
+        "P1"
+      ],
+      "route": {
+        "model_profile": "model:unassigned",
+        "provider_profile": "provider:unassigned",
+        "prompt_profile": "prompt:classification-review-v1"
+      }
+    }
+  ],
+  "killed": [],
+  "global_kill": false
+}
