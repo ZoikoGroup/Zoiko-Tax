@@ -686,6 +686,44 @@
       "assessed_amount": {
         "class": "P0",
         "note": "A tenant's liability for a period; an aggregate."
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "authority": {
+        "class": "P0"
+      },
+      "definition_id": {
+        "class": "P0"
+      },
+      "definition_version": {
+        "class": "P0"
+      },
+      "bundle_id": {
+        "class": "P0"
+      },
+      "bundle_digest": {
+        "class": "P0"
+      },
+      "duty": {
+        "class": "P0"
+      },
+      "legal_timezone": {
+        "class": "P0"
+      },
+      "reason_code": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The user who moved the obligation; NULL when a commit wrote the row."
       }
     },
     "outbox": {
@@ -1174,6 +1212,30 @@
         "retention": "RET-OPERATIONAL",
         "redaction": "NONE",
         "aiAllowed": "NONE"
+      }
+    },
+    "obligation_contribution": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "business_key": {
+        "class": "P0"
+      },
+      "decision_id": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "amount": {
+        "class": "P0",
+        "note": "One decision's tax assessed into a period's return; an aggregate input."
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
       }
     }
   }

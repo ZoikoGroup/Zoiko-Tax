@@ -186,6 +186,13 @@ type Obligation struct {
 	// (ZTAX-OBL-REQ-0044, -0045).
 	Threshold    *ThresholdState
 	Registration *RegistrationState
+
+	// Timezone is the legal calendar the period and due dates are civil dates
+	// in, so "overdue" can be asked of that calendar's today.
+	Timezone string
+	// RecordedBy is the user whose act wrote this row. Zero when a commit
+	// wrote it: the system assessed it, nobody decided it.
+	RecordedBy id.UserID
 }
 
 // DefinitionRef pins the definition version an obligation was decided under.

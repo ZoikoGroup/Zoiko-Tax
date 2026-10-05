@@ -442,7 +442,7 @@ func wireDetermination(cfg config.Config, store *postgres.Store, content *rule.H
 		WithIdempotency(app.NewIdempotency(store.Idempotency(), store, clk)).
 		WithFiscal(app.FiscalStores{
 			Accumulators: store.Accumulators(), Journals: store.Journals(),
-			LegalEntities: store.LegalEntities(), Outbox: store.Outbox(),
+			LegalEntities: store.LegalEntities(), Outbox: store.Outbox(), Obligations: store.Obligations(),
 		})
 	log.Info("determination surface enabled", "evidence.dir", cfg.EvidenceDir)
 	return svc, nil

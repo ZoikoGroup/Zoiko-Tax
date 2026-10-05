@@ -19,9 +19,11 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/accumulator"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/fiscal"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/idempotency"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/identity"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/obligation"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/outbox"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
@@ -351,6 +353,61 @@ type JournalRepository interface {
 	// Balances sums a legal entity's posted lines by account and currency,
 	// debits and credits apart (ZTAX-FIN-REQ-0121).
 	Balances(ctx context.Context, legalEntityID id.LegalEntityID) (map[subledger.BalanceKey]subledger.Balance, error)
+}
+
+// ObligationRepository stores obligation instances as append-only chains of
+// rows linked by Supersedes (ADR-0003 §2.2), and the per-decision
+// contributions their assessed amounts are the sum of.
+type ObligationRepository interface {
+	// Lock serializes the writers of one business key until the transaction
+	// ends. Commit takes it after the accumulator locks, in business-key
+	// order, so every writer acquires in the same order.
+	Lock(ctx context.Context, businessKey string) error
+	// Current returns the newest row of a business key; not found when the
+	// obligation has never been created.
+	Current(ctx context.Context, businessKey string) (obligation.Obligation, error)
+	// ByID returns one row, current or superseded.
+	ByID(ctx context.Context, obligationID id.ObligationID) (obligation.Obligation, error)
+	// List returns the current row of every chain in the filter, by due date.
+	List(ctx context.Context, f ObligationFilter) ([]obligation.Obligation, error)
+	// Append writes a row. A second root for a business key, or a second row
+	// superseding the same row, is refused as a conflict: the writer read a
+	// row that is no longer current.
+	Append(ctx context.Context, o obligation.Obligation) error
+	// Contribute records one decision's assessment into, or withdrawal from,
+	// a business key. It reports false when that decision already recorded
+	// that kind for that key, so a retried commit counts once.
+	Contribute(ctx context.Context, c ObligationContribution) (bool, error)
+	// Contribution returns what a decision recorded of one kind for a key;
+	// not found when it recorded nothing.
+	Contribution(ctx context.Context, businessKey string, decisionID id.DecisionID, kind ContributionKind) (fiscal.Money, error)
+	// Assessed sums the contributions of each business key. A key with none
+	// is absent from the result.
+	Assessed(ctx context.Context, businessKeys []string) (map[string]fiscal.Money, error)
+}
+
+// ObligationFilter narrows a listing. Zero fields do not filter.
+type ObligationFilter struct {
+	Status obligation.Status
+	Limit  int
+}
+
+// ContributionKind distinguishes an assessment from its withdrawal.
+type ContributionKind string
+
+// The contribution kinds of migration 000012.
+const (
+	ContributionAssess   ContributionKind = "ASSESS"
+	ContributionWithdraw ContributionKind = "WITHDRAW"
+)
+
+// ObligationContribution is one decision's signed amount for one obligation.
+type ObligationContribution struct {
+	BusinessKey string
+	DecisionID  id.DecisionID
+	Kind        ContributionKind
+	Amount      fiscal.Money
+	RecordedAt  time.Time
 }
 
 // OutboxWriter appends an event in the caller's transaction (ADR-0014 §2.1):

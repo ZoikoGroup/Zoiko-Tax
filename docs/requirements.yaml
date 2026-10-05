@@ -16347,7 +16347,7 @@ requirements:
     owner: "Head of Obligations"
     applies_to: ["Data"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/app/obligation_integration_test.go::TestIntegrationAdjustmentReassessesTheObligation"
     status: PROPOSED
     effective_from: null
     effective_to: null

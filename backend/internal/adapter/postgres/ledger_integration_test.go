@@ -11,8 +11,9 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/adapter/postgres"
 )
 
-// Migration 000011 against a real PostgreSQL: posted journals and legal
-// entities are append-only to the application (ZTAX-FIN-REQ-0036, -0038).
+// Migrations 000011 and 000012 against a real PostgreSQL: posted journals,
+// legal entities, obligation rows and their contributions are append-only to
+// the application (ZTAX-FIN-REQ-0036, -0038; ADR-0003 §2.2).
 func TestIntegrationLedgerTablesAreAppendOnly(t *testing.T) {
 	dsn := os.Getenv("ZTAX_TEST_DATABASE_URL")
 	if dsn == "" {
@@ -25,7 +26,7 @@ func TestIntegrationLedgerTablesAreAppendOnly(t *testing.T) {
 		t.Fatalf("open: %v", err)
 	}
 	defer pool.Close()
-	for _, table := range []string{"legal_entity", "tcsl_journal", "tcsl_journal_line"} {
+	for _, table := range []string{"legal_entity", "tcsl_journal", "tcsl_journal_line", "obligation", "obligation_contribution"} {
 		for privilege, want := range map[string]bool{
 			"SELECT": true, "INSERT": true, "UPDATE": false, "DELETE": false, "TRUNCATE": false,
 		} {

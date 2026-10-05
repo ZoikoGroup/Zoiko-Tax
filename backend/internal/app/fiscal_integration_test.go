@@ -79,6 +79,7 @@ type fiscalCell struct {
 	tenant id.TenantID
 	svc    *app.DeterminationService
 	event  time.Time
+	clock  *settableClock
 }
 
 func openFiscalCell(t *testing.T) *fiscalCell {
@@ -123,13 +124,13 @@ func openFiscalCell(t *testing.T) *fiscalCell {
 		WithIdempotency(app.NewIdempotency(store.Idempotency(), store, clk)).
 		WithFiscal(app.FiscalStores{
 			Accumulators: store.Accumulators(), Journals: store.Journals(),
-			LegalEntities: store.LegalEntities(), Outbox: store.Outbox(),
+			LegalEntities: store.LegalEntities(), Outbox: store.Outbox(), Obligations: store.Obligations(),
 		})
 	operator := security.New(tenant, id.NewUserID(uuid.Must(uuid.NewV7())), id.NewSessionID(uuid.Must(uuid.NewV7())),
 		[]security.Role{security.RoleOperator}, time.Now())
 	return &fiscalCell{
 		store: store, ctx: security.Into(ctx, operator), tenant: tenant, svc: svc,
-		event: time.Date(2026, 9, 24, 18, 0, 0, 0, time.UTC),
+		event: time.Date(2026, 9, 24, 18, 0, 0, 0, time.UTC), clock: clk,
 	}
 }
 

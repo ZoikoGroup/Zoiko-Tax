@@ -111,6 +111,9 @@ func (s *DeterminationService) record(ctx context.Context, sc security.Context, 
 	if err := s.contribute(ctx, sc.Tenant(), d, cs, held); err != nil {
 		return evidence.Decision{}, err
 	}
+	if err := s.assess(ctx, sc.Tenant(), b, d, prior, origEnv.EventTime); err != nil {
+		return evidence.Decision{}, err
+	}
 	if prior != nil {
 		if err := s.reversePosting(ctx, prior.DecisionID, d.Envelope.DecisionTime); err != nil {
 			return evidence.Decision{}, err

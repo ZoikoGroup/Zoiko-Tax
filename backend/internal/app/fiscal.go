@@ -46,10 +46,12 @@ type FiscalStores struct {
 	Journals      port.JournalRepository
 	LegalEntities port.LegalEntityRepository
 	Outbox        port.OutboxWriter
+	Obligations   port.ObligationRepository
 }
 
 func (f FiscalStores) complete() bool {
-	return f.Accumulators != nil && f.Journals != nil && f.LegalEntities != nil && f.Outbox != nil
+	return f.Accumulators != nil && f.Journals != nil && f.LegalEntities != nil && f.Outbox != nil &&
+		f.Obligations != nil
 }
 
 // WithFiscal returns the service with fiscal effects wired.
@@ -294,12 +296,8 @@ func (s *DeterminationService) post(ctx context.Context, tenant id.TenantID, b *
 	if p == nil || p.Posting == nil {
 		return nil
 	}
-	le, err := s.fiscal.LegalEntities.Default(ctx)
+	le, err := s.defaultLegalEntity(ctx)
 	if err != nil {
-		if errs.IsCategory(err, errs.CategoryNotFound) {
-			return errs.New(errs.CategoryConflict, errs.ReasonStateTransitionInvalid,
-				"The tenant has no default legal entity to post for.")
-		}
 		return err
 	}
 	journals, err := journalsFor(s.ids, tenant, le, b, p.Posting, d)
