@@ -44,6 +44,12 @@ from pathlib import Path
 from typing import Final
 
 from .citation import Citation, SourceChunk, combine
+from .privacy_source_rights import (
+    CustomerPolicy,
+    PrivacySourceRightsError,
+    RightsProfile,
+    check_corpus_source,
+)
 
 __all__: list[str] = [
     "Chunk",
@@ -240,18 +246,37 @@ class KnowledgeBase:
     # Building
     # ------------------------------------------------------------------
 
-    def build(self, paths: list[Path]) -> None:
+    def build(
+        self,
+        paths: list[Path],
+        *,
+        rights_profiles: dict[str, RightsProfile] | None = None,
+        customer_policy: CustomerPolicy | None = None,
+    ) -> None:
         """Ingest one or more spec documents into the index.
 
         Can be called multiple times with different files; calling it with a
         file that has already been ingested raises :class:`KnowledgeBaseError`.
 
+        When *rights_profiles* is supplied, every path whose posix string
+        appears in the dict is checked via
+        :func:`~ztax_gateway.privacy_source_rights.check_corpus_source` before
+        ingestion.  If the source's :class:`RightsProfile` does not permit
+        ``USE_RETRIEVAL`` *and* ``USE_EMBEDDING``, the build is aborted with
+        :class:`KnowledgeBaseError` (ZTAX-SRC-REQ-0004, ZTAX-PRIV-REQ-0073).
+
         Args:
-            paths: Absolute paths to Markdown spec files.
+            paths:            Absolute paths to Markdown spec files.
+            rights_profiles:  Optional mapping of ``path.as_posix()`` to
+                              :class:`~ztax_gateway.privacy_source_rights.RightsProfile`.
+                              Sources not present in the dict are ingested
+                              without a rights check.
+            customer_policy:  Optional customer-level policy passed through
+                              to :func:`~ztax_gateway.privacy_source_rights.check_corpus_source`.
 
         Raises:
             KnowledgeBaseError: if a path was already ingested, is missing,
-                or is empty.
+                is empty, or fails the source-rights gate.
             FileNotFoundError: if a path does not exist on disk.
         """
         for path in paths:
@@ -260,6 +285,17 @@ class KnowledgeBase:
                 raise KnowledgeBaseError(
                     f"rag: {path.name!r} has already been ingested — duplicate ingestion is a bug"
                 )
+            # Source-rights gate (ZTAX-SRC-REQ-0004, ZTAX-PRIV-REQ-0073).
+            if rights_profiles is not None and sid in rights_profiles:
+                try:
+                    check_corpus_source(
+                        rights_profiles[sid],
+                        customer_policy=customer_policy,
+                    )
+                except PrivacySourceRightsError as exc:
+                    raise KnowledgeBaseError(
+                        f"rag: source {path.name!r} failed rights gate — {exc}"
+                    ) from exc
             self._ingest_one(path)
             self._ingested.add(sid)
         self._built = True
