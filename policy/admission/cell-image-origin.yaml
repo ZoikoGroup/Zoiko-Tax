@@ -1,0 +1,52 @@
+# Rule 1 of signed-artifact admission: where an image may come from, and how it
+# must be named. Evaluated without network, which is why it is a separate
+# policy — `kyverno test` proves it offline in CI (tests/).
+#
+# In a namespace labelled ztax.zoikogroup.com/admission=signed-only, every
+# container, init container and ephemeral container image must be under
+# ghcr.io/zoikogroup/zoiko-tax/ — the path release.yml publishes to — and be
+# referenced by digest. A tag is refused before any signature is looked at: a
+# tag can be re-pointed after the check, and a signature over a mutable pointer
+# says nothing about what runs.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: cell-image-origin
+  annotations:
+    policies.kyverno.io/title: Cell images come from this repository, by digest
+    policies.kyverno.io/category: Supply chain
+    policies.kyverno.io/severity: high
+spec:
+  validationActions:
+    - Deny
+  failurePolicy: Fail
+  matchConstraints:
+    namespaceSelector:
+      matchLabels:
+        ztax.zoikogroup.com/admission: signed-only
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+  autogen:
+    podControllers:
+      controllers:
+        - deployments
+        - replicasets
+        - statefulsets
+        - daemonsets
+        - jobs
+        - cronjobs
+  variables:
+    - name: images
+      expression: >-
+        object.spec.containers.map(c, c.image)
+        + (has(object.spec.initContainers) ? object.spec.initContainers.map(c, c.image) : [])
+        + (has(object.spec.ephemeralContainers) ? object.spec.ephemeralContainers.map(c, c.image) : [])
+  validations:
+    - expression: >-
+        variables.images.all(i, i.matches(r'^ghcr\.io/zoikogroup/zoiko-tax/[a-z0-9][a-z0-9-]*@sha256:[a-f0-9]{64}$'))
+      message: >-
+        Cell namespaces admit only images from ghcr.io/zoikogroup/zoiko-tax/,
+        referenced by digest (name@sha256:...).

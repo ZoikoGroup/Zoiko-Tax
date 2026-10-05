@@ -143,6 +143,27 @@ var (
 		"lane-c",
 		"The password does not meet the minimum length or complexity policy.")
 
+	// ---- residency and transfer (SEC-001 §11, PRIV-001 §16) ---------------
+
+	// ReasonTenantNotResident is an authenticated request for a tenant whose
+	// home cell is not this cell, or is not recorded. It is a policy refusal,
+	// not a routing hint: the response does not say where the tenant lives,
+	// and retrying against the same cell fails identically. It is logged as a
+	// security event, because the tenant's data being present here at all is
+	// the finding.
+	ReasonTenantNotResident = Register("TENANT_NOT_RESIDENT", CategoryPolicy,
+		"lane-c",
+		"The tenant is not resident in the cell that received the request. The request was not applied. This is recorded as a residency incident; contact support.")
+
+	// ReasonTransferNotPermitted is a cross-cell transfer that its
+	// TransferProfile does not cover — a data class, a destination or a date
+	// outside what was approved. Cross-cell copy is an explicit, evidenced
+	// transfer (SEC-REQ-0042) and an unapproved one is refused, not logged and
+	// allowed.
+	ReasonTransferNotPermitted = Register("TRANSFER_NOT_PERMITTED", CategoryPolicy,
+		"lane-c",
+		"The cross-cell transfer is not permitted by its approved transfer profile. Nothing was transferred.")
+
 	// ---- resources -------------------------------------------------------
 
 	// ReasonNotFound is a reference to something that does not exist within

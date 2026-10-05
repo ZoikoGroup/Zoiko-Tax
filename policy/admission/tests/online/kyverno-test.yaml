@@ -1,0 +1,20 @@
+# Online proof of cell-release-signature against real images.
+#
+#   kyverno test policy/admission/tests/online
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: cell-release-signature
+policies:
+  - ../../cell-release-signature.yaml
+resources:
+  - resources.yaml
+variables: values.yaml
+results:
+  - policy: cell-release-signature
+    kind: Pod
+    isImageValidatingPolicy: true
+    resources:
+      - real-unsigned-image
+      - signed-by-another-identity
+    result: fail

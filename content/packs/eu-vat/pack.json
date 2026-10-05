@@ -1,0 +1,12 @@
+{
+  "bundleId": "eu-vat-worked-2026.09",
+  "packId": "ZTAX-CP-WORKED-EU-VAT",
+  "version": "0.1.0",
+  "level": "REGIONAL",
+  "status": "RESEARCH",
+  "capabilities": ["DETERMINE"],
+  "deploymentModes": ["P0_ZOIKO_ONLY"],
+  "sources": [
+    { "sourceId": "SRC-ZOIKO-WORKED-0001" }
+  ]
+}

@@ -1,0 +1,156 @@
+# ztax-core — the regional cell binary (ADR-0009 §2.1).
+#
+# Hardening matches docker-compose.yml's ztax-core service and goes past it
+# where an orchestrator can: read-only root, every capability dropped, no
+# privilege escalation, non-root uid 65532 (distroless nonroot), RuntimeDefault
+# seccomp, no Kubernetes API token.
+#
+# Configuration is environment variables only (ADR-0017 §2.1), and only names
+# backend/internal/platform/config recognises — an unknown ZTAX_ variable
+# refuses to start. infra/tools/check_manifests.py proves that against
+# config.go itself. The cell-specific values (cell, region, environment, the
+# seven train versions, the credential reference) are added by the cell's
+# overlay; the base deliberately cannot start on its own.
+#
+# enableServiceLinks is false and must stay false. With it on, Kubernetes
+# injects ZTAX_CORE_SERVICE_HOST, ZTAX_CORE_PORT and friends for the Service
+# below — ZTAX_-prefixed names config.Load does not know, so every replica
+# would refuse to start.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ztax-core
+  namespace: ztax-cell
+  labels:
+    app.kubernetes.io/name: ztax-core
+    app.kubernetes.io/part-of: zoikotax
+    ztax.zoikogroup.com/train: APP
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ztax-core
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ztax-core
+        app.kubernetes.io/part-of: zoikotax
+        ztax.zoikogroup.com/runtime: go
+    spec:
+      serviceAccountName: ztax-core
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 45
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      # Spread across zones: the C0 path has no single-zone runtime dependency
+      # (NFR §14).
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: ztax-core
+      containers:
+        - name: ztax-core
+          # By digest, never by tag: admission verifies the signature over a
+          # digest, and a tag can be moved. The overlay pins the released one.
+          image: ghcr.io/zoikogroup/zoiko-tax/ztax-core@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: ZTAX_HTTP_ADDR
+              value: ":8080"
+            - name: ZTAX_LOG_LEVEL
+              value: info
+            - name: ZTAX_SECURE_COOKIES
+              value: "true"
+            # No authoritative fiscal output before A4. config.Load refuses
+            # true outside production; setting it is an authorization act.
+            - name: ZTAX_AUTHORITATIVE
+              value: "false"
+            # The cell-local collector, over TLS (ZTAX_OTLP_INSECURE is refused
+            # outside development).
+            - name: ZTAX_OTLP_ENDPOINT
+              value: otel-collector.ztax-observability.svc:4317
+            - name: ZTAX_TRACE_SAMPLE_RATIO
+              value: "0.1"
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 3
+          # Liveness is /healthz, not /readyz: a database outage must take a
+          # replica out of rotation, not restart it in a loop (NFR §14).
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 500m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            privileged: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ztax-core
+  namespace: ztax-cell
+  labels:
+    app.kubernetes.io/name: ztax-core
+    app.kubernetes.io/part-of: zoikotax
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: ztax-core
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ztax-core
+  namespace: ztax-cell
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ztax-core

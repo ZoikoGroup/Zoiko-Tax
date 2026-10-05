@@ -51,6 +51,20 @@
 /backend/internal/domain/ai/    @ZoikoGroup/lane-l-intelligence @ZoikoGroup/lane-d-domain
 
 # ---------------------------------------------------------------------------
+# Infrastructure and security policy — train INFRA
+# ---------------------------------------------------------------------------
+# The cell blueprint decides where data may live, so a change to it is a
+# residency change as well as a platform one. Admission and egress policy are
+# authorization components: lane C approves who may run and what may be reached,
+# not lane B alone.
+/infra/                         @ZoikoGroup/lane-b-platform @ZoikoGroup/lane-c-security
+/policy/                        @ZoikoGroup/lane-c-security @ZoikoGroup/lane-b-platform
+
+# The canonical AI registry schemas are the authority the Gateway and the Go
+# policy gate are both checked against (ADR-0006 §2.2).
+/contracts/schemas/ai/          @ZoikoGroup/lane-l-intelligence @ZoikoGroup/lane-c-security
+
+# ---------------------------------------------------------------------------
 # Governance
 # ---------------------------------------------------------------------------
 # ADRs and specifications are the record of why the estate is shaped as it is.

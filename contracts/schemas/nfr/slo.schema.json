@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SLO",
+  "description": "A service level objective over one SLI (ZTAX-NFR-001 §4, §6). It names its eligible requests and exclusions (NFR-001: SLO definitions MUST identify both), its window, and — for latency — the CapacityProfile it is measured against, because a latency objective with no reference workload is not a claim anybody can reproduce. Alert rules are derived from it by infra/tools/nfr.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "slo_id", "version", "owner", "service", "class", "sli_ref", "objective", "window", "eligible_requests", "exclusions", "status", "alerting"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "kind": { "const": "SLO" },
+    "slo_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "version": { "$ref": "common.schema.json#/$defs/version" },
+    "owner": { "$ref": "common.schema.json#/$defs/owner" },
+    "service": { "$ref": "common.schema.json#/$defs/service" },
+    "class": { "$ref": "common.schema.json#/$defs/serviceClass" },
+    "sli_ref": {
+      "description": "sli_id of the indicator this objective is over. Must exist.",
+      "$ref": "common.schema.json#/$defs/identifier"
+    },
+    "capacity_profile_ref": {
+      "description": "capacity_profile_id the objective is measured against. Required for latency objectives.",
+      "$ref": "common.schema.json#/$defs/identifier"
+    },
+    "objective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["ratio", "latency", "zero"] },
+        "target_percent": {
+          "description": "ratio: the percentage of valid events that must be good over the window.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 100
+        },
+        "percentile": {
+          "description": "latency: the percentile judged.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 100
+        },
+        "threshold_ms": {
+          "description": "latency: the percentile must be strictly below this, in milliseconds.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "ratio" } } }, "then": { "required": ["target_percent"] } },
+        { "if": { "properties": { "type": { "const": "latency" } } }, "then": { "required": ["percentile", "threshold_ms"] } }
+      ]
+    },
+    "window": { "$ref": "common.schema.json#/$defs/duration" },
+    "eligible_requests": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "exclusions": { "$ref": "common.schema.json#/$defs/stringList" },
+    "status": { "$ref": "common.schema.json#/$defs/status" },
+    "source": {
+      "description": "Where the objective comes from (specification clause, Build Plan gate).",
+      "$ref": "common.schema.json#/$defs/nonEmptyString"
+    },
+    "alerting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["severity"],
+      "properties": {
+        "severity": { "type": "string", "enum": ["P1", "P2", "P3"] },
+        "burn_rates": {
+          "description": "ratio objectives: multi-window burn-rate alerts. Each fires when the error budget burns faster than `factor` times the sustainable rate over both windows.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["long_window", "short_window", "factor", "severity"],
+            "properties": {
+              "long_window": { "$ref": "common.schema.json#/$defs/duration" },
+              "short_window": { "$ref": "common.schema.json#/$defs/duration" },
+              "factor": { "type": "number", "exclusiveMinimum": 0 },
+              "severity": { "type": "string", "enum": ["P1", "P2", "P3"] }
+            }
+          }
+        },
+        "for": {
+          "description": "latency and zero objectives: how long the condition must hold before alerting.",
+          "$ref": "common.schema.json#/$defs/duration"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "objective": { "properties": { "type": { "const": "latency" } } } } },
+      "then": { "required": ["capacity_profile_ref"] }
+    }
+  ]
+}

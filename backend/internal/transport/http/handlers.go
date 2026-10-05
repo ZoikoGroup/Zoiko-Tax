@@ -84,6 +84,15 @@ func (rt *Router) handleSignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Residency, before the cookie is set. Every later request would be
+	// refused by withResidency anyway; refusing here means the browser is never
+	// handed a credential this cell will not honour. The session row SignIn
+	// wrote is unusable here by the same check, and expires unused.
+	if err := residencyCheck(r, rt.log, result.Tenant.ID.String(), result.Tenant.HomeCell, rt.Cell); err != nil {
+		writeProblem(w, r, rt.log, err)
+		return
+	}
+
 	// The cookie's lifetime matches the session's absolute limit, so a browser
 	// stops sending a cookie that the server would refuse anyway.
 	setSessionCookie(w, result.Token.Cookie(), rt.SecureCookies, identity.AbsoluteTimeout)

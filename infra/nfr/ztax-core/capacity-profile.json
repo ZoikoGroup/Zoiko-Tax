@@ -1,0 +1,70 @@
+{
+  "$schema": "../../../contracts/schemas/nfr/capacity-profile.schema.json",
+  "kind": "CapacityProfile",
+  "capacity_profile_id": "ztax-core.c0-typical-invoice",
+  "version": "0.1.0",
+  "owner": "lane-b-platform",
+  "service": "ztax-core",
+  "service_class": "C0",
+  "status": "placeholder",
+  "topology": {
+    "zones": 3,
+    "database": "PostgreSQL 17 + PostGIS 3.5, one instance per cell, synchronous standby in a second zone",
+    "broker": "Kafka protocol, one cluster per cell (ADR-0014 §2.4); not on the C0 path",
+    "object_store": "Regional evidence store with object lock"
+  },
+  "runtime": {
+    "node_size": "medium",
+    "replicas_min": 3,
+    "replicas_max": 12,
+    "cpu_request_millicores": 500,
+    "memory_limit_mib": 512,
+    "autoscale_signals": ["concurrency", "request_latency", "cpu", "db_connections"]
+  },
+  "request_type": "quote_and_commit",
+  "line_count": { "p50": 5, "p95": 40, "max": 500 },
+  "bundle": { "content_bundle_ref": null, "jurisdictions": 1, "components_per_line": 3 },
+  "payload_bytes": { "typical": 8192, "max": 1048576 },
+  "load": { "steady_rps": 200, "burst_rps": 1000, "concurrency": 256 },
+  "tenant_distribution": "noisy_neighbour",
+  "cache_state": "steady_state",
+  "external_dependency_mode": {
+    "database": "real",
+    "kms": "real",
+    "evidence_store": "real",
+    "broker": "excluded",
+    "model_gateway": "excluded",
+    "geocoder": "excluded"
+  },
+  "dataset": { "transactions": 10000000, "obligations": 100000, "evidence_objects": 10000000 },
+  "test_duration": { "warmup": "10m", "steady": "1h", "spike": "15m", "soak": "24h" },
+  "success_criteria": {
+    "server_p99_ms": 150,
+    "server_p95_ms": 100,
+    "single_line_runtime_p99_ms": 10,
+    "max_error_ratio": 0.0001,
+    "min_headroom_percent": 40
+  },
+  "benchmark_ref": null,
+  "placeholders": [
+    "/runtime/replicas_min",
+    "/runtime/replicas_max",
+    "/runtime/cpu_request_millicores",
+    "/runtime/memory_limit_mib",
+    "/line_count/p50",
+    "/line_count/p95",
+    "/line_count/max",
+    "/bundle/jurisdictions",
+    "/bundle/components_per_line",
+    "/payload_bytes/typical",
+    "/payload_bytes/max",
+    "/load/steady_rps",
+    "/load/burst_rps",
+    "/load/concurrency",
+    "/dataset/transactions",
+    "/dataset/obligations",
+    "/dataset/evidence_objects",
+    "/success_criteria/server_p95_ms",
+    "/success_criteria/min_headroom_percent"
+  ]
+}

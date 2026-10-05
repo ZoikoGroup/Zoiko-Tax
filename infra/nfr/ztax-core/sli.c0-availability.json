@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../contracts/schemas/nfr/sli.schema.json",
+  "kind": "SLI",
+  "sli_id": "ztax-core.c0-availability",
+  "version": "0.1.0",
+  "owner": "lane-b-platform",
+  "service": "ztax-core",
+  "family": "availability",
+  "description": "Valid authoritative C0 responses over eligible C0 requests. A 5xx is bad; a client-caused 4xx is not eligible; a 429 or 503 from admission control is bad, because it denied a valid request (NFR-001 §4).",
+  "measurement": {
+    "type": "ratio",
+    "good_events": "sum(rate(http_server_request_duration_seconds_count{service_name=\"ztax-core\",http_route=~\"/v1/quotes|/v1/transactions:commit\",http_response_status_code=~\"2..\"}[{{window}}]))",
+    "valid_events": "sum(rate(http_server_request_duration_seconds_count{service_name=\"ztax-core\",http_route=~\"/v1/quotes|/v1/transactions:commit\",http_response_status_code!~\"400|401|403|404|409|422\"}[{{window}}]))",
+    "unit": "ratio",
+    "instrumented": false
+  }
+}

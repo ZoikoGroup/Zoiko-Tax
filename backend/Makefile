@@ -63,23 +63,35 @@ CONTENT_PACK    ?= $(CONTENT_DIR)/packs/eu-vat/eu-vat.ztax
 CONTENT_BUILD   ?= $(CONTENT_DIR)/build
 CONTENT_KEYS    ?= $(CONTENT_DIR)/.keys
 CONTENT_KEY_ID  ?= content-dev-2026
+CONTENT_BUNDLE      ?= eu-vat-worked-2026.09
+CONTENT_AUTHOR_ID   ?= content-author-dev-2026
+CONTENT_APPROVER_ID ?= content-approver-dev-2026
+CONTENT_AUTHOR      ?= analyst:dev-author
+CONTENT_APPROVER    ?= counsel:dev-approver
 CONTENT_VERSION ?= 0.0.0-dev
 KEY_FROM        ?= 2026-01-01T00:00:00Z
 KEY_UNTIL       ?= 2030-01-01T00:00:00Z
 CONTENTC        := ZTAX_ENVIRONMENT=development $(GO) run ./cmd/ztax-contentc
 KEY_WINDOW      := -not-before $(KEY_FROM) -not-after $(KEY_UNTIL)
+CONTENT_MANIFEST := $(CONTENT_BUILD)/$(CONTENT_BUNDLE).manifest.json
 
 .PHONY: content-keys
-content-keys: ## Generate a development content-signing key and its keyring
-	@test -f $(CONTENT_KEYS)/signing.pem || (mkdir -p $(CONTENT_KEYS) && $(CONTENTC) keygen -key $(CONTENT_KEYS)/signing.pem -keyring $(CONTENT_KEYS)/keyring.json -key-id $(CONTENT_KEY_ID) $(KEY_WINDOW))
+content-keys: ## Generate development release, author and approver keys and their keyring
+	@mkdir -p $(CONTENT_KEYS)
+	@test -f $(CONTENT_KEYS)/signing.pem  || $(CONTENTC) keygen -key $(CONTENT_KEYS)/signing.pem  -keyring $(CONTENT_KEYS)/keyring.json -key-id $(CONTENT_KEY_ID) $(KEY_WINDOW)
+	@test -f $(CONTENT_KEYS)/author.pem   || $(CONTENTC) keygen -key $(CONTENT_KEYS)/author.pem   -keyring $(CONTENT_KEYS)/keyring.json -key-id $(CONTENT_AUTHOR_ID) $(KEY_WINDOW)
+	@test -f $(CONTENT_KEYS)/approver.pem || $(CONTENTC) keygen -key $(CONTENT_KEYS)/approver.pem -keyring $(CONTENT_KEYS)/keyring.json -key-id $(CONTENT_APPROVER_ID) $(KEY_WINDOW)
 
 .PHONY: content
-content: content-keys ## Compile and seal the worked pack (ADR-0005 2.1)
-	$(CONTENTC) build -source $(CONTENT_PACK) -out $(CONTENT_BUILD) -key $(CONTENT_KEYS)/signing.pem -key-id $(CONTENT_KEY_ID) $(KEY_WINDOW) -content-version $(CONTENT_VERSION)
+content: content-keys ## Compile (pack + rights gates), approve four-eyes, seal (ADR-0005 2.1)
+	$(CONTENTC) compile -source $(CONTENT_PACK) -out $(CONTENT_BUILD)
+	$(CONTENTC) approve -bundle $(CONTENT_MANIFEST) -role AUTHOR   -principal $(CONTENT_AUTHOR)   -key $(CONTENT_KEYS)/author.pem   -key-id $(CONTENT_AUTHOR_ID) $(KEY_WINDOW)
+	$(CONTENTC) approve -bundle $(CONTENT_MANIFEST) -role APPROVER -principal $(CONTENT_APPROVER) -key $(CONTENT_KEYS)/approver.pem -key-id $(CONTENT_APPROVER_ID) $(KEY_WINDOW)
+	$(CONTENTC) sign -bundle $(CONTENT_MANIFEST) -key $(CONTENT_KEYS)/signing.pem -key-id $(CONTENT_KEY_ID) $(KEY_WINDOW) -content-version $(CONTENT_VERSION)
 
 .PHONY: content-verify
-content-verify: ## Verify the sealed bundle through the cell's own loading path
-	$(CONTENTC) verify -dir $(CONTENT_BUILD) -keyring $(CONTENT_KEYS)/keyring.json
+content-verify: ## Verify the sealed bundle the way a production cell loads it (four-eyes included)
+	$(CONTENTC) verify -dir $(CONTENT_BUILD) -keyring $(CONTENT_KEYS)/keyring.json -environment production
 
 # --- contracts (SCHEMA train) -----------------------------------------------
 

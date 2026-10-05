@@ -200,6 +200,7 @@ func (rt *Router) Handler() http.Handler {
 		withTracing(tp, mux),
 		withLogging(rt.log),
 		withAuthentication(rt.auth, rt.log),
+		withResidency(rt.Cell, rt.log),
 	)
 }
 

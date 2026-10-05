@@ -26,10 +26,12 @@ on:
     branches: [main]
     paths:
       - 'intelligence/**'
+      - 'contracts/schemas/ai/**'
       - '.github/workflows/intelligence.yml'
   pull_request:
     paths:
       - 'intelligence/**'
+      - 'contracts/schemas/ai/**'
       - '.github/workflows/intelligence.yml'
   workflow_dispatch:
 

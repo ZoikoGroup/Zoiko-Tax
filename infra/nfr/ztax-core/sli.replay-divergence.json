@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../contracts/schemas/nfr/sli.schema.json",
+  "kind": "SLI",
+  "sli_id": "ztax-core.replay-divergence",
+  "version": "0.1.0",
+  "owner": "lane-b-platform",
+  "service": "ztax-core",
+  "family": "correctness",
+  "description": "Replays whose result differs from the recorded decision. Correctness health is measured on its own and never folded into latency or availability (NFR-001 §4).",
+  "measurement": {
+    "type": "count",
+    "counter": "ztax_replay_divergence_total",
+    "selector": "service_name=\"ztax-core\"",
+    "unit": "events",
+    "instrumented": false
+  }
+}

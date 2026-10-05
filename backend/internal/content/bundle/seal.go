@@ -49,6 +49,16 @@ type SealPayload struct {
 	// expired still loads — which it must, or every rotation would invalidate
 	// the content estate.
 	IssuedAt time.Time `json:"issuedAt"`
+	// Approvals are the four-eyes attestations over this manifest digest, each
+	// signed by its principal's own key (approval.go). They are inside the
+	// signed payload so that the release signature also covers *which*
+	// approvals the release was made on: an approval cannot be added to a
+	// sealed bundle afterwards, or removed from one.
+	//
+	// Optional in the format, and absent from the canonical bytes when empty,
+	// so a seal made before approvals existed still verifies. Whether a cell
+	// requires them is the loader's policy, not the format's.
+	Approvals []Approval `json:"approvals,omitempty"`
 }
 
 // Seal is a detached signature over a manifest.
@@ -92,6 +102,7 @@ func EncodeSealPayload(p SealPayload) ([]byte, error) {
 		canonical.F("contentVersion", canonical.String(p.ContentVersion)),
 		canonical.F("cell", canonical.OptString(p.Cell)),
 		canonical.F("issuedAt", canonical.Time(p.IssuedAt)),
+		canonical.F("approvals", canonicalApprovals(p.Approvals)),
 	))
 }
 
@@ -166,6 +177,7 @@ func DecodeSeal(data []byte) (Seal, error) {
 //     verifies but is not canonical is a payload some other implementation
 //     would read differently.
 //  4. Check the artifact kind, the profile and the digest.
+//  5. Verify each embedded approval the same way, signature first.
 //
 // A verifier that parsed first and verified second would be making decisions on
 // attacker-controlled structure. It is the same order a signature library uses,
@@ -211,6 +223,14 @@ func Verify(ctx context.Context, v kms.Verifier, s Seal, manifestBytes []byte, a
 		// This is the substitution the seal exists to catch, and it says so.
 		return SealPayload{}, fmt.Errorf("bundle: seal covers manifest %s, this manifest digests to %s",
 			p.ManifestDigest, digest)
+	}
+
+	// 5. Every approval the seal carries is genuine and covers this digest.
+	// Not whether there are enough of them — that is the caller's policy —
+	// but a forged or misdirected approval inside a good seal is refused here,
+	// so that a payload Verify returns never holds one.
+	if _, err := VerifyApprovals(ctx, v, p, at); err != nil {
+		return SealPayload{}, err
 	}
 	return p, nil
 }

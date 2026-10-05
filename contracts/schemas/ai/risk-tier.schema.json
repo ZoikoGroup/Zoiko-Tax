@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RiskTier",
+  "description": "The T0-T4 internal AI risk tier carried on every call across the Go/Python boundary (ADR-0006 §2.5; ZTAX-AIGOV-001 §5). A request at a tier above its use case's ceiling is refused rather than downgraded: downgrading would let a caller reach a lower-scrutiny path by mislabelling its own request.",
+  "$comment": "The order of the enum is the order of the tiers. Go: ai.RiskTiers. Python: ztax_gateway.provenance.RiskTier. Both are tested equal to this list.",
+  "enum": ["T0", "T1", "T2", "T3", "T4"],
+  "x-ztax-labels": {
+    "T0": "LOW",
+    "T1": "CONTROLLED",
+    "T2": "MATERIAL",
+    "T3": "HIGH",
+    "T4": "CRITICAL_RESTRICTED"
+  }
+}

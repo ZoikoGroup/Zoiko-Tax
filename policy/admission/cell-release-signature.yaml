@@ -1,0 +1,91 @@
+# Rules 2 and 3 of signed-artifact admission: who built the image, and how.
+#
+# An image is admitted to a signed-only namespace only if it carries
+#
+#   - a keyless Sigstore signature whose Fulcio certificate was issued by
+#     GitHub's OIDC issuer to .github/workflows/release.yml in
+#     ZoikoGroup/Zoiko-Tax, running for a v* tag, and logged in Rekor. That is
+#     exactly what release.yml's `cosign sign` step produces; the same image
+#     signed by any other workflow, repository, branch or key is refused.
+#   - a SLSA provenance attestation signed by that same identity, whose builder
+#     is a GitHub Actions run of this repository.
+#
+# matchImageReferences is "*": every image is in scope, so an image from
+# anywhere else is refused here as well as by cell-image-origin. Two policies
+# refusing it is the intent — the origin rule gives the readable message and
+# needs no network, this one is the cryptographic check.
+#
+# The attestation half needs a step release.yml does not have yet (buildx's
+# provenance is attached unsigned, and an unsigned attestation proves nothing
+# at admission). policy/README.md gives the step. Until it lands this policy
+# refuses every image, including correctly signed ones: fail closed, which is
+# the right state for a gate whose evidence does not yet exist.
+apiVersion: policies.kyverno.io/v1
+kind: ImageValidatingPolicy
+metadata:
+  name: cell-release-signature
+  annotations:
+    policies.kyverno.io/title: Signed by the release workflow, with signed provenance
+    policies.kyverno.io/category: Supply chain
+    policies.kyverno.io/severity: high
+spec:
+  validationActions:
+    - Deny
+  # A webhook outage must not become an admission bypass.
+  failurePolicy: Fail
+  webhookConfiguration:
+    timeoutSeconds: 30
+  matchConstraints:
+    namespaceSelector:
+      matchLabels:
+        ztax.zoikogroup.com/admission: signed-only
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+  autogen:
+    podControllers:
+      controllers:
+        - deployments
+        - replicasets
+        - statefulsets
+        - daemonsets
+        - jobs
+        - cronjobs
+  matchImageReferences:
+    - glob: "*"
+  validationConfigurations:
+    required: true
+    verifyDigest: true
+    mutateDigest: false
+  attestors:
+    - name: release
+      cosign:
+        keyless:
+          identities:
+            - issuer: https://token.actions.githubusercontent.com
+              subjectRegExp: ^https://github\.com/ZoikoGroup/Zoiko-Tax/\.github/workflows/release\.yml@refs/tags/v[0-9].*$
+        ctlog:
+          url: https://rekor.sigstore.dev
+  attestations:
+    - name: provenance
+      intoto:
+        type: https://slsa.dev/provenance/v0.2
+  validations:
+    - expression: >-
+        images.containers.map(image, verifyImageSignatures(image, [attestors.release])).all(e, e > 0)
+        && images.initContainers.map(image, verifyImageSignatures(image, [attestors.release])).all(e, e > 0)
+        && images.ephemeralContainers.map(image, verifyImageSignatures(image, [attestors.release])).all(e, e > 0)
+      message: image is not signed by ZoikoGroup/Zoiko-Tax release.yml on a v* tag
+    - expression: >-
+        images.containers.map(image, verifyAttestationSignatures(image, attestations.provenance, [attestors.release])).all(e, e > 0)
+        && images.initContainers.map(image, verifyAttestationSignatures(image, attestations.provenance, [attestors.release])).all(e, e > 0)
+        && images.ephemeralContainers.map(image, verifyAttestationSignatures(image, attestations.provenance, [attestors.release])).all(e, e > 0)
+      message: image has no SLSA provenance attestation signed by the release workflow
+    # docker/build-push-action records the Actions run as the builder; a
+    # provenance claiming any other builder is not this pipeline's.
+    - expression: >-
+        (images.containers + images.initContainers + images.ephemeralContainers).all(image,
+          extractPayload(image, attestations.provenance).predicate.builder.id.startsWith('https://github.com/ZoikoGroup/Zoiko-Tax/actions/runs/'))
+      message: provenance does not name a GitHub Actions run of ZoikoGroup/Zoiko-Tax as its builder

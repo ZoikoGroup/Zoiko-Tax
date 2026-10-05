@@ -16,10 +16,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/accumulator"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/idempotency"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/identity"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 )
@@ -190,4 +193,133 @@ type SealRepository interface {
 	Overlapping(ctx context.Context, from, to time.Time) ([]evidence.SealRecord, error)
 	Append(ctx context.Context, r evidence.SealRecord) error
 	ByID(ctx context.Context, sealID id.SealID) (evidence.SealRecord, error)
+}
+
+// ---------------------------------------------------------------------------
+// accumulators
+// ---------------------------------------------------------------------------
+
+// AccumulatorRepository persists the accumulator pattern of ADR-0004: an
+// append-only contribution log, a transactionally maintained snapshot, and the
+// threshold crossings the log has caused.
+//
+// The use case drives one commit like this, inside one transaction it opened
+// (ADR-0009 §2.4):
+//
+//	snaps := LockAll(refs)                     // the serialization point, §2.2–2.3
+//	for each contribution:
+//	    next, crossings := accumulator.Apply(snap, c, thresholds)
+//	    applied := AppendContribution(Event{c, next.LastSeq})
+//	    if !applied: the decision already contributed — §2.4, return the original result
+//	    SaveSnapshot(next)
+//	    for each crossing: AppendCrossing(crossing); outbox.Append(event)   // §2.6
+//	commit
+//
+// Every method derives its tenant from the security context (ADR-0012 §2.7);
+// none takes one.
+type AccumulatorRepository interface {
+	// LockAll takes the row lock on each named accumulator's snapshot, for
+	// the rest of the enclosing transaction, and returns the snapshots in
+	// accumulator.LockOrder order.
+	//
+	// It is the only way to lock a snapshot (ADR-0004 §5.1 control 1). Keys
+	// are acquired one at a time in canonical order, whatever order refs
+	// arrive in, and a snapshot that does not exist yet is created empty as
+	// part of acquiring it, so the first commit on a new key serializes
+	// exactly like every later one. A key named twice is locked once; named
+	// twice with different currencies, or with a currency different from the
+	// stored snapshot's, it is refused.
+	//
+	// The wait for each lock is bounded by an explicit lock_timeout set in
+	// the transaction (control 4): a pathological key degrades as a
+	// retryable CategoryUnavailable error rather than a hang. Calling it
+	// outside a transaction is an error, because the locks would be released
+	// before the caller could use them.
+	LockAll(ctx context.Context, refs []accumulator.Ref) ([]accumulator.Snapshot, error)
+
+	// AppendContribution writes a contribution to the log at e.Seq. It
+	// reports false, and no error, when the source decision has already
+	// contributed to the key: UNIQUE (tenant, accumulator_key,
+	// source_decision_id) refusing the row is the idempotence guarantee of
+	// ADR-0004 §2.4, and the caller treats it as success-already-applied.
+	// Nothing is written in that case, and the transaction remains usable.
+	AppendContribution(ctx context.Context, e accumulator.Event) (bool, error)
+
+	// Contribution reads the log entry a decision made to a key — the
+	// "reads the existing row" half of §2.4's already-applied path.
+	Contribution(ctx context.Context, key accumulator.Key, decisionID id.DecisionID) (accumulator.Event, error)
+
+	// SaveSnapshot replaces a locked snapshot with the one Apply or Rebuild
+	// produced. It refuses to move a snapshot backwards in the log.
+	SaveSnapshot(ctx context.Context, s accumulator.Snapshot) error
+
+	// AppendCrossing records a threshold crossing. A second crossing of one
+	// threshold on one key is refused by the primary key (§2.6) and surfaces
+	// as an error, failing the transaction that would have announced it
+	// twice.
+	AppendCrossing(ctx context.Context, c accumulator.Crossing) error
+
+	// Events is the whole contribution log for a key, in sequence order —
+	// the input to accumulator.Replay and accumulator.Rebuild (§2.5).
+	Events(ctx context.Context, key accumulator.Key) ([]accumulator.Event, error)
+
+	// Crossings is every recorded crossing for a key, in sequence order.
+	Crossings(ctx context.Context, key accumulator.Key) ([]accumulator.Crossing, error)
+
+	// ReadUnlocked reads a snapshot without locking it, for a quote (§2.7).
+	// The result may be stale by whatever is in flight, and is a distinct
+	// type so that it cannot be passed to accumulator.Apply. A key nothing
+	// has contributed to reads as an empty total in the named currency.
+	ReadUnlocked(ctx context.Context, ref accumulator.Ref) (accumulator.Observation, error)
+}
+
+// ---------------------------------------------------------------------------
+// model gateway
+// ---------------------------------------------------------------------------
+
+// ModelGateway is the only route from the app layer to the AI plane (ADR-0006;
+// Build Plan W1 lane L). internal/adapter/gateway implements it.
+//
+// Every method runs the ai.Evaluate policy gate before anything leaves the
+// process, then calls the Governed Model Gateway, which decides again on the
+// same governance context and is the enforcement point (§2.5). The tenant
+// comes from the security context in ctx and the region from the cell, so
+// neither is a parameter (ADR-0012 §2.7, ADR-0006 §2.8).
+//
+// Results are advisory records only (§2.6). Nothing here returns, accepts or
+// can be converted into a fiscal type; the route from a suggestion to a
+// decision is a human review workflow.
+//
+// Synchronous calls are for operator-initiated flows off the C0 path (§2.4).
+// An AI_GATEWAY_UNAVAILABLE or AI_GATEWAY_NOT_CONFIGURED error is a degraded
+// product state the caller renders as such, not a failure of the request it
+// was assisting.
+type ModelGateway interface {
+	Suggest(ctx context.Context, inv ai.Invocation) (ai.AiSuggestion, error)
+	Extract(ctx context.Context, inv ai.Invocation) (ai.AiExtraction, error)
+	ProposeClassification(ctx context.Context, inv ai.Invocation) (ai.AiClassificationProposal, error)
+}
+
+// ---------------------------------------------------------------------------
+// cross-cell transfer
+// ---------------------------------------------------------------------------
+
+// TransferLog records cross-cell transfers (ADR-0009 §2.6, SEC-REQ-0042).
+//
+// Append-only by interface as well as by grant: there is no update and no
+// delete, because the record is the evidence that a copy was authorized, and
+// evidence that can be edited after the fact is not evidence. The record is
+// appended in the source cell, in the transaction that releases the data, so a
+// copy with no record cannot commit.
+//
+// Append takes a privacy.CrossCellTransfer, which only NewCrossCellTransfer
+// builds — and that refuses a transfer its TransferProfile does not permit —
+// and every implementation re-validates its shape and refuses a record whose
+// tenant is not the one in the context.
+type TransferLog interface {
+	Append(ctx context.Context, t privacy.CrossCellTransfer) error
+	ByID(ctx context.Context, transferID id.TransferID) (privacy.CrossCellTransfer, error)
+	// List returns the tenant's transfers, newest first — the "what of this
+	// tenant's data has left this cell, and on whose approval" query.
+	List(ctx context.Context, limit int) ([]privacy.CrossCellTransfer, error)
 }

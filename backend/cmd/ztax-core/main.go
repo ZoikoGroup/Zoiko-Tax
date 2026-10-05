@@ -93,7 +93,7 @@ func run() error {
 	ids := idgen.V7{}
 
 	auth := app.NewAuthService(store.Tenants(), store.Users(), store.Sessions(), store.Audit(), store, clk, ids)
-	admin := app.NewAdminService(store.Tenants(), store.Users(), store.Sessions(), store.Audit(), store, clk, ids, cfg.Region)
+	admin := app.NewAdminService(store.Tenants(), store.Users(), store.Sessions(), store.Audit(), store, clk, ids, cfg.Region).InCell(cfg.Cell)
 
 	if err := bootstrap(startCtx, cfg, admin, log); err != nil {
 		return err
@@ -344,6 +344,9 @@ func activateContent(ctx context.Context, cfg config.Config, holder *rule.Holder
 		Verifier: keyring,
 		Clock:    clk,
 		Cell:     cfg.Cell,
+		// Anything but exactly "development" is strict: a bundle without
+		// four-eyes approvals is refused (CONT-001 four-eyes governance).
+		Environment: cfg.Environment,
 	}
 	loaded, err := loader.Activate(ctx, holder)
 	if err != nil {

@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../contracts/schemas/nfr/slo.schema.json",
+  "kind": "SLO",
+  "slo_id": "ztax-core.c0-server-latency-p99",
+  "version": "0.1.0",
+  "owner": "lane-b-platform",
+  "service": "ztax-core",
+  "class": "C0",
+  "sli_ref": "ztax-core.c0-server-latency",
+  "capacity_profile_ref": "ztax-core.c0-typical-invoice",
+  "objective": { "type": "latency", "percentile": 99, "threshold_ms": 150 },
+  "window": "28d",
+  "eligible_requests": "Successful POST /v1/quotes and POST /v1/transactions:commit under the typical-invoice CapacityProfile.",
+  "exclusions": [
+    "Client network latency",
+    "Requests outside the CapacityProfile envelope (line count above its max)"
+  ],
+  "status": "proposed",
+  "source": "Build Plan W2 exit gate; ZTAX-NFR-001 §6: p99 < 150 ms server-side for the approved typical-invoice CapacityProfile",
+  "alerting": { "severity": "P2", "for": "10m" }
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "../../../contracts/schemas/nfr/slo.schema.json",
+  "kind": "SLO",
+  "slo_id": "ztax-core.replay-divergence-zero",
+  "version": "0.1.0",
+  "owner": "lane-b-platform",
+  "service": "ztax-core",
+  "class": "C0",
+  "sli_ref": "ztax-core.replay-divergence",
+  "objective": { "type": "zero" },
+  "window": "28d",
+  "eligible_requests": "Every replay, scheduled or on demand.",
+  "exclusions": [],
+  "status": "proposed",
+  "source": "ADR-0015 §2.8: replay divergence count, any non-zero value is a P1",
+  "alerting": { "severity": "P1", "for": "0m" }
+}

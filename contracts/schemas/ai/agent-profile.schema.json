@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AgentProfile",
+  "description": "The orchestration envelope for an agent: its tool allowlist, memory policy and hard budgets (ZTAX-AIGOV-001 §7, §11; Master Specification Chapter 17 §14.4). An agent receives only the tools listed here and never inherits ambient credentials.",
+  "$comment": "Required fields are exactly ztax_gateway.production_registries.AgentProfile. delegation_depth and confirmation_policy are AIGOV-001 §7 fields the Python dataclass does not yet carry.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile_id",
+    "owner",
+    "version",
+    "allowed_tool_ids",
+    "memory_policy",
+    "max_steps",
+    "max_token_budget",
+    "suspended"
+  ],
+  "properties": {
+    "profile_id": { "$ref": "common.schema.json#/$defs/identifier" },
+    "owner": { "$ref": "common.schema.json#/$defs/owner" },
+    "version": { "$ref": "common.schema.json#/$defs/nonEmptyString" },
+    "allowed_tool_ids": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/identifier" },
+      "uniqueItems": true
+    },
+    "memory_policy": { "enum": ["STATELESS", "SESSION", "PERSISTENT"] },
+    "max_steps": { "$ref": "common.schema.json#/$defs/positiveIntegerOrNull" },
+    "max_token_budget": { "$ref": "common.schema.json#/$defs/positiveIntegerOrNull" },
+    "suspended": { "type": "boolean" },
+    "delegation_depth": { "type": "integer", "minimum": 0 },
+    "confirmation_policy": { "enum": ["NONE", "MUTATING_ACTIONS", "ALL_ACTIONS"] }
+  }
+}
