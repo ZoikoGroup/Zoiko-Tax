@@ -13,9 +13,11 @@ useDefault = true
 
 [allowlist]
 description = "Known fake dev/CI credentials — path-scoped only"
+# docs/tools/tests/test_check_secrets_manifest.py intentionally contains fake secret-shaped strings as planted test fixtures.
 paths = [
     '''docker-compose\.yml''',
     '''backend/\.env\.local\.example''',
-    '''\.github/workflows/ci\.yml'''
+    '''\.github/workflows/ci\.yml''',
+    '''docs/tools/tests/test_check_secrets_manifest\.py'''
 ]
 
