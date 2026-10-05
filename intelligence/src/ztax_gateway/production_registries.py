@@ -48,6 +48,7 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -778,6 +779,10 @@ class ManifestRegistry:
     def __init__(self) -> None:
         self._manifests: dict[str, AIReleaseManifest] = {}
         self._status: dict[str, ManifestStatus] = {}
+        # Optional lifecycle-readiness gate installed by LifecycleAwareManifestRegistry.
+        # Callable[[manifest_id], True-if-production-ready].
+        # When None (the default), no lifecycle check is performed.
+        self._lifecycle_checker: Callable[[str], bool] | None = None
 
     # ------------------------------------------------------------------
     # Mutation
@@ -797,6 +802,23 @@ class ManifestRegistry:
             )
         self._manifests[manifest.manifest_id] = manifest
         self._status[manifest.manifest_id] = ManifestStatus.ACTIVE
+
+    def set_lifecycle_checker(self, checker: Callable[[str], bool]) -> None:
+        """Install a lifecycle-readiness gate on :meth:`get`.
+
+        When installed, every call to :meth:`get` will invoke *checker* with
+        the requested ``manifest_id`` after the governance and status checks.
+        If *checker* returns ``False`` the manifest is refused with
+        :class:`ManifestRegistryError`.
+
+        This method is intentionally the only way to install the checker —
+        there is no public attribute, and the check cannot be bypassed through
+        the public API.
+
+        Called by :class:`~ztax_gateway.release_lifecycle.LifecycleAwareManifestRegistry`
+        on every :meth:`add` so that the checker is always current.
+        """
+        self._lifecycle_checker = checker
 
     def revoke(self, manifest_id: str) -> None:
         """Mark a manifest as REVOKED.
@@ -859,6 +881,16 @@ class ManifestRegistry:
             raise ManifestRegistryError(
                 f"manifest-registry: {manifest_id!r} has been superseded and may "
                 "not be used in new invocations"
+            )
+
+        # 4. Lifecycle-readiness check (installed by LifecycleAwareManifestRegistry).
+        #    This is the runtime block that prevents a manifest whose lifecycle
+        #    state is still RESEARCH/DESIGN/VALIDATION/SHADOW from being used
+        #    in any governed action (evaluation_evidence.build, etc.).
+        if self._lifecycle_checker is not None and not self._lifecycle_checker(manifest_id):
+            raise ManifestRegistryError(
+                f"manifest-registry: {manifest_id!r} is not production-ready — "
+                "its lifecycle state does not permit live invocations"
             )
 
         return manifest
