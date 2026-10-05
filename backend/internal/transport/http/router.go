@@ -74,6 +74,10 @@ type Router struct {
 	// advisory type, and nothing in the transport converts one into a fiscal
 	// value (ADR-0006 §2.6). Nil in a router built without one.
 	Models port.ModelGateway
+
+	// Classification proposes advisory ontology mappings through Models. Nil
+	// in a router built without one, which answers 503.
+	Classification *app.ClassificationService
 }
 
 // Trains are the seven release-train versions, as the contract names them.
@@ -156,6 +160,12 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/transactions:adjust", false, []security.Role{operator}}, rt.handleAdjust},
 		{Route{"GET", "/v1/decisions/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetDecision},
 		{Route{"POST", "/v1/replay/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleReplay},
+		{Route{"GET", "/v1/decisions/{decisionId}/journals", false, []security.Role{operator, analyst, auditor}}, rt.handleDecisionJournals},
+		{Route{"GET", "/v1/subledger/balances", false, []security.Role{operator, analyst, auditor}}, rt.handleSubledgerBalances},
+
+		// Classification assistance: advisory, through the Governed Model
+		// Gateway only.
+		{Route{"POST", "/v1/classifications:propose", false, []security.Role{operator, analyst}}, rt.handleProposeClassification},
 	}
 }
 

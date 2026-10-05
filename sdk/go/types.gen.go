@@ -6,6 +6,129 @@ import (
 	"time"
 )
 
+// Defines values for ClassificationProposalAuthoritative.
+const (
+	ClassificationProposalAuthoritativeFalse ClassificationProposalAuthoritative = false
+)
+
+// Valid indicates whether the value is a known member of the ClassificationProposalAuthoritative enum.
+func (e ClassificationProposalAuthoritative) Valid() bool {
+	switch e {
+	case ClassificationProposalAuthoritativeFalse:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ControlAccount.
+const (
+	ControlAccountCUSTOMERGLBRIDGE      ControlAccount = "CUSTOMER_GL_BRIDGE"
+	ControlAccountFXCONTROL             ControlAccount = "FX_CONTROL"
+	ControlAccountROUNDINGCONTROL       ControlAccount = "ROUNDING_CONTROL"
+	ControlAccountSUSPENSEEXCEPTION     ControlAccount = "SUSPENSE_EXCEPTION"
+	ControlAccountTAXACCRUEDLIABILITY   ControlAccount = "TAX_ACCRUED_LIABILITY"
+	ControlAccountTAXADJUSTMENTCONTROL  ControlAccount = "TAX_ADJUSTMENT_CONTROL"
+	ControlAccountTAXCASHCLEARING       ControlAccount = "TAX_CASH_CLEARING"
+	ControlAccountTAXCOLLECTEDLIABILITY ControlAccount = "TAX_COLLECTED_LIABILITY"
+	ControlAccountTAXRECEIVABLECONTROL  ControlAccount = "TAX_RECEIVABLE_CONTROL"
+	ControlAccountTAXRECOVERABLE        ControlAccount = "TAX_RECOVERABLE"
+	ControlAccountTAXREMITTANCECLEARING ControlAccount = "TAX_REMITTANCE_CLEARING"
+	ControlAccountTAXRETURNCLEARING     ControlAccount = "TAX_RETURN_CLEARING"
+)
+
+// Valid indicates whether the value is a known member of the ControlAccount enum.
+func (e ControlAccount) Valid() bool {
+	switch e {
+	case ControlAccountCUSTOMERGLBRIDGE:
+		return true
+	case ControlAccountFXCONTROL:
+		return true
+	case ControlAccountROUNDINGCONTROL:
+		return true
+	case ControlAccountSUSPENSEEXCEPTION:
+		return true
+	case ControlAccountTAXACCRUEDLIABILITY:
+		return true
+	case ControlAccountTAXADJUSTMENTCONTROL:
+		return true
+	case ControlAccountTAXCASHCLEARING:
+		return true
+	case ControlAccountTAXCOLLECTEDLIABILITY:
+		return true
+	case ControlAccountTAXRECEIVABLECONTROL:
+		return true
+	case ControlAccountTAXRECOVERABLE:
+		return true
+	case ControlAccountTAXREMITTANCECLEARING:
+		return true
+	case ControlAccountTAXRETURNCLEARING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JournalType.
+const (
+	JournalTypeADJUSTMENT       JournalType = "ADJUSTMENT"
+	JournalTypeCREDIT           JournalType = "CREDIT"
+	JournalTypeFX               JournalType = "FX"
+	JournalTypeINVOICE          JournalType = "INVOICE"
+	JournalTypeLIABILITYACCRUAL JournalType = "LIABILITY_ACCRUAL"
+	JournalTypeMIGRATION        JournalType = "MIGRATION"
+	JournalTypeREFUND           JournalType = "REFUND"
+	JournalTypeREMITTANCE       JournalType = "REMITTANCE"
+	JournalTypeRETURN           JournalType = "RETURN"
+	JournalTypeROUNDING         JournalType = "ROUNDING"
+)
+
+// Valid indicates whether the value is a known member of the JournalType enum.
+func (e JournalType) Valid() bool {
+	switch e {
+	case JournalTypeADJUSTMENT:
+		return true
+	case JournalTypeCREDIT:
+		return true
+	case JournalTypeFX:
+		return true
+	case JournalTypeINVOICE:
+		return true
+	case JournalTypeLIABILITYACCRUAL:
+		return true
+	case JournalTypeMIGRATION:
+		return true
+	case JournalTypeREFUND:
+		return true
+	case JournalTypeREMITTANCE:
+		return true
+	case JournalTypeRETURN:
+		return true
+	case JournalTypeROUNDING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JournalLineSide.
+const (
+	JournalLineSideCREDIT JournalLineSide = "CREDIT"
+	JournalLineSideDEBIT  JournalLineSide = "DEBIT"
+)
+
+// Valid indicates whether the value is a known member of the JournalLineSide enum.
+func (e JournalLineSide) Valid() bool {
+	switch e {
+	case JournalLineSideCREDIT:
+		return true
+	case JournalLineSideDEBIT:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Outcome.
 const (
 	OutcomeADVISORY       Outcome = "ADVISORY"
@@ -177,6 +300,15 @@ func (e ValueType) Valid() bool {
 	}
 }
 
+// AiProvenance Which governed use case, model, provider, prompt and AI train produced an output (ADR-0006 §2.7).
+type AiProvenance struct {
+	AiTrainVersion  string `json:"aiTrainVersion"`
+	ModelProfile    string `json:"modelProfile"`
+	PromptProfile   string `json:"promptProfile"`
+	ProviderProfile string `json:"providerProfile"`
+	UseCase         string `json:"useCase"`
+}
+
 // AuditID An audit record identifier (ADR-0012).
 type AuditID = string
 
@@ -267,6 +399,34 @@ type ChangePasswordRequest struct {
 	NewPassword     string `json:"newPassword"`
 }
 
+// ClassificationProposal An advisory mapping proposal. `authoritative` is always false; a person confirms it or it is nothing.
+type ClassificationProposal struct {
+	Authoritative ClassificationProposalAuthoritative `json:"authoritative"`
+
+	// Confidence The model's own score as a canonical decimal in [0, 1]. Never a threshold that makes the proposal authoritative.
+	Confidence *string `json:"confidence,omitempty"`
+	ID         string  `json:"id"`
+
+	// ProposedCode An existing ontology node, `ontology:...`.
+	ProposedCode string `json:"proposedCode"`
+
+	// Provenance Which governed use case, model, provider, prompt and AI train produced an output (ADR-0006 §2.7).
+	Provenance AiProvenance `json:"provenance"`
+	SubjectRef string       `json:"subjectRef"`
+}
+
+// ClassificationProposalAuthoritative defines model for ClassificationProposal.Authoritative.
+type ClassificationProposalAuthoritative bool
+
+// ClassificationProposalRequest defines model for ClassificationProposalRequest.
+type ClassificationProposalRequest struct {
+	// Description The item's commercial description. Catalog text, never customer data; it is sent to the Gateway.
+	Description string `json:"description"`
+
+	// SubjectRef The caller's reference for the item, e.g. a catalog SKU.
+	SubjectRef string `json:"subjectRef"`
+}
+
 // CommitRequest defines model for CommitRequest.
 type CommitRequest struct {
 	// Accumulators The accumulator values the evaluation reads — exactly the ones the
@@ -319,6 +479,38 @@ type ContentCapability struct {
 
 	// NodeCount The size of the rule graph, for telemetry.
 	NodeCount int32 `json:"nodeCount"`
+}
+
+// ControlAccount A Tax Control Subledger control account (ZTAX-FIN-001 §9). Never a customer GL account.
+type ControlAccount string
+
+// ControlBalance defines model for ControlBalance.
+type ControlBalance struct {
+	// Account A Tax Control Subledger control account (ZTAX-FIN-001 §9). Never a customer GL account.
+	Account ControlAccount `json:"account"`
+
+	// Credits A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Credits Decimal `json:"credits"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// Debits A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Debits Decimal `json:"debits"`
 }
 
 // CreateUserRequest defines model for CreateUserRequest.
@@ -457,6 +649,76 @@ type Digest = string
 
 // Emitted What the content emitted, by result slot. The slots are the pack's.
 type Emitted map[string]ResultValue
+
+// Journal One posted Tax Control Subledger journal. Balanced in its one currency; append-only.
+type Journal struct {
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+	ID       string       `json:"id"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+	LegalPeriod   string        `json:"legalPeriod"`
+	Lines         []JournalLine `json:"lines"`
+
+	// PostingDate RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	PostingDate Timestamp       `json:"postingDate"`
+	Profile     Journal_Profile `json:"profile"`
+
+	// ReversalOf The journal this one reverses, for a reversal.
+	ReversalOf *string `json:"reversalOf,omitempty"`
+	SourceID   string  `json:"sourceId"`
+
+	// SourceKind The source event kind, e.g. `DECISION_COMMITTED` or `DECISION_SUPERSEDED`.
+	SourceKind string      `json:"sourceKind"`
+	Type       JournalType `json:"type"`
+}
+
+// Journal_Profile defines model for Journal.Profile.
+type Journal_Profile struct {
+	ID      string `json:"id"`
+	Version string `json:"version"`
+}
+
+// JournalType defines model for Journal.Type.
+type JournalType string
+
+// JournalLine One line. The amount is positive and the side carries the direction (ZTAX-FIN-REQ-0044).
+type JournalLine struct {
+	// Account A Tax Control Subledger control account (ZTAX-FIN-001 §9). Never a customer GL account.
+	Account ControlAccount `json:"account"`
+
+	// Amount A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Amount Decimal `json:"amount"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// DecisionID A decision identifier: a UUIDv7 in lowercase canonical form
+	// (ADR-0012 §2.1). Sortable by creation, never recycled.
+	DecisionID *DecisionID     `json:"decisionId,omitempty"`
+	Side       JournalLineSide `json:"side"`
+}
+
+// JournalLineSide defines model for JournalLine.Side.
+type JournalLineSide string
+
+// JournalList defines model for JournalList.
+type JournalList struct {
+	Journals []Journal `json:"journals"`
+}
+
+// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+type LegalEntityID = string
 
 // MoneyValue An amount and its currency, never one without the other.
 type MoneyValue struct {
@@ -806,6 +1068,14 @@ type SignInRequest struct {
 	Tenant string `json:"tenant"`
 }
 
+// SubledgerBalances defines model for SubledgerBalances.
+type SubledgerBalances struct {
+	Balances []ControlBalance `json:"balances"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+}
+
 // Tenant defines model for Tenant.
 type Tenant struct {
 	DisplayName string `json:"displayName"`
@@ -1007,6 +1277,9 @@ type ChangePasswordJSONRequestBody = ChangePasswordRequest
 
 // SignInJSONRequestBody defines body for SignIn for application/json ContentType.
 type SignInJSONRequestBody = SignInRequest
+
+// ProposeClassificationJSONRequestBody defines body for ProposeClassification for application/json ContentType.
+type ProposeClassificationJSONRequestBody = ClassificationProposalRequest
 
 // CreateQuoteJSONRequestBody defines body for CreateQuote for application/json ContentType.
 type CreateQuoteJSONRequestBody = QuoteRequest

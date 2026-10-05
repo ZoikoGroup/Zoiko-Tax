@@ -496,6 +496,117 @@ class Decision(TypedDict):
     emitted: Emitted
 
 
+LegalEntityId: TypeAlias = str
+"""
+A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+"""
+
+
+ControlAccount: TypeAlias = Literal['TAX_COLLECTED_LIABILITY', 'TAX_ACCRUED_LIABILITY', 'TAX_RECOVERABLE', 'TAX_RECEIVABLE_CONTROL', 'TAX_CASH_CLEARING', 'TAX_RETURN_CLEARING', 'TAX_REMITTANCE_CLEARING', 'TAX_ADJUSTMENT_CONTROL', 'FX_CONTROL', 'ROUNDING_CONTROL', 'SUSPENSE_EXCEPTION', 'CUSTOMER_GL_BRIDGE']
+"""
+A Tax Control Subledger control account (ZTAX-FIN-001 §9). Never a customer GL account.
+"""
+
+
+class JournalLine(TypedDict):
+    """
+    One line. The amount is positive and the side carries the direction (ZTAX-FIN-REQ-0044).
+    """
+
+    account: ControlAccount
+    side: Literal['DEBIT', 'CREDIT']
+    amount: Decimal
+    currency: CurrencyCode
+    decisionId: NotRequired[DecisionId]
+
+
+class Profile(TypedDict):
+    id: str
+    version: str
+
+
+class Journal(TypedDict):
+    """
+    One posted Tax Control Subledger journal. Balanced in its one currency; append-only.
+    """
+
+    id: str
+    type: Literal['INVOICE', 'CREDIT', 'REFUND', 'LIABILITY_ACCRUAL', 'RETURN', 'REMITTANCE', 'FX', 'ROUNDING', 'MIGRATION', 'ADJUSTMENT']
+    legalEntityId: LegalEntityId
+    sourceKind: str
+    """
+    The source event kind, e.g. `DECISION_COMMITTED` or `DECISION_SUPERSEDED`.
+    """
+    sourceId: str
+    postingDate: Timestamp
+    legalPeriod: str
+    currency: CurrencyCode
+    reversalOf: NotRequired[str]
+    """
+    The journal this one reverses, for a reversal.
+    """
+    profile: Profile
+    lines: list[JournalLine]
+
+
+class JournalList(TypedDict):
+    journals: list[Journal]
+
+
+class ControlBalance(TypedDict):
+    account: ControlAccount
+    currency: CurrencyCode
+    debits: Decimal
+    credits: Decimal
+
+
+class SubledgerBalances(TypedDict):
+    legalEntityId: LegalEntityId
+    balances: list[ControlBalance]
+
+
+class ClassificationProposalRequest(TypedDict):
+    subjectRef: str
+    """
+    The caller's reference for the item, e.g. a catalog SKU.
+    """
+    description: str
+    """
+    The item's commercial description. Catalog text, never customer data; it is sent to the Gateway.
+    """
+
+
+class AiProvenance(TypedDict):
+    """
+    Which governed use case, model, provider, prompt and AI train produced an output (ADR-0006 §2.7).
+    """
+
+    useCase: str
+    modelProfile: str
+    providerProfile: str
+    promptProfile: str
+    aiTrainVersion: str
+
+
+class ClassificationProposal(TypedDict):
+    """
+    An advisory mapping proposal. `authoritative` is always false; a person confirms it or it is nothing.
+    """
+
+    id: str
+    subjectRef: str
+    proposedCode: str
+    """
+    An existing ontology node, `ontology:...`.
+    """
+    confidence: NotRequired[str]
+    """
+    The model's own score as a canonical decimal in [0, 1]. Never a threshold that makes the proposal authoritative.
+    """
+    authoritative: Literal[False]
+    provenance: AiProvenance
+
+
 class ReplayReport(TypedDict):
     decisionId: DecisionId
     verdict: ReplayVerdict

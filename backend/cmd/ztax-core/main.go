@@ -137,6 +137,7 @@ func run() error {
 	}
 	defer closeModels()
 	router.Models = models
+	router.Classification = app.NewClassificationService(models)
 	router.SecureCookies = cfg.SecureCookies
 	router.TrustProxy = cfg.TrustProxy
 	router.Cell, router.Region, router.Environment = cfg.Cell, cfg.Region, cfg.Environment

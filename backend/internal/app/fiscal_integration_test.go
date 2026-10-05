@@ -300,3 +300,31 @@ func TestIntegrationQuoteReadsTheStoredTotal(t *testing.T) {
 		t.Fatalf("quote levy %+v", q.Result.Emitted["TAX_ECO_LEVY"])
 	}
 }
+
+func TestIntegrationSubledgerReads(t *testing.T) {
+	c := openFiscalCell(t)
+	original := c.mustCommit(t, "k-r1", "INV-R/1", "100.00", "3", nil)
+	c.mustCommit(t, "k-r2", "INV-R/1", "50.00", "3", &original)
+
+	journals, err := c.svc.DecisionJournals(c.ctx, original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The original's own posting, then the reversal its correction posted.
+	if len(journals) != 2 || journals[0].ReversalOf != nil || journals[1].ReversalOf == nil {
+		t.Fatalf("journals for a superseded decision: %+v", journals)
+	}
+	_, balances, err := c.svc.Balances(c.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// After the reversal only the correction stands: VAT 10.50 + levy 0.11.
+	liability := balances[subledger.BalanceKey{Account: subledger.AccountTaxCollectedLiability, Currency: "EUR"}]
+	net, err := liability.Credits.Sub(liability.Debits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if net.CanonicalString() != "10.61" {
+		t.Fatalf("net collected liability %s, want 10.61", net.CanonicalString())
+	}
+}

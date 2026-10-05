@@ -491,6 +491,89 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/decisions/{decisionId}/journals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The Tax Control Subledger journals a decision posted
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. Every journal the decision's
+         *     commit posted, and — for a decision a correction has superseded —
+         *     the reversal journals the correction posted for it, so the trace from
+         *     a decision to the control ledger is one request (ZTAX-FIN-REQ-0077).
+         *     Journals are balanced per currency and never edited
+         *     (ZTAX-FIN-REQ-0035, -0036).
+         */
+        get: operations["listDecisionJournals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/subledger/balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Control balances for the tenant's default legal entity
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. Debits and credits per control
+         *     account and currency, summed from the immutable journal lines, so a
+         *     balance always reconciles to the lines it came from
+         *     (ZTAX-FIN-REQ-0121). Debits and credits are reported apart, never
+         *     netted into a sign (ZTAX-FIN-REQ-0044). This is the Tax Control
+         *     Subledger, not the customer's general ledger.
+         */
+        get: operations["getSubledgerBalances"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/classifications:propose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the AI plane for an advisory ontology mapping
+         * @description `OPERATOR` or `ANALYST`. Sends the item to the Governed Model Gateway
+         *     under the `classification-review` use case (ADR-0006) and returns
+         *     what it proposes. The proposal is **advisory and never
+         *     authoritative** (ZTAX-CLS-REQ-0082): it names an existing ontology
+         *     node for a person to confirm, and nothing in this response can become
+         *     a classification decision without that confirmation
+         *     (ADR-0006 §2.6).
+         *
+         *     A cell with no Gateway, or a Gateway with no approved provider,
+         *     answers `422 AI_GATEWAY_NOT_CONFIGURED` — understood, not covered here;
+         *     a Gateway that is down or
+         *     slow answers `503 AI_GATEWAY_UNAVAILABLE`. Deterministic processing is
+         *     unaffected by either. A governance refusal — kill switch, residency,
+         *     authority — is a `403` with the Gateway's reason code.
+         */
+        post: operations["proposeClassification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1094,6 +1177,115 @@ export interface components {
             bundle: components["schemas"]["BundleRef"];
             digests: components["schemas"]["DecisionDigests"];
             emitted: components["schemas"]["Emitted"];
+        };
+        /**
+         * LegalEntityId
+         * Format: uuid
+         * @description A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+         * @example 01920a4c-0000-7000-8000-00000000e001
+         */
+        LegalEntityId: string;
+        /**
+         * ControlAccount
+         * @description A Tax Control Subledger control account (ZTAX-FIN-001 §9). Never a customer GL account.
+         * @example TAX_COLLECTED_LIABILITY
+         * @enum {string}
+         */
+        ControlAccount: "TAX_COLLECTED_LIABILITY" | "TAX_ACCRUED_LIABILITY" | "TAX_RECOVERABLE" | "TAX_RECEIVABLE_CONTROL" | "TAX_CASH_CLEARING" | "TAX_RETURN_CLEARING" | "TAX_REMITTANCE_CLEARING" | "TAX_ADJUSTMENT_CONTROL" | "FX_CONTROL" | "ROUNDING_CONTROL" | "SUSPENSE_EXCEPTION" | "CUSTOMER_GL_BRIDGE";
+        /**
+         * JournalLine
+         * @description One line. The amount is positive and the side carries the direction (ZTAX-FIN-REQ-0044).
+         */
+        JournalLine: {
+            account: components["schemas"]["ControlAccount"];
+            /** @enum {string} */
+            side: "DEBIT" | "CREDIT";
+            amount: components["schemas"]["Decimal"];
+            currency: components["schemas"]["CurrencyCode"];
+            decisionId?: components["schemas"]["DecisionId"];
+        };
+        /**
+         * Journal
+         * @description One posted Tax Control Subledger journal. Balanced in its one currency; append-only.
+         */
+        Journal: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            type: "INVOICE" | "CREDIT" | "REFUND" | "LIABILITY_ACCRUAL" | "RETURN" | "REMITTANCE" | "FX" | "ROUNDING" | "MIGRATION" | "ADJUSTMENT";
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            /** @description The source event kind, e.g. `DECISION_COMMITTED` or `DECISION_SUPERSEDED`. */
+            sourceKind: string;
+            sourceId: string;
+            postingDate: components["schemas"]["Timestamp"];
+            legalPeriod: string;
+            currency: components["schemas"]["CurrencyCode"];
+            /**
+             * Format: uuid
+             * @description The journal this one reverses, for a reversal.
+             */
+            reversalOf?: string;
+            profile: {
+                id: string;
+                version: string;
+            };
+            lines: components["schemas"]["JournalLine"][];
+        };
+        /** JournalList */
+        JournalList: {
+            journals: components["schemas"]["Journal"][];
+        };
+        /** ControlBalance */
+        ControlBalance: {
+            account: components["schemas"]["ControlAccount"];
+            currency: components["schemas"]["CurrencyCode"];
+            debits: components["schemas"]["Decimal"];
+            credits: components["schemas"]["Decimal"];
+        };
+        /** SubledgerBalances */
+        SubledgerBalances: {
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            balances: components["schemas"]["ControlBalance"][];
+        };
+        /** ClassificationProposalRequest */
+        ClassificationProposalRequest: {
+            /**
+             * @description The caller's reference for the item, e.g. a catalog SKU.
+             * @example sku:PLAN-UNL-5G
+             */
+            subjectRef: string;
+            /**
+             * @description The item's commercial description. Catalog text, never customer data; it is sent to the Gateway.
+             * @example Unlimited 5G mobile plan with 20 GB hotspot
+             */
+            description: string;
+        };
+        /**
+         * AiProvenance
+         * @description Which governed use case, model, provider, prompt and AI train produced an output (ADR-0006 §2.7).
+         */
+        AiProvenance: {
+            useCase: string;
+            modelProfile: string;
+            providerProfile: string;
+            promptProfile: string;
+            aiTrainVersion: string;
+        };
+        /**
+         * ClassificationProposal
+         * @description An advisory mapping proposal. `authoritative` is always false; a person confirms it or it is nothing.
+         */
+        ClassificationProposal: {
+            /** Format: uuid */
+            id: string;
+            subjectRef: string;
+            /** @description An existing ontology node, `ontology:...`. */
+            proposedCode: string;
+            /** @description The model's own score as a canonical decimal in [0, 1]. Never a threshold that makes the proposal authoritative. */
+            confidence?: string;
+            /** @enum {boolean} */
+            authoritative: false;
+            provenance: components["schemas"]["AiProvenance"];
         };
         /** ReplayReport */
         ReplayReport: {
@@ -1844,6 +2036,99 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listDecisionJournals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The decision identifier.
+                 * @example 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                 */
+                decisionId: components["parameters"]["DecisionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The journals, posting journals first, then reversals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getSubledgerBalances: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The balances, by account then currency. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubledgerBalances"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    proposeClassification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassificationProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description The advisory proposal, with the provenance that produced it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassificationProposal"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description AI assistance is not available in this cell (`AI_GATEWAY_NOT_CONFIGURED`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };

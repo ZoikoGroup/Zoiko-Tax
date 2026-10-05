@@ -76,6 +76,10 @@ tags:
     description: Tenant, users, sessions and the audit trail.
   - name: determination
     description: Quotes, commits, decisions and replay. Advisory until A4.
+  - name: subledger
+    description: The Tax Control Subledger — control journals and balances, not the customer GL.
+  - name: classification
+    description: Advisory classification assistance through the Governed Model Gateway.
 security:
   - sessionCookie: []
 paths:
@@ -1150,6 +1154,188 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/decisions/{decisionId}/journals:
+    get:
+      operationId: listDecisionJournals
+      tags:
+        - subledger
+      summary: The Tax Control Subledger journals a decision posted
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. Every journal the decision's
+        commit posted, and — for a decision a correction has superseded —
+        the reversal journals the correction posted for it, so the trace from
+        a decision to the control ledger is one request (ZTAX-FIN-REQ-0077).
+        Journals are balanced per currency and never edited
+        (ZTAX-FIN-REQ-0035, -0036).
+      parameters:
+        - $ref: "#/components/parameters/DecisionId"
+      responses:
+        "200":
+          description: The journals, posting journals first, then reversals.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalList"
+              examples:
+                default:
+                  summary: One commit's invoice journal
+                  value:
+                    journals:
+                      - id: 01920a4c-2e3f-7a40-8b51-6c7d8e9fa012
+                        type: INVOICE
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        sourceKind: DECISION_COMMITTED
+                        sourceId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                        postingDate: 2026-09-25T09:00:00.000000Z
+                        legalPeriod: 2026-09
+                        currency: EUR
+                        profile:
+                          id: tcsl-worked-eu-vat
+                          version: 2026.09.1
+                        lines:
+                          - account: TAX_RECEIVABLE_CONTROL
+                            side: DEBIT
+                            amount: "21.00"
+                            currency: EUR
+                          - account: TAX_COLLECTED_LIABILITY
+                            side: CREDIT
+                            amount: "21.00"
+                            currency: EUR
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/subledger/balances:
+    get:
+      operationId: getSubledgerBalances
+      tags:
+        - subledger
+      summary: Control balances for the tenant's default legal entity
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. Debits and credits per control
+        account and currency, summed from the immutable journal lines, so a
+        balance always reconciles to the lines it came from
+        (ZTAX-FIN-REQ-0121). Debits and credits are reported apart, never
+        netted into a sign (ZTAX-FIN-REQ-0044). This is the Tax Control
+        Subledger, not the customer's general ledger.
+      responses:
+        "200":
+          description: The balances, by account then currency.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubledgerBalances"
+              examples:
+                default:
+                  summary: After one commit
+                  value:
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    balances:
+                      - account: TAX_COLLECTED_LIABILITY
+                        currency: EUR
+                        debits: "0"
+                        credits: "21.11"
+                      - account: TAX_RECEIVABLE_CONTROL
+                        currency: EUR
+                        debits: "21.11"
+                        credits: "0"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/classifications:propose:
+    post:
+      operationId: proposeClassification
+      tags:
+        - classification
+      summary: Ask the AI plane for an advisory ontology mapping
+      description: |
+        `OPERATOR` or `ANALYST`. Sends the item to the Governed Model Gateway
+        under the `classification-review` use case (ADR-0006) and returns
+        what it proposes. The proposal is **advisory and never
+        authoritative** (ZTAX-CLS-REQ-0082): it names an existing ontology
+        node for a person to confirm, and nothing in this response can become
+        a classification decision without that confirmation
+        (ADR-0006 §2.6).
+
+        A cell with no Gateway, or a Gateway with no approved provider,
+        answers `422 AI_GATEWAY_NOT_CONFIGURED` — understood, not covered here;
+        a Gateway that is down or
+        slow answers `503 AI_GATEWAY_UNAVAILABLE`. Deterministic processing is
+        unaffected by either. A governance refusal — kill switch, residency,
+        authority — is a `403` with the Gateway's reason code.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassificationProposalRequest"
+            examples:
+              sku:
+                summary: A catalog item to map
+                value:
+                  subjectRef: sku:PLAN-UNL-5G
+                  description: Unlimited 5G mobile plan with 20 GB hotspot
+      responses:
+        "200":
+          description: The advisory proposal, with the provenance that produced it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassificationProposal"
+              examples:
+                default:
+                  summary: A proposal for review
+                  value:
+                    id: 01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f
+                    subjectRef: sku:PLAN-UNL-5G
+                    proposedCode: ontology:telecom/voice/mobile
+                    confidence: "0.97"
+                    authoritative: false
+                    provenance:
+                      useCase: classification-review
+                      modelProfile: model:cls-2027.03
+                      providerProfile: provider:approved-a
+                      promptProfile: prompt:classification-review-v1
+                      aiTrainVersion: ai-2027.03.1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: AI assistance is not available in this cell (`AI_GATEWAY_NOT_CONFIGURED`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                notConfigured:
+                  summary: This cell's Gateway has no approved provider
+                  value:
+                    type: https://errors.zoikotax.com/v1/ai-gateway-not-configured
+                    title: AI gateway not configured
+                    status: 422
+                    detail: AI assistance is not available in this region yet.
+                    instance: /v1/classifications:propose
+                    ztx_reason_code: AI_GATEWAY_NOT_CONFIGURED
+                    ztx_request_id: 01JBQ0S9C3X8Q1H6M2KX5R7F4Q
+                    ztx_retryable: false
         "500":
           $ref: "#/components/responses/Internal"
         "503":
@@ -2530,6 +2716,283 @@ components:
           $ref: "#/components/schemas/DecisionDigests"
         emitted:
           $ref: "#/components/schemas/Emitted"
+    LegalEntityId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: LegalEntityId
+      description: A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920a4c-0000-7000-8000-00000000e001
+    ControlAccount:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ControlAccount
+      description: A Tax Control Subledger control account (ZTAX-FIN-001 §9). Never a customer GL account.
+      enum:
+        - TAX_COLLECTED_LIABILITY
+        - TAX_ACCRUED_LIABILITY
+        - TAX_RECOVERABLE
+        - TAX_RECEIVABLE_CONTROL
+        - TAX_CASH_CLEARING
+        - TAX_RETURN_CLEARING
+        - TAX_REMITTANCE_CLEARING
+        - TAX_ADJUSTMENT_CONTROL
+        - FX_CONTROL
+        - ROUNDING_CONTROL
+        - SUSPENSE_EXCEPTION
+        - CUSTOMER_GL_BRIDGE
+      example: TAX_COLLECTED_LIABILITY
+    JournalLine:
+      type: object
+      title: JournalLine
+      description: One line. The amount is positive and the side carries the direction (ZTAX-FIN-REQ-0044).
+      additionalProperties: false
+      required:
+        - account
+        - side
+        - amount
+        - currency
+      properties:
+        account:
+          $ref: "#/components/schemas/ControlAccount"
+        side:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - DEBIT
+            - CREDIT
+        amount:
+          $ref: "#/components/schemas/Decimal"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        decisionId:
+          $ref: "#/components/schemas/DecisionId"
+    Journal:
+      type: object
+      title: Journal
+      description: One posted Tax Control Subledger journal. Balanced in its one currency; append-only.
+      additionalProperties: false
+      required:
+        - id
+        - type
+        - legalEntityId
+        - sourceKind
+        - sourceId
+        - postingDate
+        - legalPeriod
+        - currency
+        - profile
+        - lines
+      properties:
+        id:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          format: uuid
+        type:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - INVOICE
+            - CREDIT
+            - REFUND
+            - LIABILITY_ACCRUAL
+            - RETURN
+            - REMITTANCE
+            - FX
+            - ROUNDING
+            - MIGRATION
+            - ADJUSTMENT
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        sourceKind:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The source event kind, e.g. `DECISION_COMMITTED` or `DECISION_SUPERSEDED`.
+        sourceId:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        postingDate:
+          $ref: "#/components/schemas/Timestamp"
+        legalPeriod:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        reversalOf:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          format: uuid
+          description: The journal this one reverses, for a reversal.
+        profile:
+          type: object
+          additionalProperties: false
+          required:
+            - id
+            - version
+          properties:
+            id:
+              x-ztax-privacy:
+                class: P0
+              type: string
+            version:
+              x-ztax-privacy:
+                class: P0
+              type: string
+        lines:
+          type: array
+          minItems: 2
+          items:
+            $ref: "#/components/schemas/JournalLine"
+    JournalList:
+      type: object
+      title: JournalList
+      additionalProperties: false
+      required:
+        - journals
+      properties:
+        journals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Journal"
+    ControlBalance:
+      type: object
+      title: ControlBalance
+      additionalProperties: false
+      required:
+        - account
+        - currency
+        - debits
+        - credits
+      properties:
+        account:
+          $ref: "#/components/schemas/ControlAccount"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        debits:
+          $ref: "#/components/schemas/Decimal"
+        credits:
+          $ref: "#/components/schemas/Decimal"
+    SubledgerBalances:
+      type: object
+      title: SubledgerBalances
+      additionalProperties: false
+      required:
+        - legalEntityId
+        - balances
+      properties:
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        balances:
+          type: array
+          items:
+            $ref: "#/components/schemas/ControlBalance"
+    ClassificationProposalRequest:
+      type: object
+      title: ClassificationProposalRequest
+      additionalProperties: false
+      required:
+        - subjectRef
+        - description
+      properties:
+        subjectRef:
+          x-ztax-privacy:
+            class: P0
+            aiAllowed: APPROVED_MODEL_GATEWAY
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: The caller's reference for the item, e.g. a catalog SKU.
+          example: sku:PLAN-UNL-5G
+        description:
+          x-ztax-privacy:
+            class: P0
+            aiAllowed: APPROVED_MODEL_GATEWAY
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: The item's commercial description. Catalog text, never customer data; it is sent to the Gateway.
+          example: Unlimited 5G mobile plan with 20 GB hotspot
+    AiProvenance:
+      type: object
+      title: AiProvenance
+      description: Which governed use case, model, provider, prompt and AI train produced an output (ADR-0006 §2.7).
+      additionalProperties: false
+      required:
+        - useCase
+        - modelProfile
+        - providerProfile
+        - promptProfile
+        - aiTrainVersion
+      properties:
+        useCase:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        modelProfile:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        providerProfile:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        promptProfile:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        aiTrainVersion:
+          x-ztax-privacy:
+            class: P0
+          type: string
+    ClassificationProposal:
+      type: object
+      title: ClassificationProposal
+      description: An advisory mapping proposal. `authoritative` is always false; a person confirms it or it is nothing.
+      additionalProperties: false
+      required:
+        - id
+        - subjectRef
+        - proposedCode
+        - authoritative
+        - provenance
+      properties:
+        id:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          format: uuid
+        subjectRef:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        proposedCode:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: An existing ontology node, `ontology:...`.
+        confidence:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The model's own score as a canonical decimal in [0, 1]. Never a threshold that makes the proposal authoritative.
+        authoritative:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          enum:
+            - false
+        provenance:
+          $ref: "#/components/schemas/AiProvenance"
     ReplayReport:
       type: object
       title: ReplayReport

@@ -113,7 +113,10 @@ const FOLDERS = [
     name: "06 · Determination — needs content and an OPERATOR",
     description:
       "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `adjustTransaction` then corrects that decision under the bundle that made it (ZTAX-DET-REQ-0030).\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
-    operations: ["createQuote", "commitTransaction", "getDecision", "replayDecision", "adjustTransaction"],
+    operations: [
+      "createQuote", "commitTransaction", "getDecision", "replayDecision", "listDecisionJournals",
+      "getSubledgerBalances", "adjustTransaction", "proposeClassification",
+    ],
     prerequest: [
       "if (pm.variables.get('runDetermination') !== 'true') {",
       "  console.info('skipped: set runDetermination=true against a cell with content, signed in as an OPERATOR');",
@@ -216,6 +219,25 @@ const OPERATION_TESTS = {
     "  pm.expect(pm.response.json().authoritative).to.eql(false);",
     "});",
     "pm.collectionVariables.set('decisionId', pm.response.json().id);",
+  ],
+  listDecisionJournals: [
+    "pm.test('ZTAX-FIN-REQ-0077 — the commit posted a balanced journal', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().journals.length).to.be.at.least(1);",
+    "});",
+  ],
+  getSubledgerBalances: [
+    "pm.test('control balances are reported, debits and credits apart', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().balances).to.be.an('array');",
+    "});",
+  ],
+  proposeClassification: [
+    "pm.test('ADR-0006 — advisory, or not available here; never authoritative', function () {",
+    "  pm.expect([200, 422]).to.include(pm.response.code);",
+    "  if (pm.response.code === 200) { pm.expect(pm.response.json().authoritative).to.eql(false); }",
+    "  else { pm.expect(pm.response.json().ztx_reason_code).to.eql('AI_GATEWAY_NOT_CONFIGURED'); }",
+    "});",
   ],
   adjustTransaction: [
     "pm.test('ZTAX-DET-REQ-0030 — the correction is recorded against the original decision', function () {",
@@ -339,9 +361,18 @@ function jsonBody(value) {
   };
 }
 
+// Non-2xx statuses that are a correct answer from a development cell, by
+// operation. Kept short and explained: proposeClassification answers 422
+// AI_GATEWAY_NOT_CONFIGURED from any cell whose Gateway has no approved
+// provider, which is every local stack.
+const ACCEPTED_OUTCOMES = {
+  proposeClassification: ["422"],
+};
+
 /** The statuses an operation declares, for the generated status assertion. */
 function successStatuses(operation) {
-  return Object.keys(operation.responses ?? {}).filter((s) => /^2/.test(s));
+  const ok = Object.keys(operation.responses ?? {}).filter((s) => /^2/.test(s));
+  return [...ok, ...(ACCEPTED_OUTCOMES[operation.operationId] ?? [])];
 }
 
 function requestFrom(doc, method, path, operation) {

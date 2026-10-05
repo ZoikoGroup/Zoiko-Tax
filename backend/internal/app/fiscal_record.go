@@ -12,6 +12,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/subledger"
 )
 
 // fiscalActive reports whether a commit under b has fiscal effects to apply.
@@ -184,4 +185,47 @@ func (s *DeterminationService) quoteReadSet(ctx context.Context, b *rule.Bundle,
 		out[k] = v
 	}
 	return out, nil
+}
+
+// ---------------------------------------------------------------------------
+// The subledger, read
+// ---------------------------------------------------------------------------
+
+// DecisionJournals returns the journals a decision's commit posted and, for a
+// superseded decision, the reversals its correction posted for it.
+func (s *DeterminationService) DecisionJournals(ctx context.Context, decisionID id.DecisionID) ([]subledger.Journal, error) {
+	if _, err := requireRoleOrSystem(ctx, security.RoleOperator, security.RoleAnalyst, security.RoleAuditor); err != nil {
+		return nil, err
+	}
+	if s.fiscal == nil || !s.fiscal.complete() {
+		return nil, errs.New(errs.CategoryUnavailable, errs.ReasonUnavailable, "The subledger is not wired in this cell.")
+	}
+	if _, err := s.decisions.ByID(ctx, decisionID); err != nil {
+		return nil, err
+	}
+	posted, err := s.fiscal.Journals.BySource(ctx, SourceDecisionCommitted, decisionID.String())
+	if err != nil {
+		return nil, err
+	}
+	reversed, err := s.fiscal.Journals.BySource(ctx, SourceDecisionSuperseded, decisionID.String())
+	if err != nil {
+		return nil, err
+	}
+	return append(posted, reversed...), nil
+}
+
+// Balances returns the control balances of the tenant's default legal entity.
+func (s *DeterminationService) Balances(ctx context.Context) (id.LegalEntityID, map[subledger.BalanceKey]subledger.Balance, error) {
+	if _, err := requireRoleOrSystem(ctx, security.RoleOperator, security.RoleAnalyst, security.RoleAuditor); err != nil {
+		return id.LegalEntityID{}, nil, err
+	}
+	if s.fiscal == nil || !s.fiscal.complete() {
+		return id.LegalEntityID{}, nil, errs.New(errs.CategoryUnavailable, errs.ReasonUnavailable, "The subledger is not wired in this cell.")
+	}
+	le, err := s.fiscal.LegalEntities.Default(ctx)
+	if err != nil {
+		return id.LegalEntityID{}, nil, err
+	}
+	bal, err := s.fiscal.Journals.Balances(ctx, le.ID)
+	return le.ID, bal, err
 }

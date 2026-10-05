@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:e15a93b4c1a46132905945b5f1ba846b3065b4848f8be8ac376e507635fa5945`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:a2f3cb4efb9b2bfb89aa84d84bab46cee33264a9a2961cfd4b62c65f836d4402`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -1467,6 +1467,148 @@
           ]
         },
         {
+          "name": "GET /v1/decisions/{decisionId}/journals — The Tax Control Subledger journals a decision posted",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/decisions/{{decisionId}}/journals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decisions",
+                "{{decisionId}}",
+                "journals"
+              ]
+            },
+            "description": "The Tax Control Subledger journals a decision posted\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. Every journal the decision's\ncommit posted, and — for a decision a correction has superseded —\nthe reversal journals the correction posted for it, so the trace from\na decision to the control ledger is one request (ZTAX-FIN-REQ-0077).\nJournals are balanced per currency and never edited\n(ZTAX-FIN-REQ-0035, -0036)."
+          },
+          "response": [
+            {
+              "name": "200 · One commit's invoice journal",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/decisions/{{decisionId}}/journals",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "decisions",
+                    "{{decisionId}}",
+                    "journals"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"journals\": [\n    {\n      \"id\": \"01920a4c-2e3f-7a40-8b51-6c7d8e9fa012\",\n      \"type\": \"INVOICE\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"sourceKind\": \"DECISION_COMMITTED\",\n      \"sourceId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n      \"postingDate\": \"2026-09-25T09:00:00.000000Z\",\n      \"legalPeriod\": \"2026-09\",\n      \"currency\": \"EUR\",\n      \"profile\": {\n        \"id\": \"tcsl-worked-eu-vat\",\n        \"version\": \"2026.09.1\"\n      },\n      \"lines\": [\n        {\n          \"account\": \"TAX_RECEIVABLE_CONTROL\",\n          \"side\": \"DEBIT\",\n          \"amount\": \"21.00\",\n          \"currency\": \"EUR\"\n        },\n        {\n          \"account\": \"TAX_COLLECTED_LIABILITY\",\n          \"side\": \"CREDIT\",\n          \"amount\": \"21.00\",\n          \"currency\": \"EUR\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listDecisionJournals returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('ZTAX-FIN-REQ-0077 — the commit posted a balanced journal', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().journals.length).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/subledger/balances — Control balances for the tenant's default legal entity",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/subledger/balances",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subledger",
+                "balances"
+              ]
+            },
+            "description": "Control balances for the tenant's default legal entity\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. Debits and credits per control\naccount and currency, summed from the immutable journal lines, so a\nbalance always reconciles to the lines it came from\n(ZTAX-FIN-REQ-0121). Debits and credits are reported apart, never\nnetted into a sign (ZTAX-FIN-REQ-0044). This is the Tax Control\nSubledger, not the customer's general ledger."
+          },
+          "response": [
+            {
+              "name": "200 · After one commit",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/subledger/balances",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "subledger",
+                    "balances"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"balances\": [\n    {\n      \"account\": \"TAX_COLLECTED_LIABILITY\",\n      \"currency\": \"EUR\",\n      \"debits\": \"0\",\n      \"credits\": \"21.11\"\n    },\n    {\n      \"account\": \"TAX_RECEIVABLE_CONTROL\",\n      \"currency\": \"EUR\",\n      \"debits\": \"21.11\",\n      \"credits\": \"0\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getSubledgerBalances returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('control balances are reported, debits and credits apart', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().balances).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "POST /v1/transactions:adjust — Correct a recorded decision under the content that made it",
           "request": {
             "method": "POST",
@@ -1547,6 +1689,114 @@
                   "  pm.response.to.have.status(201);",
                   "  pm.expect(pm.response.json().authoritative).to.eql(false);",
                   "  pm.expect(pm.response.json().id).to.not.eql(pm.collectionVariables.get('decisionId'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/classifications:propose — Ask the AI plane for an advisory ontology mapping",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectRef\": \"sku:PLAN-UNL-5G\",\n  \"description\": \"Unlimited 5G mobile plan with 20 GB hotspot\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/classifications:propose",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "classifications:propose"
+              ]
+            },
+            "description": "Ask the AI plane for an advisory ontology mapping\n\n`OPERATOR` or `ANALYST`. Sends the item to the Governed Model Gateway\nunder the `classification-review` use case (ADR-0006) and returns\nwhat it proposes. The proposal is **advisory and never\nauthoritative** (ZTAX-CLS-REQ-0082): it names an existing ontology\nnode for a person to confirm, and nothing in this response can become\na classification decision without that confirmation\n(ADR-0006 §2.6).\n\nA cell with no Gateway, or a Gateway with no approved provider,\nanswers `422 AI_GATEWAY_NOT_CONFIGURED` — understood, not covered here;\na Gateway that is down or\nslow answers `503 AI_GATEWAY_UNAVAILABLE`. Deterministic processing is\nunaffected by either. A governance refusal — kill switch, residency,\nauthority — is a `403` with the Gateway's reason code."
+          },
+          "response": [
+            {
+              "name": "200 · A proposal for review",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/classifications:propose",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "classifications:propose"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f\",\n  \"subjectRef\": \"sku:PLAN-UNL-5G\",\n  \"proposedCode\": \"ontology:telecom/voice/mobile\",\n  \"confidence\": \"0.97\",\n  \"authoritative\": false,\n  \"provenance\": {\n    \"useCase\": \"classification-review\",\n    \"modelProfile\": \"model:cls-2027.03\",\n    \"providerProfile\": \"provider:approved-a\",\n    \"promptProfile\": \"prompt:classification-review-v1\",\n    \"aiTrainVersion\": \"ai-2027.03.1\"\n  }\n}"
+            },
+            {
+              "name": "422 · This cell's Gateway has no approved provider",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/classifications:propose",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "classifications:propose"
+                  ]
+                }
+              },
+              "status": "422",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/problem+json"
+                }
+              ],
+              "body": "{\n  \"type\": \"https://errors.zoikotax.com/v1/ai-gateway-not-configured\",\n  \"title\": \"AI gateway not configured\",\n  \"status\": 422,\n  \"detail\": \"AI assistance is not available in this region yet.\",\n  \"instance\": \"/v1/classifications:propose\",\n  \"ztx_reason_code\": \"AI_GATEWAY_NOT_CONFIGURED\",\n  \"ztx_request_id\": \"01JBQ0S9C3X8Q1H6M2KX5R7F4Q\",\n  \"ztx_retryable\": false\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('proposeClassification returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 422]);",
+                  "});",
+                  "pm.test('ADR-0006 — advisory, or not available here; never authoritative', function () {",
+                  "  pm.expect([200, 422]).to.include(pm.response.code);",
+                  "  if (pm.response.code === 200) { pm.expect(pm.response.json().authoritative).to.eql(false); }",
+                  "  else { pm.expect(pm.response.json().ztx_reason_code).to.eql('AI_GATEWAY_NOT_CONFIGURED'); }",
                   "});"
                 ]
               }
@@ -2627,7 +2877,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:e15a93b4c1a46132905945b5f1ba846b3065b4848f8be8ac376e507635fa5945",
+      "value": "sha256:a2f3cb4efb9b2bfb89aa84d84bab46cee33264a9a2961cfd4b62c65f836d4402",
       "type": "string"
     }
   ]
