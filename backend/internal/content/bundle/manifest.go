@@ -159,6 +159,10 @@ func canonicalManifest(m rule.Manifest) (canonical.Value, error) {
 	if err != nil {
 		return canonical.Value{}, fmt.Errorf("bundle: manifest %s: %w", m.BundleID, err)
 	}
+	fiscalProfile, err := canonicalFiscal(m.Fiscal)
+	if err != nil {
+		return canonical.Value{}, fmt.Errorf("bundle: manifest %s: %w", m.BundleID, err)
+	}
 
 	return canonical.Object(
 		canonical.F("bundleId", canonical.String(m.BundleID)),
@@ -167,6 +171,77 @@ func canonicalManifest(m rule.Manifest) (canonical.Value, error) {
 		canonical.F("nodes", canonical.Array(nodeValues...)),
 		canonical.F("roots", canonicalNodeIDs(roots)),
 		canonical.F("pack", pack),
+		canonical.F("fiscal", fiscalProfile),
+	), nil
+}
+
+// canonicalFiscal renders the fiscal profile, or Absent for a bundle with
+// none — the same additive rule canonicalPack follows, so every manifest
+// written before fiscal profiles existed keeps its bytes and its digest.
+func canonicalFiscal(f *content.FiscalProfile) (canonical.Value, error) {
+	if f == nil {
+		return canonical.Absent(), nil
+	}
+	if err := f.Validate(); err != nil {
+		return canonical.Value{}, err
+	}
+	n := f.Normalize()
+	accs := make([]canonical.Value, len(n.Accumulators))
+	for i, a := range n.Accumulators {
+		ts := make([]canonical.Value, len(a.Thresholds))
+		for j, t := range a.Thresholds {
+			ts[j] = canonical.Object(
+				canonical.F("id", canonical.String(t.ID)),
+				canonical.F("limit", canonical.String(t.Limit)),
+				canonical.F("comparison", canonical.String(t.Comparison)),
+			)
+		}
+		thresholds := canonical.Absent()
+		if len(ts) > 0 {
+			thresholds = canonical.Array(ts...)
+		}
+		yearStart := canonical.Absent()
+		if a.YearStartMonth != 0 {
+			yearStart = canonical.Integer(int64(a.YearStartMonth))
+		}
+		accs[i] = canonical.Object(
+			canonical.F("read", canonical.String(a.Read)),
+			canonical.F("currency", canonical.String(a.Currency)),
+			canonical.F("period", canonical.String(a.Period)),
+			canonical.F("timezone", canonical.String(a.Timezone)),
+			canonical.F("yearStartMonth", yearStart),
+			canonical.F("contributes", canonical.Object(
+				canonical.F("input", canonical.OptString(a.Contributes.Input)),
+				canonical.F("emitted", canonical.OptString(a.Contributes.Emitted)),
+			)),
+			canonical.F("thresholds", thresholds),
+		)
+	}
+	accumulators := canonical.Absent()
+	if len(accs) > 0 {
+		accumulators = canonical.Array(accs...)
+	}
+	posting := canonical.Absent()
+	if p := n.Posting; p != nil {
+		lines := make([]canonical.Value, len(p.Lines))
+		for i, l := range p.Lines {
+			lines[i] = canonical.Object(
+				canonical.F("account", canonical.String(l.Account)),
+				canonical.F("side", canonical.String(l.Side)),
+				canonical.F("emitted", canonical.String(l.Emitted)),
+			)
+		}
+		posting = canonical.Object(
+			canonical.F("profile", canonical.String(p.Profile)),
+			canonical.F("version", canonical.String(p.Version)),
+			canonical.F("type", canonical.String(p.Type)),
+			// Line order is the journal's and is never sorted.
+			canonical.F("lines", canonical.Array(lines...)),
+		)
+	}
+	return canonical.Object(
+		canonical.F("accumulators", accumulators),
+		canonical.F("posting", posting),
 	), nil
 }
 

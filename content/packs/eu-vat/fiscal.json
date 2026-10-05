@@ -1,0 +1,26 @@
+{
+  "accumulators": [
+    {
+      "read": "threshold.ecoLevyYtd",
+      "currency": "EUR",
+      "period": "YEAR",
+      "timezone": "UTC",
+      "yearStartMonth": 1,
+      "contributes": { "emitted": "TAX_ECO_LEVY" },
+      "thresholds": [
+        { "id": "eco-levy-cap", "limit": "10000.00", "comparison": "GTE" }
+      ]
+    }
+  ],
+  "posting": {
+    "profile": "tcsl-worked-eu-vat",
+    "version": "2026.09.1",
+    "type": "INVOICE",
+    "lines": [
+      { "account": "TAX_RECEIVABLE_CONTROL", "side": "DEBIT", "emitted": "TAX_VAT" },
+      { "account": "TAX_COLLECTED_LIABILITY", "side": "CREDIT", "emitted": "TAX_VAT" },
+      { "account": "TAX_RECEIVABLE_CONTROL", "side": "DEBIT", "emitted": "TAX_ECO_LEVY" },
+      { "account": "TAX_COLLECTED_LIABILITY", "side": "CREDIT", "emitted": "TAX_ECO_LEVY" }
+    ]
+  }
+}

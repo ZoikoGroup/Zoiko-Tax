@@ -1,0 +1,47 @@
+# 2026/10/01 19:44:43.910353 [TestRebuildEqualsIncrementalApply] [rapid] draw threshold ids: []string{"cap"}
+# 2026/10/01 19:44:43.910353 [TestRebuildEqualsIncrementalApply] [rapid] draw limit.cap: 0
+# 2026/10/01 19:44:43.910353 [TestRebuildEqualsIncrementalApply] [rapid] draw limit.cap.scale: 0
+# 2026/10/01 19:44:43.910353 [TestRebuildEqualsIncrementalApply] [rapid] draw cmp.cap: "GTE"
+# 2026/10/01 19:44:43.910353 [TestRebuildEqualsIncrementalApply] [rapid] draw contributions: 3
+# 2026/10/01 19:44:43.910353 [TestRebuildEqualsIncrementalApply] [rapid] draw amount[0]: 0
+# 2026/10/01 19:44:43.910353 [TestRebuildEqualsIncrementalApply] [rapid] draw amount[0].scale: 0
+# 2026/10/01 19:44:43.910353 [TestRebuildEqualsIncrementalApply] [rapid] draw amount[1]: 0
+# 2026/10/01 19:44:43.910353 [TestRebuildEqualsIncrementalApply] [rapid] draw amount[1].scale: 0
+# 2026/10/01 19:44:43.910353 [TestRebuildEqualsIncrementalApply] [rapid] draw amount[2]: 0
+# 2026/10/01 19:44:43.910353 [TestRebuildEqualsIncrementalApply] [rapid] draw amount[2].scale: 0
+# 2026/10/01 19:44:43.910353 [TestRebuildEqualsIncrementalApply] apply 0: INTERNAL/INTERNAL_ERROR: Accumulator tenant.jur.tax.2026-Q3 has a crossed-threshold set that is not sorted and unique.
+# 
+v0.4.8#7101499786335928838
+0x5555555555555
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x38e38e38e38e4
+0x2
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

@@ -381,6 +381,15 @@ export interface paths {
          *     It must name the current version; a decision is never edited, and a
          *     correction is a new decision linked to the old (ADR-0003).
          *
+         *     When the active content binds its accumulators to the cell (a
+         *     bundle fiscal profile), the cell reads them under lock before
+         *     evaluating, records this decision's contribution, and posts the
+         *     decision to the Tax Control Subledger, all in this request's
+         *     transaction. A request that supplies a value for a bound accumulator
+         *     is refused with `400 INVALID_VALUE`: the store is the source
+         *     (ZTAX-DET-REQ-0002). `accumulators` remains for content that reads a
+         *     value the cell does not hold.
+         *
          *     Before A4 every decision is `ADVISORY` and `authoritative: false`.
          */
         post: operations["commitTransaction"];

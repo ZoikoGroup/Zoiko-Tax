@@ -229,3 +229,18 @@ func truncate(s string, n int) string {
 	}
 	return s[:n]
 }
+
+// LegalEntity is a statutory person within a tenant: the entity that owes an
+// obligation and that a Tax Control Subledger journal posts for. It is
+// distinct from the tenant, the account and any brand (ZTAX-OBL-REQ-0018),
+// and a tenant may hold several. Exactly one is the tenant's default, which is
+// where a commit that names no entity posts.
+type LegalEntity struct {
+	ID       id.LegalEntityID
+	TenantID id.TenantID
+	Name     string
+	// Country is ISO 3166-1 alpha-2, or empty when not recorded.
+	Country   string
+	Default   bool
+	CreatedAt time.Time
+}

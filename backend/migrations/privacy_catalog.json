@@ -619,6 +619,27 @@
         "class": "P0"
       }
     },
+    "legal_entity": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "name": {
+        "class": "P0",
+        "note": "A legal entity's registered name; a company, not a natural person. Reclassified here first if sole traders are onboarded."
+      },
+      "country_code": {
+        "class": "P0"
+      },
+      "is_default": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      }
+    },
     "obligation": {
       "tenant_id": {
         "class": "P0"
@@ -927,6 +948,95 @@
         "class": "P0"
       },
       "result_digest": {
+        "class": "P0"
+      }
+    },
+    "tcsl_journal": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "journal_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "journal_type": {
+        "class": "P0"
+      },
+      "source_kind": {
+        "class": "P0"
+      },
+      "source_id": {
+        "class": "P0"
+      },
+      "posting_date": {
+        "class": "P0"
+      },
+      "legal_period": {
+        "class": "P0"
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "reversal_of": {
+        "class": "P0"
+      },
+      "profile_id": {
+        "class": "P0"
+      },
+      "profile_version": {
+        "class": "P0"
+      },
+      "amendment": {
+        "class": "P0"
+      },
+      "migration_source": {
+        "class": "P0"
+      },
+      "cutover": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      }
+    },
+    "tcsl_journal_line": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "journal_id": {
+        "class": "P0"
+      },
+      "line_no": {
+        "class": "P0"
+      },
+      "account": {
+        "class": "P0"
+      },
+      "side": {
+        "class": "P0"
+      },
+      "amount": {
+        "class": "P0",
+        "note": "A control-ledger amount in aggregate tax terms; carries no customer identity."
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "authority": {
+        "class": "P0"
+      },
+      "jurisdiction": {
+        "class": "P0"
+      },
+      "decision_id": {
+        "class": "P0"
+      },
+      "document_id": {
+        "class": "P0"
+      },
+      "obligation_id": {
         "class": "P0"
       }
     },

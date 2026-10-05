@@ -34,9 +34,12 @@ type PostingProfile struct {
 	EffectiveFrom time.Time
 	// EffectiveTo is exclusive; nil is open-ended.
 	EffectiveTo *time.Time
-	// Owner approved the profile.
-	Owner id.UserID
-	Rules map[string]PostingProfileEntry
+	// Owner approved the profile. A profile that ships in a signed content
+	// bundle is approved by the bundle's four-eyes approvals instead, and
+	// Approval names that bundle; one of the two is required.
+	Owner    id.UserID
+	Approval string
+	Rules    map[string]PostingProfileEntry
 }
 
 // PostingProfileEntry is what a profile posts for one event kind.
@@ -67,7 +70,7 @@ func (p PostingProfile) EffectiveAt(t time.Time) bool {
 // in effect at the event time, which is what lets a replay post the 2027
 // event under the 2027 profile.
 func (p PostingProfile) Post(ev PostingEvent, journalID id.JournalID, postingDate time.Time) (Journal, error) {
-	if p.Ref.ID == "" || p.Ref.Version == "" || p.Owner.IsZero() {
+	if p.Ref.ID == "" || p.Ref.Version == "" || (p.Owner.IsZero() && p.Approval == "") {
 		return Journal{}, fmt.Errorf("subledger: posting profile is unversioned or unapproved")
 	}
 	if !p.EffectiveAt(ev.EventTime) {

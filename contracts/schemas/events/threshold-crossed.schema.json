@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ThresholdCrossed",
+  "description": "An accumulator threshold crossed by one committed decision (ADR-0004 §2.6, ZTAX-DET-REQ-0027). Emitted through the outbox in the transaction that recorded the crossing, exactly once per threshold and accumulator. Amounts are canonical decimal strings, never JSON numbers.",
+  "$comment": "Producer: backend/internal/app/fiscal.go (crossingEvent). Event type com.zoikotax.accumulator.threshold-crossed; schema ref ztax:events/threshold-crossed/1.0.0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "accumulatorKey",
+    "thresholdId",
+    "limit",
+    "comparison",
+    "currency",
+    "before",
+    "after",
+    "seq",
+    "sourceDecisionId",
+    "recordedAt"
+  ],
+  "properties": {
+    "accumulatorKey": {
+      "type": "string",
+      "minLength": 1
+    },
+    "thresholdId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "limit": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "comparison": {
+      "enum": [
+        "GTE",
+        "GT"
+      ]
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "before": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "after": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "sourceDecisionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "recordedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

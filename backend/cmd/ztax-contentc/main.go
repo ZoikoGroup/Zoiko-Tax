@@ -64,6 +64,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/content/dsl"
 	"github.com/zoikogroup/zoikotax/backend/internal/content/pack"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/content"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/clock"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/kms"
@@ -122,6 +123,7 @@ type compileOptions struct {
 	packs    string
 	sources  string
 	rightsAt string
+	fiscal   string
 }
 
 func (o *compileOptions) bind(fs *flag.FlagSet) {
@@ -131,6 +133,7 @@ func (o *compileOptions) bind(fs *flag.FlagSet) {
 	fs.StringVar(&o.packs, "packs", "", "the directory of packs dependencies resolve against; defaults to the parent of the source's directory")
 	fs.StringVar(&o.sources, "sources", "", "the source register; defaults to sources/register.json beside the packs directory")
 	fs.StringVar(&o.rightsAt, "rights-at", "", "RFC 3339 instant licences are judged at; defaults to now")
+	fs.StringVar(&o.fiscal, "fiscal", "", "the fiscal profile; defaults to fiscal.json beside -source, and is optional")
 }
 
 // defaults fills the conventional layout of content/:
@@ -148,6 +151,34 @@ func (o *compileOptions) defaults() {
 	if o.sources == "" {
 		o.sources = filepath.Join(filepath.Dir(o.packs), "sources", "register.json")
 	}
+}
+
+// readFiscal reads the pack's fiscal profile. An explicit -fiscal must exist;
+// the conventional fiscal.json beside the source is optional, because a pack
+// that only determines has no accumulators to bind and nothing to post.
+func readFiscal(o compileOptions) (*content.FiscalProfile, error) {
+	path, explicit := o.fiscal, o.fiscal != ""
+	if !explicit {
+		path = filepath.Join(filepath.Dir(o.source), "fiscal.json")
+	}
+	// #nosec G304 -- an operator-supplied path, or the conventional one beside it.
+	data, err := os.ReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) && !explicit {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read fiscal profile %s: %w", path, err)
+	}
+	var f content.FiscalProfile
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&f); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if err := f.Validate(); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	return &f, nil
 }
 
 // assemblePack runs both build-time gates and returns the pack section.
@@ -292,6 +323,19 @@ func compileSource(log *slog.Logger, o compileOptions) (string, []byte, error) {
 	// manifest behind for a later `sign` to pick up.
 	if manifest.Pack, err = assemblePack(log, o, manifest.BundleID); err != nil {
 		return "", nil, err
+	}
+	if manifest.Fiscal, err = readFiscal(o); err != nil {
+		return "", nil, err
+	}
+	// The cell loads with rule.Load, which checks the fiscal profile against
+	// the graph. Running the same check here refuses, before anything is
+	// written or signed, a profile no cell would accept.
+	if manifest.Fiscal != nil {
+		precheck := manifest
+		precheck.Digest = "precheck"
+		if _, err := rule.Load(precheck); err != nil {
+			return "", nil, err
+		}
 	}
 
 	data, err := bundle.EncodeManifest(manifest)

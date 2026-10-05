@@ -22,8 +22,10 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/idempotency"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/identity"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/outbox"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/subledger"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 )
 
@@ -322,4 +324,37 @@ type TransferLog interface {
 	// List returns the tenant's transfers, newest first — the "what of this
 	// tenant's data has left this cell, and on whose approval" query.
 	List(ctx context.Context, limit int) ([]privacy.CrossCellTransfer, error)
+}
+
+// ---------------------------------------------------------------------------
+// Legal entities and the Tax Control Subledger (W2 lanes I and J)
+// ---------------------------------------------------------------------------
+
+// LegalEntityRepository holds a tenant's legal entities. Every method reads
+// the tenant from the security context.
+type LegalEntityRepository interface {
+	Create(ctx context.Context, le identity.LegalEntity) error
+	// Default returns the tenant's default legal entity.
+	Default(ctx context.Context) (identity.LegalEntity, error)
+	ByID(ctx context.Context, legalEntityID id.LegalEntityID) (identity.LegalEntity, error)
+}
+
+// JournalRepository is the Tax Control Subledger. It appends balanced
+// journals and never edits one (ZTAX-FIN-REQ-0036).
+type JournalRepository interface {
+	// Append writes a journal and its lines. A second journal for the same
+	// source event, profile and currency is refused as already existing, so a
+	// retried commit cannot post twice.
+	Append(ctx context.Context, j subledger.Journal) error
+	// BySource returns the journals one source event posted.
+	BySource(ctx context.Context, kind, sourceID string) ([]subledger.Journal, error)
+	// Balances sums a legal entity's posted lines by account and currency,
+	// debits and credits apart (ZTAX-FIN-REQ-0121).
+	Balances(ctx context.Context, legalEntityID id.LegalEntityID) (map[subledger.BalanceKey]subledger.Balance, error)
+}
+
+// OutboxWriter appends an event in the caller's transaction (ADR-0014 §2.1):
+// the event commits with the state change that caused it, or neither does.
+type OutboxWriter interface {
+	Append(ctx context.Context, e outbox.Event) error
 }
