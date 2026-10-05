@@ -14,7 +14,7 @@ Generated from [`register.yaml`](register.yaml) and [`requirements.yaml`](requir
 | `ZTAX-EVID-001` | Evidence Ledger, Replay, Retention & Legal Hold | C | F0 | 1.0 | DRAFT | Chief Architect + GC | 2026-11-29 | 131 PROPOSED |
 | `ZTAX-LEG-001` | Legal, Liability & Regulatory Posture | C | F0 | 1.0 | DRAFT | General Counsel | 2026-11-29 | 104 PROPOSED |
 | `ZTAX-SRC-001` | Content Sourcing, Licensing & Redistribution | C | F0 | 1.0 | DRAFT | CCRO + GC | 2026-11-29 | 107 PROPOSED |
-| `ZTAX-SEC-001` | Security, IAM, Tenant Isolation & Residency | C | F0 | 1.0 | DRAFT | CISO | 2026-11-29 | 135 PROPOSED |
+| `ZTAX-SEC-001` | Security, IAM, Tenant Isolation & Residency | C | F0 | 1.0 | DRAFT | CISO | 2026-11-29 | 136 PROPOSED |
 | `ZTAX-PRIV-001` | Privacy Engineering & Situs Evidence Handling | C | F0 | 1.0 | DRAFT | DPO + Chief Architect | 2026-11-29 | 121 PROPOSED |
 | `ZTAX-AIGOV-001` | AI Governance, Model Risk & Authority Boundary | C | F0 | 1.0 | DRAFT | CTO + CCRO + GC | 2026-11-29 | 108 PROPOSED |
 | `ZTAX-CLS-001` | Telecom Product Ontology & Dual Classification | S | F1 | 1.0 | DRAFT | Head of Content Engineering | 2026-11-29 | 124 PROPOSED |
@@ -37,7 +37,7 @@ Generated from [`register.yaml`](register.yaml) and [`requirements.yaml`](requir
 
 ## Summary
 
-30 documents: 15 DRAFT, 2 EFFECTIVE, 12 PROPOSED, 1 SUPERSEDED. 1392 registered requirements.
+30 documents: 15 DRAFT, 2 EFFECTIVE, 12 PROPOSED, 1 SUPERSEDED. 1393 registered requirements.
 
 ## Open gaps
 

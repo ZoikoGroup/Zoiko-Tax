@@ -19565,3 +19565,17 @@ requirements:
     status: PROPOSED
     effective_from: null
     effective_to: null
+  - id: ZTAX-SEC-REQ-0136
+    document_id: ZTAX-SEC-001
+    version: "1.0"
+    statement: "No secret MUST be carried as a literal value in a configuration file, deployment manifest, or CI workflow at rest, outside an explicit, reviewed allowlist of development-only or CI-only placeholders."
+    rationale: "ADR-0017 \u00a72.4 and Mandatory Control 3: secrets are named by reference (vault://, local:// in development only) and never carried as literal values in configuration. This is a different check from general secret-leak scanning (gitleaks): it enforces the config-carries-no-secret-values rule specifically."
+    source_authority: "ADR-0017 \u00a72.4, Mandatory Control 3"
+    owner: "Lane C \u2014 Security & Privacy"
+    applies_to:
+      - Platform
+    verification_method: TEST
+    verification_ref: docs/tools/tests/test_check_secrets_manifest.py
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
