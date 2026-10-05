@@ -440,6 +440,14 @@ jobs:
       - name: the gate's own suite
         run: python -m unittest discover -s docs/tools/tests
 
+      - name: secret scan (ZTAX-SEC-001 doctrine -- no credentials in source control)
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+      - name: deployment-manifest secrets scan (ADR-0017 §2.4)
+        run: python docs/tools/check_secrets_manifest.py
+
       # GOV-001 §9.4: unregistered document IDs anywhere in the tree, broken
       # requirement references, missing owners, expired reviews, duplicate IDs,
       # production requirements without verification, publication hashes that

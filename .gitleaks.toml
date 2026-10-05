@@ -1,0 +1,21 @@
+# ZTAX-SEC-001 doctrine: secrets never enter source control.
+# See ADR-0017 §2.4 for the environment-variable rule enforced separately
+# by docs/tools/check_secrets_manifest.py.
+#
+# This config EXTENDS the default gitleaks ruleset — it does not replace it.
+# The allowlist below covers three known, deliberately-fake dev/CI placeholders
+# already in the repo. Each entry is path-scoped, so a new secret-shaped string
+# in any other file is still caught. Adding a 4th placeholder requires a
+# deliberate edit to this file.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known fake dev/CI credentials — path-scoped only"
+paths = [
+    '''docker-compose\.yml''',
+    '''backend/\.env\.local\.example''',
+    '''\.github/workflows/ci\.yml'''
+]
+
