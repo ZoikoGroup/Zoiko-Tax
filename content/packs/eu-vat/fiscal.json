@@ -12,6 +12,22 @@
       ]
     }
   ],
+  "obligations": [
+    {
+      "id": "xa-vat-return",
+      "version": "2026.09.1",
+      "type": "VAT_RETURN",
+      "authority": "authority:xa-revenue",
+      "jurisdiction": "jurisdiction:xa",
+      "duty": "TRANSACTION_MONETARY",
+      "currency": "EUR",
+      "assesses": ["TAX_VAT"],
+      "period": { "kind": "QUARTER", "timezone": "UTC", "yearStartMonth": 1 },
+      "due": { "offsetMonths": 1, "dayOfMonth": 20 },
+      "source": "SRC-ZOIKO-WORKED-0001",
+      "citation": "Worked pack: a quarterly return of the VAT collected, due on the 20th of the month after the quarter ends."
+    }
+  ],
   "posting": {
     "profile": "tcsl-worked-eu-vat",
     "version": "2026.09.1",

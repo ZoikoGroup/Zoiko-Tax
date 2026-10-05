@@ -239,9 +239,51 @@ func canonicalFiscal(f *content.FiscalProfile) (canonical.Value, error) {
 			canonical.F("lines", canonical.Array(lines...)),
 		)
 	}
+	optInt := func(v int) canonical.Value {
+		if v == 0 {
+			return canonical.Absent()
+		}
+		return canonical.Integer(int64(v))
+	}
+	obls := make([]canonical.Value, len(n.Obligations))
+	for i, o := range n.Obligations {
+		assesses := make([]canonical.Value, len(o.Assesses))
+		for j, a := range o.Assesses {
+			assesses[j] = canonical.String(a)
+		}
+		obls[i] = canonical.Object(
+			canonical.F("id", canonical.String(o.ID)),
+			canonical.F("version", canonical.String(o.Version)),
+			canonical.F("type", canonical.String(o.Type)),
+			canonical.F("authority", canonical.String(o.Authority)),
+			canonical.F("jurisdiction", canonical.String(o.Jurisdiction)),
+			canonical.F("duty", canonical.String(o.Duty)),
+			canonical.F("currency", canonical.String(o.Currency)),
+			canonical.F("assesses", canonical.Array(assesses...)),
+			canonical.F("period", canonical.Object(
+				canonical.F("kind", canonical.String(o.Period.Kind)),
+				canonical.F("timezone", canonical.String(o.Period.Timezone)),
+				canonical.F("yearStartMonth", optInt(o.Period.YearStartMonth)),
+			)),
+			canonical.F("due", canonical.Object(
+				canonical.F("offsetMonths", optInt(o.Due.OffsetMonths)),
+				canonical.F("dayOfMonth", optInt(o.Due.DayOfMonth)),
+				canonical.F("offsetDays", optInt(o.Due.OffsetDays)),
+			)),
+			canonical.F("source", canonical.String(o.Source)),
+			canonical.F("citation", canonical.String(o.Citation)),
+		)
+	}
+	// Absent when empty, so a profile written before obligations existed
+	// encodes to the bytes it was signed as.
+	obligations := canonical.Absent()
+	if len(obls) > 0 {
+		obligations = canonical.Array(obls...)
+	}
 	return canonical.Object(
 		canonical.F("accumulators", accumulators),
 		canonical.F("posting", posting),
+		canonical.F("obligations", obligations),
 	), nil
 }
 

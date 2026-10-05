@@ -242,6 +242,13 @@ func (b *Bundle) checkFiscal(f content.FiscalProfile) error {
 			return fmt.Errorf("rule: accumulator %s contributes slot %s, which no rule emits as money", a.Read, a.Contributes.Emitted)
 		}
 	}
+	for _, o := range f.Obligations {
+		for _, slot := range o.Assesses {
+			if !emits[slot] {
+				return fmt.Errorf("rule: obligation %s assesses slot %s, which no rule emits as money", o.ID, slot)
+			}
+		}
+	}
 	if f.Posting != nil {
 		for _, l := range f.Posting.Lines {
 			if !emits[l.Emitted] {
