@@ -565,6 +565,96 @@ class SubledgerBalances(TypedDict):
     balances: list[ControlBalance]
 
 
+ObligationId: TypeAlias = str
+"""
+One row of an obligation's history. A UUID in lowercase canonical form.
+"""
+
+
+CivilDate: TypeAlias = str
+"""
+A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+object names. Not an instant: a due date is a day in the authority's
+calendar, and converting it to UTC would move it.
+
+"""
+
+
+ObligationStatus: TypeAlias = Literal['OPEN', 'DATA_REQUIRED', 'READY', 'FILED', 'ACCEPTED', 'REJECTED', 'UNCERTAIN', 'PAYMENT_DUE', 'PAID', 'AMENDMENT_REQUIRED', 'SUSPENDED', 'CLOSED']
+"""
+A stored obligation status (ZTAX-OBL-REQ-0084).
+"""
+
+
+EffectiveObligationStatus: TypeAlias = Literal['OPEN', 'DATA_REQUIRED', 'READY', 'FILED', 'ACCEPTED', 'REJECTED', 'UNCERTAIN', 'PAYMENT_DUE', 'PAID', 'AMENDMENT_REQUIRED', 'SUSPENDED', 'CLOSED', 'OVERDUE']
+"""
+A stored status, or `OVERDUE` derived as of today for an unfiled obligation past its due date.
+"""
+
+
+class Definition(TypedDict):
+    id: str
+    version: str
+
+
+class Content(TypedDict):
+    bundleId: str
+    bundleDigest: Digest
+
+
+class Obligation(TypedDict):
+    """
+    One row of an obligation: a periodic duty owed by a legal entity to an
+    authority, under a pinned definition version and signed content. The
+    dates are civil dates in `timezone`; `periodEnd` is the period's
+    last day, inclusive, and `dueDate` the legal due date.
+
+    `assessedAmount` is the sum of the committed decisions' assessments:
+    live on the current row, and as written on a superseded one.
+    `supersedes` names the row this one replaced; `supersededBy`, on a
+    row that is history, the row that replaced it.
+
+    """
+
+    id: ObligationId
+    type: str
+    """
+    The return or duty, as the content names it.
+    """
+    duty: Literal['TRANSACTION_MONETARY', 'PERIODIC_CONTRIBUTION', 'REGISTRATION', 'INFORMATION_RETURN', 'RECORDKEEPING', 'NOTICE_RESPONSE']
+    jurisdiction: str
+    authority: str
+    legalEntityId: LegalEntityId
+    definition: Definition
+    content: Content
+    periodStart: CivilDate
+    periodEnd: CivilDate
+    dueDate: CivilDate
+    timezone: str
+    """
+    The legal calendar's IANA timezone.
+    """
+    status: ObligationStatus
+    effectiveStatus: EffectiveObligationStatus
+    assessedAmount: NotRequired[Decimal]
+    currency: NotRequired[CurrencyCode]
+    supersedes: NotRequired[ObligationId]
+    supersededBy: NotRequired[ObligationId]
+    recordedAt: Timestamp
+    recordedBy: NotRequired[str]
+    """
+    The user whose move wrote this row. Absent when a commit wrote it.
+    """
+
+
+class ObligationList(TypedDict):
+    obligations: list[Obligation]
+
+
+class ObligationTransitionRequest(TypedDict):
+    to: Literal['OPEN', 'DATA_REQUIRED', 'READY', 'SUSPENDED', 'CLOSED']
+
+
 class ClassificationProposalRequest(TypedDict):
     subjectRef: str
     """

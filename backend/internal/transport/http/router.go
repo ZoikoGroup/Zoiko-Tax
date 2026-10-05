@@ -162,6 +162,9 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/replay/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleReplay},
 		{Route{"GET", "/v1/decisions/{decisionId}/journals", false, []security.Role{operator, analyst, auditor}}, rt.handleDecisionJournals},
 		{Route{"GET", "/v1/subledger/balances", false, []security.Role{operator, analyst, auditor}}, rt.handleSubledgerBalances},
+		{Route{"GET", "/v1/obligations", false, []security.Role{operator, analyst, auditor}}, rt.handleListObligations},
+		{Route{"GET", "/v1/obligations/{obligationId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetObligation},
+		{Route{"POST", "/v1/obligations/{obligationId}/transitions", false, []security.Role{operator}}, rt.handleTransitionObligation},
 
 		// Classification assistance: advisory, through the Governed Model
 		// Gateway only.

@@ -112,10 +112,11 @@ const FOLDERS = [
   {
     name: "06 · Determination — needs content and an OPERATOR",
     description:
-      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `adjustTransaction` then corrects that decision under the bundle that made it (ZTAX-DET-REQ-0030).\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
     operations: [
       "createQuote", "commitTransaction", "getDecision", "replayDecision", "listDecisionJournals",
-      "getSubledgerBalances", "adjustTransaction", "proposeClassification",
+      "getSubledgerBalances", "listObligations", "getObligation", "transitionObligation",
+      "adjustTransaction", "proposeClassification",
     ],
     prerequest: [
       "if (pm.variables.get('runDetermination') !== 'true') {",
@@ -160,6 +161,8 @@ const VALUE_VARIABLES = {
   "auditor@acme.example": "{{newUserEmail}}",
   // The adjust example's supersedes: the decision the folder just committed.
   "01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f": "{{decisionId}}",
+  // The obligation examples' id: the return the folder's commit assessed into.
+  "01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01": "{{obligationId}}",
 };
 
 // Per-operation test scripts, beyond the status assertion every request gets.
@@ -230,6 +233,28 @@ const OPERATION_TESTS = {
     "pm.test('control balances are reported, debits and credits apart', function () {",
     "  pm.response.to.have.status(200);",
     "  pm.expect(pm.response.json().balances).to.be.an('array');",
+    "});",
+  ],
+  listObligations: [
+    "pm.test('ZTAX-OBL-001 §4 — the commit assessed into the period\'s return', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().obligations.length).to.be.at.least(1);",
+    "});",
+    "pm.collectionVariables.set('obligationId', pm.response.json().obligations[0].id);",
+  ],
+  getObligation: [
+    "pm.test('the obligation names its authority, definition and content', function () {",
+    "  pm.response.to.have.status(200);",
+    "  const o = pm.response.json();",
+    "  pm.expect(o.definition.id).to.be.a('string');",
+    "  pm.expect(o.content.bundleDigest).to.match(/^zt1:[0-9a-f]{64}$/);",
+    "});",
+  ],
+  transitionObligation: [
+    "pm.test('ADR-0003 §2.2 — a move is a new row superseding the old one', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().status).to.eql('READY');",
+    "  pm.expect(pm.response.json().supersedes).to.eql(pm.collectionVariables.get('obligationId'));",
     "});",
   ],
   proposeClassification: [
@@ -654,6 +679,7 @@ function variables(overlay, contractDigest, local) {
     { key: "decisionTime", value: "", type: "string" },
     { key: "eventTime", value: "", type: "string" },
     { key: "decisionId", value: "", type: "string" },
+    { key: "obligationId", value: "", type: "string" },
     // Minted once per run by `07`, and reused by the requests that must share it.
     { key: "reusedKey", value: "", type: "string" },
 

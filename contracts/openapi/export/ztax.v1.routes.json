@@ -104,6 +104,24 @@
       "public": false
     },
     {
+      "method": "GET",
+      "path": "/v1/obligations",
+      "operationId": "listObligations",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/obligations/{obligationId}",
+      "operationId": "getObligation",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/obligations/{obligationId}/transitions",
+      "operationId": "transitionObligation",
+      "public": false
+    },
+    {
       "method": "POST",
       "path": "/v1/quotes",
       "operationId": "createQuote",

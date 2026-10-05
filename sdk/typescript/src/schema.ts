@@ -541,6 +541,95 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/obligations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The tenant's current obligations
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. The current state of every
+         *     obligation, earliest due first. An obligation is created the first
+         *     time a commit falls in its period under content that declares it, and
+         *     its assessed amount is the sum of what each committed decision
+         *     assessed into it — a correction withdraws exactly what the decision it
+         *     corrects added (ZTAX-OBL-001 §4).
+         *
+         *     `effectiveStatus` is the status as of today in the obligation's legal
+         *     calendar, with `OVERDUE` derived for an unfiled obligation past its
+         *     due date; it is never stored (ZTAX-OBL-REQ-0084). Filtering on
+         *     `OVERDUE` filters on that derivation.
+         */
+        get: operations["listObligations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/obligations/{obligationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One obligation row, current or superseded
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. An obligation's history is a chain
+         *     of rows, each superseding the one before (ADR-0003 §2.2). The current
+         *     row carries the live assessed amount and today's effective status; a
+         *     superseded row is reported as it was written, with `supersededBy`
+         *     naming the row after it.
+         */
+        get: operations["getObligation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/obligations/{obligationId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move an obligation to a status a user sets
+         * @description `OPERATOR`. Moves the obligation to `OPEN`, `DATA_REQUIRED`, `READY`,
+         *     `SUSPENDED` or `CLOSED`, where its lifecycle allows the move
+         *     (ZTAX-OBL-REQ-0085). `FILED`, `ACCEPTED`, `REJECTED`, `UNCERTAIN`,
+         *     `PAYMENT_DUE` and `PAID` are set by the submission and payment
+         *     boundary, never by hand.
+         *
+         *     The identifier must be the obligation's current row. A move against a
+         *     row that has since been superseded — by another user, or by a commit
+         *     that changed the figures — is refused with `OPTIMISTIC_CONFLICT`
+         *     rather than applied to figures the caller never saw; read the
+         *     obligation again and retry. That makes a retry of this request safe
+         *     without an idempotency key: the second attempt names a superseded row.
+         *
+         *     A commit into a `READY` obligation moves it back to `OPEN`; into an
+         *     `ACCEPTED`, `PAYMENT_DUE` or `PAID` one, to `AMENDMENT_REQUIRED`. A
+         *     commit into a `FILED`, `UNCERTAIN` or `CLOSED` obligation is refused.
+         */
+        post: operations["transitionObligation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/classifications:propose": {
         parameters: {
             query?: never;
@@ -1247,6 +1336,91 @@ export interface components {
             legalEntityId: components["schemas"]["LegalEntityId"];
             balances: components["schemas"]["ControlBalance"][];
         };
+        /**
+         * ObligationId
+         * Format: uuid
+         * @description One row of an obligation's history. A UUID in lowercase canonical form.
+         * @example 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+         */
+        ObligationId: string;
+        /**
+         * CivilDate
+         * @description A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+         *     object names. Not an instant: a due date is a day in the authority's
+         *     calendar, and converting it to UTC would move it.
+         * @example 2026-10-20
+         */
+        CivilDate: string;
+        /**
+         * ObligationStatus
+         * @description A stored obligation status (ZTAX-OBL-REQ-0084).
+         * @example OPEN
+         * @enum {string}
+         */
+        ObligationStatus: "OPEN" | "DATA_REQUIRED" | "READY" | "FILED" | "ACCEPTED" | "REJECTED" | "UNCERTAIN" | "PAYMENT_DUE" | "PAID" | "AMENDMENT_REQUIRED" | "SUSPENDED" | "CLOSED";
+        /**
+         * EffectiveObligationStatus
+         * @description A stored status, or `OVERDUE` derived as of today for an unfiled obligation past its due date.
+         * @example OVERDUE
+         * @enum {string}
+         */
+        EffectiveObligationStatus: "OPEN" | "DATA_REQUIRED" | "READY" | "FILED" | "ACCEPTED" | "REJECTED" | "UNCERTAIN" | "PAYMENT_DUE" | "PAID" | "AMENDMENT_REQUIRED" | "SUSPENDED" | "CLOSED" | "OVERDUE";
+        /**
+         * Obligation
+         * @description One row of an obligation: a periodic duty owed by a legal entity to an
+         *     authority, under a pinned definition version and signed content. The
+         *     dates are civil dates in `timezone`; `periodEnd` is the period's
+         *     last day, inclusive, and `dueDate` the legal due date.
+         *
+         *     `assessedAmount` is the sum of the committed decisions' assessments:
+         *     live on the current row, and as written on a superseded one.
+         *     `supersedes` names the row this one replaced; `supersededBy`, on a
+         *     row that is history, the row that replaced it.
+         */
+        Obligation: {
+            id: components["schemas"]["ObligationId"];
+            /** @description The return or duty, as the content names it. */
+            type: string;
+            /** @enum {string} */
+            duty: "TRANSACTION_MONETARY" | "PERIODIC_CONTRIBUTION" | "REGISTRATION" | "INFORMATION_RETURN" | "RECORDKEEPING" | "NOTICE_RESPONSE";
+            jurisdiction: string;
+            authority: string;
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            definition: {
+                id: string;
+                version: string;
+            };
+            content: {
+                bundleId: string;
+                bundleDigest: components["schemas"]["Digest"];
+            };
+            periodStart: components["schemas"]["CivilDate"];
+            periodEnd: components["schemas"]["CivilDate"];
+            dueDate: components["schemas"]["CivilDate"];
+            /** @description The legal calendar's IANA timezone. */
+            timezone: string;
+            status: components["schemas"]["ObligationStatus"];
+            effectiveStatus: components["schemas"]["EffectiveObligationStatus"];
+            assessedAmount?: components["schemas"]["Decimal"];
+            currency?: components["schemas"]["CurrencyCode"];
+            supersedes?: components["schemas"]["ObligationId"];
+            supersededBy?: components["schemas"]["ObligationId"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /**
+             * Format: uuid
+             * @description The user whose move wrote this row. Absent when a commit wrote it.
+             */
+            recordedBy?: string;
+        };
+        /** ObligationList */
+        ObligationList: {
+            obligations: components["schemas"]["Obligation"][];
+        };
+        /** ObligationTransitionRequest */
+        ObligationTransitionRequest: {
+            /** @enum {string} */
+            to: "OPEN" | "DATA_REQUIRED" | "READY" | "SUSPENDED" | "CLOSED";
+        };
         /** ClassificationProposalRequest */
         ClassificationProposalRequest: {
             /**
@@ -1414,6 +1588,11 @@ export interface components {
          * @example 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
          */
         DecisionId: components["schemas"]["DecisionId"];
+        /**
+         * @description The obligation row identifier.
+         * @example 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+         */
+        ObligationId: components["schemas"]["ObligationId"];
         /**
          * @description Maximum number of items to return. The server caps this independently,
          *     so a larger value is not an error and does not return more.
@@ -2091,6 +2270,112 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listObligations: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only obligations in this effective status.
+                 * @example OPEN
+                 */
+                status?: components["schemas"]["EffectiveObligationStatus"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The obligations, by due date. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObligationList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getObligation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The obligation row identifier.
+                 * @example 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                 */
+                obligationId: components["parameters"]["ObligationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The obligation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Obligation"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    transitionObligation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The obligation row identifier.
+                 * @example 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                 */
+                obligationId: components["parameters"]["ObligationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ObligationTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description The obligation's new current row. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Obligation"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };

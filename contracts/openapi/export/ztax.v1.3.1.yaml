@@ -80,6 +80,8 @@ tags:
     description: The Tax Control Subledger — control journals and balances, not the customer GL.
   - name: classification
     description: Advisory classification assistance through the Governed Model Gateway.
+  - name: obligations
+    description: Periodic returns assessed from committed decisions, and their lifecycle.
 security:
   - sessionCookie: []
 paths:
@@ -1257,6 +1259,218 @@ paths:
           $ref: "#/components/responses/Internal"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/obligations:
+    get:
+      operationId: listObligations
+      tags:
+        - obligations
+      summary: The tenant's current obligations
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. The current state of every
+        obligation, earliest due first. An obligation is created the first
+        time a commit falls in its period under content that declares it, and
+        its assessed amount is the sum of what each committed decision
+        assessed into it — a correction withdraws exactly what the decision it
+        corrects added (ZTAX-OBL-001 §4).
+
+        `effectiveStatus` is the status as of today in the obligation's legal
+        calendar, with `OVERDUE` derived for an unfiled obligation past its
+        due date; it is never stored (ZTAX-OBL-REQ-0084). Filtering on
+        `OVERDUE` filters on that derivation.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Only obligations in this effective status.
+          schema:
+            $ref: "#/components/schemas/EffectiveObligationStatus"
+          example: OPEN
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The obligations, by due date.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObligationList"
+              examples:
+                default:
+                  summary: One quarter's VAT return, two commits in
+                  value:
+                    obligations:
+                      - id: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                        type: VAT_RETURN
+                        duty: TRANSACTION_MONETARY
+                        jurisdiction: jurisdiction:xa
+                        authority: authority:xa-revenue
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        definition:
+                          id: xa-vat-return
+                          version: 2026.09.1
+                        content:
+                          bundleId: eu-vat-worked-2026.09
+                          bundleDigest: zt1:3f0c9a5e4b7d2c1a8e6f0b9d3c5a7e1f2b4d6c8a0e9f1b3d5c7a9e2f4b6d8c0a
+                        periodStart: 2026-07-01
+                        periodEnd: 2026-09-30
+                        dueDate: 2026-10-20
+                        timezone: UTC
+                        status: OPEN
+                        effectiveStatus: OPEN
+                        assessedAmount: "42.00"
+                        currency: EUR
+                        recordedAt: 2026-09-25T09:00:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/obligations/{obligationId}:
+    get:
+      operationId: getObligation
+      tags:
+        - obligations
+      summary: One obligation row, current or superseded
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. An obligation's history is a chain
+        of rows, each superseding the one before (ADR-0003 §2.2). The current
+        row carries the live assessed amount and today's effective status; a
+        superseded row is reported as it was written, with `supersededBy`
+        naming the row after it.
+      parameters:
+        - $ref: "#/components/parameters/ObligationId"
+      responses:
+        "200":
+          description: The obligation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Obligation"
+              examples:
+                default:
+                  summary: An open VAT return
+                  value:
+                    id: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                    type: VAT_RETURN
+                    duty: TRANSACTION_MONETARY
+                    jurisdiction: jurisdiction:xa
+                    authority: authority:xa-revenue
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    definition:
+                      id: xa-vat-return
+                      version: 2026.09.1
+                    content:
+                      bundleId: eu-vat-worked-2026.09
+                      bundleDigest: zt1:3f0c9a5e4b7d2c1a8e6f0b9d3c5a7e1f2b4d6c8a0e9f1b3d5c7a9e2f4b6d8c0a
+                    periodStart: 2026-07-01
+                    periodEnd: 2026-09-30
+                    dueDate: 2026-10-20
+                    timezone: UTC
+                    status: OPEN
+                    effectiveStatus: OPEN
+                    assessedAmount: "42.00"
+                    currency: EUR
+                    recordedAt: 2026-09-25T09:00:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/obligations/{obligationId}/transitions:
+    post:
+      operationId: transitionObligation
+      tags:
+        - obligations
+      summary: Move an obligation to a status a user sets
+      description: |
+        `OPERATOR`. Moves the obligation to `OPEN`, `DATA_REQUIRED`, `READY`,
+        `SUSPENDED` or `CLOSED`, where its lifecycle allows the move
+        (ZTAX-OBL-REQ-0085). `FILED`, `ACCEPTED`, `REJECTED`, `UNCERTAIN`,
+        `PAYMENT_DUE` and `PAID` are set by the submission and payment
+        boundary, never by hand.
+
+        The identifier must be the obligation's current row. A move against a
+        row that has since been superseded — by another user, or by a commit
+        that changed the figures — is refused with `OPTIMISTIC_CONFLICT`
+        rather than applied to figures the caller never saw; read the
+        obligation again and retry. That makes a retry of this request safe
+        without an idempotency key: the second attempt names a superseded row.
+
+        A commit into a `READY` obligation moves it back to `OPEN`; into an
+        `ACCEPTED`, `PAYMENT_DUE` or `PAID` one, to `AMENDMENT_REQUIRED`. A
+        commit into a `FILED`, `UNCERTAIN` or `CLOSED` obligation is refused.
+      parameters:
+        - $ref: "#/components/parameters/ObligationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ObligationTransitionRequest"
+            examples:
+              default:
+                summary: Mark the return ready to file
+                value:
+                  to: READY
+      responses:
+        "200":
+          description: The obligation's new current row.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Obligation"
+              examples:
+                default:
+                  summary: The return, marked ready
+                  value:
+                    id: 01920a4e-3c4d-7e5f-8a61-7b8c9d0e1f23
+                    type: VAT_RETURN
+                    duty: TRANSACTION_MONETARY
+                    jurisdiction: jurisdiction:xa
+                    authority: authority:xa-revenue
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    definition:
+                      id: xa-vat-return
+                      version: 2026.09.1
+                    content:
+                      bundleId: eu-vat-worked-2026.09
+                      bundleDigest: zt1:3f0c9a5e4b7d2c1a8e6f0b9d3c5a7e1f2b4d6c8a0e9f1b3d5c7a9e2f4b6d8c0a
+                    periodStart: 2026-07-01
+                    periodEnd: 2026-09-30
+                    dueDate: 2026-10-20
+                    timezone: UTC
+                    status: READY
+                    effectiveStatus: READY
+                    assessedAmount: "42.00"
+                    currency: EUR
+                    supersedes: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                    recordedAt: 2026-10-02T10:15:00.000000Z
+                    recordedBy: 01920a40-aaaa-7bbb-8ccc-000000000d01
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/classifications:propose:
     post:
       operationId: proposeClassification
@@ -1379,6 +1593,14 @@ components:
       schema:
         $ref: "#/components/schemas/DecisionId"
       example: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+    ObligationId:
+      name: obligationId
+      in: path
+      required: true
+      description: The obligation row identifier.
+      schema:
+        $ref: "#/components/schemas/ObligationId"
+      example: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
     Limit:
       name: limit
       in: query
@@ -2896,6 +3118,218 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ControlBalance"
+    ObligationId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ObligationId
+      description: One row of an obligation's history. A UUID in lowercase canonical form.
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+    CivilDate:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CivilDate
+      description: |
+        A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+        object names. Not an instant: a due date is a day in the authority's
+        calendar, and converting it to UTC would move it.
+      pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}$
+      example: 2026-10-20
+    ObligationStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ObligationStatus
+      description: A stored obligation status (ZTAX-OBL-REQ-0084).
+      enum:
+        - OPEN
+        - DATA_REQUIRED
+        - READY
+        - FILED
+        - ACCEPTED
+        - REJECTED
+        - UNCERTAIN
+        - PAYMENT_DUE
+        - PAID
+        - AMENDMENT_REQUIRED
+        - SUSPENDED
+        - CLOSED
+      example: OPEN
+    EffectiveObligationStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: EffectiveObligationStatus
+      description: A stored status, or `OVERDUE` derived as of today for an unfiled obligation past its due date.
+      enum:
+        - OPEN
+        - DATA_REQUIRED
+        - READY
+        - FILED
+        - ACCEPTED
+        - REJECTED
+        - UNCERTAIN
+        - PAYMENT_DUE
+        - PAID
+        - AMENDMENT_REQUIRED
+        - SUSPENDED
+        - CLOSED
+        - OVERDUE
+      example: OVERDUE
+    Obligation:
+      type: object
+      title: Obligation
+      description: |
+        One row of an obligation: a periodic duty owed by a legal entity to an
+        authority, under a pinned definition version and signed content. The
+        dates are civil dates in `timezone`; `periodEnd` is the period's
+        last day, inclusive, and `dueDate` the legal due date.
+
+        `assessedAmount` is the sum of the committed decisions' assessments:
+        live on the current row, and as written on a superseded one.
+        `supersedes` names the row this one replaced; `supersededBy`, on a
+        row that is history, the row that replaced it.
+      additionalProperties: false
+      required:
+        - id
+        - type
+        - duty
+        - jurisdiction
+        - authority
+        - legalEntityId
+        - definition
+        - content
+        - periodStart
+        - periodEnd
+        - dueDate
+        - timezone
+        - status
+        - effectiveStatus
+        - recordedAt
+      properties:
+        id:
+          $ref: "#/components/schemas/ObligationId"
+        type:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The return or duty, as the content names it.
+        duty:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - TRANSACTION_MONETARY
+            - PERIODIC_CONTRIBUTION
+            - REGISTRATION
+            - INFORMATION_RETURN
+            - RECORDKEEPING
+            - NOTICE_RESPONSE
+        jurisdiction:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        authority:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        definition:
+          type: object
+          additionalProperties: false
+          required:
+            - id
+            - version
+          properties:
+            id:
+              x-ztax-privacy:
+                class: P0
+              type: string
+            version:
+              x-ztax-privacy:
+                class: P0
+              type: string
+        content:
+          type: object
+          additionalProperties: false
+          required:
+            - bundleId
+            - bundleDigest
+          properties:
+            bundleId:
+              x-ztax-privacy:
+                class: P0
+              type: string
+            bundleDigest:
+              $ref: "#/components/schemas/Digest"
+        periodStart:
+          $ref: "#/components/schemas/CivilDate"
+        periodEnd:
+          $ref: "#/components/schemas/CivilDate"
+        dueDate:
+          $ref: "#/components/schemas/CivilDate"
+        timezone:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The legal calendar's IANA timezone.
+        status:
+          $ref: "#/components/schemas/ObligationStatus"
+        effectiveStatus:
+          $ref: "#/components/schemas/EffectiveObligationStatus"
+        assessedAmount:
+          $ref: "#/components/schemas/Decimal"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        supersedes:
+          $ref: "#/components/schemas/ObligationId"
+        supersededBy:
+          $ref: "#/components/schemas/ObligationId"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+          description: The user whose move wrote this row. Absent when a commit wrote it.
+    ObligationList:
+      type: object
+      title: ObligationList
+      additionalProperties: false
+      required:
+        - obligations
+      properties:
+        obligations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Obligation"
+    ObligationTransitionRequest:
+      type: object
+      title: ObligationTransitionRequest
+      additionalProperties: false
+      required:
+        - to
+      properties:
+        to:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - OPEN
+            - DATA_REQUIRED
+            - READY
+            - SUSPENDED
+            - CLOSED
     ClassificationProposalRequest:
       type: object
       title: ClassificationProposalRequest

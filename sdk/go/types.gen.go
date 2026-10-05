@@ -69,6 +69,57 @@ func (e ControlAccount) Valid() bool {
 	}
 }
 
+// Defines values for EffectiveObligationStatus.
+const (
+	EffectiveObligationStatusACCEPTED          EffectiveObligationStatus = "ACCEPTED"
+	EffectiveObligationStatusAMENDMENTREQUIRED EffectiveObligationStatus = "AMENDMENT_REQUIRED"
+	EffectiveObligationStatusCLOSED            EffectiveObligationStatus = "CLOSED"
+	EffectiveObligationStatusDATAREQUIRED      EffectiveObligationStatus = "DATA_REQUIRED"
+	EffectiveObligationStatusFILED             EffectiveObligationStatus = "FILED"
+	EffectiveObligationStatusOPEN              EffectiveObligationStatus = "OPEN"
+	EffectiveObligationStatusOVERDUE           EffectiveObligationStatus = "OVERDUE"
+	EffectiveObligationStatusPAID              EffectiveObligationStatus = "PAID"
+	EffectiveObligationStatusPAYMENTDUE        EffectiveObligationStatus = "PAYMENT_DUE"
+	EffectiveObligationStatusREADY             EffectiveObligationStatus = "READY"
+	EffectiveObligationStatusREJECTED          EffectiveObligationStatus = "REJECTED"
+	EffectiveObligationStatusSUSPENDED         EffectiveObligationStatus = "SUSPENDED"
+	EffectiveObligationStatusUNCERTAIN         EffectiveObligationStatus = "UNCERTAIN"
+)
+
+// Valid indicates whether the value is a known member of the EffectiveObligationStatus enum.
+func (e EffectiveObligationStatus) Valid() bool {
+	switch e {
+	case EffectiveObligationStatusACCEPTED:
+		return true
+	case EffectiveObligationStatusAMENDMENTREQUIRED:
+		return true
+	case EffectiveObligationStatusCLOSED:
+		return true
+	case EffectiveObligationStatusDATAREQUIRED:
+		return true
+	case EffectiveObligationStatusFILED:
+		return true
+	case EffectiveObligationStatusOPEN:
+		return true
+	case EffectiveObligationStatusOVERDUE:
+		return true
+	case EffectiveObligationStatusPAID:
+		return true
+	case EffectiveObligationStatusPAYMENTDUE:
+		return true
+	case EffectiveObligationStatusREADY:
+		return true
+	case EffectiveObligationStatusREJECTED:
+		return true
+	case EffectiveObligationStatusSUSPENDED:
+		return true
+	case EffectiveObligationStatusUNCERTAIN:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for JournalType.
 const (
 	JournalTypeADJUSTMENT       JournalType = "ADJUSTMENT"
@@ -123,6 +174,111 @@ func (e JournalLineSide) Valid() bool {
 	case JournalLineSideCREDIT:
 		return true
 	case JournalLineSideDEBIT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ObligationDuty.
+const (
+	ObligationDutyINFORMATIONRETURN    ObligationDuty = "INFORMATION_RETURN"
+	ObligationDutyNOTICERESPONSE       ObligationDuty = "NOTICE_RESPONSE"
+	ObligationDutyPERIODICCONTRIBUTION ObligationDuty = "PERIODIC_CONTRIBUTION"
+	ObligationDutyRECORDKEEPING        ObligationDuty = "RECORDKEEPING"
+	ObligationDutyREGISTRATION         ObligationDuty = "REGISTRATION"
+	ObligationDutyTRANSACTIONMONETARY  ObligationDuty = "TRANSACTION_MONETARY"
+)
+
+// Valid indicates whether the value is a known member of the ObligationDuty enum.
+func (e ObligationDuty) Valid() bool {
+	switch e {
+	case ObligationDutyINFORMATIONRETURN:
+		return true
+	case ObligationDutyNOTICERESPONSE:
+		return true
+	case ObligationDutyPERIODICCONTRIBUTION:
+		return true
+	case ObligationDutyRECORDKEEPING:
+		return true
+	case ObligationDutyREGISTRATION:
+		return true
+	case ObligationDutyTRANSACTIONMONETARY:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ObligationStatus.
+const (
+	ObligationStatusACCEPTED          ObligationStatus = "ACCEPTED"
+	ObligationStatusAMENDMENTREQUIRED ObligationStatus = "AMENDMENT_REQUIRED"
+	ObligationStatusCLOSED            ObligationStatus = "CLOSED"
+	ObligationStatusDATAREQUIRED      ObligationStatus = "DATA_REQUIRED"
+	ObligationStatusFILED             ObligationStatus = "FILED"
+	ObligationStatusOPEN              ObligationStatus = "OPEN"
+	ObligationStatusPAID              ObligationStatus = "PAID"
+	ObligationStatusPAYMENTDUE        ObligationStatus = "PAYMENT_DUE"
+	ObligationStatusREADY             ObligationStatus = "READY"
+	ObligationStatusREJECTED          ObligationStatus = "REJECTED"
+	ObligationStatusSUSPENDED         ObligationStatus = "SUSPENDED"
+	ObligationStatusUNCERTAIN         ObligationStatus = "UNCERTAIN"
+)
+
+// Valid indicates whether the value is a known member of the ObligationStatus enum.
+func (e ObligationStatus) Valid() bool {
+	switch e {
+	case ObligationStatusACCEPTED:
+		return true
+	case ObligationStatusAMENDMENTREQUIRED:
+		return true
+	case ObligationStatusCLOSED:
+		return true
+	case ObligationStatusDATAREQUIRED:
+		return true
+	case ObligationStatusFILED:
+		return true
+	case ObligationStatusOPEN:
+		return true
+	case ObligationStatusPAID:
+		return true
+	case ObligationStatusPAYMENTDUE:
+		return true
+	case ObligationStatusREADY:
+		return true
+	case ObligationStatusREJECTED:
+		return true
+	case ObligationStatusSUSPENDED:
+		return true
+	case ObligationStatusUNCERTAIN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ObligationTransitionRequestTo.
+const (
+	ObligationTransitionRequestToCLOSED       ObligationTransitionRequestTo = "CLOSED"
+	ObligationTransitionRequestToDATAREQUIRED ObligationTransitionRequestTo = "DATA_REQUIRED"
+	ObligationTransitionRequestToOPEN         ObligationTransitionRequestTo = "OPEN"
+	ObligationTransitionRequestToREADY        ObligationTransitionRequestTo = "READY"
+	ObligationTransitionRequestToSUSPENDED    ObligationTransitionRequestTo = "SUSPENDED"
+)
+
+// Valid indicates whether the value is a known member of the ObligationTransitionRequestTo enum.
+func (e ObligationTransitionRequestTo) Valid() bool {
+	switch e {
+	case ObligationTransitionRequestToCLOSED:
+		return true
+	case ObligationTransitionRequestToDATAREQUIRED:
+		return true
+	case ObligationTransitionRequestToOPEN:
+		return true
+	case ObligationTransitionRequestToREADY:
+		return true
+	case ObligationTransitionRequestToSUSPENDED:
 		return true
 	default:
 		return false
@@ -399,6 +555,11 @@ type ChangePasswordRequest struct {
 	NewPassword     string `json:"newPassword"`
 }
 
+// CivilDate A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+// object names. Not an instant: a due date is a day in the authority's
+// calendar, and converting it to UTC would move it.
+type CivilDate = string
+
 // ClassificationProposal An advisory mapping proposal. `authoritative` is always false; a person confirms it or it is nothing.
 type ClassificationProposal struct {
 	Authoritative ClassificationProposalAuthoritative `json:"authoritative"`
@@ -647,6 +808,9 @@ type DeterminationInput struct {
 // different digest, and comparing the two without it would be wrong.
 type Digest = string
 
+// EffectiveObligationStatus A stored status, or `OVERDUE` derived as of today for an unfiled obligation past its due date.
+type EffectiveObligationStatus string
+
 // Emitted What the content emitted, by result slot. The slots are the pack's.
 type Emitted map[string]ResultValue
 
@@ -735,6 +899,120 @@ type MoneyValue struct {
 	// Currency An ISO 4217 alphabetic currency code.
 	Currency CurrencyCode `json:"currency"`
 }
+
+// Obligation One row of an obligation: a periodic duty owed by a legal entity to an
+// authority, under a pinned definition version and signed content. The
+// dates are civil dates in `timezone`; `periodEnd` is the period's
+// last day, inclusive, and `dueDate` the legal due date.
+//
+// `assessedAmount` is the sum of the committed decisions' assessments:
+// live on the current row, and as written on a superseded one.
+// `supersedes` names the row this one replaced; `supersededBy`, on a
+// row that is history, the row that replaced it.
+type Obligation struct {
+	// AssessedAmount A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	AssessedAmount *Decimal           `json:"assessedAmount,omitempty"`
+	Authority      string             `json:"authority"`
+	Content        Obligation_Content `json:"content"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency   *CurrencyCode         `json:"currency,omitempty"`
+	Definition Obligation_Definition `json:"definition"`
+
+	// DueDate A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	DueDate CivilDate      `json:"dueDate"`
+	Duty    ObligationDuty `json:"duty"`
+
+	// EffectiveStatus A stored status, or `OVERDUE` derived as of today for an unfiled obligation past its due date.
+	EffectiveStatus EffectiveObligationStatus `json:"effectiveStatus"`
+
+	// ID One row of an obligation's history. A UUID in lowercase canonical form.
+	ID           ObligationID `json:"id"`
+	Jurisdiction string       `json:"jurisdiction"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// PeriodEnd A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	PeriodEnd CivilDate `json:"periodEnd"`
+
+	// PeriodStart A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	PeriodStart CivilDate `json:"periodStart"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy The user whose move wrote this row. Absent when a commit wrote it.
+	RecordedBy *string `json:"recordedBy,omitempty"`
+
+	// Status A stored obligation status (ZTAX-OBL-REQ-0084).
+	Status ObligationStatus `json:"status"`
+
+	// SupersededBy One row of an obligation's history. A UUID in lowercase canonical form.
+	SupersededBy *ObligationID `json:"supersededBy,omitempty"`
+
+	// Supersedes One row of an obligation's history. A UUID in lowercase canonical form.
+	Supersedes *ObligationID `json:"supersedes,omitempty"`
+
+	// Timezone The legal calendar's IANA timezone.
+	Timezone string `json:"timezone"`
+
+	// Type The return or duty, as the content names it.
+	Type string `json:"type"`
+}
+
+// Obligation_Content defines model for Obligation.Content.
+type Obligation_Content struct {
+	// BundleDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	BundleDigest Digest `json:"bundleDigest"`
+	BundleID     string `json:"bundleId"`
+}
+
+// Obligation_Definition defines model for Obligation.Definition.
+type Obligation_Definition struct {
+	ID      string `json:"id"`
+	Version string `json:"version"`
+}
+
+// ObligationDuty defines model for Obligation.Duty.
+type ObligationDuty string
+
+// ObligationID One row of an obligation's history. A UUID in lowercase canonical form.
+type ObligationID = string
+
+// ObligationList defines model for ObligationList.
+type ObligationList struct {
+	Obligations []Obligation `json:"obligations"`
+}
+
+// ObligationStatus A stored obligation status (ZTAX-OBL-REQ-0084).
+type ObligationStatus string
+
+// ObligationTransitionRequest defines model for ObligationTransitionRequest.
+type ObligationTransitionRequest struct {
+	To ObligationTransitionRequestTo `json:"to"`
+}
+
+// ObligationTransitionRequestTo defines model for ObligationTransitionRequest.To.
+type ObligationTransitionRequestTo string
 
 // Outcome What a determination concluded (ADR-0016 §2.1). Only `AUTHORITATIVE`
 // may be filed, and nothing produces it before A4. The refusals —
@@ -1245,6 +1523,16 @@ type ListUsers200JSONResponseBody struct {
 	Users []User `json:"users"`
 }
 
+// ListObligationsParams defines parameters for ListObligations.
+type ListObligationsParams struct {
+	// Status Only obligations in this effective status.
+	Status *EffectiveObligationStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // AdjustTransactionParams defines parameters for AdjustTransaction.
 type AdjustTransactionParams struct {
 	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
@@ -1280,6 +1568,9 @@ type SignInJSONRequestBody = SignInRequest
 
 // ProposeClassificationJSONRequestBody defines body for ProposeClassification for application/json ContentType.
 type ProposeClassificationJSONRequestBody = ClassificationProposalRequest
+
+// TransitionObligationJSONRequestBody defines body for TransitionObligation for application/json ContentType.
+type TransitionObligationJSONRequestBody = ObligationTransitionRequest
 
 // CreateQuoteJSONRequestBody defines body for CreateQuote for application/json ContentType.
 type CreateQuoteJSONRequestBody = QuoteRequest

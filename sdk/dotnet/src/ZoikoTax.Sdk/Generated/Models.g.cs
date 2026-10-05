@@ -1252,6 +1252,236 @@ namespace ZoikoTax.Sdk
 
     }
 
+    /// <summary>
+    /// A stored obligation status (ZTAX-OBL-REQ-0084).
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ObligationStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"OPEN")]
+        OPEN = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DATA_REQUIRED")]
+        DATA_REQUIRED = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"READY")]
+        READY = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"FILED")]
+        FILED = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ACCEPTED")]
+        ACCEPTED = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REJECTED")]
+        REJECTED = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"UNCERTAIN")]
+        UNCERTAIN = 6,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PAYMENT_DUE")]
+        PAYMENT_DUE = 7,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PAID")]
+        PAID = 8,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AMENDMENT_REQUIRED")]
+        AMENDMENT_REQUIRED = 9,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SUSPENDED")]
+        SUSPENDED = 10,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CLOSED")]
+        CLOSED = 11,
+
+    }
+
+    /// <summary>
+    /// A stored status, or `OVERDUE` derived as of today for an unfiled obligation past its due date.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum EffectiveObligationStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"OPEN")]
+        OPEN = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DATA_REQUIRED")]
+        DATA_REQUIRED = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"READY")]
+        READY = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"FILED")]
+        FILED = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ACCEPTED")]
+        ACCEPTED = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REJECTED")]
+        REJECTED = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"UNCERTAIN")]
+        UNCERTAIN = 6,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PAYMENT_DUE")]
+        PAYMENT_DUE = 7,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PAID")]
+        PAID = 8,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AMENDMENT_REQUIRED")]
+        AMENDMENT_REQUIRED = 9,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SUSPENDED")]
+        SUSPENDED = 10,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CLOSED")]
+        CLOSED = 11,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"OVERDUE")]
+        OVERDUE = 12,
+
+    }
+
+    /// <summary>
+    /// One row of an obligation: a periodic duty owed by a legal entity to an
+    /// <br/>authority, under a pinned definition version and signed content. The
+    /// <br/>dates are civil dates in `timezone`; `periodEnd` is the period's
+    /// <br/>last day, inclusive, and `dueDate` the legal due date.
+    /// <br/>
+    /// <br/>`assessedAmount` is the sum of the committed decisions' assessments:
+    /// <br/>live on the current row, and as written on a superseded one.
+    /// <br/>`supersedes` names the row this one replaced; `supersededBy`, on a
+    /// <br/>row that is history, the row that replaced it.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Obligation
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        /// <summary>
+        /// The return or duty, as the content names it.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("duty")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ObligationDuty>))]
+        public ObligationDuty Duty { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("jurisdiction")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Jurisdiction { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("authority")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Authority { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("legalEntityId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid LegalEntityId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("definition")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public Definition Definition { get; set; } = new Definition();
+
+        [System.Text.Json.Serialization.JsonPropertyName("content")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public Content Content { get; set; } = new Content();
+
+        [System.Text.Json.Serialization.JsonPropertyName("periodStart")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")]
+        public string PeriodStart { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("periodEnd")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")]
+        public string PeriodEnd { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("dueDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")]
+        public string DueDate { get; set; } = default!;
+
+        /// <summary>
+        /// The legal calendar's IANA timezone.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("timezone")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Timezone { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ObligationStatus>))]
+        public ObligationStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effectiveStatus")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<EffectiveObligationStatus>))]
+        public EffectiveObligationStatus EffectiveStatus { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("assessedAmount")]
+        [System.ComponentModel.DataAnnotations.StringLength(64)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$")]
+        public string? AssessedAmount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z]{3}$")]
+        public string? Currency { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("supersedes")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid? Supersedes { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("supersededBy")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid? SupersededBy { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RecordedAt { get; set; } = default!;
+
+        /// <summary>
+        /// The user whose move wrote this row. Absent when a commit wrote it.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("recordedBy")]
+        public System.Guid? RecordedBy { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ObligationList
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("obligations")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<Obligation> Obligations { get; set; } = new System.Collections.ObjectModel.Collection<Obligation>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ObligationTransitionRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("to")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ObligationTransitionRequestTo>))]
+        public ObligationTransitionRequestTo To { get; set; } = default!;
+
+    }
+
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ClassificationProposalRequest
     {
@@ -1435,6 +1665,80 @@ namespace ZoikoTax.Sdk
         [System.Text.Json.Serialization.JsonPropertyName("version")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string Version { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ObligationDuty
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"TRANSACTION_MONETARY")]
+        TRANSACTION_MONETARY = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PERIODIC_CONTRIBUTION")]
+        PERIODIC_CONTRIBUTION = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REGISTRATION")]
+        REGISTRATION = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"INFORMATION_RETURN")]
+        INFORMATION_RETURN = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RECORDKEEPING")]
+        RECORDKEEPING = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"NOTICE_RESPONSE")]
+        NOTICE_RESPONSE = 5,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Definition
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("version")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Version { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Content
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("bundleId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string BundleId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("bundleDigest")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string BundleDigest { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ObligationTransitionRequestTo
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"OPEN")]
+        OPEN = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DATA_REQUIRED")]
+        DATA_REQUIRED = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"READY")]
+        READY = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SUSPENDED")]
+        SUSPENDED = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CLOSED")]
+        CLOSED = 4,
 
     }
 

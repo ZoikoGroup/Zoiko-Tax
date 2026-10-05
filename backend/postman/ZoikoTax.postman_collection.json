@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:a2f3cb4efb9b2bfb89aa84d84bab46cee33264a9a2961cfd4b62c65f836d4402`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:96a90e120afe357331ac3ac03456d638064f0b98a9bb406a2a2e8e2e539df7f7`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -1128,7 +1128,7 @@
     },
     {
       "name": "06 · Determination — needs content and an OPERATOR",
-      "description": "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `adjustTransaction` then corrects that decision under the bundle that made it (ZTAX-DET-REQ-0030).\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "description": "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
       "item": [
         {
           "name": "POST /v1/quotes — Quote a transaction without recording it",
@@ -1602,6 +1602,245 @@
                   "pm.test('control balances are reported, debits and credits apart', function () {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.json().balances).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/obligations — The tenant's current obligations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/obligations?status={{status}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "obligations"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only obligations in this effective status."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The tenant's current obligations\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. The current state of every\nobligation, earliest due first. An obligation is created the first\ntime a commit falls in its period under content that declares it, and\nits assessed amount is the sum of what each committed decision\nassessed into it — a correction withdraws exactly what the decision it\ncorrects added (ZTAX-OBL-001 §4).\n\n`effectiveStatus` is the status as of today in the obligation's legal\ncalendar, with `OVERDUE` derived for an unfiled obligation past its\ndue date; it is never stored (ZTAX-OBL-REQ-0084). Filtering on\n`OVERDUE` filters on that derivation."
+          },
+          "response": [
+            {
+              "name": "200 · One quarter's VAT return, two commits in",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/obligations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "obligations"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"obligations\": [\n    {\n      \"id\": \"01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01\",\n      \"type\": \"VAT_RETURN\",\n      \"duty\": \"TRANSACTION_MONETARY\",\n      \"jurisdiction\": \"jurisdiction:xa\",\n      \"authority\": \"authority:xa-revenue\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"definition\": {\n        \"id\": \"xa-vat-return\",\n        \"version\": \"2026.09.1\"\n      },\n      \"content\": {\n        \"bundleId\": \"eu-vat-worked-2026.09\",\n        \"bundleDigest\": \"zt1:3f0c9a5e4b7d2c1a8e6f0b9d3c5a7e1f2b4d6c8a0e9f1b3d5c7a9e2f4b6d8c0a\"\n      },\n      \"periodStart\": \"2026-07-01\",\n      \"periodEnd\": \"2026-09-30\",\n      \"dueDate\": \"2026-10-20\",\n      \"timezone\": \"UTC\",\n      \"status\": \"OPEN\",\n      \"effectiveStatus\": \"OPEN\",\n      \"assessedAmount\": \"42.00\",\n      \"currency\": \"EUR\",\n      \"recordedAt\": \"2026-09-25T09:00:00.000000Z\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listObligations returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('ZTAX-OBL-001 §4 — the commit assessed into the period's return', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().obligations.length).to.be.at.least(1);",
+                  "});",
+                  "pm.collectionVariables.set('obligationId', pm.response.json().obligations[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/obligations/{obligationId} — One obligation row, current or superseded",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/obligations/{{obligationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "obligations",
+                "{{obligationId}}"
+              ]
+            },
+            "description": "One obligation row, current or superseded\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. An obligation's history is a chain\nof rows, each superseding the one before (ADR-0003 §2.2). The current\nrow carries the live assessed amount and today's effective status; a\nsuperseded row is reported as it was written, with `supersededBy`\nnaming the row after it."
+          },
+          "response": [
+            {
+              "name": "200 · An open VAT return",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/obligations/{{obligationId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "obligations",
+                    "{{obligationId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01\",\n  \"type\": \"VAT_RETURN\",\n  \"duty\": \"TRANSACTION_MONETARY\",\n  \"jurisdiction\": \"jurisdiction:xa\",\n  \"authority\": \"authority:xa-revenue\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"definition\": {\n    \"id\": \"xa-vat-return\",\n    \"version\": \"2026.09.1\"\n  },\n  \"content\": {\n    \"bundleId\": \"eu-vat-worked-2026.09\",\n    \"bundleDigest\": \"zt1:3f0c9a5e4b7d2c1a8e6f0b9d3c5a7e1f2b4d6c8a0e9f1b3d5c7a9e2f4b6d8c0a\"\n  },\n  \"periodStart\": \"2026-07-01\",\n  \"periodEnd\": \"2026-09-30\",\n  \"dueDate\": \"2026-10-20\",\n  \"timezone\": \"UTC\",\n  \"status\": \"OPEN\",\n  \"effectiveStatus\": \"OPEN\",\n  \"assessedAmount\": \"42.00\",\n  \"currency\": \"EUR\",\n  \"recordedAt\": \"2026-09-25T09:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getObligation returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('the obligation names its authority, definition and content', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const o = pm.response.json();",
+                  "  pm.expect(o.definition.id).to.be.a('string');",
+                  "  pm.expect(o.content.bundleDigest).to.match(/^zt1:[0-9a-f]{64}$/);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/obligations/{obligationId}/transitions — Move an obligation to a status a user sets",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"READY\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/obligations/{{obligationId}}/transitions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "obligations",
+                "{{obligationId}}",
+                "transitions"
+              ]
+            },
+            "description": "Move an obligation to a status a user sets\n\n`OPERATOR`. Moves the obligation to `OPEN`, `DATA_REQUIRED`, `READY`,\n`SUSPENDED` or `CLOSED`, where its lifecycle allows the move\n(ZTAX-OBL-REQ-0085). `FILED`, `ACCEPTED`, `REJECTED`, `UNCERTAIN`,\n`PAYMENT_DUE` and `PAID` are set by the submission and payment\nboundary, never by hand.\n\nThe identifier must be the obligation's current row. A move against a\nrow that has since been superseded — by another user, or by a commit\nthat changed the figures — is refused with `OPTIMISTIC_CONFLICT`\nrather than applied to figures the caller never saw; read the\nobligation again and retry. That makes a retry of this request safe\nwithout an idempotency key: the second attempt names a superseded row.\n\nA commit into a `READY` obligation moves it back to `OPEN`; into an\n`ACCEPTED`, `PAYMENT_DUE` or `PAID` one, to `AMENDMENT_REQUIRED`. A\ncommit into a `FILED`, `UNCERTAIN` or `CLOSED` obligation is refused."
+          },
+          "response": [
+            {
+              "name": "200 · The return, marked ready",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/obligations/{{obligationId}}/transitions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "obligations",
+                    "{{obligationId}}",
+                    "transitions"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a4e-3c4d-7e5f-8a61-7b8c9d0e1f23\",\n  \"type\": \"VAT_RETURN\",\n  \"duty\": \"TRANSACTION_MONETARY\",\n  \"jurisdiction\": \"jurisdiction:xa\",\n  \"authority\": \"authority:xa-revenue\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"definition\": {\n    \"id\": \"xa-vat-return\",\n    \"version\": \"2026.09.1\"\n  },\n  \"content\": {\n    \"bundleId\": \"eu-vat-worked-2026.09\",\n    \"bundleDigest\": \"zt1:3f0c9a5e4b7d2c1a8e6f0b9d3c5a7e1f2b4d6c8a0e9f1b3d5c7a9e2f4b6d8c0a\"\n  },\n  \"periodStart\": \"2026-07-01\",\n  \"periodEnd\": \"2026-09-30\",\n  \"dueDate\": \"2026-10-20\",\n  \"timezone\": \"UTC\",\n  \"status\": \"READY\",\n  \"effectiveStatus\": \"READY\",\n  \"assessedAmount\": \"42.00\",\n  \"currency\": \"EUR\",\n  \"supersedes\": \"01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01\",\n  \"recordedAt\": \"2026-10-02T10:15:00.000000Z\",\n  \"recordedBy\": \"01920a40-aaaa-7bbb-8ccc-000000000d01\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('transitionObligation returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('ADR-0003 §2.2 — a move is a new row superseding the old one', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('READY');",
+                  "  pm.expect(pm.response.json().supersedes).to.eql(pm.collectionVariables.get('obligationId'));",
                   "});"
                 ]
               }
@@ -2866,6 +3105,11 @@
       "type": "string"
     },
     {
+      "key": "obligationId",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "reusedKey",
       "value": "",
       "type": "string"
@@ -2877,7 +3121,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:a2f3cb4efb9b2bfb89aa84d84bab46cee33264a9a2961cfd4b62c65f836d4402",
+      "value": "sha256:96a90e120afe357331ac3ac03456d638064f0b98a9bb406a2a2e8e2e539df7f7",
       "type": "string"
     }
   ]
