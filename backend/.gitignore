@@ -6,6 +6,10 @@ bin/
 coverage.out
 *.test
 
+# rapid writes a replay file for each failing property run. A failure is fixed
+# in the code, not pinned in the tree.
+testdata/rapid/
+
 # vendor/ is NOT ignored. It is committed deliberately: ADR-0001 control 6
 # requires the apd source to be retrievable from our own history across the
 # statutory retention period, not from a third party.
