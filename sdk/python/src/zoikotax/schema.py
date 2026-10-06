@@ -496,6 +496,207 @@ class Decision(TypedDict):
     emitted: Emitted
 
 
+LegalEntityId: TypeAlias = str
+"""
+A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+"""
+
+
+ControlAccount: TypeAlias = Literal['TAX_COLLECTED_LIABILITY', 'TAX_ACCRUED_LIABILITY', 'TAX_RECOVERABLE', 'TAX_RECEIVABLE_CONTROL', 'TAX_CASH_CLEARING', 'TAX_RETURN_CLEARING', 'TAX_REMITTANCE_CLEARING', 'TAX_ADJUSTMENT_CONTROL', 'FX_CONTROL', 'ROUNDING_CONTROL', 'SUSPENSE_EXCEPTION', 'CUSTOMER_GL_BRIDGE']
+"""
+A Tax Control Subledger control account (ZTAX-FIN-001 §9). Never a customer GL account.
+"""
+
+
+class JournalLine(TypedDict):
+    """
+    One line. The amount is positive and the side carries the direction (ZTAX-FIN-REQ-0044).
+    """
+
+    account: ControlAccount
+    side: Literal['DEBIT', 'CREDIT']
+    amount: Decimal
+    currency: CurrencyCode
+    decisionId: NotRequired[DecisionId]
+
+
+class Profile(TypedDict):
+    id: str
+    version: str
+
+
+class Journal(TypedDict):
+    """
+    One posted Tax Control Subledger journal. Balanced in its one currency; append-only.
+    """
+
+    id: str
+    type: Literal['INVOICE', 'CREDIT', 'REFUND', 'LIABILITY_ACCRUAL', 'RETURN', 'REMITTANCE', 'FX', 'ROUNDING', 'MIGRATION', 'ADJUSTMENT']
+    legalEntityId: LegalEntityId
+    sourceKind: str
+    """
+    The source event kind, e.g. `DECISION_COMMITTED` or `DECISION_SUPERSEDED`.
+    """
+    sourceId: str
+    postingDate: Timestamp
+    legalPeriod: str
+    currency: CurrencyCode
+    reversalOf: NotRequired[str]
+    """
+    The journal this one reverses, for a reversal.
+    """
+    profile: Profile
+    lines: list[JournalLine]
+
+
+class JournalList(TypedDict):
+    journals: list[Journal]
+
+
+class ControlBalance(TypedDict):
+    account: ControlAccount
+    currency: CurrencyCode
+    debits: Decimal
+    credits: Decimal
+
+
+class SubledgerBalances(TypedDict):
+    legalEntityId: LegalEntityId
+    balances: list[ControlBalance]
+
+
+ObligationId: TypeAlias = str
+"""
+One row of an obligation's history. A UUID in lowercase canonical form.
+"""
+
+
+CivilDate: TypeAlias = str
+"""
+A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+object names. Not an instant: a due date is a day in the authority's
+calendar, and converting it to UTC would move it.
+
+"""
+
+
+ObligationStatus: TypeAlias = Literal['OPEN', 'DATA_REQUIRED', 'READY', 'FILED', 'ACCEPTED', 'REJECTED', 'UNCERTAIN', 'PAYMENT_DUE', 'PAID', 'AMENDMENT_REQUIRED', 'SUSPENDED', 'CLOSED']
+"""
+A stored obligation status (ZTAX-OBL-REQ-0084).
+"""
+
+
+EffectiveObligationStatus: TypeAlias = Literal['OPEN', 'DATA_REQUIRED', 'READY', 'FILED', 'ACCEPTED', 'REJECTED', 'UNCERTAIN', 'PAYMENT_DUE', 'PAID', 'AMENDMENT_REQUIRED', 'SUSPENDED', 'CLOSED', 'OVERDUE']
+"""
+A stored status, or `OVERDUE` derived as of today for an unfiled obligation past its due date.
+"""
+
+
+class Definition(TypedDict):
+    id: str
+    version: str
+
+
+class Content(TypedDict):
+    bundleId: str
+    bundleDigest: Digest
+
+
+class Obligation(TypedDict):
+    """
+    One row of an obligation: a periodic duty owed by a legal entity to an
+    authority, under a pinned definition version and signed content. The
+    dates are civil dates in `timezone`; `periodEnd` is the period's
+    last day, inclusive, and `dueDate` the legal due date.
+
+    `assessedAmount` is the sum of the committed decisions' assessments:
+    live on the current row, and as written on a superseded one.
+    `supersedes` names the row this one replaced; `supersededBy`, on a
+    row that is history, the row that replaced it.
+
+    """
+
+    id: ObligationId
+    type: str
+    """
+    The return or duty, as the content names it.
+    """
+    duty: Literal['TRANSACTION_MONETARY', 'PERIODIC_CONTRIBUTION', 'REGISTRATION', 'INFORMATION_RETURN', 'RECORDKEEPING', 'NOTICE_RESPONSE']
+    jurisdiction: str
+    authority: str
+    legalEntityId: LegalEntityId
+    definition: Definition
+    content: Content
+    periodStart: CivilDate
+    periodEnd: CivilDate
+    dueDate: CivilDate
+    timezone: str
+    """
+    The legal calendar's IANA timezone.
+    """
+    status: ObligationStatus
+    effectiveStatus: EffectiveObligationStatus
+    assessedAmount: NotRequired[Decimal]
+    currency: NotRequired[CurrencyCode]
+    supersedes: NotRequired[ObligationId]
+    supersededBy: NotRequired[ObligationId]
+    recordedAt: Timestamp
+    recordedBy: NotRequired[str]
+    """
+    The user whose move wrote this row. Absent when a commit wrote it.
+    """
+
+
+class ObligationList(TypedDict):
+    obligations: list[Obligation]
+
+
+class ObligationTransitionRequest(TypedDict):
+    to: Literal['OPEN', 'DATA_REQUIRED', 'READY', 'SUSPENDED', 'CLOSED']
+
+
+class ClassificationProposalRequest(TypedDict):
+    subjectRef: str
+    """
+    The caller's reference for the item, e.g. a catalog SKU.
+    """
+    description: str
+    """
+    The item's commercial description. Catalog text, never customer data; it is sent to the Gateway.
+    """
+
+
+class AiProvenance(TypedDict):
+    """
+    Which governed use case, model, provider, prompt and AI train produced an output (ADR-0006 §2.7).
+    """
+
+    useCase: str
+    modelProfile: str
+    providerProfile: str
+    promptProfile: str
+    aiTrainVersion: str
+
+
+class ClassificationProposal(TypedDict):
+    """
+    An advisory mapping proposal. `authoritative` is always false; a person confirms it or it is nothing.
+    """
+
+    id: str
+    subjectRef: str
+    proposedCode: str
+    """
+    An existing ontology node, `ontology:...`.
+    """
+    confidence: NotRequired[str]
+    """
+    The model's own score as a canonical decimal in [0, 1]. Never a threshold that makes the proposal authoritative.
+    """
+    authoritative: Literal[False]
+    provenance: AiProvenance
+
+
 class ReplayReport(TypedDict):
     decisionId: DecisionId
     verdict: ReplayVerdict

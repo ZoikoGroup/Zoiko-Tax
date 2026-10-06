@@ -37,6 +37,17 @@ type AdminService struct {
 	// cell provisions nothing, because a tenant with no home is a tenant no
 	// cell will serve.
 	cell string
+	// entities receives the tenant's default legal entity at provisioning.
+	// Set by WithLegalEntities; ProvisionTenant refuses without it, because a
+	// tenant with no legal entity has nothing a journal or an obligation can
+	// be owed by.
+	entities port.LegalEntityRepository
+}
+
+// WithLegalEntities names the legal-entity store, and returns the service.
+func (s *AdminService) WithLegalEntities(r port.LegalEntityRepository) *AdminService {
+	s.entities = r
+	return s
 }
 
 // NewAdminService wires the service.
@@ -431,6 +442,11 @@ func (s *AdminService) ProvisionTenant(ctx context.Context, in ProvisionTenantIn
 			"This cell does not know its own identity, so it cannot home a tenant.")
 	}
 
+	if s.entities == nil {
+		return identity.Tenant{}, identity.User{}, errs.New(errs.CategoryInternal, errs.ReasonInternal,
+			"The administration service was wired without a legal-entity store, so it cannot provision a tenant.")
+	}
+
 	now := s.clock.Now()
 	tenantID, err := idgen.TenantID(s.ids)
 	if err != nil {
@@ -480,6 +496,18 @@ func (s *AdminService) ProvisionTenant(ctx context.Context, in ProvisionTenantIn
 		return identity.Tenant{}, identity.User{}, err
 	}
 	if err := s.users.GrantRole(txCtx, admin.ID, security.RoleAdmin, admin.ID, now); err != nil {
+		return identity.Tenant{}, identity.User{}, err
+	}
+	entityID, err := idgen.LegalEntityID(s.ids)
+	if err != nil {
+		return identity.Tenant{}, identity.User{}, errs.Wrap(err, errs.CategoryInternal, errs.ReasonInternal, "The tenant could not be created.")
+	}
+	// The default legal entity takes the tenant's name. Its country is not
+	// recorded here: establishment is a fact somebody states, not one
+	// provisioning can infer from the cell's region.
+	if err := s.entities.Create(txCtx, identity.LegalEntity{
+		ID: entityID, TenantID: tenantID, Name: in.DisplayName, Default: true, CreatedAt: now,
+	}); err != nil {
 		return identity.Tenant{}, identity.User{}, err
 	}
 

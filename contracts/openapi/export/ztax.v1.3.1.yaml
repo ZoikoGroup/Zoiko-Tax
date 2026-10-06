@@ -76,6 +76,12 @@ tags:
     description: Tenant, users, sessions and the audit trail.
   - name: determination
     description: Quotes, commits, decisions and replay. Advisory until A4.
+  - name: subledger
+    description: The Tax Control Subledger — control journals and balances, not the customer GL.
+  - name: classification
+    description: Advisory classification assistance through the Governed Model Gateway.
+  - name: obligations
+    description: Periodic returns assessed from committed decisions, and their lifecycle.
 security:
   - sessionCookie: []
 paths:
@@ -836,6 +842,15 @@ paths:
         It must name the current version; a decision is never edited, and a
         correction is a new decision linked to the old (ADR-0003).
 
+        When the active content binds its accumulators to the cell (a
+        bundle fiscal profile), the cell reads them under lock before
+        evaluating, records this decision's contribution, and posts the
+        decision to the Tax Control Subledger, all in this request's
+        transaction. A request that supplies a value for a bound accumulator
+        is refused with `400 INVALID_VALUE`: the store is the source
+        (ZTAX-DET-REQ-0002). `accumulators` remains for content that reads a
+        value the cell does not hold.
+
         Before A4 every decision is `ADVISORY` and `authoritative: false`.
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
@@ -863,10 +878,6 @@ paths:
                     flags:
                       line.reducedRateApplies: false
                       line.exemptCertificateHeld: false
-                  accumulators:
-                    threshold.ecoLevyYtd:
-                      amount: "9999.99"
-                      currency: EUR
       responses:
         "201":
           description: |
@@ -976,10 +987,6 @@ paths:
                     flags:
                       line.reducedRateApplies: false
                       line.exemptCertificateHeld: false
-                  accumulators:
-                    threshold.ecoLevyYtd:
-                      amount: "9999.99"
-                      currency: EUR
       responses:
         "201":
           description: |
@@ -1153,6 +1160,400 @@ paths:
           $ref: "#/components/responses/Internal"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/decisions/{decisionId}/journals:
+    get:
+      operationId: listDecisionJournals
+      tags:
+        - subledger
+      summary: The Tax Control Subledger journals a decision posted
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. Every journal the decision's
+        commit posted, and — for a decision a correction has superseded —
+        the reversal journals the correction posted for it, so the trace from
+        a decision to the control ledger is one request (ZTAX-FIN-REQ-0077).
+        Journals are balanced per currency and never edited
+        (ZTAX-FIN-REQ-0035, -0036).
+      parameters:
+        - $ref: "#/components/parameters/DecisionId"
+      responses:
+        "200":
+          description: The journals, posting journals first, then reversals.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalList"
+              examples:
+                default:
+                  summary: One commit's invoice journal
+                  value:
+                    journals:
+                      - id: 01920a4c-2e3f-7a40-8b51-6c7d8e9fa012
+                        type: INVOICE
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        sourceKind: DECISION_COMMITTED
+                        sourceId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                        postingDate: 2026-09-25T09:00:00.000000Z
+                        legalPeriod: 2026-09
+                        currency: EUR
+                        profile:
+                          id: tcsl-worked-eu-vat
+                          version: 2026.09.1
+                        lines:
+                          - account: TAX_RECEIVABLE_CONTROL
+                            side: DEBIT
+                            amount: "21.00"
+                            currency: EUR
+                          - account: TAX_COLLECTED_LIABILITY
+                            side: CREDIT
+                            amount: "21.00"
+                            currency: EUR
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/subledger/balances:
+    get:
+      operationId: getSubledgerBalances
+      tags:
+        - subledger
+      summary: Control balances for the tenant's default legal entity
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. Debits and credits per control
+        account and currency, summed from the immutable journal lines, so a
+        balance always reconciles to the lines it came from
+        (ZTAX-FIN-REQ-0121). Debits and credits are reported apart, never
+        netted into a sign (ZTAX-FIN-REQ-0044). This is the Tax Control
+        Subledger, not the customer's general ledger.
+      responses:
+        "200":
+          description: The balances, by account then currency.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubledgerBalances"
+              examples:
+                default:
+                  summary: After one commit
+                  value:
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    balances:
+                      - account: TAX_COLLECTED_LIABILITY
+                        currency: EUR
+                        debits: "0"
+                        credits: "21.11"
+                      - account: TAX_RECEIVABLE_CONTROL
+                        currency: EUR
+                        debits: "21.11"
+                        credits: "0"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/obligations:
+    get:
+      operationId: listObligations
+      tags:
+        - obligations
+      summary: The tenant's current obligations
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. The current state of every
+        obligation, earliest due first. An obligation is created the first
+        time a commit falls in its period under content that declares it, and
+        its assessed amount is the sum of what each committed decision
+        assessed into it — a correction withdraws exactly what the decision it
+        corrects added (ZTAX-OBL-001 §4).
+
+        `effectiveStatus` is the status as of today in the obligation's legal
+        calendar, with `OVERDUE` derived for an unfiled obligation past its
+        due date; it is never stored (ZTAX-OBL-REQ-0084). Filtering on
+        `OVERDUE` filters on that derivation.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Only obligations in this effective status.
+          schema:
+            $ref: "#/components/schemas/EffectiveObligationStatus"
+          example: OPEN
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The obligations, by due date.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObligationList"
+              examples:
+                default:
+                  summary: One quarter's VAT return, two commits in
+                  value:
+                    obligations:
+                      - id: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                        type: VAT_RETURN
+                        duty: TRANSACTION_MONETARY
+                        jurisdiction: jurisdiction:xa
+                        authority: authority:xa-revenue
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        definition:
+                          id: xa-vat-return
+                          version: 2026.09.1
+                        content:
+                          bundleId: eu-vat-worked-2026.09
+                          bundleDigest: zt1:3f0c9a5e4b7d2c1a8e6f0b9d3c5a7e1f2b4d6c8a0e9f1b3d5c7a9e2f4b6d8c0a
+                        periodStart: 2026-07-01
+                        periodEnd: 2026-09-30
+                        dueDate: 2026-10-20
+                        timezone: UTC
+                        status: OPEN
+                        effectiveStatus: OPEN
+                        assessedAmount: "42.00"
+                        currency: EUR
+                        recordedAt: 2026-09-25T09:00:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/obligations/{obligationId}:
+    get:
+      operationId: getObligation
+      tags:
+        - obligations
+      summary: One obligation row, current or superseded
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. An obligation's history is a chain
+        of rows, each superseding the one before (ADR-0003 §2.2). The current
+        row carries the live assessed amount and today's effective status; a
+        superseded row is reported as it was written, with `supersededBy`
+        naming the row after it.
+      parameters:
+        - $ref: "#/components/parameters/ObligationId"
+      responses:
+        "200":
+          description: The obligation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Obligation"
+              examples:
+                default:
+                  summary: An open VAT return
+                  value:
+                    id: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                    type: VAT_RETURN
+                    duty: TRANSACTION_MONETARY
+                    jurisdiction: jurisdiction:xa
+                    authority: authority:xa-revenue
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    definition:
+                      id: xa-vat-return
+                      version: 2026.09.1
+                    content:
+                      bundleId: eu-vat-worked-2026.09
+                      bundleDigest: zt1:3f0c9a5e4b7d2c1a8e6f0b9d3c5a7e1f2b4d6c8a0e9f1b3d5c7a9e2f4b6d8c0a
+                    periodStart: 2026-07-01
+                    periodEnd: 2026-09-30
+                    dueDate: 2026-10-20
+                    timezone: UTC
+                    status: OPEN
+                    effectiveStatus: OPEN
+                    assessedAmount: "42.00"
+                    currency: EUR
+                    recordedAt: 2026-09-25T09:00:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/obligations/{obligationId}/transitions:
+    post:
+      operationId: transitionObligation
+      tags:
+        - obligations
+      summary: Move an obligation to a status a user sets
+      description: |
+        `OPERATOR`. Moves the obligation to `OPEN`, `DATA_REQUIRED`, `READY`,
+        `SUSPENDED` or `CLOSED`, where its lifecycle allows the move
+        (ZTAX-OBL-REQ-0085). `FILED`, `ACCEPTED`, `REJECTED`, `UNCERTAIN`,
+        `PAYMENT_DUE` and `PAID` are set by the submission and payment
+        boundary, never by hand.
+
+        The identifier must be the obligation's current row. A move against a
+        row that has since been superseded — by another user, or by a commit
+        that changed the figures — is refused with `OPTIMISTIC_CONFLICT`
+        rather than applied to figures the caller never saw; read the
+        obligation again and retry. That makes a retry of this request safe
+        without an idempotency key: the second attempt names a superseded row.
+
+        A commit into a `READY` obligation moves it back to `OPEN`; into an
+        `ACCEPTED`, `PAYMENT_DUE` or `PAID` one, to `AMENDMENT_REQUIRED`. A
+        commit into a `FILED`, `UNCERTAIN` or `CLOSED` obligation is refused.
+      parameters:
+        - $ref: "#/components/parameters/ObligationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ObligationTransitionRequest"
+            examples:
+              default:
+                summary: Mark the return ready to file
+                value:
+                  to: READY
+      responses:
+        "200":
+          description: The obligation's new current row.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Obligation"
+              examples:
+                default:
+                  summary: The return, marked ready
+                  value:
+                    id: 01920a4e-3c4d-7e5f-8a61-7b8c9d0e1f23
+                    type: VAT_RETURN
+                    duty: TRANSACTION_MONETARY
+                    jurisdiction: jurisdiction:xa
+                    authority: authority:xa-revenue
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    definition:
+                      id: xa-vat-return
+                      version: 2026.09.1
+                    content:
+                      bundleId: eu-vat-worked-2026.09
+                      bundleDigest: zt1:3f0c9a5e4b7d2c1a8e6f0b9d3c5a7e1f2b4d6c8a0e9f1b3d5c7a9e2f4b6d8c0a
+                    periodStart: 2026-07-01
+                    periodEnd: 2026-09-30
+                    dueDate: 2026-10-20
+                    timezone: UTC
+                    status: READY
+                    effectiveStatus: READY
+                    assessedAmount: "42.00"
+                    currency: EUR
+                    supersedes: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                    recordedAt: 2026-10-02T10:15:00.000000Z
+                    recordedBy: 01920a40-aaaa-7bbb-8ccc-000000000d01
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/classifications:propose:
+    post:
+      operationId: proposeClassification
+      tags:
+        - classification
+      summary: Ask the AI plane for an advisory ontology mapping
+      description: |
+        `OPERATOR` or `ANALYST`. Sends the item to the Governed Model Gateway
+        under the `classification-review` use case (ADR-0006) and returns
+        what it proposes. The proposal is **advisory and never
+        authoritative** (ZTAX-CLS-REQ-0082): it names an existing ontology
+        node for a person to confirm, and nothing in this response can become
+        a classification decision without that confirmation
+        (ADR-0006 §2.6).
+
+        A cell with no Gateway, or a Gateway with no approved provider,
+        answers `422 AI_GATEWAY_NOT_CONFIGURED` — understood, not covered here;
+        a Gateway that is down or
+        slow answers `503 AI_GATEWAY_UNAVAILABLE`. Deterministic processing is
+        unaffected by either. A governance refusal — kill switch, residency,
+        authority — is a `403` with the Gateway's reason code.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassificationProposalRequest"
+            examples:
+              sku:
+                summary: A catalog item to map
+                value:
+                  subjectRef: sku:PLAN-UNL-5G
+                  description: Unlimited 5G mobile plan with 20 GB hotspot
+      responses:
+        "200":
+          description: The advisory proposal, with the provenance that produced it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassificationProposal"
+              examples:
+                default:
+                  summary: A proposal for review
+                  value:
+                    id: 01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f
+                    subjectRef: sku:PLAN-UNL-5G
+                    proposedCode: ontology:telecom/voice/mobile
+                    confidence: "0.97"
+                    authoritative: false
+                    provenance:
+                      useCase: classification-review
+                      modelProfile: model:cls-2027.03
+                      providerProfile: provider:approved-a
+                      promptProfile: prompt:classification-review-v1
+                      aiTrainVersion: ai-2027.03.1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          description: AI assistance is not available in this cell (`AI_GATEWAY_NOT_CONFIGURED`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                notConfigured:
+                  summary: This cell's Gateway has no approved provider
+                  value:
+                    type: https://errors.zoikotax.com/v1/ai-gateway-not-configured
+                    title: AI gateway not configured
+                    status: 422
+                    detail: AI assistance is not available in this region yet.
+                    instance: /v1/classifications:propose
+                    ztx_reason_code: AI_GATEWAY_NOT_CONFIGURED
+                    ztx_request_id: 01JBQ0S9C3X8Q1H6M2KX5R7F4Q
+                    ztx_retryable: false
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
 components:
   securitySchemes:
     sessionCookie:
@@ -1192,6 +1593,14 @@ components:
       schema:
         $ref: "#/components/schemas/DecisionId"
       example: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+    ObligationId:
+      name: obligationId
+      in: path
+      required: true
+      description: The obligation row identifier.
+      schema:
+        $ref: "#/components/schemas/ObligationId"
+      example: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
     Limit:
       name: limit
       in: query
@@ -2529,6 +2938,495 @@ components:
           $ref: "#/components/schemas/DecisionDigests"
         emitted:
           $ref: "#/components/schemas/Emitted"
+    LegalEntityId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: LegalEntityId
+      description: A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920a4c-0000-7000-8000-00000000e001
+    ControlAccount:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ControlAccount
+      description: A Tax Control Subledger control account (ZTAX-FIN-001 §9). Never a customer GL account.
+      enum:
+        - TAX_COLLECTED_LIABILITY
+        - TAX_ACCRUED_LIABILITY
+        - TAX_RECOVERABLE
+        - TAX_RECEIVABLE_CONTROL
+        - TAX_CASH_CLEARING
+        - TAX_RETURN_CLEARING
+        - TAX_REMITTANCE_CLEARING
+        - TAX_ADJUSTMENT_CONTROL
+        - FX_CONTROL
+        - ROUNDING_CONTROL
+        - SUSPENSE_EXCEPTION
+        - CUSTOMER_GL_BRIDGE
+      example: TAX_COLLECTED_LIABILITY
+    JournalLine:
+      type: object
+      title: JournalLine
+      description: One line. The amount is positive and the side carries the direction (ZTAX-FIN-REQ-0044).
+      additionalProperties: false
+      required:
+        - account
+        - side
+        - amount
+        - currency
+      properties:
+        account:
+          $ref: "#/components/schemas/ControlAccount"
+        side:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - DEBIT
+            - CREDIT
+        amount:
+          $ref: "#/components/schemas/Decimal"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        decisionId:
+          $ref: "#/components/schemas/DecisionId"
+    Journal:
+      type: object
+      title: Journal
+      description: One posted Tax Control Subledger journal. Balanced in its one currency; append-only.
+      additionalProperties: false
+      required:
+        - id
+        - type
+        - legalEntityId
+        - sourceKind
+        - sourceId
+        - postingDate
+        - legalPeriod
+        - currency
+        - profile
+        - lines
+      properties:
+        id:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          format: uuid
+        type:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - INVOICE
+            - CREDIT
+            - REFUND
+            - LIABILITY_ACCRUAL
+            - RETURN
+            - REMITTANCE
+            - FX
+            - ROUNDING
+            - MIGRATION
+            - ADJUSTMENT
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        sourceKind:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The source event kind, e.g. `DECISION_COMMITTED` or `DECISION_SUPERSEDED`.
+        sourceId:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        postingDate:
+          $ref: "#/components/schemas/Timestamp"
+        legalPeriod:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        reversalOf:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          format: uuid
+          description: The journal this one reverses, for a reversal.
+        profile:
+          type: object
+          additionalProperties: false
+          required:
+            - id
+            - version
+          properties:
+            id:
+              x-ztax-privacy:
+                class: P0
+              type: string
+            version:
+              x-ztax-privacy:
+                class: P0
+              type: string
+        lines:
+          type: array
+          minItems: 2
+          items:
+            $ref: "#/components/schemas/JournalLine"
+    JournalList:
+      type: object
+      title: JournalList
+      additionalProperties: false
+      required:
+        - journals
+      properties:
+        journals:
+          type: array
+          items:
+            $ref: "#/components/schemas/Journal"
+    ControlBalance:
+      type: object
+      title: ControlBalance
+      additionalProperties: false
+      required:
+        - account
+        - currency
+        - debits
+        - credits
+      properties:
+        account:
+          $ref: "#/components/schemas/ControlAccount"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        debits:
+          $ref: "#/components/schemas/Decimal"
+        credits:
+          $ref: "#/components/schemas/Decimal"
+    SubledgerBalances:
+      type: object
+      title: SubledgerBalances
+      additionalProperties: false
+      required:
+        - legalEntityId
+        - balances
+      properties:
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        balances:
+          type: array
+          items:
+            $ref: "#/components/schemas/ControlBalance"
+    ObligationId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ObligationId
+      description: One row of an obligation's history. A UUID in lowercase canonical form.
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+    CivilDate:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CivilDate
+      description: |
+        A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+        object names. Not an instant: a due date is a day in the authority's
+        calendar, and converting it to UTC would move it.
+      pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}$
+      example: 2026-10-20
+    ObligationStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ObligationStatus
+      description: A stored obligation status (ZTAX-OBL-REQ-0084).
+      enum:
+        - OPEN
+        - DATA_REQUIRED
+        - READY
+        - FILED
+        - ACCEPTED
+        - REJECTED
+        - UNCERTAIN
+        - PAYMENT_DUE
+        - PAID
+        - AMENDMENT_REQUIRED
+        - SUSPENDED
+        - CLOSED
+      example: OPEN
+    EffectiveObligationStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: EffectiveObligationStatus
+      description: A stored status, or `OVERDUE` derived as of today for an unfiled obligation past its due date.
+      enum:
+        - OPEN
+        - DATA_REQUIRED
+        - READY
+        - FILED
+        - ACCEPTED
+        - REJECTED
+        - UNCERTAIN
+        - PAYMENT_DUE
+        - PAID
+        - AMENDMENT_REQUIRED
+        - SUSPENDED
+        - CLOSED
+        - OVERDUE
+      example: OVERDUE
+    Obligation:
+      type: object
+      title: Obligation
+      description: |
+        One row of an obligation: a periodic duty owed by a legal entity to an
+        authority, under a pinned definition version and signed content. The
+        dates are civil dates in `timezone`; `periodEnd` is the period's
+        last day, inclusive, and `dueDate` the legal due date.
+
+        `assessedAmount` is the sum of the committed decisions' assessments:
+        live on the current row, and as written on a superseded one.
+        `supersedes` names the row this one replaced; `supersededBy`, on a
+        row that is history, the row that replaced it.
+      additionalProperties: false
+      required:
+        - id
+        - type
+        - duty
+        - jurisdiction
+        - authority
+        - legalEntityId
+        - definition
+        - content
+        - periodStart
+        - periodEnd
+        - dueDate
+        - timezone
+        - status
+        - effectiveStatus
+        - recordedAt
+      properties:
+        id:
+          $ref: "#/components/schemas/ObligationId"
+        type:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The return or duty, as the content names it.
+        duty:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - TRANSACTION_MONETARY
+            - PERIODIC_CONTRIBUTION
+            - REGISTRATION
+            - INFORMATION_RETURN
+            - RECORDKEEPING
+            - NOTICE_RESPONSE
+        jurisdiction:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        authority:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        definition:
+          type: object
+          additionalProperties: false
+          required:
+            - id
+            - version
+          properties:
+            id:
+              x-ztax-privacy:
+                class: P0
+              type: string
+            version:
+              x-ztax-privacy:
+                class: P0
+              type: string
+        content:
+          type: object
+          additionalProperties: false
+          required:
+            - bundleId
+            - bundleDigest
+          properties:
+            bundleId:
+              x-ztax-privacy:
+                class: P0
+              type: string
+            bundleDigest:
+              $ref: "#/components/schemas/Digest"
+        periodStart:
+          $ref: "#/components/schemas/CivilDate"
+        periodEnd:
+          $ref: "#/components/schemas/CivilDate"
+        dueDate:
+          $ref: "#/components/schemas/CivilDate"
+        timezone:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The legal calendar's IANA timezone.
+        status:
+          $ref: "#/components/schemas/ObligationStatus"
+        effectiveStatus:
+          $ref: "#/components/schemas/EffectiveObligationStatus"
+        assessedAmount:
+          $ref: "#/components/schemas/Decimal"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        supersedes:
+          $ref: "#/components/schemas/ObligationId"
+        supersededBy:
+          $ref: "#/components/schemas/ObligationId"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+          description: The user whose move wrote this row. Absent when a commit wrote it.
+    ObligationList:
+      type: object
+      title: ObligationList
+      additionalProperties: false
+      required:
+        - obligations
+      properties:
+        obligations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Obligation"
+    ObligationTransitionRequest:
+      type: object
+      title: ObligationTransitionRequest
+      additionalProperties: false
+      required:
+        - to
+      properties:
+        to:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - OPEN
+            - DATA_REQUIRED
+            - READY
+            - SUSPENDED
+            - CLOSED
+    ClassificationProposalRequest:
+      type: object
+      title: ClassificationProposalRequest
+      additionalProperties: false
+      required:
+        - subjectRef
+        - description
+      properties:
+        subjectRef:
+          x-ztax-privacy:
+            class: P0
+            aiAllowed: APPROVED_MODEL_GATEWAY
+          type: string
+          minLength: 1
+          maxLength: 512
+          description: The caller's reference for the item, e.g. a catalog SKU.
+          example: sku:PLAN-UNL-5G
+        description:
+          x-ztax-privacy:
+            class: P0
+            aiAllowed: APPROVED_MODEL_GATEWAY
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: The item's commercial description. Catalog text, never customer data; it is sent to the Gateway.
+          example: Unlimited 5G mobile plan with 20 GB hotspot
+    AiProvenance:
+      type: object
+      title: AiProvenance
+      description: Which governed use case, model, provider, prompt and AI train produced an output (ADR-0006 §2.7).
+      additionalProperties: false
+      required:
+        - useCase
+        - modelProfile
+        - providerProfile
+        - promptProfile
+        - aiTrainVersion
+      properties:
+        useCase:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        modelProfile:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        providerProfile:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        promptProfile:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        aiTrainVersion:
+          x-ztax-privacy:
+            class: P0
+          type: string
+    ClassificationProposal:
+      type: object
+      title: ClassificationProposal
+      description: An advisory mapping proposal. `authoritative` is always false; a person confirms it or it is nothing.
+      additionalProperties: false
+      required:
+        - id
+        - subjectRef
+        - proposedCode
+        - authoritative
+        - provenance
+      properties:
+        id:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          format: uuid
+        subjectRef:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        proposedCode:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: An existing ontology node, `ontology:...`.
+        confidence:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The model's own score as a canonical decimal in [0, 1]. Never a threshold that makes the proposal authoritative.
+        authoritative:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          enum:
+            - false
+        provenance:
+          $ref: "#/components/schemas/AiProvenance"
     ReplayReport:
       type: object
       title: ReplayReport

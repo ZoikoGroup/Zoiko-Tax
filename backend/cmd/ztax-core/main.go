@@ -95,7 +95,8 @@ func run() error {
 	ids := idgen.V7{}
 
 	auth := app.NewAuthService(store.Tenants(), store.Users(), store.Sessions(), store.Audit(), store, clk, ids)
-	admin := app.NewAdminService(store.Tenants(), store.Users(), store.Sessions(), store.Audit(), store, clk, ids, cfg.Region).InCell(cfg.Cell)
+	admin := app.NewAdminService(store.Tenants(), store.Users(), store.Sessions(), store.Audit(), store, clk, ids, cfg.Region).InCell(cfg.Cell).
+		WithLegalEntities(store.LegalEntities())
 
 	if err := bootstrap(startCtx, cfg, admin, log); err != nil {
 		return err
@@ -136,6 +137,7 @@ func run() error {
 	}
 	defer closeModels()
 	router.Models = models
+	router.Classification = app.NewClassificationService(models)
 	router.SecureCookies = cfg.SecureCookies
 	router.TrustProxy = cfg.TrustProxy
 	router.Cell, router.Region, router.Environment = cfg.Cell, cfg.Region, cfg.Environment
@@ -437,7 +439,11 @@ func wireDetermination(cfg config.Config, store *postgres.Store, content *rule.H
 		Infra: cfg.TrainInfra, Schema: cfg.TrainSchema, Migration: cfg.TrainMigration,
 	}
 	svc := app.NewDeterminationService(content, library, store.Decisions(), objects, store, clk, ids, trains).
-		WithIdempotency(app.NewIdempotency(store.Idempotency(), store, clk))
+		WithIdempotency(app.NewIdempotency(store.Idempotency(), store, clk)).
+		WithFiscal(app.FiscalStores{
+			Accumulators: store.Accumulators(), Journals: store.Journals(),
+			LegalEntities: store.LegalEntities(), Outbox: store.Outbox(), Obligations: store.Obligations(),
+		})
 	log.Info("determination surface enabled", "evidence.dir", cfg.EvidenceDir)
 	return svc, nil
 }

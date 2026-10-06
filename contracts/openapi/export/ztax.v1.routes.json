@@ -86,9 +86,39 @@
       "public": true
     },
     {
+      "method": "POST",
+      "path": "/v1/classifications:propose",
+      "operationId": "proposeClassification",
+      "public": false
+    },
+    {
       "method": "GET",
       "path": "/v1/decisions/{decisionId}",
       "operationId": "getDecision",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/decisions/{decisionId}/journals",
+      "operationId": "listDecisionJournals",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/obligations",
+      "operationId": "listObligations",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/obligations/{obligationId}",
+      "operationId": "getObligation",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/obligations/{obligationId}/transitions",
+      "operationId": "transitionObligation",
       "public": false
     },
     {
@@ -101,6 +131,12 @@
       "method": "POST",
       "path": "/v1/replay/{decisionId}",
       "operationId": "replayDecision",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/subledger/balances",
+      "operationId": "getSubledgerBalances",
       "public": false
     },
     {

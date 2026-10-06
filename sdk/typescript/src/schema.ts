@@ -381,6 +381,15 @@ export interface paths {
          *     It must name the current version; a decision is never edited, and a
          *     correction is a new decision linked to the old (ADR-0003).
          *
+         *     When the active content binds its accumulators to the cell (a
+         *     bundle fiscal profile), the cell reads them under lock before
+         *     evaluating, records this decision's contribution, and posts the
+         *     decision to the Tax Control Subledger, all in this request's
+         *     transaction. A request that supplies a value for a bound accumulator
+         *     is refused with `400 INVALID_VALUE`: the store is the source
+         *     (ZTAX-DET-REQ-0002). `accumulators` remains for content that reads a
+         *     value the cell does not hold.
+         *
          *     Before A4 every decision is `ADVISORY` and `authoritative: false`.
          */
         post: operations["commitTransaction"];
@@ -476,6 +485,178 @@ export interface paths {
          *     Nothing is recorded. Replaying twice gives the same answer.
          */
         post: operations["replayDecision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/decisions/{decisionId}/journals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The Tax Control Subledger journals a decision posted
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. Every journal the decision's
+         *     commit posted, and — for a decision a correction has superseded —
+         *     the reversal journals the correction posted for it, so the trace from
+         *     a decision to the control ledger is one request (ZTAX-FIN-REQ-0077).
+         *     Journals are balanced per currency and never edited
+         *     (ZTAX-FIN-REQ-0035, -0036).
+         */
+        get: operations["listDecisionJournals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/subledger/balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Control balances for the tenant's default legal entity
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. Debits and credits per control
+         *     account and currency, summed from the immutable journal lines, so a
+         *     balance always reconciles to the lines it came from
+         *     (ZTAX-FIN-REQ-0121). Debits and credits are reported apart, never
+         *     netted into a sign (ZTAX-FIN-REQ-0044). This is the Tax Control
+         *     Subledger, not the customer's general ledger.
+         */
+        get: operations["getSubledgerBalances"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/obligations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The tenant's current obligations
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. The current state of every
+         *     obligation, earliest due first. An obligation is created the first
+         *     time a commit falls in its period under content that declares it, and
+         *     its assessed amount is the sum of what each committed decision
+         *     assessed into it — a correction withdraws exactly what the decision it
+         *     corrects added (ZTAX-OBL-001 §4).
+         *
+         *     `effectiveStatus` is the status as of today in the obligation's legal
+         *     calendar, with `OVERDUE` derived for an unfiled obligation past its
+         *     due date; it is never stored (ZTAX-OBL-REQ-0084). Filtering on
+         *     `OVERDUE` filters on that derivation.
+         */
+        get: operations["listObligations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/obligations/{obligationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One obligation row, current or superseded
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. An obligation's history is a chain
+         *     of rows, each superseding the one before (ADR-0003 §2.2). The current
+         *     row carries the live assessed amount and today's effective status; a
+         *     superseded row is reported as it was written, with `supersededBy`
+         *     naming the row after it.
+         */
+        get: operations["getObligation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/obligations/{obligationId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move an obligation to a status a user sets
+         * @description `OPERATOR`. Moves the obligation to `OPEN`, `DATA_REQUIRED`, `READY`,
+         *     `SUSPENDED` or `CLOSED`, where its lifecycle allows the move
+         *     (ZTAX-OBL-REQ-0085). `FILED`, `ACCEPTED`, `REJECTED`, `UNCERTAIN`,
+         *     `PAYMENT_DUE` and `PAID` are set by the submission and payment
+         *     boundary, never by hand.
+         *
+         *     The identifier must be the obligation's current row. A move against a
+         *     row that has since been superseded — by another user, or by a commit
+         *     that changed the figures — is refused with `OPTIMISTIC_CONFLICT`
+         *     rather than applied to figures the caller never saw; read the
+         *     obligation again and retry. That makes a retry of this request safe
+         *     without an idempotency key: the second attempt names a superseded row.
+         *
+         *     A commit into a `READY` obligation moves it back to `OPEN`; into an
+         *     `ACCEPTED`, `PAYMENT_DUE` or `PAID` one, to `AMENDMENT_REQUIRED`. A
+         *     commit into a `FILED`, `UNCERTAIN` or `CLOSED` obligation is refused.
+         */
+        post: operations["transitionObligation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/classifications:propose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the AI plane for an advisory ontology mapping
+         * @description `OPERATOR` or `ANALYST`. Sends the item to the Governed Model Gateway
+         *     under the `classification-review` use case (ADR-0006) and returns
+         *     what it proposes. The proposal is **advisory and never
+         *     authoritative** (ZTAX-CLS-REQ-0082): it names an existing ontology
+         *     node for a person to confirm, and nothing in this response can become
+         *     a classification decision without that confirmation
+         *     (ADR-0006 §2.6).
+         *
+         *     A cell with no Gateway, or a Gateway with no approved provider,
+         *     answers `422 AI_GATEWAY_NOT_CONFIGURED` — understood, not covered here;
+         *     a Gateway that is down or
+         *     slow answers `503 AI_GATEWAY_UNAVAILABLE`. Deterministic processing is
+         *     unaffected by either. A governance refusal — kill switch, residency,
+         *     authority — is a `403` with the Gateway's reason code.
+         */
+        post: operations["proposeClassification"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1086,6 +1267,200 @@ export interface components {
             digests: components["schemas"]["DecisionDigests"];
             emitted: components["schemas"]["Emitted"];
         };
+        /**
+         * LegalEntityId
+         * Format: uuid
+         * @description A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+         * @example 01920a4c-0000-7000-8000-00000000e001
+         */
+        LegalEntityId: string;
+        /**
+         * ControlAccount
+         * @description A Tax Control Subledger control account (ZTAX-FIN-001 §9). Never a customer GL account.
+         * @example TAX_COLLECTED_LIABILITY
+         * @enum {string}
+         */
+        ControlAccount: "TAX_COLLECTED_LIABILITY" | "TAX_ACCRUED_LIABILITY" | "TAX_RECOVERABLE" | "TAX_RECEIVABLE_CONTROL" | "TAX_CASH_CLEARING" | "TAX_RETURN_CLEARING" | "TAX_REMITTANCE_CLEARING" | "TAX_ADJUSTMENT_CONTROL" | "FX_CONTROL" | "ROUNDING_CONTROL" | "SUSPENSE_EXCEPTION" | "CUSTOMER_GL_BRIDGE";
+        /**
+         * JournalLine
+         * @description One line. The amount is positive and the side carries the direction (ZTAX-FIN-REQ-0044).
+         */
+        JournalLine: {
+            account: components["schemas"]["ControlAccount"];
+            /** @enum {string} */
+            side: "DEBIT" | "CREDIT";
+            amount: components["schemas"]["Decimal"];
+            currency: components["schemas"]["CurrencyCode"];
+            decisionId?: components["schemas"]["DecisionId"];
+        };
+        /**
+         * Journal
+         * @description One posted Tax Control Subledger journal. Balanced in its one currency; append-only.
+         */
+        Journal: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            type: "INVOICE" | "CREDIT" | "REFUND" | "LIABILITY_ACCRUAL" | "RETURN" | "REMITTANCE" | "FX" | "ROUNDING" | "MIGRATION" | "ADJUSTMENT";
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            /** @description The source event kind, e.g. `DECISION_COMMITTED` or `DECISION_SUPERSEDED`. */
+            sourceKind: string;
+            sourceId: string;
+            postingDate: components["schemas"]["Timestamp"];
+            legalPeriod: string;
+            currency: components["schemas"]["CurrencyCode"];
+            /**
+             * Format: uuid
+             * @description The journal this one reverses, for a reversal.
+             */
+            reversalOf?: string;
+            profile: {
+                id: string;
+                version: string;
+            };
+            lines: components["schemas"]["JournalLine"][];
+        };
+        /** JournalList */
+        JournalList: {
+            journals: components["schemas"]["Journal"][];
+        };
+        /** ControlBalance */
+        ControlBalance: {
+            account: components["schemas"]["ControlAccount"];
+            currency: components["schemas"]["CurrencyCode"];
+            debits: components["schemas"]["Decimal"];
+            credits: components["schemas"]["Decimal"];
+        };
+        /** SubledgerBalances */
+        SubledgerBalances: {
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            balances: components["schemas"]["ControlBalance"][];
+        };
+        /**
+         * ObligationId
+         * Format: uuid
+         * @description One row of an obligation's history. A UUID in lowercase canonical form.
+         * @example 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+         */
+        ObligationId: string;
+        /**
+         * CivilDate
+         * @description A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+         *     object names. Not an instant: a due date is a day in the authority's
+         *     calendar, and converting it to UTC would move it.
+         * @example 2026-10-20
+         */
+        CivilDate: string;
+        /**
+         * ObligationStatus
+         * @description A stored obligation status (ZTAX-OBL-REQ-0084).
+         * @example OPEN
+         * @enum {string}
+         */
+        ObligationStatus: "OPEN" | "DATA_REQUIRED" | "READY" | "FILED" | "ACCEPTED" | "REJECTED" | "UNCERTAIN" | "PAYMENT_DUE" | "PAID" | "AMENDMENT_REQUIRED" | "SUSPENDED" | "CLOSED";
+        /**
+         * EffectiveObligationStatus
+         * @description A stored status, or `OVERDUE` derived as of today for an unfiled obligation past its due date.
+         * @example OVERDUE
+         * @enum {string}
+         */
+        EffectiveObligationStatus: "OPEN" | "DATA_REQUIRED" | "READY" | "FILED" | "ACCEPTED" | "REJECTED" | "UNCERTAIN" | "PAYMENT_DUE" | "PAID" | "AMENDMENT_REQUIRED" | "SUSPENDED" | "CLOSED" | "OVERDUE";
+        /**
+         * Obligation
+         * @description One row of an obligation: a periodic duty owed by a legal entity to an
+         *     authority, under a pinned definition version and signed content. The
+         *     dates are civil dates in `timezone`; `periodEnd` is the period's
+         *     last day, inclusive, and `dueDate` the legal due date.
+         *
+         *     `assessedAmount` is the sum of the committed decisions' assessments:
+         *     live on the current row, and as written on a superseded one.
+         *     `supersedes` names the row this one replaced; `supersededBy`, on a
+         *     row that is history, the row that replaced it.
+         */
+        Obligation: {
+            id: components["schemas"]["ObligationId"];
+            /** @description The return or duty, as the content names it. */
+            type: string;
+            /** @enum {string} */
+            duty: "TRANSACTION_MONETARY" | "PERIODIC_CONTRIBUTION" | "REGISTRATION" | "INFORMATION_RETURN" | "RECORDKEEPING" | "NOTICE_RESPONSE";
+            jurisdiction: string;
+            authority: string;
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            definition: {
+                id: string;
+                version: string;
+            };
+            content: {
+                bundleId: string;
+                bundleDigest: components["schemas"]["Digest"];
+            };
+            periodStart: components["schemas"]["CivilDate"];
+            periodEnd: components["schemas"]["CivilDate"];
+            dueDate: components["schemas"]["CivilDate"];
+            /** @description The legal calendar's IANA timezone. */
+            timezone: string;
+            status: components["schemas"]["ObligationStatus"];
+            effectiveStatus: components["schemas"]["EffectiveObligationStatus"];
+            assessedAmount?: components["schemas"]["Decimal"];
+            currency?: components["schemas"]["CurrencyCode"];
+            supersedes?: components["schemas"]["ObligationId"];
+            supersededBy?: components["schemas"]["ObligationId"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /**
+             * Format: uuid
+             * @description The user whose move wrote this row. Absent when a commit wrote it.
+             */
+            recordedBy?: string;
+        };
+        /** ObligationList */
+        ObligationList: {
+            obligations: components["schemas"]["Obligation"][];
+        };
+        /** ObligationTransitionRequest */
+        ObligationTransitionRequest: {
+            /** @enum {string} */
+            to: "OPEN" | "DATA_REQUIRED" | "READY" | "SUSPENDED" | "CLOSED";
+        };
+        /** ClassificationProposalRequest */
+        ClassificationProposalRequest: {
+            /**
+             * @description The caller's reference for the item, e.g. a catalog SKU.
+             * @example sku:PLAN-UNL-5G
+             */
+            subjectRef: string;
+            /**
+             * @description The item's commercial description. Catalog text, never customer data; it is sent to the Gateway.
+             * @example Unlimited 5G mobile plan with 20 GB hotspot
+             */
+            description: string;
+        };
+        /**
+         * AiProvenance
+         * @description Which governed use case, model, provider, prompt and AI train produced an output (ADR-0006 §2.7).
+         */
+        AiProvenance: {
+            useCase: string;
+            modelProfile: string;
+            providerProfile: string;
+            promptProfile: string;
+            aiTrainVersion: string;
+        };
+        /**
+         * ClassificationProposal
+         * @description An advisory mapping proposal. `authoritative` is always false; a person confirms it or it is nothing.
+         */
+        ClassificationProposal: {
+            /** Format: uuid */
+            id: string;
+            subjectRef: string;
+            /** @description An existing ontology node, `ontology:...`. */
+            proposedCode: string;
+            /** @description The model's own score as a canonical decimal in [0, 1]. Never a threshold that makes the proposal authoritative. */
+            confidence?: string;
+            /** @enum {boolean} */
+            authoritative: false;
+            provenance: components["schemas"]["AiProvenance"];
+        };
         /** ReplayReport */
         ReplayReport: {
             decisionId: components["schemas"]["DecisionId"];
@@ -1213,6 +1588,11 @@ export interface components {
          * @example 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
          */
         DecisionId: components["schemas"]["DecisionId"];
+        /**
+         * @description The obligation row identifier.
+         * @example 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+         */
+        ObligationId: components["schemas"]["ObligationId"];
         /**
          * @description Maximum number of items to return. The server caps this independently,
          *     so a larger value is not an error and does not return more.
@@ -1835,6 +2215,205 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listDecisionJournals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The decision identifier.
+                 * @example 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                 */
+                decisionId: components["parameters"]["DecisionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The journals, posting journals first, then reversals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getSubledgerBalances: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The balances, by account then currency. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubledgerBalances"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listObligations: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only obligations in this effective status.
+                 * @example OPEN
+                 */
+                status?: components["schemas"]["EffectiveObligationStatus"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The obligations, by due date. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObligationList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getObligation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The obligation row identifier.
+                 * @example 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                 */
+                obligationId: components["parameters"]["ObligationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The obligation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Obligation"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    transitionObligation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The obligation row identifier.
+                 * @example 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                 */
+                obligationId: components["parameters"]["ObligationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ObligationTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description The obligation's new current row. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Obligation"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    proposeClassification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassificationProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description The advisory proposal, with the provenance that produced it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassificationProposal"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            /** @description AI assistance is not available in this cell (`AI_GATEWAY_NOT_CONFIGURED`). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };

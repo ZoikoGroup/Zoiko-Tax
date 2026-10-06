@@ -112,8 +112,12 @@ const FOLDERS = [
   {
     name: "06 · Determination — needs content and an OPERATOR",
     description:
-      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `adjustTransaction` then corrects that decision under the bundle that made it (ZTAX-DET-REQ-0030).\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
-    operations: ["createQuote", "commitTransaction", "getDecision", "replayDecision", "adjustTransaction"],
+      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+    operations: [
+      "createQuote", "commitTransaction", "getDecision", "replayDecision", "listDecisionJournals",
+      "getSubledgerBalances", "listObligations", "getObligation", "transitionObligation",
+      "adjustTransaction", "proposeClassification",
+    ],
     prerequest: [
       "if (pm.variables.get('runDetermination') !== 'true') {",
       "  console.info('skipped: set runDetermination=true against a cell with content, signed in as an OPERATOR');",
@@ -157,6 +161,8 @@ const VALUE_VARIABLES = {
   "auditor@acme.example": "{{newUserEmail}}",
   // The adjust example's supersedes: the decision the folder just committed.
   "01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f": "{{decisionId}}",
+  // The obligation examples' id: the return the folder's commit assessed into.
+  "01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01": "{{obligationId}}",
 };
 
 // Per-operation test scripts, beyond the status assertion every request gets.
@@ -216,6 +222,47 @@ const OPERATION_TESTS = {
     "  pm.expect(pm.response.json().authoritative).to.eql(false);",
     "});",
     "pm.collectionVariables.set('decisionId', pm.response.json().id);",
+  ],
+  listDecisionJournals: [
+    "pm.test('ZTAX-FIN-REQ-0077 — the commit posted a balanced journal', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().journals.length).to.be.at.least(1);",
+    "});",
+  ],
+  getSubledgerBalances: [
+    "pm.test('control balances are reported, debits and credits apart', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().balances).to.be.an('array');",
+    "});",
+  ],
+  listObligations: [
+    "pm.test('ZTAX-OBL-001 §4 — the commit assessed into the period\'s return', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().obligations.length).to.be.at.least(1);",
+    "});",
+    "pm.collectionVariables.set('obligationId', pm.response.json().obligations[0].id);",
+  ],
+  getObligation: [
+    "pm.test('the obligation names its authority, definition and content', function () {",
+    "  pm.response.to.have.status(200);",
+    "  const o = pm.response.json();",
+    "  pm.expect(o.definition.id).to.be.a('string');",
+    "  pm.expect(o.content.bundleDigest).to.match(/^zt1:[0-9a-f]{64}$/);",
+    "});",
+  ],
+  transitionObligation: [
+    "pm.test('ADR-0003 §2.2 — a move is a new row superseding the old one', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().status).to.eql('READY');",
+    "  pm.expect(pm.response.json().supersedes).to.eql(pm.collectionVariables.get('obligationId'));",
+    "});",
+  ],
+  proposeClassification: [
+    "pm.test('ADR-0006 — advisory, or not available here; never authoritative', function () {",
+    "  pm.expect([200, 422]).to.include(pm.response.code);",
+    "  if (pm.response.code === 200) { pm.expect(pm.response.json().authoritative).to.eql(false); }",
+    "  else { pm.expect(pm.response.json().ztx_reason_code).to.eql('AI_GATEWAY_NOT_CONFIGURED'); }",
+    "});",
   ],
   adjustTransaction: [
     "pm.test('ZTAX-DET-REQ-0030 — the correction is recorded against the original decision', function () {",
@@ -339,9 +386,18 @@ function jsonBody(value) {
   };
 }
 
+// Non-2xx statuses that are a correct answer from a development cell, by
+// operation. Kept short and explained: proposeClassification answers 422
+// AI_GATEWAY_NOT_CONFIGURED from any cell whose Gateway has no approved
+// provider, which is every local stack.
+const ACCEPTED_OUTCOMES = {
+  proposeClassification: ["422"],
+};
+
 /** The statuses an operation declares, for the generated status assertion. */
 function successStatuses(operation) {
-  return Object.keys(operation.responses ?? {}).filter((s) => /^2/.test(s));
+  const ok = Object.keys(operation.responses ?? {}).filter((s) => /^2/.test(s));
+  return [...ok, ...(ACCEPTED_OUTCOMES[operation.operationId] ?? [])];
 }
 
 function requestFrom(doc, method, path, operation) {
@@ -623,6 +679,7 @@ function variables(overlay, contractDigest, local) {
     { key: "decisionTime", value: "", type: "string" },
     { key: "eventTime", value: "", type: "string" },
     { key: "decisionId", value: "", type: "string" },
+    { key: "obligationId", value: "", type: "string" },
     // Minted once per run by `07`, and reused by the requests that must share it.
     { key: "reusedKey", value: "", type: "string" },
 

@@ -33,6 +33,18 @@ type Bundle struct {
 	rateConsts     map[string]fiscal.Rate
 	quantityConsts map[string]fiscal.Quantity
 	stringConsts   map[string]string
+
+	fiscal *content.FiscalProfile
+}
+
+// Fiscal returns the bundle's fiscal profile, or nil for a bundle with none.
+// The value is a copy; a bundle is immutable once loaded.
+func (b *Bundle) Fiscal() *content.FiscalProfile {
+	if b.fiscal == nil {
+		return nil
+	}
+	f := b.fiscal.Normalize()
+	return &f
 }
 
 // ID returns the bundle identity recorded in every decision.
@@ -91,6 +103,11 @@ type Manifest struct {
 	// may be distributed to are release questions, answered before the bundle
 	// is signed, and the evaluator has no use for either.
 	Pack *content.PackManifest `json:"pack,omitempty"`
+	// Fiscal is what a committed decision does beyond being recorded: the
+	// accumulators it contributes to and how it posts to the Tax Control
+	// Subledger. Optional, and absent from the canonical bytes when nil, for
+	// the reason Pack is.
+	Fiscal *content.FiscalProfile `json:"fiscal,omitempty"`
 }
 
 // Constant is one entry in the pool.
@@ -181,7 +198,65 @@ func Load(m Manifest) (*Bundle, error) {
 		return nil, err
 	}
 	b.order = order
+	if m.Fiscal != nil {
+		if err := b.checkFiscal(*m.Fiscal); err != nil {
+			return nil, err
+		}
+		f := m.Fiscal.Normalize()
+		b.fiscal = &f
+	}
 	return b, nil
+}
+
+// checkFiscal refuses a fiscal profile that names what the graph does not
+// have: an accumulator no rule reads, an input no rule takes, a slot no rule
+// emits. A profile that bound a key nothing reads would record contributions
+// to a total no decision ever consults.
+func (b *Bundle) checkFiscal(f content.FiscalProfile) error {
+	if err := f.Validate(); err != nil {
+		return err
+	}
+	reads, inputs, emits := map[string]bool{}, map[string]bool{}, map[string]bool{}
+	for _, n := range b.nodes {
+		switch n.Op {
+		case OpAccumulator:
+			reads[n.Field] = true
+		case OpInput:
+			if n.Type == TypeMoney {
+				inputs[n.Field] = true
+			}
+		case OpEmit:
+			if n.Type == TypeMoney {
+				emits[n.Emit] = true
+			}
+		}
+	}
+	for _, a := range f.Accumulators {
+		if !reads[a.Read] {
+			return fmt.Errorf("rule: fiscal profile binds accumulator %s, which no rule in bundle %s reads", a.Read, b.id)
+		}
+		if a.Contributes.Input != "" && !inputs[a.Contributes.Input] {
+			return fmt.Errorf("rule: accumulator %s contributes input %s, which no rule reads as money", a.Read, a.Contributes.Input)
+		}
+		if a.Contributes.Emitted != "" && !emits[a.Contributes.Emitted] {
+			return fmt.Errorf("rule: accumulator %s contributes slot %s, which no rule emits as money", a.Read, a.Contributes.Emitted)
+		}
+	}
+	for _, o := range f.Obligations {
+		for _, slot := range o.Assesses {
+			if !emits[slot] {
+				return fmt.Errorf("rule: obligation %s assesses slot %s, which no rule emits as money", o.ID, slot)
+			}
+		}
+	}
+	if f.Posting != nil {
+		for _, l := range f.Posting.Lines {
+			if !emits[l.Emitted] {
+				return fmt.Errorf("rule: posting line on %s names slot %s, which no rule emits as money", l.Account, l.Emitted)
+			}
+		}
+	}
+	return nil
 }
 
 func (b *Bundle) addConstant(c Constant) error {

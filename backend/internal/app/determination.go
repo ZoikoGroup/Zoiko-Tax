@@ -46,6 +46,10 @@ type DeterminationService struct {
 	// idempotency guards Commit. Nil in a service built only to determine and
 	// replay, whose Commit then refuses rather than committing unguarded.
 	idempotency *Idempotency
+
+	// fiscal holds the stores a commit's fiscal effects write to (fiscal.go).
+	// Nil, or a bundle with no fiscal profile, records the decision alone.
+	fiscal *FiscalStores
 }
 
 // NewDeterminationService wires the service. trains are the seven release-train
@@ -286,7 +290,14 @@ func (s *DeterminationService) Quote(ctx context.Context, in QuoteInput) (Quote,
 	if _, err := requireRoleOrSystem(ctx, security.RoleOperator, security.RoleAnalyst); err != nil {
 		return Quote{}, err
 	}
-	b, env, envBytes, err := s.envelope(in.EventTime, in.Input, in.Accumulators)
+	reads := in.Accumulators
+	if active := s.content.Current(); active != nil {
+		var err error
+		if reads, err = s.quoteReadSet(ctx, active, in.EventTime, in.Accumulators); err != nil {
+			return Quote{}, err
+		}
+	}
+	b, env, envBytes, err := s.envelope(in.EventTime, in.Input, reads)
 	if err != nil {
 		return Quote{}, err
 	}
@@ -348,7 +359,11 @@ func (s *DeterminationService) Commit(ctx context.Context, in CommitInput) (Sett
 		Digest:    digest,
 		Retention: CommitRetention,
 		Execute: func(ctx context.Context) (Response, error) {
-			d, err := s.determine(ctx, sc, in.Determination)
+			b, err := s.active()
+			if err != nil {
+				return Response{}, err
+			}
+			d, err := s.record(ctx, sc, in.Determination, b, nil)
 			if err != nil {
 				return Response{}, err
 			}
@@ -404,11 +419,11 @@ func (s *DeterminationService) Adjust(ctx context.Context, in CommitInput) (Sett
 		Digest:    digest,
 		Retention: CommitRetention,
 		Execute: func(ctx context.Context) (Response, error) {
-			b, err := s.originalBundle(ctx, *in.Determination.Supersedes)
+			rec, b, err := s.originalBundle(ctx, *in.Determination.Supersedes)
 			if err != nil {
 				return Response{}, err
 			}
-			d, err := s.determineWith(ctx, sc, in.Determination, b)
+			d, err := s.record(ctx, sc, in.Determination, b, &rec)
 			if err != nil {
 				return Response{}, err
 			}
@@ -423,17 +438,17 @@ func (s *DeterminationService) Adjust(ctx context.Context, in CommitInput) (Sett
 }
 
 // originalBundle returns the bundle that made a recorded decision.
-func (s *DeterminationService) originalBundle(ctx context.Context, prior id.DecisionID) (*rule.Bundle, error) {
+func (s *DeterminationService) originalBundle(ctx context.Context, prior id.DecisionID) (evidence.Record, *rule.Bundle, error) {
 	rec, err := s.decisions.ByID(ctx, prior)
 	if err != nil {
-		return nil, err
+		return evidence.Record{}, nil, err
 	}
 	b, ok := s.library.ByDigest(rec.BundleDigest)
 	if !ok {
-		return nil, errs.New(errs.CategoryUnavailable, errs.ReasonNoContentBundle,
+		return evidence.Record{}, nil, errs.New(errs.CategoryUnavailable, errs.ReasonNoContentBundle,
 			"The content bundle that made the original decision is not loaded in this cell, and an adjustment is never re-evaluated under other content. The request was not applied and may be retried.")
 	}
-	return b, nil
+	return rec, b, nil
 }
 
 // commitDigest is the ADR-0013 §2.3 request digest: the canonical form of what

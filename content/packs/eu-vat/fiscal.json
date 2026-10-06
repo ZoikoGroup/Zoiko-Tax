@@ -1,0 +1,42 @@
+{
+  "accumulators": [
+    {
+      "read": "threshold.ecoLevyYtd",
+      "currency": "EUR",
+      "period": "YEAR",
+      "timezone": "UTC",
+      "yearStartMonth": 1,
+      "contributes": { "emitted": "TAX_ECO_LEVY" },
+      "thresholds": [
+        { "id": "eco-levy-cap", "limit": "10000.00", "comparison": "GTE" }
+      ]
+    }
+  ],
+  "obligations": [
+    {
+      "id": "xa-vat-return",
+      "version": "2026.09.1",
+      "type": "VAT_RETURN",
+      "authority": "authority:xa-revenue",
+      "jurisdiction": "jurisdiction:xa",
+      "duty": "TRANSACTION_MONETARY",
+      "currency": "EUR",
+      "assesses": ["TAX_VAT"],
+      "period": { "kind": "QUARTER", "timezone": "UTC", "yearStartMonth": 1 },
+      "due": { "offsetMonths": 1, "dayOfMonth": 20 },
+      "source": "SRC-ZOIKO-WORKED-0001",
+      "citation": "Worked pack: a quarterly return of the VAT collected, due on the 20th of the month after the quarter ends."
+    }
+  ],
+  "posting": {
+    "profile": "tcsl-worked-eu-vat",
+    "version": "2026.09.1",
+    "type": "INVOICE",
+    "lines": [
+      { "account": "TAX_RECEIVABLE_CONTROL", "side": "DEBIT", "emitted": "TAX_VAT" },
+      { "account": "TAX_COLLECTED_LIABILITY", "side": "CREDIT", "emitted": "TAX_VAT" },
+      { "account": "TAX_RECEIVABLE_CONTROL", "side": "DEBIT", "emitted": "TAX_ECO_LEVY" },
+      { "account": "TAX_COLLECTED_LIABILITY", "side": "CREDIT", "emitted": "TAX_ECO_LEVY" }
+    ]
+  }
+}
