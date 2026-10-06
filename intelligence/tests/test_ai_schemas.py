@@ -190,11 +190,14 @@ class _Validator:
     ) -> list[str]:
         out = [f"{path}: missing {k!r}" for k in schema.get("required", []) if k not in value]
         props: dict[str, Any] = schema.get("properties", {})
+        addl = schema.get("additionalProperties", True)
         for k, v in value.items():
             if k in props:
                 out += self.errors(props[k], v, base, f"{path}.{k}")
-            elif schema.get("additionalProperties", True) is False:
+            elif addl is False:
                 out.append(f"{path}: undeclared field {k!r}")
+            elif isinstance(addl, dict):
+                out += self.errors(addl, v, base, f"{path}.{k}")
         return out
 
     def _array(
@@ -463,3 +466,287 @@ def test_privacy_classes_match_the_shared_vocabulary() -> None:
     with _PRIVACY_VOCABULARY.open(encoding="utf-8") as f:
         classes = sorted(json.load(f)["classes"])
     assert _load("common")["$defs"]["privacyClass"]["enum"] == classes
+
+# ---------------------------------------------------------------------------
+# Gateway call and reply schemas
+# ---------------------------------------------------------------------------
+# test_server.py validates gateway-call and gateway-reply via a live gRPC
+# channel; the tests here exercise the schemas directly with plain dicts so
+# that every schema file in contracts/schemas/ai/ is covered by this file.
+# ---------------------------------------------------------------------------
+
+import base64  # noqa: E402
+
+from ztax_gateway.wire import Call, Governance, Reply  # noqa: E402
+
+_TENANT = "0190f3a2-1b2c-7d3e-8f40-5a6b7c8d9e0f"
+_REGION = "euc1-dev-01"
+_INPUT_B64 = base64.b64encode(b'{"sku":"PLAN-5G"}').decode()
+
+_CALL_MIN: dict[str, Any] = {
+    "kind": "SUGGESTION",
+    "governance": {
+        "tenant_id": _TENANT,
+        "use_case": "classification-review",
+        "authority_outcome": "A1",
+        "risk_tier": "T1",
+        "region": _REGION,
+        "data_classes": ["P0"],
+    },
+    "subject_ref": "sku:PLAN-5G",
+    "input_b64": _INPUT_B64,
+}
+
+_REPLY_MIN: dict[str, Any] = {
+    "model_profile": "model:cls-2027.03",
+    "provider_profile": "provider:eu-hosted",
+    "prompt_profile": "prompt:cls-v4",
+    "ai_train_version": "ai-2027.03.1",
+}
+
+_REPLY_FULL: dict[str, Any] = {
+    **_REPLY_MIN,
+    "text": "Consider the reduced rate.",
+    "payload": '{"detail":"none"}',
+    "fields": {"invoiceNumber": "INV-001"},
+    "proposed_code": "ontology:telecom/voice/mobile",
+    "confidence": "0.97",
+}
+
+
+# --- gateway-call positive --------------------------------------------------
+
+
+def test_gateway_call_minimal_conforms(validator: _Validator) -> None:
+    assert validator.validate("gateway-call", _CALL_MIN) == []
+
+
+@pytest.mark.parametrize("kind", ["SUGGESTION", "EXTRACTION", "CLASSIFICATION_PROPOSAL"])
+def test_gateway_call_all_kinds_conform(validator: _Validator, kind: str) -> None:
+    doc = {**_CALL_MIN, "kind": kind}
+    assert validator.validate("gateway-call", doc) == []
+
+
+@pytest.mark.parametrize("outcome", ["A0", "A1", "A2", "A3", "A4", "A5"])
+def test_gateway_call_all_authority_outcomes_conform(
+    validator: _Validator, outcome: str
+) -> None:
+    gov = {**_CALL_MIN["governance"], "authority_outcome": outcome}
+    assert validator.validate("gateway-call", {**_CALL_MIN, "governance": gov}) == []
+
+
+@pytest.mark.parametrize("tier", ["T0", "T1", "T2", "T3", "T4"])
+def test_gateway_call_all_risk_tiers_conform(validator: _Validator, tier: str) -> None:
+    gov = {**_CALL_MIN["governance"], "risk_tier": tier}
+    assert validator.validate("gateway-call", {**_CALL_MIN, "governance": gov}) == []
+
+
+@pytest.mark.parametrize("cls", ["P0", "P1", "P2", "P3", "P4", "P5", "P6", "P7"])
+def test_gateway_call_every_privacy_class_is_valid(validator: _Validator, cls: str) -> None:
+    gov = {**_CALL_MIN["governance"], "data_classes": [cls]}
+    assert validator.validate("gateway-call", {**_CALL_MIN, "governance": gov}) == []
+
+
+def test_gateway_call_multiple_privacy_classes_conform(validator: _Validator) -> None:
+    gov = {**_CALL_MIN["governance"], "data_classes": ["P0", "P3", "P5"]}
+    assert validator.validate("gateway-call", {**_CALL_MIN, "governance": gov}) == []
+
+
+def test_gateway_call_subject_ref_at_max_length_conforms(validator: _Validator) -> None:
+    doc = {**_CALL_MIN, "subject_ref": "x" * 512}
+    assert validator.validate("gateway-call", doc) == []
+
+
+# --- gateway-call negative --------------------------------------------------
+
+
+@pytest.mark.parametrize("field", ["kind", "governance", "subject_ref", "input_b64"])
+def test_gateway_call_refuses_when_top_field_missing(
+    validator: _Validator, field: str
+) -> None:
+    doc = {k: v for k, v in _CALL_MIN.items() if k != field}
+    assert validator.validate("gateway-call", doc) != []
+
+
+@pytest.mark.parametrize(
+    "gov_field",
+    ["tenant_id", "use_case", "authority_outcome", "risk_tier", "region", "data_classes"],
+)
+def test_gateway_call_refuses_missing_governance_field(
+    validator: _Validator, gov_field: str
+) -> None:
+    gov = {k: v for k, v in _CALL_MIN["governance"].items() if k != gov_field}
+    assert validator.validate("gateway-call", {**_CALL_MIN, "governance": gov}) != []
+
+
+def test_gateway_call_refuses_unknown_kind(validator: _Validator) -> None:
+    assert validator.validate("gateway-call", {**_CALL_MIN, "kind": "AUTONOMOUS_DECISION"}) != []
+
+
+def test_gateway_call_refuses_extra_top_level_field(validator: _Validator) -> None:
+    assert validator.validate("gateway-call", {**_CALL_MIN, "extra": "surprise"}) != []
+
+
+def test_gateway_call_refuses_extra_governance_field(validator: _Validator) -> None:
+    gov = {**_CALL_MIN["governance"], "internal_note": "bypass"}
+    assert validator.validate("gateway-call", {**_CALL_MIN, "governance": gov}) != []
+
+
+def test_gateway_call_refuses_malformed_tenant_uuid(validator: _Validator) -> None:
+    gov = {**_CALL_MIN["governance"], "tenant_id": "not-a-uuid"}
+    assert validator.validate("gateway-call", {**_CALL_MIN, "governance": gov}) != []
+
+
+def test_gateway_call_refuses_empty_data_classes(validator: _Validator) -> None:
+    gov = {**_CALL_MIN["governance"], "data_classes": []}
+    assert validator.validate("gateway-call", {**_CALL_MIN, "governance": gov}) != []
+
+
+def test_gateway_call_refuses_unknown_privacy_class(validator: _Validator) -> None:
+    gov = {**_CALL_MIN["governance"], "data_classes": ["UNRESTRICTED"]}
+    assert validator.validate("gateway-call", {**_CALL_MIN, "governance": gov}) != []
+
+
+def test_gateway_call_refuses_duplicate_privacy_classes(validator: _Validator) -> None:
+    gov = {**_CALL_MIN["governance"], "data_classes": ["P0", "P0"]}
+    assert validator.validate("gateway-call", {**_CALL_MIN, "governance": gov}) != []
+
+
+def test_gateway_call_refuses_subject_ref_too_long(validator: _Validator) -> None:
+    assert validator.validate("gateway-call", {**_CALL_MIN, "subject_ref": "x" * 513}) != []
+
+
+def test_gateway_call_refuses_unknown_authority_outcome(validator: _Validator) -> None:
+    gov = {**_CALL_MIN["governance"], "authority_outcome": "A9"}
+    assert validator.validate("gateway-call", {**_CALL_MIN, "governance": gov}) != []
+
+
+def test_gateway_call_refuses_unknown_risk_tier(validator: _Validator) -> None:
+    gov = {**_CALL_MIN["governance"], "risk_tier": "T9"}
+    assert validator.validate("gateway-call", {**_CALL_MIN, "governance": gov}) != []
+
+
+# --- gateway-call Python type parity ----------------------------------------
+
+
+def test_gateway_call_schema_required_matches_call_wire_fields() -> None:
+    python_fields = {f.name for f in dataclasses.fields(Call)}
+    mapped = (python_fields - {"input"}) | {"input_b64"}
+    schema_required = set(_load("gateway-call")["required"])
+    assert schema_required == mapped
+
+
+def test_gateway_governance_schema_required_matches_governance_fields() -> None:
+    python_fields = {f.name for f in dataclasses.fields(Governance)}
+    schema_required = set(_load("gateway-call")["properties"]["governance"]["required"])
+    assert schema_required == python_fields
+
+
+# --- gateway-reply positive --------------------------------------------------
+
+
+def test_gateway_reply_routing_only_conforms(validator: _Validator) -> None:
+    assert validator.validate("gateway-reply", _REPLY_MIN) == []
+
+
+def test_gateway_reply_full_conforms(validator: _Validator) -> None:
+    assert validator.validate("gateway-reply", _REPLY_FULL) == []
+
+
+def test_gateway_reply_text_suggestion_conforms(validator: _Validator) -> None:
+    doc = {**_REPLY_MIN, "text": "Consider the reduced rate."}
+    assert validator.validate("gateway-reply", doc) == []
+
+
+def test_gateway_reply_extraction_conforms(validator: _Validator) -> None:
+    doc = {**_REPLY_MIN, "fields": {"invoiceNumber": "INV-001", "amount": "99.00"}}
+    assert validator.validate("gateway-reply", doc) == []
+
+
+def test_gateway_reply_classification_conforms(validator: _Validator) -> None:
+    doc = {**_REPLY_MIN, "proposed_code": "ontology:telecom/voice", "confidence": "0.97"}
+    assert validator.validate("gateway-reply", doc) == []
+
+
+@pytest.mark.parametrize(
+    "confidence",
+    ["", "0", "0.0", "0.5", "0.99", "1", "1.0", "0.000001", "0.999999"],
+)
+def test_gateway_reply_confidence_valid_values_conform(
+    validator: _Validator, confidence: str
+) -> None:
+    doc = {**_REPLY_MIN, "confidence": confidence}
+    assert validator.validate("gateway-reply", doc) == [], f"confidence {confidence!r} rejected"
+
+
+# --- gateway-reply negative --------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "field", ["model_profile", "provider_profile", "prompt_profile", "ai_train_version"]
+)
+def test_gateway_reply_refuses_missing_routing_field(
+    validator: _Validator, field: str
+) -> None:
+    doc = {k: v for k, v in _REPLY_MIN.items() if k != field}
+    assert validator.validate("gateway-reply", doc) != []
+
+
+def test_gateway_reply_refuses_extra_field(validator: _Validator) -> None:
+    assert validator.validate("gateway-reply", {**_REPLY_MIN, "extra": "field"}) != []
+
+
+@pytest.mark.parametrize(
+    "confidence", ["1.1", "2.0", "-0.1", "0.5%", "high", "1.00001", ".", "0,5"]
+)
+def test_gateway_reply_refuses_invalid_confidence(
+    validator: _Validator, confidence: str
+) -> None:
+    doc = {**_REPLY_MIN, "confidence": confidence}
+    assert validator.validate("gateway-reply", doc) != [], f"bad confidence {confidence!r} accepted"
+
+
+def test_gateway_reply_refuses_non_string_fields_value(validator: _Validator) -> None:
+    doc = {**_REPLY_MIN, "fields": {"amount": 99}}
+    assert validator.validate("gateway-reply", doc) != []
+
+
+def test_gateway_reply_refuses_empty_model_profile(validator: _Validator) -> None:
+    assert validator.validate("gateway-reply", {**_REPLY_MIN, "model_profile": ""}) != []
+
+
+def test_gateway_reply_refuses_empty_ai_train_version(validator: _Validator) -> None:
+    assert validator.validate("gateway-reply", {**_REPLY_MIN, "ai_train_version": ""}) != []
+
+
+# --- gateway-reply Python type parity ---------------------------------------
+
+
+def test_gateway_reply_schema_required_matches_reply_non_default_fields() -> None:
+    non_default = {
+        f.name
+        for f in dataclasses.fields(Reply)
+        if f.default is dataclasses.MISSING
+        and f.default_factory is dataclasses.MISSING
+    }
+    schema_required = set(_load("gateway-reply")["required"])
+    assert schema_required == non_default
+
+
+def test_gateway_reply_schema_properties_match_reply_fields() -> None:
+    python_fields = {f.name for f in dataclasses.fields(Reply)}
+    schema_props = set(_load("gateway-reply")["properties"])
+    assert python_fields == schema_props
+
+
+# --- coverage sentinel -------------------------------------------------------
+
+
+def test_every_ai_schema_file_is_in_all_schemas() -> None:
+    on_disk = {p.stem.removesuffix(".schema") for p in _SCHEMAS.glob("*.schema.json")}
+    assert on_disk == set(_ALL_SCHEMAS), (
+        "schema files not in _ALL_SCHEMAS: "
+        + str(on_disk - set(_ALL_SCHEMAS))
+        + " | _ALL_SCHEMAS entries with no file: "
+        + str(set(_ALL_SCHEMAS) - on_disk)
+    )
