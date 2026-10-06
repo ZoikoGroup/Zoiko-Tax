@@ -161,6 +161,29 @@ jobs:
       - name: tier 1 and 2 — unit, property, golden vectors
         run: make test
 
+      # REPORT-ONLY: coverage is never a gate here. backend/README.md's own
+      # citation of ADR-0018 §2.9 ("Coverage is reported and never gated.")
+      # is what this comment relies on -- no ADR-0018 document is committed
+      # to this repo to quote directly. This step re-runs the tier 1/2 tests
+      # once more, WITHOUT -race (the existing `cover` target), only to
+      # produce a coverage profile; it cannot fail on a percentage.
+      - name: coverage (report-only, ADR-0018 §2.9)
+        run: |
+          make cover
+          {
+            echo "## Backend coverage (report-only — ADR-0018 §2.9)"
+            echo '```'
+            go tool cover -func=coverage.out | tail -1
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always() && hashFiles('backend/coverage.out') != ''
+        with:
+          name: backend-coverage
+          path: backend/coverage.out
+          if-no-files-found: error
+
       # Applied by the real migration runner, so this also asserts the
       # migrations apply cleanly from nothing on every commit.
       - name: apply migrations
