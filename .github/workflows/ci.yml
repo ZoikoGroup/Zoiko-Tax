@@ -501,8 +501,28 @@ jobs:
       # One check to require on the branch, so that adding a gate above does
       # not mean editing branch protection and forgetting to.
       - name: verify every gate passed
+        # toJSON(needs) is routed through the environment rather than
+        # inlined into the script: inlined, its own double quotes break out
+        # of the surrounding shell quoting, and the grep that used to live
+        # here was looking for an escaped "result": "failure" that never
+        # actually appeared in the unquoted text -- so the gate always
+        # passed, even when a needed job had failed.
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          echo "${{ toJSON(needs) }}"
-          if echo "${{ toJSON(needs) }}" | grep -q '"result": *"\(failure\|cancelled\|skipped\)"'; then
-            echo "::error::a gate did not pass"; exit 1
-          fi
+          echo "$NEEDS_JSON"
+          python3 - <<'PY'
+          import json
+          import os
+
+          needs = json.loads(os.environ["NEEDS_JSON"])
+          failed = [
+              (name, info.get("result"))
+              for name, info in needs.items()
+              if info.get("result") != "success"
+          ]
+          if failed:
+              names = ", ".join(f"{name}={result}" for name, result in failed)
+              print(f"::error::a gate did not pass: {names}")
+              raise SystemExit(1)
+          PY
