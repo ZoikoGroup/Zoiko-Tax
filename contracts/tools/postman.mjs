@@ -112,11 +112,11 @@ const FOLDERS = [
   {
     name: "06 · Determination — needs content and an OPERATOR",
     description:
-      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059).\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
     operations: [
       "createQuote", "commitTransaction", "getDecision", "replayDecision", "listDecisionJournals",
       "getSubledgerBalances", "listObligations", "getObligation", "transitionObligation",
-      "adjustTransaction", "proposeClassification",
+      "adjustTransaction", "refundTransaction", "getRefund", "reportRefund", "proposeClassification",
     ],
     prerequest: [
       "if (pm.variables.get('runDetermination') !== 'true') {",
@@ -163,6 +163,8 @@ const VALUE_VARIABLES = {
   "01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f": "{{decisionId}}",
   // The obligation examples' id: the return the folder's commit assessed into.
   "01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01": "{{obligationId}}",
+  // The refund examples' id: the refund the folder just requested.
+  "01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f": "{{refundId}}",
 };
 
 // Per-operation test scripts, beyond the status assertion every request gets.
@@ -269,6 +271,28 @@ const OPERATION_TESTS = {
     "  pm.response.to.have.status(201);",
     "  pm.expect(pm.response.json().authoritative).to.eql(false);",
     "  pm.expect(pm.response.json().id).to.not.eql(pm.collectionVariables.get('decisionId'));",
+    "});",
+    "// The original is superseded now; a refund is made against the current version.",
+    "pm.collectionVariables.set('decisionId', pm.response.json().id);",
+  ],
+  refundTransaction: [
+    "pm.test('ZTAX-FIN-REQ-0015 — a refund is its own record, requested and not yet posted', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().status).to.eql('REQUESTED');",
+    "  pm.expect(pm.response.json().decisionId).to.eql(pm.collectionVariables.get('decisionId'));",
+    "});",
+    "pm.collectionVariables.set('refundId', pm.response.json().id);",
+  ],
+  getRefund: [
+    "pm.test('the refund carries its history', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().history[0].status).to.eql('REQUESTED');",
+    "});",
+  ],
+  reportRefund: [
+    "pm.test('ZTAX-FIN-REQ-0059 — the provider report moves the refund, never the decision', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().status).to.eql('COMPLETED');",
     "});",
   ],
   replayDecision: [
@@ -680,6 +704,7 @@ function variables(overlay, contractDigest, local) {
     { key: "eventTime", value: "", type: "string" },
     { key: "decisionId", value: "", type: "string" },
     { key: "obligationId", value: "", type: "string" },
+    { key: "refundId", value: "", type: "string" },
     // Minted once per run by `07`, and reused by the requests that must share it.
     { key: "reusedKey", value: "", type: "string" },
 

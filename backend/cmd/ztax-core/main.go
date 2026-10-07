@@ -131,6 +131,12 @@ func run() error {
 	if router.Determination, err = wireDetermination(cfg, store, content, clk, ids, log); err != nil {
 		return err
 	}
+	if router.Determination != nil {
+		// Refunds read what commits posted, so they are served wherever the
+		// determination surface is.
+		router.Refunds = app.NewRefundService(store.Decisions(), store.Journals(), store.Refunds(), store.Outbox(),
+			store, clk, ids, app.NewIdempotency(store.Idempotency(), store, clk))
+	}
 	models, closeModels, err := wireModelGateway(cfg, clk, ids, log)
 	if err != nil {
 		return err

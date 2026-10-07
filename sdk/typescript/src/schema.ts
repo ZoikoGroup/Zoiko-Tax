@@ -436,6 +436,99 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/transactions:refund": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refund tax a committed decision charged
+         * @description `OPERATOR` only. Records a refund of tax charged by a committed
+         *     decision. A refund is **not** a decision and not a credit
+         *     (ZTAX-FIN-REQ-0015): nothing is re-determined, the decision is never
+         *     rewritten, and the refund has a lifecycle of its own
+         *     (ZTAX-FIN-REQ-0059). ZoikoTax moves no money; this records that a
+         *     payment provider has been, or will be, asked to return it.
+         *
+         *     The decision must be the current version of its business key, and the
+         *     amount at most the tax that decision posted to
+         *     `TAX_COLLECTED_LIABILITY` in that currency, less every earlier refund
+         *     of it that has not `FAILED`. An `UNCERTAIN` refund still counts: it
+         *     may have paid. A request beyond what is refundable is refused with
+         *     `400 INVALID_VALUE`, and the response says how much is left.
+         *
+         *     The refund is created `REQUESTED` and posts nothing. Only a provider
+         *     report of `SUCCEEDED` (see `POST /v1/refunds/{refundId}/reports`)
+         *     posts the `REFUND` journal.
+         *
+         *     `Idempotency-Key` is required, scoped apart from `:commit` and
+         *     `:adjust` (ADR-0013 §2.2).
+         */
+        post: operations["refundTransaction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/refunds/{refundId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One refund and its history
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. The refund as requested, its
+         *     current status, and every provider report that moved it, oldest
+         *     first.
+         */
+        get: operations["getRefund"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/refunds/{refundId}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record what the payment provider reported about a refund
+         * @description `OPERATOR`. Records one provider report. `ACCEPTED` makes the refund
+         *     `PENDING`, `SUCCEEDED` makes it `COMPLETED` and posts it to the Tax
+         *     Control Subledger, `DECLINED` makes it `FAILED` and releases its tax
+         *     to be refunded again. `TIMED_OUT` and `UNKNOWN` make it `UNCERTAIN` —
+         *     never completed and never failed, because the money may or may not
+         *     have moved — and a later definite report resolves it.
+         *
+         *     Nothing leaves `COMPLETED` or `FAILED`. A report the lifecycle does
+         *     not permit is refused with `409 STATE_TRANSITION_INVALID`.
+         *
+         *     Safe to retry without an idempotency key: the same report arriving
+         *     again (same outcome and reference, refund already where it put it)
+         *     returns the refund unchanged rather than recording a second move.
+         */
+        post: operations["reportRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/decisions/{decisionId}": {
         parameters: {
             query?: never;
@@ -1461,6 +1554,86 @@ export interface components {
             authoritative: false;
             provenance: components["schemas"]["AiProvenance"];
         };
+        /**
+         * RefundId
+         * Format: uuid
+         * @description A refund identifier. A UUIDv7 in lowercase canonical form (ADR-0012 §2.1).
+         * @example 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+         */
+        RefundId: string;
+        /**
+         * RefundStatus
+         * @description A refund's own lifecycle (ZTAX-FIN-REQ-0059), separate from any credit.
+         *     `UNCERTAIN` means the provider's answer did not say whether the money
+         *     moved; it is neither paid nor failed.
+         * @example PENDING
+         * @enum {string}
+         */
+        RefundStatus: "REQUESTED" | "PENDING" | "COMPLETED" | "FAILED" | "UNCERTAIN";
+        /**
+         * RefundOutcome
+         * @description What the payment provider reported.
+         * @example SUCCEEDED
+         * @enum {string}
+         */
+        RefundOutcome: "ACCEPTED" | "SUCCEEDED" | "DECLINED" | "TIMED_OUT" | "UNKNOWN";
+        /**
+         * PaymentReference
+         * @description A payment provider's reference. It can identify a payer's transaction, so logs carry it redacted.
+         * @example psp:ch_3Nf0a1
+         */
+        PaymentReference: string;
+        /** RefundRequest */
+        RefundRequest: {
+            decisionId: components["schemas"]["DecisionId"];
+            amount: components["schemas"]["MoneyValue"];
+            paymentReference: components["schemas"]["PaymentReference"];
+            /** @description Why the refund is made. Free text; it may name the customer. */
+            reason?: string;
+        };
+        /**
+         * RefundEvent
+         * @description One entry in a refund's history. The first is the request; each later one is a provider report that moved it.
+         */
+        RefundEvent: {
+            /** Format: int32 */
+            seq: number;
+            status: components["schemas"]["RefundStatus"];
+            outcome?: components["schemas"]["RefundOutcome"];
+            externalReference?: components["schemas"]["PaymentReference"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /**
+             * Format: uuid
+             * @description The user who recorded the event. Absent for system work.
+             */
+            recordedBy?: string;
+        };
+        /**
+         * Refund
+         * @description A refund of tax a committed decision charged. `status` is the latest
+         *     event's; `history` is every event, oldest first.
+         */
+        Refund: {
+            id: components["schemas"]["RefundId"];
+            decisionId: components["schemas"]["DecisionId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            amount: components["schemas"]["MoneyValue"];
+            paymentReference: components["schemas"]["PaymentReference"];
+            reason?: string;
+            status: components["schemas"]["RefundStatus"];
+            requestedAt: components["schemas"]["Timestamp"];
+            /**
+             * Format: uuid
+             * @description The user who requested the refund. Absent for system work.
+             */
+            requestedBy?: string;
+            history: components["schemas"]["RefundEvent"][];
+        };
+        /** RefundReportRequest */
+        RefundReportRequest: {
+            outcome: components["schemas"]["RefundOutcome"];
+            externalReference?: components["schemas"]["PaymentReference"];
+        };
         /** ReplayReport */
         ReplayReport: {
             decisionId: components["schemas"]["DecisionId"];
@@ -1593,6 +1766,11 @@ export interface components {
          * @example 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
          */
         ObligationId: components["schemas"]["ObligationId"];
+        /**
+         * @description The refund identifier.
+         * @example 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+         */
+        RefundId: components["schemas"]["RefundId"];
         /**
          * @description Maximum number of items to return. The server caps this independently,
          *     so a larger value is not an error and does not return more.
@@ -2153,6 +2331,123 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["IdempotencyConflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    refundTransaction: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefundRequest"];
+            };
+        };
+        responses: {
+            /**
+             * @description The refund, `REQUESTED`. A replayed response carries
+             *     `Idempotent-Replay: true` and is byte-for-byte the original.
+             */
+            201: {
+                headers: {
+                    /**
+                     * @description Present, and `true`, when this is the stored response to an earlier request with the same key.
+                     * @example true
+                     */
+                    "Idempotent-Replay"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refund"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["IdempotencyConflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getRefund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The refund identifier.
+                 * @example 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+                 */
+                refundId: components["parameters"]["RefundId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The refund. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refund"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    reportRefund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The refund identifier.
+                 * @example 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+                 */
+                refundId: components["parameters"]["RefundId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefundReportRequest"];
+            };
+        };
+        responses: {
+            /** @description The refund after the report. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refund"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };

@@ -697,6 +697,86 @@ class ClassificationProposal(TypedDict):
     provenance: AiProvenance
 
 
+RefundId: TypeAlias = str
+"""
+A refund identifier. A UUIDv7 in lowercase canonical form (ADR-0012 §2.1).
+"""
+
+
+RefundStatus: TypeAlias = Literal['REQUESTED', 'PENDING', 'COMPLETED', 'FAILED', 'UNCERTAIN']
+"""
+A refund's own lifecycle (ZTAX-FIN-REQ-0059), separate from any credit.
+`UNCERTAIN` means the provider's answer did not say whether the money
+moved; it is neither paid nor failed.
+
+"""
+
+
+RefundOutcome: TypeAlias = Literal['ACCEPTED', 'SUCCEEDED', 'DECLINED', 'TIMED_OUT', 'UNKNOWN']
+"""
+What the payment provider reported.
+"""
+
+
+PaymentReference: TypeAlias = str
+"""
+A payment provider's reference. It can identify a payer's transaction, so logs carry it redacted.
+"""
+
+
+class RefundRequest(TypedDict):
+    decisionId: DecisionId
+    amount: MoneyValue
+    paymentReference: PaymentReference
+    reason: NotRequired[str]
+    """
+    Why the refund is made. Free text; it may name the customer.
+    """
+
+
+class RefundEvent(TypedDict):
+    """
+    One entry in a refund's history. The first is the request; each later one is a provider report that moved it.
+    """
+
+    seq: int
+    status: RefundStatus
+    outcome: NotRequired[RefundOutcome]
+    externalReference: NotRequired[PaymentReference]
+    recordedAt: Timestamp
+    recordedBy: NotRequired[str]
+    """
+    The user who recorded the event. Absent for system work.
+    """
+
+
+class Refund(TypedDict):
+    """
+    A refund of tax a committed decision charged. `status` is the latest
+    event's; `history` is every event, oldest first.
+
+    """
+
+    id: RefundId
+    decisionId: DecisionId
+    legalEntityId: LegalEntityId
+    amount: MoneyValue
+    paymentReference: PaymentReference
+    reason: NotRequired[str]
+    status: RefundStatus
+    requestedAt: Timestamp
+    requestedBy: NotRequired[str]
+    """
+    The user who requested the refund. Absent for system work.
+    """
+    history: list[RefundEvent]
+
+
+class RefundReportRequest(TypedDict):
+    outcome: RefundOutcome
+    externalReference: NotRequired[PaymentReference]
+
+
 class ReplayReport(TypedDict):
     decisionId: DecisionId
     verdict: ReplayVerdict

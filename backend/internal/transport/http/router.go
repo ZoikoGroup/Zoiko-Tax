@@ -78,6 +78,10 @@ type Router struct {
 	// Classification proposes advisory ontology mappings through Models. Nil
 	// in a router built without one, which answers 503.
 	Classification *app.ClassificationService
+	// Refunds serves POST /v1/transactions:refund and the refund reads and
+	// provider reports. Nil in a cell deployed without the determination
+	// surface, which answers 503.
+	Refunds *app.RefundService
 }
 
 // Trains are the seven release-train versions, as the contract names them.
@@ -158,6 +162,9 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/quotes", false, []security.Role{operator, analyst}}, rt.handleQuote},
 		{Route{"POST", "/v1/transactions:commit", false, []security.Role{operator}}, rt.handleCommit},
 		{Route{"POST", "/v1/transactions:adjust", false, []security.Role{operator}}, rt.handleAdjust},
+		{Route{"POST", "/v1/transactions:refund", false, []security.Role{operator}}, rt.handleRefund},
+		{Route{"GET", "/v1/refunds/{refundId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetRefund},
+		{Route{"POST", "/v1/refunds/{refundId}/reports", false, []security.Role{operator}}, rt.handleReportRefund},
 		{Route{"GET", "/v1/decisions/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetDecision},
 		{Route{"POST", "/v1/replay/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleReplay},
 		{Route{"GET", "/v1/decisions/{decisionId}/journals", false, []security.Role{operator, analyst, auditor}}, rt.handleDecisionJournals},

@@ -128,6 +128,18 @@
       "public": false
     },
     {
+      "method": "GET",
+      "path": "/v1/refunds/{refundId}",
+      "operationId": "getRefund",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/refunds/{refundId}/reports",
+      "operationId": "reportRefund",
+      "public": false
+    },
+    {
       "method": "POST",
       "path": "/v1/replay/{decisionId}",
       "operationId": "replayDecision",
@@ -149,6 +161,12 @@
       "method": "POST",
       "path": "/v1/transactions:commit",
       "operationId": "commitTransaction",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/transactions:refund",
+      "operationId": "refundTransaction",
       "public": false
     }
   ]

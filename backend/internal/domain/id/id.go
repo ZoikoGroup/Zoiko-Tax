@@ -114,6 +114,10 @@ type (
 
 	// ReconciliationID identifies one reconciliation run.
 	ReconciliationID struct{ base }
+
+	// RefundID identifies one refund: a payment-side return of tax against a
+	// committed decision, with a lifecycle of its own (ZTAX-FIN-REQ-0059).
+	RefundID struct{ base }
 )
 
 // The constructors. Each takes a uuid.UUID that idgen produced, or that the
@@ -188,6 +192,9 @@ func NewJournalID(u uuid.UUID) JournalID { return JournalID{base{u}} }
 
 // NewReconciliationID wraps a raw UUID as a ReconciliationID.
 func NewReconciliationID(u uuid.UUID) ReconciliationID { return ReconciliationID{base{u}} }
+
+// NewRefundID wraps a raw UUID as a RefundID.
+func NewRefundID(u uuid.UUID) RefundID { return RefundID{base{u}} }
 
 // parse is the shared text ingress. Identifiers arrive from a URL path, a
 // cookie lookup or a database column, and all three can carry something that is
@@ -324,4 +331,13 @@ func ParseReconciliationID(s string) (ReconciliationID, error) {
 		return ReconciliationID{}, err
 	}
 	return NewReconciliationID(u), nil
+}
+
+// ParseRefundID reads a RefundID from its canonical string form.
+func ParseRefundID(s string) (RefundID, error) {
+	u, err := parse("refund id", s)
+	if err != nil {
+		return RefundID{}, err
+	}
+	return NewRefundID(u), nil
 }

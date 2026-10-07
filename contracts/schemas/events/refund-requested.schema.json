@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RefundRequested",
+  "description": "A refund of tax a committed decision charged was admitted (ZTAX-FIN-REQ-0015, -0059). Emitted through the outbox in the transaction that recorded it. The refund is REQUESTED: nothing has been paid and nothing has been posted. Amounts are canonical decimal strings, never JSON numbers.",
+  "$comment": "Producer: backend/internal/app/refund.go (emit). Event type com.zoikotax.refund.requested; schema ref ztax:events/refund-requested/1.0.0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "refundId",
+    "decisionId",
+    "legalEntityId",
+    "amount",
+    "currency",
+    "seq",
+    "status",
+    "recordedAt"
+  ],
+  "properties": {
+    "refundId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "decisionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "legalEntityId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "amount": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "seq": {
+      "const": 1
+    },
+    "status": {
+      "const": "REQUESTED"
+    },
+    "recordedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

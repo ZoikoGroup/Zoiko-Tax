@@ -27,6 +27,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/outbox"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/settlement"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/subledger"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 )
@@ -414,4 +415,34 @@ type ObligationContribution struct {
 // the event commits with the state change that caused it, or neither does.
 type OutboxWriter interface {
 	Append(ctx context.Context, e outbox.Event) error
+}
+
+// ---------------------------------------------------------------------------
+// refunds (ZTAX-FIN-001 §14)
+// ---------------------------------------------------------------------------
+
+// RefundRepository stores refunds: an immutable header and an append-only
+// history of what the payment provider reported (ZTAX-FIN-REQ-0059).
+type RefundRepository interface {
+	// LockDecision serializes the refunds of one decision until the
+	// transaction ends, so two refunds admitted concurrently cannot both find
+	// the same tax still refundable.
+	LockDecision(ctx context.Context, decisionID id.DecisionID) error
+	// Create writes the header and its REQUESTED event.
+	Create(ctx context.Context, r settlement.Refund) error
+	// Append writes the next event. An event whose sequence another writer
+	// has already used is refused as a conflict: the writer read a history
+	// that is no longer current.
+	Append(ctx context.Context, e settlement.RefundEvent) error
+	// ByID returns a refund and its history, oldest event first.
+	ByID(ctx context.Context, refundID id.RefundID) (settlement.Refund, []settlement.RefundEvent, error)
+	// ForDecision returns the refunds of one decision, each with its current
+	// event, oldest first.
+	ForDecision(ctx context.Context, decisionID id.DecisionID) ([]RefundState, error)
+}
+
+// RefundState is a refund and its current event.
+type RefundState struct {
+	Refund  settlement.Refund
+	Current settlement.RefundEvent
 }

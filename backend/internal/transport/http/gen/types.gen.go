@@ -336,6 +336,60 @@ func (e RateBasis) Valid() bool {
 	}
 }
 
+// Defines values for RefundOutcome.
+const (
+	RefundOutcomeACCEPTED  RefundOutcome = "ACCEPTED"
+	RefundOutcomeDECLINED  RefundOutcome = "DECLINED"
+	RefundOutcomeSUCCEEDED RefundOutcome = "SUCCEEDED"
+	RefundOutcomeTIMEDOUT  RefundOutcome = "TIMED_OUT"
+	RefundOutcomeUNKNOWN   RefundOutcome = "UNKNOWN"
+)
+
+// Valid indicates whether the value is a known member of the RefundOutcome enum.
+func (e RefundOutcome) Valid() bool {
+	switch e {
+	case RefundOutcomeACCEPTED:
+		return true
+	case RefundOutcomeDECLINED:
+		return true
+	case RefundOutcomeSUCCEEDED:
+		return true
+	case RefundOutcomeTIMEDOUT:
+		return true
+	case RefundOutcomeUNKNOWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RefundStatus.
+const (
+	RefundStatusCOMPLETED RefundStatus = "COMPLETED"
+	RefundStatusFAILED    RefundStatus = "FAILED"
+	RefundStatusPENDING   RefundStatus = "PENDING"
+	RefundStatusREQUESTED RefundStatus = "REQUESTED"
+	RefundStatusUNCERTAIN RefundStatus = "UNCERTAIN"
+)
+
+// Valid indicates whether the value is a known member of the RefundStatus enum.
+func (e RefundStatus) Valid() bool {
+	switch e {
+	case RefundStatusCOMPLETED:
+		return true
+	case RefundStatusFAILED:
+		return true
+	case RefundStatusPENDING:
+		return true
+	case RefundStatusREQUESTED:
+		return true
+	case RefundStatusUNCERTAIN:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReplayVerdict.
 const (
 	BUNDLEUNAVAILABLE ReplayVerdict = "BUNDLE_UNAVAILABLE"
@@ -1018,6 +1072,9 @@ type ObligationTransitionRequestTo string
 // about coverage that is recorded against the transaction.
 type Outcome string
 
+// PaymentReference A payment provider's reference. It can identify a payer's transaction, so logs carry it redacted.
+type PaymentReference = string
+
 // Problem RFC 9457 Problem Details, with the `ztx_` extensions from ADR-0016 §2.5.
 // The extensions carry identifiers rather than data: an error that needs
 // data to be understood names a decision or a request, and the data is
@@ -1176,6 +1233,100 @@ type ReadSet map[string]MoneyValue
 // here, because the register grows by addition and a client that rejects
 // an unrecognised code would break on an additive change (ADR-0010 §2.6).
 type ReasonCode = string
+
+// Refund A refund of tax a committed decision charged. `status` is the latest
+// event's; `history` is every event, oldest first.
+type Refund struct {
+	// Amount An amount and its currency, never one without the other.
+	Amount MoneyValue `json:"amount"`
+
+	// DecisionID A decision identifier: a UUIDv7 in lowercase canonical form
+	// (ADR-0012 §2.1). Sortable by creation, never recycled.
+	DecisionID DecisionID    `json:"decisionId"`
+	History    []RefundEvent `json:"history"`
+
+	// ID A refund identifier. A UUIDv7 in lowercase canonical form (ADR-0012 §2.1).
+	ID RefundID `json:"id"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// PaymentReference A payment provider's reference. It can identify a payer's transaction, so logs carry it redacted.
+	PaymentReference PaymentReference `json:"paymentReference"`
+	Reason           *string          `json:"reason,omitempty"`
+
+	// RequestedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RequestedAt Timestamp `json:"requestedAt"`
+
+	// RequestedBy The user who requested the refund. Absent for system work.
+	RequestedBy *string `json:"requestedBy,omitempty"`
+
+	// Status A refund's own lifecycle (ZTAX-FIN-REQ-0059), separate from any credit.
+	// `UNCERTAIN` means the provider's answer did not say whether the money
+	// moved; it is neither paid nor failed.
+	Status RefundStatus `json:"status"`
+}
+
+// RefundEvent One entry in a refund's history. The first is the request; each later one is a provider report that moved it.
+type RefundEvent struct {
+	// ExternalReference A payment provider's reference. It can identify a payer's transaction, so logs carry it redacted.
+	ExternalReference *PaymentReference `json:"externalReference,omitempty"`
+
+	// Outcome What the payment provider reported.
+	Outcome *RefundOutcome `json:"outcome,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy The user who recorded the event. Absent for system work.
+	RecordedBy *string `json:"recordedBy,omitempty"`
+	Seq        int32   `json:"seq"`
+
+	// Status A refund's own lifecycle (ZTAX-FIN-REQ-0059), separate from any credit.
+	// `UNCERTAIN` means the provider's answer did not say whether the money
+	// moved; it is neither paid nor failed.
+	Status RefundStatus `json:"status"`
+}
+
+// RefundID A refund identifier. A UUIDv7 in lowercase canonical form (ADR-0012 §2.1).
+type RefundID = string
+
+// RefundOutcome What the payment provider reported.
+type RefundOutcome string
+
+// RefundReportRequest defines model for RefundReportRequest.
+type RefundReportRequest struct {
+	// ExternalReference A payment provider's reference. It can identify a payer's transaction, so logs carry it redacted.
+	ExternalReference *PaymentReference `json:"externalReference,omitempty"`
+
+	// Outcome What the payment provider reported.
+	Outcome RefundOutcome `json:"outcome"`
+}
+
+// RefundRequest defines model for RefundRequest.
+type RefundRequest struct {
+	// Amount An amount and its currency, never one without the other.
+	Amount MoneyValue `json:"amount"`
+
+	// DecisionID A decision identifier: a UUIDv7 in lowercase canonical form
+	// (ADR-0012 §2.1). Sortable by creation, never recycled.
+	DecisionID DecisionID `json:"decisionId"`
+
+	// PaymentReference A payment provider's reference. It can identify a payer's transaction, so logs carry it redacted.
+	PaymentReference PaymentReference `json:"paymentReference"`
+
+	// Reason Why the refund is made. Free text; it may name the customer.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// RefundStatus A refund's own lifecycle (ZTAX-FIN-REQ-0059), separate from any credit.
+// `UNCERTAIN` means the provider's answer did not say whether the money
+// moved; it is neither paid nor failed.
+type RefundStatus string
 
 // ReplayReport defines model for ReplayReport.
 type ReplayReport struct {
@@ -1548,6 +1699,15 @@ type CommitTransactionParams struct {
 	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
 }
 
+// RefundTransactionParams defines parameters for RefundTransaction.
+type RefundTransactionParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
 // CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
 type CreateUserJSONRequestBody = CreateUserRequest
 
@@ -1572,8 +1732,14 @@ type TransitionObligationJSONRequestBody = ObligationTransitionRequest
 // CreateQuoteJSONRequestBody defines body for CreateQuote for application/json ContentType.
 type CreateQuoteJSONRequestBody = QuoteRequest
 
+// ReportRefundJSONRequestBody defines body for ReportRefund for application/json ContentType.
+type ReportRefundJSONRequestBody = RefundReportRequest
+
 // AdjustTransactionJSONRequestBody defines body for AdjustTransaction for application/json ContentType.
 type AdjustTransactionJSONRequestBody = CommitRequest
 
 // CommitTransactionJSONRequestBody defines body for CommitTransaction for application/json ContentType.
 type CommitTransactionJSONRequestBody = CommitRequest
+
+// RefundTransactionJSONRequestBody defines body for RefundTransaction for application/json ContentType.
+type RefundTransactionJSONRequestBody = RefundRequest

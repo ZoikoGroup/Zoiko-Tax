@@ -82,6 +82,8 @@ tags:
     description: Advisory classification assistance through the Governed Model Gateway.
   - name: obligations
     description: Periodic returns assessed from committed decisions, and their lifecycle.
+  - name: refunds
+    description: Refunds of tax a committed decision charged. Their own lifecycle; never a decision, never a credit.
 security:
   - sessionCookie: []
 paths:
@@ -1045,6 +1047,234 @@ paths:
           $ref: "#/components/responses/Internal"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/transactions:refund:
+    post:
+      operationId: refundTransaction
+      tags:
+        - refunds
+      summary: Refund tax a committed decision charged
+      description: |
+        `OPERATOR` only. Records a refund of tax charged by a committed
+        decision. A refund is **not** a decision and not a credit
+        (ZTAX-FIN-REQ-0015): nothing is re-determined, the decision is never
+        rewritten, and the refund has a lifecycle of its own
+        (ZTAX-FIN-REQ-0059). ZoikoTax moves no money; this records that a
+        payment provider has been, or will be, asked to return it.
+
+        The decision must be the current version of its business key, and the
+        amount at most the tax that decision posted to
+        `TAX_COLLECTED_LIABILITY` in that currency, less every earlier refund
+        of it that has not `FAILED`. An `UNCERTAIN` refund still counts: it
+        may have paid. A request beyond what is refundable is refused with
+        `400 INVALID_VALUE`, and the response says how much is left.
+
+        The refund is created `REQUESTED` and posts nothing. Only a provider
+        report of `SUCCEEDED` (see `POST /v1/refunds/{refundId}/reports`)
+        posts the `REFUND` journal.
+
+        `Idempotency-Key` is required, scoped apart from `:commit` and
+        `:adjust` (ADR-0013 §2.2).
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefundRequest"
+            examples:
+              default:
+                summary: Refund the VAT on one line
+                value:
+                  decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                  amount:
+                    amount: "10.50"
+                    currency: EUR
+                  paymentReference: psp:ch_3Nf0a1
+                  reason: Customer cancelled within the cooling-off period.
+      responses:
+        "201":
+          description: |
+            The refund, `REQUESTED`. A replayed response carries
+            `Idempotent-Replay: true` and is byte-for-byte the original.
+          headers:
+            Idempotent-Replay:
+              description: Present, and `true`, when this is the stored response to an earlier request with the same key.
+              schema:
+                type: boolean
+              example: true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Refund"
+              examples:
+                default:
+                  summary: A requested refund
+                  value:
+                    id: 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+                    decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    amount:
+                      amount: "10.50"
+                      currency: EUR
+                    paymentReference: psp:ch_3Nf0a1
+                    reason: Customer cancelled within the cooling-off period.
+                    status: REQUESTED
+                    requestedAt: 2026-10-07T10:00:00.000000Z
+                    requestedBy: 01920a40-aaaa-7bbb-8ccc-000000000d01
+                    history:
+                      - seq: 1
+                        status: REQUESTED
+                        recordedAt: 2026-10-07T10:00:00.000000Z
+                        recordedBy: 01920a40-aaaa-7bbb-8ccc-000000000d01
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/IdempotencyConflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/refunds/{refundId}:
+    get:
+      operationId: getRefund
+      tags:
+        - refunds
+      summary: One refund and its history
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. The refund as requested, its
+        current status, and every provider report that moved it, oldest
+        first.
+      parameters:
+        - $ref: "#/components/parameters/RefundId"
+      responses:
+        "200":
+          description: The refund.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Refund"
+              examples:
+                default:
+                  summary: A refund that timed out, then completed
+                  value:
+                    id: 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+                    decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    amount:
+                      amount: "10.50"
+                      currency: EUR
+                    paymentReference: psp:ch_3Nf0a1
+                    status: COMPLETED
+                    requestedAt: 2026-10-07T10:00:00.000000Z
+                    history:
+                      - seq: 1
+                        status: REQUESTED
+                        recordedAt: 2026-10-07T10:00:00.000000Z
+                      - seq: 2
+                        status: UNCERTAIN
+                        outcome: TIMED_OUT
+                        recordedAt: 2026-10-07T10:00:30.000000Z
+                      - seq: 3
+                        status: COMPLETED
+                        outcome: SUCCEEDED
+                        externalReference: psp:re_9Kd2
+                        recordedAt: 2026-10-07T11:12:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/refunds/{refundId}/reports:
+    post:
+      operationId: reportRefund
+      tags:
+        - refunds
+      summary: Record what the payment provider reported about a refund
+      description: |
+        `OPERATOR`. Records one provider report. `ACCEPTED` makes the refund
+        `PENDING`, `SUCCEEDED` makes it `COMPLETED` and posts it to the Tax
+        Control Subledger, `DECLINED` makes it `FAILED` and releases its tax
+        to be refunded again. `TIMED_OUT` and `UNKNOWN` make it `UNCERTAIN` —
+        never completed and never failed, because the money may or may not
+        have moved — and a later definite report resolves it.
+
+        Nothing leaves `COMPLETED` or `FAILED`. A report the lifecycle does
+        not permit is refused with `409 STATE_TRANSITION_INVALID`.
+
+        Safe to retry without an idempotency key: the same report arriving
+        again (same outcome and reference, refund already where it put it)
+        returns the refund unchanged rather than recording a second move.
+      parameters:
+        - $ref: "#/components/parameters/RefundId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefundReportRequest"
+            examples:
+              default:
+                summary: The provider paid the refund
+                value:
+                  outcome: SUCCEEDED
+                  externalReference: psp:re_9Kd2
+      responses:
+        "200":
+          description: The refund after the report.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Refund"
+              examples:
+                default:
+                  summary: A completed refund
+                  value:
+                    id: 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+                    decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    amount:
+                      amount: "10.50"
+                      currency: EUR
+                    paymentReference: psp:ch_3Nf0a1
+                    status: COMPLETED
+                    requestedAt: 2026-10-07T10:00:00.000000Z
+                    history:
+                      - seq: 1
+                        status: REQUESTED
+                        recordedAt: 2026-10-07T10:00:00.000000Z
+                      - seq: 2
+                        status: COMPLETED
+                        outcome: SUCCEEDED
+                        externalReference: psp:re_9Kd2
+                        recordedAt: 2026-10-07T11:12:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/decisions/{decisionId}:
     get:
       operationId: getDecision
@@ -1601,6 +1831,14 @@ components:
       schema:
         $ref: "#/components/schemas/ObligationId"
       example: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+    RefundId:
+      name: refundId
+      in: path
+      required: true
+      description: The refund identifier.
+      schema:
+        $ref: "#/components/schemas/RefundId"
+      example: 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
     Limit:
       name: limit
       in: query
@@ -3427,6 +3665,190 @@ components:
             - false
         provenance:
           $ref: "#/components/schemas/AiProvenance"
+    RefundId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RefundId
+      description: A refund identifier. A UUIDv7 in lowercase canonical form (ADR-0012 §2.1).
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+    RefundStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RefundStatus
+      description: |
+        A refund's own lifecycle (ZTAX-FIN-REQ-0059), separate from any credit.
+        `UNCERTAIN` means the provider's answer did not say whether the money
+        moved; it is neither paid nor failed.
+      enum:
+        - REQUESTED
+        - PENDING
+        - COMPLETED
+        - FAILED
+        - UNCERTAIN
+      example: PENDING
+    RefundOutcome:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RefundOutcome
+      description: What the payment provider reported.
+      enum:
+        - ACCEPTED
+        - SUCCEEDED
+        - DECLINED
+        - TIMED_OUT
+        - UNKNOWN
+      example: SUCCEEDED
+    PaymentReference:
+      x-ztax-privacy:
+        class: P5
+        purposes:
+          - PURP-RECON
+          - PURP-EVID
+        retention: RET-FISCAL
+        redaction: REDACT
+        aiAllowed: NONE
+        evidencePolicy: RAW_REQUIRED
+      type: string
+      title: PaymentReference
+      description: A payment provider's reference. It can identify a payer's transaction, so logs carry it redacted.
+      minLength: 1
+      maxLength: 255
+      example: psp:ch_3Nf0a1
+    RefundRequest:
+      type: object
+      title: RefundRequest
+      additionalProperties: false
+      required:
+        - decisionId
+        - amount
+        - paymentReference
+      properties:
+        decisionId:
+          $ref: "#/components/schemas/DecisionId"
+        amount:
+          $ref: "#/components/schemas/MoneyValue"
+        paymentReference:
+          $ref: "#/components/schemas/PaymentReference"
+        reason:
+          x-ztax-privacy:
+            class: P2
+            purposes:
+              - PURP-RECON
+              - PURP-EVID
+            retention: RET-FISCAL
+            redaction: REDACT
+            aiAllowed: NONE
+          type: string
+          maxLength: 1000
+          description: Why the refund is made. Free text; it may name the customer.
+    RefundEvent:
+      type: object
+      title: RefundEvent
+      description: One entry in a refund's history. The first is the request; each later one is a provider report that moved it.
+      additionalProperties: false
+      required:
+        - seq
+        - status
+        - recordedAt
+      properties:
+        seq:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        status:
+          $ref: "#/components/schemas/RefundStatus"
+        outcome:
+          $ref: "#/components/schemas/RefundOutcome"
+        externalReference:
+          $ref: "#/components/schemas/PaymentReference"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+          description: The user who recorded the event. Absent for system work.
+    Refund:
+      type: object
+      title: Refund
+      description: |
+        A refund of tax a committed decision charged. `status` is the latest
+        event's; `history` is every event, oldest first.
+      additionalProperties: false
+      required:
+        - id
+        - decisionId
+        - legalEntityId
+        - amount
+        - paymentReference
+        - status
+        - requestedAt
+        - history
+      properties:
+        id:
+          $ref: "#/components/schemas/RefundId"
+        decisionId:
+          $ref: "#/components/schemas/DecisionId"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        amount:
+          $ref: "#/components/schemas/MoneyValue"
+        paymentReference:
+          $ref: "#/components/schemas/PaymentReference"
+        reason:
+          x-ztax-privacy:
+            class: P2
+            purposes:
+              - PURP-RECON
+              - PURP-EVID
+            retention: RET-FISCAL
+            redaction: REDACT
+            aiAllowed: NONE
+          type: string
+        status:
+          $ref: "#/components/schemas/RefundStatus"
+        requestedAt:
+          $ref: "#/components/schemas/Timestamp"
+        requestedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+          description: The user who requested the refund. Absent for system work.
+        history:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/RefundEvent"
+    RefundReportRequest:
+      type: object
+      title: RefundReportRequest
+      additionalProperties: false
+      required:
+        - outcome
+      properties:
+        outcome:
+          $ref: "#/components/schemas/RefundOutcome"
+        externalReference:
+          $ref: "#/components/schemas/PaymentReference"
     ReplayReport:
       type: object
       title: ReplayReport

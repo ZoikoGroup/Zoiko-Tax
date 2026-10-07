@@ -1237,6 +1237,116 @@
       "recorded_at": {
         "class": "P0"
       }
+    },
+    "refund": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "refund_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "decision_id": {
+        "class": "P0"
+      },
+      "amount": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "Tax returned on one decision; a per-transaction figure, not an aggregate."
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "payment_reference": {
+        "class": "P5",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "The payment provider's reference for the refunded payment; it can identify a payer's transaction."
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by an operator; may name the customer."
+      },
+      "requested_at": {
+        "class": "P0"
+      },
+      "requested_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The user who requested the refund; NULL for system work."
+      }
+    },
+    "refund_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "refund_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "status": {
+        "class": "P0"
+      },
+      "outcome": {
+        "class": "P0"
+      },
+      "external_reference": {
+        "class": "P5",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "The provider's reference for its report on the refund."
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The user who recorded the provider's report; NULL for system work."
+      }
     }
   }
 }

@@ -253,3 +253,12 @@ func ReconciliationID(g Generator) (id.ReconciliationID, error) {
 	}
 	return id.NewReconciliationID(u), nil
 }
+
+// RefundID returns a fresh RefundID.
+func RefundID(g Generator) (id.RefundID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.RefundID{}, err
+	}
+	return id.NewRefundID(u), nil
+}
