@@ -19635,3 +19635,1683 @@ requirements:
     status: PROPOSED
     effective_from: null
     effective_to: null
+
+  - id: ZTAX-QA-REQ-0001
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Every normative C/S requirement MUST have a verification method before production authority."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0002
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Every applicable normative requirement MUST link to executed evidence or approved status."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0003
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Requirement verification status MUST distinguish PASS, FAIL, WAIVED and NOT_APPLICABLE."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0004
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "NOT_APPLICABLE MUST include rationale and approver."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0005
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "WAIVED MUST NOT be treated as PASS."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Release"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0006
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Requirement text/version changes MUST trigger verification impact analysis."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0007
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Release evidence MUST identify exact governing document versions."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0008
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Release evidence MUST identify exact artifact versions."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0009
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Release evidence MUST identify test environment/profile."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0010
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Developer unit tests alone MUST NOT constitute independent production certification for authoritative tax content."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: INSPECTION
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0011
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Quality Engineering MUST have authority to block release on failed mandatory gates."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Governance"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0012
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Golden test expected results MUST NOT be silently generated from the system under test."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0013
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Every material monetary golden MUST have a documented oracle/derivation."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Domain QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0014
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Golden vectors MUST pin legal effective date."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Content QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0015
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Golden vectors MUST pin applicable content bundle/version."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Content QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0016
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Golden vectors MUST preserve source provenance."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Content QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0017
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Historical golden vectors MUST remain available for replay after law changes."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Replay"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0018
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "New legal treatment MUST create new effective-dated golden expectations rather than overwrite history."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Content QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0019
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Country-pack certification MUST include positive and negative cases."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Pack QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0020
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Country-pack certification MUST include boundary/effective-date cases."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Pack QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0021
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Country-pack certification MUST include supported telecom product families."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Pack QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0022
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Country-pack certification MUST separately certify advertised determination, filing, CTC and managed capabilities."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Pack QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0023
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "A production country pack MUST NOT claim capability not covered by certification evidence."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Product"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0024
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Unsupported/ambiguous content MUST have expected negative tests."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Pack QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0025
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Tax/obligation threshold boundaries MUST include values below/equal/above the threshold."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Domain QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0026
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Rounding tests MUST include all approved rounding modes/scopes used by the pack."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["DET QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0027
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Tax-on-tax dependency tests MUST verify DAG ordering and cycle rejection."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["DET QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0028
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Inclusive pricing tests MUST verify inversion/rounding behavior where supported."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["DET QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0029
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Caps/floors/threshold/allocations MUST have boundary tests."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["DET QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0030
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Credit/refund/void/rebill/amendment flows MUST have golden tests where supported."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["FIN QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0031
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Responsibility tests MUST independently validate incidence/collection/reporting/remittance/economic-bearer roles."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["OBL QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0032
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Regulatory-revenue classification MUST be tested independently from taxability classification."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["CLS QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0033
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Situs tests MUST include conflicting/ambiguous evidence cases."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["JUR QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0034
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Property tests MUST validate key mathematical/domain invariants."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0035
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Determinism MUST be tested across repeated/parallel executions."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0036
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Idempotency MUST be tested with same-key/same-payload and same-key/different-payload cases."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0037
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Tax control journals MUST have balance invariants."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["FIN QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0038
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Accumulator concurrency MUST be property/stress tested for lost updates."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["OBL QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0039
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "State machines MUST reject invalid transitions."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Domain QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0040
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Mutation testing SHOULD be used for critical deterministic code/rule/compiler modules where practical."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0041
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Material threshold/comparator/rounding/date mutations SHOULD be killed by the critical suite."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0042
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Mutation score expectations MUST be risk/component specific."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: INSPECTION
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0043
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Differential comparator profiles MUST document version and known limitations."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0044
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Differential agreement MUST NOT be represented as independent legal correctness without stronger oracle."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: INSPECTION
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0045
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Comparator disagreement MUST be root-cause classified rather than hidden."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Shadow QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0046
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Major incumbent/custom engine mappings MUST have migration/shadow differential tests where relevant."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Migration QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0047
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Replay MUST operate without mutating production data."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Replay"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0048
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Replay MUST pin engine/content/mapping/FX/reference versions needed for historical reproduction."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Replay"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0049
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Unexplained replay differences MUST block affected authoritative release."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Replay"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0050
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Schema evolution MUST preserve ability to read/replay retained historical evidence."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Data QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0051
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "API contracts MUST be automatically linted/validated."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["INT QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0052
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Breaking API/schema changes MUST be detected beyond simple field removal."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["INT QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0053
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "API idempotency/concurrency/error/pagination/bulk semantics MUST be contract-tested."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["INT QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0054
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Event schemas MUST be versioned and validated."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["INT QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0055
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Webhook signatures/retries/duplicate/replay behavior MUST be tested."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["INT QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0056
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "SDK serialization MUST preserve money precision and timestamps."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["INT QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0057
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Database migrations MUST be tested for compatibility and integrity."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Data QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0058
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Backfills MUST be resumable/idempotent and reconciled."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Data QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0059
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Data-quality tests MUST detect orphan/duplicate/impossible-state records."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Data QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0060
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "External adapters MUST have certification profiles."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Integration QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0061
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Authority filing adapters MUST test acknowledgement/rejection/uncertain states."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["COMP QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0062
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Filing retry after timeout MUST be tested for duplicate prevention."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["COMP QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0063
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Filing credential/authorization expiry/revocation MUST be tested."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["COMP QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0064
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "CTC mappings MUST have semantic golden tests independent of transport partner."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["CTC QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0065
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "CTC retries/rejections/corrections/cancellations MUST be tested as applicable."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["CTC QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0066
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Payment/remittance integrations MUST distinguish instruction from confirmation."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["REM QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0067
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "ERP/GL integrations MUST verify acknowledgement and reconciliation, not only transmission."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["FIN QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0068
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Security testing MUST map to SEC requirements and applicable ASVS controls."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Security QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0069
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Cross-tenant isolation MUST be explicitly adversarially tested."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Security QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0070
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Tenant isolation testing MUST include API, storage, cache, search, export and vector surfaces where applicable."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Security QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0071
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Privileged/support/JIT/break-glass controls MUST be tested."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Security QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0072
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Content/rule signature and anti-rollback controls MUST be tested."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Security QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0073
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "KMS/secrets outage MUST be tested for fail-closed behavior."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Security QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0074
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Independent penetration testing MUST cover material production surfaces before launch and periodically thereafter."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Security QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0075
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Privacy field metadata MUST be schema-tested."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Privacy QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0076
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Situs raw-evidence minimization/discard behavior MUST be tested."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Privacy QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0077
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "DSR tests MUST include immutable evidence/legal-hold exceptions."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Privacy QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0078
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Cross-region/failover privacy restrictions MUST be tested."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Privacy QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0079
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Privacy deletion MUST propagate to eligible search/vector/cache/staging stores."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Privacy QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0080
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "AI release testing MUST use exact AIReleaseManifest."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["AI QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0081
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "AI gold/evaluation datasets MUST be versioned."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["AI QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0082
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "A3 auto-accept MUST test low-confidence/conflict/OOD/unsupported cases."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["AI QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0083
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Every A5 prohibited AI authority action MUST be adversarially tested."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["AI Security"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0084
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Prompt-injection/retrieval-poisoning/tool-authorization tests MUST run for agentic/RAG use cases."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["AI Security"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0085
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "AI deterministic-core kill switch/degradation MUST be demonstrated."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["AI QA"]
+    verification_method: DEMONSTRATION
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0086
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "NFR certification MUST use exact CapacityProfile/ResilienceProfile."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Performance QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0087
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Performance tests MUST include burst and soak phases."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Performance QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0088
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Stress testing MUST preserve determinism/idempotency/tenant isolation/money invariants."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Performance QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0089
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "DR exercises MUST measure actual RPO/RTO."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["SRE QA"]
+    verification_method: DEMONSTRATION
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0090
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "AZ/database/broker/provider failure modes MUST be tested according to NFR profile."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Resilience QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0091
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Migration certification MUST reconcile source inventory and totals."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Migration QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0092
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Migration certification MUST preserve source IDs/provenance."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Migration QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0093
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Migration cutover MUST test delta load/idempotency/rollback."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Migration QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0094
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Shadow comparison SHOULD precede high-risk authoritative migrations where feasible."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Migration QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0095
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Synthetic data SHOULD be preferred over production data in non-production."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: INSPECTION
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0096
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Production-derived test data MUST require Privacy/Security approval."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0097
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Test datasets linked to certification MUST be versioned."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0098
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Random/property tests MUST retain reproducible seeds for failures."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0099
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "QA-SEV-1 defects MUST block authoritative production release."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Release"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0100
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "QA-SEV-2 defects MUST normally block release unless explicit governance permits and risk is bounded."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Release"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0101
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "A workaround MUST NOT automatically downgrade a material fiscal/legal defect."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: INSPECTION
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0102
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Release-blocking suites MUST NOT be rerun-until-green to bypass flakiness."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0103
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Flaky tests MUST have an owner/defect."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0104
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Quarantined tests MUST have reason, expiry and coverage-impact assessment."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0105
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "The sole verification of a mandatory gate MUST NOT be quarantined."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Release"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0106
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "CI test retries MUST preserve initial failure evidence."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["DevOps"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0107
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Test automation MUST isolate shared state so parallelism does not create false passes."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0108
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Country-pack changes SHOULD trigger targeted impact-based suites independent of unrelated application regression."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["DevOps"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0109
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Release certification MUST produce a ReleaseCertificationManifest."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Release"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0110
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "ReleaseCertificationManifest MUST include traceability snapshot."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Release"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0111
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "ReleaseCertificationManifest MUST include known defects/waivers."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Release"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0112
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "ReleaseCertificationManifest MUST identify rollback/suspension path."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Release"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0113
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "ReleaseCertificationManifest MUST be tamper-evident."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Evidence"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0114
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "The artifact promoted to production MUST be the certified artifact or verifiably equivalent under approved provenance control."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Release"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0115
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Rebuilding after certification MUST NOT silently reuse prior certification evidence."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Release"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0116
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Certification state MUST support PILOT/PRODUCTION/MANAGED/SUSPENDED/WITHDRAWN/SUPERSEDED."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0117
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Suspended certification MUST block new authoritative use of affected capability."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Platform"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0118
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Production incidents MUST create regression tests where the defect is reproducible and material."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["QA"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0119
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "Verification evidence MUST be retained for the governing audit/replay/legal horizon."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Evidence"]
+    verification_method: AUDIT
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-QA-REQ-0120
+    document_id: ZTAX-QA-001
+    version: null
+    statement: "No production launch MAY proceed with unresolved mandatory quality gate."
+    rationale: "ZTAX-QA-001 requirement register (31. Normative QA Requirements) in the Master Specification."
+    source_authority: "ZTAX-QA-001"
+    owner: "Head of Quality Engineering"
+    applies_to: ["Release"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null

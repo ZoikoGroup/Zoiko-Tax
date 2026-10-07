@@ -24,7 +24,7 @@ Generated from [`register.yaml`](register.yaml) and [`requirements.yaml`](requir
 | `ZTAX-FIN-001` | Fiscal Document Lifecycle, Tax Control Subledger & Reconciliation | S | F1 | 1.0 | DRAFT | Head of Finance Systems | 2026-11-29 | 123 PROPOSED |
 | `ZTAX-INT-001` | Global API, Event, Webhook, SDK & Integration Contracts | S | F1 | — | PROPOSED | Head of Platform | — | 1 PROPOSED |
 | `ZTAX-NFR-001` | Non-Functional Requirements, Capacity, Availability & Resilience | S | F0-F1 | — | PROPOSED | Chief Architect | — | — |
-| `ZTAX-QA-001` | Verification, Golden Testing & Certification Standard | S | F1 | — | PROPOSED | Head of Quality Engineering | — | — |
+| `ZTAX-QA-001` | Verification, Golden Testing & Certification Standard | S | F1 | — | PROPOSED | Head of Quality Engineering | — | 120 PROPOSED |
 | `ZTAX-AI-001` | ZoikoTax Intelligence Fabric Architecture | L | F1 | — | PROPOSED | Head of AI | — | 19 PROPOSED |
 | `ZTAX-COMP-001` | Global Compliance Operations | S | F2 | — | PROPOSED | Head of Global Compliance | — | — |
 | `ZTAX-REM-001` | Remittance & Funds Control | S | F2 | — | PROPOSED | GC + Head of Compliance | — | — |
@@ -37,7 +37,7 @@ Generated from [`register.yaml`](register.yaml) and [`requirements.yaml`](requir
 
 ## Summary
 
-30 documents: 15 DRAFT, 2 EFFECTIVE, 12 PROPOSED, 1 SUPERSEDED. 1397 registered requirements.
+30 documents: 15 DRAFT, 2 EFFECTIVE, 12 PROPOSED, 1 SUPERSEDED. 1517 registered requirements.
 
 ## Open gaps
 
