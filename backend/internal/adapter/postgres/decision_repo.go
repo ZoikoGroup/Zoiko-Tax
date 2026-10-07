@@ -260,6 +260,9 @@ const (
 	sqlSealByID = `SELECT ` + sqlSealColumns + `
 		FROM ztax.evidence_period_seal WHERE tenant_id = $1 AND seal_id = $2`
 
+	sqlSealList = `SELECT ` + sqlSealColumns + `
+		FROM ztax.evidence_period_seal WHERE tenant_id = $1 ORDER BY period_start DESC LIMIT $2`
+
 	sqlSealOverlapping = `SELECT ` + sqlSealColumns + `
 		FROM   ztax.evidence_period_seal
 		WHERE  tenant_id = $1 AND period_start < $3 AND period_end > $2
@@ -339,6 +342,31 @@ func (r *SealRepo) ByID(ctx context.Context, sealID id.SealID) (evidence.SealRec
 		return evidence.SealRecord{}, err
 	}
 	return scanSeal(r.s.db(ctx).QueryRow(ctx, sqlSealByID, tenant.UUID(), sealID.UUID()))
+}
+
+// List returns the tenant's seals, latest period first.
+func (r *SealRepo) List(ctx context.Context, limit int) ([]evidence.SealRecord, error) {
+	tenant, err := tenantOf(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if limit <= 0 || limit > 500 {
+		limit = 500
+	}
+	rows, err := r.s.db(ctx).Query(ctx, sqlSealList, tenant.UUID(), limit)
+	if err != nil {
+		return nil, mapError(err, "list seals")
+	}
+	defer rows.Close()
+	var out []evidence.SealRecord
+	for rows.Next() {
+		rec, err := scanSeal(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, rec)
+	}
+	return out, mapError(rows.Err(), "list seals")
 }
 
 func scanSeal(row scanner) (evidence.SealRecord, error) {

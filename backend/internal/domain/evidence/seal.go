@@ -256,3 +256,57 @@ const (
 	// cannot produce, or produces bytes that do not hash to it.
 	SealEvidenceMissing SealVerdict = "EVIDENCE_MISSING"
 )
+
+// Inclusion is one decision's proof of membership in a sealed period: its
+// leaf, where the leaf sits in LeafOrder, and the RFC 6962 audit path from it
+// to the seal's root. Checked against the signed payload's root and leaf
+// count — never against a size the proof itself supplies.
+type Inclusion struct {
+	Leaf       SealLeaf
+	LeafDigest canonical.Digest
+	Index      int
+	TreeSize   int
+	Path       []canonical.Digest
+}
+
+// PeriodInclusion builds the inclusion proof for one decision among a
+// period's leaves.
+func PeriodInclusion(leaves []SealLeaf, decisionID id.DecisionID) (Inclusion, error) {
+	ordered := append([]SealLeaf(nil), leaves...)
+	OrderLeaves(ordered)
+	digests := make([]canonical.Digest, len(ordered))
+	index := -1
+	for i, l := range ordered {
+		d, err := l.Digest()
+		if err != nil {
+			return Inclusion{}, fmt.Errorf("evidence: leaf %d (%s): %w", i, l.DecisionID, err)
+		}
+		digests[i] = d
+		if l.DecisionID == decisionID {
+			index = i
+		}
+	}
+	if index < 0 {
+		return Inclusion{}, fmt.Errorf("evidence: decision %s is not among the period's leaves", decisionID)
+	}
+	path, err := canonical.InclusionProof(digests, index)
+	if err != nil {
+		return Inclusion{}, err
+	}
+	return Inclusion{Leaf: ordered[index], LeafDigest: digests[index], Index: index, TreeSize: len(ordered), Path: path}, nil
+}
+
+// Verify checks the proof against a seal's signed root and leaf count.
+func (in Inclusion) Verify(root canonical.Digest, leafCount int) error {
+	if in.TreeSize != leafCount {
+		return fmt.Errorf("evidence: the proof is for a tree of %d; the seal signed %d", in.TreeSize, leafCount)
+	}
+	d, err := in.Leaf.Digest()
+	if err != nil {
+		return err
+	}
+	if !d.Equal(in.LeafDigest) {
+		return fmt.Errorf("evidence: the leaf does not digest to the proof's leaf digest")
+	}
+	return canonical.VerifyInclusion(d, in.Index, leafCount, in.Path, root)
+}

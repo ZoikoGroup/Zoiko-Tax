@@ -135,6 +135,9 @@ func run() error {
 	if router.Webhooks, err = wireWebhooks(cfg, store, clk, ids, log); err != nil {
 		return err
 	}
+	if router.Seals, err = wireSeals(cfg, store, clk, ids, log); err != nil {
+		return err
+	}
 	if router.Determination != nil {
 		// Refunds read what commits posted, so they are served wherever the
 		// determination surface is.
@@ -487,6 +490,48 @@ func runBatchWorker(ctx context.Context, svc *app.BatchService, log *slog.Logger
 			}
 		}
 	}
+}
+
+// wireSeals builds the period-seal service (ADR-0011 §2.4). A cell with the
+// seal keyring verifies seals and proves inclusion; one that also has a
+// signing key seals. With neither, the seal surface answers 503.
+func wireSeals(cfg config.Config, store *postgres.Store, clk clock.Clock, ids idgen.Generator, log *slog.Logger) (*app.SealService, error) {
+	if cfg.SealKeyring == "" {
+		log.Warn("no seal keyring configured; the seal surface will refuse with 503")
+		return nil, nil
+	}
+	// #nosec G304 -- a path from this process's own configuration.
+	ringBytes, err := os.ReadFile(cfg.SealKeyring)
+	if err != nil {
+		return nil, fmt.Errorf("seal keyring: %w", err)
+	}
+	keyring, err := kms.ParseKeyring(ringBytes)
+	if err != nil {
+		return nil, err
+	}
+	objects, err := adapterevidence.NewFileStore(cfg.EvidenceDir)
+	if err != nil {
+		return nil, err
+	}
+	var signer kms.Signer
+	if cfg.SealSigningKey != "" {
+		notBefore, notAfter, ok := keyring.Window(cfg.SealKeyID)
+		if !ok {
+			return nil, fmt.Errorf("seal signing key %q is not in the seal keyring; its seals could not be verified", cfg.SealKeyID)
+		}
+		// #nosec G304 -- a path from this process's own configuration.
+		pemBytes, err := os.ReadFile(cfg.SealSigningKey)
+		if err != nil {
+			return nil, fmt.Errorf("seal signing key: %w", err)
+		}
+		local, err := kms.NewLocalSigner(cfg.Environment, pemBytes, cfg.SealKeyID, notBefore, notAfter)
+		if err != nil {
+			return nil, err
+		}
+		signer = local
+	}
+	log.Info("seal surface enabled", "seal.keys", keyring.KeyIDs(), "seal.signing", signer != nil)
+	return app.NewSealService(store.Decisions(), store.Seals(), objects, store, signer, keyring, clk, ids, cfg.Cell, 0), nil
 }
 
 // wireWebhooks builds the webhook administration service. A cell with no

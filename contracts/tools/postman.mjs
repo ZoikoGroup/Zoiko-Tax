@@ -97,7 +97,7 @@ const FOLDERS = [
   {
     name: "04 · Administration",
     description:
-      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.",
+      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.",
     operations: [
       "listUsers",
       "createUser",
@@ -115,6 +115,10 @@ const FOLDERS = [
       "getWebhookDelivery",
       "replayWebhookDelivery",
       "setWebhookStatus",
+      "listSeals",
+      "sealPeriod",
+      "getSeal",
+      "verifySeal",
     ],
   },
   {
@@ -125,7 +129,7 @@ const FOLDERS = [
       "createQuote", "commitTransaction", "getDecision", "replayDecision", "listDecisionJournals",
       "getSubledgerBalances", "listObligations", "getObligation", "transitionObligation",
       "adjustTransaction", "refundTransaction", "getRefund", "reportRefund", "proposeClassification",
-      "submitBatch", "getJob",
+      "submitBatch", "getJob", "getDecisionInclusion",
     ],
     prerequest: [
       "if (pm.variables.get('runDetermination') !== 'true') {",
@@ -174,6 +178,8 @@ const VALUE_VARIABLES = {
   "01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01": "{{obligationId}}",
   // The refund examples' id: the refund the folder just requested.
   "01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f": "{{refundId}}",
+  // The seal examples' id: the seal folder 04 just made.
+  "01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{sealId}}",
   // The job example's id: the batch the folder just queued.
   "01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{jobId}}",
   // The webhook examples' id: the subscription folder 04 just created.
@@ -287,6 +293,29 @@ const OPERATION_TESTS = {
     "});",
     "// The original is superseded now; a refund is made against the current version.",
     "pm.collectionVariables.set('decisionId', pm.response.json().id);",
+  ],
+  sealPeriod: [
+    "pm.test('ADR-0011 §2.4 — sealed, or refused for a reason the cell states', function () {",
+    "  pm.expect([201, 409, 503]).to.include(pm.response.code);",
+    "});",
+    "if (pm.response.code === 201) { pm.collectionVariables.set('sealId', pm.response.json().id); }",
+  ],
+  getSeal: [
+    "pm.test('the seal carries the bytes its signature covers', function () {",
+    "  pm.expect([200, 404, 503]).to.include(pm.response.code);",
+    "  if (pm.response.code === 200) { pm.expect(pm.response.json().signedPayload).to.be.a('string'); }",
+    "});",
+  ],
+  verifySeal: [
+    "pm.test('a seal this cell made verifies', function () {",
+    "  pm.expect([200, 404, 503]).to.include(pm.response.code);",
+    "  if (pm.response.code === 200) { pm.expect(pm.response.json().verdict).to.eql('VALID'); }",
+    "});",
+  ],
+  getDecisionInclusion: [
+    "pm.test('a sealed decision proves its inclusion; an unsealed one is not found', function () {",
+    "  pm.expect([200, 404, 503]).to.include(pm.response.code);",
+    "});",
   ],
   submitBatch: [
     "pm.test('the batch is queued as one job, every item pending', function () {",
@@ -772,6 +801,7 @@ function variables(overlay, contractDigest, local) {
     { key: "refundId", value: "", type: "string" },
     { key: "webhookId", value: "", type: "string" },
     { key: "jobId", value: "", type: "string" },
+    { key: "sealId", value: "", type: "string" },
     // Minted once per run by `07`, and reused by the requests that must share it.
     { key: "reusedKey", value: "", type: "string" },
 

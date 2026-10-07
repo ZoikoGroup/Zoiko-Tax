@@ -928,6 +928,90 @@ class Job(TypedDict):
     items: list[JobItem]
 
 
+SealId: TypeAlias = str
+"""
+A period seal. A UUIDv7 in lowercase canonical form.
+"""
+
+
+class SealRequest(TypedDict):
+    periodStart: Timestamp
+    periodEnd: Timestamp
+
+
+class Seal(TypedDict):
+    """
+    A signed statement that the decisions recorded in `[periodStart, periodEnd)` were exactly these.
+    """
+
+    id: SealId
+    periodStart: Timestamp
+    periodEnd: Timestamp
+    leafCount: int
+    merkleRoot: Digest
+    keyId: str
+    cell: str
+    sealedAt: Timestamp
+
+
+class SealList(TypedDict):
+    seals: list[Seal]
+
+
+class SealSignature(TypedDict):
+    keyId: str
+    algorithm: Literal['ECDSA_P384_SHA384']
+    value: str
+    """
+    The DER signature, base64.
+    """
+
+
+class SealDocument(TypedDict):
+    seal: Seal
+    signedPayload: str
+    """
+    The canonical payload exactly as signed, base64. It names the tenant, cell, period, leaf count, leaf order and root.
+    """
+    signature: SealSignature
+
+
+class SealVerification(TypedDict):
+    sealId: SealId
+    verdict: Literal['VALID', 'SIGNATURE_INVALID', 'RECORD_MISMATCH', 'ROOT_MISMATCH', 'EVIDENCE_MISSING']
+    keyId: str
+    leafCount: int
+    signedRoot: Digest
+    recomputedRoot: NotRequired[Digest]
+    detail: NotRequired[str]
+    """
+    What failed, for the operator. Absent when VALID.
+    """
+
+
+class SealLeaf(TypedDict):
+    """
+    One decision's leaf. Its digest is the canonical (canon/v1) digest of exactly these three members.
+    """
+
+    decisionId: DecisionId
+    recordedAt: Timestamp
+    resultDigest: Digest
+
+
+class InclusionProof(TypedDict):
+    sealId: SealId
+    merkleRoot: Digest
+    leafCount: int
+    leafIndex: int
+    leaf: SealLeaf
+    leafDigest: Digest
+    auditPath: list[Digest]
+    """
+    Sibling node hashes from the leaf's level to the root, in the digest form.
+    """
+
+
 class ReplayReport(TypedDict):
     decisionId: DecisionId
     verdict: ReplayVerdict

@@ -317,6 +317,12 @@ func (r *memSeals) ByID(_ context.Context, sealID id.SealID) (evidence.SealRecor
 	return evidence.SealRecord{}, errs.New(errs.CategoryNotFound, errs.ReasonNotFound, "no such seal")
 }
 
+func (r *memSeals) List(context.Context, int) ([]evidence.SealRecord, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]evidence.SealRecord(nil), r.rows...), nil
+}
+
 func (r *memSeals) rewrite(sealID id.SealID, f func(*evidence.SealRecord)) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

@@ -137,6 +137,17 @@ type Config struct {
 	// because a webhook URL is a request the cell makes on a customer's say-so.
 	WebhookKeyRef       string
 	WebhookAllowPrivate bool
+
+	// Period seals (ADR-0011 §2.4; EVID-001). SealKeyring is the
+	// evidence-seal hierarchy's public keys (ADR-0017 §2.6) — not the content
+	// keyring, even though both verify through kms. A cell with a keyring
+	// verifies seals and proves inclusion. SealSigningKey and SealKeyID name
+	// an in-process signing key, which kms refuses outside development; a
+	// cell elsewhere seals through a KMS signer, and until one is wired it
+	// verifies and does not seal.
+	SealKeyring    string
+	SealSigningKey string
+	SealKeyID      string
 }
 
 // LocalSecretPrefix is the one recognised variable family whose members are not
@@ -193,6 +204,9 @@ var known = map[string]struct {
 	"ZTAX_AI_POLICY_FILE":               {def: ""},
 	"ZTAX_WEBHOOK_KEY_REF":              {def: ""},
 	"ZTAX_WEBHOOK_ALLOW_PRIVATE":        {def: "false"},
+	"ZTAX_SEAL_KEYRING":                 {def: ""},
+	"ZTAX_SEAL_SIGNING_KEY":             {def: ""},
+	"ZTAX_SEAL_KEY_ID":                  {def: ""},
 	"ZTAX_BOOTSTRAP_TENANT":             {def: ""},
 	"ZTAX_BOOTSTRAP_TENANT_NAME":        {def: ""},
 	"ZTAX_BOOTSTRAP_ADMIN_EMAIL":        {def: ""},
@@ -309,6 +323,10 @@ func Load() (Config, error) {
 		WebhookKeyRef:       get("ZTAX_WEBHOOK_KEY_REF"),
 		WebhookAllowPrivate: boolean("ZTAX_WEBHOOK_ALLOW_PRIVATE"),
 
+		SealKeyring:    get("ZTAX_SEAL_KEYRING"),
+		SealSigningKey: get("ZTAX_SEAL_SIGNING_KEY"),
+		SealKeyID:      get("ZTAX_SEAL_KEY_ID"),
+
 		BootstrapTenant:           get("ZTAX_BOOTSTRAP_TENANT"),
 		BootstrapTenantName:       get("ZTAX_BOOTSTRAP_TENANT_NAME"),
 		BootstrapAdminEmail:       get("ZTAX_BOOTSTRAP_ADMIN_EMAIL"),
@@ -365,6 +383,16 @@ func Load() (Config, error) {
 	if c.WebhookAllowPrivate && c.Environment != "development" {
 		problems = append(problems, fmt.Sprintf(
 			"ZTAX_WEBHOOK_ALLOW_PRIVATE: refused in environment %q; webhook egress never reaches private addresses", c.Environment))
+	}
+
+	// A signing key without the keyring that verifies it would seal what this
+	// cell could not then verify, and without an identifier its signatures
+	// could not name their key after a rotation (ADR-0017 §2.7).
+	if c.SealSigningKey != "" && (c.SealKeyring == "" || c.SealKeyID == "") {
+		problems = append(problems, "ZTAX_SEAL_SIGNING_KEY needs ZTAX_SEAL_KEYRING and ZTAX_SEAL_KEY_ID")
+	}
+	if c.SealKeyring != "" && c.EvidenceDir == "" {
+		problems = append(problems, "ZTAX_SEAL_KEYRING needs ZTAX_EVIDENCE_DIR; a seal is verified against the evidence it covers")
 	}
 
 	// Telemetry in clear is a development affordance for the same reason.
@@ -431,6 +459,9 @@ func (c Config) LogAttrs() []any {
 		"ai_policy.file", c.AIPolicyFile,
 		"webhook.key_ref", c.WebhookKeyRef,
 		"webhook.allow_private", c.WebhookAllowPrivate,
+		"seal.keyring", c.SealKeyring,
+		"seal.signing", c.SealSigningKey != "",
+		"seal.key_id", c.SealKeyID,
 		"known_vars", strconv.Itoa(len(known)),
 	}
 }

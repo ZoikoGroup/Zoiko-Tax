@@ -841,6 +841,124 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/decisions/{decisionId}/inclusion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Prove a decision is in its period's seal
+         * @description `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`. The RFC 6962 audit path
+         *     from the decision's leaf to the root of the seal covering the instant
+         *     it was recorded (ADR-0011 §2.4). With the seal's signed payload
+         *     (`GET /v1/seals/{sealId}`) and the published seal keyring, a verifier
+         *     outside the cell can confirm the decision was sealed without seeing
+         *     any other decision — the leaf is the decision's id, recorded instant
+         *     and result digest, hashed as `SHA-256(0x00 ‖ leafDigest)`, and each
+         *     level as `SHA-256(0x01 ‖ left ‖ right)`, an odd node promoted.
+         *
+         *     Check the path against the **signed** root and leaf count, never
+         *     against sizes the proof itself states. `404 NOT_FOUND` until the
+         *     period is sealed.
+         */
+        get: operations["getDecisionInclusion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/seals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The tenant's period seals, latest first
+         * @description `ADMIN`, `AUDITOR` or `ANALYST`.
+         */
+        get: operations["listSeals"];
+        put?: never;
+        /**
+         * Seal a period's decisions
+         * @description `ADMIN` only. Signs a statement that the decisions recorded in
+         *     `[periodStart, periodEnd)` were exactly these, with exactly these
+         *     results: an RFC 6962 Merkle root over one leaf per decision, signed
+         *     with the evidence-seal key together with the tenant, cell and period,
+         *     so the signature cannot be lifted onto anything else (ADR-0011 §2.5).
+         *
+         *     A period may be sealed only after it has settled — five minutes past
+         *     its end — so a decision whose transaction was still committing is not
+         *     left out. Periods never overlap: a decision is vouched for by one seal
+         *     or none. A cell with no seal signer refuses with `503`; it can still
+         *     verify seals and prove inclusion.
+         *
+         *     A seal is integrity evidence, not a legal finality marker: it says the
+         *     record has not changed, not that the figures in it were right.
+         */
+        post: operations["sealPeriod"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/seals/{sealId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One seal, with the bytes its signature covers
+         * @description `ADMIN`, `AUDITOR` or `ANALYST`. `signedPayload` is the canonical
+         *     payload exactly as signed, base64; `signature` is ECDSA P-384 over
+         *     SHA-384 of those bytes, DER, base64, under the key `keyId` names in
+         *     the published seal keyring. Verify those two before trusting any
+         *     other field.
+         */
+        get: operations["getSeal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/seals/{sealId}/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Verify a seal end to end
+         * @description `ADMIN`, `AUDITOR` or `ANALYST`. Checks the signature over the
+         *     payload at the instant the seal was made, the payload against its
+         *     index row, the root against the decisions recorded for the period
+         *     today, and every decision's result object against its digest. A
+         *     failure is a verdict, not an error: `SIGNATURE_INVALID`,
+         *     `RECORD_MISMATCH`, `ROOT_MISMATCH` (something in the period moved) or
+         *     `EVIDENCE_MISSING`.
+         */
+        get: operations["verifySeal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/subledger/balances": {
         parameters: {
             query?: never;
@@ -2040,6 +2158,93 @@ export interface components {
             finishedAt?: components["schemas"]["Timestamp"];
             items: components["schemas"]["JobItem"][];
         };
+        /**
+         * SealId
+         * Format: uuid
+         * @description A period seal. A UUIDv7 in lowercase canonical form.
+         * @example 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        SealId: string;
+        /** SealRequest */
+        SealRequest: {
+            periodStart: components["schemas"]["Timestamp"];
+            periodEnd: components["schemas"]["Timestamp"];
+        };
+        /**
+         * Seal
+         * @description A signed statement that the decisions recorded in `[periodStart, periodEnd)` were exactly these.
+         */
+        Seal: {
+            id: components["schemas"]["SealId"];
+            periodStart: components["schemas"]["Timestamp"];
+            periodEnd: components["schemas"]["Timestamp"];
+            /** Format: int32 */
+            leafCount: number;
+            merkleRoot: components["schemas"]["Digest"];
+            keyId: string;
+            cell: string;
+            sealedAt: components["schemas"]["Timestamp"];
+        };
+        /** SealList */
+        SealList: {
+            seals: components["schemas"]["Seal"][];
+        };
+        /** SealSignature */
+        SealSignature: {
+            keyId: string;
+            /** @enum {string} */
+            algorithm: "ECDSA_P384_SHA384";
+            /**
+             * Format: byte
+             * @description The DER signature, base64.
+             */
+            value: string;
+        };
+        /** SealDocument */
+        SealDocument: {
+            seal: components["schemas"]["Seal"];
+            /**
+             * Format: byte
+             * @description The canonical payload exactly as signed, base64. It names the tenant, cell, period, leaf count, leaf order and root.
+             */
+            signedPayload: string;
+            signature: components["schemas"]["SealSignature"];
+        };
+        /** SealVerification */
+        SealVerification: {
+            sealId: components["schemas"]["SealId"];
+            /** @enum {string} */
+            verdict: "VALID" | "SIGNATURE_INVALID" | "RECORD_MISMATCH" | "ROOT_MISMATCH" | "EVIDENCE_MISSING";
+            keyId: string;
+            /** Format: int32 */
+            leafCount: number;
+            signedRoot: components["schemas"]["Digest"];
+            recomputedRoot?: components["schemas"]["Digest"];
+            /** @description What failed, for the operator. Absent when VALID. */
+            detail?: string;
+        };
+        /**
+         * SealLeaf
+         * @description One decision's leaf. Its digest is the canonical (canon/v1) digest of exactly these three members.
+         */
+        SealLeaf: {
+            decisionId: components["schemas"]["DecisionId"];
+            recordedAt: components["schemas"]["Timestamp"];
+            resultDigest: components["schemas"]["Digest"];
+        };
+        /** InclusionProof */
+        InclusionProof: {
+            sealId: components["schemas"]["SealId"];
+            merkleRoot: components["schemas"]["Digest"];
+            /** Format: int32 */
+            leafCount: number;
+            /** Format: int32 */
+            leafIndex: number;
+            leaf: components["schemas"]["SealLeaf"];
+            leafDigest: components["schemas"]["Digest"];
+            /** @description Sibling node hashes from the leaf's level to the root, in the digest form. */
+            auditPath: components["schemas"]["Digest"][];
+        };
         /** ReplayReport */
         ReplayReport: {
             decisionId: components["schemas"]["DecisionId"];
@@ -2192,6 +2397,11 @@ export interface components {
          * @example 01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f
          */
         JobId: components["schemas"]["JobId"];
+        /**
+         * @description The seal.
+         * @example 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        SealId: components["schemas"]["SealId"];
         /**
          * @description Maximum number of items to return. The server caps this independently,
          *     so a larger value is not an error and does not return more.
@@ -3319,6 +3529,163 @@ export interface operations {
                     "application/json": components["schemas"]["JournalList"];
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getDecisionInclusion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The decision identifier.
+                 * @example 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                 */
+                decisionId: components["parameters"]["DecisionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The proof. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InclusionProof"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listSeals: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The seals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SealList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    sealPeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SealRequest"];
+            };
+        };
+        responses: {
+            /** @description The seal. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Seal"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getSeal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The seal.
+                 * @example 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                sealId: components["parameters"]["SealId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The seal and its signed document. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SealDocument"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    verifySeal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The seal.
+                 * @example 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                sealId: components["parameters"]["SealId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The verdict. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SealVerification"];
+                };
+            };
+            400: components["responses"]["Validation"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];

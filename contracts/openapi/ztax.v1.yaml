@@ -110,6 +110,8 @@ tags:
     description: Delivery of the cell's events to endpoints a tenant names. Signed, retried, dead-lettered and replayable; egress-guarded.
   - name: batches
     description: Many commits queued as one asynchronous job, each item on the single-commit path.
+  - name: evidence
+    description: Period seals, their verification, and the inclusion proof that ties one decision to a signed root.
 
 security:
   - sessionCookie: []
@@ -1763,6 +1765,229 @@ paths:
         "500": { $ref: "#/components/responses/Internal" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
+  /v1/decisions/{decisionId}/inclusion:
+    get:
+      operationId: getDecisionInclusion
+      tags: [evidence]
+      summary: Prove a decision is in its period's seal
+      description: |
+        `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`. The RFC 6962 audit path
+        from the decision's leaf to the root of the seal covering the instant
+        it was recorded (ADR-0011 §2.4). With the seal's signed payload
+        (`GET /v1/seals/{sealId}`) and the published seal keyring, a verifier
+        outside the cell can confirm the decision was sealed without seeing
+        any other decision — the leaf is the decision's id, recorded instant
+        and result digest, hashed as `SHA-256(0x00 ‖ leafDigest)`, and each
+        level as `SHA-256(0x01 ‖ left ‖ right)`, an odd node promoted.
+
+        Check the path against the **signed** root and leaf count, never
+        against sizes the proof itself states. `404 NOT_FOUND` until the
+        period is sealed.
+      parameters:
+        - $ref: "#/components/parameters/DecisionId"
+      responses:
+        "200":
+          description: The proof.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InclusionProof"
+              examples:
+                default:
+                  summary: The second of three decisions in a sealed day
+                  value:
+                    sealId: 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    merkleRoot: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                    leafCount: 3
+                    leafIndex: 1
+                    leaf:
+                      decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                      recordedAt: "2026-09-25T09:00:00.000000Z"
+                      resultDigest: "zt1:2b1c0d9e8f7a6b5c4d3e5c3e2f1a0b9c8d7e6f4b2d1e0f9a8c7b6d5e4f3a2b1c"
+                    leafDigest: "zt1:9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b"
+                    auditPath:
+                      - "zt1:1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d"
+                      - "zt1:5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/seals:
+    get:
+      operationId: listSeals
+      tags: [evidence]
+      summary: The tenant's period seals, latest first
+      description: "`ADMIN`, `AUDITOR` or `ANALYST`."
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The seals.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SealList"
+              examples:
+                default:
+                  summary: One sealed day
+                  value:
+                    seals:
+                      - id: 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        periodStart: "2026-09-25T00:00:00.000000Z"
+                        periodEnd: "2026-09-26T00:00:00.000000Z"
+                        leafCount: 3
+                        merkleRoot: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                        keyId: evidence-seal-2026
+                        cell: eu-west-1
+                        sealedAt: "2026-09-26T01:00:00.000000Z"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: sealPeriod
+      tags: [evidence]
+      summary: Seal a period's decisions
+      description: |
+        `ADMIN` only. Signs a statement that the decisions recorded in
+        `[periodStart, periodEnd)` were exactly these, with exactly these
+        results: an RFC 6962 Merkle root over one leaf per decision, signed
+        with the evidence-seal key together with the tenant, cell and period,
+        so the signature cannot be lifted onto anything else (ADR-0011 §2.5).
+
+        A period may be sealed only after it has settled — five minutes past
+        its end — so a decision whose transaction was still committing is not
+        left out. Periods never overlap: a decision is vouched for by one seal
+        or none. A cell with no seal signer refuses with `503`; it can still
+        verify seals and prove inclusion.
+
+        A seal is integrity evidence, not a legal finality marker: it says the
+        record has not changed, not that the figures in it were right.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SealRequest"
+            examples:
+              default:
+                summary: Seal one day
+                value:
+                  periodStart: "2026-09-25T00:00:00.000000Z"
+                  periodEnd: "2026-09-26T00:00:00.000000Z"
+      responses:
+        "201":
+          description: The seal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Seal"
+              examples:
+                default:
+                  summary: A sealed day
+                  value:
+                    id: 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    periodStart: "2026-09-25T00:00:00.000000Z"
+                    periodEnd: "2026-09-26T00:00:00.000000Z"
+                    leafCount: 3
+                    merkleRoot: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                    keyId: evidence-seal-2026
+                    cell: eu-west-1
+                    sealedAt: "2026-09-26T01:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/seals/{sealId}:
+    get:
+      operationId: getSeal
+      tags: [evidence]
+      summary: One seal, with the bytes its signature covers
+      description: |
+        `ADMIN`, `AUDITOR` or `ANALYST`. `signedPayload` is the canonical
+        payload exactly as signed, base64; `signature` is ECDSA P-384 over
+        SHA-384 of those bytes, DER, base64, under the key `keyId` names in
+        the published seal keyring. Verify those two before trusting any
+        other field.
+      parameters:
+        - $ref: "#/components/parameters/SealId"
+      responses:
+        "200":
+          description: The seal and its signed document.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SealDocument"
+              examples:
+                default:
+                  summary: A sealed day
+                  value:
+                    seal:
+                      id: 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                      periodStart: "2026-09-25T00:00:00.000000Z"
+                      periodEnd: "2026-09-26T00:00:00.000000Z"
+                      leafCount: 3
+                      merkleRoot: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                      keyId: evidence-seal-2026
+                      cell: eu-west-1
+                      sealedAt: "2026-09-26T01:00:00.000000Z"
+                    signedPayload: "eyJhcnRpZmFjdCI6ImV2aWRlbmNlLXBlcmlvZC1zZWFsIn0="
+                    signature:
+                      keyId: evidence-seal-2026
+                      algorithm: ECDSA_P384_SHA384
+                      value: "MGUCMQDf3q1Z0r1sY3k5K0n9m0bq6X5w2Jx0d7cE3yV1u4B9w8hK2nL6tQp0rS1vX3aZ4QIwM1bN8cV5xZ2qW9eR4tY7uI0oP3aS6dF9gH2jK5lZ8xC1vB4nM7qW0eR3tY6uI9oP2aS"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/seals/{sealId}/verification:
+    get:
+      operationId: verifySeal
+      tags: [evidence]
+      summary: Verify a seal end to end
+      description: |
+        `ADMIN`, `AUDITOR` or `ANALYST`. Checks the signature over the
+        payload at the instant the seal was made, the payload against its
+        index row, the root against the decisions recorded for the period
+        today, and every decision's result object against its digest. A
+        failure is a verdict, not an error: `SIGNATURE_INVALID`,
+        `RECORD_MISMATCH`, `ROOT_MISMATCH` (something in the period moved) or
+        `EVIDENCE_MISSING`.
+      parameters:
+        - $ref: "#/components/parameters/SealId"
+      responses:
+        "200":
+          description: The verdict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SealVerification"
+              examples:
+                default:
+                  summary: Valid
+                  value:
+                    sealId: 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    verdict: VALID
+                    keyId: evidence-seal-2026
+                    leafCount: 3
+                    signedRoot: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                    recomputedRoot: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
   /v1/subledger/balances:
     get:
       operationId: getSubledgerBalances
@@ -2134,6 +2359,14 @@ components:
       description: The job.
       schema: { $ref: "#/components/schemas/JobId" }
       example: 01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    SealId:
+      name: sealId
+      in: path
+      required: true
+      description: The seal.
+      schema: { $ref: "#/components/schemas/SealId" }
+      example: 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
 
     Limit:
       name: limit
@@ -3854,6 +4087,151 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/JobItem" }
+
+    SealId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SealId
+      description: A period seal. A UUIDv7 in lowercase canonical form.
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    SealRequest:
+      type: object
+      title: SealRequest
+      additionalProperties: false
+      required: [periodStart, periodEnd]
+      properties:
+        periodStart: { $ref: "#/components/schemas/Timestamp" }
+        periodEnd: { $ref: "#/components/schemas/Timestamp" }
+
+    Seal:
+      type: object
+      title: Seal
+      description: A signed statement that the decisions recorded in `[periodStart, periodEnd)` were exactly these.
+      additionalProperties: false
+      required: [id, periodStart, periodEnd, leafCount, merkleRoot, keyId, cell, sealedAt]
+      properties:
+        id: { $ref: "#/components/schemas/SealId" }
+        periodStart: { $ref: "#/components/schemas/Timestamp" }
+        periodEnd: { $ref: "#/components/schemas/Timestamp" }
+        leafCount:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        merkleRoot: { $ref: "#/components/schemas/Digest" }
+        keyId:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        cell:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        sealedAt: { $ref: "#/components/schemas/Timestamp" }
+
+    SealList:
+      type: object
+      title: SealList
+      additionalProperties: false
+      required: [seals]
+      properties:
+        seals:
+          type: array
+          items: { $ref: "#/components/schemas/Seal" }
+
+    SealSignature:
+      type: object
+      title: SealSignature
+      additionalProperties: false
+      required: [keyId, algorithm, value]
+      properties:
+        keyId:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        algorithm:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [ECDSA_P384_SHA384]
+        value:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          format: byte
+          description: The DER signature, base64.
+
+    SealDocument:
+      type: object
+      title: SealDocument
+      additionalProperties: false
+      required: [seal, signedPayload, signature]
+      properties:
+        seal: { $ref: "#/components/schemas/Seal" }
+        signedPayload:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          format: byte
+          description: The canonical payload exactly as signed, base64. It names the tenant, cell, period, leaf count, leaf order and root.
+        signature: { $ref: "#/components/schemas/SealSignature" }
+
+    SealVerification:
+      type: object
+      title: SealVerification
+      additionalProperties: false
+      required: [sealId, verdict, keyId, leafCount, signedRoot]
+      properties:
+        sealId: { $ref: "#/components/schemas/SealId" }
+        verdict:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [VALID, SIGNATURE_INVALID, RECORD_MISMATCH, ROOT_MISMATCH, EVIDENCE_MISSING]
+        keyId:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        leafCount:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+        signedRoot: { $ref: "#/components/schemas/Digest" }
+        recomputedRoot: { $ref: "#/components/schemas/Digest" }
+        detail:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: What failed, for the operator. Absent when VALID.
+
+    SealLeaf:
+      type: object
+      title: SealLeaf
+      description: One decision's leaf. Its digest is the canonical (canon/v1) digest of exactly these three members.
+      additionalProperties: false
+      required: [decisionId, recordedAt, resultDigest]
+      properties:
+        decisionId: { $ref: "#/components/schemas/DecisionId" }
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        resultDigest: { $ref: "#/components/schemas/Digest" }
+
+    InclusionProof:
+      type: object
+      title: InclusionProof
+      additionalProperties: false
+      required: [sealId, merkleRoot, leafCount, leafIndex, leaf, leafDigest, auditPath]
+      properties:
+        sealId: { $ref: "#/components/schemas/SealId" }
+        merkleRoot: { $ref: "#/components/schemas/Digest" }
+        leafCount:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+        leafIndex:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        leaf: { $ref: "#/components/schemas/SealLeaf" }
+        leafDigest: { $ref: "#/components/schemas/Digest" }
+        auditPath:
+          type: array
+          description: Sibling node hashes from the leaf's level to the root, in the digest form.
+          items: { $ref: "#/components/schemas/Digest" }
 
     ReplayReport:
       type: object

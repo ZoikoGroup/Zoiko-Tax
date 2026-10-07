@@ -90,6 +90,11 @@ type Router struct {
 	// Batches serves POST /v1/batches and GET /v1/jobs/{id}. Nil wherever
 	// Determination is, since every item takes the commit path.
 	Batches *app.BatchService
+
+	// Seals serves the period seals, their verification and decisions'
+	// inclusion proofs. Nil in a cell with no seal keyring, which answers
+	// 503.
+	Seals *app.SealService
 }
 
 // Trains are the seven release-train versions, as the contract names them.
@@ -190,6 +195,15 @@ func (rt *Router) routes() []struct {
 		{Route{"GET", "/v1/decisions/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetDecision},
 		{Route{"POST", "/v1/replay/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleReplay},
 		{Route{"GET", "/v1/decisions/{decisionId}/journals", false, []security.Role{operator, analyst, auditor}}, rt.handleDecisionJournals},
+		{Route{"GET", "/v1/decisions/{decisionId}/inclusion", false, []security.Role{operator, analyst, auditor, admin}}, rt.handleDecisionInclusion},
+
+		// Period seals. Making one is ADMIN's — it is a statement about the
+		// record, not a fiscal act; reading and verifying one is for anyone
+		// who audits.
+		{Route{"GET", "/v1/seals", false, []security.Role{admin, auditor, analyst}}, rt.handleListSeals},
+		{Route{"POST", "/v1/seals", false, []security.Role{admin}}, rt.handleSealPeriod},
+		{Route{"GET", "/v1/seals/{sealId}", false, []security.Role{admin, auditor, analyst}}, rt.handleGetSeal},
+		{Route{"GET", "/v1/seals/{sealId}/verification", false, []security.Role{admin, auditor, analyst}}, rt.handleVerifySeal},
 		{Route{"GET", "/v1/subledger/balances", false, []security.Role{operator, analyst, auditor}}, rt.handleSubledgerBalances},
 		{Route{"GET", "/v1/obligations", false, []security.Role{operator, analyst, auditor}}, rt.handleListObligations},
 		{Route{"GET", "/v1/obligations/{obligationId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetObligation},

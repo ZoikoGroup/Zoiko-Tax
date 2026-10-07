@@ -558,6 +558,48 @@ func (e Role) Valid() bool {
 	}
 }
 
+// Defines values for SealSignatureAlgorithm.
+const (
+	ECDSAP384SHA384 SealSignatureAlgorithm = "ECDSA_P384_SHA384"
+)
+
+// Valid indicates whether the value is a known member of the SealSignatureAlgorithm enum.
+func (e SealSignatureAlgorithm) Valid() bool {
+	switch e {
+	case ECDSAP384SHA384:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SealVerificationVerdict.
+const (
+	EVIDENCEMISSING  SealVerificationVerdict = "EVIDENCE_MISSING"
+	RECORDMISMATCH   SealVerificationVerdict = "RECORD_MISMATCH"
+	ROOTMISMATCH     SealVerificationVerdict = "ROOT_MISMATCH"
+	SIGNATUREINVALID SealVerificationVerdict = "SIGNATURE_INVALID"
+	VALID            SealVerificationVerdict = "VALID"
+)
+
+// Valid indicates whether the value is a known member of the SealVerificationVerdict enum.
+func (e SealVerificationVerdict) Valid() bool {
+	switch e {
+	case EVIDENCEMISSING:
+		return true
+	case RECORDMISMATCH:
+		return true
+	case ROOTMISMATCH:
+		return true
+	case SIGNATUREINVALID:
+		return true
+	case VALID:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TenantStatus.
 const (
 	TenantStatusACTIVE    TenantStatus = "ACTIVE"
@@ -1031,6 +1073,32 @@ type Emitted map[string]ResultValue
 
 // EventType An event type this cell emits, as the AsyncAPI contract names it.
 type EventType string
+
+// InclusionProof defines model for InclusionProof.
+type InclusionProof struct {
+	// AuditPath Sibling node hashes from the leaf's level to the root, in the digest form.
+	AuditPath []Digest `json:"auditPath"`
+
+	// Leaf One decision's leaf. Its digest is the canonical (canon/v1) digest of exactly these three members.
+	Leaf      SealLeaf `json:"leaf"`
+	LeafCount int32    `json:"leafCount"`
+
+	// LeafDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	LeafDigest Digest `json:"leafDigest"`
+	LeafIndex  int32  `json:"leafIndex"`
+
+	// MerkleRoot A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	MerkleRoot Digest `json:"merkleRoot"`
+
+	// SealID A period seal. A UUIDv7 in lowercase canonical form.
+	SealID SealID `json:"sealId"`
+}
 
 // Job defines model for Job.
 type Job struct {
@@ -1656,6 +1724,125 @@ type RoleRequest struct {
 	Role Role `json:"role"`
 }
 
+// Seal A signed statement that the decisions recorded in `[periodStart, periodEnd)` were exactly these.
+type Seal struct {
+	Cell string `json:"cell"`
+
+	// ID A period seal. A UUIDv7 in lowercase canonical form.
+	ID        SealID `json:"id"`
+	KeyID     string `json:"keyId"`
+	LeafCount int32  `json:"leafCount"`
+
+	// MerkleRoot A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	MerkleRoot Digest `json:"merkleRoot"`
+
+	// PeriodEnd RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	PeriodEnd Timestamp `json:"periodEnd"`
+
+	// PeriodStart RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	PeriodStart Timestamp `json:"periodStart"`
+
+	// SealedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	SealedAt Timestamp `json:"sealedAt"`
+}
+
+// SealDocument defines model for SealDocument.
+type SealDocument struct {
+	// Seal A signed statement that the decisions recorded in `[periodStart, periodEnd)` were exactly these.
+	Seal      Seal          `json:"seal"`
+	Signature SealSignature `json:"signature"`
+
+	// SignedPayload The canonical payload exactly as signed, base64. It names the tenant, cell, period, leaf count, leaf order and root.
+	SignedPayload []byte `json:"signedPayload"`
+}
+
+// SealID A period seal. A UUIDv7 in lowercase canonical form.
+type SealID = string
+
+// SealLeaf One decision's leaf. Its digest is the canonical (canon/v1) digest of exactly these three members.
+type SealLeaf struct {
+	// DecisionID A decision identifier: a UUIDv7 in lowercase canonical form
+	// (ADR-0012 §2.1). Sortable by creation, never recycled.
+	DecisionID DecisionID `json:"decisionId"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// ResultDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	ResultDigest Digest `json:"resultDigest"`
+}
+
+// SealList defines model for SealList.
+type SealList struct {
+	Seals []Seal `json:"seals"`
+}
+
+// SealRequest defines model for SealRequest.
+type SealRequest struct {
+	// PeriodEnd RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	PeriodEnd Timestamp `json:"periodEnd"`
+
+	// PeriodStart RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	PeriodStart Timestamp `json:"periodStart"`
+}
+
+// SealSignature defines model for SealSignature.
+type SealSignature struct {
+	Algorithm SealSignatureAlgorithm `json:"algorithm"`
+	KeyID     string                 `json:"keyId"`
+
+	// Value The DER signature, base64.
+	Value []byte `json:"value"`
+}
+
+// SealSignatureAlgorithm defines model for SealSignature.Algorithm.
+type SealSignatureAlgorithm string
+
+// SealVerification defines model for SealVerification.
+type SealVerification struct {
+	// Detail What failed, for the operator. Absent when VALID.
+	Detail    *string `json:"detail,omitempty"`
+	KeyID     string  `json:"keyId"`
+	LeafCount int32   `json:"leafCount"`
+
+	// RecomputedRoot A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	RecomputedRoot *Digest `json:"recomputedRoot,omitempty"`
+
+	// SealID A period seal. A UUIDv7 in lowercase canonical form.
+	SealID SealID `json:"sealId"`
+
+	// SignedRoot A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	SignedRoot Digest                  `json:"signedRoot"`
+	Verdict    SealVerificationVerdict `json:"verdict"`
+}
+
+// SealVerificationVerdict defines model for SealVerification.Verdict.
+type SealVerificationVerdict string
+
 // Session The current session. It carries no token: the session secret is in an
 // `HttpOnly` cookie and is never in a response body.
 type Session struct {
@@ -2064,6 +2251,13 @@ type ListObligationsParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// ListSealsParams defines parameters for ListSeals.
+type ListSealsParams struct {
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // AdjustTransactionParams defines parameters for AdjustTransaction.
 type AdjustTransactionParams struct {
 	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
@@ -2137,6 +2331,9 @@ type CreateQuoteJSONRequestBody = QuoteRequest
 
 // ReportRefundJSONRequestBody defines body for ReportRefund for application/json ContentType.
 type ReportRefundJSONRequestBody = RefundReportRequest
+
+// SealPeriodJSONRequestBody defines body for SealPeriod for application/json ContentType.
+type SealPeriodJSONRequestBody = SealRequest
 
 // AdjustTransactionJSONRequestBody defines body for AdjustTransaction for application/json ContentType.
 type AdjustTransactionJSONRequestBody = CommitRequest

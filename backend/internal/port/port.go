@@ -200,6 +200,8 @@ type SealRepository interface {
 	Overlapping(ctx context.Context, from, to time.Time) ([]evidence.SealRecord, error)
 	Append(ctx context.Context, r evidence.SealRecord) error
 	ByID(ctx context.Context, sealID id.SealID) (evidence.SealRecord, error)
+	// List returns the tenant's seals, latest period first.
+	List(ctx context.Context, limit int) ([]evidence.SealRecord, error)
 }
 
 // ---------------------------------------------------------------------------

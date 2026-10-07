@@ -105,6 +105,12 @@
     },
     {
       "method": "GET",
+      "path": "/v1/decisions/{decisionId}/inclusion",
+      "operationId": "getDecisionInclusion",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/decisions/{decisionId}/journals",
       "operationId": "listDecisionJournals",
       "public": false
@@ -155,6 +161,30 @@
       "method": "POST",
       "path": "/v1/replay/{decisionId}",
       "operationId": "replayDecision",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/seals",
+      "operationId": "listSeals",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/seals",
+      "operationId": "sealPeriod",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/seals/{sealId}",
+      "operationId": "getSeal",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/seals/{sealId}/verification",
+      "operationId": "verifySeal",
       "public": false
     },
     {

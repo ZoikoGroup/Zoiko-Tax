@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:c355d94f07392ed711680a315a252708ae9dac4d5f3f233f93a5d74622c0a963`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:e7d53c9b1ed4d06d600fba22840fa56881551e84a425a18e4e6fbf21332935d1`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -438,7 +438,7 @@
     },
     {
       "name": "04 · Administration",
-      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.",
+      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.",
       "item": [
         {
           "name": "GET /v1/admin/users — List the tenant's users",
@@ -1563,6 +1563,300 @@
                   "pm.test('the webhook is paused', function () {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.json().status).to.eql('PAUSED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/seals — The tenant's period seals, latest first",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/seals?limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "seals"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The tenant's period seals, latest first\n\n`ADMIN`, `AUDITOR` or `ANALYST`."
+          },
+          "response": [
+            {
+              "name": "200 · One sealed day",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/seals",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "seals"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"seals\": [\n    {\n      \"id\": \"01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"periodStart\": \"2026-09-25T00:00:00.000000Z\",\n      \"periodEnd\": \"2026-09-26T00:00:00.000000Z\",\n      \"leafCount\": 3,\n      \"merkleRoot\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n      \"keyId\": \"evidence-seal-2026\",\n      \"cell\": \"eu-west-1\",\n      \"sealedAt\": \"2026-09-26T01:00:00.000000Z\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listSeals returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/seals — Seal a period's decisions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"periodStart\": \"2026-09-25T00:00:00.000000Z\",\n  \"periodEnd\": \"2026-09-26T00:00:00.000000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/seals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "seals"
+              ]
+            },
+            "description": "Seal a period's decisions\n\n`ADMIN` only. Signs a statement that the decisions recorded in\n`[periodStart, periodEnd)` were exactly these, with exactly these\nresults: an RFC 6962 Merkle root over one leaf per decision, signed\nwith the evidence-seal key together with the tenant, cell and period,\nso the signature cannot be lifted onto anything else (ADR-0011 §2.5).\n\nA period may be sealed only after it has settled — five minutes past\nits end — so a decision whose transaction was still committing is not\nleft out. Periods never overlap: a decision is vouched for by one seal\nor none. A cell with no seal signer refuses with `503`; it can still\nverify seals and prove inclusion.\n\nA seal is integrity evidence, not a legal finality marker: it says the\nrecord has not changed, not that the figures in it were right."
+          },
+          "response": [
+            {
+              "name": "201 · A sealed day",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/seals",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "seals"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"periodStart\": \"2026-09-25T00:00:00.000000Z\",\n  \"periodEnd\": \"2026-09-26T00:00:00.000000Z\",\n  \"leafCount\": 3,\n  \"merkleRoot\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n  \"keyId\": \"evidence-seal-2026\",\n  \"cell\": \"eu-west-1\",\n  \"sealedAt\": \"2026-09-26T01:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sealPeriod returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('ADR-0011 §2.4 — sealed, or refused for a reason the cell states', function () {",
+                  "  pm.expect([201, 409, 503]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('sealId', pm.response.json().id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/seals/{sealId} — One seal, with the bytes its signature covers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/seals/{{sealId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "seals",
+                "{{sealId}}"
+              ]
+            },
+            "description": "One seal, with the bytes its signature covers\n\n`ADMIN`, `AUDITOR` or `ANALYST`. `signedPayload` is the canonical\npayload exactly as signed, base64; `signature` is ECDSA P-384 over\nSHA-384 of those bytes, DER, base64, under the key `keyId` names in\nthe published seal keyring. Verify those two before trusting any\nother field."
+          },
+          "response": [
+            {
+              "name": "200 · A sealed day",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/seals/{{sealId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "seals",
+                    "{{sealId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"seal\": {\n    \"id\": \"01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n    \"periodStart\": \"2026-09-25T00:00:00.000000Z\",\n    \"periodEnd\": \"2026-09-26T00:00:00.000000Z\",\n    \"leafCount\": 3,\n    \"merkleRoot\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n    \"keyId\": \"evidence-seal-2026\",\n    \"cell\": \"eu-west-1\",\n    \"sealedAt\": \"2026-09-26T01:00:00.000000Z\"\n  },\n  \"signedPayload\": \"eyJhcnRpZmFjdCI6ImV2aWRlbmNlLXBlcmlvZC1zZWFsIn0=\",\n  \"signature\": {\n    \"keyId\": \"evidence-seal-2026\",\n    \"algorithm\": \"ECDSA_P384_SHA384\",\n    \"value\": \"MGUCMQDf3q1Z0r1sY3k5K0n9m0bq6X5w2Jx0d7cE3yV1u4B9w8hK2nL6tQp0rS1vX3aZ4QIwM1bN8cV5xZ2qW9eR4tY7uI0oP3aS6dF9gH2jK5lZ8xC1vB4nM7qW0eR3tY6uI9oP2aS\"\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getSeal returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('the seal carries the bytes its signature covers', function () {",
+                  "  pm.expect([200, 404, 503]).to.include(pm.response.code);",
+                  "  if (pm.response.code === 200) { pm.expect(pm.response.json().signedPayload).to.be.a('string'); }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/seals/{sealId}/verification — Verify a seal end to end",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/seals/{{sealId}}/verification",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "seals",
+                "{{sealId}}",
+                "verification"
+              ]
+            },
+            "description": "Verify a seal end to end\n\n`ADMIN`, `AUDITOR` or `ANALYST`. Checks the signature over the\npayload at the instant the seal was made, the payload against its\nindex row, the root against the decisions recorded for the period\ntoday, and every decision's result object against its digest. A\nfailure is a verdict, not an error: `SIGNATURE_INVALID`,\n`RECORD_MISMATCH`, `ROOT_MISMATCH` (something in the period moved) or\n`EVIDENCE_MISSING`."
+          },
+          "response": [
+            {
+              "name": "200 · Valid",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/seals/{{sealId}}/verification",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "seals",
+                    "{{sealId}}",
+                    "verification"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"sealId\": \"01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"verdict\": \"VALID\",\n  \"keyId\": \"evidence-seal-2026\",\n  \"leafCount\": 3,\n  \"signedRoot\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n  \"recomputedRoot\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('verifySeal returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('a seal this cell made verifies', function () {",
+                  "  pm.expect([200, 404, 503]).to.include(pm.response.code);",
+                  "  if (pm.response.code === 200) { pm.expect(pm.response.json().verdict).to.eql('VALID'); }",
                   "});"
                 ]
               }
@@ -3055,6 +3349,77 @@
               }
             }
           ]
+        },
+        {
+          "name": "GET /v1/decisions/{decisionId}/inclusion — Prove a decision is in its period's seal",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/decisions/{{decisionId}}/inclusion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decisions",
+                "{{decisionId}}",
+                "inclusion"
+              ]
+            },
+            "description": "Prove a decision is in its period's seal\n\n`OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`. The RFC 6962 audit path\nfrom the decision's leaf to the root of the seal covering the instant\nit was recorded (ADR-0011 §2.4). With the seal's signed payload\n(`GET /v1/seals/{sealId}`) and the published seal keyring, a verifier\noutside the cell can confirm the decision was sealed without seeing\nany other decision — the leaf is the decision's id, recorded instant\nand result digest, hashed as `SHA-256(0x00 ‖ leafDigest)`, and each\nlevel as `SHA-256(0x01 ‖ left ‖ right)`, an odd node promoted.\n\nCheck the path against the **signed** root and leaf count, never\nagainst sizes the proof itself states. `404 NOT_FOUND` until the\nperiod is sealed."
+          },
+          "response": [
+            {
+              "name": "200 · The second of three decisions in a sealed day",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/decisions/{{decisionId}}/inclusion",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "decisions",
+                    "{{decisionId}}",
+                    "inclusion"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"sealId\": \"01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"merkleRoot\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n  \"leafCount\": 3,\n  \"leafIndex\": 1,\n  \"leaf\": {\n    \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n    \"recordedAt\": \"2026-09-25T09:00:00.000000Z\",\n    \"resultDigest\": \"zt1:2b1c0d9e8f7a6b5c4d3e5c3e2f1a0b9c8d7e6f4b2d1e0f9a8c7b6d5e4f3a2b1c\"\n  },\n  \"leafDigest\": \"zt1:9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b\",\n  \"auditPath\": [\n    \"zt1:1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d\",\n    \"zt1:5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f\"\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getDecisionInclusion returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('a sealed decision proves its inclusion; an unsealed one is not found', function () {",
+                  "  pm.expect([200, 404, 503]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ],
       "event": [
@@ -4139,6 +4504,11 @@
       "type": "string"
     },
     {
+      "key": "sealId",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "reusedKey",
       "value": "",
       "type": "string"
@@ -4150,7 +4520,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:c355d94f07392ed711680a315a252708ae9dac4d5f3f233f93a5d74622c0a963",
+      "value": "sha256:e7d53c9b1ed4d06d600fba22840fa56881551e84a425a18e4e6fbf21332935d1",
       "type": "string"
     }
   ]

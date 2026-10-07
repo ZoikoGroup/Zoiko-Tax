@@ -2163,6 +2163,222 @@ namespace ZoikoTax.Sdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SealRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("periodStart")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string PeriodStart { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("periodEnd")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string PeriodEnd { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// A signed statement that the decisions recorded in `[periodStart, periodEnd)` were exactly these.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Seal
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("periodStart")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string PeriodStart { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("periodEnd")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string PeriodEnd { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("leafCount")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int LeafCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("merkleRoot")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string MerkleRoot { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("keyId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string KeyId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("cell")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Cell { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sealedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string SealedAt { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SealList
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("seals")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<Seal> Seals { get; set; } = new System.Collections.ObjectModel.Collection<Seal>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SealSignature
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("keyId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string KeyId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("algorithm")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<SealSignatureAlgorithm>))]
+        public SealSignatureAlgorithm Algorithm { get; set; } = default!;
+
+        /// <summary>
+        /// The DER signature, base64.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public byte[] Value { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SealDocument
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("seal")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public Seal Seal { get; set; } = new Seal();
+
+        /// <summary>
+        /// The canonical payload exactly as signed, base64. It names the tenant, cell, period, leaf count, leaf order and root.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("signedPayload")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public byte[] SignedPayload { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("signature")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public SealSignature Signature { get; set; } = new SealSignature();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SealVerification
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("sealId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid SealId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("verdict")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<SealVerificationVerdict>))]
+        public SealVerificationVerdict Verdict { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("keyId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string KeyId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("leafCount")]
+        public int LeafCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("signedRoot")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string SignedRoot { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recomputedRoot")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string? RecomputedRoot { get; set; } = default!;
+
+        /// <summary>
+        /// What failed, for the operator. Absent when VALID.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("detail")]
+        public string? Detail { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// One decision's leaf. Its digest is the canonical (canon/v1) digest of exactly these three members.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SealLeaf
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("decisionId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
+        public System.Guid DecisionId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RecordedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("resultDigest")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string ResultDigest { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class InclusionProof
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("sealId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid SealId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("merkleRoot")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string MerkleRoot { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("leafCount")]
+        public int LeafCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("leafIndex")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int LeafIndex { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("leaf")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public SealLeaf Leaf { get; set; } = new SealLeaf();
+
+        [System.Text.Json.Serialization.JsonPropertyName("leafDigest")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string LeafDigest { get; set; } = default!;
+
+        /// <summary>
+        /// Sibling node hashes from the leaf's level to the root, in the digest form.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("auditPath")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<string> AuditPath { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ReplayReport
     {
 
@@ -2379,6 +2595,36 @@ namespace ZoikoTax.Sdk
 
         [System.Runtime.Serialization.EnumMember(Value = @"COMPLETED")]
         COMPLETED = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum SealSignatureAlgorithm
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ECDSA_P384_SHA384")]
+        ECDSA_P384_SHA384 = 0,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum SealVerificationVerdict
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"VALID")]
+        VALID = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SIGNATURE_INVALID")]
+        SIGNATURE_INVALID = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RECORD_MISMATCH")]
+        RECORD_MISMATCH = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ROOT_MISMATCH")]
+        ROOT_MISMATCH = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"EVIDENCE_MISSING")]
+        EVIDENCE_MISSING = 4,
 
     }
 
