@@ -777,6 +777,121 @@ class RefundReportRequest(TypedDict):
     externalReference: NotRequired[PaymentReference]
 
 
+WebhookId: TypeAlias = str
+"""
+A webhook subscription. A UUIDv7 in lowercase canonical form.
+"""
+
+
+DeliveryId: TypeAlias = str
+"""
+One delivery of one event to one webhook.
+"""
+
+
+EventType: TypeAlias = Literal['com.zoikotax.decision.committed', 'com.zoikotax.decision.corrected', 'com.zoikotax.obligation.status-changed', 'com.zoikotax.accumulator.threshold-crossed', 'com.zoikotax.refund.requested', 'com.zoikotax.refund.status-changed']
+"""
+An event type this cell emits, as the AsyncAPI contract names it.
+"""
+
+
+WebhookStatus: TypeAlias = Literal['ACTIVE', 'PAUSED', 'DISABLED']
+
+
+DeliveryStatus: TypeAlias = Literal['PENDING', 'DELIVERED', 'DEAD']
+"""
+`PENDING` awaits its next attempt; `DEAD` is the dead-letter state, kept and replayable.
+"""
+
+
+WebhookUrl: TypeAlias = str
+"""
+An HTTPS endpoint at a public address, with no credentials in it.
+"""
+
+
+class WebhookCreateRequest(TypedDict):
+    url: WebhookUrl
+    eventTypes: list[EventType]
+    description: NotRequired[str]
+
+
+class Webhook(TypedDict):
+    id: WebhookId
+    url: WebhookUrl
+    eventTypes: list[EventType]
+    description: NotRequired[str]
+    status: WebhookStatus
+    createdAt: Timestamp
+    statusChangedAt: Timestamp
+
+
+class WebhookList(TypedDict):
+    webhooks: list[Webhook]
+
+
+class WebhookSecret(TypedDict):
+    """
+    A signing secret, in the form Standard Webhooks libraries take. Returned once, by the response that issued it.
+    """
+
+    version: int
+    secret: str
+
+
+class WebhookCreated(TypedDict):
+    webhook: Webhook
+    secret: WebhookSecret
+
+
+class WebhookStatusRequest(TypedDict):
+    status: WebhookStatus
+
+
+class WebhookSecretRotation(TypedDict):
+    secret: WebhookSecret
+    previousRetiresAt: Timestamp
+
+
+class WebhookDelivery(TypedDict):
+    id: DeliveryId
+    webhookId: WebhookId
+    eventId: str
+    """
+    The CloudEvents id, sent as `webhook-id`. The receiver's deduplication key.
+    """
+    eventType: EventType
+    status: DeliveryStatus
+    attempts: int
+    nextAttemptAt: NotRequired[Timestamp]
+    createdAt: Timestamp
+    deliveredAt: NotRequired[Timestamp]
+    replayOf: NotRequired[DeliveryId]
+
+
+class WebhookDeliveryList(TypedDict):
+    deliveries: list[WebhookDelivery]
+
+
+class WebhookAttempt(TypedDict):
+    attempt: int
+    startedAt: Timestamp
+    durationMs: int
+    statusCode: NotRequired[int]
+    """
+    The receiver's HTTP status. Absent when no response arrived.
+    """
+    error: NotRequired[str]
+    """
+    The transport's error, when no 2xx arrived. Never the receiver's response body.
+    """
+
+
+class WebhookDeliveryDetail(TypedDict):
+    delivery: WebhookDelivery
+    attempts: list[WebhookAttempt]
+
+
 class ReplayReport(TypedDict):
     decisionId: DecisionId
     verdict: ReplayVerdict
@@ -886,5 +1001,9 @@ class Capabilities(TypedDict):
     reasonCodes: list[ReasonCode]
     """
     Every reason code this deployment can emit.
+    """
+    eventTypes: list[EventType]
+    """
+    Every event type this deployment emits, and so the types a webhook may subscribe to.
     """
     content: NotRequired[ContentCapability]

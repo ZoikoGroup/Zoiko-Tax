@@ -38,6 +38,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/config"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/idgen"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/kms"
+	"github.com/zoikogroup/zoikotax/backend/internal/platform/secretbox"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/secrets"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/telemetry"
 	ztaxhttp "github.com/zoikogroup/zoikotax/backend/internal/transport/http"
@@ -129,6 +130,9 @@ func run() error {
 	router.Tracer = tracing.Provider
 	router.Content = content
 	if router.Determination, err = wireDetermination(cfg, store, content, clk, ids, log); err != nil {
+		return err
+	}
+	if router.Webhooks, err = wireWebhooks(cfg, store, clk, ids, log); err != nil {
 		return err
 	}
 	if router.Determination != nil {
@@ -452,6 +456,26 @@ func wireDetermination(cfg config.Config, store *postgres.Store, content *rule.H
 		})
 	log.Info("determination surface enabled", "evidence.dir", cfg.EvidenceDir)
 	return svc, nil
+}
+
+// wireWebhooks builds the webhook administration service. A cell with no
+// webhook key serves no webhooks: the key seals every signing secret, and a
+// secret that cannot be sealed is not issued.
+func wireWebhooks(cfg config.Config, store *postgres.Store, clk clock.Clock, ids idgen.Generator, log *slog.Logger) (*app.WebhookService, error) {
+	if cfg.WebhookKeyRef == "" {
+		log.Warn("no webhook key configured; the webhook surface will refuse with 503")
+		return nil, nil
+	}
+	key, err := secrets.Resolve(secrets.EnvResolver{Environment: cfg.Environment}, cfg.WebhookKeyRef)
+	if err != nil {
+		return nil, err
+	}
+	box, err := secretbox.New(key)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("webhook surface enabled")
+	return app.NewWebhookService(store.Webhooks(), box, store, clk, ids, cfg.WebhookAllowPrivate), nil
 }
 
 // wireModelGateway builds the Governed Model Gateway client (ADR-0006). A cell

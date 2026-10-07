@@ -529,6 +529,180 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/webhooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The tenant's webhook subscriptions
+         * @description `ADMIN` or `AUDITOR`. Every subscription with its current status,
+         *     oldest first.
+         */
+        get: operations["listWebhooks"];
+        put?: never;
+        /**
+         * Subscribe an endpoint to named event types
+         * @description `ADMIN` only. Subscribes an HTTPS endpoint to the event types it
+         *     names — there is no wildcard, so an event kind added later reaches
+         *     nobody who did not ask for it by name. The endpoint must be HTTPS,
+         *     carry no credentials, and be a public address: a destination inside
+         *     the cell's network is refused here and again at every connection,
+         *     after name resolution.
+         *
+         *     The response carries the signing secret, `whsec_…`, **once**. It is
+         *     stored sealed and is never returned again; rotate it to get a new one.
+         *     Deliveries are signed under the Standard Webhooks scheme
+         *     (`webhook-id`, `webhook-timestamp`, `webhook-signature`), so any
+         *     Standard Webhooks library verifies them. `webhook-id` is the
+         *     CloudEvents id: deduplicate on it, because delivery is at least once.
+         */
+        post: operations["createWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/webhooks/{webhookId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One webhook subscription
+         * @description `ADMIN` or `AUDITOR`.
+         */
+        get: operations["getWebhook"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/webhooks/{webhookId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause, resume or disable a subscription
+         * @description `ADMIN` only. `PAUSED` stops deliveries and keeps nothing for later:
+         *     an event committed while paused is not delivered on resume, and a
+         *     delivery already scheduled is dead-lettered. Replay is how a receiver
+         *     catches up, deliberately. `DISABLED` is final. Asking for the status
+         *     the subscription already has is a retry and returns it unchanged.
+         */
+        post: operations["setWebhookStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/webhooks/{webhookId}/secrets:rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue a new signing secret
+         * @description `ADMIN` only. Issues the next signing secret, returned this once.
+         *     For 24 hours after the rotation every delivery is signed with both
+         *     the new secret and the previous one — `webhook-signature` carries
+         *     both — so a receiver can switch at its own pace. Rotating again inside
+         *     that window retires the oldest at once.
+         */
+        post: operations["rotateWebhookSecret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/webhooks/{webhookId}/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A subscription's deliveries, newest first
+         * @description `ADMIN` or `AUDITOR`. Filter on `status=DEAD` for the dead-letter
+         *     queue: deliveries that exhausted their attempts, or whose
+         *     subscription stopped receiving. The body sent is not returned; it is
+         *     the event, which the receiver has, or can be read through the API.
+         */
+        get: operations["listWebhookDeliveries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/webhooks/{webhookId}/deliveries/{deliveryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One delivery and its attempts
+         * @description `ADMIN` or `AUDITOR`. Each attempt records when it started, how long
+         *     it took, the receiver's status code if one arrived, and the
+         *     transport's error if not. The receiver's response body is never
+         *     kept.
+         */
+        get: operations["getWebhookDelivery"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/webhooks/{webhookId}/deliveries/{deliveryId}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deliver an event again
+         * @description `ADMIN` only. Schedules a new delivery of the same event, with the
+         *     same bytes and the same `webhook-id`, naming the delivery it replays.
+         *     It is how a receiver catches up after an outage that outlasted the
+         *     retries, or after a pause. The subscription must be `ACTIVE`.
+         */
+        post: operations["replayWebhookDelivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/decisions/{decisionId}": {
         parameters: {
             query?: never;
@@ -1029,6 +1203,8 @@ export interface components {
             authoritative: boolean;
             /** @description Every reason code this deployment can emit. */
             reasonCodes: components["schemas"]["ReasonCode"][];
+            /** @description Every event type this deployment emits, and so the types a webhook may subscribe to. */
+            eventTypes: components["schemas"]["EventType"][];
             content?: components["schemas"]["ContentCapability"];
         };
         /**
@@ -1634,6 +1810,132 @@ export interface components {
             outcome: components["schemas"]["RefundOutcome"];
             externalReference?: components["schemas"]["PaymentReference"];
         };
+        /**
+         * WebhookId
+         * Format: uuid
+         * @description A webhook subscription. A UUIDv7 in lowercase canonical form.
+         * @example 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        WebhookId: string;
+        /**
+         * DeliveryId
+         * Format: uuid
+         * @description One delivery of one event to one webhook.
+         * @example 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+         */
+        DeliveryId: string;
+        /**
+         * EventType
+         * @description An event type this cell emits, as the AsyncAPI contract names it.
+         * @example com.zoikotax.decision.committed
+         * @enum {string}
+         */
+        EventType: "com.zoikotax.decision.committed" | "com.zoikotax.decision.corrected" | "com.zoikotax.obligation.status-changed" | "com.zoikotax.accumulator.threshold-crossed" | "com.zoikotax.refund.requested" | "com.zoikotax.refund.status-changed";
+        /**
+         * WebhookStatus
+         * @example ACTIVE
+         * @enum {string}
+         */
+        WebhookStatus: "ACTIVE" | "PAUSED" | "DISABLED";
+        /**
+         * DeliveryStatus
+         * @description `PENDING` awaits its next attempt; `DEAD` is the dead-letter state, kept and replayable.
+         * @example DEAD
+         * @enum {string}
+         */
+        DeliveryStatus: "PENDING" | "DELIVERED" | "DEAD";
+        /**
+         * WebhookUrl
+         * Format: uri
+         * @description An HTTPS endpoint at a public address, with no credentials in it.
+         * @example https://hooks.example.com/ztax
+         */
+        WebhookUrl: string;
+        /** WebhookCreateRequest */
+        WebhookCreateRequest: {
+            url: components["schemas"]["WebhookUrl"];
+            eventTypes: components["schemas"]["EventType"][];
+            description?: string;
+        };
+        /** Webhook */
+        Webhook: {
+            id: components["schemas"]["WebhookId"];
+            url: components["schemas"]["WebhookUrl"];
+            eventTypes: components["schemas"]["EventType"][];
+            description?: string;
+            status: components["schemas"]["WebhookStatus"];
+            createdAt: components["schemas"]["Timestamp"];
+            statusChangedAt: components["schemas"]["Timestamp"];
+        };
+        /** WebhookList */
+        WebhookList: {
+            webhooks: components["schemas"]["Webhook"][];
+        };
+        /**
+         * WebhookSecret
+         * @description A signing secret, in the form Standard Webhooks libraries take. Returned once, by the response that issued it.
+         */
+        WebhookSecret: {
+            /** Format: int32 */
+            version: number;
+            secret: string;
+        };
+        /** WebhookCreated */
+        WebhookCreated: {
+            webhook: components["schemas"]["Webhook"];
+            secret: components["schemas"]["WebhookSecret"];
+        };
+        /** WebhookStatusRequest */
+        WebhookStatusRequest: {
+            status: components["schemas"]["WebhookStatus"];
+        };
+        /** WebhookSecretRotation */
+        WebhookSecretRotation: {
+            secret: components["schemas"]["WebhookSecret"];
+            previousRetiresAt: components["schemas"]["Timestamp"];
+        };
+        /** WebhookDelivery */
+        WebhookDelivery: {
+            id: components["schemas"]["DeliveryId"];
+            webhookId: components["schemas"]["WebhookId"];
+            /**
+             * Format: uuid
+             * @description The CloudEvents id, sent as `webhook-id`. The receiver's deduplication key.
+             */
+            eventId: string;
+            eventType: components["schemas"]["EventType"];
+            status: components["schemas"]["DeliveryStatus"];
+            /** Format: int32 */
+            attempts: number;
+            nextAttemptAt?: components["schemas"]["Timestamp"];
+            createdAt: components["schemas"]["Timestamp"];
+            deliveredAt?: components["schemas"]["Timestamp"];
+            replayOf?: components["schemas"]["DeliveryId"];
+        };
+        /** WebhookDeliveryList */
+        WebhookDeliveryList: {
+            deliveries: components["schemas"]["WebhookDelivery"][];
+        };
+        /** WebhookAttempt */
+        WebhookAttempt: {
+            /** Format: int32 */
+            attempt: number;
+            startedAt: components["schemas"]["Timestamp"];
+            /** Format: int32 */
+            durationMs: number;
+            /**
+             * Format: int32
+             * @description The receiver's HTTP status. Absent when no response arrived.
+             */
+            statusCode?: number;
+            /** @description The transport's error, when no 2xx arrived. Never the receiver's response body. */
+            error?: string;
+        };
+        /** WebhookDeliveryDetail */
+        WebhookDeliveryDetail: {
+            delivery: components["schemas"]["WebhookDelivery"];
+            attempts: components["schemas"]["WebhookAttempt"][];
+        };
         /** ReplayReport */
         ReplayReport: {
             decisionId: components["schemas"]["DecisionId"];
@@ -1771,6 +2073,16 @@ export interface components {
          * @example 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
          */
         RefundId: components["schemas"]["RefundId"];
+        /**
+         * @description The webhook subscription.
+         * @example 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        WebhookId: components["schemas"]["WebhookId"];
+        /**
+         * @description The delivery.
+         * @example 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+         */
+        DeliveryId: components["schemas"]["DeliveryId"];
         /**
          * @description Maximum number of items to return. The server caps this independently,
          *     so a larger value is not an error and does not return more.
@@ -2441,6 +2753,287 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Refund"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listWebhooks: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The subscriptions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description The subscription and its first signing secret, shown this once. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookCreated"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The webhook subscription.
+                 * @example 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                webhookId: components["parameters"]["WebhookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The subscription. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Webhook"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    setWebhookStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The webhook subscription.
+                 * @example 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                webhookId: components["parameters"]["WebhookId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description The subscription after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Webhook"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    rotateWebhookSecret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The webhook subscription.
+                 * @example 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                webhookId: components["parameters"]["WebhookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The new secret, and when the previous one stops signing. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookSecretRotation"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listWebhookDeliveries: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only deliveries in this status.
+                 * @example DEAD
+                 */
+                status?: components["schemas"]["DeliveryStatus"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description The webhook subscription.
+                 * @example 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                webhookId: components["parameters"]["WebhookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deliveries. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDeliveryList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getWebhookDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The webhook subscription.
+                 * @example 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                webhookId: components["parameters"]["WebhookId"];
+                /**
+                 * @description The delivery.
+                 * @example 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                 */
+                deliveryId: components["parameters"]["DeliveryId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The delivery. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDeliveryDetail"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    replayWebhookDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The webhook subscription.
+                 * @example 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                webhookId: components["parameters"]["WebhookId"];
+                /**
+                 * @description The delivery.
+                 * @example 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                 */
+                deliveryId: components["parameters"]["DeliveryId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The new delivery, scheduled now. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDelivery"];
                 };
             };
             400: components["responses"]["Validation"];

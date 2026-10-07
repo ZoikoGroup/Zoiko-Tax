@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:9afd700101240e368444752b1daf8c4a16d922ec21444e29a7c1e7a6e844c5cc`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:16c5425bc4ec2096c610015b38442516d2dc62629a780881de60e4e5943d72fb`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -137,7 +137,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"cell\": \"eu-west-1\",\n  \"region\": \"eu-west\",\n  \"environment\": \"development\",\n  \"trains\": {\n    \"app\": \"0.4.0\",\n    \"content\": \"0.0.0-dev\",\n    \"ai\": \"0.1.0\",\n    \"adapter\": \"0.2.0\",\n    \"infra\": \"0.3.0\",\n    \"schema\": \"0.1.0\",\n    \"migration\": \"6\"\n  },\n  \"canonProfile\": \"canon/v1\",\n  \"authoritative\": false,\n  \"reasonCodes\": [\n    \"AMBIGUOUS\",\n    \"CURRENCY_MISMATCH\",\n    \"FORBIDDEN\",\n    \"NOT_AUTHORITATIVE\",\n    \"NO_CONTENT_BUNDLE\"\n  ],\n  \"content\": {\n    \"bundleId\": \"eu-vat-worked-2026.09\",\n    \"digest\": \"zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b\",\n    \"irVersion\": 1,\n    \"nodeCount\": 22\n  }\n}"
+              "body": "{\n  \"cell\": \"eu-west-1\",\n  \"region\": \"eu-west\",\n  \"environment\": \"development\",\n  \"trains\": {\n    \"app\": \"0.4.0\",\n    \"content\": \"0.0.0-dev\",\n    \"ai\": \"0.1.0\",\n    \"adapter\": \"0.2.0\",\n    \"infra\": \"0.3.0\",\n    \"schema\": \"0.1.0\",\n    \"migration\": \"6\"\n  },\n  \"canonProfile\": \"canon/v1\",\n  \"authoritative\": false,\n  \"reasonCodes\": [\n    \"AMBIGUOUS\",\n    \"CURRENCY_MISMATCH\",\n    \"FORBIDDEN\",\n    \"NOT_AUTHORITATIVE\",\n    \"NO_CONTENT_BUNDLE\"\n  ],\n  \"eventTypes\": [\n    \"com.zoikotax.decision.committed\",\n    \"com.zoikotax.decision.corrected\",\n    \"com.zoikotax.obligation.status-changed\"\n  ],\n  \"content\": {\n    \"bundleId\": \"eu-vat-worked-2026.09\",\n    \"digest\": \"zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b\",\n    \"irVersion\": 1,\n    \"nodeCount\": 22\n  }\n}"
             },
             {
               "name": "200 · A cell deployed with no content bundle",
@@ -163,7 +163,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"cell\": \"eu-west-1\",\n  \"region\": \"eu-west\",\n  \"environment\": \"production\",\n  \"trains\": {\n    \"app\": \"0.4.0\",\n    \"content\": \"none\",\n    \"ai\": \"0.1.0\",\n    \"adapter\": \"0.2.0\",\n    \"infra\": \"0.3.0\",\n    \"schema\": \"0.1.0\",\n    \"migration\": \"6\"\n  },\n  \"canonProfile\": \"canon/v1\",\n  \"authoritative\": false,\n  \"reasonCodes\": [\n    \"NO_CONTENT_BUNDLE\",\n    \"NOT_AUTHORITATIVE\"\n  ]\n}"
+              "body": "{\n  \"cell\": \"eu-west-1\",\n  \"region\": \"eu-west\",\n  \"environment\": \"production\",\n  \"trains\": {\n    \"app\": \"0.4.0\",\n    \"content\": \"none\",\n    \"ai\": \"0.1.0\",\n    \"adapter\": \"0.2.0\",\n    \"infra\": \"0.3.0\",\n    \"schema\": \"0.1.0\",\n    \"migration\": \"6\"\n  },\n  \"canonProfile\": \"canon/v1\",\n  \"authoritative\": false,\n  \"reasonCodes\": [\n    \"NO_CONTENT_BUNDLE\",\n    \"NOT_AUTHORITATIVE\"\n  ],\n  \"eventTypes\": [\n    \"com.zoikotax.decision.committed\",\n    \"com.zoikotax.decision.corrected\",\n    \"com.zoikotax.obligation.status-changed\"\n  ]\n}"
             }
           ],
           "event": [
@@ -438,7 +438,7 @@
     },
     {
       "name": "04 · Administration",
-      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.",
+      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.",
       "item": [
         {
           "name": "GET /v1/admin/users — List the tenant's users",
@@ -954,6 +954,615 @@
                 "exec": [
                   "pm.test('revokeSession returns a status the contract declares', function () {",
                   "  pm.expect(pm.response.code).to.be.oneOf([204]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/webhooks — The tenant's webhook subscriptions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks?limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The tenant's webhook subscriptions\n\n`ADMIN` or `AUDITOR`. Every subscription with its current status,\noldest first."
+          },
+          "response": [
+            {
+              "name": "200 · One active subscription",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/webhooks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "webhooks"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"webhooks\": [\n    {\n      \"id\": \"01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"url\": \"https://hooks.example.com/ztax\",\n      \"eventTypes\": [\n        \"com.zoikotax.decision.committed\",\n        \"com.zoikotax.refund.status-changed\"\n      ],\n      \"status\": \"ACTIVE\",\n      \"createdAt\": \"2026-10-07T09:00:00.000000Z\",\n      \"statusChangedAt\": \"2026-10-07T09:00:00.000000Z\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listWebhooks returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/webhooks — Subscribe an endpoint to named event types",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://hooks.example.com/ztax\",\n  \"eventTypes\": [\n    \"com.zoikotax.decision.committed\",\n    \"com.zoikotax.refund.status-changed\"\n  ],\n  \"description\": \"ERP bridge\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks"
+              ]
+            },
+            "description": "Subscribe an endpoint to named event types\n\n`ADMIN` only. Subscribes an HTTPS endpoint to the event types it\nnames — there is no wildcard, so an event kind added later reaches\nnobody who did not ask for it by name. The endpoint must be HTTPS,\ncarry no credentials, and be a public address: a destination inside\nthe cell's network is refused here and again at every connection,\nafter name resolution.\n\nThe response carries the signing secret, `whsec_…`, **once**. It is\nstored sealed and is never returned again; rotate it to get a new one.\nDeliveries are signed under the Standard Webhooks scheme\n(`webhook-id`, `webhook-timestamp`, `webhook-signature`), so any\nStandard Webhooks library verifies them. `webhook-id` is the\nCloudEvents id: deduplicate on it, because delivery is at least once."
+          },
+          "response": [
+            {
+              "name": "201 · A new subscription",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/webhooks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "webhooks"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"webhook\": {\n    \"id\": \"01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n    \"url\": \"https://hooks.example.com/ztax\",\n    \"eventTypes\": [\n      \"com.zoikotax.decision.committed\",\n      \"com.zoikotax.refund.status-changed\"\n    ],\n    \"description\": \"ERP bridge\",\n    \"status\": \"ACTIVE\",\n    \"createdAt\": \"2026-10-07T09:00:00.000000Z\",\n    \"statusChangedAt\": \"2026-10-07T09:00:00.000000Z\"\n  },\n  \"secret\": {\n    \"version\": 1,\n    \"secret\": \"whsec_AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=\"\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('createWebhook returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('the webhook is created ACTIVE, and its secret is shown once in Standard Webhooks form', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().webhook.status).to.eql('ACTIVE');",
+                  "  pm.expect(pm.response.json().secret.secret).to.match(/^whsec_/);",
+                  "});",
+                  "pm.collectionVariables.set('webhookId', pm.response.json().webhook.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/webhooks/{webhookId} — One webhook subscription",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks",
+                "{{webhookId}}"
+              ]
+            },
+            "description": "One webhook subscription\n\n`ADMIN` or `AUDITOR`."
+          },
+          "response": [
+            {
+              "name": "200 · A paused subscription",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "webhooks",
+                    "{{webhookId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"url\": \"https://hooks.example.com/ztax\",\n  \"eventTypes\": [\n    \"com.zoikotax.decision.committed\"\n  ],\n  \"status\": \"PAUSED\",\n  \"createdAt\": \"2026-10-07T09:00:00.000000Z\",\n  \"statusChangedAt\": \"2026-10-07T12:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getWebhook returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('a read never returns the signing secret', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.text()).to.not.include('whsec_');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/webhooks/{webhookId}/secrets:rotate — Issue a new signing secret",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/secrets:rotate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks",
+                "{{webhookId}}",
+                "secrets:rotate"
+              ]
+            },
+            "description": "Issue a new signing secret\n\n`ADMIN` only. Issues the next signing secret, returned this once.\nFor 24 hours after the rotation every delivery is signed with both\nthe new secret and the previous one — `webhook-signature` carries\nboth — so a receiver can switch at its own pace. Rotating again inside\nthat window retires the oldest at once."
+          },
+          "response": [
+            {
+              "name": "200 · Version 2",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/secrets:rotate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "webhooks",
+                    "{{webhookId}}",
+                    "secrets:rotate"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"secret\": {\n    \"version\": 2,\n    \"secret\": \"whsec_ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=\"\n  },\n  \"previousRetiresAt\": \"2026-10-08T09:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('rotateWebhookSecret returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('rotation issues version 2, and the previous secret retires later', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().secret.version).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/webhooks/{webhookId}/deliveries — A subscription's deliveries, newest first",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/deliveries?status={{status}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks",
+                "{{webhookId}}",
+                "deliveries"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only deliveries in this status."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "A subscription's deliveries, newest first\n\n`ADMIN` or `AUDITOR`. Filter on `status=DEAD` for the dead-letter\nqueue: deliveries that exhausted their attempts, or whose\nsubscription stopped receiving. The body sent is not returned; it is\nthe event, which the receiver has, or can be read through the API."
+          },
+          "response": [
+            {
+              "name": "200 · One dead-lettered delivery",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/deliveries",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "webhooks",
+                    "{{webhookId}}",
+                    "deliveries"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"deliveries\": [\n    {\n      \"id\": \"01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f\",\n      \"webhookId\": \"01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"eventId\": \"01920a5f-0a1b-7c2d-8e3f-4a5b6c7d8e9f\",\n      \"eventType\": \"com.zoikotax.decision.committed\",\n      \"status\": \"DEAD\",\n      \"attempts\": 8,\n      \"createdAt\": \"2026-10-06T09:00:00.000000Z\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listWebhookDeliveries returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/webhooks/{webhookId}/deliveries/{deliveryId} — One delivery and its attempts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/deliveries/{{deliveryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks",
+                "{{webhookId}}",
+                "deliveries",
+                "{{deliveryId}}"
+              ]
+            },
+            "description": "One delivery and its attempts\n\n`ADMIN` or `AUDITOR`. Each attempt records when it started, how long\nit took, the receiver's status code if one arrived, and the\ntransport's error if not. The receiver's response body is never\nkept."
+          },
+          "response": [
+            {
+              "name": "200 · Delivered on the second attempt",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/deliveries/{{deliveryId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "webhooks",
+                    "{{webhookId}}",
+                    "deliveries",
+                    "{{deliveryId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"delivery\": {\n    \"id\": \"01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f\",\n    \"webhookId\": \"01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n    \"eventId\": \"01920a5f-0a1b-7c2d-8e3f-4a5b6c7d8e9f\",\n    \"eventType\": \"com.zoikotax.decision.committed\",\n    \"status\": \"DELIVERED\",\n    \"attempts\": 2,\n    \"createdAt\": \"2026-10-07T09:00:00.000000Z\",\n    \"deliveredAt\": \"2026-10-07T09:00:31.000000Z\"\n  },\n  \"attempts\": [\n    {\n      \"attempt\": 1,\n      \"startedAt\": \"2026-10-07T09:00:01.000000Z\",\n      \"durationMs\": 10000,\n      \"error\": \"context deadline exceeded\"\n    },\n    {\n      \"attempt\": 2,\n      \"startedAt\": \"2026-10-07T09:00:31.000000Z\",\n      \"durationMs\": 84,\n      \"statusCode\": 204\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getWebhookDelivery returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('nothing has been delivered in a fresh run', function () {",
+                  "  pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/webhooks/{webhookId}/deliveries/{deliveryId}/replay — Deliver an event again",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/deliveries/{{deliveryId}}/replay",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks",
+                "{{webhookId}}",
+                "deliveries",
+                "{{deliveryId}}",
+                "replay"
+              ]
+            },
+            "description": "Deliver an event again\n\n`ADMIN` only. Schedules a new delivery of the same event, with the\nsame bytes and the same `webhook-id`, naming the delivery it replays.\nIt is how a receiver catches up after an outage that outlasted the\nretries, or after a pause. The subscription must be `ACTIVE`."
+          },
+          "response": [
+            {
+              "name": "202 · A replay of a dead-lettered delivery",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/deliveries/{{deliveryId}}/replay",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "webhooks",
+                    "{{webhookId}}",
+                    "deliveries",
+                    "{{deliveryId}}",
+                    "replay"
+                  ]
+                }
+              },
+              "status": "202",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a62-3c4d-7e5f-8061-7b8c9d0e1f2a\",\n  \"webhookId\": \"01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"eventId\": \"01920a5f-0a1b-7c2d-8e3f-4a5b6c7d8e9f\",\n  \"eventType\": \"com.zoikotax.decision.committed\",\n  \"status\": \"PENDING\",\n  \"attempts\": 0,\n  \"nextAttemptAt\": \"2026-10-07T13:00:00.000000Z\",\n  \"createdAt\": \"2026-10-07T13:00:00.000000Z\",\n  \"replayOf\": \"01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('replayWebhookDelivery returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([202]);",
+                  "});",
+                  "pm.test('a replay needs a delivery to replay', function () {",
+                  "  pm.expect([202, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/webhooks/{webhookId}/status — Pause, resume or disable a subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PAUSED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks",
+                "{{webhookId}}",
+                "status"
+              ]
+            },
+            "description": "Pause, resume or disable a subscription\n\n`ADMIN` only. `PAUSED` stops deliveries and keeps nothing for later:\nan event committed while paused is not delivered on resume, and a\ndelivery already scheduled is dead-lettered. Replay is how a receiver\ncatches up, deliberately. `DISABLED` is final. Asking for the status\nthe subscription already has is a retry and returns it unchanged."
+          },
+          "response": [
+            {
+              "name": "200 · Paused",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "webhooks",
+                    "{{webhookId}}",
+                    "status"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"url\": \"https://hooks.example.com/ztax\",\n  \"eventTypes\": [\n    \"com.zoikotax.decision.committed\"\n  ],\n  \"status\": \"PAUSED\",\n  \"createdAt\": \"2026-10-07T09:00:00.000000Z\",\n  \"statusChangedAt\": \"2026-10-07T12:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('setWebhookStatus returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('the webhook is paused', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('PAUSED');",
                   "});"
                 ]
               }
@@ -3360,6 +3969,11 @@
       "type": "string"
     },
     {
+      "key": "webhookId",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "reusedKey",
       "value": "",
       "type": "string"
@@ -3371,7 +3985,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:9afd700101240e368444752b1daf8c4a16d922ec21444e29a7c1e7a6e844c5cc",
+      "value": "sha256:16c5425bc4ec2096c610015b38442516d2dc62629a780881de60e4e5943d72fb",
       "type": "string"
     }
   ]

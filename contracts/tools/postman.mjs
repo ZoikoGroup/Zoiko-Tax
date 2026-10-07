@@ -97,7 +97,7 @@ const FOLDERS = [
   {
     name: "04 · Administration",
     description:
-      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.",
+      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.",
     operations: [
       "listUsers",
       "createUser",
@@ -107,6 +107,14 @@ const FOLDERS = [
       "listAudit",
       "revokeRole",
       "revokeSession",
+      "listWebhooks",
+      "createWebhook",
+      "getWebhook",
+      "rotateWebhookSecret",
+      "listWebhookDeliveries",
+      "getWebhookDelivery",
+      "replayWebhookDelivery",
+      "setWebhookStatus",
     ],
   },
   {
@@ -165,6 +173,8 @@ const VALUE_VARIABLES = {
   "01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01": "{{obligationId}}",
   // The refund examples' id: the refund the folder just requested.
   "01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f": "{{refundId}}",
+  // The webhook examples' id: the subscription folder 04 just created.
+  "01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{webhookId}}",
 };
 
 // Per-operation test scripts, beyond the status assertion every request gets.
@@ -274,6 +284,42 @@ const OPERATION_TESTS = {
     "});",
     "// The original is superseded now; a refund is made against the current version.",
     "pm.collectionVariables.set('decisionId', pm.response.json().id);",
+  ],
+  createWebhook: [
+    "pm.test('the webhook is created ACTIVE, and its secret is shown once in Standard Webhooks form', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().webhook.status).to.eql('ACTIVE');",
+    "  pm.expect(pm.response.json().secret.secret).to.match(/^whsec_/);",
+    "});",
+    "pm.collectionVariables.set('webhookId', pm.response.json().webhook.id);",
+  ],
+  getWebhook: [
+    "pm.test('a read never returns the signing secret', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.text()).to.not.include('whsec_');",
+    "});",
+  ],
+  rotateWebhookSecret: [
+    "pm.test('rotation issues version 2, and the previous secret retires later', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().secret.version).to.eql(2);",
+    "});",
+  ],
+  getWebhookDelivery: [
+    "pm.test('nothing has been delivered in a fresh run', function () {",
+    "  pm.expect([200, 404]).to.include(pm.response.code);",
+    "});",
+  ],
+  replayWebhookDelivery: [
+    "pm.test('a replay needs a delivery to replay', function () {",
+    "  pm.expect([202, 404]).to.include(pm.response.code);",
+    "});",
+  ],
+  setWebhookStatus: [
+    "pm.test('the webhook is paused', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().status).to.eql('PAUSED');",
+    "});",
   ],
   refundTransaction: [
     "pm.test('ZTAX-FIN-REQ-0015 — a refund is its own record, requested and not yet posted', function () {",
@@ -705,6 +751,7 @@ function variables(overlay, contractDigest, local) {
     { key: "decisionId", value: "", type: "string" },
     { key: "obligationId", value: "", type: "string" },
     { key: "refundId", value: "", type: "string" },
+    { key: "webhookId", value: "", type: "string" },
     // Minted once per run by `07`, and reused by the requests that must share it.
     { key: "reusedKey", value: "", type: "string" },
 

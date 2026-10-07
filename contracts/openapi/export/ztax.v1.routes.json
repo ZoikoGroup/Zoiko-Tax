@@ -168,6 +168,54 @@
       "path": "/v1/transactions:refund",
       "operationId": "refundTransaction",
       "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/webhooks",
+      "operationId": "listWebhooks",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/webhooks",
+      "operationId": "createWebhook",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/webhooks/{webhookId}",
+      "operationId": "getWebhook",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/webhooks/{webhookId}/deliveries",
+      "operationId": "listWebhookDeliveries",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/webhooks/{webhookId}/deliveries/{deliveryId}",
+      "operationId": "getWebhookDelivery",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/webhooks/{webhookId}/deliveries/{deliveryId}/replay",
+      "operationId": "replayWebhookDelivery",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/webhooks/{webhookId}/secrets:rotate",
+      "operationId": "rotateWebhookSecret",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/webhooks/{webhookId}/status",
+      "operationId": "setWebhookStatus",
+      "public": false
     }
   ]
 }

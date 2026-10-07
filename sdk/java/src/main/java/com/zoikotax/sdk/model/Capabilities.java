@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.zoikotax.sdk.model.ContentCapability;
+import com.zoikotax.sdk.model.EventType;
 import com.zoikotax.sdk.model.Trains;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,6 +41,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
   Capabilities.JSON_PROPERTY_CANON_PROFILE,
   Capabilities.JSON_PROPERTY_AUTHORITATIVE,
   Capabilities.JSON_PROPERTY_REASON_CODES,
+  Capabilities.JSON_PROPERTY_EVENT_TYPES,
   Capabilities.JSON_PROPERTY_CONTENT
 })
 @jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen", comments = "Generator version: 7.25.0")
@@ -71,6 +73,10 @@ public class Capabilities {
   public static final String JSON_PROPERTY_REASON_CODES = "reasonCodes";
   @jakarta.annotation.Nonnull
   private List<String> reasonCodes;
+
+  public static final String JSON_PROPERTY_EVENT_TYPES = "eventTypes";
+  @jakarta.annotation.Nonnull
+  private List<EventType> eventTypes;
 
   public static final String JSON_PROPERTY_CONTENT = "content";
   @jakarta.annotation.Nullable
@@ -255,6 +261,38 @@ public class Capabilities {
   }
 
 
+  public Capabilities eventTypes(@jakarta.annotation.Nonnull List<EventType> eventTypes) {
+    this.eventTypes = eventTypes;
+    return this;
+  }
+
+  public Capabilities addEventTypesItem(EventType eventTypesItem) {
+    if (this.eventTypes == null) {
+      this.eventTypes = new ArrayList<>();
+    }
+    this.eventTypes.add(eventTypesItem);
+    return this;
+  }
+
+  /**
+   * Every event type this deployment emits, and so the types a webhook may subscribe to.
+   * @return eventTypes
+   */
+  @jakarta.annotation.Nonnull
+  @JsonProperty(value = JSON_PROPERTY_EVENT_TYPES, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public List<EventType> getEventTypes() {
+    return eventTypes;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_EVENT_TYPES, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public void setEventTypes(@jakarta.annotation.Nonnull List<EventType> eventTypes) {
+    this.eventTypes = eventTypes;
+  }
+
+
   public Capabilities content(@jakarta.annotation.Nullable ContentCapability content) {
     this.content = content;
     return this;
@@ -298,12 +336,13 @@ public class Capabilities {
         Objects.equals(this.canonProfile, capabilities.canonProfile) &&
         Objects.equals(this.authoritative, capabilities.authoritative) &&
         Objects.equals(this.reasonCodes, capabilities.reasonCodes) &&
+        Objects.equals(this.eventTypes, capabilities.eventTypes) &&
         Objects.equals(this.content, capabilities.content);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(cell, region, environment, trains, canonProfile, authoritative, reasonCodes, content);
+    return Objects.hash(cell, region, environment, trains, canonProfile, authoritative, reasonCodes, eventTypes, content);
   }
 
   @Override
@@ -317,6 +356,7 @@ public class Capabilities {
     sb.append("    canonProfile: ").append(toIndentedString(canonProfile)).append("\n");
     sb.append("    authoritative: ").append(toIndentedString(authoritative)).append("\n");
     sb.append("    reasonCodes: ").append(toIndentedString(reasonCodes)).append("\n");
+    sb.append("    eventTypes: ").append(toIndentedString(eventTypes)).append("\n");
     sb.append("    content: ").append(toIndentedString(content)).append("\n");
     sb.append("}");
     return sb.toString();

@@ -262,3 +262,21 @@ func RefundID(g Generator) (id.RefundID, error) {
 	}
 	return id.NewRefundID(u), nil
 }
+
+// WebhookID returns a fresh WebhookID.
+func WebhookID(g Generator) (id.WebhookID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.WebhookID{}, err
+	}
+	return id.NewWebhookID(u), nil
+}
+
+// DeliveryID returns a fresh DeliveryID.
+func DeliveryID(g Generator) (id.DeliveryID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.DeliveryID{}, err
+	}
+	return id.NewDeliveryID(u), nil
+}

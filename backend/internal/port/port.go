@@ -29,6 +29,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/settlement"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/subledger"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/webhook"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 )
 
@@ -445,4 +446,71 @@ type RefundRepository interface {
 type RefundState struct {
 	Refund  settlement.Refund
 	Current settlement.RefundEvent
+}
+
+// ---------------------------------------------------------------------------
+// webhooks (W2 lane K)
+// ---------------------------------------------------------------------------
+
+// SealedSecret is one version of a webhook's signing secret, sealed under the
+// cell's webhook key. Only the app layer, holding the key, opens it.
+type SealedSecret struct {
+	webhook.SecretVersion
+	Sealed []byte
+}
+
+// WebhookState is a subscription and its current status.
+type WebhookState struct {
+	Subscription webhook.Subscription
+	Status       webhook.StatusChange
+}
+
+// WebhookRepository stores webhooks and their deliveries.
+//
+// Every method but ClaimDue reads the tenant from the context. ClaimDue is
+// the dispatcher's, which serves the whole cell as the outbox relay does, and
+// returns each delivery with its tenant so the work on it can be scoped.
+type WebhookRepository interface {
+	// Create writes a subscription, its ACTIVE status and its first secret.
+	Create(ctx context.Context, s webhook.Subscription, first webhook.StatusChange, secret SealedSecret) error
+	// Lock serializes the writers of one subscription's status and secrets
+	// until the transaction ends.
+	Lock(ctx context.Context, webhookID id.WebhookID) error
+	ByID(ctx context.Context, webhookID id.WebhookID) (WebhookState, error)
+	List(ctx context.Context, limit int) ([]WebhookState, error)
+	// Matching returns the ACTIVE subscriptions that receive an event type.
+	Matching(ctx context.Context, eventType string) ([]webhook.Subscription, error)
+	// AppendStatus writes the next status; a sequence already taken is an
+	// optimistic conflict.
+	AppendStatus(ctx context.Context, c webhook.StatusChange) error
+	// Secrets returns every version, oldest first.
+	Secrets(ctx context.Context, webhookID id.WebhookID) ([]SealedSecret, error)
+	// AppendSecret writes the next version; a version already taken is an
+	// optimistic conflict.
+	AppendSecret(ctx context.Context, s SealedSecret) error
+
+	// InsertDelivery writes a delivery. It reports false, and no error, for a
+	// second fan-out of one event to one subscription.
+	InsertDelivery(ctx context.Context, d webhook.Delivery) (bool, error)
+	Delivery(ctx context.Context, deliveryID id.DeliveryID) (webhook.Delivery, []webhook.Attempt, error)
+	Deliveries(ctx context.Context, webhookID id.WebhookID, status webhook.DeliveryStatus, limit int) ([]webhook.Delivery, error)
+	// ClaimDue leases up to limit PENDING deliveries whose next attempt is
+	// due at now, across the cell: each is pushed lease into the future in
+	// the same statement, so a second dispatcher skips it and a dispatcher
+	// that dies mid-send leaves it to be retried when the lease lapses.
+	ClaimDue(ctx context.Context, now time.Time, lease time.Duration, limit int) ([]webhook.Delivery, error)
+	// RecordAttempt writes an attempt and the delivery's resulting state.
+	RecordAttempt(ctx context.Context, a webhook.Attempt, d webhook.Delivery) error
+	// Bury dead-letters a delivery without an attempt: its subscription has
+	// stopped receiving.
+	Bury(ctx context.Context, deliveryID id.DeliveryID) error
+}
+
+// WebhookSender makes one delivery request. The implementation is the egress
+// guard: it refuses a destination the policy forbids at the moment of
+// connection, and follows no redirect.
+type WebhookSender interface {
+	// Send POSTs body with headers and returns the receiver's status. An
+	// error means no status was received.
+	Send(ctx context.Context, url string, headers map[string]string, body []byte) (int, error)
 }

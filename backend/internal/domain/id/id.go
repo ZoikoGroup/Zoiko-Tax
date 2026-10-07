@@ -118,6 +118,12 @@ type (
 	// RefundID identifies one refund: a payment-side return of tax against a
 	// committed decision, with a lifecycle of its own (ZTAX-FIN-REQ-0059).
 	RefundID struct{ base }
+
+	// WebhookID identifies one webhook subscription.
+	WebhookID struct{ base }
+
+	// DeliveryID identifies one delivery of one event to one webhook.
+	DeliveryID struct{ base }
 )
 
 // The constructors. Each takes a uuid.UUID that idgen produced, or that the
@@ -195,6 +201,12 @@ func NewReconciliationID(u uuid.UUID) ReconciliationID { return ReconciliationID
 
 // NewRefundID wraps a raw UUID as a RefundID.
 func NewRefundID(u uuid.UUID) RefundID { return RefundID{base{u}} }
+
+// NewWebhookID wraps a raw UUID as a WebhookID.
+func NewWebhookID(u uuid.UUID) WebhookID { return WebhookID{base{u}} }
+
+// NewDeliveryID wraps a raw UUID as a DeliveryID.
+func NewDeliveryID(u uuid.UUID) DeliveryID { return DeliveryID{base{u}} }
 
 // parse is the shared text ingress. Identifiers arrive from a URL path, a
 // cookie lookup or a database column, and all three can carry something that is
@@ -340,4 +352,22 @@ func ParseRefundID(s string) (RefundID, error) {
 		return RefundID{}, err
 	}
 	return NewRefundID(u), nil
+}
+
+// ParseWebhookID reads a WebhookID from its canonical string form.
+func ParseWebhookID(s string) (WebhookID, error) {
+	u, err := parse("webhook id", s)
+	if err != nil {
+		return WebhookID{}, err
+	}
+	return NewWebhookID(u), nil
+}
+
+// ParseDeliveryID reads a DeliveryID from its canonical string form.
+func ParseDeliveryID(s string) (DeliveryID, error) {
+	u, err := parse("delivery id", s)
+	if err != nil {
+		return DeliveryID{}, err
+	}
+	return NewDeliveryID(u), nil
 }

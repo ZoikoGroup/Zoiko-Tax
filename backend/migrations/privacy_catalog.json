@@ -1347,6 +1347,199 @@
         "aiAllowed": "NONE",
         "note": "The user who recorded the provider's report; NULL for system work."
       }
+    },
+    "webhook_subscription": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "webhook_id": {
+        "class": "P0"
+      },
+      "url": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SVCOPS",
+          "PURP-SEC"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "A customer's endpoint. The path or query may carry a customer identifier; logs carry it redacted."
+      },
+      "event_types": {
+        "class": "P0"
+      },
+      "description": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SVCOPS"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by an administrator."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who created the webhook; NULL for system work."
+      }
+    },
+    "webhook_status": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "webhook_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "status": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who changed the status."
+      }
+    },
+    "webhook_secret": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "webhook_id": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "sealed_secret": {
+        "class": "P7",
+        "purposes": [
+          "PURP-SEC"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "NO_LOG",
+        "aiAllowed": "NONE",
+        "note": "A signing secret, sealed under the cell's webhook key. Never logged, never returned after the response that issued it."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who issued the secret."
+      },
+      "retires_previous_at": {
+        "class": "P0"
+      }
+    },
+    "webhook_delivery": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "delivery_id": {
+        "class": "P0"
+      },
+      "webhook_id": {
+        "class": "P0"
+      },
+      "event_id": {
+        "class": "P0"
+      },
+      "event_type": {
+        "class": "P0"
+      },
+      "body": {
+        "class": "P5",
+        "purposes": [
+          "PURP-SVCOPS",
+          "PURP-EVID"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The CloudEvent as sent; carries what the event's payload carries, amounts included for refunds and threshold crossings."
+      },
+      "status": {
+        "class": "P0"
+      },
+      "attempts": {
+        "class": "P0"
+      },
+      "next_attempt_at": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "delivered_at": {
+        "class": "P0"
+      },
+      "replay_of": {
+        "class": "P0"
+      },
+      "replayed_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who replayed the delivery; NULL on a fan-out."
+      }
+    },
+    "webhook_attempt": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "delivery_id": {
+        "class": "P0"
+      },
+      "attempt": {
+        "class": "P0"
+      },
+      "started_at": {
+        "class": "P0"
+      },
+      "duration_ms": {
+        "class": "P0"
+      },
+      "status_code": {
+        "class": "P0"
+      },
+      "error": {
+        "class": "P0",
+        "note": "The transport's error class, truncated; never the response body."
+      }
     }
   }
 }

@@ -66,6 +66,27 @@ func (e ControlAccount) Valid() bool {
 	}
 }
 
+// Defines values for DeliveryStatus.
+const (
+	DeliveryStatusDEAD      DeliveryStatus = "DEAD"
+	DeliveryStatusDELIVERED DeliveryStatus = "DELIVERED"
+	DeliveryStatusPENDING   DeliveryStatus = "PENDING"
+)
+
+// Valid indicates whether the value is a known member of the DeliveryStatus enum.
+func (e DeliveryStatus) Valid() bool {
+	switch e {
+	case DeliveryStatusDEAD:
+		return true
+	case DeliveryStatusDELIVERED:
+		return true
+	case DeliveryStatusPENDING:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EffectiveObligationStatus.
 const (
 	EffectiveObligationStatusACCEPTED          EffectiveObligationStatus = "ACCEPTED"
@@ -111,6 +132,36 @@ func (e EffectiveObligationStatus) Valid() bool {
 	case EffectiveObligationStatusSUSPENDED:
 		return true
 	case EffectiveObligationStatusUNCERTAIN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EventType.
+const (
+	ComZoikotaxAccumulatorThresholdCrossed EventType = "com.zoikotax.accumulator.threshold-crossed"
+	ComZoikotaxDecisionCommitted           EventType = "com.zoikotax.decision.committed"
+	ComZoikotaxDecisionCorrected           EventType = "com.zoikotax.decision.corrected"
+	ComZoikotaxObligationStatusChanged     EventType = "com.zoikotax.obligation.status-changed"
+	ComZoikotaxRefundRequested             EventType = "com.zoikotax.refund.requested"
+	ComZoikotaxRefundStatusChanged         EventType = "com.zoikotax.refund.status-changed"
+)
+
+// Valid indicates whether the value is a known member of the EventType enum.
+func (e EventType) Valid() bool {
+	switch e {
+	case ComZoikotaxAccumulatorThresholdCrossed:
+		return true
+	case ComZoikotaxDecisionCommitted:
+		return true
+	case ComZoikotaxDecisionCorrected:
+		return true
+	case ComZoikotaxObligationStatusChanged:
+		return true
+	case ComZoikotaxRefundRequested:
+		return true
+	case ComZoikotaxRefundStatusChanged:
 		return true
 	default:
 		return false
@@ -507,6 +558,27 @@ func (e ValueType) Valid() bool {
 	}
 }
 
+// Defines values for WebhookStatus.
+const (
+	WebhookStatusACTIVE   WebhookStatus = "ACTIVE"
+	WebhookStatusDISABLED WebhookStatus = "DISABLED"
+	WebhookStatusPAUSED   WebhookStatus = "PAUSED"
+)
+
+// Valid indicates whether the value is a known member of the WebhookStatus enum.
+func (e WebhookStatus) Valid() bool {
+	switch e {
+	case WebhookStatusACTIVE:
+		return true
+	case WebhookStatusDISABLED:
+		return true
+	case WebhookStatusPAUSED:
+		return true
+	default:
+		return false
+	}
+}
+
 // AiProvenance Which governed use case, model, provider, prompt and AI train produced an output (ADR-0006 §2.7).
 type AiProvenance struct {
 	AiTrainVersion  string `json:"aiTrainVersion"`
@@ -588,6 +660,9 @@ type Capabilities struct {
 	// difference between them is a difference in law.
 	Content     *ContentCapability `json:"content,omitempty"`
 	Environment string             `json:"environment"`
+
+	// EventTypes Every event type this deployment emits, and so the types a webhook may subscribe to.
+	EventTypes []EventType `json:"eventTypes"`
 
 	// ReasonCodes Every reason code this deployment can emit.
 	ReasonCodes []ReasonCode `json:"reasonCodes"`
@@ -837,6 +912,12 @@ type DecisionDigests struct {
 // (ADR-0012 §2.1). Sortable by creation, never recycled.
 type DecisionID = string
 
+// DeliveryID One delivery of one event to one webhook.
+type DeliveryID = string
+
+// DeliveryStatus `PENDING` awaits its next attempt; `DEAD` is the dead-letter state, kept and replayable.
+type DeliveryStatus string
+
 // DeterminationInput The named values the active content reads, grouped by type. The names
 // are the pack's — `line.netAmount`, not a field this contract defines —
 // because which values a transaction carries is decided by content, and
@@ -864,6 +945,9 @@ type EffectiveObligationStatus string
 
 // Emitted What the content emitted, by result slot. The slots are the pack's.
 type Emitted map[string]ResultValue
+
+// EventType An event type this cell emits, as the AsyncAPI contract names it.
+type EventType string
 
 // Journal One posted Tax Control Subledger journal. Balanced in its one currency; append-only.
 type Journal struct {
@@ -1581,6 +1665,146 @@ type UserStatus string
 // ValueType The type of an emitted value. It says which of a value's other members are present.
 type ValueType string
 
+// Webhook defines model for Webhook.
+type Webhook struct {
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt   Timestamp   `json:"createdAt"`
+	Description *string     `json:"description,omitempty"`
+	EventTypes  []EventType `json:"eventTypes"`
+
+	// ID A webhook subscription. A UUIDv7 in lowercase canonical form.
+	ID     WebhookID     `json:"id"`
+	Status WebhookStatus `json:"status"`
+
+	// StatusChangedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	StatusChangedAt Timestamp `json:"statusChangedAt"`
+
+	// URL An HTTPS endpoint at a public address, with no credentials in it.
+	URL WebhookURL `json:"url"`
+}
+
+// WebhookAttempt defines model for WebhookAttempt.
+type WebhookAttempt struct {
+	Attempt    int32 `json:"attempt"`
+	DurationMs int32 `json:"durationMs"`
+
+	// Error The transport's error, when no 2xx arrived. Never the receiver's response body.
+	Error *string `json:"error,omitempty"`
+
+	// StartedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	StartedAt Timestamp `json:"startedAt"`
+
+	// StatusCode The receiver's HTTP status. Absent when no response arrived.
+	StatusCode *int32 `json:"statusCode,omitempty"`
+}
+
+// WebhookCreateRequest defines model for WebhookCreateRequest.
+type WebhookCreateRequest struct {
+	Description *string     `json:"description,omitempty"`
+	EventTypes  []EventType `json:"eventTypes"`
+
+	// URL An HTTPS endpoint at a public address, with no credentials in it.
+	URL WebhookURL `json:"url"`
+}
+
+// WebhookCreated defines model for WebhookCreated.
+type WebhookCreated struct {
+	// Secret A signing secret, in the form Standard Webhooks libraries take. Returned once, by the response that issued it.
+	Secret  WebhookSecret `json:"secret"`
+	Webhook Webhook       `json:"webhook"`
+}
+
+// WebhookDelivery defines model for WebhookDelivery.
+type WebhookDelivery struct {
+	Attempts int32 `json:"attempts"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// DeliveredAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	DeliveredAt *Timestamp `json:"deliveredAt,omitempty"`
+
+	// EventID The CloudEvents id, sent as `webhook-id`. The receiver's deduplication key.
+	EventID string `json:"eventId"`
+
+	// EventType An event type this cell emits, as the AsyncAPI contract names it.
+	EventType EventType `json:"eventType"`
+
+	// ID One delivery of one event to one webhook.
+	ID DeliveryID `json:"id"`
+
+	// NextAttemptAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	NextAttemptAt *Timestamp `json:"nextAttemptAt,omitempty"`
+
+	// ReplayOf One delivery of one event to one webhook.
+	ReplayOf *DeliveryID `json:"replayOf,omitempty"`
+
+	// Status `PENDING` awaits its next attempt; `DEAD` is the dead-letter state, kept and replayable.
+	Status DeliveryStatus `json:"status"`
+
+	// WebhookID A webhook subscription. A UUIDv7 in lowercase canonical form.
+	WebhookID WebhookID `json:"webhookId"`
+}
+
+// WebhookDeliveryDetail defines model for WebhookDeliveryDetail.
+type WebhookDeliveryDetail struct {
+	Attempts []WebhookAttempt `json:"attempts"`
+	Delivery WebhookDelivery  `json:"delivery"`
+}
+
+// WebhookDeliveryList defines model for WebhookDeliveryList.
+type WebhookDeliveryList struct {
+	Deliveries []WebhookDelivery `json:"deliveries"`
+}
+
+// WebhookID A webhook subscription. A UUIDv7 in lowercase canonical form.
+type WebhookID = string
+
+// WebhookList defines model for WebhookList.
+type WebhookList struct {
+	Webhooks []Webhook `json:"webhooks"`
+}
+
+// WebhookSecret A signing secret, in the form Standard Webhooks libraries take. Returned once, by the response that issued it.
+type WebhookSecret struct {
+	Secret  string `json:"secret"`
+	Version int32  `json:"version"`
+}
+
+// WebhookSecretRotation defines model for WebhookSecretRotation.
+type WebhookSecretRotation struct {
+	// PreviousRetiresAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	PreviousRetiresAt Timestamp `json:"previousRetiresAt"`
+
+	// Secret A signing secret, in the form Standard Webhooks libraries take. Returned once, by the response that issued it.
+	Secret WebhookSecret `json:"secret"`
+}
+
+// WebhookStatus defines model for WebhookStatus.
+type WebhookStatus string
+
+// WebhookStatusRequest defines model for WebhookStatusRequest.
+type WebhookStatusRequest struct {
+	Status WebhookStatus `json:"status"`
+}
+
+// WebhookURL An HTTPS endpoint at a public address, with no credentials in it.
+type WebhookURL = string
+
 // IdempotencyKey defines model for IdempotencyKey.
 type IdempotencyKey = string
 
@@ -1708,6 +1932,23 @@ type RefundTransactionParams struct {
 	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
 }
 
+// ListWebhooksParams defines parameters for ListWebhooks.
+type ListWebhooksParams struct {
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListWebhookDeliveriesParams defines parameters for ListWebhookDeliveries.
+type ListWebhookDeliveriesParams struct {
+	// Status Only deliveries in this status.
+	Status *DeliveryStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
 type CreateUserJSONRequestBody = CreateUserRequest
 
@@ -1743,3 +1984,9 @@ type CommitTransactionJSONRequestBody = CommitRequest
 
 // RefundTransactionJSONRequestBody defines body for RefundTransaction for application/json ContentType.
 type RefundTransactionJSONRequestBody = RefundRequest
+
+// CreateWebhookJSONRequestBody defines body for CreateWebhook for application/json ContentType.
+type CreateWebhookJSONRequestBody = WebhookCreateRequest
+
+// SetWebhookStatusJSONRequestBody defines body for SetWebhookStatus for application/json ContentType.
+type SetWebhookStatusJSONRequestBody = WebhookStatusRequest

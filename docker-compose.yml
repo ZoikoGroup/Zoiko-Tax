@@ -112,6 +112,10 @@ services:
       ZTAX_BOOTSTRAP_ADMIN_NAME: Acme Administrator
       ZTAX_BOOTSTRAP_ADMIN_PASSWORD_REF: local://bootstrap-admin
       ZTAX_LOCAL_SECRET_BOOTSTRAP_ADMIN: local-dev-only-password
+      # The key that seals webhook signing secrets at rest. Development-only,
+      # like every local:// value: the resolver refuses it anywhere else.
+      ZTAX_WEBHOOK_KEY_REF: local://webhook-key
+      ZTAX_LOCAL_SECRET_WEBHOOK_KEY: bG9jYWwtZGV2LW9ubHktd2ViaG9vay1rZXktMzJieXQ=
 
       ZTAX_HTTP_ADDR: ":8080"
       ZTAX_LOG_LEVEL: debug

@@ -440,6 +440,14 @@ namespace ZoikoTax.Sdk
         [System.ComponentModel.DataAnnotations.Required]
         public System.Collections.Generic.ICollection<string> ReasonCodes { get; set; } = new System.Collections.ObjectModel.Collection<string>();
 
+        /// <summary>
+        /// Every event type this deployment emits, and so the types a webhook may subscribe to.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("eventTypes")]
+        // TODO(system.text.json): Add ItemConverterType with enum converter when supported
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<EventType> EventTypes { get; set; } = new System.Collections.ObjectModel.Collection<EventType>();
+
         [System.Text.Json.Serialization.JsonPropertyName("content")]
         public ContentCapability? Content { get; set; } = default!;
 
@@ -1756,6 +1764,303 @@ namespace ZoikoTax.Sdk
         [System.Text.Json.Serialization.JsonPropertyName("externalReference")]
         [System.ComponentModel.DataAnnotations.StringLength(255, MinimumLength = 1)]
         public string? ExternalReference { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// An event type this cell emits, as the AsyncAPI contract names it.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum EventType
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"com.zoikotax.decision.committed")]
+        Com_zoikotax_decision_committed = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"com.zoikotax.decision.corrected")]
+        Com_zoikotax_decision_corrected = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"com.zoikotax.obligation.status-changed")]
+        Com_zoikotax_obligation_statusChanged = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"com.zoikotax.accumulator.threshold-crossed")]
+        Com_zoikotax_accumulator_thresholdCrossed = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"com.zoikotax.refund.requested")]
+        Com_zoikotax_refund_requested = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"com.zoikotax.refund.status-changed")]
+        Com_zoikotax_refund_statusChanged = 5,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum WebhookStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ACTIVE")]
+        ACTIVE = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PAUSED")]
+        PAUSED = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DISABLED")]
+        DISABLED = 2,
+
+    }
+
+    /// <summary>
+    /// `PENDING` awaits its next attempt; `DEAD` is the dead-letter state, kept and replayable.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum DeliveryStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PENDING")]
+        PENDING = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DELIVERED")]
+        DELIVERED = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DEAD")]
+        DEAD = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookCreateRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("url")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(2048, MinimumLength = 8)]
+        public System.Uri Url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("eventTypes")]
+        // TODO(system.text.json): Add ItemConverterType with enum converter when supported
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.MinLength(1)]
+        public System.Collections.Generic.ICollection<EventType> EventTypes { get; set; } = new System.Collections.ObjectModel.Collection<EventType>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        [System.ComponentModel.DataAnnotations.StringLength(500)]
+        public string? Description { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Webhook
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("url")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(2048, MinimumLength = 8)]
+        public System.Uri Url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("eventTypes")]
+        // TODO(system.text.json): Add ItemConverterType with enum converter when supported
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<EventType> EventTypes { get; set; } = new System.Collections.ObjectModel.Collection<EventType>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public string? Description { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<WebhookStatus>))]
+        public WebhookStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string CreatedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("statusChangedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string StatusChangedAt { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookList
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("webhooks")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<Webhook> Webhooks { get; set; } = new System.Collections.ObjectModel.Collection<Webhook>();
+
+    }
+
+    /// <summary>
+    /// A signing secret, in the form Standard Webhooks libraries take. Returned once, by the response that issued it.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookSecret
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("version")]
+        [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
+        public int Version { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("secret")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^whsec_[A-Za-z0-9+/]{43}=$")]
+        public string Secret { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookCreated
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("webhook")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public Webhook Webhook { get; set; } = new Webhook();
+
+        [System.Text.Json.Serialization.JsonPropertyName("secret")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public WebhookSecret Secret { get; set; } = new WebhookSecret();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookStatusRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<WebhookStatus>))]
+        public WebhookStatus Status { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookSecretRotation
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("secret")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public WebhookSecret Secret { get; set; } = new WebhookSecret();
+
+        [System.Text.Json.Serialization.JsonPropertyName("previousRetiresAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string PreviousRetiresAt { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookDelivery
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("webhookId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid WebhookId { get; set; } = default!;
+
+        /// <summary>
+        /// The CloudEvents id, sent as `webhook-id`. The receiver's deduplication key.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("eventId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Guid EventId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("eventType")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<EventType>))]
+        public EventType EventType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<DeliveryStatus>))]
+        public DeliveryStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("attempts")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Attempts { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("nextAttemptAt")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string? NextAttemptAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string CreatedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("deliveredAt")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string? DeliveredAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("replayOf")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid? ReplayOf { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookDeliveryList
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("deliveries")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<WebhookDelivery> Deliveries { get; set; } = new System.Collections.ObjectModel.Collection<WebhookDelivery>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookAttempt
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("attempt")]
+        [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
+        public int Attempt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("startedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string StartedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("durationMs")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int DurationMs { get; set; } = default!;
+
+        /// <summary>
+        /// The receiver's HTTP status. Absent when no response arrived.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("statusCode")]
+        public int? StatusCode { get; set; } = default!;
+
+        /// <summary>
+        /// The transport's error, when no 2xx arrived. Never the receiver's response body.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("error")]
+        public string? Error { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookDeliveryDetail
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("delivery")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public WebhookDelivery Delivery { get; set; } = new WebhookDelivery();
+
+        [System.Text.Json.Serialization.JsonPropertyName("attempts")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<WebhookAttempt> Attempts { get; set; } = new System.Collections.ObjectModel.Collection<WebhookAttempt>();
 
     }
 

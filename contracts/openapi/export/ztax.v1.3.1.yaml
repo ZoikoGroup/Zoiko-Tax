@@ -84,6 +84,8 @@ tags:
     description: Periodic returns assessed from committed decisions, and their lifecycle.
   - name: refunds
     description: Refunds of tax a committed decision charged. Their own lifecycle; never a decision, never a credit.
+  - name: webhooks
+    description: Delivery of the cell's events to endpoints a tenant names. Signed, retried, dead-lettered and replayable; egress-guarded.
 security:
   - sessionCookie: []
 paths:
@@ -136,6 +138,10 @@ paths:
                       - FORBIDDEN
                       - NOT_AUTHORITATIVE
                       - NO_CONTENT_BUNDLE
+                    eventTypes:
+                      - com.zoikotax.decision.committed
+                      - com.zoikotax.decision.corrected
+                      - com.zoikotax.obligation.status-changed
                     content:
                       bundleId: eu-vat-worked-2026.09
                       digest: zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b
@@ -160,6 +166,10 @@ paths:
                     reasonCodes:
                       - NO_CONTENT_BUNDLE
                       - NOT_AUTHORITATIVE
+                    eventTypes:
+                      - com.zoikotax.decision.committed
+                      - com.zoikotax.decision.corrected
+                      - com.zoikotax.obligation.status-changed
         "500":
           $ref: "#/components/responses/Internal"
         "503":
@@ -1275,6 +1285,407 @@ paths:
           $ref: "#/components/responses/Internal"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/webhooks:
+    get:
+      operationId: listWebhooks
+      tags:
+        - webhooks
+      summary: The tenant's webhook subscriptions
+      description: |
+        `ADMIN` or `AUDITOR`. Every subscription with its current status,
+        oldest first.
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The subscriptions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookList"
+              examples:
+                default:
+                  summary: One active subscription
+                  value:
+                    webhooks:
+                      - id: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        url: https://hooks.example.com/ztax
+                        eventTypes:
+                          - com.zoikotax.decision.committed
+                          - com.zoikotax.refund.status-changed
+                        status: ACTIVE
+                        createdAt: 2026-10-07T09:00:00.000000Z
+                        statusChangedAt: 2026-10-07T09:00:00.000000Z
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: createWebhook
+      tags:
+        - webhooks
+      summary: Subscribe an endpoint to named event types
+      description: |
+        `ADMIN` only. Subscribes an HTTPS endpoint to the event types it
+        names — there is no wildcard, so an event kind added later reaches
+        nobody who did not ask for it by name. The endpoint must be HTTPS,
+        carry no credentials, and be a public address: a destination inside
+        the cell's network is refused here and again at every connection,
+        after name resolution.
+
+        The response carries the signing secret, `whsec_…`, **once**. It is
+        stored sealed and is never returned again; rotate it to get a new one.
+        Deliveries are signed under the Standard Webhooks scheme
+        (`webhook-id`, `webhook-timestamp`, `webhook-signature`), so any
+        Standard Webhooks library verifies them. `webhook-id` is the
+        CloudEvents id: deduplicate on it, because delivery is at least once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookCreateRequest"
+            examples:
+              default:
+                summary: Decisions and refunds to the ERP bridge
+                value:
+                  url: https://hooks.example.com/ztax
+                  eventTypes:
+                    - com.zoikotax.decision.committed
+                    - com.zoikotax.refund.status-changed
+                  description: ERP bridge
+      responses:
+        "201":
+          description: The subscription and its first signing secret, shown this once.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookCreated"
+              examples:
+                default:
+                  summary: A new subscription
+                  value:
+                    webhook:
+                      id: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                      url: https://hooks.example.com/ztax
+                      eventTypes:
+                        - com.zoikotax.decision.committed
+                        - com.zoikotax.refund.status-changed
+                      description: ERP bridge
+                      status: ACTIVE
+                      createdAt: 2026-10-07T09:00:00.000000Z
+                      statusChangedAt: 2026-10-07T09:00:00.000000Z
+                    secret:
+                      version: 1
+                      secret: whsec_AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/webhooks/{webhookId}:
+    get:
+      operationId: getWebhook
+      tags:
+        - webhooks
+      summary: One webhook subscription
+      description: "`ADMIN` or `AUDITOR`."
+      parameters:
+        - $ref: "#/components/parameters/WebhookId"
+      responses:
+        "200":
+          description: The subscription.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Webhook"
+              examples:
+                default:
+                  summary: A paused subscription
+                  value:
+                    id: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    url: https://hooks.example.com/ztax
+                    eventTypes:
+                      - com.zoikotax.decision.committed
+                    status: PAUSED
+                    createdAt: 2026-10-07T09:00:00.000000Z
+                    statusChangedAt: 2026-10-07T12:00:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/webhooks/{webhookId}/status:
+    post:
+      operationId: setWebhookStatus
+      tags:
+        - webhooks
+      summary: Pause, resume or disable a subscription
+      description: |
+        `ADMIN` only. `PAUSED` stops deliveries and keeps nothing for later:
+        an event committed while paused is not delivered on resume, and a
+        delivery already scheduled is dead-lettered. Replay is how a receiver
+        catches up, deliberately. `DISABLED` is final. Asking for the status
+        the subscription already has is a retry and returns it unchanged.
+      parameters:
+        - $ref: "#/components/parameters/WebhookId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookStatusRequest"
+            examples:
+              default:
+                summary: Pause during a receiver migration
+                value:
+                  status: PAUSED
+      responses:
+        "200":
+          description: The subscription after the change.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Webhook"
+              examples:
+                default:
+                  summary: Paused
+                  value:
+                    id: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    url: https://hooks.example.com/ztax
+                    eventTypes:
+                      - com.zoikotax.decision.committed
+                    status: PAUSED
+                    createdAt: 2026-10-07T09:00:00.000000Z
+                    statusChangedAt: 2026-10-07T12:00:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/webhooks/{webhookId}/secrets:rotate:
+    post:
+      operationId: rotateWebhookSecret
+      tags:
+        - webhooks
+      summary: Issue a new signing secret
+      description: |
+        `ADMIN` only. Issues the next signing secret, returned this once.
+        For 24 hours after the rotation every delivery is signed with both
+        the new secret and the previous one — `webhook-signature` carries
+        both — so a receiver can switch at its own pace. Rotating again inside
+        that window retires the oldest at once.
+      parameters:
+        - $ref: "#/components/parameters/WebhookId"
+      responses:
+        "200":
+          description: The new secret, and when the previous one stops signing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookSecretRotation"
+              examples:
+                default:
+                  summary: Version 2
+                  value:
+                    secret:
+                      version: 2
+                      secret: whsec_ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=
+                    previousRetiresAt: 2026-10-08T09:00:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/webhooks/{webhookId}/deliveries:
+    get:
+      operationId: listWebhookDeliveries
+      tags:
+        - webhooks
+      summary: A subscription's deliveries, newest first
+      description: |
+        `ADMIN` or `AUDITOR`. Filter on `status=DEAD` for the dead-letter
+        queue: deliveries that exhausted their attempts, or whose
+        subscription stopped receiving. The body sent is not returned; it is
+        the event, which the receiver has, or can be read through the API.
+      parameters:
+        - $ref: "#/components/parameters/WebhookId"
+        - name: status
+          in: query
+          required: false
+          description: Only deliveries in this status.
+          schema:
+            $ref: "#/components/schemas/DeliveryStatus"
+          example: DEAD
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The deliveries.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookDeliveryList"
+              examples:
+                default:
+                  summary: One dead-lettered delivery
+                  value:
+                    deliveries:
+                      - id: 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                        webhookId: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        eventId: 01920a5f-0a1b-7c2d-8e3f-4a5b6c7d8e9f
+                        eventType: com.zoikotax.decision.committed
+                        status: DEAD
+                        attempts: 8
+                        createdAt: 2026-10-06T09:00:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/webhooks/{webhookId}/deliveries/{deliveryId}:
+    get:
+      operationId: getWebhookDelivery
+      tags:
+        - webhooks
+      summary: One delivery and its attempts
+      description: |
+        `ADMIN` or `AUDITOR`. Each attempt records when it started, how long
+        it took, the receiver's status code if one arrived, and the
+        transport's error if not. The receiver's response body is never
+        kept.
+      parameters:
+        - $ref: "#/components/parameters/WebhookId"
+        - $ref: "#/components/parameters/DeliveryId"
+      responses:
+        "200":
+          description: The delivery.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookDeliveryDetail"
+              examples:
+                default:
+                  summary: Delivered on the second attempt
+                  value:
+                    delivery:
+                      id: 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                      webhookId: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                      eventId: 01920a5f-0a1b-7c2d-8e3f-4a5b6c7d8e9f
+                      eventType: com.zoikotax.decision.committed
+                      status: DELIVERED
+                      attempts: 2
+                      createdAt: 2026-10-07T09:00:00.000000Z
+                      deliveredAt: 2026-10-07T09:00:31.000000Z
+                    attempts:
+                      - attempt: 1
+                        startedAt: 2026-10-07T09:00:01.000000Z
+                        durationMs: 10000
+                        error: context deadline exceeded
+                      - attempt: 2
+                        startedAt: 2026-10-07T09:00:31.000000Z
+                        durationMs: 84
+                        statusCode: 204
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/webhooks/{webhookId}/deliveries/{deliveryId}/replay:
+    post:
+      operationId: replayWebhookDelivery
+      tags:
+        - webhooks
+      summary: Deliver an event again
+      description: |
+        `ADMIN` only. Schedules a new delivery of the same event, with the
+        same bytes and the same `webhook-id`, naming the delivery it replays.
+        It is how a receiver catches up after an outage that outlasted the
+        retries, or after a pause. The subscription must be `ACTIVE`.
+      parameters:
+        - $ref: "#/components/parameters/WebhookId"
+        - $ref: "#/components/parameters/DeliveryId"
+      responses:
+        "202":
+          description: The new delivery, scheduled now.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookDelivery"
+              examples:
+                default:
+                  summary: A replay of a dead-lettered delivery
+                  value:
+                    id: 01920a62-3c4d-7e5f-8061-7b8c9d0e1f2a
+                    webhookId: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    eventId: 01920a5f-0a1b-7c2d-8e3f-4a5b6c7d8e9f
+                    eventType: com.zoikotax.decision.committed
+                    status: PENDING
+                    attempts: 0
+                    nextAttemptAt: 2026-10-07T13:00:00.000000Z
+                    createdAt: 2026-10-07T13:00:00.000000Z
+                    replayOf: 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/decisions/{decisionId}:
     get:
       operationId: getDecision
@@ -1839,6 +2250,22 @@ components:
       schema:
         $ref: "#/components/schemas/RefundId"
       example: 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+    WebhookId:
+      name: webhookId
+      in: path
+      required: true
+      description: The webhook subscription.
+      schema:
+        $ref: "#/components/schemas/WebhookId"
+      example: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+    DeliveryId:
+      name: deliveryId
+      in: path
+      required: true
+      description: The delivery.
+      schema:
+        $ref: "#/components/schemas/DeliveryId"
+      example: 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
     Limit:
       name: limit
       in: query
@@ -2490,6 +2917,7 @@ components:
         - canonProfile
         - authoritative
         - reasonCodes
+        - eventTypes
       properties:
         cell:
           x-ztax-privacy:
@@ -2534,6 +2962,11 @@ components:
           description: Every reason code this deployment can emit.
           items:
             $ref: "#/components/schemas/ReasonCode"
+        eventTypes:
+          type: array
+          description: Every event type this deployment emits, and so the types a webhook may subscribe to.
+          items:
+            $ref: "#/components/schemas/EventType"
         content:
           $ref: "#/components/schemas/ContentCapability"
     Trains:
@@ -3849,6 +4282,304 @@ components:
           $ref: "#/components/schemas/RefundOutcome"
         externalReference:
           $ref: "#/components/schemas/PaymentReference"
+    WebhookId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WebhookId
+      description: A webhook subscription. A UUIDv7 in lowercase canonical form.
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+    DeliveryId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: DeliveryId
+      description: One delivery of one event to one webhook.
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+    EventType:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: EventType
+      description: An event type this cell emits, as the AsyncAPI contract names it.
+      enum:
+        - com.zoikotax.decision.committed
+        - com.zoikotax.decision.corrected
+        - com.zoikotax.obligation.status-changed
+        - com.zoikotax.accumulator.threshold-crossed
+        - com.zoikotax.refund.requested
+        - com.zoikotax.refund.status-changed
+      example: com.zoikotax.decision.committed
+    WebhookStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WebhookStatus
+      enum:
+        - ACTIVE
+        - PAUSED
+        - DISABLED
+      example: ACTIVE
+    DeliveryStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: DeliveryStatus
+      description: "`PENDING` awaits its next attempt; `DEAD` is the dead-letter state, kept and replayable."
+      enum:
+        - PENDING
+        - DELIVERED
+        - DEAD
+      example: DEAD
+    WebhookUrl:
+      x-ztax-privacy:
+        class: P2
+        purposes:
+          - PURP-SVCOPS
+          - PURP-SEC
+        retention: RET-OPERATIONAL
+        redaction: REDACT
+        aiAllowed: NONE
+      type: string
+      title: WebhookUrl
+      description: An HTTPS endpoint at a public address, with no credentials in it.
+      format: uri
+      minLength: 8
+      maxLength: 2048
+      example: https://hooks.example.com/ztax
+    WebhookCreateRequest:
+      type: object
+      title: WebhookCreateRequest
+      additionalProperties: false
+      required:
+        - url
+        - eventTypes
+      properties:
+        url:
+          $ref: "#/components/schemas/WebhookUrl"
+        eventTypes:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/EventType"
+        description:
+          x-ztax-privacy:
+            class: P2
+            purposes:
+              - PURP-SVCOPS
+            retention: RET-OPERATIONAL
+            redaction: REDACT
+            aiAllowed: NONE
+          type: string
+          maxLength: 500
+    Webhook:
+      type: object
+      title: Webhook
+      additionalProperties: false
+      required:
+        - id
+        - url
+        - eventTypes
+        - status
+        - createdAt
+        - statusChangedAt
+      properties:
+        id:
+          $ref: "#/components/schemas/WebhookId"
+        url:
+          $ref: "#/components/schemas/WebhookUrl"
+        eventTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventType"
+        description:
+          x-ztax-privacy:
+            class: P2
+            purposes:
+              - PURP-SVCOPS
+            retention: RET-OPERATIONAL
+            redaction: REDACT
+            aiAllowed: NONE
+          type: string
+        status:
+          $ref: "#/components/schemas/WebhookStatus"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        statusChangedAt:
+          $ref: "#/components/schemas/Timestamp"
+    WebhookList:
+      type: object
+      title: WebhookList
+      additionalProperties: false
+      required:
+        - webhooks
+      properties:
+        webhooks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Webhook"
+    WebhookSecret:
+      type: object
+      title: WebhookSecret
+      description: A signing secret, in the form Standard Webhooks libraries take. Returned once, by the response that issued it.
+      additionalProperties: false
+      required:
+        - version
+        - secret
+      properties:
+        version:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        secret:
+          x-ztax-privacy:
+            class: P7
+            purposes:
+              - PURP-SEC
+            retention: RET-OPERATIONAL
+            redaction: NO_LOG
+            aiAllowed: NONE
+          type: string
+          pattern: ^whsec_[A-Za-z0-9+/]{43}=$
+    WebhookCreated:
+      type: object
+      title: WebhookCreated
+      additionalProperties: false
+      required:
+        - webhook
+        - secret
+      properties:
+        webhook:
+          $ref: "#/components/schemas/Webhook"
+        secret:
+          $ref: "#/components/schemas/WebhookSecret"
+    WebhookStatusRequest:
+      type: object
+      title: WebhookStatusRequest
+      additionalProperties: false
+      required:
+        - status
+      properties:
+        status:
+          $ref: "#/components/schemas/WebhookStatus"
+    WebhookSecretRotation:
+      type: object
+      title: WebhookSecretRotation
+      additionalProperties: false
+      required:
+        - secret
+        - previousRetiresAt
+      properties:
+        secret:
+          $ref: "#/components/schemas/WebhookSecret"
+        previousRetiresAt:
+          $ref: "#/components/schemas/Timestamp"
+    WebhookDelivery:
+      type: object
+      title: WebhookDelivery
+      additionalProperties: false
+      required:
+        - id
+        - webhookId
+        - eventId
+        - eventType
+        - status
+        - attempts
+        - createdAt
+      properties:
+        id:
+          $ref: "#/components/schemas/DeliveryId"
+        webhookId:
+          $ref: "#/components/schemas/WebhookId"
+        eventId:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          format: uuid
+          description: The CloudEvents id, sent as `webhook-id`. The receiver's deduplication key.
+        eventType:
+          $ref: "#/components/schemas/EventType"
+        status:
+          $ref: "#/components/schemas/DeliveryStatus"
+        attempts:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        nextAttemptAt:
+          $ref: "#/components/schemas/Timestamp"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        deliveredAt:
+          $ref: "#/components/schemas/Timestamp"
+        replayOf:
+          $ref: "#/components/schemas/DeliveryId"
+    WebhookDeliveryList:
+      type: object
+      title: WebhookDeliveryList
+      additionalProperties: false
+      required:
+        - deliveries
+      properties:
+        deliveries:
+          type: array
+          items:
+            $ref: "#/components/schemas/WebhookDelivery"
+    WebhookAttempt:
+      type: object
+      title: WebhookAttempt
+      additionalProperties: false
+      required:
+        - attempt
+        - startedAt
+        - durationMs
+      properties:
+        attempt:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        startedAt:
+          $ref: "#/components/schemas/Timestamp"
+        durationMs:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        statusCode:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          description: The receiver's HTTP status. Absent when no response arrived.
+        error:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The transport's error, when no 2xx arrived. Never the receiver's response body.
+    WebhookDeliveryDetail:
+      type: object
+      title: WebhookDeliveryDetail
+      additionalProperties: false
+      required:
+        - delivery
+        - attempts
+      properties:
+        delivery:
+          $ref: "#/components/schemas/WebhookDelivery"
+        attempts:
+          type: array
+          items:
+            $ref: "#/components/schemas/WebhookAttempt"
     ReplayReport:
       type: object
       title: ReplayReport

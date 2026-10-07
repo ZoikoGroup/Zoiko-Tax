@@ -127,6 +127,16 @@ type Config struct {
 	AIGatewayInsecure bool
 	AIGatewayDeadline time.Duration
 	AIPolicyFile      string
+
+	// Webhooks (W2 lane K). WebhookKeyRef names where the key that encrypts
+	// webhook signing secrets at rest lives — a reference resolved through
+	// internal/platform/secrets, never the key. Empty is a cell that serves no
+	// webhooks: the surface answers 503 and the relay delivers nothing.
+	// WebhookAllowPrivate lets a delivery reach a loopback or private address,
+	// which the egress guard otherwise refuses; refused outside development,
+	// because a webhook URL is a request the cell makes on a customer's say-so.
+	WebhookKeyRef       string
+	WebhookAllowPrivate bool
 }
 
 // LocalSecretPrefix is the one recognised variable family whose members are not
@@ -181,6 +191,8 @@ var known = map[string]struct {
 	"ZTAX_AI_GATEWAY_INSECURE":          {def: "false"},
 	"ZTAX_AI_GATEWAY_DEADLINE":          {def: "5s"},
 	"ZTAX_AI_POLICY_FILE":               {def: ""},
+	"ZTAX_WEBHOOK_KEY_REF":              {def: ""},
+	"ZTAX_WEBHOOK_ALLOW_PRIVATE":        {def: "false"},
 	"ZTAX_BOOTSTRAP_TENANT":             {def: ""},
 	"ZTAX_BOOTSTRAP_TENANT_NAME":        {def: ""},
 	"ZTAX_BOOTSTRAP_ADMIN_EMAIL":        {def: ""},
@@ -294,6 +306,9 @@ func Load() (Config, error) {
 		AIGatewayDeadline: duration("ZTAX_AI_GATEWAY_DEADLINE"),
 		AIPolicyFile:      get("ZTAX_AI_POLICY_FILE"),
 
+		WebhookKeyRef:       get("ZTAX_WEBHOOK_KEY_REF"),
+		WebhookAllowPrivate: boolean("ZTAX_WEBHOOK_ALLOW_PRIVATE"),
+
 		BootstrapTenant:           get("ZTAX_BOOTSTRAP_TENANT"),
 		BootstrapTenantName:       get("ZTAX_BOOTSTRAP_TENANT_NAME"),
 		BootstrapAdminEmail:       get("ZTAX_BOOTSTRAP_ADMIN_EMAIL"),
@@ -341,6 +356,15 @@ func Load() (Config, error) {
 	if c.AIGatewayInsecure && c.Environment != "development" {
 		problems = append(problems, fmt.Sprintf(
 			"ZTAX_AI_GATEWAY_INSECURE: refused in environment %q; the Gateway boundary is mTLS", c.Environment))
+	}
+
+	// A webhook that may reach the cell's own network is server-side request
+	// forgery with a configuration flag (ZTAX-SEC-001). Local development
+	// needs it to point a webhook at a listener on the laptop; nothing else
+	// does.
+	if c.WebhookAllowPrivate && c.Environment != "development" {
+		problems = append(problems, fmt.Sprintf(
+			"ZTAX_WEBHOOK_ALLOW_PRIVATE: refused in environment %q; webhook egress never reaches private addresses", c.Environment))
 	}
 
 	// Telemetry in clear is a development affordance for the same reason.
@@ -405,6 +429,8 @@ func (c Config) LogAttrs() []any {
 		"ai_gateway.mtls", c.AIGatewayTLSDir != "",
 		"ai_gateway.deadline", c.AIGatewayDeadline.String(),
 		"ai_policy.file", c.AIPolicyFile,
+		"webhook.key_ref", c.WebhookKeyRef,
+		"webhook.allow_private", c.WebhookAllowPrivate,
 		"known_vars", strconv.Itoa(len(known)),
 	}
 }

@@ -82,6 +82,10 @@ type Router struct {
 	// provider reports. Nil in a cell deployed without the determination
 	// surface, which answers 503.
 	Refunds *app.RefundService
+
+	// Webhooks administers webhook subscriptions and reads their deliveries.
+	// Nil in a cell with no webhook key, which answers 503.
+	Webhooks *app.WebhookService
 }
 
 // Trains are the seven release-train versions, as the contract names them.
@@ -155,6 +159,18 @@ func (rt *Router) routes() []struct {
 		{Route{"GET", "/v1/admin/sessions", false, []security.Role{admin}}, rt.handleListSessions},
 		{Route{"DELETE", "/v1/admin/sessions/{sessionId}", false, []security.Role{admin}}, rt.handleRevokeSession},
 		{Route{"GET", "/v1/admin/audit", false, []security.Role{admin, security.RoleAuditor}}, rt.handleListAudit},
+
+		// Webhooks. Which events leave the cell, and to where, is an egress
+		// decision and ADMIN's; it moves no figure, so no fiscal role holds
+		// it.
+		{Route{"GET", "/v1/webhooks", false, []security.Role{admin, auditor}}, rt.handleListWebhooks},
+		{Route{"POST", "/v1/webhooks", false, []security.Role{admin}}, rt.handleCreateWebhook},
+		{Route{"GET", "/v1/webhooks/{webhookId}", false, []security.Role{admin, auditor}}, rt.handleGetWebhook},
+		{Route{"POST", "/v1/webhooks/{webhookId}/status", false, []security.Role{admin}}, rt.handleSetWebhookStatus},
+		{Route{"POST", "/v1/webhooks/{webhookId}/secrets:rotate", false, []security.Role{admin}}, rt.handleRotateWebhookSecret},
+		{Route{"GET", "/v1/webhooks/{webhookId}/deliveries", false, []security.Role{admin, auditor}}, rt.handleListWebhookDeliveries},
+		{Route{"GET", "/v1/webhooks/{webhookId}/deliveries/{deliveryId}", false, []security.Role{admin, auditor}}, rt.handleGetWebhookDelivery},
+		{Route{"POST", "/v1/webhooks/{webhookId}/deliveries/{deliveryId}/replay", false, []security.Role{admin}}, rt.handleReplayWebhookDelivery},
 
 		// Determination. ADMIN is on none of them: administering a tenant's
 		// users is not a fiscal operation, and a role that could do both
@@ -288,6 +304,12 @@ func (rt *Router) handleCapabilities(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	events := app.Events()
+	eventTypes := make([]gen.EventType, len(events))
+	for i, e := range events {
+		eventTypes[i] = gen.EventType(e.Type)
+	}
+
 	writeJSON(w, r, rt.log, http.StatusOK, gen.Capabilities{
 		Cell:          rt.Cell,
 		Region:        rt.Region,
@@ -296,6 +318,7 @@ func (rt *Router) handleCapabilities(w http.ResponseWriter, r *http.Request) {
 		CanonProfile:  "canon/v1",
 		Authoritative: rt.Authoritative,
 		ReasonCodes:   names,
+		EventTypes:    eventTypes,
 		Content:       content,
 	})
 }

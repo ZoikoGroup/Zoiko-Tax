@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -86,5 +87,37 @@ func TestEveryEmittedEventIsRegisteredInAllThreePlaces(t *testing.T) {
 	}
 	if got, want := strings.Count(doc, "name: com.zoikotax."), len(app.Events()); got != want {
 		t.Errorf("the AsyncAPI document declares %d messages; the producer emits %d events", got, want)
+	}
+}
+
+// The API contract's EventType enum is what a webhook subscription is
+// validated against by every SDK, so it names exactly the emitted events.
+func TestTheContractsEventTypesAreTheEmittedEvents(t *testing.T) {
+	raw, err := os.ReadFile("../../../contracts/openapi/ztax.v1.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	doc := string(raw)
+	start := strings.Index(doc, "\n    EventType:\n")
+	if start < 0 {
+		t.Fatal("the contract has no EventType schema")
+	}
+	block := doc[start:]
+	block = block[strings.Index(block, "      enum:\n")+len("      enum:\n"):]
+	var listed []string
+	for _, line := range strings.Split(block, "\n") {
+		item, ok := strings.CutPrefix(line, "        - ")
+		if !ok {
+			break
+		}
+		listed = append(listed, item)
+	}
+	if len(listed) != len(app.Events()) {
+		t.Fatalf("the contract lists %d event types %v; the producer emits %d", len(listed), listed, len(app.Events()))
+	}
+	for _, e := range app.Events() {
+		if !slices.Contains(listed, e.Type) {
+			t.Errorf("the contract's EventType does not list %s", e.Type)
+		}
 	}
 }
