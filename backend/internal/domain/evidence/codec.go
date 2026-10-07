@@ -343,3 +343,28 @@ func strictDecode(data []byte, v any) error {
 	}
 	return nil
 }
+
+// DecodeInput reads an input back from its canonical form (Input.Canonical),
+// refusing unknown members. It is the parser an envelope's input goes
+// through, so anything stored in canonical form and decoded here — a queued
+// batch item — reaches evaluation exactly as a direct request would.
+func DecodeInput(data []byte) (Input, error) {
+	var w inputWire
+	if err := strictDecode(data, &w); err != nil {
+		return Input{}, fmt.Errorf("evidence: input: %w", err)
+	}
+	return w.decode()
+}
+
+// DecodeReadSet reads an accumulator read set back from ReadSetCanonical.
+func DecodeReadSet(data []byte) (map[string]fiscal.Money, error) {
+	var w map[string]moneyWire
+	if err := strictDecode(data, &w); err != nil {
+		return nil, fmt.Errorf("evidence: read set: %w", err)
+	}
+	m, err := decodeMoneyMap(w)
+	if err != nil {
+		return nil, fmt.Errorf("evidence: read set %w", err)
+	}
+	return m, nil
+}

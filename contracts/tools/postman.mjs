@@ -120,11 +120,12 @@ const FOLDERS = [
   {
     name: "06 · Determination — needs content and an OPERATOR",
     description:
-      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059).\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
     operations: [
       "createQuote", "commitTransaction", "getDecision", "replayDecision", "listDecisionJournals",
       "getSubledgerBalances", "listObligations", "getObligation", "transitionObligation",
       "adjustTransaction", "refundTransaction", "getRefund", "reportRefund", "proposeClassification",
+      "submitBatch", "getJob",
     ],
     prerequest: [
       "if (pm.variables.get('runDetermination') !== 'true') {",
@@ -173,6 +174,8 @@ const VALUE_VARIABLES = {
   "01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01": "{{obligationId}}",
   // The refund examples' id: the refund the folder just requested.
   "01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f": "{{refundId}}",
+  // The job example's id: the batch the folder just queued.
+  "01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{jobId}}",
   // The webhook examples' id: the subscription folder 04 just created.
   "01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{webhookId}}",
 };
@@ -284,6 +287,22 @@ const OPERATION_TESTS = {
     "});",
     "// The original is superseded now; a refund is made against the current version.",
     "pm.collectionVariables.set('decisionId', pm.response.json().id);",
+  ],
+  submitBatch: [
+    "pm.test('the batch is queued as one job, every item pending', function () {",
+    "  pm.response.to.have.status(202);",
+    "  pm.expect(pm.response.json().pending).to.eql(pm.response.json().itemCount);",
+    "});",
+    "pm.collectionVariables.set('jobId', pm.response.json().id);",
+  ],
+  getJob: [
+    "pm.test('the job reports each item, and a finished one its decision or its reason', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.response.json().items.forEach(function (it) {",
+    "    if (it.status === 'SUCCEEDED') { pm.expect(it.decisionId).to.be.a('string'); }",
+    "    if (it.status === 'FAILED') { pm.expect(it.reasonCode).to.be.a('string'); }",
+    "  });",
+    "});",
   ],
   createWebhook: [
     "pm.test('the webhook is created ACTIVE, and its secret is shown once in Standard Webhooks form', function () {",
@@ -752,6 +771,7 @@ function variables(overlay, contractDigest, local) {
     { key: "obligationId", value: "", type: "string" },
     { key: "refundId", value: "", type: "string" },
     { key: "webhookId", value: "", type: "string" },
+    { key: "jobId", value: "", type: "string" },
     // Minted once per run by `07`, and reused by the requests that must share it.
     { key: "reusedKey", value: "", type: "string" },
 

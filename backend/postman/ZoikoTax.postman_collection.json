@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:16c5425bc4ec2096c610015b38442516d2dc62629a780881de60e4e5943d72fb`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:c355d94f07392ed711680a315a252708ae9dac4d5f3f233f93a5d74622c0a963`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -1737,7 +1737,7 @@
     },
     {
       "name": "06 · Determination — needs content and an OPERATOR",
-      "description": "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059).\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "description": "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
       "item": [
         {
           "name": "POST /v1/quotes — Quote a transaction without recording it",
@@ -2895,6 +2895,166 @@
               }
             }
           ]
+        },
+        {
+          "name": "POST /v1/batches — Queue many commits as one job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"COMMIT\",\n  \"items\": [\n    {\n      \"businessKey\": \"INV-0002/1\",\n      \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n      \"input\": {\n        \"money\": {\n          \"line.netAmount\": {\n            \"amount\": \"100.00\",\n            \"currency\": \"EUR\"\n          }\n        },\n        \"quantities\": {\n          \"line.quantity\": {\n            \"value\": \"3\",\n            \"unit\": \"EA\"\n          }\n        },\n        \"flags\": {\n          \"line.reducedRateApplies\": false,\n          \"line.exemptCertificateHeld\": false\n        }\n      }\n    },\n    {\n      \"businessKey\": \"INV-0002/2\",\n      \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n      \"input\": {\n        \"money\": {\n          \"line.netAmount\": {\n            \"amount\": \"40.00\",\n            \"currency\": \"EUR\"\n          }\n        },\n        \"quantities\": {\n          \"line.quantity\": {\n            \"value\": \"1\",\n            \"unit\": \"EA\"\n          }\n        },\n        \"flags\": {\n          \"line.reducedRateApplies\": true,\n          \"line.exemptCertificateHeld\": false\n        }\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "batches"
+              ]
+            },
+            "description": "Queue many commits as one job\n\n`OPERATOR` only. Queues up to 1000 commits, executed asynchronously\nand in order by a worker in the cell. Each item is exactly a\n`:commit` request body; an item naming `supersedes` is executed as\n`:adjust`, under the content that made what it corrects. An item may\ncorrect an earlier item of the same batch.\n\nA batch changes how commits arrive, never what a commit is: each item\ntakes the commit path a single request takes, under an idempotency key\nof its own, so a worker that stops halfway resumes at the first item\nwith no result and commits nothing twice. A refused item — invalid\ninput, a superseded decision, a closed period — is recorded with its\nreason code and the job carries on.\n\n`Idempotency-Key` is required: the same key and body returns the same\njob (ADR-0013). Poll `GET /v1/jobs/{jobId}` for progress."
+          },
+          "response": [
+            {
+              "name": "202 · Queued",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/batches",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "batches"
+                  ]
+                }
+              },
+              "status": "202",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"operation\": \"COMMIT\",\n  \"status\": \"QUEUED\",\n  \"itemCount\": 2,\n  \"succeeded\": 0,\n  \"failed\": 0,\n  \"pending\": 2,\n  \"requestedAt\": \"2026-10-07T09:00:00.000000Z\",\n  \"items\": [\n    {\n      \"index\": 0,\n      \"businessKey\": \"INV-0002/1\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"index\": 1,\n      \"businessKey\": \"INV-0002/2\",\n      \"status\": \"PENDING\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('submitBatch returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([202]);",
+                  "});",
+                  "pm.test('the batch is queued as one job, every item pending', function () {",
+                  "  pm.response.to.have.status(202);",
+                  "  pm.expect(pm.response.json().pending).to.eql(pm.response.json().itemCount);",
+                  "});",
+                  "pm.collectionVariables.set('jobId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/jobs/{jobId} — A job's progress and each item's result",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/jobs/{{jobId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "jobs",
+                "{{jobId}}"
+              ]
+            },
+            "description": "A job's progress and each item's result\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. `COMPLETED` means the job ran to\nits end, however its items fared: `succeeded`, `failed` and each\nitem's `status` say which. A succeeded item names its decision; a\nfailed one names the registered reason code a single request would\nhave been refused with."
+          },
+          "response": [
+            {
+              "name": "200 · Completed, one item refused",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/jobs/{{jobId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "jobs",
+                    "{{jobId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"operation\": \"COMMIT\",\n  \"status\": \"COMPLETED\",\n  \"itemCount\": 2,\n  \"succeeded\": 1,\n  \"failed\": 1,\n  \"pending\": 0,\n  \"requestedAt\": \"2026-10-07T09:00:00.000000Z\",\n  \"startedAt\": \"2026-10-07T09:00:01.000000Z\",\n  \"finishedAt\": \"2026-10-07T09:00:02.000000Z\",\n  \"items\": [\n    {\n      \"index\": 0,\n      \"businessKey\": \"INV-0002/1\",\n      \"status\": \"SUCCEEDED\",\n      \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n    },\n    {\n      \"index\": 1,\n      \"businessKey\": \"INV-0002/2\",\n      \"status\": \"FAILED\",\n      \"reasonCode\": \"INVALID_VALUE\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getJob returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('the job reports each item, and a finished one its decision or its reason', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.response.json().items.forEach(function (it) {",
+                  "    if (it.status === 'SUCCEEDED') { pm.expect(it.decisionId).to.be.a('string'); }",
+                  "    if (it.status === 'FAILED') { pm.expect(it.reasonCode).to.be.a('string'); }",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ],
       "event": [
@@ -3974,6 +4134,11 @@
       "type": "string"
     },
     {
+      "key": "jobId",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "reusedKey",
       "value": "",
       "type": "string"
@@ -3985,7 +4150,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:16c5425bc4ec2096c610015b38442516d2dc62629a780881de60e4e5943d72fb",
+      "value": "sha256:c355d94f07392ed711680a315a252708ae9dac4d5f3f233f93a5d74622c0a963",
       "type": "string"
     }
   ]

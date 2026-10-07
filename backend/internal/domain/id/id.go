@@ -124,6 +124,9 @@ type (
 
 	// DeliveryID identifies one delivery of one event to one webhook.
 	DeliveryID struct{ base }
+
+	// JobID identifies one asynchronous job: a batch of commits.
+	JobID struct{ base }
 )
 
 // The constructors. Each takes a uuid.UUID that idgen produced, or that the
@@ -207,6 +210,9 @@ func NewWebhookID(u uuid.UUID) WebhookID { return WebhookID{base{u}} }
 
 // NewDeliveryID wraps a raw UUID as a DeliveryID.
 func NewDeliveryID(u uuid.UUID) DeliveryID { return DeliveryID{base{u}} }
+
+// NewJobID wraps a raw UUID as a JobID.
+func NewJobID(u uuid.UUID) JobID { return JobID{base{u}} }
 
 // parse is the shared text ingress. Identifiers arrive from a URL path, a
 // cookie lookup or a database column, and all three can carry something that is
@@ -370,4 +376,13 @@ func ParseDeliveryID(s string) (DeliveryID, error) {
 		return DeliveryID{}, err
 	}
 	return NewDeliveryID(u), nil
+}
+
+// ParseJobID reads a JobID from its canonical string form.
+func ParseJobID(s string) (JobID, error) {
+	u, err := parse("job id", s)
+	if err != nil {
+		return JobID{}, err
+	}
+	return NewJobID(u), nil
 }

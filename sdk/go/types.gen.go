@@ -6,6 +6,21 @@ import (
 	"time"
 )
 
+// Defines values for BatchRequestOperation.
+const (
+	BatchRequestOperationCOMMIT BatchRequestOperation = "COMMIT"
+)
+
+// Valid indicates whether the value is a known member of the BatchRequestOperation enum.
+func (e BatchRequestOperation) Valid() bool {
+	switch e {
+	case BatchRequestOperationCOMMIT:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ClassificationProposalAuthoritative.
 const (
 	ClassificationProposalAuthoritativeFalse ClassificationProposalAuthoritative = false
@@ -165,6 +180,63 @@ func (e EventType) Valid() bool {
 	case EventTypeComZoikotaxRefundRequested:
 		return true
 	case EventTypeComZoikotaxRefundStatusChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JobOperation.
+const (
+	JobOperationCOMMIT JobOperation = "COMMIT"
+)
+
+// Valid indicates whether the value is a known member of the JobOperation enum.
+func (e JobOperation) Valid() bool {
+	switch e {
+	case JobOperationCOMMIT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JobStatus.
+const (
+	JobStatusCOMPLETED JobStatus = "COMPLETED"
+	JobStatusQUEUED    JobStatus = "QUEUED"
+	JobStatusRUNNING   JobStatus = "RUNNING"
+)
+
+// Valid indicates whether the value is a known member of the JobStatus enum.
+func (e JobStatus) Valid() bool {
+	switch e {
+	case JobStatusCOMPLETED:
+		return true
+	case JobStatusQUEUED:
+		return true
+	case JobStatusRUNNING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JobItemStatus.
+const (
+	JobItemStatusFAILED    JobItemStatus = "FAILED"
+	JobItemStatusPENDING   JobItemStatus = "PENDING"
+	JobItemStatusSUCCEEDED JobItemStatus = "SUCCEEDED"
+)
+
+// Valid indicates whether the value is a known member of the JobItemStatus enum.
+func (e JobItemStatus) Valid() bool {
+	switch e {
+	case JobItemStatusFAILED:
+		return true
+	case JobItemStatusPENDING:
+		return true
+	case JobItemStatusSUCCEEDED:
 		return true
 	default:
 		return false
@@ -621,6 +693,17 @@ type AuditRecord struct {
 	SubjectType string    `json:"subjectType"`
 }
 
+// BatchRequest defines model for BatchRequest.
+type BatchRequest struct {
+	Items []CommitRequest `json:"items"`
+
+	// Operation What each item does. `COMMIT` commits it, or corrects with it when it names `supersedes`.
+	Operation BatchRequestOperation `json:"operation"`
+}
+
+// BatchRequestOperation What each item does. `COMMIT` commits it, or corrects with it when it names `supersedes`.
+type BatchRequestOperation string
+
 // BundleRef The content bundle an evaluation ran against.
 type BundleRef struct {
 	BundleID string `json:"bundleId"`
@@ -951,6 +1034,73 @@ type Emitted map[string]ResultValue
 
 // EventType An event type this cell emits, as the AsyncAPI contract names it.
 type EventType string
+
+// Job defines model for Job.
+type Job struct {
+	Failed int32 `json:"failed"`
+
+	// FinishedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	FinishedAt *Timestamp `json:"finishedAt,omitempty"`
+
+	// ID An asynchronous job. A UUIDv7 in lowercase canonical form.
+	ID        JobID        `json:"id"`
+	ItemCount int32        `json:"itemCount"`
+	Items     []JobItem    `json:"items"`
+	Operation JobOperation `json:"operation"`
+	Pending   int32        `json:"pending"`
+
+	// RequestedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RequestedAt Timestamp `json:"requestedAt"`
+
+	// StartedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	StartedAt *Timestamp `json:"startedAt,omitempty"`
+	Status    JobStatus  `json:"status"`
+	Succeeded int32      `json:"succeeded"`
+}
+
+// JobOperation defines model for Job.Operation.
+type JobOperation string
+
+// JobStatus defines model for Job.Status.
+type JobStatus string
+
+// JobID An asynchronous job. A UUIDv7 in lowercase canonical form.
+type JobID = string
+
+// JobItem defines model for JobItem.
+type JobItem struct {
+	// BusinessKey The caller's stable reference for what is being determined — a line, a
+	// transaction. It is the identity across corrections: every version of a
+	// decision shares it (ADR-0003). Not an identifier this service
+	// interprets.
+	BusinessKey BusinessKey `json:"businessKey"`
+
+	// DecisionID A decision identifier: a UUIDv7 in lowercase canonical form
+	// (ADR-0012 §2.1). Sortable by creation, never recycled.
+	DecisionID *DecisionID `json:"decisionId,omitempty"`
+	Index      int32       `json:"index"`
+
+	// ReasonCode A registered code from a closed vocabulary (ADR-0016 §2.4). Codes are
+	// never renumbered, never reused and never redefined; a retired code stops
+	// being emitted and keeps its meaning so historical evidence still
+	// resolves.
+	//
+	// This is the field to branch on. The set this deployment can emit is
+	// reported by `GET /v1/capabilities`; the enum is deliberately not closed
+	// here, because the register grows by addition and a client that rejects
+	// an unrecognised code would break on an additive change (ADR-0010 §2.6).
+	ReasonCode *ReasonCode   `json:"reasonCode,omitempty"`
+	Status     JobItemStatus `json:"status"`
+}
+
+// JobItemStatus defines model for JobItem.Status.
+type JobItemStatus string
 
 // Journal One posted Tax Control Subledger journal. Balanced in its one currency; append-only.
 type Journal struct {
@@ -1898,6 +2048,15 @@ type ListUsers200JSONResponseBody struct {
 	Users []User `json:"users"`
 }
 
+// SubmitBatchParams defines parameters for SubmitBatch.
+type SubmitBatchParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
 // ListObligationsParams defines parameters for ListObligations.
 type ListObligationsParams struct {
 	// Status Only obligations in this effective status.
@@ -1966,6 +2125,9 @@ type ChangePasswordJSONRequestBody = ChangePasswordRequest
 
 // SignInJSONRequestBody defines body for SignIn for application/json ContentType.
 type SignInJSONRequestBody = SignInRequest
+
+// SubmitBatchJSONRequestBody defines body for SubmitBatch for application/json ContentType.
+type SubmitBatchJSONRequestBody = BatchRequest
 
 // ProposeClassificationJSONRequestBody defines body for ProposeClassification for application/json ContentType.
 type ProposeClassificationJSONRequestBody = ClassificationProposalRequest

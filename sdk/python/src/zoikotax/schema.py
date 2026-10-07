@@ -892,6 +892,42 @@ class WebhookDeliveryDetail(TypedDict):
     attempts: list[WebhookAttempt]
 
 
+JobId: TypeAlias = str
+"""
+An asynchronous job. A UUIDv7 in lowercase canonical form.
+"""
+
+
+class BatchRequest(TypedDict):
+    operation: Literal['COMMIT']
+    """
+    What each item does. `COMMIT` commits it, or corrects with it when it names `supersedes`.
+    """
+    items: list[CommitRequest]
+
+
+class JobItem(TypedDict):
+    index: int
+    businessKey: BusinessKey
+    status: Literal['PENDING', 'SUCCEEDED', 'FAILED']
+    decisionId: NotRequired[DecisionId]
+    reasonCode: NotRequired[ReasonCode]
+
+
+class Job(TypedDict):
+    id: JobId
+    operation: Literal['COMMIT']
+    status: Literal['QUEUED', 'RUNNING', 'COMPLETED']
+    itemCount: int
+    succeeded: int
+    failed: int
+    pending: int
+    requestedAt: Timestamp
+    startedAt: NotRequired[Timestamp]
+    finishedAt: NotRequired[Timestamp]
+    items: list[JobItem]
+
+
 class ReplayReport(TypedDict):
     decisionId: DecisionId
     verdict: ReplayVerdict

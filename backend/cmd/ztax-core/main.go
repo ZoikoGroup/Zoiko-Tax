@@ -140,6 +140,9 @@ func run() error {
 		// determination surface is.
 		router.Refunds = app.NewRefundService(store.Decisions(), store.Journals(), store.Refunds(), store.Outbox(),
 			store, clk, ids, app.NewIdempotency(store.Idempotency(), store, clk))
+		router.Batches = app.NewBatchService(store.Batches(), router.Determination,
+			app.NewIdempotency(store.Idempotency(), store, clk), clk, ids)
+		go runBatchWorker(ctx, router.Batches, log)
 	}
 	models, closeModels, err := wireModelGateway(cfg, clk, ids, log)
 	if err != nil {
@@ -456,6 +459,34 @@ func wireDetermination(cfg config.Config, store *postgres.Store, content *rule.H
 		})
 	log.Info("determination surface enabled", "evidence.dir", cfg.EvidenceDir)
 	return svc, nil
+}
+
+// runBatchWorker executes queued batches until ctx ends. Every replica runs
+// one; jobs are leased with SKIP LOCKED, so they share the queue without
+// coordinating. A pass that fails is logged and retried on the next tick: the
+// job's lease lapses and it is taken up again where its results end.
+func runBatchWorker(ctx context.Context, svc *app.BatchService, log *slog.Logger) {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+		for {
+			found, err := svc.Work(ctx)
+			if err != nil {
+				if ctx.Err() == nil {
+					log.Warn("batch pass failed", "error", err.Error())
+				}
+				break
+			}
+			if !found {
+				break
+			}
+		}
+	}
 }
 
 // wireWebhooks builds the webhook administration service. A cell with no

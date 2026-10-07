@@ -1540,6 +1540,95 @@
         "class": "P0",
         "note": "The transport's error class, truncated; never the response body."
       }
+    },
+    "batch_job": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "job_id": {
+        "class": "P0"
+      },
+      "operation": {
+        "class": "P0"
+      },
+      "status": {
+        "class": "P0"
+      },
+      "item_count": {
+        "class": "P0"
+      },
+      "requested_at": {
+        "class": "P0"
+      },
+      "requested_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The operator who submitted the batch."
+      },
+      "started_at": {
+        "class": "P0"
+      },
+      "finished_at": {
+        "class": "P0"
+      },
+      "lease_until": {
+        "class": "P0"
+      }
+    },
+    "batch_item": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "job_id": {
+        "class": "P0"
+      },
+      "item_index": {
+        "class": "P0"
+      },
+      "business_key": {
+        "class": "P0"
+      },
+      "request": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "A queued commit's canonical request: the same transaction input a decision's envelope records."
+      }
+    },
+    "batch_item_result": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "job_id": {
+        "class": "P0"
+      },
+      "item_index": {
+        "class": "P0"
+      },
+      "status": {
+        "class": "P0"
+      },
+      "decision_id": {
+        "class": "P0"
+      },
+      "reason_code": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      }
     }
   }
 }

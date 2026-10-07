@@ -86,6 +86,10 @@ type Router struct {
 	// Webhooks administers webhook subscriptions and reads their deliveries.
 	// Nil in a cell with no webhook key, which answers 503.
 	Webhooks *app.WebhookService
+
+	// Batches serves POST /v1/batches and GET /v1/jobs/{id}. Nil wherever
+	// Determination is, since every item takes the commit path.
+	Batches *app.BatchService
 }
 
 // Trains are the seven release-train versions, as the contract names them.
@@ -180,6 +184,8 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/transactions:adjust", false, []security.Role{operator}}, rt.handleAdjust},
 		{Route{"POST", "/v1/transactions:refund", false, []security.Role{operator}}, rt.handleRefund},
 		{Route{"GET", "/v1/refunds/{refundId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetRefund},
+		{Route{"POST", "/v1/batches", false, []security.Role{operator}}, rt.handleSubmitBatch},
+		{Route{"GET", "/v1/jobs/{jobId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetJob},
 		{Route{"POST", "/v1/refunds/{refundId}/reports", false, []security.Role{operator}}, rt.handleReportRefund},
 		{Route{"GET", "/v1/decisions/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetDecision},
 		{Route{"POST", "/v1/replay/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleReplay},

@@ -280,3 +280,12 @@ func DeliveryID(g Generator) (id.DeliveryID, error) {
 	}
 	return id.NewDeliveryID(u), nil
 }
+
+// JobID returns a fresh JobID.
+func JobID(g Generator) (id.JobID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.JobID{}, err
+	}
+	return id.NewJobID(u), nil
+}

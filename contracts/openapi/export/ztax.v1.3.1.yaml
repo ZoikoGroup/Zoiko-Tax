@@ -86,6 +86,8 @@ tags:
     description: Refunds of tax a committed decision charged. Their own lifecycle; never a decision, never a credit.
   - name: webhooks
     description: Delivery of the cell's events to endpoints a tenant names. Signed, retried, dead-lettered and replayable; egress-guarded.
+  - name: batches
+    description: Many commits queued as one asynchronous job, each item on the single-commit path.
 security:
   - sessionCookie: []
 paths:
@@ -1686,6 +1688,172 @@ paths:
           $ref: "#/components/responses/Internal"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/batches:
+    post:
+      operationId: submitBatch
+      tags:
+        - batches
+      summary: Queue many commits as one job
+      description: |
+        `OPERATOR` only. Queues up to 1000 commits, executed asynchronously
+        and in order by a worker in the cell. Each item is exactly a
+        `:commit` request body; an item naming `supersedes` is executed as
+        `:adjust`, under the content that made what it corrects. An item may
+        correct an earlier item of the same batch.
+
+        A batch changes how commits arrive, never what a commit is: each item
+        takes the commit path a single request takes, under an idempotency key
+        of its own, so a worker that stops halfway resumes at the first item
+        with no result and commits nothing twice. A refused item — invalid
+        input, a superseded decision, a closed period — is recorded with its
+        reason code and the job carries on.
+
+        `Idempotency-Key` is required: the same key and body returns the same
+        job (ADR-0013). Poll `GET /v1/jobs/{jobId}` for progress.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchRequest"
+            examples:
+              default:
+                summary: Two lines
+                value:
+                  operation: COMMIT
+                  items:
+                    - businessKey: INV-0002/1
+                      eventTime: 2026-09-24T18:00:00.000000Z
+                      input:
+                        money:
+                          line.netAmount:
+                            amount: "100.00"
+                            currency: EUR
+                        quantities:
+                          line.quantity:
+                            value: "3"
+                            unit: EA
+                        flags:
+                          line.reducedRateApplies: false
+                          line.exemptCertificateHeld: false
+                    - businessKey: INV-0002/2
+                      eventTime: 2026-09-24T18:00:00.000000Z
+                      input:
+                        money:
+                          line.netAmount:
+                            amount: "40.00"
+                            currency: EUR
+                        quantities:
+                          line.quantity:
+                            value: "1"
+                            unit: EA
+                        flags:
+                          line.reducedRateApplies: true
+                          line.exemptCertificateHeld: false
+      responses:
+        "202":
+          description: |
+            The job, queued. A replayed response carries
+            `Idempotent-Replay: true` and is byte-for-byte the original.
+          headers:
+            Idempotent-Replay:
+              description: Present, and `true`, when this is the stored response to an earlier request with the same key.
+              schema:
+                type: boolean
+              example: true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+              examples:
+                default:
+                  summary: Queued
+                  value:
+                    id: 01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    operation: COMMIT
+                    status: QUEUED
+                    itemCount: 2
+                    succeeded: 0
+                    failed: 0
+                    pending: 2
+                    requestedAt: 2026-10-07T09:00:00.000000Z
+                    items:
+                      - index: 0
+                        businessKey: INV-0002/1
+                        status: PENDING
+                      - index: 1
+                        businessKey: INV-0002/2
+                        status: PENDING
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/IdempotencyConflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/jobs/{jobId}:
+    get:
+      operationId: getJob
+      tags:
+        - batches
+      summary: A job's progress and each item's result
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. `COMPLETED` means the job ran to
+        its end, however its items fared: `succeeded`, `failed` and each
+        item's `status` say which. A succeeded item names its decision; a
+        failed one names the registered reason code a single request would
+        have been refused with.
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: The job.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+              examples:
+                default:
+                  summary: Completed, one item refused
+                  value:
+                    id: 01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    operation: COMMIT
+                    status: COMPLETED
+                    itemCount: 2
+                    succeeded: 1
+                    failed: 1
+                    pending: 0
+                    requestedAt: 2026-10-07T09:00:00.000000Z
+                    startedAt: 2026-10-07T09:00:01.000000Z
+                    finishedAt: 2026-10-07T09:00:02.000000Z
+                    items:
+                      - index: 0
+                        businessKey: INV-0002/1
+                        status: SUCCEEDED
+                        decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                      - index: 1
+                        businessKey: INV-0002/2
+                        status: FAILED
+                        reasonCode: INVALID_VALUE
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/decisions/{decisionId}:
     get:
       operationId: getDecision
@@ -2266,6 +2434,14 @@ components:
       schema:
         $ref: "#/components/schemas/DeliveryId"
       example: 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      description: The job.
+      schema:
+        $ref: "#/components/schemas/JobId"
+      example: 01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f
     Limit:
       name: limit
       in: query
@@ -4580,6 +4756,126 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WebhookAttempt"
+    JobId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: JobId
+      description: An asynchronous job. A UUIDv7 in lowercase canonical form.
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+    BatchRequest:
+      type: object
+      title: BatchRequest
+      additionalProperties: false
+      required:
+        - operation
+        - items
+      properties:
+        operation:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - COMMIT
+          description: What each item does. `COMMIT` commits it, or corrects with it when it names `supersedes`.
+        items:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            $ref: "#/components/schemas/CommitRequest"
+    JobItem:
+      type: object
+      title: JobItem
+      additionalProperties: false
+      required:
+        - index
+        - businessKey
+        - status
+      properties:
+        index:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        businessKey:
+          $ref: "#/components/schemas/BusinessKey"
+        status:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - PENDING
+            - SUCCEEDED
+            - FAILED
+        decisionId:
+          $ref: "#/components/schemas/DecisionId"
+        reasonCode:
+          $ref: "#/components/schemas/ReasonCode"
+    Job:
+      type: object
+      title: Job
+      additionalProperties: false
+      required:
+        - id
+        - operation
+        - status
+        - itemCount
+        - succeeded
+        - failed
+        - pending
+        - requestedAt
+        - items
+      properties:
+        id:
+          $ref: "#/components/schemas/JobId"
+        operation:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - COMMIT
+        status:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - QUEUED
+            - RUNNING
+            - COMPLETED
+        itemCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+        succeeded:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+        failed:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+        pending:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+        requestedAt:
+          $ref: "#/components/schemas/Timestamp"
+        startedAt:
+          $ref: "#/components/schemas/Timestamp"
+        finishedAt:
+          $ref: "#/components/schemas/Timestamp"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/JobItem"
     ReplayReport:
       type: object
       title: ReplayReport

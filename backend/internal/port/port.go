@@ -18,6 +18,7 @@ import (
 
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/accumulator"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/batch"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/fiscal"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
@@ -513,4 +514,34 @@ type WebhookSender interface {
 	// Send POSTs body with headers and returns the receiver's status. An
 	// error means no status was received.
 	Send(ctx context.Context, url string, headers map[string]string, body []byte) (int, error)
+}
+
+// ---------------------------------------------------------------------------
+// batches and jobs (W2 lane K)
+// ---------------------------------------------------------------------------
+
+// BatchRepository stores batch jobs, their items and the items' results.
+//
+// ClaimNext serves the whole cell, as the outbox relay does, and returns the
+// job with its tenant; every other method reads the tenant from the context.
+type BatchRepository interface {
+	// Create writes a QUEUED job and its items.
+	Create(ctx context.Context, j batch.Job, items []batch.Item) error
+	// Job returns a job, its items' business keys in order, and the results
+	// recorded so far.
+	Job(ctx context.Context, jobID id.JobID) (batch.Job, []batch.Item, []batch.Result, error)
+	// ClaimNext leases the oldest job that is QUEUED, or RUNNING with a
+	// lapsed lease, marking it RUNNING until leaseUntil. False when there is
+	// none.
+	ClaimNext(ctx context.Context, now, leaseUntil time.Time) (batch.Job, bool, error)
+	// Renew extends a held lease. It refuses a job no longer RUNNING.
+	Renew(ctx context.Context, jobID id.JobID, leaseUntil time.Time) error
+	// Pending returns the items with no result yet, in order, requests
+	// included.
+	Pending(ctx context.Context, jobID id.JobID) ([]batch.Item, error)
+	// AppendResult records an item's outcome. It reports false when the item
+	// already has one: a worker that resumed after another finished it.
+	AppendResult(ctx context.Context, r batch.Result) (bool, error)
+	// Complete marks a job COMPLETED and releases its lease.
+	Complete(ctx context.Context, jobID id.JobID, at time.Time) error
 }

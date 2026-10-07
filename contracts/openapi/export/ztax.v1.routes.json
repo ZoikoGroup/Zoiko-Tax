@@ -80,6 +80,12 @@
       "public": false
     },
     {
+      "method": "POST",
+      "path": "/v1/batches",
+      "operationId": "submitBatch",
+      "public": false
+    },
+    {
       "method": "GET",
       "path": "/v1/capabilities",
       "operationId": "getCapabilities",
@@ -101,6 +107,12 @@
       "method": "GET",
       "path": "/v1/decisions/{decisionId}/journals",
       "operationId": "listDecisionJournals",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/jobs/{jobId}",
+      "operationId": "getJob",
       "public": false
     },
     {

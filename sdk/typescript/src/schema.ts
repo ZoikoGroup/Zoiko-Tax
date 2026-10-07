@@ -703,6 +703,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue many commits as one job
+         * @description `OPERATOR` only. Queues up to 1000 commits, executed asynchronously
+         *     and in order by a worker in the cell. Each item is exactly a
+         *     `:commit` request body; an item naming `supersedes` is executed as
+         *     `:adjust`, under the content that made what it corrects. An item may
+         *     correct an earlier item of the same batch.
+         *
+         *     A batch changes how commits arrive, never what a commit is: each item
+         *     takes the commit path a single request takes, under an idempotency key
+         *     of its own, so a worker that stops halfway resumes at the first item
+         *     with no result and commits nothing twice. A refused item — invalid
+         *     input, a superseded decision, a closed period — is recorded with its
+         *     reason code and the job carries on.
+         *
+         *     `Idempotency-Key` is required: the same key and body returns the same
+         *     job (ADR-0013). Poll `GET /v1/jobs/{jobId}` for progress.
+         */
+        post: operations["submitBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/jobs/{jobId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A job's progress and each item's result
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. `COMPLETED` means the job ran to
+         *     its end, however its items fared: `succeeded`, `failed` and each
+         *     item's `status` say which. A succeeded item names its decision; a
+         *     failed one names the registered reason code a single request would
+         *     have been refused with.
+         */
+        get: operations["getJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/decisions/{decisionId}": {
         parameters: {
             query?: never;
@@ -1936,6 +1994,52 @@ export interface components {
             delivery: components["schemas"]["WebhookDelivery"];
             attempts: components["schemas"]["WebhookAttempt"][];
         };
+        /**
+         * JobId
+         * Format: uuid
+         * @description An asynchronous job. A UUIDv7 in lowercase canonical form.
+         * @example 01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        JobId: string;
+        /** BatchRequest */
+        BatchRequest: {
+            /**
+             * @description What each item does. `COMMIT` commits it, or corrects with it when it names `supersedes`.
+             * @enum {string}
+             */
+            operation: "COMMIT";
+            items: components["schemas"]["CommitRequest"][];
+        };
+        /** JobItem */
+        JobItem: {
+            /** Format: int32 */
+            index: number;
+            businessKey: components["schemas"]["BusinessKey"];
+            /** @enum {string} */
+            status: "PENDING" | "SUCCEEDED" | "FAILED";
+            decisionId?: components["schemas"]["DecisionId"];
+            reasonCode?: components["schemas"]["ReasonCode"];
+        };
+        /** Job */
+        Job: {
+            id: components["schemas"]["JobId"];
+            /** @enum {string} */
+            operation: "COMMIT";
+            /** @enum {string} */
+            status: "QUEUED" | "RUNNING" | "COMPLETED";
+            /** Format: int32 */
+            itemCount: number;
+            /** Format: int32 */
+            succeeded: number;
+            /** Format: int32 */
+            failed: number;
+            /** Format: int32 */
+            pending: number;
+            requestedAt: components["schemas"]["Timestamp"];
+            startedAt?: components["schemas"]["Timestamp"];
+            finishedAt?: components["schemas"]["Timestamp"];
+            items: components["schemas"]["JobItem"][];
+        };
         /** ReplayReport */
         ReplayReport: {
             decisionId: components["schemas"]["DecisionId"];
@@ -2083,6 +2187,11 @@ export interface components {
          * @example 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
          */
         DeliveryId: components["schemas"]["DeliveryId"];
+        /**
+         * @description The job.
+         * @example 01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        JobId: components["schemas"]["JobId"];
         /**
          * @description Maximum number of items to return. The server caps this independently,
          *     so a larger value is not an error and does not return more.
@@ -3041,6 +3150,85 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    submitBatch: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchRequest"];
+            };
+        };
+        responses: {
+            /**
+             * @description The job, queued. A replayed response carries
+             *     `Idempotent-Replay: true` and is byte-for-byte the original.
+             */
+            202: {
+                headers: {
+                    /**
+                     * @description Present, and `true`, when this is the stored response to an earlier request with the same key.
+                     * @example true
+                     */
+                    "Idempotent-Replay"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Job"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["IdempotencyConflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The job.
+                 * @example 01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                jobId: components["parameters"]["JobId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The job. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Job"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };
