@@ -19579,3 +19579,59 @@ requirements:
     status: PROPOSED
     effective_from: null
     effective_to: null
+
+  - id: ZTAX-AI-REQ-0056
+    document_id: ZTAX-AI-001
+    version: null
+    statement: "Explanation Service MUST anchor authoritative amounts/states to deterministic domain records."
+    rationale: "ZTAX-AI-001 requirement register (32. Normative Intelligence Fabric Requirements) in the Master Specification."
+    source_authority: "ZTAX-AI-001"
+    owner: "Head of AI"
+    applies_to: ["Product AI"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-AI-REQ-0057
+    document_id: ZTAX-AI-001
+    version: null
+    statement: "Explanation Service MUST NOT change the underlying decision."
+    rationale: "ZTAX-AI-001 requirement register (32. Normative Intelligence Fabric Requirements) in the Master Specification."
+    source_authority: "ZTAX-AI-001"
+    owner: "Head of AI"
+    applies_to: ["Product AI"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-AI-REQ-0091
+    document_id: ZTAX-AI-001
+    version: null
+    statement: "Behavior-change detection SHOULD be implemented where provider pinning is unavailable."
+    rationale: "ZTAX-AI-001 requirement register (32. Normative Intelligence Fabric Requirements) in the Master Specification."
+    source_authority: "ZTAX-AI-001"
+    owner: "Head of AI"
+    applies_to: ["Validation"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
+
+  - id: ZTAX-AI-REQ-0095
+    document_id: ZTAX-AI-001
+    version: null
+    statement: "Production drift monitoring MUST be enabled for T2/T3 use cases."
+    rationale: "ZTAX-AI-001 requirement register (32. Normative Intelligence Fabric Requirements) in the Master Specification."
+    source_authority: "ZTAX-AI-001"
+    owner: "Head of AI"
+    applies_to: ["Monitoring"]
+    verification_method: TEST
+    verification_ref: null
+    status: PROPOSED
+    effective_from: null
+    effective_to: null
