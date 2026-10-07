@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DecisionCorrected",
+  "description": "A decision was corrected: a new decision superseding an earlier one for the same business key, evaluated under the content that made the original (ZTAX-DET-REQ-0030). Emitted in the adjustment's transaction. The superseded decision's posting has been reversed in the same transaction. Thin, as decision.committed is.",
+  "$comment": "Producer: backend/internal/app/events.go (emitDecision). Event type com.zoikotax.decision.corrected; schema ref ztax:events/decision-corrected/1.0.0. Partition key decision/<businessKey>, so a correction never overtakes the decision it corrects.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "decisionId",
+    "businessKey",
+    "outcome",
+    "reasonCode",
+    "authoritative",
+    "eventTime",
+    "recordedAt",
+    "bundleId",
+    "bundleDigest",
+    "envelopeDigest",
+    "resultDigest",
+    "supersedes"
+  ],
+  "properties": {
+    "decisionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "businessKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "outcome": {
+      "enum": [
+        "AUTHORITATIVE",
+        "ADVISORY",
+        "AMBIGUOUS",
+        "CONFLICTED",
+        "UNSUPPORTED",
+        "REVIEW_REQUIRED"
+      ]
+    },
+    "reasonCode": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authoritative": {
+      "const": false
+    },
+    "eventTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "recordedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "bundleId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bundleDigest": {
+      "type": "string",
+      "pattern": "^zt1:[0-9a-f]{64}$"
+    },
+    "envelopeDigest": {
+      "type": "string",
+      "pattern": "^zt1:[0-9a-f]{64}$"
+    },
+    "resultDigest": {
+      "type": "string",
+      "pattern": "^zt1:[0-9a-f]{64}$"
+    },
+    "supersedes": {
+      "type": "string",
+      "format": "uuid"
+    }
+  }
+}

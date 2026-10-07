@@ -367,6 +367,9 @@ func (s *DeterminationService) Commit(ctx context.Context, in CommitInput) (Sett
 			if err != nil {
 				return Response{}, err
 			}
+			if err := s.emitDecision(ctx, d); err != nil {
+				return Response{}, err
+			}
 			body, err := in.Render(d)
 			if err != nil {
 				return Response{}, internal(err, "The committed decision could not be rendered.")
@@ -425,6 +428,9 @@ func (s *DeterminationService) Adjust(ctx context.Context, in CommitInput) (Sett
 			}
 			d, err := s.record(ctx, sc, in.Determination, b, &rec)
 			if err != nil {
+				return Response{}, err
+			}
+			if err := s.emitDecision(ctx, d); err != nil {
 				return Response{}, err
 			}
 			body, err := in.Render(d)
