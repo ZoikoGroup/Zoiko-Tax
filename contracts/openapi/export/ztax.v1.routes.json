@@ -116,6 +116,30 @@
       "public": false
     },
     {
+      "method": "POST",
+      "path": "/v1/documents",
+      "operationId": "issueDocument",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/documents/{documentId}",
+      "operationId": "getDocument",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/documents/{documentId}/corrections",
+      "operationId": "correctDocument",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/documents/{documentId}/lineage",
+      "operationId": "getDocumentLineage",
+      "public": false
+    },
+    {
       "method": "GET",
       "path": "/v1/jobs/{jobId}",
       "operationId": "getJob",

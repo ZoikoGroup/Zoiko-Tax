@@ -84,6 +84,27 @@ func (e ControlAccount) Valid() bool {
 	}
 }
 
+// Defines values for CorrectionRequestType.
+const (
+	CorrectionRequestTypeCREDITNOTE CorrectionRequestType = "CREDIT_NOTE"
+	CorrectionRequestTypeREBILL     CorrectionRequestType = "REBILL"
+	CorrectionRequestTypeVOID       CorrectionRequestType = "VOID"
+)
+
+// Valid indicates whether the value is a known member of the CorrectionRequestType enum.
+func (e CorrectionRequestType) Valid() bool {
+	switch e {
+	case CorrectionRequestTypeCREDITNOTE:
+		return true
+	case CorrectionRequestTypeREBILL:
+		return true
+	case CorrectionRequestTypeVOID:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DeliveryStatus.
 const (
 	DeliveryStatusDEAD      DeliveryStatus = "DEAD"
@@ -99,6 +120,75 @@ func (e DeliveryStatus) Valid() bool {
 	case DeliveryStatusDELIVERED:
 		return true
 	case DeliveryStatusPENDING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DocumentRequestType.
+const (
+	DocumentRequestTypeADJUSTMENT DocumentRequestType = "ADJUSTMENT"
+	DocumentRequestTypeDEBITNOTE  DocumentRequestType = "DEBIT_NOTE"
+	DocumentRequestTypeINVOICE    DocumentRequestType = "INVOICE"
+)
+
+// Valid indicates whether the value is a known member of the DocumentRequestType enum.
+func (e DocumentRequestType) Valid() bool {
+	switch e {
+	case DocumentRequestTypeADJUSTMENT:
+		return true
+	case DocumentRequestTypeDEBITNOTE:
+		return true
+	case DocumentRequestTypeINVOICE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DocumentStatusEventStatus.
+const (
+	DocumentStatusEventStatusACCEPTED          DocumentStatusEventStatus = "ACCEPTED"
+	DocumentStatusEventStatusAMENDED           DocumentStatusEventStatus = "AMENDED"
+	DocumentStatusEventStatusCLOSED            DocumentStatusEventStatus = "CLOSED"
+	DocumentStatusEventStatusCOMMITTED         DocumentStatusEventStatus = "COMMITTED"
+	DocumentStatusEventStatusDELIVERED         DocumentStatusEventStatus = "DELIVERED"
+	DocumentStatusEventStatusDISPUTED          DocumentStatusEventStatus = "DISPUTED"
+	DocumentStatusEventStatusFULLYCREDITED     DocumentStatusEventStatus = "FULLY_CREDITED"
+	DocumentStatusEventStatusISSUED            DocumentStatusEventStatus = "ISSUED"
+	DocumentStatusEventStatusPARTIALLYCREDITED DocumentStatusEventStatus = "PARTIALLY_CREDITED"
+	DocumentStatusEventStatusREFUNDED          DocumentStatusEventStatus = "REFUNDED"
+	DocumentStatusEventStatusSUSPENDED         DocumentStatusEventStatus = "SUSPENDED"
+	DocumentStatusEventStatusVOIDED            DocumentStatusEventStatus = "VOIDED"
+)
+
+// Valid indicates whether the value is a known member of the DocumentStatusEventStatus enum.
+func (e DocumentStatusEventStatus) Valid() bool {
+	switch e {
+	case DocumentStatusEventStatusACCEPTED:
+		return true
+	case DocumentStatusEventStatusAMENDED:
+		return true
+	case DocumentStatusEventStatusCLOSED:
+		return true
+	case DocumentStatusEventStatusCOMMITTED:
+		return true
+	case DocumentStatusEventStatusDELIVERED:
+		return true
+	case DocumentStatusEventStatusDISPUTED:
+		return true
+	case DocumentStatusEventStatusFULLYCREDITED:
+		return true
+	case DocumentStatusEventStatusISSUED:
+		return true
+	case DocumentStatusEventStatusPARTIALLYCREDITED:
+		return true
+	case DocumentStatusEventStatusREFUNDED:
+		return true
+	case DocumentStatusEventStatusSUSPENDED:
+		return true
+	case DocumentStatusEventStatusVOIDED:
 		return true
 	default:
 		return false
@@ -161,6 +251,7 @@ const (
 	EventTypeComZoikotaxAccumulatorThresholdCrossed EventType = "com.zoikotax.accumulator.threshold-crossed"
 	EventTypeComZoikotaxDecisionCommitted           EventType = "com.zoikotax.decision.committed"
 	EventTypeComZoikotaxDecisionCorrected           EventType = "com.zoikotax.decision.corrected"
+	EventTypeComZoikotaxDocumentCommitted           EventType = "com.zoikotax.document.committed"
 	EventTypeComZoikotaxObligationStatusChanged     EventType = "com.zoikotax.obligation.status-changed"
 	EventTypeComZoikotaxRefundRequested             EventType = "com.zoikotax.refund.requested"
 	EventTypeComZoikotaxRefundStatusChanged         EventType = "com.zoikotax.refund.status-changed"
@@ -175,11 +266,103 @@ func (e EventType) Valid() bool {
 		return true
 	case EventTypeComZoikotaxDecisionCorrected:
 		return true
+	case EventTypeComZoikotaxDocumentCommitted:
+		return true
 	case EventTypeComZoikotaxObligationStatusChanged:
 		return true
 	case EventTypeComZoikotaxRefundRequested:
 		return true
 	case EventTypeComZoikotaxRefundStatusChanged:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FiscalDocumentStatus.
+const (
+	FiscalDocumentStatusACCEPTED          FiscalDocumentStatus = "ACCEPTED"
+	FiscalDocumentStatusAMENDED           FiscalDocumentStatus = "AMENDED"
+	FiscalDocumentStatusCLOSED            FiscalDocumentStatus = "CLOSED"
+	FiscalDocumentStatusCOMMITTED         FiscalDocumentStatus = "COMMITTED"
+	FiscalDocumentStatusDELIVERED         FiscalDocumentStatus = "DELIVERED"
+	FiscalDocumentStatusDISPUTED          FiscalDocumentStatus = "DISPUTED"
+	FiscalDocumentStatusFULLYCREDITED     FiscalDocumentStatus = "FULLY_CREDITED"
+	FiscalDocumentStatusISSUED            FiscalDocumentStatus = "ISSUED"
+	FiscalDocumentStatusPARTIALLYCREDITED FiscalDocumentStatus = "PARTIALLY_CREDITED"
+	FiscalDocumentStatusREFUNDED          FiscalDocumentStatus = "REFUNDED"
+	FiscalDocumentStatusSUSPENDED         FiscalDocumentStatus = "SUSPENDED"
+	FiscalDocumentStatusVOIDED            FiscalDocumentStatus = "VOIDED"
+)
+
+// Valid indicates whether the value is a known member of the FiscalDocumentStatus enum.
+func (e FiscalDocumentStatus) Valid() bool {
+	switch e {
+	case FiscalDocumentStatusACCEPTED:
+		return true
+	case FiscalDocumentStatusAMENDED:
+		return true
+	case FiscalDocumentStatusCLOSED:
+		return true
+	case FiscalDocumentStatusCOMMITTED:
+		return true
+	case FiscalDocumentStatusDELIVERED:
+		return true
+	case FiscalDocumentStatusDISPUTED:
+		return true
+	case FiscalDocumentStatusFULLYCREDITED:
+		return true
+	case FiscalDocumentStatusISSUED:
+		return true
+	case FiscalDocumentStatusPARTIALLYCREDITED:
+		return true
+	case FiscalDocumentStatusREFUNDED:
+		return true
+	case FiscalDocumentStatusSUSPENDED:
+		return true
+	case FiscalDocumentStatusVOIDED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FiscalDocumentType.
+const (
+	FiscalDocumentTypeADJUSTMENT    FiscalDocumentType = "ADJUSTMENT"
+	FiscalDocumentTypeAMENDMENT     FiscalDocumentType = "AMENDMENT"
+	FiscalDocumentTypeCREDITNOTE    FiscalDocumentType = "CREDIT_NOTE"
+	FiscalDocumentTypeDEBITNOTE     FiscalDocumentType = "DEBIT_NOTE"
+	FiscalDocumentTypeINVOICE       FiscalDocumentType = "INVOICE"
+	FiscalDocumentTypePARTIALCREDIT FiscalDocumentType = "PARTIAL_CREDIT"
+	FiscalDocumentTypeREBILL        FiscalDocumentType = "REBILL"
+	FiscalDocumentTypeREFUND        FiscalDocumentType = "REFUND"
+	FiscalDocumentTypeRESTATEMENT   FiscalDocumentType = "RESTATEMENT"
+	FiscalDocumentTypeVOID          FiscalDocumentType = "VOID"
+)
+
+// Valid indicates whether the value is a known member of the FiscalDocumentType enum.
+func (e FiscalDocumentType) Valid() bool {
+	switch e {
+	case FiscalDocumentTypeADJUSTMENT:
+		return true
+	case FiscalDocumentTypeAMENDMENT:
+		return true
+	case FiscalDocumentTypeCREDITNOTE:
+		return true
+	case FiscalDocumentTypeDEBITNOTE:
+		return true
+	case FiscalDocumentTypeINVOICE:
+		return true
+	case FiscalDocumentTypePARTIALCREDIT:
+		return true
+	case FiscalDocumentTypeREBILL:
+		return true
+	case FiscalDocumentTypeREFUND:
+		return true
+	case FiscalDocumentTypeRESTATEMENT:
+		return true
+	case FiscalDocumentTypeVOID:
 		return true
 	default:
 		return false
@@ -928,6 +1111,43 @@ type ControlBalance struct {
 	Debits Decimal `json:"debits"`
 }
 
+// CorrectionRequest defines model for CorrectionRequest.
+type CorrectionRequest struct {
+	// CancelLines A credit note's lines to cancel; absent is every line not yet cancelled.
+	CancelLines []DocumentLineID `json:"cancelLines,omitempty"`
+
+	// IssueDate A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	IssueDate CivilDate `json:"issueDate"`
+
+	// Lines A rebill's lines, each naming the original line it replaces.
+	Lines []DocumentLineRequest `json:"lines,omitempty"`
+
+	// Number The legal, customer-visible document number (ZTAX-FIN-REQ-0006). Kept apart from the id.
+	Number *DocumentNumber `json:"number,omitempty"`
+
+	// Reason A registered code from a closed vocabulary (ADR-0016 §2.4). Codes are
+	// never renumbered, never reused and never redefined; a retired code stops
+	// being emitted and keeps its meaning so historical evidence still
+	// resolves.
+	//
+	// This is the field to branch on. The set this deployment can emit is
+	// reported by `GET /v1/capabilities`; the enum is deliberately not closed
+	// here, because the register grows by addition and a client that rejects
+	// an unrecognised code would break on an additive change (ADR-0010 §2.6).
+	Reason ReasonCode `json:"reason"`
+
+	// TaxPoint RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	TaxPoint Timestamp             `json:"taxPoint"`
+	Type     CorrectionRequestType `json:"type"`
+}
+
+// CorrectionRequestType defines model for CorrectionRequest.Type.
+type CorrectionRequestType string
+
 // CreateUserRequest defines model for CreateUserRequest.
 type CreateUserRequest struct {
 	DisplayName string `json:"displayName"`
@@ -1068,6 +1288,146 @@ type DeterminationInput struct {
 // different digest, and comparing the two without it would be wrong.
 type Digest = string
 
+// DocumentID A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+type DocumentID = string
+
+// DocumentLine defines model for DocumentLine.
+type DocumentLine struct {
+	AllocationRef     *string `json:"allocationRef,omitempty"`
+	ComponentInstance *string `json:"componentInstance,omitempty"`
+
+	// Discount A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Discount *Decimal       `json:"discount,omitempty"`
+	ID       DocumentLineID `json:"id"`
+
+	// Net A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Net               Decimal         `json:"net"`
+	PredecessorLineID *DocumentLineID `json:"predecessorLineId,omitempty"`
+
+	// SourceLineRef The billing or ERP line a document line came from (ZTAX-FIN-REQ-0020).
+	SourceLineRef *SourceLineRef `json:"sourceLineRef,omitempty"`
+	Taxes         []DocumentTax  `json:"taxes"`
+}
+
+// DocumentLineID defines model for DocumentLineId.
+type DocumentLineID = string
+
+// DocumentLineRequest defines model for DocumentLineRequest.
+type DocumentLineRequest struct {
+	// AllocationRef Required with a discount — the allocation that produced it (ZTAX-FIN-REQ-0021).
+	AllocationRef     *string `json:"allocationRef,omitempty"`
+	ComponentInstance *string `json:"componentInstance,omitempty"`
+
+	// Discount A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Discount *Decimal `json:"discount,omitempty"`
+
+	// Net A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Net               Decimal         `json:"net"`
+	PredecessorLineID *DocumentLineID `json:"predecessorLineId,omitempty"`
+
+	// SourceLineRef The billing or ERP line a document line came from (ZTAX-FIN-REQ-0020).
+	SourceLineRef *SourceLineRef `json:"sourceLineRef,omitempty"`
+	Taxes         []DocumentTax  `json:"taxes"`
+}
+
+// DocumentLineage defines model for DocumentLineage.
+type DocumentLineage struct {
+	Documents []FiscalDocument `json:"documents"`
+}
+
+// DocumentNumber The legal, customer-visible document number (ZTAX-FIN-REQ-0006). Kept apart from the id.
+type DocumentNumber = string
+
+// DocumentRequest defines model for DocumentRequest.
+type DocumentRequest struct {
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// ExternalRef Another system's identifier for the document (ZTAX-DOM-REQ-0003). Never a key, never parsed, never assumed unique.
+	ExternalRef *ExternalReference `json:"externalRef,omitempty"`
+
+	// IssueDate A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	IssueDate CivilDate             `json:"issueDate"`
+	Lines     []DocumentLineRequest `json:"lines"`
+
+	// Number The legal, customer-visible document number (ZTAX-FIN-REQ-0006). Kept apart from the id.
+	Number *DocumentNumber `json:"number,omitempty"`
+
+	// TaxPoint RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	TaxPoint Timestamp           `json:"taxPoint"`
+	Type     DocumentRequestType `json:"type"`
+}
+
+// DocumentRequestType defines model for DocumentRequest.Type.
+type DocumentRequestType string
+
+// DocumentStatusEvent defines model for DocumentStatusEvent.
+type DocumentStatusEvent struct {
+	// CauseID A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+	CauseID *DocumentID `json:"causeId,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp                 `json:"recordedAt"`
+	RecordedBy *string                   `json:"recordedBy,omitempty"`
+	Seq        int32                     `json:"seq"`
+	Status     DocumentStatusEventStatus `json:"status"`
+}
+
+// DocumentStatusEventStatus defines model for DocumentStatusEvent.Status.
+type DocumentStatusEventStatus string
+
+// DocumentTax One tax on one line, naming the committed decision it comes from and the component the decision's content posts.
+type DocumentTax struct {
+	// Amount A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Amount    Decimal `json:"amount"`
+	Component string  `json:"component"`
+
+	// DecisionID A decision identifier: a UUIDv7 in lowercase canonical form
+	// (ADR-0012 §2.1). Sortable by creation, never recycled.
+	DecisionID DecisionID `json:"decisionId"`
+}
+
 // EffectiveObligationStatus A stored status, or `OVERDUE` derived as of today for an unfiled obligation past its due date.
 type EffectiveObligationStatus string
 
@@ -1076,6 +1436,104 @@ type Emitted map[string]ResultValue
 
 // EventType An event type this cell emits, as the AsyncAPI contract names it.
 type EventType string
+
+// ExternalReference Another system's identifier for the document (ZTAX-DOM-REQ-0003). Never a key, never parsed, never assumed unique.
+type ExternalReference struct {
+	Namespace    string `json:"namespace"`
+	SourceSystem string `json:"sourceSystem"`
+	Value        string `json:"value"`
+}
+
+// FiscalDocument A committed fiscal document. Amounts are in `currency`; a cancelling
+// document's are negative. `status` is the latest of `history`.
+type FiscalDocument struct {
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency    CurrencyCode `json:"currency"`
+	DecisionIds []DecisionID `json:"decisionIds"`
+
+	// ExternalRef Another system's identifier for the document (ZTAX-DOM-REQ-0003). Never a key, never parsed, never assumed unique.
+	ExternalRef *ExternalReference `json:"externalRef,omitempty"`
+
+	// GrossTotal A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	GrossTotal Decimal               `json:"grossTotal"`
+	History    []DocumentStatusEvent `json:"history"`
+
+	// ID A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+	ID DocumentID `json:"id"`
+
+	// IssueDate A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	IssueDate CivilDate `json:"issueDate"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID  `json:"legalEntityId"`
+	Lines         []DocumentLine `json:"lines"`
+
+	// NetTotal A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	NetTotal Decimal `json:"netTotal"`
+
+	// Number The legal, customer-visible document number (ZTAX-FIN-REQ-0006). Kept apart from the id.
+	Number       *DocumentNumber `json:"number,omitempty"`
+	Predecessors []DocumentID    `json:"predecessors"`
+
+	// ReasonCode A registered code from a closed vocabulary (ADR-0016 §2.4). Codes are
+	// never renumbered, never reused and never redefined; a retired code stops
+	// being emitted and keeps its meaning so historical evidence still
+	// resolves.
+	//
+	// This is the field to branch on. The set this deployment can emit is
+	// reported by `GET /v1/capabilities`; the enum is deliberately not closed
+	// here, because the register grows by addition and a client that rejects
+	// an unrecognised code would break on an additive change (ADR-0010 §2.6).
+	ReasonCode *ReasonCode `json:"reasonCode,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+	RecordedBy *string   `json:"recordedBy,omitempty"`
+
+	// RootID A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+	RootID DocumentID           `json:"rootId"`
+	Status FiscalDocumentStatus `json:"status"`
+
+	// TaxPoint RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	TaxPoint Timestamp `json:"taxPoint"`
+
+	// TaxTotal A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	TaxTotal Decimal            `json:"taxTotal"`
+	Type     FiscalDocumentType `json:"type"`
+}
+
+// FiscalDocumentStatus defines model for FiscalDocument.Status.
+type FiscalDocumentStatus string
+
+// FiscalDocumentType defines model for FiscalDocument.Type.
+type FiscalDocumentType string
 
 // InclusionProof defines model for InclusionProof.
 type InclusionProof struct {
@@ -1918,6 +2376,9 @@ type SignInRequest struct {
 	Tenant string `json:"tenant"`
 }
 
+// SourceLineRef The billing or ERP line a document line came from (ZTAX-FIN-REQ-0020).
+type SourceLineRef = string
+
 // SubledgerBalances defines model for SubledgerBalances.
 type SubledgerBalances struct {
 	Balances []ControlBalance `json:"balances"`
@@ -2244,6 +2705,24 @@ type SubmitBatchParams struct {
 	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
 }
 
+// IssueDocumentParams defines parameters for IssueDocument.
+type IssueDocumentParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
+// CorrectDocumentParams defines parameters for CorrectDocument.
+type CorrectDocumentParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
 // ListObligationsParams defines parameters for ListObligations.
 type ListObligationsParams struct {
 	// Status Only obligations in this effective status.
@@ -2325,6 +2804,12 @@ type SubmitBatchJSONRequestBody = BatchRequest
 
 // ProposeClassificationJSONRequestBody defines body for ProposeClassification for application/json ContentType.
 type ProposeClassificationJSONRequestBody = ClassificationProposalRequest
+
+// IssueDocumentJSONRequestBody defines body for IssueDocument for application/json ContentType.
+type IssueDocumentJSONRequestBody = DocumentRequest
+
+// CorrectDocumentJSONRequestBody defines body for CorrectDocument for application/json ContentType.
+type CorrectDocumentJSONRequestBody = CorrectionRequest
 
 // TransitionObligationJSONRequestBody defines body for TransitionObligation for application/json ContentType.
 type TransitionObligationJSONRequestBody = ObligationTransitionRequest

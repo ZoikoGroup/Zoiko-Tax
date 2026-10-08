@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:e7d53c9b1ed4d06d600fba22840fa56881551e84a425a18e4e6fbf21332935d1`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:50d72072a4287679dca97e64227a25ce169a88cbeb924c8c97f0697bc8cf6ea3`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -2031,7 +2031,7 @@
     },
     {
       "name": "06 · Determination — needs content and an OPERATOR",
-      "description": "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "description": "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
       "item": [
         {
           "name": "POST /v1/quotes — Quote a transaction without recording it",
@@ -2744,6 +2744,321 @@
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.json().status).to.eql('READY');",
                   "  pm.expect(pm.response.json().supersedes).to.eql(pm.collectionVariables.get('obligationId'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/documents — Commit a fiscal document that presents committed decisions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"INVOICE\",\n  \"number\": \"INV-2026-0001\",\n  \"issueDate\": \"2026-09-25\",\n  \"taxPoint\": \"2026-09-24T18:00:00.000000Z\",\n  \"currency\": \"EUR\",\n  \"externalRef\": {\n    \"sourceSystem\": \"bss\",\n    \"namespace\": \"invoice\",\n    \"value\": \"88231\"\n  },\n  \"lines\": [\n    {\n      \"sourceLineRef\": \"bss:order-9/line-1\",\n      \"net\": \"100.00\",\n      \"taxes\": [\n        {\n          \"decisionId\": \"{{decisionId}}\",\n          \"component\": \"TAX_VAT\",\n          \"amount\": \"21.00\"\n        },\n        {\n          \"decisionId\": \"{{decisionId}}\",\n          \"component\": \"TAX_ECO_LEVY\",\n          \"amount\": \"0.11\"\n        }\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "documents"
+              ]
+            },
+            "description": "Commit a fiscal document that presents committed decisions\n\n`OPERATOR` only. Commits an `INVOICE`, `DEBIT_NOTE` or `ADJUSTMENT`\n(ZTAX-FIN-001 §3). A document invents no tax: every tax line names\nthe committed decision it comes from and the component — the slot the\ndecision's content posts, such as `TAX_VAT` — and for each decision\nand component the document must present exactly what was decided\n(ZTAX-FIN-REQ-0010, -0011). A component decided as zero may be left\nout. A document that disagrees is refused with `409 CONFLICTED`\nnaming each decision and component that differs, and nothing is\ncommitted: correct the decision, not the document.\n\nEach decision must be the current version of its business key, and\nmay be billed by only one standing document at a time: a second\ninvoice for a decision already billed is refused with\n`409 ALREADY_EXISTS` until the first is voided or fully credited.\n\nCommitted documents are never changed. `Idempotency-Key` is required."
+          },
+          "response": [
+            {
+              "name": "201 · A committed invoice",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/documents",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "documents"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"type\": \"INVOICE\",\n  \"number\": \"INV-2026-0001\",\n  \"rootId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"predecessors\": [],\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"issueDate\": \"2026-09-25\",\n  \"taxPoint\": \"2026-09-24T18:00:00.000000Z\",\n  \"currency\": \"EUR\",\n  \"externalRef\": {\n    \"sourceSystem\": \"bss\",\n    \"namespace\": \"invoice\",\n    \"value\": \"88231\"\n  },\n  \"decisionIds\": [\n    \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n  ],\n  \"lines\": [\n    {\n      \"id\": \"01920a90-2b3c-7d4e-8f50-6a7b8c9d0e1f\",\n      \"sourceLineRef\": \"bss:order-9/line-1\",\n      \"net\": \"100.00\",\n      \"taxes\": [\n        {\n          \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n          \"component\": \"TAX_VAT\",\n          \"amount\": \"21.00\"\n        },\n        {\n          \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n          \"component\": \"TAX_ECO_LEVY\",\n          \"amount\": \"0.11\"\n        }\n      ]\n    }\n  ],\n  \"netTotal\": \"100.00\",\n  \"taxTotal\": \"21.11\",\n  \"grossTotal\": \"121.11\",\n  \"status\": \"COMMITTED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"status\": \"COMMITTED\",\n      \"recordedAt\": \"2026-09-25T09:00:00.000000Z\"\n    }\n  ],\n  \"recordedAt\": \"2026-09-25T09:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('issueDocument returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('ZTAX-FIN-REQ-0011 — the invoice presents exactly what was decided', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().status).to.eql('COMMITTED');",
+                  "});",
+                  "pm.collectionVariables.set('documentId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/documents/{documentId} — One fiscal document and its status history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/documents/{{documentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "documents",
+                "{{documentId}}"
+              ]
+            },
+            "description": "One fiscal document and its status history\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. The document exactly as committed,\nand every status it has had since: a credit note or void that moved\nit names itself as the `causeId`."
+          },
+          "response": [
+            {
+              "name": "200 · An invoice since voided",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/documents/{{documentId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "documents",
+                    "{{documentId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"type\": \"INVOICE\",\n  \"number\": \"INV-2026-0001\",\n  \"rootId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"predecessors\": [],\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"issueDate\": \"2026-09-25\",\n  \"taxPoint\": \"2026-09-24T18:00:00.000000Z\",\n  \"currency\": \"EUR\",\n  \"decisionIds\": [\n    \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n  ],\n  \"lines\": [\n    {\n      \"id\": \"01920a90-2b3c-7d4e-8f50-6a7b8c9d0e1f\",\n      \"net\": \"100.00\",\n      \"taxes\": [\n        {\n          \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n          \"component\": \"TAX_VAT\",\n          \"amount\": \"21.00\"\n        }\n      ]\n    }\n  ],\n  \"netTotal\": \"100.00\",\n  \"taxTotal\": \"21.00\",\n  \"grossTotal\": \"121.00\",\n  \"status\": \"VOIDED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"status\": \"COMMITTED\",\n      \"recordedAt\": \"2026-09-25T09:00:00.000000Z\"\n    },\n    {\n      \"seq\": 2,\n      \"status\": \"VOIDED\",\n      \"causeId\": \"01920a91-3c4d-7e5f-8061-7b8c9d0e1f2a\",\n      \"recordedAt\": \"2026-09-26T09:00:00.000000Z\"\n    }\n  ],\n  \"recordedAt\": \"2026-09-25T09:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getDocument returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/documents/{documentId}/corrections — Void, credit or rebill a committed document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"VOID\",\n  \"reason\": \"CORRECTION_CUSTOMER_CANCELLATION\",\n  \"number\": \"VOID-2026-0001\",\n  \"issueDate\": \"2026-09-26\",\n  \"taxPoint\": \"2026-09-24T18:00:00.000000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/documents/{{documentId}}/corrections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "documents",
+                "{{documentId}}",
+                "corrections"
+              ]
+            },
+            "description": "Void, credit or rebill a committed document\n\n`OPERATOR` only. Commits a correcting document as a successor of this\none, sharing its root (ZTAX-FIN-REQ-0003, -0004). The original is\nnever edited; it gains a status naming the correction.\n\n- `VOID` cancels every line, exactly: nets and taxes negated, nothing\n  recomputed. The original becomes `VOIDED`. Refused once any line\n  has been credited — credit the rest instead.\n- `CREDIT_NOTE` cancels the lines in `cancelLines`, or every line not\n  already cancelled. The original becomes `PARTIALLY_CREDITED` or\n  `FULLY_CREDITED`. A line is cancelled once.\n- `REBILL` charges again, with `lines` like an invoice's — each naming\n  the original line it replaces — once the original is voided or\n  fully credited.\n\n`reason` is a registered `CORRECTION_*` code (ZTAX-FIN-REQ-0008).\n`PARTIAL_CREDIT`, `AMENDMENT` and `RESTATEMENT` are refused as\n`UNSUPPORTED`. `Idempotency-Key` is required."
+          },
+          "response": [
+            {
+              "name": "201 · A void",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/documents/{{documentId}}/corrections",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "documents",
+                    "{{documentId}}",
+                    "corrections"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a91-3c4d-7e5f-8061-7b8c9d0e1f2a\",\n  \"type\": \"VOID\",\n  \"number\": \"VOID-2026-0001\",\n  \"rootId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"predecessors\": [\n    \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\"\n  ],\n  \"reasonCode\": \"CORRECTION_CUSTOMER_CANCELLATION\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"issueDate\": \"2026-09-26\",\n  \"taxPoint\": \"2026-09-24T18:00:00.000000Z\",\n  \"currency\": \"EUR\",\n  \"decisionIds\": [\n    \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n  ],\n  \"lines\": [\n    {\n      \"id\": \"01920a91-4d5e-7f60-8172-8c9d0e1f2a3b\",\n      \"net\": \"-100.00\",\n      \"predecessorLineId\": \"01920a90-2b3c-7d4e-8f50-6a7b8c9d0e1f\",\n      \"taxes\": [\n        {\n          \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n          \"component\": \"TAX_VAT\",\n          \"amount\": \"-21.00\"\n        }\n      ]\n    }\n  ],\n  \"netTotal\": \"-100.00\",\n  \"taxTotal\": \"-21.00\",\n  \"grossTotal\": \"-121.00\",\n  \"status\": \"COMMITTED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"status\": \"COMMITTED\",\n      \"recordedAt\": \"2026-09-26T09:00:00.000000Z\"\n    }\n  ],\n  \"recordedAt\": \"2026-09-26T09:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('correctDocument returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('ZTAX-FIN-REQ-0004 — the void is a linked successor', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().predecessors).to.include(pm.collectionVariables.get('documentId'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/documents/{documentId}/lineage — Every document in this one's chain, original first",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/documents/{{documentId}}/lineage",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "documents",
+                "{{documentId}}",
+                "lineage"
+              ]
+            },
+            "description": "Every document in this one's chain, original first\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. The original, and every void, credit note and rebill that followed it, in commit order (ZTAX-FIN-REQ-0007)."
+          },
+          "response": [
+            {
+              "name": "200 · An invoice and its void",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/documents/{{documentId}}/lineage",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "documents",
+                    "{{documentId}}",
+                    "lineage"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"documents\": [\n    {\n      \"id\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"type\": \"INVOICE\",\n      \"rootId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"predecessors\": [],\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"issueDate\": \"2026-09-25\",\n      \"taxPoint\": \"2026-09-24T18:00:00.000000Z\",\n      \"currency\": \"EUR\",\n      \"decisionIds\": [\n        \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n      ],\n      \"lines\": [],\n      \"netTotal\": \"0.00\",\n      \"taxTotal\": \"0.00\",\n      \"grossTotal\": \"0.00\",\n      \"status\": \"VOIDED\",\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"status\": \"COMMITTED\",\n          \"recordedAt\": \"2026-09-25T09:00:00.000000Z\"\n        }\n      ],\n      \"recordedAt\": \"2026-09-25T09:00:00.000000Z\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getDocumentLineage returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('one root, the invoice first', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().documents[0].status).to.eql('VOIDED');",
                   "});"
                 ]
               }
@@ -4509,6 +4824,11 @@
       "type": "string"
     },
     {
+      "key": "documentId",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "reusedKey",
       "value": "",
       "type": "string"
@@ -4520,7 +4840,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:e7d53c9b1ed4d06d600fba22840fa56881551e84a425a18e4e6fbf21332935d1",
+      "value": "sha256:50d72072a4287679dca97e64227a25ce169a88cbeb924c8c97f0697bc8cf6ea3",
       "type": "string"
     }
   ]

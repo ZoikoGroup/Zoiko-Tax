@@ -959,6 +959,119 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Commit a fiscal document that presents committed decisions
+         * @description `OPERATOR` only. Commits an `INVOICE`, `DEBIT_NOTE` or `ADJUSTMENT`
+         *     (ZTAX-FIN-001 §3). A document invents no tax: every tax line names
+         *     the committed decision it comes from and the component — the slot the
+         *     decision's content posts, such as `TAX_VAT` — and for each decision
+         *     and component the document must present exactly what was decided
+         *     (ZTAX-FIN-REQ-0010, -0011). A component decided as zero may be left
+         *     out. A document that disagrees is refused with `409 CONFLICTED`
+         *     naming each decision and component that differs, and nothing is
+         *     committed: correct the decision, not the document.
+         *
+         *     Each decision must be the current version of its business key, and
+         *     may be billed by only one standing document at a time: a second
+         *     invoice for a decision already billed is refused with
+         *     `409 ALREADY_EXISTS` until the first is voided or fully credited.
+         *
+         *     Committed documents are never changed. `Idempotency-Key` is required.
+         */
+        post: operations["issueDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One fiscal document and its status history
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. The document exactly as committed,
+         *     and every status it has had since: a credit note or void that moved
+         *     it names itself as the `causeId`.
+         */
+        get: operations["getDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/documents/{documentId}/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void, credit or rebill a committed document
+         * @description `OPERATOR` only. Commits a correcting document as a successor of this
+         *     one, sharing its root (ZTAX-FIN-REQ-0003, -0004). The original is
+         *     never edited; it gains a status naming the correction.
+         *
+         *     - `VOID` cancels every line, exactly: nets and taxes negated, nothing
+         *       recomputed. The original becomes `VOIDED`. Refused once any line
+         *       has been credited — credit the rest instead.
+         *     - `CREDIT_NOTE` cancels the lines in `cancelLines`, or every line not
+         *       already cancelled. The original becomes `PARTIALLY_CREDITED` or
+         *       `FULLY_CREDITED`. A line is cancelled once.
+         *     - `REBILL` charges again, with `lines` like an invoice's — each naming
+         *       the original line it replaces — once the original is voided or
+         *       fully credited.
+         *
+         *     `reason` is a registered `CORRECTION_*` code (ZTAX-FIN-REQ-0008).
+         *     `PARTIAL_CREDIT`, `AMENDMENT` and `RESTATEMENT` are refused as
+         *     `UNSUPPORTED`. `Idempotency-Key` is required.
+         */
+        post: operations["correctDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/documents/{documentId}/lineage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every document in this one's chain, original first
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. The original, and every void, credit note and rebill that followed it, in commit order (ZTAX-FIN-REQ-0007).
+         */
+        get: operations["getDocumentLineage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/subledger/balances": {
         parameters: {
             query?: never;
@@ -2006,7 +2119,7 @@ export interface components {
          * @example com.zoikotax.decision.committed
          * @enum {string}
          */
-        EventType: "com.zoikotax.decision.committed" | "com.zoikotax.decision.corrected" | "com.zoikotax.obligation.status-changed" | "com.zoikotax.accumulator.threshold-crossed" | "com.zoikotax.refund.requested" | "com.zoikotax.refund.status-changed";
+        EventType: "com.zoikotax.decision.committed" | "com.zoikotax.decision.corrected" | "com.zoikotax.obligation.status-changed" | "com.zoikotax.accumulator.threshold-crossed" | "com.zoikotax.refund.requested" | "com.zoikotax.refund.status-changed" | "com.zoikotax.document.committed";
         /**
          * WebhookStatus
          * @example ACTIVE
@@ -2245,6 +2358,141 @@ export interface components {
             /** @description Sibling node hashes from the leaf's level to the root, in the digest form. */
             auditPath: components["schemas"]["Digest"][];
         };
+        /**
+         * DocumentId
+         * Format: uuid
+         * @description A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+         * @example 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        DocumentId: string;
+        /**
+         * DocumentLineId
+         * Format: uuid
+         * @example 01920a90-2b3c-7d4e-8f50-6a7b8c9d0e1f
+         */
+        DocumentLineId: string;
+        /**
+         * DocumentNumber
+         * @description The legal, customer-visible document number (ZTAX-FIN-REQ-0006). Kept apart from the id.
+         * @example INV-2026-0001
+         */
+        DocumentNumber: string;
+        /**
+         * ExternalReference
+         * @description Another system's identifier for the document (ZTAX-DOM-REQ-0003). Never a key, never parsed, never assumed unique.
+         */
+        ExternalReference: {
+            sourceSystem: string;
+            namespace: string;
+            value: string;
+        };
+        /**
+         * DocumentTax
+         * @description One tax on one line, naming the committed decision it comes from and the component the decision's content posts.
+         */
+        DocumentTax: {
+            decisionId: components["schemas"]["DecisionId"];
+            /** @example TAX_VAT */
+            component: string;
+            amount: components["schemas"]["Decimal"];
+        };
+        /**
+         * SourceLineRef
+         * @description The billing or ERP line a document line came from (ZTAX-FIN-REQ-0020).
+         * @example bss:order-9/line-1
+         */
+        SourceLineRef: string;
+        /** DocumentLineRequest */
+        DocumentLineRequest: {
+            sourceLineRef?: components["schemas"]["SourceLineRef"];
+            componentInstance?: string;
+            net: components["schemas"]["Decimal"];
+            discount?: components["schemas"]["Decimal"];
+            /** @description Required with a discount — the allocation that produced it (ZTAX-FIN-REQ-0021). */
+            allocationRef?: string;
+            predecessorLineId?: components["schemas"]["DocumentLineId"];
+            taxes: components["schemas"]["DocumentTax"][];
+        };
+        /** DocumentRequest */
+        DocumentRequest: {
+            /** @enum {string} */
+            type: "INVOICE" | "DEBIT_NOTE" | "ADJUSTMENT";
+            number?: components["schemas"]["DocumentNumber"];
+            issueDate: components["schemas"]["CivilDate"];
+            taxPoint: components["schemas"]["Timestamp"];
+            currency: components["schemas"]["CurrencyCode"];
+            externalRef?: components["schemas"]["ExternalReference"];
+            lines: components["schemas"]["DocumentLineRequest"][];
+        };
+        /** CorrectionRequest */
+        CorrectionRequest: {
+            /** @enum {string} */
+            type: "VOID" | "CREDIT_NOTE" | "REBILL";
+            reason: components["schemas"]["ReasonCode"];
+            number?: components["schemas"]["DocumentNumber"];
+            issueDate: components["schemas"]["CivilDate"];
+            taxPoint: components["schemas"]["Timestamp"];
+            /** @description A credit note's lines to cancel; absent is every line not yet cancelled. */
+            cancelLines?: components["schemas"]["DocumentLineId"][];
+            /** @description A rebill's lines, each naming the original line it replaces. */
+            lines?: components["schemas"]["DocumentLineRequest"][];
+        };
+        /** DocumentLine */
+        DocumentLine: {
+            id: components["schemas"]["DocumentLineId"];
+            sourceLineRef?: components["schemas"]["SourceLineRef"];
+            componentInstance?: string;
+            net: components["schemas"]["Decimal"];
+            discount?: components["schemas"]["Decimal"];
+            allocationRef?: string;
+            predecessorLineId?: components["schemas"]["DocumentLineId"];
+            taxes: components["schemas"]["DocumentTax"][];
+        };
+        /** DocumentStatusEvent */
+        DocumentStatusEvent: {
+            /** Format: int32 */
+            seq: number;
+            /** @enum {string} */
+            status: "COMMITTED" | "ISSUED" | "DELIVERED" | "ACCEPTED" | "PARTIALLY_CREDITED" | "FULLY_CREDITED" | "VOIDED" | "REFUNDED" | "AMENDED" | "DISPUTED" | "CLOSED" | "SUSPENDED";
+            causeId?: components["schemas"]["DocumentId"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy?: string;
+        };
+        /**
+         * FiscalDocument
+         * @description A committed fiscal document. Amounts are in `currency`; a cancelling
+         *     document's are negative. `status` is the latest of `history`.
+         */
+        FiscalDocument: {
+            id: components["schemas"]["DocumentId"];
+            /** @enum {string} */
+            type: "INVOICE" | "CREDIT_NOTE" | "DEBIT_NOTE" | "PARTIAL_CREDIT" | "VOID" | "REFUND" | "REBILL" | "ADJUSTMENT" | "AMENDMENT" | "RESTATEMENT";
+            number?: components["schemas"]["DocumentNumber"];
+            rootId: components["schemas"]["DocumentId"];
+            predecessors: components["schemas"]["DocumentId"][];
+            reasonCode?: components["schemas"]["ReasonCode"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            issueDate: components["schemas"]["CivilDate"];
+            taxPoint: components["schemas"]["Timestamp"];
+            currency: components["schemas"]["CurrencyCode"];
+            externalRef?: components["schemas"]["ExternalReference"];
+            decisionIds: components["schemas"]["DecisionId"][];
+            lines: components["schemas"]["DocumentLine"][];
+            netTotal: components["schemas"]["Decimal"];
+            taxTotal: components["schemas"]["Decimal"];
+            grossTotal: components["schemas"]["Decimal"];
+            /** @enum {string} */
+            status: "COMMITTED" | "ISSUED" | "DELIVERED" | "ACCEPTED" | "PARTIALLY_CREDITED" | "FULLY_CREDITED" | "VOIDED" | "REFUNDED" | "AMENDED" | "DISPUTED" | "CLOSED" | "SUSPENDED";
+            history: components["schemas"]["DocumentStatusEvent"][];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy?: string;
+        };
+        /** DocumentLineage */
+        DocumentLineage: {
+            documents: components["schemas"]["FiscalDocument"][];
+        };
         /** ReplayReport */
         ReplayReport: {
             decisionId: components["schemas"]["DecisionId"];
@@ -2402,6 +2650,11 @@ export interface components {
          * @example 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
          */
         SealId: components["schemas"]["SealId"];
+        /**
+         * @description The fiscal document.
+         * @example 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        DocumentId: components["schemas"]["DocumentId"];
         /**
          * @description Maximum number of items to return. The server caps this independently,
          *     so a larger value is not an error and does not return more.
@@ -3683,6 +3936,169 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SealVerification"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    issueDocument: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentRequest"];
+            };
+        };
+        responses: {
+            /**
+             * @description The committed document. A replayed response carries
+             *     `Idempotent-Replay: true` and is byte-for-byte the original.
+             */
+            201: {
+                headers: {
+                    /**
+                     * @description Present, and `true`, when this is the stored response to an earlier request with the same key.
+                     * @example true
+                     */
+                    "Idempotent-Replay"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FiscalDocument"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["IdempotencyConflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The fiscal document.
+                 * @example 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                documentId: components["parameters"]["DocumentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The document. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FiscalDocument"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    correctDocument: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /**
+                 * @description The fiscal document.
+                 * @example 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                documentId: components["parameters"]["DocumentId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CorrectionRequest"];
+            };
+        };
+        responses: {
+            /** @description The correcting document. */
+            201: {
+                headers: {
+                    /**
+                     * @description Present, and `true`, when this is the stored response to an earlier request with the same key.
+                     * @example true
+                     */
+                    "Idempotent-Replay"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FiscalDocument"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["IdempotencyConflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getDocumentLineage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The fiscal document.
+                 * @example 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                documentId: components["parameters"]["DocumentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The chain. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentLineage"];
                 };
             };
             400: components["responses"]["Validation"];

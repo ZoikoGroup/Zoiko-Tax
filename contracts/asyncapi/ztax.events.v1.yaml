@@ -91,6 +91,7 @@ channels:
       thresholdCrossed: { $ref: "#/components/messages/thresholdCrossed" }
       refundRequested: { $ref: "#/components/messages/refundRequested" }
       refundStatusChanged: { $ref: "#/components/messages/refundStatusChanged" }
+      documentCommitted: { $ref: "#/components/messages/documentCommitted" }
 
 operations:
   receiveCellEvents:
@@ -104,6 +105,7 @@ operations:
       - $ref: "#/channels/cellEvents/messages/thresholdCrossed"
       - $ref: "#/channels/cellEvents/messages/refundRequested"
       - $ref: "#/channels/cellEvents/messages/refundStatusChanged"
+      - $ref: "#/channels/cellEvents/messages/documentCommitted"
 
 components:
   messageTraits:
@@ -190,3 +192,12 @@ components:
       payload:
         schemaFormat: application/schema+json;version=draft-2020-12
         schema: { $ref: "../schemas/events/refund-status-changed.schema.json" }
+
+    documentCommitted:
+      name: com.zoikotax.document.committed
+      title: Document committed
+      summary: A fiscal document, or a void, credit note or rebill of one, was committed. Read it from GET /v1/documents/{documentId}.
+      traits: [{ $ref: "#/components/messageTraits/cloudEvent" }]
+      payload:
+        schemaFormat: application/schema+json;version=draft-2020-12
+        schema: { $ref: "../schemas/events/document-committed.schema.json" }

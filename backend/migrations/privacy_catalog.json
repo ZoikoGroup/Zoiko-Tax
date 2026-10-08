@@ -325,25 +325,42 @@
       "document_id": {
         "class": "P0"
       },
-      "decision_id": {
-        "class": "P0"
-      },
-      "business_key": {
-        "class": "P0"
-      },
-      "valid_from": {
-        "class": "P0"
-      },
-      "valid_to": {
-        "class": "P0"
-      },
-      "recorded_at": {
-        "class": "P0"
-      },
-      "supersedes_id": {
+      "legal_entity_id": {
         "class": "P0"
       },
       "document_type": {
+        "class": "P0"
+      },
+      "document_number": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-RECON",
+          "PURP-EVID",
+          "PURP-FILE"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "The legal document number a customer holds; it identifies their transaction."
+      },
+      "root_id": {
+        "class": "P0"
+      },
+      "reason_code": {
+        "class": "P0"
+      },
+      "issue_date": {
+        "class": "P0"
+      },
+      "tax_point": {
+        "class": "P0"
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "restated": {
         "class": "P0"
       },
       "ext_source_system": {
@@ -364,9 +381,6 @@
         "evidencePolicy": "RAW_REQUIRED",
         "aiAllowed": "NONE",
         "note": "The customer's own document reference; may be a subscriber account or invoice number."
-      },
-      "currency": {
-        "class": "P0"
       },
       "net_total": {
         "class": "P5",
@@ -404,8 +418,19 @@
         "evidencePolicy": "RAW_REQUIRED",
         "aiAllowed": "NONE"
       },
-      "event_time": {
+      "recorded_at": {
         "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The operator who committed the document; NULL for system work."
       }
     },
     "fiscal_line": {
@@ -421,13 +446,7 @@
       "ordinal": {
         "class": "P0"
       },
-      "item_ref": {
-        "class": "P0"
-      },
-      "classification_id": {
-        "class": "P0"
-      },
-      "quantity": {
+      "source_line_ref": {
         "class": "P5",
         "purposes": [
           "PURP-TAX-CALC",
@@ -438,12 +457,9 @@
         "redaction": "REDACT",
         "evidencePolicy": "RAW_REQUIRED",
         "aiAllowed": "NONE",
-        "note": "Per-line quantity; for a telecom line, an individual's usage."
+        "note": "The billing system's line reference; may carry an account or order number."
       },
-      "unit": {
-        "class": "P0"
-      },
-      "currency": {
+      "component_instance": {
         "class": "P0"
       },
       "net_amount": {
@@ -458,7 +474,7 @@
         "evidencePolicy": "RAW_REQUIRED",
         "aiAllowed": "NONE"
       },
-      "tax_amount": {
+      "discount_amount": {
         "class": "P5",
         "purposes": [
           "PURP-TAX-CALC",
@@ -468,15 +484,13 @@
         "retention": "RET-FISCAL",
         "redaction": "REDACT",
         "evidencePolicy": "RAW_REQUIRED",
-        "aiAllowed": "NONE"
+        "aiAllowed": "NONE",
+        "note": "A line's allocated discount."
       },
-      "rounding_mode": {
+      "allocation_ref": {
         "class": "P0"
       },
-      "rounding_scale": {
-        "class": "P0"
-      },
-      "rounding_basis": {
+      "predecessor_line_id": {
         "class": "P0"
       }
     },
@@ -1628,6 +1642,88 @@
       },
       "recorded_at": {
         "class": "P0"
+      }
+    },
+    "fiscal_document_predecessor": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "document_id": {
+        "class": "P0"
+      },
+      "predecessor_id": {
+        "class": "P0"
+      }
+    },
+    "fiscal_document_decision": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "document_id": {
+        "class": "P0"
+      },
+      "decision_id": {
+        "class": "P0"
+      }
+    },
+    "fiscal_line_tax": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "line_id": {
+        "class": "P0"
+      },
+      "ordinal": {
+        "class": "P0"
+      },
+      "decision_id": {
+        "class": "P0"
+      },
+      "component": {
+        "class": "P0"
+      },
+      "amount": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE"
+      }
+    },
+    "fiscal_document_status": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "document_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "status": {
+        "class": "P0"
+      },
+      "cause_id": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The operator whose act moved the document; NULL when a correction's commit did."
       }
     }
   }

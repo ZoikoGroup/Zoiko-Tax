@@ -39,11 +39,12 @@ type eventSchema struct {
 	MinLength            *int                    `json:"minLength"`
 	MaxLength            *int                    `json:"maxLength"`
 	Minimum              *float64                `json:"minimum"`
+	Items                *eventSchema            `json:"items"`
 }
 
 var knownSchemaKeywords = []string{
 	"$schema", "title", "description", "$comment", "type", "required", "properties", "additionalProperties",
-	"dependentRequired", "const", "enum", "pattern", "format", "minLength", "maxLength", "minimum",
+	"dependentRequired", "const", "enum", "pattern", "format", "minLength", "maxLength", "minimum", "items",
 }
 
 func checkKeywords(t *testing.T, where string, raw json.RawMessage) {
@@ -55,6 +56,9 @@ func checkKeywords(t *testing.T, where string, raw json.RawMessage) {
 	for k, v := range m {
 		if !slices.Contains(knownSchemaKeywords, k) {
 			t.Fatalf("%s uses %q, which this check does not evaluate", where, k)
+		}
+		if k == "items" {
+			checkKeywords(t, where+"[]", v)
 		}
 		if k == "properties" {
 			var props map[string]json.RawMessage
@@ -155,6 +159,17 @@ func (s *eventSchema) validate(path string, v any) []string {
 				bad("%q is not a canon/v1 timestamp", str)
 			}
 		}
+	case "array":
+		arr, ok := v.([]any)
+		if !ok {
+			bad("is not an array")
+			return out
+		}
+		if s.Items != nil {
+			for i, item := range arr {
+				out = append(out, s.Items.validate(fmt.Sprintf("%s[%d]", path, i), item)...)
+			}
+		}
 	case "integer":
 		n, ok := v.(float64)
 		if !ok || n != float64(int64(n)) {
@@ -189,6 +204,7 @@ func TestIntegrationEveryEmittedEventMatchesItsSchema(t *testing.T) {
 	if _, err := refunds.Report(c.ctx, rf, app.ReportInput{Outcome: settlement.RefundSucceeded, ExternalRef: "psp:re_ev"}); err != nil {
 		t.Fatal(err)
 	}
+	mustDoc(t)(c.issue(t, c.documents(), "ev-doc", c.docLine(t, corrected, "50.00", "10.50", "0.11")))
 
 	rows, err := c.store.Pool().Query(c.ctx,
 		`SELECT event_type, schema_ref, payload::text FROM ztax.outbox WHERE tenant_id = $1 ORDER BY created_at, id`,
@@ -229,6 +245,7 @@ func TestIntegrationEveryEmittedEventMatchesItsSchema(t *testing.T) {
 		app.EventObligationStatusChanged: 2, // created OPEN, then READY
 		app.EventRefundRequested:         1,
 		app.EventRefundStatusChanged:     1,
+		app.EventDocumentCommitted:       1,
 	} {
 		if seen[typ] != want {
 			t.Errorf("%d %s events, want %d", seen[typ], typ, want)

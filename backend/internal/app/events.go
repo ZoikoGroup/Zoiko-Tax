@@ -53,6 +53,7 @@ func Events() []EventSpec {
 		{EventThresholdCrossed, SchemaThresholdCrossedRef},
 		{EventRefundRequested, SchemaRefundRequestedRef},
 		{EventRefundStatusChanged, SchemaRefundStatusChangedRef},
+		{EventDocumentCommitted, SchemaDocumentCommittedRef},
 	}
 }
 

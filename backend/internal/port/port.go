@@ -19,6 +19,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/accumulator"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/batch"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/document"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/fiscal"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
@@ -546,4 +547,54 @@ type BatchRepository interface {
 	AppendResult(ctx context.Context, r batch.Result) (bool, error)
 	// Complete marks a job COMPLETED and releases its lease.
 	Complete(ctx context.Context, jobID id.JobID, at time.Time) error
+}
+
+// ---------------------------------------------------------------------------
+// fiscal documents (W2 lane J; ZTAX-FIN-001 §3–§6)
+// ---------------------------------------------------------------------------
+
+// DocumentRecord is a committed document as stored: the document, the totals
+// computed from its lines when it was committed, and who committed it.
+type DocumentRecord struct {
+	Document   document.Document
+	Net        fiscal.Money
+	Tax        fiscal.Money
+	Gross      fiscal.Money
+	RecordedAt time.Time
+	RecordedBy id.UserID
+}
+
+// DocumentCitation is a document that pins a decision, and where it stands.
+type DocumentCitation struct {
+	Document id.FiscalDocumentID
+	Type     document.Type
+	Status   document.Status
+}
+
+// DocumentRepository stores committed fiscal documents and their lifecycle.
+// Append-only by interface and by grant: there is no update and no delete.
+type DocumentRepository interface {
+	// Lock serializes the writers of one document chain until the
+	// transaction ends: two corrections of one invoice, or a correction and
+	// a rebill, are decided one after the other.
+	Lock(ctx context.Context, root id.FiscalDocumentID) error
+	// LockDecision serializes the billing of one decision, so it cannot be
+	// billed twice by two documents committed at once.
+	LockDecision(ctx context.Context, decisionID id.DecisionID) error
+	// Create writes a committed document — header, predecessors, pinned
+	// decisions, lines and their taxes — and its COMMITTED status.
+	Create(ctx context.Context, r DocumentRecord, first document.StatusEvent) error
+	// ByID returns a document and its status history, oldest first.
+	ByID(ctx context.Context, documentID id.FiscalDocumentID) (DocumentRecord, []document.StatusEvent, error)
+	// AppendStatus writes the next status event; a sequence already taken is
+	// an optimistic conflict.
+	AppendStatus(ctx context.Context, e document.StatusEvent) error
+	// Lineage returns every document sharing a root, in commit order.
+	Lineage(ctx context.Context, root id.FiscalDocumentID) ([]DocumentRecord, error)
+	// CitedBy returns the documents that pin a decision, with each one's
+	// current status.
+	CitedBy(ctx context.Context, decisionID id.DecisionID) ([]DocumentCitation, error)
+	// CancelledLines reports which lines of a document a void or credit note
+	// has already cancelled.
+	CancelledLines(ctx context.Context, documentID id.FiscalDocumentID) (map[id.FiscalLineID]bool, error)
 }

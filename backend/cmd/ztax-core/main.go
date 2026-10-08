@@ -146,6 +146,8 @@ func run() error {
 		router.Batches = app.NewBatchService(store.Batches(), router.Determination,
 			app.NewIdempotency(store.Idempotency(), store, clk), clk, ids)
 		go runBatchWorker(ctx, router.Batches, log)
+		router.Documents = app.NewDocumentService(router.Determination, store.Documents(),
+			app.NewIdempotency(store.Idempotency(), store, clk))
 	}
 	models, closeModels, err := wireModelGateway(cfg, clk, ids, log)
 	if err != nil {

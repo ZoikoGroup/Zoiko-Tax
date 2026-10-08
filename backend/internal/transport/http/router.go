@@ -95,6 +95,10 @@ type Router struct {
 	// inclusion proofs. Nil in a cell with no seal keyring, which answers
 	// 503.
 	Seals *app.SealService
+
+	// Documents serves the fiscal documents. Nil wherever Determination is,
+	// since documents present its decisions.
+	Documents *app.DocumentService
 }
 
 // Trains are the seven release-train versions, as the contract names them.
@@ -190,6 +194,10 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/transactions:refund", false, []security.Role{operator}}, rt.handleRefund},
 		{Route{"GET", "/v1/refunds/{refundId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetRefund},
 		{Route{"POST", "/v1/batches", false, []security.Role{operator}}, rt.handleSubmitBatch},
+		{Route{"POST", "/v1/documents", false, []security.Role{operator}}, rt.handleIssueDocument},
+		{Route{"GET", "/v1/documents/{documentId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetDocument},
+		{Route{"POST", "/v1/documents/{documentId}/corrections", false, []security.Role{operator}}, rt.handleCorrectDocument},
+		{Route{"GET", "/v1/documents/{documentId}/lineage", false, []security.Role{operator, analyst, auditor}}, rt.handleDocumentLineage},
 		{Route{"GET", "/v1/jobs/{jobId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetJob},
 		{Route{"POST", "/v1/refunds/{refundId}/reports", false, []security.Role{operator}}, rt.handleReportRefund},
 		{Route{"GET", "/v1/decisions/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetDecision},

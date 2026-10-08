@@ -39,6 +39,8 @@ public enum EventType {
   
   COM_ZOIKOTAX_REFUND_STATUS_CHANGED("com.zoikotax.refund.status-changed"),
   
+  COM_ZOIKOTAX_DOCUMENT_COMMITTED("com.zoikotax.document.committed"),
+  
   UNKNOWN_DEFAULT_OPEN_API("unknown_default_open_api");
 
   private String value;

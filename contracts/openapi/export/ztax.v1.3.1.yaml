@@ -90,6 +90,8 @@ tags:
     description: Many commits queued as one asynchronous job, each item on the single-commit path.
   - name: evidence
     description: Period seals, their verification, and the inclusion proof that ties one decision to a signed root.
+  - name: documents
+    description: Fiscal documents that present committed decisions, and the voids, credits and rebills that correct them. Never edited.
 security:
   - sessionCookie: []
 paths:
@@ -2280,6 +2282,350 @@ paths:
           $ref: "#/components/responses/Internal"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/documents:
+    post:
+      operationId: issueDocument
+      tags:
+        - documents
+      summary: Commit a fiscal document that presents committed decisions
+      description: |
+        `OPERATOR` only. Commits an `INVOICE`, `DEBIT_NOTE` or `ADJUSTMENT`
+        (ZTAX-FIN-001 §3). A document invents no tax: every tax line names
+        the committed decision it comes from and the component — the slot the
+        decision's content posts, such as `TAX_VAT` — and for each decision
+        and component the document must present exactly what was decided
+        (ZTAX-FIN-REQ-0010, -0011). A component decided as zero may be left
+        out. A document that disagrees is refused with `409 CONFLICTED`
+        naming each decision and component that differs, and nothing is
+        committed: correct the decision, not the document.
+
+        Each decision must be the current version of its business key, and
+        may be billed by only one standing document at a time: a second
+        invoice for a decision already billed is refused with
+        `409 ALREADY_EXISTS` until the first is voided or fully credited.
+
+        Committed documents are never changed. `Idempotency-Key` is required.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentRequest"
+            examples:
+              default:
+                summary: An invoice for one committed line
+                value:
+                  type: INVOICE
+                  number: INV-2026-0001
+                  issueDate: 2026-09-25
+                  taxPoint: 2026-09-24T18:00:00.000000Z
+                  currency: EUR
+                  externalRef:
+                    sourceSystem: bss
+                    namespace: invoice
+                    value: "88231"
+                  lines:
+                    - sourceLineRef: bss:order-9/line-1
+                      net: "100.00"
+                      taxes:
+                        - decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                          component: TAX_VAT
+                          amount: "21.00"
+                        - decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                          component: TAX_ECO_LEVY
+                          amount: "0.11"
+      responses:
+        "201":
+          description: |
+            The committed document. A replayed response carries
+            `Idempotent-Replay: true` and is byte-for-byte the original.
+          headers:
+            Idempotent-Replay:
+              description: Present, and `true`, when this is the stored response to an earlier request with the same key.
+              schema:
+                type: boolean
+              example: true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FiscalDocument"
+              examples:
+                default:
+                  summary: A committed invoice
+                  value:
+                    id: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    type: INVOICE
+                    number: INV-2026-0001
+                    rootId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    predecessors: []
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    issueDate: 2026-09-25
+                    taxPoint: 2026-09-24T18:00:00.000000Z
+                    currency: EUR
+                    externalRef:
+                      sourceSystem: bss
+                      namespace: invoice
+                      value: "88231"
+                    decisionIds:
+                      - 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    lines:
+                      - id: 01920a90-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                        sourceLineRef: bss:order-9/line-1
+                        net: "100.00"
+                        taxes:
+                          - decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                            component: TAX_VAT
+                            amount: "21.00"
+                          - decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                            component: TAX_ECO_LEVY
+                            amount: "0.11"
+                    netTotal: "100.00"
+                    taxTotal: "21.11"
+                    grossTotal: "121.11"
+                    status: COMMITTED
+                    history:
+                      - seq: 1
+                        status: COMMITTED
+                        recordedAt: 2026-09-25T09:00:00.000000Z
+                    recordedAt: 2026-09-25T09:00:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/IdempotencyConflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/documents/{documentId}:
+    get:
+      operationId: getDocument
+      tags:
+        - documents
+      summary: One fiscal document and its status history
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. The document exactly as committed,
+        and every status it has had since: a credit note or void that moved
+        it names itself as the `causeId`.
+      parameters:
+        - $ref: "#/components/parameters/DocumentId"
+      responses:
+        "200":
+          description: The document.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FiscalDocument"
+              examples:
+                default:
+                  summary: An invoice since voided
+                  value:
+                    id: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    type: INVOICE
+                    number: INV-2026-0001
+                    rootId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    predecessors: []
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    issueDate: 2026-09-25
+                    taxPoint: 2026-09-24T18:00:00.000000Z
+                    currency: EUR
+                    decisionIds:
+                      - 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    lines:
+                      - id: 01920a90-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                        net: "100.00"
+                        taxes:
+                          - decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                            component: TAX_VAT
+                            amount: "21.00"
+                    netTotal: "100.00"
+                    taxTotal: "21.00"
+                    grossTotal: "121.00"
+                    status: VOIDED
+                    history:
+                      - seq: 1
+                        status: COMMITTED
+                        recordedAt: 2026-09-25T09:00:00.000000Z
+                      - seq: 2
+                        status: VOIDED
+                        causeId: 01920a91-3c4d-7e5f-8061-7b8c9d0e1f2a
+                        recordedAt: 2026-09-26T09:00:00.000000Z
+                    recordedAt: 2026-09-25T09:00:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/documents/{documentId}/corrections:
+    post:
+      operationId: correctDocument
+      tags:
+        - documents
+      summary: Void, credit or rebill a committed document
+      description: |
+        `OPERATOR` only. Commits a correcting document as a successor of this
+        one, sharing its root (ZTAX-FIN-REQ-0003, -0004). The original is
+        never edited; it gains a status naming the correction.
+
+        - `VOID` cancels every line, exactly: nets and taxes negated, nothing
+          recomputed. The original becomes `VOIDED`. Refused once any line
+          has been credited — credit the rest instead.
+        - `CREDIT_NOTE` cancels the lines in `cancelLines`, or every line not
+          already cancelled. The original becomes `PARTIALLY_CREDITED` or
+          `FULLY_CREDITED`. A line is cancelled once.
+        - `REBILL` charges again, with `lines` like an invoice's — each naming
+          the original line it replaces — once the original is voided or
+          fully credited.
+
+        `reason` is a registered `CORRECTION_*` code (ZTAX-FIN-REQ-0008).
+        `PARTIAL_CREDIT`, `AMENDMENT` and `RESTATEMENT` are refused as
+        `UNSUPPORTED`. `Idempotency-Key` is required.
+      parameters:
+        - $ref: "#/components/parameters/DocumentId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CorrectionRequest"
+            examples:
+              default:
+                summary: Void an invoice the customer cancelled
+                value:
+                  type: VOID
+                  reason: CORRECTION_CUSTOMER_CANCELLATION
+                  number: VOID-2026-0001
+                  issueDate: 2026-09-26
+                  taxPoint: 2026-09-24T18:00:00.000000Z
+      responses:
+        "201":
+          description: The correcting document.
+          headers:
+            Idempotent-Replay:
+              description: Present, and `true`, when this is the stored response to an earlier request with the same key.
+              schema:
+                type: boolean
+              example: true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FiscalDocument"
+              examples:
+                default:
+                  summary: A void
+                  value:
+                    id: 01920a91-3c4d-7e5f-8061-7b8c9d0e1f2a
+                    type: VOID
+                    number: VOID-2026-0001
+                    rootId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    predecessors:
+                      - 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    reasonCode: CORRECTION_CUSTOMER_CANCELLATION
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    issueDate: 2026-09-26
+                    taxPoint: 2026-09-24T18:00:00.000000Z
+                    currency: EUR
+                    decisionIds:
+                      - 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    lines:
+                      - id: 01920a91-4d5e-7f60-8172-8c9d0e1f2a3b
+                        net: "-100.00"
+                        predecessorLineId: 01920a90-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                        taxes:
+                          - decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                            component: TAX_VAT
+                            amount: "-21.00"
+                    netTotal: "-100.00"
+                    taxTotal: "-21.00"
+                    grossTotal: "-121.00"
+                    status: COMMITTED
+                    history:
+                      - seq: 1
+                        status: COMMITTED
+                        recordedAt: 2026-09-26T09:00:00.000000Z
+                    recordedAt: 2026-09-26T09:00:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/IdempotencyConflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/documents/{documentId}/lineage:
+    get:
+      operationId: getDocumentLineage
+      tags:
+        - documents
+      summary: Every document in this one's chain, original first
+      description: "`OPERATOR`, `ANALYST` or `AUDITOR`. The original, and every void, credit note and rebill that followed it, in commit order (ZTAX-FIN-REQ-0007)."
+      parameters:
+        - $ref: "#/components/parameters/DocumentId"
+      responses:
+        "200":
+          description: The chain.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentLineage"
+              examples:
+                default:
+                  summary: An invoice and its void
+                  value:
+                    documents:
+                      - id: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        type: INVOICE
+                        rootId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        predecessors: []
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        issueDate: 2026-09-25
+                        taxPoint: 2026-09-24T18:00:00.000000Z
+                        currency: EUR
+                        decisionIds:
+                          - 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                        lines: []
+                        netTotal: "0.00"
+                        taxTotal: "0.00"
+                        grossTotal: "0.00"
+                        status: VOIDED
+                        history:
+                          - seq: 1
+                            status: COMMITTED
+                            recordedAt: 2026-09-25T09:00:00.000000Z
+                        recordedAt: 2026-09-25T09:00:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/subledger/balances:
     get:
       operationId: getSubledgerBalances
@@ -2704,6 +3050,14 @@ components:
       schema:
         $ref: "#/components/schemas/SealId"
       example: 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      description: The fiscal document.
+      schema:
+        $ref: "#/components/schemas/DocumentId"
+      example: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
     Limit:
       name: limit
       in: query
@@ -4751,6 +5105,7 @@ components:
         - com.zoikotax.accumulator.threshold-crossed
         - com.zoikotax.refund.requested
         - com.zoikotax.refund.status-changed
+        - com.zoikotax.document.committed
       example: com.zoikotax.decision.committed
     WebhookStatus:
       x-ztax-privacy:
@@ -5347,6 +5702,414 @@ components:
           description: Sibling node hashes from the leaf's level to the root, in the digest form.
           items:
             $ref: "#/components/schemas/Digest"
+    DocumentId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: DocumentId
+      description: A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+    DocumentLineId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: DocumentLineId
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920a90-2b3c-7d4e-8f50-6a7b8c9d0e1f
+    DocumentNumber:
+      x-ztax-privacy:
+        class: P5
+        purposes:
+          - PURP-TAX-CALC
+          - PURP-RECON
+          - PURP-EVID
+          - PURP-FILE
+        retention: RET-FISCAL
+        redaction: REDACT
+        aiAllowed: NONE
+        evidencePolicy: RAW_REQUIRED
+      type: string
+      title: DocumentNumber
+      description: The legal, customer-visible document number (ZTAX-FIN-REQ-0006). Kept apart from the id.
+      minLength: 1
+      maxLength: 255
+      example: INV-2026-0001
+    ExternalReference:
+      type: object
+      title: ExternalReference
+      description: Another system's identifier for the document (ZTAX-DOM-REQ-0003). Never a key, never parsed, never assumed unique.
+      additionalProperties: false
+      required:
+        - sourceSystem
+        - namespace
+        - value
+      properties:
+        sourceSystem:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          minLength: 1
+          maxLength: 255
+        namespace:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          minLength: 1
+          maxLength: 255
+        value:
+          x-ztax-privacy:
+            class: P5
+            purposes:
+              - PURP-TAX-CALC
+              - PURP-RECON
+              - PURP-EVID
+            retention: RET-FISCAL
+            redaction: REDACT
+            aiAllowed: NONE
+            evidencePolicy: RAW_REQUIRED
+          type: string
+          minLength: 1
+          maxLength: 255
+    DocumentTax:
+      type: object
+      title: DocumentTax
+      description: One tax on one line, naming the committed decision it comes from and the component the decision's content posts.
+      additionalProperties: false
+      required:
+        - decisionId
+        - component
+        - amount
+      properties:
+        decisionId:
+          $ref: "#/components/schemas/DecisionId"
+        component:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          minLength: 1
+          maxLength: 128
+          example: TAX_VAT
+        amount:
+          $ref: "#/components/schemas/Decimal"
+    SourceLineRef:
+      x-ztax-privacy:
+        class: P5
+        purposes:
+          - PURP-TAX-CALC
+          - PURP-RECON
+          - PURP-EVID
+        retention: RET-FISCAL
+        redaction: REDACT
+        aiAllowed: NONE
+        evidencePolicy: RAW_REQUIRED
+      type: string
+      title: SourceLineRef
+      description: The billing or ERP line a document line came from (ZTAX-FIN-REQ-0020).
+      maxLength: 255
+      example: bss:order-9/line-1
+    DocumentLineRequest:
+      type: object
+      title: DocumentLineRequest
+      additionalProperties: false
+      required:
+        - net
+        - taxes
+      properties:
+        sourceLineRef:
+          $ref: "#/components/schemas/SourceLineRef"
+        componentInstance:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          maxLength: 255
+        net:
+          $ref: "#/components/schemas/Decimal"
+        discount:
+          $ref: "#/components/schemas/Decimal"
+        allocationRef:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          maxLength: 255
+          description: Required with a discount — the allocation that produced it (ZTAX-FIN-REQ-0021).
+        predecessorLineId:
+          $ref: "#/components/schemas/DocumentLineId"
+        taxes:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentTax"
+    DocumentRequest:
+      type: object
+      title: DocumentRequest
+      additionalProperties: false
+      required:
+        - type
+        - issueDate
+        - taxPoint
+        - currency
+        - lines
+      properties:
+        type:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - INVOICE
+            - DEBIT_NOTE
+            - ADJUSTMENT
+        number:
+          $ref: "#/components/schemas/DocumentNumber"
+        issueDate:
+          $ref: "#/components/schemas/CivilDate"
+        taxPoint:
+          $ref: "#/components/schemas/Timestamp"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        externalRef:
+          $ref: "#/components/schemas/ExternalReference"
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            $ref: "#/components/schemas/DocumentLineRequest"
+    CorrectionRequest:
+      type: object
+      title: CorrectionRequest
+      additionalProperties: false
+      required:
+        - type
+        - reason
+        - issueDate
+        - taxPoint
+      properties:
+        type:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - VOID
+            - CREDIT_NOTE
+            - REBILL
+        reason:
+          $ref: "#/components/schemas/ReasonCode"
+        number:
+          $ref: "#/components/schemas/DocumentNumber"
+        issueDate:
+          $ref: "#/components/schemas/CivilDate"
+        taxPoint:
+          $ref: "#/components/schemas/Timestamp"
+        cancelLines:
+          type: array
+          description: A credit note's lines to cancel; absent is every line not yet cancelled.
+          items:
+            $ref: "#/components/schemas/DocumentLineId"
+        lines:
+          type: array
+          description: A rebill's lines, each naming the original line it replaces.
+          maxItems: 1000
+          items:
+            $ref: "#/components/schemas/DocumentLineRequest"
+    DocumentLine:
+      type: object
+      title: DocumentLine
+      additionalProperties: false
+      required:
+        - id
+        - net
+        - taxes
+      properties:
+        id:
+          $ref: "#/components/schemas/DocumentLineId"
+        sourceLineRef:
+          $ref: "#/components/schemas/SourceLineRef"
+        componentInstance:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        net:
+          $ref: "#/components/schemas/Decimal"
+        discount:
+          $ref: "#/components/schemas/Decimal"
+        allocationRef:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        predecessorLineId:
+          $ref: "#/components/schemas/DocumentLineId"
+        taxes:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentTax"
+    DocumentStatusEvent:
+      type: object
+      title: DocumentStatusEvent
+      additionalProperties: false
+      required:
+        - seq
+        - status
+        - recordedAt
+      properties:
+        seq:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        status:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - COMMITTED
+            - ISSUED
+            - DELIVERED
+            - ACCEPTED
+            - PARTIALLY_CREDITED
+            - FULLY_CREDITED
+            - VOIDED
+            - REFUNDED
+            - AMENDED
+            - DISPUTED
+            - CLOSED
+            - SUSPENDED
+        causeId:
+          $ref: "#/components/schemas/DocumentId"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+    FiscalDocument:
+      type: object
+      title: FiscalDocument
+      description: |
+        A committed fiscal document. Amounts are in `currency`; a cancelling
+        document's are negative. `status` is the latest of `history`.
+      additionalProperties: false
+      required:
+        - id
+        - type
+        - rootId
+        - predecessors
+        - legalEntityId
+        - issueDate
+        - taxPoint
+        - currency
+        - decisionIds
+        - lines
+        - netTotal
+        - taxTotal
+        - grossTotal
+        - status
+        - history
+        - recordedAt
+      properties:
+        id:
+          $ref: "#/components/schemas/DocumentId"
+        type:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - INVOICE
+            - CREDIT_NOTE
+            - DEBIT_NOTE
+            - PARTIAL_CREDIT
+            - VOID
+            - REFUND
+            - REBILL
+            - ADJUSTMENT
+            - AMENDMENT
+            - RESTATEMENT
+        number:
+          $ref: "#/components/schemas/DocumentNumber"
+        rootId:
+          $ref: "#/components/schemas/DocumentId"
+        predecessors:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentId"
+        reasonCode:
+          $ref: "#/components/schemas/ReasonCode"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        issueDate:
+          $ref: "#/components/schemas/CivilDate"
+        taxPoint:
+          $ref: "#/components/schemas/Timestamp"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        externalRef:
+          $ref: "#/components/schemas/ExternalReference"
+        decisionIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/DecisionId"
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentLine"
+        netTotal:
+          $ref: "#/components/schemas/Decimal"
+        taxTotal:
+          $ref: "#/components/schemas/Decimal"
+        grossTotal:
+          $ref: "#/components/schemas/Decimal"
+        status:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - COMMITTED
+            - ISSUED
+            - DELIVERED
+            - ACCEPTED
+            - PARTIALLY_CREDITED
+            - FULLY_CREDITED
+            - VOIDED
+            - REFUNDED
+            - AMENDED
+            - DISPUTED
+            - CLOSED
+            - SUSPENDED
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/DocumentStatusEvent"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+    DocumentLineage:
+      type: object
+      title: DocumentLineage
+      additionalProperties: false
+      required:
+        - documents
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/FiscalDocument"
     ReplayReport:
       type: object
       title: ReplayReport

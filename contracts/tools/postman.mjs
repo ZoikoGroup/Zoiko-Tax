@@ -124,10 +124,11 @@ const FOLDERS = [
   {
     name: "06 · Determination — needs content and an OPERATOR",
     description:
-      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
     operations: [
       "createQuote", "commitTransaction", "getDecision", "replayDecision", "listDecisionJournals",
       "getSubledgerBalances", "listObligations", "getObligation", "transitionObligation",
+      "issueDocument", "getDocument", "correctDocument", "getDocumentLineage",
       "adjustTransaction", "refundTransaction", "getRefund", "reportRefund", "proposeClassification",
       "submitBatch", "getJob", "getDecisionInclusion",
     ],
@@ -180,6 +181,8 @@ const VALUE_VARIABLES = {
   "01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f": "{{refundId}}",
   // The seal examples' id: the seal folder 04 just made.
   "01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{sealId}}",
+  // The document examples' id: the invoice the folder just issued.
+  "01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{documentId}}",
   // The job example's id: the batch the folder just queued.
   "01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{jobId}}",
   // The webhook examples' id: the subscription folder 04 just created.
@@ -315,6 +318,25 @@ const OPERATION_TESTS = {
   getDecisionInclusion: [
     "pm.test('a sealed decision proves its inclusion; an unsealed one is not found', function () {",
     "  pm.expect([200, 404, 503]).to.include(pm.response.code);",
+    "});",
+  ],
+  issueDocument: [
+    "pm.test('ZTAX-FIN-REQ-0011 — the invoice presents exactly what was decided', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().status).to.eql('COMMITTED');",
+    "});",
+    "pm.collectionVariables.set('documentId', pm.response.json().id);",
+  ],
+  correctDocument: [
+    "pm.test('ZTAX-FIN-REQ-0004 — the void is a linked successor', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().predecessors).to.include(pm.collectionVariables.get('documentId'));",
+    "});",
+  ],
+  getDocumentLineage: [
+    "pm.test('one root, the invoice first', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().documents[0].status).to.eql('VOIDED');",
     "});",
   ],
   submitBatch: [
@@ -802,6 +824,7 @@ function variables(overlay, contractDigest, local) {
     { key: "webhookId", value: "", type: "string" },
     { key: "jobId", value: "", type: "string" },
     { key: "sealId", value: "", type: "string" },
+    { key: "documentId", value: "", type: "string" },
     // Minted once per run by `07`, and reused by the requests that must share it.
     { key: "reusedKey", value: "", type: "string" },
 

@@ -261,6 +261,15 @@ func ParseSessionID(s string) (SessionID, error) {
 	return NewSessionID(u), nil
 }
 
+// ParseFiscalLineID reads a FiscalLineID from its canonical string form.
+func ParseFiscalLineID(s string) (FiscalLineID, error) {
+	u, err := parse("fiscal line id", s)
+	if err != nil {
+		return FiscalLineID{}, err
+	}
+	return NewFiscalLineID(u), nil
+}
+
 // ParseFiscalDocumentID reads a FiscalDocumentID from its canonical string form.
 func ParseFiscalDocumentID(s string) (FiscalDocumentID, error) {
 	u, err := parse("fiscal document id", s)

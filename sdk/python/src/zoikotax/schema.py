@@ -789,7 +789,7 @@ One delivery of one event to one webhook.
 """
 
 
-EventType: TypeAlias = Literal['com.zoikotax.decision.committed', 'com.zoikotax.decision.corrected', 'com.zoikotax.obligation.status-changed', 'com.zoikotax.accumulator.threshold-crossed', 'com.zoikotax.refund.requested', 'com.zoikotax.refund.status-changed']
+EventType: TypeAlias = Literal['com.zoikotax.decision.committed', 'com.zoikotax.decision.corrected', 'com.zoikotax.obligation.status-changed', 'com.zoikotax.accumulator.threshold-crossed', 'com.zoikotax.refund.requested', 'com.zoikotax.refund.status-changed', 'com.zoikotax.document.committed']
 """
 An event type this cell emits, as the AsyncAPI contract names it.
 """
@@ -1010,6 +1010,138 @@ class InclusionProof(TypedDict):
     """
     Sibling node hashes from the leaf's level to the root, in the digest form.
     """
+
+
+DocumentId: TypeAlias = str
+"""
+A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+"""
+
+
+DocumentLineId: TypeAlias = str
+
+
+DocumentNumber: TypeAlias = str
+"""
+The legal, customer-visible document number (ZTAX-FIN-REQ-0006). Kept apart from the id.
+"""
+
+
+class ExternalReference(TypedDict):
+    """
+    Another system's identifier for the document (ZTAX-DOM-REQ-0003). Never a key, never parsed, never assumed unique.
+    """
+
+    sourceSystem: str
+    namespace: str
+    value: str
+
+
+class DocumentTax(TypedDict):
+    """
+    One tax on one line, naming the committed decision it comes from and the component the decision's content posts.
+    """
+
+    decisionId: DecisionId
+    component: str
+    amount: Decimal
+
+
+SourceLineRef: TypeAlias = str
+"""
+The billing or ERP line a document line came from (ZTAX-FIN-REQ-0020).
+"""
+
+
+class DocumentLineRequest(TypedDict):
+    sourceLineRef: NotRequired[SourceLineRef]
+    componentInstance: NotRequired[str]
+    net: Decimal
+    discount: NotRequired[Decimal]
+    allocationRef: NotRequired[str]
+    """
+    Required with a discount — the allocation that produced it (ZTAX-FIN-REQ-0021).
+    """
+    predecessorLineId: NotRequired[DocumentLineId]
+    taxes: list[DocumentTax]
+
+
+class DocumentRequest(TypedDict):
+    type: Literal['INVOICE', 'DEBIT_NOTE', 'ADJUSTMENT']
+    number: NotRequired[DocumentNumber]
+    issueDate: CivilDate
+    taxPoint: Timestamp
+    currency: CurrencyCode
+    externalRef: NotRequired[ExternalReference]
+    lines: list[DocumentLineRequest]
+
+
+class CorrectionRequest(TypedDict):
+    type: Literal['VOID', 'CREDIT_NOTE', 'REBILL']
+    reason: ReasonCode
+    number: NotRequired[DocumentNumber]
+    issueDate: CivilDate
+    taxPoint: Timestamp
+    cancelLines: NotRequired[list[DocumentLineId]]
+    """
+    A credit note's lines to cancel; absent is every line not yet cancelled.
+    """
+    lines: NotRequired[list[DocumentLineRequest]]
+    """
+    A rebill's lines, each naming the original line it replaces.
+    """
+
+
+class DocumentLine(TypedDict):
+    id: DocumentLineId
+    sourceLineRef: NotRequired[SourceLineRef]
+    componentInstance: NotRequired[str]
+    net: Decimal
+    discount: NotRequired[Decimal]
+    allocationRef: NotRequired[str]
+    predecessorLineId: NotRequired[DocumentLineId]
+    taxes: list[DocumentTax]
+
+
+class DocumentStatusEvent(TypedDict):
+    seq: int
+    status: Literal['COMMITTED', 'ISSUED', 'DELIVERED', 'ACCEPTED', 'PARTIALLY_CREDITED', 'FULLY_CREDITED', 'VOIDED', 'REFUNDED', 'AMENDED', 'DISPUTED', 'CLOSED', 'SUSPENDED']
+    causeId: NotRequired[DocumentId]
+    recordedAt: Timestamp
+    recordedBy: NotRequired[str]
+
+
+class FiscalDocument(TypedDict):
+    """
+    A committed fiscal document. Amounts are in `currency`; a cancelling
+    document's are negative. `status` is the latest of `history`.
+
+    """
+
+    id: DocumentId
+    type: Literal['INVOICE', 'CREDIT_NOTE', 'DEBIT_NOTE', 'PARTIAL_CREDIT', 'VOID', 'REFUND', 'REBILL', 'ADJUSTMENT', 'AMENDMENT', 'RESTATEMENT']
+    number: NotRequired[DocumentNumber]
+    rootId: DocumentId
+    predecessors: list[DocumentId]
+    reasonCode: NotRequired[ReasonCode]
+    legalEntityId: LegalEntityId
+    issueDate: CivilDate
+    taxPoint: Timestamp
+    currency: CurrencyCode
+    externalRef: NotRequired[ExternalReference]
+    decisionIds: list[DecisionId]
+    lines: list[DocumentLine]
+    netTotal: Decimal
+    taxTotal: Decimal
+    grossTotal: Decimal
+    status: Literal['COMMITTED', 'ISSUED', 'DELIVERED', 'ACCEPTED', 'PARTIALLY_CREDITED', 'FULLY_CREDITED', 'VOIDED', 'REFUNDED', 'AMENDED', 'DISPUTED', 'CLOSED', 'SUSPENDED']
+    history: list[DocumentStatusEvent]
+    recordedAt: Timestamp
+    recordedBy: NotRequired[str]
+
+
+class DocumentLineage(TypedDict):
+    documents: list[FiscalDocument]
 
 
 class ReplayReport(TypedDict):
