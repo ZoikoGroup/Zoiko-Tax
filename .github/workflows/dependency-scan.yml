@@ -91,7 +91,18 @@ jobs:
           go-version-file: backend/go.mod
           cache: false
 
+      # osv-scanner v2.6.0's own go.mod requires a newer Go than
+      # backend/go.mod (confirmed on the first real CI run: "requires go >=
+      # 1.27.0" against the runner's 1.25.11), so only this install step is
+      # allowed to fetch a newer toolchain just for itself. GOTOOLCHAIN=auto
+      # is set at the step level only, not job- or workflow-wide: the
+      # resulting osv-scanner binary is standalone once built, and every
+      # later step still runs on the pinned backend/go.mod toolchain. A
+      # failure here fails the job on purpose -- a broken scanner must never
+      # be mistaken for a clean one.
       - name: install osv-scanner
+        env:
+          GOTOOLCHAIN: auto
         run: |
           go install github.com/google/osv-scanner/v2/cmd/osv-scanner@${{ env.OSV_SCANNER_VERSION }}
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
@@ -263,7 +274,21 @@ jobs:
           go-version-file: backend/go.mod
           cache: false
 
+      # govulncheck v1.8.0's own go.mod requires a newer Go than
+      # backend/go.mod (confirmed on the first real CI run: "requires go >=
+      # 1.26.0" against the runner's 1.25.11), so only this install step is
+      # allowed to fetch a newer toolchain just for itself. GOTOOLCHAIN=auto
+      # is set at the step level only, not job- or workflow-wide: the
+      # resulting govulncheck binary is standalone once built, and the scan
+      # step below still runs on the pinned backend/go.mod toolchain
+      # (1.25.11) -- that is what actually ships, and what the scan's
+      # stdlib findings must be judged against, not whatever newer
+      # toolchain happened to build the scanner itself. A failure here
+      # fails the job on purpose -- a broken scanner must never be mistaken
+      # for a clean one.
       - name: install govulncheck
+        env:
+          GOTOOLCHAIN: auto
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@${{ env.GOVULNCHECK_VERSION }}
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
