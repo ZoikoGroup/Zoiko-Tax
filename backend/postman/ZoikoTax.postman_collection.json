@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:2fa570894a4ae32d29f451446f7a77ac642948b357e35377e41fd5e396798900`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:a9a623bf125c90327f2a91687323f00fbd66b36a5cbf827b6c330b4748bb3a86`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -438,7 +438,7 @@
     },
     {
       "name": "04 · Administration",
-      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.",
+      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.",
       "item": [
         {
           "name": "GET /v1/admin/users — List the tenant's users",
@@ -1857,6 +1857,602 @@
                   "pm.test('a seal this cell made verifies', function () {",
                   "  pm.expect([200, 404, 503]).to.include(pm.response.code);",
                   "  if (pm.response.code === 200) { pm.expect(pm.response.json().verdict).to.eql('VALID'); }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/retention/policies — Record the next version of a retention policy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"de-decisions\",\n  \"recordClass\": \"DECISION\",\n  \"country\": \"DE\",\n  \"years\": 10,\n  \"trigger\": \"EVENT_YEAR_END\",\n  \"effectiveFrom\": \"2020-01-01T00:00:00.000000Z\",\n  \"citation\": \"AO §147(3)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/retention/policies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "retention",
+                "policies"
+              ]
+            },
+            "description": "Record the next version of a retention policy\n\n`ADMIN`, signed in as themselves. Recording a policy under an id that\nexists makes its next version; nothing is overwritten\n(ZTAX-EVID-REQ-0052). There is no default period: a record no policy\ngoverns is kept and reported `NO_POLICY` (ZTAX-EVID-REQ-0022,\nZTAX-PRIV-REQ-0052). The act is written to the administrative audit\ntrail."
+          },
+          "response": [
+            {
+              "name": "201 · Version 1",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/retention/policies",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "retention",
+                    "policies"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"de-decisions\",\n  \"version\": 1,\n  \"recordClass\": \"DECISION\",\n  \"country\": \"DE\",\n  \"years\": 10,\n  \"trigger\": \"EVENT_YEAR_END\",\n  \"effectiveFrom\": \"2020-01-01T00:00:00.000000Z\",\n  \"citation\": \"AO §147(3)\",\n  \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n  \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordRetentionPolicy returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/retention/policies — Every version of every retention policy",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/retention/policies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "retention",
+                "policies"
+              ]
+            },
+            "description": "Every version of every retention policy\n\n`ADMIN` or `AUDITOR`. A policy keeps one class of record of one\ncountry's legal entities for a number of years from a trigger, on a\ncited authority. Every version is listed, oldest first per policy: a\nverdict names the version it used, so it can be reproduced\n(ZTAX-EVID-REQ-0052, -0126)."
+          },
+          "response": [
+            {
+              "name": "200 · One policy, one version",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/retention/policies",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "retention",
+                    "policies"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"policies\": [\n    {\n      \"id\": \"de-decisions\",\n      \"version\": 1,\n      \"recordClass\": \"DECISION\",\n      \"country\": \"DE\",\n      \"years\": 10,\n      \"trigger\": \"EVENT_YEAR_END\",\n      \"effectiveFrom\": \"2020-01-01T00:00:00.000000Z\",\n      \"citation\": \"AO §147(3)\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listRetentionPolicies returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/legal-holds — Place a legal hold",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matter\": \"Claim 2026/114\",\n  \"reason\": \"litigation notice received\",\n  \"scope\": {\n    \"businessKeys\": [\n      \"INV-0001/1\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal-holds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal-holds"
+              ]
+            },
+            "description": "Place a legal hold\n\n`ADMIN`, signed in as themselves. A hold serves a named claim,\ninvestigation or regulator request (ZTAX-LEG-REQ-0091) and blocks\ndisposition of what it scopes, past any retention period\n(ZTAX-EVID-REQ-0023, ZTAX-PRIV-REQ-0050). The scope is specific —\nnamed decisions or business keys, or a bounded window of event times\nof at most ten years, optionally narrowed to one legal entity — never\na tenant at large, so a hold is never a reason to keep unrelated\npersonal data (ZTAX-PRIV-REQ-0051)."
+          },
+          "response": [
+            {
+              "name": "201 · Placed",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal-holds",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal-holds"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"matter\": \"Claim 2026/114\",\n  \"status\": \"ACTIVE\",\n  \"scope\": {\n    \"businessKeys\": [\n      \"INV-0001/1\"\n    ]\n  },\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PLACED\",\n      \"scope\": {\n        \"businessKeys\": [\n          \"INV-0001/1\"\n        ]\n      },\n      \"reason\": \"litigation notice received\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('placeLegalHold returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('ZTAX-EVID-REQ-0023 — a hold is placed ACTIVE with its first history entry', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().status).to.eql('ACTIVE');",
+                  "  pm.expect(pm.response.json().history[0].kind).to.eql('PLACED');",
+                  "});",
+                  "pm.collectionVariables.set('holdId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/legal-holds — The tenant's legal holds",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal-holds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal-holds"
+              ]
+            },
+            "description": "The tenant's legal holds\n\n`ADMIN` or `AUDITOR`, newest first, each with its full history. The\nsearch is recorded in the administrative audit trail as privileged\nevidence access (ZTAX-EVID-REQ-0115). A hold names what is kept; it\nreturns no evidence and opens nothing to anyone\n(ZTAX-EVID-REQ-0024)."
+          },
+          "response": [
+            {
+              "name": "200 · One active hold",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal-holds",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal-holds"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"holds\": [\n    {\n      \"id\": \"01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"matter\": \"Claim 2026/114\",\n      \"status\": \"ACTIVE\",\n      \"scope\": {\n        \"businessKeys\": [\n          \"INV-0001/1\"\n        ]\n      },\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"PLACED\",\n          \"scope\": {\n            \"businessKeys\": [\n              \"INV-0001/1\"\n            ]\n          },\n          \"reason\": \"litigation notice received\",\n          \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listLegalHolds returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/legal-holds/{holdId} — One legal hold and its history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal-holds/{{holdId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal-holds",
+                "{{holdId}}"
+              ]
+            },
+            "description": "One legal hold and its history\n\n`ADMIN` or `AUDITOR`. The read is recorded in the administrative audit\ntrail as privileged evidence access (ZTAX-EVID-REQ-0115)."
+          },
+          "response": [
+            {
+              "name": "200 · Released",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal-holds/{{holdId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal-holds",
+                    "{{holdId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"matter\": \"Claim 2026/114\",\n  \"status\": \"RELEASED\",\n  \"scope\": {\n    \"businessKeys\": [\n      \"INV-0001/1\"\n    ]\n  },\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PLACED\",\n      \"scope\": {\n        \"businessKeys\": [\n          \"INV-0001/1\"\n        ]\n      },\n      \"reason\": \"litigation notice received\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"RELEASED\",\n      \"scope\": {\n        \"businessKeys\": [\n          \"INV-0001/1\"\n        ]\n      },\n      \"reason\": \"claim settled\",\n      \"recordedAt\": \"2027-03-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getLegalHold returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/legal-holds/{holdId}/scope — Change an active hold's scope",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"second invoice named in the claim\",\n  \"scope\": {\n    \"businessKeys\": [\n      \"INV-0001/1\",\n      \"INV-0002/1\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal-holds/{{holdId}}/scope",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal-holds",
+                "{{holdId}}",
+                "scope"
+              ]
+            },
+            "description": "Change an active hold's scope\n\n`ADMIN`, signed in as themselves. The new scope replaces the old as a\nnew entry in the hold's history, with who and why; the old scope\nstays readable there (ZTAX-EVID-REQ-0053). A released hold is not\nchanged: a matter that revives places a new hold."
+          },
+          "response": [
+            {
+              "name": "200 · Widened",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal-holds/{{holdId}}/scope",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal-holds",
+                    "{{holdId}}",
+                    "scope"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"matter\": \"Claim 2026/114\",\n  \"status\": \"ACTIVE\",\n  \"scope\": {\n    \"businessKeys\": [\n      \"INV-0001/1\",\n      \"INV-0002/1\"\n    ]\n  },\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PLACED\",\n      \"scope\": {\n        \"businessKeys\": [\n          \"INV-0001/1\"\n        ]\n      },\n      \"reason\": \"litigation notice received\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"SCOPE_CHANGED\",\n      \"scope\": {\n        \"businessKeys\": [\n          \"INV-0001/1\",\n          \"INV-0002/1\"\n        ]\n      },\n      \"reason\": \"second invoice named in the claim\",\n      \"recordedAt\": \"2026-10-05T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('changeLegalHoldScope returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('ZTAX-EVID-REQ-0053 — a scope change is a new history entry, the old one kept', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().history.map(e => e.kind)).to.eql(['PLACED', 'SCOPE_CHANGED']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/legal-holds/{holdId}/release — Release a legal hold",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"claim settled\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal-holds/{{holdId}}/release",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal-holds",
+                "{{holdId}}",
+                "release"
+              ]
+            },
+            "description": "Release a legal hold\n\n`ADMIN`, signed in as themselves. Final. What the hold kept is decided\nby its retention policy again from the next verdict on\n(ZTAX-EVID-REQ-0054) — and is kept still if another active hold\nscopes it."
+          },
+          "response": [
+            {
+              "name": "200 · Released",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal-holds/{{holdId}}/release",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal-holds",
+                    "{{holdId}}",
+                    "release"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"matter\": \"Claim 2026/114\",\n  \"status\": \"RELEASED\",\n  \"scope\": {\n    \"businessKeys\": [\n      \"INV-0001/1\"\n    ]\n  },\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PLACED\",\n      \"scope\": {\n        \"businessKeys\": [\n          \"INV-0001/1\"\n        ]\n      },\n      \"reason\": \"litigation notice received\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"RELEASED\",\n      \"scope\": {\n        \"businessKeys\": [\n          \"INV-0001/1\"\n        ]\n      },\n      \"reason\": \"claim settled\",\n      \"recordedAt\": \"2027-03-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('releaseLegalHold returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('a release is final', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('RELEASED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/decisions/{decisionId}/retention — Whether a decision's evidence may be disposed of now",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/decisions/{{decisionId}}/retention",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decisions",
+                "{{decisionId}}",
+                "retention"
+              ]
+            },
+            "description": "Whether a decision's evidence may be disposed of now\n\n`ADMIN` or `AUDITOR`. The verdict a disposition job passes immediately\nbefore it acts, taken under the hold lock so a hold being placed is\nseen (ZTAX-EVID-REQ-0026): `RETAIN` inside the period, `ELIGIBLE` past\nit, `HELD` under an active hold whatever the period says. `NO_POLICY`\nand `CONFLICTED` — no policy governs the record, or several disagree —\nkeep it and are for a person to resolve, never a guess\n(ZTAX-EVID-REQ-0092). The policy version used is named\n(ZTAX-EVID-REQ-0126). Nothing about the decision is changed by\nasking (ZTAX-EVID-REQ-0105)."
+          },
+          "response": [
+            {
+              "name": "200 · Held past its period",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/decisions/{{decisionId}}/retention",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "decisions",
+                    "{{decisionId}}",
+                    "retention"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n  \"recordClass\": \"DECISION\",\n  \"country\": \"DE\",\n  \"outcome\": \"HELD\",\n  \"policy\": {\n    \"id\": \"de-decisions\",\n    \"version\": 1\n  },\n  \"retainUntil\": \"2037-01-01T00:00:00.000000Z\",\n  \"holds\": [\n    \"01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\"\n  ],\n  \"evaluatedAt\": \"2040-01-01T00:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getDecisionRetention returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
                   "});"
                 ]
               }
@@ -5360,7 +5956,7 @@
     },
     {
       "key": "decisionId",
-      "value": "",
+      "value": "00000000-0000-7000-8000-000000000000",
       "type": "string"
     },
     {
@@ -5409,6 +6005,11 @@
       "type": "string"
     },
     {
+      "key": "holdId",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "reusedKey",
       "value": "",
       "type": "string"
@@ -5420,7 +6021,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:2fa570894a4ae32d29f451446f7a77ac642948b357e35377e41fd5e396798900",
+      "value": "sha256:a9a623bf125c90327f2a91687323f00fbd66b36a5cbf827b6c330b4748bb3a86",
       "type": "string"
     }
   ]

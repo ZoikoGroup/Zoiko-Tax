@@ -97,7 +97,7 @@ const FOLDERS = [
   {
     name: "04 · Administration",
     description:
-      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.",
+      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.",
     operations: [
       "listUsers",
       "createUser",
@@ -119,6 +119,14 @@ const FOLDERS = [
       "sealPeriod",
       "getSeal",
       "verifySeal",
+      "recordRetentionPolicy",
+      "listRetentionPolicies",
+      "placeLegalHold",
+      "listLegalHolds",
+      "getLegalHold",
+      "changeLegalHoldScope",
+      "releaseLegalHold",
+      "getDecisionRetention",
     ],
   },
   {
@@ -388,6 +396,26 @@ const OPERATION_TESTS = {
     "  });",
     "});",
   ],
+  placeLegalHold: [
+    "pm.test('ZTAX-EVID-REQ-0023 — a hold is placed ACTIVE with its first history entry', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().status).to.eql('ACTIVE');",
+    "  pm.expect(pm.response.json().history[0].kind).to.eql('PLACED');",
+    "});",
+    "pm.collectionVariables.set('holdId', pm.response.json().id);",
+  ],
+  changeLegalHoldScope: [
+    "pm.test('ZTAX-EVID-REQ-0053 — a scope change is a new history entry, the old one kept', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().history.map(e => e.kind)).to.eql(['PLACED', 'SCOPE_CHANGED']);",
+    "});",
+  ],
+  releaseLegalHold: [
+    "pm.test('a release is final', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().status).to.eql('RELEASED');",
+    "});",
+  ],
   createWebhook: [
     "pm.test('the webhook is created ACTIVE, and its secret is shown once in Standard Webhooks form', function () {",
     "  pm.response.to.have.status(201);",
@@ -585,6 +613,9 @@ const ACCEPTED_OUTCOMES = {
   // The requester cannot approve their own reopen.
   approvePeriodReopen: ["403", "404"],
   resolveReconciliationItem: ["404", "409"],
+  // The administration folder commits nothing, so {{decisionId}} names no
+  // decision there.
+  getDecisionRetention: ["404"],
 };
 
 /** The statuses an operation declares, for the generated status assertion. */
@@ -875,7 +906,9 @@ function variables(overlay, contractDigest, local) {
     { key: "bundleDigest", value: "", type: "string" },
     { key: "decisionTime", value: "", type: "string" },
     { key: "eventTime", value: "", type: "string" },
-    { key: "decisionId", value: "", type: "string" },
+    // Well-formed and nothing's: captured by `06`'s commit, and until then
+    // the retention verdict in `04` asks about a decision that does not exist.
+    { key: "decisionId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
     { key: "obligationId", value: "", type: "string" },
     { key: "refundId", value: "", type: "string" },
     { key: "webhookId", value: "", type: "string" },
@@ -885,6 +918,7 @@ function variables(overlay, contractDigest, local) {
     { key: "period", value: "2000-01", type: "string" },
     { key: "requestId", value: "", type: "string" },
     { key: "runId", value: "", type: "string" },
+    { key: "holdId", value: "", type: "string" },
     // Minted once per run by `07`, and reused by the requests that must share it.
     { key: "reusedKey", value: "", type: "string" },
 

@@ -307,3 +307,12 @@ func ReconItemID(g Generator) (id.ReconItemID, error) {
 	}
 	return id.NewReconItemID(u), nil
 }
+
+// LegalHoldID returns a fresh LegalHoldID.
+func LegalHoldID(g Generator) (id.LegalHoldID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.LegalHoldID{}, err
+	}
+	return id.NewLegalHoldID(u), nil
+}

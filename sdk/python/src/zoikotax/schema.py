@@ -1275,6 +1275,131 @@ class ReplayReport(TypedDict):
     """
 
 
+RetentionPolicyId: TypeAlias = str
+"""
+A retention policy's stable name; its versions share it.
+"""
+
+
+RetentionRecordClass: TypeAlias = Literal['DECISION', 'DOCUMENT', 'JOURNAL', 'REFUND']
+
+
+RetentionTrigger: TypeAlias = Literal['EVENT_TIME', 'RECORDED_AT', 'EVENT_YEAR_END']
+"""
+What the period runs from: the taxable event, the record's making, or
+the end of the calendar year of the event.
+
+"""
+
+
+CountryCode: TypeAlias = str
+"""
+ISO 3166-1 alpha-2.
+"""
+
+
+class RetentionPolicyRequest(TypedDict):
+    id: RetentionPolicyId
+    recordClass: RetentionRecordClass
+    country: CountryCode
+    years: int
+    trigger: RetentionTrigger
+    effectiveFrom: Timestamp
+    citation: str
+    """
+    The statute, regulation or contract the period comes from.
+    """
+
+
+class RetentionPolicy(TypedDict):
+    id: RetentionPolicyId
+    version: int
+    recordClass: RetentionRecordClass
+    country: CountryCode
+    years: int
+    trigger: RetentionTrigger
+    effectiveFrom: Timestamp
+    citation: str
+    recordedAt: Timestamp
+    recordedBy: str
+    """
+    The administrator who recorded this version.
+    """
+
+
+class RetentionPolicyList(TypedDict):
+    policies: list[RetentionPolicy]
+
+
+class PolicyVersionRef(TypedDict):
+    id: RetentionPolicyId
+    version: int
+
+
+LegalHoldId: TypeAlias = str
+
+
+LegalHoldReason: TypeAlias = str
+"""
+Free text entered by an administrator.
+"""
+
+
+class LegalHoldScope(TypedDict):
+    """
+    What a hold covers. Every criterion given must hold: named decisions
+    or business keys, a window of event times `[eventFrom, eventTo)`, and
+    a legal entity narrowing either. At least names or a window; a window
+    alone spans at most ten years.
+
+    """
+
+    legalEntityId: NotRequired[LegalEntityId]
+    businessKeys: NotRequired[list[BusinessKey]]
+    decisionIds: NotRequired[list[DecisionId]]
+    eventFrom: NotRequired[Timestamp]
+    eventTo: NotRequired[Timestamp]
+
+
+class LegalHoldEvent(TypedDict):
+    seq: int
+    kind: Literal['PLACED', 'SCOPE_CHANGED', 'RELEASED']
+    scope: LegalHoldScope
+    reason: LegalHoldReason
+    recordedAt: Timestamp
+    recordedBy: str
+
+
+class LegalHold(TypedDict):
+    id: LegalHoldId
+    matter: str
+    """
+    The claim, investigation or regulator request the hold serves.
+    """
+    status: Literal['ACTIVE', 'RELEASED']
+    scope: LegalHoldScope
+    history: list[LegalHoldEvent]
+
+
+class LegalHoldList(TypedDict):
+    holds: list[LegalHold]
+
+
+class LegalHoldRequest(TypedDict):
+    matter: str
+    reason: LegalHoldReason
+    scope: LegalHoldScope
+
+
+class LegalHoldScopeRequest(TypedDict):
+    reason: LegalHoldReason
+    scope: LegalHoldScope
+
+
+class LegalHoldReleaseRequest(TypedDict):
+    reason: LegalHoldReason
+
+
 class V1AdminUsersGetResponse(TypedDict):
     users: list[User]
 
@@ -1407,3 +1532,25 @@ class SubledgerPeriod(TypedDict):
     """
     Whether the period's journals and balances today are exactly the ones its latest manifest sealed. Absent until the period is first hard-closed.
     """
+
+
+class RetentionVerdict(TypedDict):
+    decisionId: DecisionId
+    recordClass: RetentionRecordClass
+    country: NotRequired[CountryCode]
+    outcome: Literal['RETAIN', 'HELD', 'ELIGIBLE', 'NO_POLICY', 'CONFLICTED']
+    policy: NotRequired[PolicyVersionRef]
+    candidates: NotRequired[list[PolicyVersionRef]]
+    """
+    For `CONFLICTED`, the policies that disagree.
+    """
+    retainUntil: NotRequired[Timestamp]
+    holds: NotRequired[list[LegalHoldId]]
+    """
+    The active holds that scope the record.
+    """
+    detail: NotRequired[str]
+    """
+    Why a record is `NO_POLICY` or `CONFLICTED`.
+    """
+    evaluatedAt: Timestamp

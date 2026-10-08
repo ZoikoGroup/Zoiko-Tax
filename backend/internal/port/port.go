@@ -29,6 +29,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/outbox"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/reconciliation"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/retention"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/settlement"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/subledger"
@@ -677,4 +678,30 @@ type ReconciliationRepository interface {
 	// Resolve records an item's resolution; a second resolution of one item
 	// is refused as a conflict.
 	Resolve(ctx context.Context, r ReconResolution) error
+}
+
+// ---------------------------------------------------------------------------
+// retention and legal hold
+// ---------------------------------------------------------------------------
+
+// RetentionRepository holds retention policy versions and legal holds. Both
+// are append-only: a policy change is a new version, and a hold's state is
+// its event history.
+type RetentionRepository interface {
+	// AppendPolicy records a policy version. A version that already exists
+	// is a conflict.
+	AppendPolicy(ctx context.Context, p retention.Policy) error
+	// Policies returns every version of every policy, by id then version.
+	Policies(ctx context.Context) ([]retention.Policy, error)
+	// LockHolds serializes the tenant's hold writes with each other and with
+	// a disposition check, for the rest of the transaction.
+	LockHolds(ctx context.Context) error
+	// CreateHold records a hold and its PLACED event.
+	CreateHold(ctx context.Context, h retention.Hold, placed retention.HoldEvent) error
+	// AppendHoldEvent records the next event of a hold.
+	AppendHoldEvent(ctx context.Context, e retention.HoldEvent) error
+	// Hold returns one hold, folded from its history.
+	Hold(ctx context.Context, holdID id.LegalHoldID) (retention.Hold, error)
+	// Holds returns every hold of the tenant, newest first.
+	Holds(ctx context.Context) ([]retention.Hold, error)
 }

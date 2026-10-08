@@ -107,6 +107,10 @@ type Router struct {
 	// Reconciliations runs and resolves R1–R7 over a legal period. Nil
 	// wherever Determination is.
 	Reconciliations *app.ReconciliationService
+
+	// Retention serves retention policies, legal holds and the disposition
+	// verdict.
+	Retention *app.RetentionService
 }
 
 // Trains are the seven release-train versions, as the contract names them.
@@ -230,6 +234,16 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/reconciliations", false, []security.Role{operator}}, rt.handleRunReconciliation},
 		{Route{"GET", "/v1/reconciliations/{runId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetReconciliation},
 		{Route{"POST", "/v1/reconciliations/{runId}/items/{itemId}/resolution", false, []security.Role{operator}}, rt.handleResolveReconItem},
+		{Route{"GET", "/v1/retention/policies", false, []security.Role{admin, auditor}}, rt.handleListRetentionPolicies},
+		{Route{"POST", "/v1/retention/policies", false, []security.Role{admin}}, rt.handleRecordRetentionPolicy},
+		// Hold reads are ADMIN's and AUDITOR's, and each is audited as
+		// privileged evidence access (ZTAX-EVID-REQ-0115).
+		{Route{"GET", "/v1/legal-holds", false, []security.Role{admin, auditor}}, rt.handleListLegalHolds},
+		{Route{"POST", "/v1/legal-holds", false, []security.Role{admin}}, rt.handlePlaceLegalHold},
+		{Route{"GET", "/v1/legal-holds/{holdId}", false, []security.Role{admin, auditor}}, rt.handleGetLegalHold},
+		{Route{"POST", "/v1/legal-holds/{holdId}/scope", false, []security.Role{admin}}, rt.handleChangeLegalHoldScope},
+		{Route{"POST", "/v1/legal-holds/{holdId}/release", false, []security.Role{admin}}, rt.handleReleaseLegalHold},
+		{Route{"GET", "/v1/decisions/{decisionId}/retention", false, []security.Role{admin, auditor}}, rt.handleGetDecisionRetention},
 		{Route{"GET", "/v1/obligations", false, []security.Role{operator, analyst, auditor}}, rt.handleListObligations},
 		{Route{"GET", "/v1/obligations/{obligationId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetObligation},
 		{Route{"POST", "/v1/obligations/{obligationId}/transitions", false, []security.Role{operator}}, rt.handleTransitionObligation},

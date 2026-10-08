@@ -151,6 +151,9 @@ func run() error {
 			app.NewIdempotency(store.Idempotency(), store, clk))
 		router.Reconciliations = app.NewReconciliationService(router.Documents, store.Refunds(), store.Reconciliations())
 	}
+	// Retention reads decisions as recorded; it needs no content, so it is
+	// served wherever the cell's store is.
+	router.Retention = app.NewRetentionService(store.Retention(), store.Decisions(), store.LegalEntities(), store.Audit(), store, clk, ids)
 	models, closeModels, err := wireModelGateway(cfg, clk, ids, log)
 	if err != nil {
 		return err

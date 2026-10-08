@@ -2009,6 +2009,136 @@
       "resolved_at": {
         "class": "P0"
       }
+    },
+    "retention_policy": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "policy_id": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "record_class": {
+        "class": "P0"
+      },
+      "country_code": {
+        "class": "P0"
+      },
+      "years": {
+        "class": "P0"
+      },
+      "trigger_kind": {
+        "class": "P0"
+      },
+      "effective_from": {
+        "class": "P0"
+      },
+      "citation": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who recorded the policy version."
+      }
+    },
+    "legal_hold": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "hold_id": {
+        "class": "P0"
+      },
+      "matter": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-LEGAL-HOLD",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The claim, investigation or request the hold serves, as an operator named it."
+      },
+      "placed_at": {
+        "class": "P0"
+      },
+      "placed_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who placed the hold."
+      }
+    },
+    "legal_hold_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "hold_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "business_keys": {
+        "class": "P0"
+      },
+      "decision_ids": {
+        "class": "P0"
+      },
+      "event_from": {
+        "class": "P0"
+      },
+      "event_to": {
+        "class": "P0"
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-LEGAL-HOLD",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by an operator."
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who placed, changed or released the hold."
+      }
     }
   }
 }

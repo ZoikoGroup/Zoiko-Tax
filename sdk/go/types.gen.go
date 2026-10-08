@@ -486,6 +486,45 @@ func (e JournalLineSide) Valid() bool {
 	}
 }
 
+// Defines values for LegalHoldStatus.
+const (
+	LegalHoldStatusACTIVE   LegalHoldStatus = "ACTIVE"
+	LegalHoldStatusRELEASED LegalHoldStatus = "RELEASED"
+)
+
+// Valid indicates whether the value is a known member of the LegalHoldStatus enum.
+func (e LegalHoldStatus) Valid() bool {
+	switch e {
+	case LegalHoldStatusACTIVE:
+		return true
+	case LegalHoldStatusRELEASED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LegalHoldEventKind.
+const (
+	LegalHoldEventKindPLACED       LegalHoldEventKind = "PLACED"
+	LegalHoldEventKindRELEASED     LegalHoldEventKind = "RELEASED"
+	LegalHoldEventKindSCOPECHANGED LegalHoldEventKind = "SCOPE_CHANGED"
+)
+
+// Valid indicates whether the value is a known member of the LegalHoldEventKind enum.
+func (e LegalHoldEventKind) Valid() bool {
+	switch e {
+	case LegalHoldEventKindPLACED:
+		return true
+	case LegalHoldEventKindRELEASED:
+		return true
+	case LegalHoldEventKindSCOPECHANGED:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ObligationDuty.
 const (
 	ObligationDutyINFORMATIONRETURN    ObligationDuty = "INFORMATION_RETURN"
@@ -924,6 +963,78 @@ func (e ResolutionRequestAction) Valid() bool {
 	case ResolutionRequestActionWAIT:
 		return true
 	case ResolutionRequestActionWAIVEWITHAPPROVAL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RetentionRecordClass.
+const (
+	RetentionRecordClassDECISION RetentionRecordClass = "DECISION"
+	RetentionRecordClassDOCUMENT RetentionRecordClass = "DOCUMENT"
+	RetentionRecordClassJOURNAL  RetentionRecordClass = "JOURNAL"
+	RetentionRecordClassREFUND   RetentionRecordClass = "REFUND"
+)
+
+// Valid indicates whether the value is a known member of the RetentionRecordClass enum.
+func (e RetentionRecordClass) Valid() bool {
+	switch e {
+	case RetentionRecordClassDECISION:
+		return true
+	case RetentionRecordClassDOCUMENT:
+		return true
+	case RetentionRecordClassJOURNAL:
+		return true
+	case RetentionRecordClassREFUND:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RetentionTrigger.
+const (
+	RetentionTriggerEVENTTIME    RetentionTrigger = "EVENT_TIME"
+	RetentionTriggerEVENTYEAREND RetentionTrigger = "EVENT_YEAR_END"
+	RetentionTriggerRECORDEDAT   RetentionTrigger = "RECORDED_AT"
+)
+
+// Valid indicates whether the value is a known member of the RetentionTrigger enum.
+func (e RetentionTrigger) Valid() bool {
+	switch e {
+	case RetentionTriggerEVENTTIME:
+		return true
+	case RetentionTriggerEVENTYEAREND:
+		return true
+	case RetentionTriggerRECORDEDAT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RetentionVerdictOutcome.
+const (
+	RetentionVerdictOutcomeCONFLICTED RetentionVerdictOutcome = "CONFLICTED"
+	RetentionVerdictOutcomeELIGIBLE   RetentionVerdictOutcome = "ELIGIBLE"
+	RetentionVerdictOutcomeHELD       RetentionVerdictOutcome = "HELD"
+	RetentionVerdictOutcomeNOPOLICY   RetentionVerdictOutcome = "NO_POLICY"
+	RetentionVerdictOutcomeRETAIN     RetentionVerdictOutcome = "RETAIN"
+)
+
+// Valid indicates whether the value is a known member of the RetentionVerdictOutcome enum.
+func (e RetentionVerdictOutcome) Valid() bool {
+	switch e {
+	case RetentionVerdictOutcomeCONFLICTED:
+		return true
+	case RetentionVerdictOutcomeELIGIBLE:
+		return true
+	case RetentionVerdictOutcomeHELD:
+		return true
+	case RetentionVerdictOutcomeNOPOLICY:
+		return true
+	case RetentionVerdictOutcomeRETAIN:
 		return true
 	default:
 		return false
@@ -1422,6 +1533,9 @@ type CorrectionRequest struct {
 
 // CorrectionRequestType defines model for CorrectionRequest.Type.
 type CorrectionRequestType string
+
+// CountryCode ISO 3166-1 alpha-2.
+type CountryCode = string
 
 // CreateUserRequest defines model for CreateUserRequest.
 type CreateUserRequest struct {
@@ -1979,6 +2093,114 @@ type JournalList struct {
 // LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
 type LegalEntityID = string
 
+// LegalHold defines model for LegalHold.
+type LegalHold struct {
+	History []LegalHoldEvent `json:"history"`
+	ID      LegalHoldID      `json:"id"`
+
+	// Matter The claim, investigation or regulator request the hold serves.
+	Matter string `json:"matter"`
+
+	// Scope What a hold covers. Every criterion given must hold: named decisions
+	// or business keys, a window of event times `[eventFrom, eventTo)`, and
+	// a legal entity narrowing either. At least names or a window; a window
+	// alone spans at most ten years.
+	Scope  LegalHoldScope  `json:"scope"`
+	Status LegalHoldStatus `json:"status"`
+}
+
+// LegalHoldStatus defines model for LegalHold.Status.
+type LegalHoldStatus string
+
+// LegalHoldEvent defines model for LegalHoldEvent.
+type LegalHoldEvent struct {
+	Kind LegalHoldEventKind `json:"kind"`
+
+	// Reason Free text entered by an administrator.
+	Reason LegalHoldReason `json:"reason"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+	RecordedBy string    `json:"recordedBy"`
+
+	// Scope What a hold covers. Every criterion given must hold: named decisions
+	// or business keys, a window of event times `[eventFrom, eventTo)`, and
+	// a legal entity narrowing either. At least names or a window; a window
+	// alone spans at most ten years.
+	Scope LegalHoldScope `json:"scope"`
+	Seq   int32          `json:"seq"`
+}
+
+// LegalHoldEventKind defines model for LegalHoldEvent.Kind.
+type LegalHoldEventKind string
+
+// LegalHoldID defines model for LegalHoldId.
+type LegalHoldID = string
+
+// LegalHoldList defines model for LegalHoldList.
+type LegalHoldList struct {
+	Holds []LegalHold `json:"holds"`
+}
+
+// LegalHoldReason Free text entered by an administrator.
+type LegalHoldReason = string
+
+// LegalHoldReleaseRequest defines model for LegalHoldReleaseRequest.
+type LegalHoldReleaseRequest struct {
+	// Reason Free text entered by an administrator.
+	Reason LegalHoldReason `json:"reason"`
+}
+
+// LegalHoldRequest defines model for LegalHoldRequest.
+type LegalHoldRequest struct {
+	Matter string `json:"matter"`
+
+	// Reason Free text entered by an administrator.
+	Reason LegalHoldReason `json:"reason"`
+
+	// Scope What a hold covers. Every criterion given must hold: named decisions
+	// or business keys, a window of event times `[eventFrom, eventTo)`, and
+	// a legal entity narrowing either. At least names or a window; a window
+	// alone spans at most ten years.
+	Scope LegalHoldScope `json:"scope"`
+}
+
+// LegalHoldScope What a hold covers. Every criterion given must hold: named decisions
+// or business keys, a window of event times `[eventFrom, eventTo)`, and
+// a legal entity narrowing either. At least names or a window; a window
+// alone spans at most ten years.
+type LegalHoldScope struct {
+	BusinessKeys []BusinessKey `json:"businessKeys,omitempty"`
+	DecisionIds  []DecisionID  `json:"decisionIds,omitempty"`
+
+	// EventFrom RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	EventFrom *Timestamp `json:"eventFrom,omitempty"`
+
+	// EventTo RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	EventTo *Timestamp `json:"eventTo,omitempty"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID *LegalEntityID `json:"legalEntityId,omitempty"`
+}
+
+// LegalHoldScopeRequest defines model for LegalHoldScopeRequest.
+type LegalHoldScopeRequest struct {
+	// Reason Free text entered by an administrator.
+	Reason LegalHoldReason `json:"reason"`
+
+	// Scope What a hold covers. Every criterion given must hold: named decisions
+	// or business keys, a window of event times `[eventFrom, eventTo)`, and
+	// a legal entity narrowing either. At least names or a window; a window
+	// alone spans at most ten years.
+	Scope LegalHoldScope `json:"scope"`
+}
+
 // LegalPeriod A subledger legal period, a month.
 type LegalPeriod = string
 
@@ -2180,6 +2402,13 @@ type PeriodTransitionRequest struct {
 
 // PeriodTransitionRequestTo defines model for PeriodTransitionRequest.To.
 type PeriodTransitionRequestTo string
+
+// PolicyVersionRef defines model for PolicyVersionRef.
+type PolicyVersionRef struct {
+	// ID A retention policy's stable name; its versions share it.
+	ID      RetentionPolicyID `json:"id"`
+	Version int32             `json:"version"`
+}
 
 // Problem RFC 9457 Problem Details, with the `ztx_` extensions from ADR-0016 §2.5.
 // The extensions carry identifiers rather than data: an error that needs
@@ -2618,6 +2847,110 @@ type ResultValue struct {
 	// period as evidence.
 	Value *Decimal `json:"value,omitempty"`
 }
+
+// RetentionPolicy defines model for RetentionPolicy.
+type RetentionPolicy struct {
+	Citation string `json:"citation"`
+
+	// Country ISO 3166-1 alpha-2.
+	Country CountryCode `json:"country"`
+
+	// EffectiveFrom RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	EffectiveFrom Timestamp `json:"effectiveFrom"`
+
+	// ID A retention policy's stable name; its versions share it.
+	ID          RetentionPolicyID    `json:"id"`
+	RecordClass RetentionRecordClass `json:"recordClass"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy The administrator who recorded this version.
+	RecordedBy string `json:"recordedBy"`
+
+	// Trigger What the period runs from: the taxable event, the record's making, or
+	// the end of the calendar year of the event.
+	Trigger RetentionTrigger `json:"trigger"`
+	Version int32            `json:"version"`
+	Years   int32            `json:"years"`
+}
+
+// RetentionPolicyID A retention policy's stable name; its versions share it.
+type RetentionPolicyID = string
+
+// RetentionPolicyList defines model for RetentionPolicyList.
+type RetentionPolicyList struct {
+	Policies []RetentionPolicy `json:"policies"`
+}
+
+// RetentionPolicyRequest defines model for RetentionPolicyRequest.
+type RetentionPolicyRequest struct {
+	// Citation The statute, regulation or contract the period comes from.
+	Citation string `json:"citation"`
+
+	// Country ISO 3166-1 alpha-2.
+	Country CountryCode `json:"country"`
+
+	// EffectiveFrom RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	EffectiveFrom Timestamp `json:"effectiveFrom"`
+
+	// ID A retention policy's stable name; its versions share it.
+	ID          RetentionPolicyID    `json:"id"`
+	RecordClass RetentionRecordClass `json:"recordClass"`
+
+	// Trigger What the period runs from: the taxable event, the record's making, or
+	// the end of the calendar year of the event.
+	Trigger RetentionTrigger `json:"trigger"`
+	Years   int32            `json:"years"`
+}
+
+// RetentionRecordClass defines model for RetentionRecordClass.
+type RetentionRecordClass string
+
+// RetentionTrigger What the period runs from: the taxable event, the record's making, or
+// the end of the calendar year of the event.
+type RetentionTrigger string
+
+// RetentionVerdict defines model for RetentionVerdict.
+type RetentionVerdict struct {
+	// Candidates For `CONFLICTED`, the policies that disagree.
+	Candidates []PolicyVersionRef `json:"candidates,omitempty"`
+
+	// Country ISO 3166-1 alpha-2.
+	Country *CountryCode `json:"country,omitempty"`
+
+	// DecisionID A decision identifier: a UUIDv7 in lowercase canonical form
+	// (ADR-0012 §2.1). Sortable by creation, never recycled.
+	DecisionID DecisionID `json:"decisionId"`
+
+	// Detail Why a record is `NO_POLICY` or `CONFLICTED`.
+	Detail *string `json:"detail,omitempty"`
+
+	// EvaluatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	EvaluatedAt Timestamp `json:"evaluatedAt"`
+
+	// Holds The active holds that scope the record.
+	Holds       []LegalHoldID           `json:"holds,omitempty"`
+	Outcome     RetentionVerdictOutcome `json:"outcome"`
+	Policy      *PolicyVersionRef       `json:"policy,omitempty"`
+	RecordClass RetentionRecordClass    `json:"recordClass"`
+
+	// RetainUntil RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RetainUntil *Timestamp `json:"retainUntil,omitempty"`
+}
+
+// RetentionVerdictOutcome defines model for RetentionVerdict.Outcome.
+type RetentionVerdictOutcome string
 
 // Role A role within a tenant. Closed: adding one is a reviewed change with an
 // authorization matrix entry, not a string a caller may invent.
@@ -3280,6 +3613,15 @@ type IssueDocumentJSONRequestBody = DocumentRequest
 // CorrectDocumentJSONRequestBody defines body for CorrectDocument for application/json ContentType.
 type CorrectDocumentJSONRequestBody = CorrectionRequest
 
+// PlaceLegalHoldJSONRequestBody defines body for PlaceLegalHold for application/json ContentType.
+type PlaceLegalHoldJSONRequestBody = LegalHoldRequest
+
+// ReleaseLegalHoldJSONRequestBody defines body for ReleaseLegalHold for application/json ContentType.
+type ReleaseLegalHoldJSONRequestBody = LegalHoldReleaseRequest
+
+// ChangeLegalHoldScopeJSONRequestBody defines body for ChangeLegalHoldScope for application/json ContentType.
+type ChangeLegalHoldScopeJSONRequestBody = LegalHoldScopeRequest
+
 // TransitionObligationJSONRequestBody defines body for TransitionObligation for application/json ContentType.
 type TransitionObligationJSONRequestBody = ObligationTransitionRequest
 
@@ -3294,6 +3636,9 @@ type ResolveReconciliationItemJSONRequestBody = ResolutionRequest
 
 // ReportRefundJSONRequestBody defines body for ReportRefund for application/json ContentType.
 type ReportRefundJSONRequestBody = RefundReportRequest
+
+// RecordRetentionPolicyJSONRequestBody defines body for RecordRetentionPolicy for application/json ContentType.
+type RecordRetentionPolicyJSONRequestBody = RetentionPolicyRequest
 
 // SealPeriodJSONRequestBody defines body for SealPeriod for application/json ContentType.
 type SealPeriodJSONRequestBody = SealRequest

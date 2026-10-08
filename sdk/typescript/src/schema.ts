@@ -1280,6 +1280,169 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/retention/policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every version of every retention policy
+         * @description `ADMIN` or `AUDITOR`. A policy keeps one class of record of one
+         *     country's legal entities for a number of years from a trigger, on a
+         *     cited authority. Every version is listed, oldest first per policy: a
+         *     verdict names the version it used, so it can be reproduced
+         *     (ZTAX-EVID-REQ-0052, -0126).
+         */
+        get: operations["listRetentionPolicies"];
+        put?: never;
+        /**
+         * Record the next version of a retention policy
+         * @description `ADMIN`, signed in as themselves. Recording a policy under an id that
+         *     exists makes its next version; nothing is overwritten
+         *     (ZTAX-EVID-REQ-0052). There is no default period: a record no policy
+         *     governs is kept and reported `NO_POLICY` (ZTAX-EVID-REQ-0022,
+         *     ZTAX-PRIV-REQ-0052). The act is written to the administrative audit
+         *     trail.
+         */
+        post: operations["recordRetentionPolicy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/legal-holds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The tenant's legal holds
+         * @description `ADMIN` or `AUDITOR`, newest first, each with its full history. The
+         *     search is recorded in the administrative audit trail as privileged
+         *     evidence access (ZTAX-EVID-REQ-0115). A hold names what is kept; it
+         *     returns no evidence and opens nothing to anyone
+         *     (ZTAX-EVID-REQ-0024).
+         */
+        get: operations["listLegalHolds"];
+        put?: never;
+        /**
+         * Place a legal hold
+         * @description `ADMIN`, signed in as themselves. A hold serves a named claim,
+         *     investigation or regulator request (ZTAX-LEG-REQ-0091) and blocks
+         *     disposition of what it scopes, past any retention period
+         *     (ZTAX-EVID-REQ-0023, ZTAX-PRIV-REQ-0050). The scope is specific —
+         *     named decisions or business keys, or a bounded window of event times
+         *     of at most ten years, optionally narrowed to one legal entity — never
+         *     a tenant at large, so a hold is never a reason to keep unrelated
+         *     personal data (ZTAX-PRIV-REQ-0051).
+         */
+        post: operations["placeLegalHold"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/legal-holds/{holdId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One legal hold and its history
+         * @description `ADMIN` or `AUDITOR`. The read is recorded in the administrative audit
+         *     trail as privileged evidence access (ZTAX-EVID-REQ-0115).
+         */
+        get: operations["getLegalHold"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/legal-holds/{holdId}/scope": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change an active hold's scope
+         * @description `ADMIN`, signed in as themselves. The new scope replaces the old as a
+         *     new entry in the hold's history, with who and why; the old scope
+         *     stays readable there (ZTAX-EVID-REQ-0053). A released hold is not
+         *     changed: a matter that revives places a new hold.
+         */
+        post: operations["changeLegalHoldScope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/legal-holds/{holdId}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Release a legal hold
+         * @description `ADMIN`, signed in as themselves. Final. What the hold kept is decided
+         *     by its retention policy again from the next verdict on
+         *     (ZTAX-EVID-REQ-0054) — and is kept still if another active hold
+         *     scopes it.
+         */
+        post: operations["releaseLegalHold"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/decisions/{decisionId}/retention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether a decision's evidence may be disposed of now
+         * @description `ADMIN` or `AUDITOR`. The verdict a disposition job passes immediately
+         *     before it acts, taken under the hold lock so a hold being placed is
+         *     seen (ZTAX-EVID-REQ-0026): `RETAIN` inside the period, `ELIGIBLE` past
+         *     it, `HELD` under an active hold whatever the period says. `NO_POLICY`
+         *     and `CONFLICTED` — no policy governs the record, or several disagree —
+         *     keep it and are for a person to resolve, never a guess
+         *     (ZTAX-EVID-REQ-0092). The policy version used is named
+         *     (ZTAX-EVID-REQ-0126). Nothing about the decision is changed by
+         *     asking (ZTAX-EVID-REQ-0105).
+         */
+        get: operations["getDecisionRetention"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/obligations": {
         parameters: {
             query?: never;
@@ -2858,6 +3021,157 @@ export interface components {
              */
             divergence?: string;
         };
+        /**
+         * RetentionPolicyId
+         * @description A retention policy's stable name; its versions share it.
+         * @example de-decisions
+         */
+        RetentionPolicyId: string;
+        /**
+         * RetentionRecordClass
+         * @example DECISION
+         * @enum {string}
+         */
+        RetentionRecordClass: "DECISION" | "DOCUMENT" | "JOURNAL" | "REFUND";
+        /**
+         * RetentionTrigger
+         * @description What the period runs from: the taxable event, the record's making, or
+         *     the end of the calendar year of the event.
+         * @example EVENT_YEAR_END
+         * @enum {string}
+         */
+        RetentionTrigger: "EVENT_TIME" | "RECORDED_AT" | "EVENT_YEAR_END";
+        /**
+         * CountryCode
+         * @description ISO 3166-1 alpha-2.
+         * @example DE
+         */
+        CountryCode: string;
+        /** RetentionPolicyRequest */
+        RetentionPolicyRequest: {
+            id: components["schemas"]["RetentionPolicyId"];
+            recordClass: components["schemas"]["RetentionRecordClass"];
+            country: components["schemas"]["CountryCode"];
+            /** Format: int32 */
+            years: number;
+            trigger: components["schemas"]["RetentionTrigger"];
+            effectiveFrom: components["schemas"]["Timestamp"];
+            /** @description The statute, regulation or contract the period comes from. */
+            citation: string;
+        };
+        /** RetentionPolicy */
+        RetentionPolicy: {
+            id: components["schemas"]["RetentionPolicyId"];
+            /** Format: int32 */
+            version: number;
+            recordClass: components["schemas"]["RetentionRecordClass"];
+            country: components["schemas"]["CountryCode"];
+            /** Format: int32 */
+            years: number;
+            trigger: components["schemas"]["RetentionTrigger"];
+            effectiveFrom: components["schemas"]["Timestamp"];
+            citation: string;
+            recordedAt: components["schemas"]["Timestamp"];
+            /**
+             * Format: uuid
+             * @description The administrator who recorded this version.
+             */
+            recordedBy: string;
+        };
+        /** RetentionPolicyList */
+        RetentionPolicyList: {
+            policies: components["schemas"]["RetentionPolicy"][];
+        };
+        /** PolicyVersionRef */
+        PolicyVersionRef: {
+            id: components["schemas"]["RetentionPolicyId"];
+            /** Format: int32 */
+            version: number;
+        };
+        /** RetentionVerdict */
+        RetentionVerdict: {
+            decisionId: components["schemas"]["DecisionId"];
+            recordClass: components["schemas"]["RetentionRecordClass"];
+            country?: components["schemas"]["CountryCode"];
+            /** @enum {string} */
+            outcome: "RETAIN" | "HELD" | "ELIGIBLE" | "NO_POLICY" | "CONFLICTED";
+            policy?: components["schemas"]["PolicyVersionRef"];
+            /** @description For `CONFLICTED`, the policies that disagree. */
+            candidates?: components["schemas"]["PolicyVersionRef"][];
+            retainUntil?: components["schemas"]["Timestamp"];
+            /** @description The active holds that scope the record. */
+            holds?: components["schemas"]["LegalHoldId"][];
+            /** @description Why a record is `NO_POLICY` or `CONFLICTED`. */
+            detail?: string;
+            evaluatedAt: components["schemas"]["Timestamp"];
+        };
+        /**
+         * LegalHoldId
+         * Format: uuid
+         * @example 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        LegalHoldId: string;
+        /**
+         * LegalHoldReason
+         * @description Free text entered by an administrator.
+         * @example litigation notice received
+         */
+        LegalHoldReason: string;
+        /**
+         * LegalHoldScope
+         * @description What a hold covers. Every criterion given must hold: named decisions
+         *     or business keys, a window of event times `[eventFrom, eventTo)`, and
+         *     a legal entity narrowing either. At least names or a window; a window
+         *     alone spans at most ten years.
+         */
+        LegalHoldScope: {
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            businessKeys?: components["schemas"]["BusinessKey"][];
+            decisionIds?: components["schemas"]["DecisionId"][];
+            eventFrom?: components["schemas"]["Timestamp"];
+            eventTo?: components["schemas"]["Timestamp"];
+        };
+        /** LegalHoldEvent */
+        LegalHoldEvent: {
+            /** Format: int32 */
+            seq: number;
+            /** @enum {string} */
+            kind: "PLACED" | "SCOPE_CHANGED" | "RELEASED";
+            scope: components["schemas"]["LegalHoldScope"];
+            reason: components["schemas"]["LegalHoldReason"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /** LegalHold */
+        LegalHold: {
+            id: components["schemas"]["LegalHoldId"];
+            /** @description The claim, investigation or regulator request the hold serves. */
+            matter: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "RELEASED";
+            scope: components["schemas"]["LegalHoldScope"];
+            history: components["schemas"]["LegalHoldEvent"][];
+        };
+        /** LegalHoldList */
+        LegalHoldList: {
+            holds: components["schemas"]["LegalHold"][];
+        };
+        /** LegalHoldRequest */
+        LegalHoldRequest: {
+            matter: string;
+            reason: components["schemas"]["LegalHoldReason"];
+            scope: components["schemas"]["LegalHoldScope"];
+        };
+        /** LegalHoldScopeRequest */
+        LegalHoldScopeRequest: {
+            reason: components["schemas"]["LegalHoldReason"];
+            scope: components["schemas"]["LegalHoldScope"];
+        };
+        /** LegalHoldReleaseRequest */
+        LegalHoldReleaseRequest: {
+            reason: components["schemas"]["LegalHoldReason"];
+        };
     };
     responses: {
         /**
@@ -2972,6 +3286,11 @@ export interface components {
          * @example 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
          */
         DecisionId: components["schemas"]["DecisionId"];
+        /**
+         * @description The legal hold identifier.
+         * @example 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        LegalHoldId: components["schemas"]["LegalHoldId"];
         /**
          * @description The obligation row identifier.
          * @example 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
@@ -4745,6 +5064,251 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listRetentionPolicies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The policies. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionPolicyList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordRetentionPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetentionPolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description The version recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionPolicy"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listLegalHolds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The holds. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalHoldList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    placeLegalHold: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegalHoldRequest"];
+            };
+        };
+        responses: {
+            /** @description The hold. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalHold"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getLegalHold: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The legal hold identifier.
+                 * @example 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                holdId: components["parameters"]["LegalHoldId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The hold. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalHold"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    changeLegalHoldScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The legal hold identifier.
+                 * @example 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                holdId: components["parameters"]["LegalHoldId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegalHoldScopeRequest"];
+            };
+        };
+        responses: {
+            /** @description The hold after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalHold"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    releaseLegalHold: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The legal hold identifier.
+                 * @example 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                holdId: components["parameters"]["LegalHoldId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegalHoldReleaseRequest"];
+            };
+        };
+        responses: {
+            /** @description The released hold. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalHold"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getDecisionRetention: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The decision identifier.
+                 * @example 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                 */
+                decisionId: components["parameters"]["DecisionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The verdict. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionVerdict"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };

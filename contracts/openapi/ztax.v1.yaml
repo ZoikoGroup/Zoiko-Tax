@@ -116,6 +116,8 @@ tags:
     description: Fiscal documents that present committed decisions, and the voids, credits and rebills that correct them. Never edited.
   - name: reconciliation
     description: R1 to R7 over a legal period, every item recorded with its exact variance, every resolution with its evidence.
+  - name: retention
+    description: Versioned retention policies, legal holds, and the disposition verdict that weighs them. Nothing here deletes or rewrites a record.
 
 security:
   - sessionCookie: []
@@ -2644,6 +2646,339 @@ paths:
         "500": { $ref: "#/components/responses/Internal" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
+  /v1/retention/policies:
+    get:
+      operationId: listRetentionPolicies
+      tags: [retention]
+      summary: Every version of every retention policy
+      description: |
+        `ADMIN` or `AUDITOR`. A policy keeps one class of record of one
+        country's legal entities for a number of years from a trigger, on a
+        cited authority. Every version is listed, oldest first per policy: a
+        verdict names the version it used, so it can be reproduced
+        (ZTAX-EVID-REQ-0052, -0126).
+      responses:
+        "200":
+          description: The policies.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetentionPolicyList"
+              examples:
+                default:
+                  summary: One policy, one version
+                  value:
+                    policies:
+                      - { id: de-decisions, version: 1, recordClass: DECISION, country: DE, years: 10, trigger: EVENT_YEAR_END, effectiveFrom: "2020-01-01T00:00:00.000000Z", citation: "AO §147(3)", recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: recordRetentionPolicy
+      tags: [retention]
+      summary: Record the next version of a retention policy
+      description: |
+        `ADMIN`, signed in as themselves. Recording a policy under an id that
+        exists makes its next version; nothing is overwritten
+        (ZTAX-EVID-REQ-0052). There is no default period: a record no policy
+        governs is kept and reported `NO_POLICY` (ZTAX-EVID-REQ-0022,
+        ZTAX-PRIV-REQ-0052). The act is written to the administrative audit
+        trail.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RetentionPolicyRequest"
+            examples:
+              default:
+                summary: Ten years from the end of the year
+                value:
+                  id: de-decisions
+                  recordClass: DECISION
+                  country: DE
+                  years: 10
+                  trigger: EVENT_YEAR_END
+                  effectiveFrom: "2020-01-01T00:00:00.000000Z"
+                  citation: "AO §147(3)"
+      responses:
+        "201":
+          description: The version recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetentionPolicy"
+              examples:
+                default:
+                  summary: Version 1
+                  value: { id: de-decisions, version: 1, recordClass: DECISION, country: DE, years: 10, trigger: EVENT_YEAR_END, effectiveFrom: "2020-01-01T00:00:00.000000Z", citation: "AO §147(3)", recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/legal-holds:
+    get:
+      operationId: listLegalHolds
+      tags: [retention]
+      summary: The tenant's legal holds
+      description: |
+        `ADMIN` or `AUDITOR`, newest first, each with its full history. The
+        search is recorded in the administrative audit trail as privileged
+        evidence access (ZTAX-EVID-REQ-0115). A hold names what is kept; it
+        returns no evidence and opens nothing to anyone
+        (ZTAX-EVID-REQ-0024).
+      responses:
+        "200":
+          description: The holds.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalHoldList"
+              examples:
+                default:
+                  summary: One active hold
+                  value:
+                    holds:
+                      - id: 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        matter: "Claim 2026/114"
+                        status: ACTIVE
+                        scope: { businessKeys: ["INV-0001/1"] }
+                        history:
+                          - { seq: 1, kind: PLACED, scope: { businessKeys: ["INV-0001/1"] }, reason: litigation notice received, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: placeLegalHold
+      tags: [retention]
+      summary: Place a legal hold
+      description: |
+        `ADMIN`, signed in as themselves. A hold serves a named claim,
+        investigation or regulator request (ZTAX-LEG-REQ-0091) and blocks
+        disposition of what it scopes, past any retention period
+        (ZTAX-EVID-REQ-0023, ZTAX-PRIV-REQ-0050). The scope is specific —
+        named decisions or business keys, or a bounded window of event times
+        of at most ten years, optionally narrowed to one legal entity — never
+        a tenant at large, so a hold is never a reason to keep unrelated
+        personal data (ZTAX-PRIV-REQ-0051).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LegalHoldRequest"
+            examples:
+              default:
+                summary: Hold one invoice line
+                value:
+                  matter: "Claim 2026/114"
+                  reason: litigation notice received
+                  scope: { businessKeys: ["INV-0001/1"] }
+      responses:
+        "201":
+          description: The hold.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalHold"
+              examples:
+                default:
+                  summary: Placed
+                  value:
+                    id: 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    matter: "Claim 2026/114"
+                    status: ACTIVE
+                    scope: { businessKeys: ["INV-0001/1"] }
+                    history:
+                      - { seq: 1, kind: PLACED, scope: { businessKeys: ["INV-0001/1"] }, reason: litigation notice received, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/legal-holds/{holdId}:
+    get:
+      operationId: getLegalHold
+      tags: [retention]
+      summary: One legal hold and its history
+      description: |
+        `ADMIN` or `AUDITOR`. The read is recorded in the administrative audit
+        trail as privileged evidence access (ZTAX-EVID-REQ-0115).
+      parameters:
+        - $ref: "#/components/parameters/LegalHoldId"
+      responses:
+        "200":
+          description: The hold.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalHold"
+              examples:
+                default:
+                  summary: Released
+                  value:
+                    id: 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    matter: "Claim 2026/114"
+                    status: RELEASED
+                    scope: { businessKeys: ["INV-0001/1"] }
+                    history:
+                      - { seq: 1, kind: PLACED, scope: { businessKeys: ["INV-0001/1"] }, reason: litigation notice received, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                      - { seq: 2, kind: RELEASED, scope: { businessKeys: ["INV-0001/1"] }, reason: claim settled, recordedAt: "2027-03-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/legal-holds/{holdId}/scope:
+    post:
+      operationId: changeLegalHoldScope
+      tags: [retention]
+      summary: Change an active hold's scope
+      description: |
+        `ADMIN`, signed in as themselves. The new scope replaces the old as a
+        new entry in the hold's history, with who and why; the old scope
+        stays readable there (ZTAX-EVID-REQ-0053). A released hold is not
+        changed: a matter that revives places a new hold.
+      parameters:
+        - $ref: "#/components/parameters/LegalHoldId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LegalHoldScopeRequest"
+            examples:
+              default:
+                summary: Widen to a second line
+                value:
+                  reason: second invoice named in the claim
+                  scope: { businessKeys: ["INV-0001/1", "INV-0002/1"] }
+      responses:
+        "200":
+          description: The hold after the change.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalHold"
+              examples:
+                default:
+                  summary: Widened
+                  value:
+                    id: 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    matter: "Claim 2026/114"
+                    status: ACTIVE
+                    scope: { businessKeys: ["INV-0001/1", "INV-0002/1"] }
+                    history:
+                      - { seq: 1, kind: PLACED, scope: { businessKeys: ["INV-0001/1"] }, reason: litigation notice received, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                      - { seq: 2, kind: SCOPE_CHANGED, scope: { businessKeys: ["INV-0001/1", "INV-0002/1"] }, reason: second invoice named in the claim, recordedAt: "2026-10-05T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/legal-holds/{holdId}/release:
+    post:
+      operationId: releaseLegalHold
+      tags: [retention]
+      summary: Release a legal hold
+      description: |
+        `ADMIN`, signed in as themselves. Final. What the hold kept is decided
+        by its retention policy again from the next verdict on
+        (ZTAX-EVID-REQ-0054) — and is kept still if another active hold
+        scopes it.
+      parameters:
+        - $ref: "#/components/parameters/LegalHoldId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LegalHoldReleaseRequest"
+            examples:
+              default:
+                summary: Settled
+                value:
+                  reason: claim settled
+      responses:
+        "200":
+          description: The released hold.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalHold"
+              examples:
+                default:
+                  summary: Released
+                  value:
+                    id: 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    matter: "Claim 2026/114"
+                    status: RELEASED
+                    scope: { businessKeys: ["INV-0001/1"] }
+                    history:
+                      - { seq: 1, kind: PLACED, scope: { businessKeys: ["INV-0001/1"] }, reason: litigation notice received, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                      - { seq: 2, kind: RELEASED, scope: { businessKeys: ["INV-0001/1"] }, reason: claim settled, recordedAt: "2027-03-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/decisions/{decisionId}/retention:
+    get:
+      operationId: getDecisionRetention
+      tags: [retention]
+      summary: Whether a decision's evidence may be disposed of now
+      description: |
+        `ADMIN` or `AUDITOR`. The verdict a disposition job passes immediately
+        before it acts, taken under the hold lock so a hold being placed is
+        seen (ZTAX-EVID-REQ-0026): `RETAIN` inside the period, `ELIGIBLE` past
+        it, `HELD` under an active hold whatever the period says. `NO_POLICY`
+        and `CONFLICTED` — no policy governs the record, or several disagree —
+        keep it and are for a person to resolve, never a guess
+        (ZTAX-EVID-REQ-0092). The policy version used is named
+        (ZTAX-EVID-REQ-0126). Nothing about the decision is changed by
+        asking (ZTAX-EVID-REQ-0105).
+      parameters:
+        - $ref: "#/components/parameters/DecisionId"
+      responses:
+        "200":
+          description: The verdict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetentionVerdict"
+              examples:
+                default:
+                  summary: Held past its period
+                  value:
+                    decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    recordClass: DECISION
+                    country: DE
+                    outcome: HELD
+                    policy: { id: de-decisions, version: 1 }
+                    retainUntil: "2037-01-01T00:00:00.000000Z"
+                    holds: [01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f]
+                    evaluatedAt: "2040-01-01T00:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
   /v1/obligations:
     get:
       operationId: listObligations
@@ -2943,6 +3278,14 @@ components:
       description: The decision identifier.
       schema: { $ref: "#/components/schemas/DecisionId" }
       example: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+
+    LegalHoldId:
+      name: holdId
+      in: path
+      required: true
+      description: The legal hold identifier.
+      schema: { $ref: "#/components/schemas/LegalHoldId" }
+      example: 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
 
     ObligationId:
       name: obligationId
@@ -5426,3 +5769,265 @@ components:
           type: string
           description: For `DIVERGED`, the first path at which the results differ. A path, never a value.
           example: $.emitted.TAX_VAT.amount
+
+    RetentionPolicyId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: RetentionPolicyId
+      description: A retention policy's stable name; its versions share it.
+      minLength: 1
+      maxLength: 128
+      example: de-decisions
+
+    RetentionRecordClass:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: RetentionRecordClass
+      enum: [DECISION, DOCUMENT, JOURNAL, REFUND]
+      example: DECISION
+
+    RetentionTrigger:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: RetentionTrigger
+      description: |
+        What the period runs from: the taxable event, the record's making, or
+        the end of the calendar year of the event.
+      enum: [EVENT_TIME, RECORDED_AT, EVENT_YEAR_END]
+      example: EVENT_YEAR_END
+
+    CountryCode:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: CountryCode
+      description: ISO 3166-1 alpha-2.
+      pattern: "^[A-Z]{2}$"
+      example: DE
+
+    RetentionPolicyRequest:
+      type: object
+      title: RetentionPolicyRequest
+      additionalProperties: false
+      required: [id, recordClass, country, years, trigger, effectiveFrom, citation]
+      properties:
+        id: { $ref: "#/components/schemas/RetentionPolicyId" }
+        recordClass: { $ref: "#/components/schemas/RetentionRecordClass" }
+        country: { $ref: "#/components/schemas/CountryCode" }
+        years:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 100
+        trigger: { $ref: "#/components/schemas/RetentionTrigger" }
+        effectiveFrom: { $ref: "#/components/schemas/Timestamp" }
+        citation:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: The statute, regulation or contract the period comes from.
+
+    RetentionPolicy:
+      type: object
+      title: RetentionPolicy
+      additionalProperties: false
+      required: [id, version, recordClass, country, years, trigger, effectiveFrom, citation, recordedAt, recordedBy]
+      properties:
+        id: { $ref: "#/components/schemas/RetentionPolicyId" }
+        version:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        recordClass: { $ref: "#/components/schemas/RetentionRecordClass" }
+        country: { $ref: "#/components/schemas/CountryCode" }
+        years:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+        trigger: { $ref: "#/components/schemas/RetentionTrigger" }
+        effectiveFrom: { $ref: "#/components/schemas/Timestamp" }
+        citation:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+          description: The administrator who recorded this version.
+
+    RetentionPolicyList:
+      type: object
+      title: RetentionPolicyList
+      additionalProperties: false
+      required: [policies]
+      properties:
+        policies:
+          type: array
+          items: { $ref: "#/components/schemas/RetentionPolicy" }
+
+    PolicyVersionRef:
+      type: object
+      title: PolicyVersionRef
+      additionalProperties: false
+      required: [id, version]
+      properties:
+        id: { $ref: "#/components/schemas/RetentionPolicyId" }
+        version:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+
+    RetentionVerdict:
+      type: object
+      title: RetentionVerdict
+      additionalProperties: false
+      required: [decisionId, recordClass, outcome, evaluatedAt]
+      properties:
+        decisionId: { $ref: "#/components/schemas/DecisionId" }
+        recordClass: { $ref: "#/components/schemas/RetentionRecordClass" }
+        country: { $ref: "#/components/schemas/CountryCode" }
+        outcome:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [RETAIN, HELD, ELIGIBLE, NO_POLICY, CONFLICTED]
+        policy: { $ref: "#/components/schemas/PolicyVersionRef" }
+        candidates:
+          type: array
+          description: For `CONFLICTED`, the policies that disagree.
+          items: { $ref: "#/components/schemas/PolicyVersionRef" }
+        retainUntil: { $ref: "#/components/schemas/Timestamp" }
+        holds:
+          type: array
+          description: The active holds that scope the record.
+          items: { $ref: "#/components/schemas/LegalHoldId" }
+        detail:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: Why a record is `NO_POLICY` or `CONFLICTED`.
+        evaluatedAt: { $ref: "#/components/schemas/Timestamp" }
+
+    LegalHoldId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: LegalHoldId
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    LegalHoldReason:
+      x-ztax-privacy: { class: P2, purposes: [PURP-LEGAL, PURP-EVID], retention: RET-LEGAL-HOLD, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: LegalHoldReason
+      description: Free text entered by an administrator.
+      minLength: 1
+      maxLength: 1000
+      example: litigation notice received
+
+    LegalHoldScope:
+      type: object
+      title: LegalHoldScope
+      description: |
+        What a hold covers. Every criterion given must hold: named decisions
+        or business keys, a window of event times `[eventFrom, eventTo)`, and
+        a legal entity narrowing either. At least names or a window; a window
+        alone spans at most ten years.
+      additionalProperties: false
+      properties:
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        businessKeys:
+          type: array
+          maxItems: 1000
+          items: { $ref: "#/components/schemas/BusinessKey" }
+        decisionIds:
+          type: array
+          maxItems: 1000
+          items: { $ref: "#/components/schemas/DecisionId" }
+        eventFrom: { $ref: "#/components/schemas/Timestamp" }
+        eventTo: { $ref: "#/components/schemas/Timestamp" }
+
+    LegalHoldEvent:
+      type: object
+      title: LegalHoldEvent
+      additionalProperties: false
+      required: [seq, kind, scope, reason, recordedAt, recordedBy]
+      properties:
+        seq:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        kind:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [PLACED, SCOPE_CHANGED, RELEASED]
+        scope: { $ref: "#/components/schemas/LegalHoldScope" }
+        reason: { $ref: "#/components/schemas/LegalHoldReason" }
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+
+    LegalHold:
+      type: object
+      title: LegalHold
+      additionalProperties: false
+      required: [id, matter, status, scope, history]
+      properties:
+        id: { $ref: "#/components/schemas/LegalHoldId" }
+        matter:
+          x-ztax-privacy: { class: P2, purposes: [PURP-LEGAL, PURP-EVID], retention: RET-LEGAL-HOLD, redaction: REDACT, aiAllowed: NONE }
+          type: string
+          description: The claim, investigation or regulator request the hold serves.
+        status:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [ACTIVE, RELEASED]
+        scope: { $ref: "#/components/schemas/LegalHoldScope" }
+        history:
+          type: array
+          items: { $ref: "#/components/schemas/LegalHoldEvent" }
+
+    LegalHoldList:
+      type: object
+      title: LegalHoldList
+      additionalProperties: false
+      required: [holds]
+      properties:
+        holds:
+          type: array
+          items: { $ref: "#/components/schemas/LegalHold" }
+
+    LegalHoldRequest:
+      type: object
+      title: LegalHoldRequest
+      additionalProperties: false
+      required: [matter, reason, scope]
+      properties:
+        matter:
+          x-ztax-privacy: { class: P2, purposes: [PURP-LEGAL, PURP-EVID], retention: RET-LEGAL-HOLD, redaction: REDACT, aiAllowed: NONE }
+          type: string
+          minLength: 1
+          maxLength: 255
+        reason: { $ref: "#/components/schemas/LegalHoldReason" }
+        scope: { $ref: "#/components/schemas/LegalHoldScope" }
+
+    LegalHoldScopeRequest:
+      type: object
+      title: LegalHoldScopeRequest
+      additionalProperties: false
+      required: [reason, scope]
+      properties:
+        reason: { $ref: "#/components/schemas/LegalHoldReason" }
+        scope: { $ref: "#/components/schemas/LegalHoldScope" }
+
+    LegalHoldReleaseRequest:
+      type: object
+      title: LegalHoldReleaseRequest
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { $ref: "#/components/schemas/LegalHoldReason" }

@@ -116,6 +116,12 @@
       "public": false
     },
     {
+      "method": "GET",
+      "path": "/v1/decisions/{decisionId}/retention",
+      "operationId": "getDecisionRetention",
+      "public": false
+    },
+    {
       "method": "POST",
       "path": "/v1/documents",
       "operationId": "issueDocument",
@@ -143,6 +149,36 @@
       "method": "GET",
       "path": "/v1/jobs/{jobId}",
       "operationId": "getJob",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/legal-holds",
+      "operationId": "listLegalHolds",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/legal-holds",
+      "operationId": "placeLegalHold",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/legal-holds/{holdId}",
+      "operationId": "getLegalHold",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/legal-holds/{holdId}/release",
+      "operationId": "releaseLegalHold",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/legal-holds/{holdId}/scope",
+      "operationId": "changeLegalHoldScope",
       "public": false
     },
     {
@@ -203,6 +239,18 @@
       "method": "POST",
       "path": "/v1/replay/{decisionId}",
       "operationId": "replayDecision",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/retention/policies",
+      "operationId": "listRetentionPolicies",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/retention/policies",
+      "operationId": "recordRetentionPolicy",
       "public": false
     },
     {

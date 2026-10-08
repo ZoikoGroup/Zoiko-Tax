@@ -133,6 +133,9 @@ type (
 
 	// ReconItemID identifies one compared item of a reconciliation run.
 	ReconItemID struct{ base }
+
+	// LegalHoldID identifies one legal hold.
+	LegalHoldID struct{ base }
 )
 
 // The constructors. Each takes a uuid.UUID that idgen produced, or that the
@@ -225,6 +228,9 @@ func NewReopenRequestID(u uuid.UUID) ReopenRequestID { return ReopenRequestID{ba
 
 // NewReconItemID wraps a raw UUID as a ReconItemID.
 func NewReconItemID(u uuid.UUID) ReconItemID { return ReconItemID{base{u}} }
+
+// NewLegalHoldID wraps a raw UUID as a LegalHoldID.
+func NewLegalHoldID(u uuid.UUID) LegalHoldID { return LegalHoldID{base{u}} }
 
 // parse is the shared text ingress. Identifiers arrive from a URL path, a
 // cookie lookup or a database column, and all three can carry something that is
@@ -424,4 +430,13 @@ func ParseReconItemID(s string) (ReconItemID, error) {
 		return ReconItemID{}, err
 	}
 	return NewReconItemID(u), nil
+}
+
+// ParseLegalHoldID reads a LegalHoldID from its canonical string form.
+func ParseLegalHoldID(s string) (LegalHoldID, error) {
+	u, err := parse("legal hold id", s)
+	if err != nil {
+		return LegalHoldID{}, err
+	}
+	return NewLegalHoldID(u), nil
 }
