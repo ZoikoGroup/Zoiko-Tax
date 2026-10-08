@@ -100,7 +100,7 @@ func openWebhookCell(t *testing.T, allowPrivate bool) *webhookCell {
 // schema owner, which may do this; the application role may not.
 func quiesceDeliveries(t *testing.T, c *fiscalCell) {
 	t.Helper()
-	if _, err := c.store.Pool().Exec(c.ctx,
+	if _, err := ownerPool(t).Exec(c.ctx,
 		`UPDATE ztax.webhook_delivery SET status = 'DEAD', next_attempt_at = NULL WHERE status = 'PENDING'`); err != nil {
 		t.Fatal(err)
 	}

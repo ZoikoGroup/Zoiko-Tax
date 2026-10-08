@@ -53,17 +53,25 @@ func (s *Store) Pool() *pgxpool.Pool { return s.pool }
 // txKey carries a transaction on a context.
 type txKey struct{}
 
-// db returns the transaction on ctx if there is one, and the pool otherwise.
+// db returns the transaction on ctx if there is one, and the pool otherwise,
+// either way setting the row-level-security scope for each statement from
+// ctx (scope.go).
 //
 // This is what lets a repository method be called from inside a use case's
 // transaction and from outside it without the caller choosing. The alternative
 // — passing a handle through every signature — puts the transaction in the
 // domain's field of view, which ADR-0009 §2.4 rules out.
 func (s *Store) db(ctx context.Context) querier {
-	if tx, ok := ctx.Value(txKey{}).(pgx.Tx); ok {
+	if tx, ok := ctx.Value(txKey{}).(*txScope); ok {
 		return tx
 	}
-	return s.pool
+	return poolScope{pool: s.pool}
+}
+
+// inTx reports whether ctx carries a transaction.
+func inTx(ctx context.Context) bool {
+	_, ok := ctx.Value(txKey{}).(*txScope)
+	return ok
 }
 
 // Begin opens a transaction and returns a context carrying it.
@@ -76,7 +84,7 @@ func (s *Store) Begin(ctx context.Context) (port.Tx, context.Context, error) {
 	if err != nil {
 		return nil, ctx, mapError(err, "begin transaction")
 	}
-	return &pgTx{tx: tx}, context.WithValue(ctx, txKey{}, tx), nil
+	return &pgTx{tx: tx}, context.WithValue(ctx, txKey{}, &txScope{tx: tx}), nil
 }
 
 type pgTx struct {

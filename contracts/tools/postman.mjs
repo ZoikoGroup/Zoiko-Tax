@@ -565,6 +565,26 @@ function jsonBody(value) {
 // provider, which is every local stack.
 const ACCEPTED_OUTCOMES = {
   proposeClassification: ["422"],
+  // A fresh stack has one session, the run's own, which listSessions does not
+  // capture; there is then no other session to revoke.
+  revokeSession: ["404"],
+  // A fresh run has delivered nothing, so the example delivery is not found.
+  getWebhookDelivery: ["404"],
+  replayWebhookDelivery: ["404"],
+  // The local stack configures no seal keyring: the seal surface says so
+  // with 503 rather than pretending, and a seal made by an earlier run
+  // makes the next run's seal of the same period a conflict.
+  listSeals: ["503"],
+  sealPeriod: ["409", "503"],
+  getSeal: ["404", "503"],
+  verifySeal: ["404", "503"],
+  getDecisionInclusion: ["404", "503"],
+  // {{period}} is closed by the first run; later runs find it closed.
+  transitionSubledgerPeriod: ["409"],
+  requestPeriodReopen: ["409"],
+  // The requester cannot approve their own reopen.
+  approvePeriodReopen: ["403", "404"],
+  resolveReconciliationItem: ["404", "409"],
 };
 
 /** The statuses an operation declares, for the generated status assertion. */
@@ -846,6 +866,10 @@ function variables(overlay, contractDigest, local) {
     { key: "newUserEmail", value: "", type: "string" },
     { key: "userId", value: "", type: "string" },
     { key: "sessionId", value: "", type: "string" },
+    // Query filters, empty so a request lists everything unless a run sets one.
+    { key: "status", value: "", type: "string" },
+    // A well-formed id nothing has: a fresh run has no delivery to name.
+    { key: "deliveryId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
     { key: "role", value: "AUDITOR", type: "string" },
     { key: "limit", value: "50", type: "string" },
     { key: "bundleDigest", value: "", type: "string" },

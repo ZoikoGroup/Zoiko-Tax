@@ -26,6 +26,9 @@ const Schema = "ztax"
 // called the same thing.
 const SearchPath = Schema + ", public"
 
+// AppRole is the application's grant holder (migration 000001).
+const AppRole = "ztax_app"
+
 // Config is what the pool needs. It is built from the process configuration and
 // never carries a secret in a field that outlives the call: the DSN is resolved
 // from the credential reference at startup (ADR-0017 §2.4) and handed here once.
@@ -45,6 +48,12 @@ type Config struct {
 	// IdleInTransactionTimeout bounds an open transaction doing nothing, which
 	// is how a leaked transaction blocks vacuum and, eventually, everything.
 	IdleInTransactionTimeout time.Duration
+	// Role is assumed on every connection with SET ROLE: the application's
+	// grant holder, ztax_app, which owns no table and so is bound by the
+	// append-only grants and the row-level-security policies whichever login
+	// the deployment connects with. Empty connects as the login itself, for
+	// tooling that must not be bound — none in a cell.
+	Role string
 }
 
 // DefaultConfig returns the settings a cell runs with. They are deliberately
@@ -56,6 +65,7 @@ func DefaultConfig(dsn string) Config {
 		StatementTimeout:         10 * time.Second,
 		LockTimeout:              3 * time.Second,
 		IdleInTransactionTimeout: 15 * time.Second,
+		Role:                     AppRole,
 	}
 }
 
@@ -84,10 +94,16 @@ func Open(ctx context.Context, cfg Config) (*pgxpool.Pool, error) {
 	poolCfg.ConnConfig.RuntimeParams["lock_timeout"] = millis(cfg.LockTimeout)
 	poolCfg.ConnConfig.RuntimeParams["idle_in_transaction_session_timeout"] = millis(cfg.IdleInTransactionTimeout)
 
-	poolCfg.AfterConnect = func(_ context.Context, conn *pgx.Conn) error {
+	poolCfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
 		RegisterTypes(conn)
+		if cfg.Role != "" {
+			if _, err := conn.Exec(ctx, "SET ROLE "+pgx.Identifier{cfg.Role}.Sanitize()); err != nil {
+				return fmt.Errorf("postgres: assume role %s: %w", cfg.Role, err)
+			}
+		}
 		return nil
 	}
+	poolCfg.AfterRelease = clearScope
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {

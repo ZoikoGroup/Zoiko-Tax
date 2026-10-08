@@ -206,7 +206,7 @@ func TestIntegrationEveryEmittedEventMatchesItsSchema(t *testing.T) {
 	}
 	mustDoc(t)(c.issue(t, c.documents(), "ev-doc", c.docLine(t, corrected, "50.00", "10.50", "0.11")))
 
-	rows, err := c.store.Pool().Query(c.ctx,
+	rows, err := ownerPool(t).Query(c.ctx,
 		`SELECT event_type, schema_ref, payload::text FROM ztax.outbox WHERE tenant_id = $1 ORDER BY created_at, id`,
 		c.tenant.UUID())
 	if err != nil {

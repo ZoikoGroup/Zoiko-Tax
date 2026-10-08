@@ -148,6 +148,9 @@ func (r *BatchRepo) Job(ctx context.Context, jobID id.JobID) (batch.Job, []batch
 
 // ClaimNext leases the oldest unheld job across the cell.
 func (r *BatchRepo) ClaimNext(ctx context.Context, now, leaseUntil time.Time) (batch.Job, bool, error) {
+	// Cell-wide: the oldest job of any tenant, whose work then runs as that
+	// tenant's.
+	ctx = CellScope(ctx)
 	j, err := scanJob(r.s.db(ctx).QueryRow(ctx, sqlJobClaim, now.UTC(), leaseUntil.UTC()))
 	if errs.IsCategory(err, errs.CategoryNotFound) {
 		return batch.Job{}, false, nil

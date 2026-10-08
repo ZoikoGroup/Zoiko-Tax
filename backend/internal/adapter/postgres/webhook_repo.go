@@ -319,6 +319,9 @@ func (r *WebhookRepo) Deliveries(ctx context.Context, webhookID id.WebhookID, st
 
 // ClaimDue leases due deliveries across the cell.
 func (r *WebhookRepo) ClaimDue(ctx context.Context, now time.Time, lease time.Duration, limit int) ([]webhook.Delivery, error) {
+	// Cell-wide: the dispatcher serves every tenant, each delivery then
+	// attempted as its own tenant's.
+	ctx = CellScope(ctx)
 	return r.deliveries(ctx, "claim webhook deliveries", sqlDeliveryClaim, now.UTC(), now.Add(lease).UTC(), limit)
 }
 

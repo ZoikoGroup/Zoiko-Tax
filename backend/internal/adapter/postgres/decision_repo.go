@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
@@ -319,7 +318,7 @@ func (r *SealRepo) LockSealing(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if _, inTx := ctx.Value(txKey{}).(pgx.Tx); !inTx {
+	if !inTx(ctx) {
 		// Outside a transaction the lock would be released at the end of
 		// this one statement, and the caller would believe it held a lock it
 		// does not.

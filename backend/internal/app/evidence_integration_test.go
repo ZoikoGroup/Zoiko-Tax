@@ -209,7 +209,7 @@ func TestIntegrationSealDetectsATamperedRow(t *testing.T) {
 	if forged == ds[0].ResultDigest.String() {
 		forged = forged[:len(forged)-1] + "1"
 	}
-	if _, err := c.pool.Exec(c.ctx,
+	if _, err := ownerPool(t).Exec(c.ctx,
 		`UPDATE ztax.tax_decision SET result_digest = $1 WHERE tenant_id = $2 AND decision_id = $3`,
 		forged, c.tenant.UUID(), ds[1].ID.UUID()); err != nil {
 		t.Fatalf("tamper: %v", err)

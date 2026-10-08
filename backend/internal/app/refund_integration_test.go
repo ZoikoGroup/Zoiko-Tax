@@ -153,7 +153,7 @@ func TestIntegrationFINREQ0015CompletedRefundPostsAndLeavesTheDecision(t *testin
 	// Each state change wrote its event in its own transaction: the request,
 	// then the two moves.
 	var n int
-	if err := c.store.Pool().QueryRow(c.ctx,
+	if err := ownerPool(t).QueryRow(c.ctx,
 		`SELECT count(*) FROM ztax.outbox WHERE tenant_id = $1 AND aggregate_key = $2`,
 		c.tenant.UUID(), "refund/"+rf.String()).Scan(&n); err != nil {
 		t.Fatal(err)

@@ -953,7 +953,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('revokeSession returns a status the contract declares', function () {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([204]);",
+                  "  pm.expect(pm.response.code).to.be.oneOf([204, 404]);",
                   "});"
                 ]
               }
@@ -1399,7 +1399,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('getWebhookDelivery returns a status the contract declares', function () {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
                   "});",
                   "pm.test('nothing has been delivered in a fresh run', function () {",
                   "  pm.expect([200, 404]).to.include(pm.response.code);",
@@ -1474,7 +1474,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('replayWebhookDelivery returns a status the contract declares', function () {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([202]);",
+                  "  pm.expect(pm.response.code).to.be.oneOf([202, 404]);",
                   "});",
                   "pm.test('a replay needs a delivery to replay', function () {",
                   "  pm.expect([202, 404]).to.include(pm.response.code);",
@@ -1633,7 +1633,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('listSeals returns a status the contract declares', function () {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 503]);",
                   "});"
                 ]
               }
@@ -1710,7 +1710,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('sealPeriod returns a status the contract declares', function () {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201, 409, 503]);",
                   "});",
                   "pm.test('ADR-0011 §2.4 — sealed, or refused for a reason the cell states', function () {",
                   "  pm.expect([201, 409, 503]).to.include(pm.response.code);",
@@ -1780,7 +1780,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('getSeal returns a status the contract declares', function () {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404, 503]);",
                   "});",
                   "pm.test('the seal carries the bytes its signature covers', function () {",
                   "  pm.expect([200, 404, 503]).to.include(pm.response.code);",
@@ -1852,7 +1852,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('verifySeal returns a status the contract declares', function () {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404, 503]);",
                   "});",
                   "pm.test('a seal this cell made verifies', function () {",
                   "  pm.expect([200, 404, 503]).to.include(pm.response.code);",
@@ -3726,7 +3726,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('getDecisionInclusion returns a status the contract declares', function () {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404, 503]);",
                   "});",
                   "pm.test('a sealed decision proves its inclusion; an unsealed one is not found', function () {",
                   "  pm.expect([200, 404, 503]).to.include(pm.response.code);",
@@ -3880,7 +3880,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('transitionSubledgerPeriod returns a status the contract declares', function () {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
                   "});",
                   "pm.test('ZTAX-FIN-REQ-0089 — closed with a manifest, or already closed by an earlier run', function () {",
                   "  pm.expect([200, 409]).to.include(pm.response.code);",
@@ -3967,7 +3967,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('requestPeriodReopen returns a status the contract declares', function () {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201, 409]);",
                   "});",
                   "pm.test('a reopen is requested and nothing moves yet', function () {",
                   "  pm.expect([201, 409]).to.include(pm.response.code);",
@@ -4045,7 +4045,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('approvePeriodReopen returns a status the contract declares', function () {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403, 404]);",
                   "});",
                   "pm.test('ZTAX-FIN-REQ-0091 — the requester cannot approve their own reopen', function () {",
                   "  pm.expect([403, 404]).to.include(pm.response.code);",
@@ -4281,7 +4281,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('resolveReconciliationItem returns a status the contract declares', function () {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404, 409]);",
                   "});",
                   "pm.test('a resolution needs an item of the run', function () {",
                   "  pm.expect([200, 404, 409]).to.include(pm.response.code);",
@@ -5321,6 +5321,16 @@
     {
       "key": "sessionId",
       "value": "",
+      "type": "string"
+    },
+    {
+      "key": "status",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "deliveryId",
+      "value": "00000000-0000-7000-8000-000000000000",
       "type": "string"
     },
     {
