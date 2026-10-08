@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:a9a623bf125c90327f2a91687323f00fbd66b36a5cbf827b6c330b4748bb3a86`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:cde813af1cdfd0ebbfdc7e87ca4a7c555261d1d00a8524364cd610e916c7efa6`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -438,7 +438,7 @@
     },
     {
       "name": "04 · Administration",
-      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.",
+      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked.",
       "item": [
         {
           "name": "GET /v1/admin/users — List the tenant's users",
@@ -2453,6 +2453,467 @@
                 "exec": [
                   "pm.test('getDecisionRetention returns a status the contract declares', function () {",
                   "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/legal/matrix — The LegalAuthorization matrix this cell resolves against",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal/matrix",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal",
+                "matrix"
+              ]
+            },
+            "description": "The LegalAuthorization matrix this cell resolves against\n\n`ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. For each country,\nauthority and service state (`INFORM`, `COMPUTE`, `PREPARE`, `FILE`,\n`REPRESENT`, `ADVISE`), whether ZoikoTax may act directly, only with\nthe customer's authorization, only through a qualified person or a\npartner, not at all, or whether counsel has yet to say\n(ZTAX-LEG-001 §3–§4). It is legal content: every rule is versioned,\neffective-dated and cites the counsel memo or authority source it\nrests on (ZTAX-LEG-REQ-0009, -0102), and the digest names the edition\na check used. A cell with no matrix returns an empty one and blocks\nevery legally sensitive action. A content pack being in production\nfor `COMPUTE` implies nothing here (ZTAX-LEG-REQ-0057)."
+          },
+          "response": [
+            {
+              "name": "200 · One rule",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal/matrix",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal",
+                    "matrix"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"version\": \"dev-2026.10-1\",\n  \"draft\": true,\n  \"digest\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n  \"rules\": [\n    {\n      \"id\": \"DE-ELSTER-FILE\",\n      \"version\": 1,\n      \"country\": \"DE\",\n      \"authority\": \"DE-ELSTER\",\n      \"service\": \"FILE\",\n      \"status\": \"DIRECT_WITH_AUTH\",\n      \"provider\": \"Zoiko development entity\",\n      \"authorizationType\": \"FILING_MANDATE\",\n      \"requiresPeriods\": true,\n      \"requiresMatters\": false,\n      \"credential\": \"ELSTER organisation certificate\",\n      \"funds\": \"NO_CUSTODY\",\n      \"opinionRef\": \"LDR-DEV-0001\",\n      \"effectiveFrom\": \"2026-01-01T00:00:00.000000Z\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getLegalMatrix returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('ZTAX-LEG-REQ-0102 — every rule cites the opinion it rests on', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.response.json().rules.forEach(r => pm.expect(r.opinionRef).to.not.be.empty);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/legal/authorizations — Record a customer authorization",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"country\": \"DE\",\n  \"authority\": \"DE-ELSTER\",\n  \"type\": \"FILING_MANDATE\",\n  \"permissions\": [\n    \"PREPARE\",\n    \"SUBMIT\"\n  ],\n  \"periodFrom\": \"2026-01\",\n  \"periodTo\": \"2026-12\",\n  \"effectiveFrom\": \"2026-01-01T00:00:00.000000Z\",\n  \"expiresAt\": \"2027-06-30T00:00:00.000000Z\",\n  \"evidence\": [\n    \"doc:mandate-2026.pdf\"\n  ],\n  \"credentialRef\": \"vault://tax/de/elster/cert\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal/authorizations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal",
+                "authorizations"
+              ]
+            },
+            "description": "Record a customer authorization\n\n`ADMIN`, signed in as themselves — never system work or a model\n(ZTAX-LEG-REQ-0044). A customer's grant to one authority: a power of\nattorney, a filing mandate, a portal delegation, an information\nauthorization — which is not representation (ZTAX-LEG-REQ-0013). It\nnames the legal entity granting it (the tenant's default when\nomitted), the permissions, matters and periods it covers, when it\ntakes effect and lapses, and the evidence of the grant\n(ZTAX-LEG-REQ-0014). An authority credential is a vault reference\n(`vault://`, `awssm://`, `gcpsm://`, `azkv://`) and never the\ncredential (ZTAX-LEG-REQ-0017, -0018). Naming `supersedes` closes that\ngrant in the same act (ZTAX-LEG-REQ-0015)."
+          },
+          "response": [
+            {
+              "name": "201 · Granted",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal/authorizations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal",
+                    "authorizations"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"DE\",\n  \"authority\": \"DE-ELSTER\",\n  \"type\": \"FILING_MANDATE\",\n  \"permissions\": [\n    \"PREPARE\",\n    \"SUBMIT\"\n  ],\n  \"matters\": [],\n  \"periodFrom\": \"2026-01\",\n  \"periodTo\": \"2026-12\",\n  \"effectiveFrom\": \"2026-01-01T00:00:00.000000Z\",\n  \"expiresAt\": \"2027-06-30T00:00:00.000000Z\",\n  \"evidence\": [\n    \"doc:mandate-2026.pdf\"\n  ],\n  \"credentialRef\": \"vault://tax/de/elster/cert\",\n  \"status\": \"ACTIVE\",\n  \"inForce\": true,\n  \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n  \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"GRANTED\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('grantAuthorization returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('ZTAX-LEG-REQ-0014 — the grant is recorded ACTIVE with its history', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().status).to.eql('ACTIVE');",
+                  "  pm.expect(pm.response.json().history[0].kind).to.eql('GRANTED');",
+                  "});",
+                  "pm.collectionVariables.set('authorizationId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/legal/authorizations — The customer's authorizations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal/authorizations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal",
+                "authorizations"
+              ]
+            },
+            "description": "The customer's authorizations\n\n`ADMIN`, `OPERATOR` or `AUDITOR`, newest first, each with its history\nand whether it is in force now."
+          },
+          "response": [
+            {
+              "name": "200 · One filing mandate",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal/authorizations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal",
+                    "authorizations"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"authorizations\": [\n    {\n      \"id\": \"01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"country\": \"DE\",\n      \"authority\": \"DE-ELSTER\",\n      \"type\": \"FILING_MANDATE\",\n      \"permissions\": [\n        \"PREPARE\",\n        \"SUBMIT\"\n      ],\n      \"matters\": [],\n      \"periodFrom\": \"2026-01\",\n      \"periodTo\": \"2026-12\",\n      \"effectiveFrom\": \"2026-01-01T00:00:00.000000Z\",\n      \"expiresAt\": \"2027-06-30T00:00:00.000000Z\",\n      \"evidence\": [\n        \"doc:mandate-2026.pdf\"\n      ],\n      \"credentialRef\": \"vault://tax/de/elster/cert\",\n      \"status\": \"ACTIVE\",\n      \"inForce\": true,\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"GRANTED\",\n          \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listAuthorizations returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/legal/authorizations/{authorizationId} — One customer authorization and its history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal/authorizations/{{authorizationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal",
+                "authorizations",
+                "{{authorizationId}}"
+              ]
+            },
+            "description": "One customer authorization and its history\n\n`ADMIN`, `OPERATOR` or `AUDITOR`."
+          },
+          "response": [
+            {
+              "name": "200 · Revoked",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal/authorizations/{{authorizationId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal",
+                    "authorizations",
+                    "{{authorizationId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"DE\",\n  \"authority\": \"DE-ELSTER\",\n  \"type\": \"FILING_MANDATE\",\n  \"permissions\": [\n    \"PREPARE\",\n    \"SUBMIT\"\n  ],\n  \"matters\": [],\n  \"periodFrom\": \"2026-01\",\n  \"periodTo\": \"2026-12\",\n  \"effectiveFrom\": \"2026-01-01T00:00:00.000000Z\",\n  \"evidence\": [\n    \"doc:mandate-2026.pdf\"\n  ],\n  \"status\": \"REVOKED\",\n  \"inForce\": false,\n  \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n  \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"GRANTED\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"REVOKED\",\n      \"reason\": \"mandate withdrawn\",\n      \"recordedAt\": \"2026-10-05T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getAuthorization returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/legal/authorization-checks — Resolve whether an action may execute now",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"country\": \"DE\",\n  \"authority\": \"DE-ELSTER\",\n  \"service\": \"FILE\",\n  \"period\": \"2026-09\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal/authorization-checks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal",
+                "authorization-checks"
+              ]
+            },
+            "description": "Resolve whether an action may execute now\n\n`ADMIN`, `OPERATOR` or `ANALYST`. The gate every legally sensitive\naction passes before it executes (ZTAX-LEG-REQ-0001), asked directly.\nIt fails closed: no rule, rules that disagree, `COUNSEL_PENDING`,\n`PROHIBITED`, `SUSPENDED`, a partner's or the customer's action, a\nqualified person's — each blocks (ZTAX-LEG-REQ-0007, -0008). Under\n`DIRECT_WITH_AUTH` it needs an authorization in force, of the type\nthe rule names, granting what the service needs — `SUBMIT` to file,\n`REPRESENT` to represent, which a filing mandate does not grant\n(ZTAX-LEG-REQ-0062) — reaching the action's period and matter\n(ZTAX-LEG-REQ-0101), bound to a credential where the authority needs\none. A block names its reason. Nothing is recorded by asking."
+          },
+          "response": [
+            {
+              "name": "200 · Allowed under a mandate",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal/authorization-checks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal",
+                    "authorization-checks"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"allowed\": true,\n  \"status\": \"DIRECT_WITH_AUTH\",\n  \"rule\": {\n    \"id\": \"DE-ELSTER-FILE\",\n    \"version\": 1\n  },\n  \"authorizationId\": \"01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"matrixVersion\": \"dev-2026.10-1\",\n  \"matrixDigest\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n  \"checkedAt\": \"2026-10-08T12:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('checkAuthorization returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('ZTAX-LEG-REQ-0004 — filing resolves under the mandate rule, against a named matrix', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('DIRECT_WITH_AUTH');",
+                  "  pm.expect(pm.response.json().matrixDigest).to.match(/^zt1:/);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/legal/authorizations/{authorizationId}/revocation — Revoke a customer authorization",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"mandate withdrawn\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal/authorizations/{{authorizationId}}/revocation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal",
+                "authorizations",
+                "{{authorizationId}}",
+                "revocation"
+              ]
+            },
+            "description": "Revoke a customer authorization\n\n`ADMIN`, signed in as themselves. Final, and immediate: every action\nthat depended on the grant is blocked from the moment the revocation\ncommits (ZTAX-LEG-REQ-0016). The grant and its history stay\n(ZTAX-LEG-REQ-0015)."
+          },
+          "response": [
+            {
+              "name": "200 · Revoked",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal/authorizations/{{authorizationId}}/revocation",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal",
+                    "authorizations",
+                    "{{authorizationId}}",
+                    "revocation"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"DE\",\n  \"authority\": \"DE-ELSTER\",\n  \"type\": \"FILING_MANDATE\",\n  \"permissions\": [\n    \"PREPARE\",\n    \"SUBMIT\"\n  ],\n  \"matters\": [],\n  \"effectiveFrom\": \"2026-01-01T00:00:00.000000Z\",\n  \"evidence\": [\n    \"doc:mandate-2026.pdf\"\n  ],\n  \"status\": \"REVOKED\",\n  \"inForce\": false,\n  \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n  \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"GRANTED\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"REVOKED\",\n      \"reason\": \"mandate withdrawn\",\n      \"recordedAt\": \"2026-10-05T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('revokeAuthorization returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('ZTAX-LEG-REQ-0016 — a revoked grant is no longer in force', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('REVOKED');",
+                  "  pm.expect(pm.response.json().inForce).to.eql(false);",
                   "});"
                 ]
               }
@@ -6010,6 +6471,11 @@
       "type": "string"
     },
     {
+      "key": "authorizationId",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "reusedKey",
       "value": "",
       "type": "string"
@@ -6021,7 +6487,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:a9a623bf125c90327f2a91687323f00fbd66b36a5cbf827b6c330b4748bb3a86",
+      "value": "sha256:cde813af1cdfd0ebbfdc7e87ca4a7c555261d1d00a8524364cd610e916c7efa6",
       "type": "string"
     }
   ]

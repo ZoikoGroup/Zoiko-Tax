@@ -182,6 +182,42 @@
       "public": false
     },
     {
+      "method": "POST",
+      "path": "/v1/legal/authorization-checks",
+      "operationId": "checkAuthorization",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/legal/authorizations",
+      "operationId": "listAuthorizations",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/legal/authorizations",
+      "operationId": "grantAuthorization",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/legal/authorizations/{authorizationId}",
+      "operationId": "getAuthorization",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/legal/authorizations/{authorizationId}/revocation",
+      "operationId": "revokeAuthorization",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/legal/matrix",
+      "operationId": "getLegalMatrix",
+      "public": false
+    },
+    {
       "method": "GET",
       "path": "/v1/obligations",
       "operationId": "listObligations",

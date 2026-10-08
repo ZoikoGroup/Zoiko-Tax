@@ -132,8 +132,14 @@ services:
       ZTAX_AI_GATEWAY_TARGET: dns:///ztax-model-gateway:8443
       ZTAX_AI_GATEWAY_INSECURE: "true"
       ZTAX_AI_POLICY_FILE: /etc/ztax/ai/registry.json
+
+      # The LegalAuthorization matrix (ZTAX-LEG-001 §4). The development one
+      # is a draft, refused outside development; it is a worked posture, not
+      # a legal opinion.
+      ZTAX_LEGAL_MATRIX: /etc/ztax/legal/matrix.json
     volumes:
       - ./intelligence/config/registry.dev.json:/etc/ztax/ai/registry.json:ro
+      - ./content/legal/authorization-matrix.dev.json:/etc/ztax/legal/matrix.json:ro
 
     # The binary writes nothing to disk. Enforcing that here means a future
     # change that starts writing fails loudly in development rather than in a

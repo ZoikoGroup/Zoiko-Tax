@@ -31,6 +31,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/legal"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
@@ -154,6 +155,11 @@ func run() error {
 	// Retention reads decisions as recorded; it needs no content, so it is
 	// served wherever the cell's store is.
 	router.Retention = app.NewRetentionService(store.Retention(), store.Decisions(), store.LegalEntities(), store.Audit(), store, clk, ids)
+	matrix, err := loadLegalMatrix(cfg, log)
+	if err != nil {
+		return err
+	}
+	router.Legal = app.NewLegalService(matrix, store.Authorizations(), store.LegalEntities(), store.Audit(), store, clk, ids)
 	models, closeModels, err := wireModelGateway(cfg, clk, ids, log)
 	if err != nil {
 		return err
@@ -498,6 +504,31 @@ func runBatchWorker(ctx context.Context, svc *app.BatchService, log *slog.Logger
 			}
 		}
 	}
+}
+
+// loadLegalMatrix reads the LegalAuthorization matrix (ADR-LEG-001). With
+// none configured the cell still starts, and the gate blocks every legally
+// sensitive action: an unknown posture fails closed (ZTAX-LEG-REQ-0007). A
+// draft matrix — one nobody has approved — loads in development only.
+func loadLegalMatrix(cfg config.Config, log *slog.Logger) (legal.Matrix, error) {
+	if cfg.LegalMatrix == "" {
+		log.Warn("no legal authorization matrix configured; every legally sensitive action will be blocked")
+		return legal.Matrix{}, nil
+	}
+	// #nosec G304 -- a path from this process's own configuration.
+	b, err := os.ReadFile(cfg.LegalMatrix)
+	if err != nil {
+		return legal.Matrix{}, fmt.Errorf("legal matrix: %w", err)
+	}
+	m, err := legal.ParseMatrix(b)
+	if err != nil {
+		return legal.Matrix{}, err
+	}
+	if m.Draft && cfg.Environment != "development" {
+		return legal.Matrix{}, fmt.Errorf("legal matrix %s is a draft; a draft loads in development only", m.Version)
+	}
+	log.Info("legal authorization matrix loaded", "version", m.Version, "digest", m.Digest.String(), "rules", len(m.Rules), "draft", m.Draft)
+	return m, nil
 }
 
 // wireSeals builds the period-seal service (ADR-0011 §2.4). A cell with the

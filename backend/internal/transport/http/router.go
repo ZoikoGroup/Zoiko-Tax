@@ -111,6 +111,10 @@ type Router struct {
 	// Retention serves retention policies, legal holds and the disposition
 	// verdict.
 	Retention *app.RetentionService
+
+	// Legal serves the LegalAuthorization matrix, customer authorizations
+	// and the gate that resolves the two.
+	Legal *app.LegalService
 }
 
 // Trains are the seven release-train versions, as the contract names them.
@@ -244,6 +248,14 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/legal-holds/{holdId}/scope", false, []security.Role{admin}}, rt.handleChangeLegalHoldScope},
 		{Route{"POST", "/v1/legal-holds/{holdId}/release", false, []security.Role{admin}}, rt.handleReleaseLegalHold},
 		{Route{"GET", "/v1/decisions/{decisionId}/retention", false, []security.Role{admin, auditor}}, rt.handleGetDecisionRetention},
+		{Route{"GET", "/v1/legal/matrix", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetLegalMatrix},
+		// A grant is recorded and revoked by an administrator; the service
+		// also refuses one with no person behind it (ZTAX-LEG-REQ-0044).
+		{Route{"GET", "/v1/legal/authorizations", false, []security.Role{admin, operator, auditor}}, rt.handleListAuthorizations},
+		{Route{"POST", "/v1/legal/authorizations", false, []security.Role{admin}}, rt.handleGrantAuthorization},
+		{Route{"GET", "/v1/legal/authorizations/{authorizationId}", false, []security.Role{admin, operator, auditor}}, rt.handleGetAuthorization},
+		{Route{"POST", "/v1/legal/authorizations/{authorizationId}/revocation", false, []security.Role{admin}}, rt.handleRevokeAuthorization},
+		{Route{"POST", "/v1/legal/authorization-checks", false, []security.Role{admin, operator, analyst}}, rt.handleCheckAuthorization},
 		{Route{"GET", "/v1/obligations", false, []security.Role{operator, analyst, auditor}}, rt.handleListObligations},
 		{Route{"GET", "/v1/obligations/{obligationId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetObligation},
 		{Route{"POST", "/v1/obligations/{obligationId}/transitions", false, []security.Role{operator}}, rt.handleTransitionObligation},

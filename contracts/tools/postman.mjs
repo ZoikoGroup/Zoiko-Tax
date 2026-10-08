@@ -97,7 +97,7 @@ const FOLDERS = [
   {
     name: "04 · Administration",
     description:
-      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.",
+      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked.",
     operations: [
       "listUsers",
       "createUser",
@@ -127,6 +127,12 @@ const FOLDERS = [
       "changeLegalHoldScope",
       "releaseLegalHold",
       "getDecisionRetention",
+      "getLegalMatrix",
+      "grantAuthorization",
+      "listAuthorizations",
+      "getAuthorization",
+      "checkAuthorization",
+      "revokeAuthorization",
     ],
   },
   {
@@ -414,6 +420,34 @@ const OPERATION_TESTS = {
     "pm.test('a release is final', function () {",
     "  pm.response.to.have.status(200);",
     "  pm.expect(pm.response.json().status).to.eql('RELEASED');",
+    "});",
+  ],
+  getLegalMatrix: [
+    "pm.test('ZTAX-LEG-REQ-0102 — every rule cites the opinion it rests on', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.response.json().rules.forEach(r => pm.expect(r.opinionRef).to.not.be.empty);",
+    "});",
+  ],
+  grantAuthorization: [
+    "pm.test('ZTAX-LEG-REQ-0014 — the grant is recorded ACTIVE with its history', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().status).to.eql('ACTIVE');",
+    "  pm.expect(pm.response.json().history[0].kind).to.eql('GRANTED');",
+    "});",
+    "pm.collectionVariables.set('authorizationId', pm.response.json().id);",
+  ],
+  checkAuthorization: [
+    "pm.test('ZTAX-LEG-REQ-0004 — filing resolves under the mandate rule, against a named matrix', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().status).to.eql('DIRECT_WITH_AUTH');",
+    "  pm.expect(pm.response.json().matrixDigest).to.match(/^zt1:/);",
+    "});",
+  ],
+  revokeAuthorization: [
+    "pm.test('ZTAX-LEG-REQ-0016 — a revoked grant is no longer in force', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().status).to.eql('REVOKED');",
+    "  pm.expect(pm.response.json().inForce).to.eql(false);",
     "});",
   ],
   createWebhook: [
@@ -919,6 +953,7 @@ function variables(overlay, contractDigest, local) {
     { key: "requestId", value: "", type: "string" },
     { key: "runId", value: "", type: "string" },
     { key: "holdId", value: "", type: "string" },
+    { key: "authorizationId", value: "", type: "string" },
     // Minted once per run by `07`, and reused by the requests that must share it.
     { key: "reusedKey", value: "", type: "string" },
 

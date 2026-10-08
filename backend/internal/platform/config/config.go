@@ -148,6 +148,11 @@ type Config struct {
 	SealKeyring    string
 	SealSigningKey string
 	SealKeyID      string
+
+	// LegalMatrix is the path of the LegalAuthorization matrix
+	// (ZTAX-LEG-001 §4; ADR-LEG-001): legal content, reviewed and versioned
+	// like any other. With none, every legally sensitive action is blocked.
+	LegalMatrix string
 }
 
 // LocalSecretPrefix is the one recognised variable family whose members are not
@@ -207,6 +212,7 @@ var known = map[string]struct {
 	"ZTAX_SEAL_KEYRING":                 {def: ""},
 	"ZTAX_SEAL_SIGNING_KEY":             {def: ""},
 	"ZTAX_SEAL_KEY_ID":                  {def: ""},
+	"ZTAX_LEGAL_MATRIX":                 {def: ""},
 	"ZTAX_BOOTSTRAP_TENANT":             {def: ""},
 	"ZTAX_BOOTSTRAP_TENANT_NAME":        {def: ""},
 	"ZTAX_BOOTSTRAP_ADMIN_EMAIL":        {def: ""},
@@ -326,6 +332,8 @@ func Load() (Config, error) {
 		SealKeyring:    get("ZTAX_SEAL_KEYRING"),
 		SealSigningKey: get("ZTAX_SEAL_SIGNING_KEY"),
 		SealKeyID:      get("ZTAX_SEAL_KEY_ID"),
+
+		LegalMatrix: get("ZTAX_LEGAL_MATRIX"),
 
 		BootstrapTenant:           get("ZTAX_BOOTSTRAP_TENANT"),
 		BootstrapTenantName:       get("ZTAX_BOOTSTRAP_TENANT_NAME"),
@@ -462,6 +470,7 @@ func (c Config) LogAttrs() []any {
 		"seal.keyring", c.SealKeyring,
 		"seal.signing", c.SealSigningKey != "",
 		"seal.key_id", c.SealKeyID,
+		"legal.matrix", c.LegalMatrix,
 		"known_vars", strconv.Itoa(len(known)),
 	}
 }

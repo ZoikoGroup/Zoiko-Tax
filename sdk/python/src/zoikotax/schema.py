@@ -1400,6 +1400,190 @@ class LegalHoldReleaseRequest(TypedDict):
     reason: LegalHoldReason
 
 
+ServiceState: TypeAlias = Literal['INFORM', 'COMPUTE', 'PREPARE', 'FILE', 'REPRESENT', 'ADVISE']
+
+
+LegalStatus: TypeAlias = Literal['DIRECT_ALLOWED', 'DIRECT_WITH_AUTH', 'QUALIFIED_PERSON_REQUIRED', 'PARTNER_REQUIRED', 'CUSTOMER_ONLY', 'COUNSEL_PENDING', 'PROHIBITED', 'SUSPENDED']
+
+
+AuthorizationType: TypeAlias = Literal['NONE', 'CONTRACT', 'DECLARATION', 'POA', 'TAX_INFORMATION', 'PORTAL_DELEGATION', 'FILING_MANDATE']
+
+
+AuthorizationPermission: TypeAlias = Literal['READ_INFO', 'PREPARE', 'SUBMIT', 'RECEIVE_NOTICE', 'REPRESENT', 'SIGN']
+
+
+FundsPosture: TypeAlias = Literal['NO_CUSTODY', 'INSTRUCTION_ONLY', 'PSP_PARTNER', 'LICENSED_PROGRAM']
+
+
+AuthorityCode: TypeAlias = str
+"""
+An authority within a country, as the matrix names it.
+"""
+
+
+AuthorizationId: TypeAlias = str
+
+
+class LegalRule(TypedDict):
+    id: str
+    version: int
+    country: CountryCode
+    authority: AuthorityCode
+    service: ServiceState
+    status: LegalStatus
+    provider: str
+    """
+    The Zoiko entity or approved partner that performs the service.
+    """
+    authorizationType: AuthorizationType
+    requiresPeriods: bool
+    """
+    The authority accepts no generic grant; an authorization names its periods.
+    """
+    requiresMatters: bool
+    """
+    The authority accepts no generic grant; an authorization names its matters.
+    """
+    qualification: NotRequired[str]
+    credential: NotRequired[str]
+    """
+    The kind of credential the authority needs — never a credential.
+    """
+    funds: FundsPosture
+    opinionRef: str
+    """
+    The counsel memo or authority source the rule rests on.
+    """
+    effectiveFrom: Timestamp
+    effectiveTo: NotRequired[Timestamp]
+
+
+class LegalMatrix(TypedDict):
+    version: str
+    """
+    The matrix edition; empty when the cell has none.
+    """
+    draft: bool
+    """
+    A matrix nobody has approved. Loads in development only.
+    """
+    digest: NotRequired[Digest]
+    rules: list[LegalRule]
+
+
+class AuthorizationEvent(TypedDict):
+    seq: int
+    kind: Literal['GRANTED', 'REVOKED', 'SUPERSEDED']
+    reason: NotRequired[str]
+    supersededBy: NotRequired[AuthorizationId]
+    recordedAt: Timestamp
+    recordedBy: str
+
+
+AuthorizationMatter: TypeAlias = str
+"""
+A form or matter a grant covers, as the customer named it.
+"""
+
+
+AuthorizationEvidence: TypeAlias = str
+"""
+A reference to the signed artifact, consent proof or authority acknowledgement.
+"""
+
+
+CredentialRef: TypeAlias = str
+"""
+Where the authority credential is held in the secrets vault. Never the credential.
+"""
+
+
+Representative: TypeAlias = str
+"""
+The individual or entity acting under the grant.
+"""
+
+
+class CustomerAuthorization(TypedDict):
+    id: AuthorizationId
+    legalEntityId: LegalEntityId
+    country: CountryCode
+    authority: AuthorityCode
+    type: AuthorizationType
+    permissions: list[AuthorizationPermission]
+    matters: list[AuthorizationMatter]
+    periodFrom: NotRequired[LegalPeriod]
+    periodTo: NotRequired[LegalPeriod]
+    representative: NotRequired[Representative]
+    effectiveFrom: Timestamp
+    expiresAt: NotRequired[Timestamp]
+    evidence: list[AuthorizationEvidence]
+    credentialRef: NotRequired[CredentialRef]
+    supersedes: NotRequired[AuthorizationId]
+    status: Literal['ACTIVE', 'REVOKED', 'SUPERSEDED']
+    inForce: bool
+    """
+    Active, effective and not expired, now.
+    """
+    recordedAt: Timestamp
+    recordedBy: str
+    history: list[AuthorizationEvent]
+
+
+class AuthorizationList(TypedDict):
+    authorizations: list[CustomerAuthorization]
+
+
+class AuthorizationRequest(TypedDict):
+    legalEntityId: NotRequired[LegalEntityId]
+    country: CountryCode
+    authority: AuthorityCode
+    type: AuthorizationType
+    permissions: list[AuthorizationPermission]
+    matters: NotRequired[list[AuthorizationMatter]]
+    periodFrom: NotRequired[LegalPeriod]
+    periodTo: NotRequired[LegalPeriod]
+    representative: NotRequired[Representative]
+    effectiveFrom: Timestamp
+    expiresAt: NotRequired[Timestamp]
+    evidence: list[AuthorizationEvidence]
+    credentialRef: NotRequired[CredentialRef]
+    supersedes: NotRequired[AuthorizationId]
+
+
+class RevocationRequest(TypedDict):
+    reason: str
+
+
+class AuthorizationCheckRequest(TypedDict):
+    country: CountryCode
+    authority: AuthorityCode
+    service: ServiceState
+    legalEntityId: NotRequired[LegalEntityId]
+    period: NotRequired[LegalPeriod]
+    matter: NotRequired[AuthorizationMatter]
+
+
+class RuleRef(TypedDict):
+    id: str
+    version: int
+
+
+class AuthorizationCheck(TypedDict):
+    allowed: bool
+    status: LegalStatus
+    reason: NotRequired[Literal['NO_RULE', 'RULE_CONFLICT', 'COUNSEL_PENDING', 'PROHIBITED', 'SUSPENDED', 'PARTNER_REQUIRED', 'CUSTOMER_ONLY', 'QUALIFIED_PERSON_REQUIRED', 'AUTHORIZATION_MISSING', 'AUTHORIZATION_EXPIRED', 'AUTHORIZATION_REVOKED', 'AUTHORIZATION_OUT_OF_SCOPE', 'CREDENTIAL_MISSING', 'MATRIX_UNAVAILABLE', 'ACTION_NOT_WELL_FORMED']]
+    """
+    Why the action is blocked; absent when it is allowed.
+    """
+    rule: NotRequired[RuleRef]
+    authorizationId: NotRequired[AuthorizationId]
+    matrixVersion: NotRequired[str]
+    matrixDigest: NotRequired[Digest]
+    detail: NotRequired[str]
+    checkedAt: Timestamp
+
+
 class V1AdminUsersGetResponse(TypedDict):
     users: list[User]
 

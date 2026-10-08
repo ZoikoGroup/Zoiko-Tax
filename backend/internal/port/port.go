@@ -25,6 +25,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/idempotency"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/identity"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/legal"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/obligation"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/outbox"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
@@ -704,4 +705,24 @@ type RetentionRepository interface {
 	Hold(ctx context.Context, holdID id.LegalHoldID) (retention.Hold, error)
 	// Holds returns every hold of the tenant, newest first.
 	Holds(ctx context.Context) ([]retention.Hold, error)
+}
+
+// ---------------------------------------------------------------------------
+// customer authorizations
+// ---------------------------------------------------------------------------
+
+// AuthorizationRepository holds customer authorizations. A record is never
+// changed; its state is its event history.
+type AuthorizationRepository interface {
+	// Lock serializes the tenant's authorization writes for the rest of the
+	// transaction.
+	Lock(ctx context.Context) error
+	// Create records an authorization and its GRANTED event.
+	Create(ctx context.Context, a legal.Authorization, granted legal.Event) error
+	// AppendEvent records the next event of an authorization.
+	AppendEvent(ctx context.Context, authorizationID id.AuthorizationID, e legal.Event) error
+	// Authorization returns one, folded from its history.
+	Authorization(ctx context.Context, authorizationID id.AuthorizationID) (legal.Authorization, error)
+	// List returns the tenant's authorizations, newest first.
+	List(ctx context.Context) ([]legal.Authorization, error)
 }

@@ -316,3 +316,12 @@ func LegalHoldID(g Generator) (id.LegalHoldID, error) {
 	}
 	return id.NewLegalHoldID(u), nil
 }
+
+// AuthorizationID returns a fresh AuthorizationID.
+func AuthorizationID(g Generator) (id.AuthorizationID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.AuthorizationID{}, err
+	}
+	return id.NewAuthorizationID(u), nil
+}

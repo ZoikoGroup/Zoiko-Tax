@@ -136,6 +136,10 @@ type (
 
 	// LegalHoldID identifies one legal hold.
 	LegalHoldID struct{ base }
+
+	// AuthorizationID identifies one customer authorization: a power of
+	// attorney, a filing mandate, a portal delegation.
+	AuthorizationID struct{ base }
 )
 
 // The constructors. Each takes a uuid.UUID that idgen produced, or that the
@@ -231,6 +235,9 @@ func NewReconItemID(u uuid.UUID) ReconItemID { return ReconItemID{base{u}} }
 
 // NewLegalHoldID wraps a raw UUID as a LegalHoldID.
 func NewLegalHoldID(u uuid.UUID) LegalHoldID { return LegalHoldID{base{u}} }
+
+// NewAuthorizationID wraps a raw UUID as an AuthorizationID.
+func NewAuthorizationID(u uuid.UUID) AuthorizationID { return AuthorizationID{base{u}} }
 
 // parse is the shared text ingress. Identifiers arrive from a URL path, a
 // cookie lookup or a database column, and all three can carry something that is
@@ -439,4 +446,13 @@ func ParseLegalHoldID(s string) (LegalHoldID, error) {
 		return LegalHoldID{}, err
 	}
 	return NewLegalHoldID(u), nil
+}
+
+// ParseAuthorizationID reads an AuthorizationID from its canonical string form.
+func ParseAuthorizationID(s string) (AuthorizationID, error) {
+	u, err := parse("authorization id", s)
+	if err != nil {
+		return AuthorizationID{}, err
+	}
+	return NewAuthorizationID(u), nil
 }

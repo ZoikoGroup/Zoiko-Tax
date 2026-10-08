@@ -2139,6 +2139,148 @@
         "aiAllowed": "NONE",
         "note": "The administrator who placed, changed or released the hold."
       }
+    },
+    "customer_authorization": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "authorization_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "country_code": {
+        "class": "P0"
+      },
+      "authority": {
+        "class": "P0"
+      },
+      "auth_type": {
+        "class": "P0"
+      },
+      "permissions": {
+        "class": "P0"
+      },
+      "period_from": {
+        "class": "P0"
+      },
+      "period_to": {
+        "class": "P0"
+      },
+      "effective_from": {
+        "class": "P0"
+      },
+      "expires_at": {
+        "class": "P0"
+      },
+      "supersedes": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "matters": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Forms or matters the grant covers, as the customer named them."
+      },
+      "representative": {
+        "class": "P1",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The individual or entity acting under the grant."
+      },
+      "evidence": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "References to the signed artifact, consent proof or authority acknowledgement."
+      },
+      "credential_ref": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Where the authority credential is held in the secrets vault. Never the credential."
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who recorded the grant."
+      }
+    },
+    "customer_authorization_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "authorization_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by an administrator."
+      },
+      "superseded_by": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who granted, revoked or superseded the authorization."
+      }
     }
   }
 }

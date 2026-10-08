@@ -1443,6 +1443,144 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/legal/matrix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The LegalAuthorization matrix this cell resolves against
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. For each country,
+         *     authority and service state (`INFORM`, `COMPUTE`, `PREPARE`, `FILE`,
+         *     `REPRESENT`, `ADVISE`), whether ZoikoTax may act directly, only with
+         *     the customer's authorization, only through a qualified person or a
+         *     partner, not at all, or whether counsel has yet to say
+         *     (ZTAX-LEG-001 §3–§4). It is legal content: every rule is versioned,
+         *     effective-dated and cites the counsel memo or authority source it
+         *     rests on (ZTAX-LEG-REQ-0009, -0102), and the digest names the edition
+         *     a check used. A cell with no matrix returns an empty one and blocks
+         *     every legally sensitive action. A content pack being in production
+         *     for `COMPUTE` implies nothing here (ZTAX-LEG-REQ-0057).
+         */
+        get: operations["getLegalMatrix"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/legal/authorizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The customer's authorizations
+         * @description `ADMIN`, `OPERATOR` or `AUDITOR`, newest first, each with its history
+         *     and whether it is in force now.
+         */
+        get: operations["listAuthorizations"];
+        put?: never;
+        /**
+         * Record a customer authorization
+         * @description `ADMIN`, signed in as themselves — never system work or a model
+         *     (ZTAX-LEG-REQ-0044). A customer's grant to one authority: a power of
+         *     attorney, a filing mandate, a portal delegation, an information
+         *     authorization — which is not representation (ZTAX-LEG-REQ-0013). It
+         *     names the legal entity granting it (the tenant's default when
+         *     omitted), the permissions, matters and periods it covers, when it
+         *     takes effect and lapses, and the evidence of the grant
+         *     (ZTAX-LEG-REQ-0014). An authority credential is a vault reference
+         *     (`vault://`, `awssm://`, `gcpsm://`, `azkv://`) and never the
+         *     credential (ZTAX-LEG-REQ-0017, -0018). Naming `supersedes` closes that
+         *     grant in the same act (ZTAX-LEG-REQ-0015).
+         */
+        post: operations["grantAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/legal/authorizations/{authorizationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One customer authorization and its history
+         * @description `ADMIN`, `OPERATOR` or `AUDITOR`.
+         */
+        get: operations["getAuthorization"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/legal/authorizations/{authorizationId}/revocation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke a customer authorization
+         * @description `ADMIN`, signed in as themselves. Final, and immediate: every action
+         *     that depended on the grant is blocked from the moment the revocation
+         *     commits (ZTAX-LEG-REQ-0016). The grant and its history stay
+         *     (ZTAX-LEG-REQ-0015).
+         */
+        post: operations["revokeAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/legal/authorization-checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve whether an action may execute now
+         * @description `ADMIN`, `OPERATOR` or `ANALYST`. The gate every legally sensitive
+         *     action passes before it executes (ZTAX-LEG-REQ-0001), asked directly.
+         *     It fails closed: no rule, rules that disagree, `COUNSEL_PENDING`,
+         *     `PROHIBITED`, `SUSPENDED`, a partner's or the customer's action, a
+         *     qualified person's — each blocks (ZTAX-LEG-REQ-0007, -0008). Under
+         *     `DIRECT_WITH_AUTH` it needs an authorization in force, of the type
+         *     the rule names, granting what the service needs — `SUBMIT` to file,
+         *     `REPRESENT` to represent, which a filing mandate does not grant
+         *     (ZTAX-LEG-REQ-0062) — reaching the action's period and matter
+         *     (ZTAX-LEG-REQ-0101), bound to a credential where the authority needs
+         *     one. A block names its reason. Nothing is recorded by asking.
+         */
+        post: operations["checkAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/obligations": {
         parameters: {
             query?: never;
@@ -3172,6 +3310,199 @@ export interface components {
         LegalHoldReleaseRequest: {
             reason: components["schemas"]["LegalHoldReason"];
         };
+        /**
+         * ServiceState
+         * @example FILE
+         * @enum {string}
+         */
+        ServiceState: "INFORM" | "COMPUTE" | "PREPARE" | "FILE" | "REPRESENT" | "ADVISE";
+        /**
+         * LegalStatus
+         * @example DIRECT_WITH_AUTH
+         * @enum {string}
+         */
+        LegalStatus: "DIRECT_ALLOWED" | "DIRECT_WITH_AUTH" | "QUALIFIED_PERSON_REQUIRED" | "PARTNER_REQUIRED" | "CUSTOMER_ONLY" | "COUNSEL_PENDING" | "PROHIBITED" | "SUSPENDED";
+        /**
+         * AuthorizationType
+         * @example FILING_MANDATE
+         * @enum {string}
+         */
+        AuthorizationType: "NONE" | "CONTRACT" | "DECLARATION" | "POA" | "TAX_INFORMATION" | "PORTAL_DELEGATION" | "FILING_MANDATE";
+        /**
+         * AuthorizationPermission
+         * @example SUBMIT
+         * @enum {string}
+         */
+        AuthorizationPermission: "READ_INFO" | "PREPARE" | "SUBMIT" | "RECEIVE_NOTICE" | "REPRESENT" | "SIGN";
+        /**
+         * FundsPosture
+         * @example NO_CUSTODY
+         * @enum {string}
+         */
+        FundsPosture: "NO_CUSTODY" | "INSTRUCTION_ONLY" | "PSP_PARTNER" | "LICENSED_PROGRAM";
+        /**
+         * AuthorityCode
+         * @description An authority within a country, as the matrix names it.
+         * @example DE-ELSTER
+         */
+        AuthorityCode: string;
+        /**
+         * AuthorizationId
+         * Format: uuid
+         * @example 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        AuthorizationId: string;
+        /** LegalRule */
+        LegalRule: {
+            id: string;
+            /** Format: int32 */
+            version: number;
+            country: components["schemas"]["CountryCode"];
+            authority: components["schemas"]["AuthorityCode"];
+            service: components["schemas"]["ServiceState"];
+            status: components["schemas"]["LegalStatus"];
+            /** @description The Zoiko entity or approved partner that performs the service. */
+            provider: string;
+            authorizationType: components["schemas"]["AuthorizationType"];
+            /** @description The authority accepts no generic grant; an authorization names its periods. */
+            requiresPeriods: boolean;
+            /** @description The authority accepts no generic grant; an authorization names its matters. */
+            requiresMatters: boolean;
+            qualification?: string;
+            /** @description The kind of credential the authority needs — never a credential. */
+            credential?: string;
+            funds: components["schemas"]["FundsPosture"];
+            /** @description The counsel memo or authority source the rule rests on. */
+            opinionRef: string;
+            effectiveFrom: components["schemas"]["Timestamp"];
+            effectiveTo?: components["schemas"]["Timestamp"];
+        };
+        /** LegalMatrix */
+        LegalMatrix: {
+            /** @description The matrix edition; empty when the cell has none. */
+            version: string;
+            /** @description A matrix nobody has approved. Loads in development only. */
+            draft: boolean;
+            digest?: components["schemas"]["Digest"];
+            rules: components["schemas"]["LegalRule"][];
+        };
+        /** AuthorizationEvent */
+        AuthorizationEvent: {
+            /** Format: int32 */
+            seq: number;
+            /** @enum {string} */
+            kind: "GRANTED" | "REVOKED" | "SUPERSEDED";
+            reason?: string;
+            supersededBy?: components["schemas"]["AuthorizationId"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /**
+         * AuthorizationMatter
+         * @description A form or matter a grant covers, as the customer named it.
+         * @example UStVA
+         */
+        AuthorizationMatter: string;
+        /**
+         * AuthorizationEvidence
+         * @description A reference to the signed artifact, consent proof or authority acknowledgement.
+         * @example doc:mandate-2026.pdf
+         */
+        AuthorizationEvidence: string;
+        /**
+         * CredentialRef
+         * @description Where the authority credential is held in the secrets vault. Never the credential.
+         * @example vault://tax/de/elster/cert
+         */
+        CredentialRef: string;
+        /**
+         * Representative
+         * @description The individual or entity acting under the grant.
+         */
+        Representative: string;
+        /** CustomerAuthorization */
+        CustomerAuthorization: {
+            id: components["schemas"]["AuthorizationId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            country: components["schemas"]["CountryCode"];
+            authority: components["schemas"]["AuthorityCode"];
+            type: components["schemas"]["AuthorizationType"];
+            permissions: components["schemas"]["AuthorizationPermission"][];
+            matters: components["schemas"]["AuthorizationMatter"][];
+            periodFrom?: components["schemas"]["LegalPeriod"];
+            periodTo?: components["schemas"]["LegalPeriod"];
+            representative?: components["schemas"]["Representative"];
+            effectiveFrom: components["schemas"]["Timestamp"];
+            expiresAt?: components["schemas"]["Timestamp"];
+            evidence: components["schemas"]["AuthorizationEvidence"][];
+            credentialRef?: components["schemas"]["CredentialRef"];
+            supersedes?: components["schemas"]["AuthorizationId"];
+            /** @enum {string} */
+            status: "ACTIVE" | "REVOKED" | "SUPERSEDED";
+            /** @description Active, effective and not expired, now. */
+            inForce: boolean;
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+            history: components["schemas"]["AuthorizationEvent"][];
+        };
+        /** AuthorizationList */
+        AuthorizationList: {
+            authorizations: components["schemas"]["CustomerAuthorization"][];
+        };
+        /** AuthorizationRequest */
+        AuthorizationRequest: {
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            country: components["schemas"]["CountryCode"];
+            authority: components["schemas"]["AuthorityCode"];
+            type: components["schemas"]["AuthorizationType"];
+            permissions: components["schemas"]["AuthorizationPermission"][];
+            matters?: components["schemas"]["AuthorizationMatter"][];
+            periodFrom?: components["schemas"]["LegalPeriod"];
+            periodTo?: components["schemas"]["LegalPeriod"];
+            representative?: components["schemas"]["Representative"];
+            effectiveFrom: components["schemas"]["Timestamp"];
+            expiresAt?: components["schemas"]["Timestamp"];
+            evidence: components["schemas"]["AuthorizationEvidence"][];
+            credentialRef?: components["schemas"]["CredentialRef"];
+            supersedes?: components["schemas"]["AuthorizationId"];
+        };
+        /** RevocationRequest */
+        RevocationRequest: {
+            reason: string;
+        };
+        /** AuthorizationCheckRequest */
+        AuthorizationCheckRequest: {
+            country: components["schemas"]["CountryCode"];
+            authority: components["schemas"]["AuthorityCode"];
+            service: components["schemas"]["ServiceState"];
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            period?: components["schemas"]["LegalPeriod"];
+            matter?: components["schemas"]["AuthorizationMatter"];
+        };
+        /** RuleRef */
+        RuleRef: {
+            id: string;
+            /** Format: int32 */
+            version: number;
+        };
+        /** AuthorizationCheck */
+        AuthorizationCheck: {
+            allowed: boolean;
+            status: components["schemas"]["LegalStatus"];
+            /**
+             * @description Why the action is blocked; absent when it is allowed.
+             * @enum {string}
+             */
+            reason?: "NO_RULE" | "RULE_CONFLICT" | "COUNSEL_PENDING" | "PROHIBITED" | "SUSPENDED" | "PARTNER_REQUIRED" | "CUSTOMER_ONLY" | "QUALIFIED_PERSON_REQUIRED" | "AUTHORIZATION_MISSING" | "AUTHORIZATION_EXPIRED" | "AUTHORIZATION_REVOKED" | "AUTHORIZATION_OUT_OF_SCOPE" | "CREDENTIAL_MISSING" | "MATRIX_UNAVAILABLE" | "ACTION_NOT_WELL_FORMED";
+            rule?: components["schemas"]["RuleRef"];
+            authorizationId?: components["schemas"]["AuthorizationId"];
+            matrixVersion?: string;
+            matrixDigest?: components["schemas"]["Digest"];
+            detail?: string;
+            checkedAt: components["schemas"]["Timestamp"];
+        };
     };
     responses: {
         /**
@@ -3291,6 +3622,11 @@ export interface components {
          * @example 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
          */
         LegalHoldId: components["schemas"]["LegalHoldId"];
+        /**
+         * @description The customer authorization identifier.
+         * @example 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        AuthorizationId: components["schemas"]["AuthorizationId"];
         /**
          * @description The obligation row identifier.
          * @example 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
@@ -5309,6 +5645,183 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getLegalMatrix: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The matrix. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalMatrix"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+        };
+    };
+    listAuthorizations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The authorizations. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorizationList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    grantAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthorizationRequest"];
+            };
+        };
+        responses: {
+            /** @description The authorization. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerAuthorization"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The customer authorization identifier.
+                 * @example 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                authorizationId: components["parameters"]["AuthorizationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The authorization. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerAuthorization"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    revokeAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The customer authorization identifier.
+                 * @example 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                authorizationId: components["parameters"]["AuthorizationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevocationRequest"];
+            };
+        };
+        responses: {
+            /** @description The revoked authorization. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerAuthorization"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    checkAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthorizationCheckRequest"];
+            };
+        };
+        responses: {
+            /** @description The resolution, allowed or not. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorizationCheck"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };

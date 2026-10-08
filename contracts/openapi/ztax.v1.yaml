@@ -118,6 +118,8 @@ tags:
     description: R1 to R7 over a legal period, every item recorded with its exact variance, every resolution with its evidence.
   - name: retention
     description: Versioned retention policies, legal holds, and the disposition verdict that weighs them. Nothing here deletes or rewrites a record.
+  - name: legal
+    description: The LegalAuthorization matrix, customer authorizations and powers of attorney, and the gate that resolves whether an action may execute. Fails closed.
 
 security:
   - sessionCookie: []
@@ -2979,6 +2981,318 @@ paths:
         "500": { $ref: "#/components/responses/Internal" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
+  /v1/legal/matrix:
+    get:
+      operationId: getLegalMatrix
+      tags: [legal]
+      summary: The LegalAuthorization matrix this cell resolves against
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. For each country,
+        authority and service state (`INFORM`, `COMPUTE`, `PREPARE`, `FILE`,
+        `REPRESENT`, `ADVISE`), whether ZoikoTax may act directly, only with
+        the customer's authorization, only through a qualified person or a
+        partner, not at all, or whether counsel has yet to say
+        (ZTAX-LEG-001 §3–§4). It is legal content: every rule is versioned,
+        effective-dated and cites the counsel memo or authority source it
+        rests on (ZTAX-LEG-REQ-0009, -0102), and the digest names the edition
+        a check used. A cell with no matrix returns an empty one and blocks
+        every legally sensitive action. A content pack being in production
+        for `COMPUTE` implies nothing here (ZTAX-LEG-REQ-0057).
+      responses:
+        "200":
+          description: The matrix.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalMatrix"
+              examples:
+                default:
+                  summary: One rule
+                  value:
+                    version: dev-2026.10-1
+                    draft: true
+                    digest: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                    rules:
+                      - { id: DE-ELSTER-FILE, version: 1, country: DE, authority: DE-ELSTER, service: FILE, status: DIRECT_WITH_AUTH, provider: Zoiko development entity, authorizationType: FILING_MANDATE, requiresPeriods: true, requiresMatters: false, credential: ELSTER organisation certificate, funds: NO_CUSTODY, opinionRef: LDR-DEV-0001, effectiveFrom: "2026-01-01T00:00:00.000000Z" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+
+  /v1/legal/authorizations:
+    get:
+      operationId: listAuthorizations
+      tags: [legal]
+      summary: The customer's authorizations
+      description: |
+        `ADMIN`, `OPERATOR` or `AUDITOR`, newest first, each with its history
+        and whether it is in force now.
+      responses:
+        "200":
+          description: The authorizations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthorizationList"
+              examples:
+                default:
+                  summary: One filing mandate
+                  value:
+                    authorizations:
+                      - id: 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        country: DE
+                        authority: DE-ELSTER
+                        type: FILING_MANDATE
+                        permissions: [PREPARE, SUBMIT]
+                        matters: []
+                        periodFrom: "2026-01"
+                        periodTo: "2026-12"
+                        effectiveFrom: "2026-01-01T00:00:00.000000Z"
+                        expiresAt: "2027-06-30T00:00:00.000000Z"
+                        evidence: ["doc:mandate-2026.pdf"]
+                        credentialRef: vault://tax/de/elster/cert
+                        status: ACTIVE
+                        inForce: true
+                        recordedAt: "2026-10-01T09:00:00.000000Z"
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                        history:
+                          - { seq: 1, kind: GRANTED, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: grantAuthorization
+      tags: [legal]
+      summary: Record a customer authorization
+      description: |
+        `ADMIN`, signed in as themselves — never system work or a model
+        (ZTAX-LEG-REQ-0044). A customer's grant to one authority: a power of
+        attorney, a filing mandate, a portal delegation, an information
+        authorization — which is not representation (ZTAX-LEG-REQ-0013). It
+        names the legal entity granting it (the tenant's default when
+        omitted), the permissions, matters and periods it covers, when it
+        takes effect and lapses, and the evidence of the grant
+        (ZTAX-LEG-REQ-0014). An authority credential is a vault reference
+        (`vault://`, `awssm://`, `gcpsm://`, `azkv://`) and never the
+        credential (ZTAX-LEG-REQ-0017, -0018). Naming `supersedes` closes that
+        grant in the same act (ZTAX-LEG-REQ-0015).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthorizationRequest"
+            examples:
+              default:
+                summary: A filing mandate for 2026
+                value:
+                  country: DE
+                  authority: DE-ELSTER
+                  type: FILING_MANDATE
+                  permissions: [PREPARE, SUBMIT]
+                  periodFrom: "2026-01"
+                  periodTo: "2026-12"
+                  effectiveFrom: "2026-01-01T00:00:00.000000Z"
+                  expiresAt: "2027-06-30T00:00:00.000000Z"
+                  evidence: ["doc:mandate-2026.pdf"]
+                  credentialRef: vault://tax/de/elster/cert
+      responses:
+        "201":
+          description: The authorization.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerAuthorization"
+              examples:
+                default:
+                  summary: Granted
+                  value:
+                    id: 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: DE
+                    authority: DE-ELSTER
+                    type: FILING_MANDATE
+                    permissions: [PREPARE, SUBMIT]
+                    matters: []
+                    periodFrom: "2026-01"
+                    periodTo: "2026-12"
+                    effectiveFrom: "2026-01-01T00:00:00.000000Z"
+                    expiresAt: "2027-06-30T00:00:00.000000Z"
+                    evidence: ["doc:mandate-2026.pdf"]
+                    credentialRef: vault://tax/de/elster/cert
+                    status: ACTIVE
+                    inForce: true
+                    recordedAt: "2026-10-01T09:00:00.000000Z"
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - { seq: 1, kind: GRANTED, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/legal/authorizations/{authorizationId}:
+    get:
+      operationId: getAuthorization
+      tags: [legal]
+      summary: One customer authorization and its history
+      description: "`ADMIN`, `OPERATOR` or `AUDITOR`."
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationId"
+      responses:
+        "200":
+          description: The authorization.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerAuthorization"
+              examples:
+                default:
+                  summary: Revoked
+                  value:
+                    id: 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: DE
+                    authority: DE-ELSTER
+                    type: FILING_MANDATE
+                    permissions: [PREPARE, SUBMIT]
+                    matters: []
+                    periodFrom: "2026-01"
+                    periodTo: "2026-12"
+                    effectiveFrom: "2026-01-01T00:00:00.000000Z"
+                    evidence: ["doc:mandate-2026.pdf"]
+                    status: REVOKED
+                    inForce: false
+                    recordedAt: "2026-10-01T09:00:00.000000Z"
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - { seq: 1, kind: GRANTED, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                      - { seq: 2, kind: REVOKED, reason: mandate withdrawn, recordedAt: "2026-10-05T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/legal/authorizations/{authorizationId}/revocation:
+    post:
+      operationId: revokeAuthorization
+      tags: [legal]
+      summary: Revoke a customer authorization
+      description: |
+        `ADMIN`, signed in as themselves. Final, and immediate: every action
+        that depended on the grant is blocked from the moment the revocation
+        commits (ZTAX-LEG-REQ-0016). The grant and its history stay
+        (ZTAX-LEG-REQ-0015).
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RevocationRequest"
+            examples:
+              default:
+                summary: Withdrawn
+                value:
+                  reason: mandate withdrawn
+      responses:
+        "200":
+          description: The revoked authorization.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerAuthorization"
+              examples:
+                default:
+                  summary: Revoked
+                  value:
+                    id: 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: DE
+                    authority: DE-ELSTER
+                    type: FILING_MANDATE
+                    permissions: [PREPARE, SUBMIT]
+                    matters: []
+                    effectiveFrom: "2026-01-01T00:00:00.000000Z"
+                    evidence: ["doc:mandate-2026.pdf"]
+                    status: REVOKED
+                    inForce: false
+                    recordedAt: "2026-10-01T09:00:00.000000Z"
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - { seq: 1, kind: GRANTED, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                      - { seq: 2, kind: REVOKED, reason: mandate withdrawn, recordedAt: "2026-10-05T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/legal/authorization-checks:
+    post:
+      operationId: checkAuthorization
+      tags: [legal]
+      summary: Resolve whether an action may execute now
+      description: |
+        `ADMIN`, `OPERATOR` or `ANALYST`. The gate every legally sensitive
+        action passes before it executes (ZTAX-LEG-REQ-0001), asked directly.
+        It fails closed: no rule, rules that disagree, `COUNSEL_PENDING`,
+        `PROHIBITED`, `SUSPENDED`, a partner's or the customer's action, a
+        qualified person's — each blocks (ZTAX-LEG-REQ-0007, -0008). Under
+        `DIRECT_WITH_AUTH` it needs an authorization in force, of the type
+        the rule names, granting what the service needs — `SUBMIT` to file,
+        `REPRESENT` to represent, which a filing mandate does not grant
+        (ZTAX-LEG-REQ-0062) — reaching the action's period and matter
+        (ZTAX-LEG-REQ-0101), bound to a credential where the authority needs
+        one. A block names its reason. Nothing is recorded by asking.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthorizationCheckRequest"
+            examples:
+              default:
+                summary: File September's return
+                value:
+                  country: DE
+                  authority: DE-ELSTER
+                  service: FILE
+                  period: "2026-09"
+      responses:
+        "200":
+          description: The resolution, allowed or not.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthorizationCheck"
+              examples:
+                default:
+                  summary: Allowed under a mandate
+                  value:
+                    allowed: true
+                    status: DIRECT_WITH_AUTH
+                    rule: { id: DE-ELSTER-FILE, version: 1 }
+                    authorizationId: 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    matrixVersion: dev-2026.10-1
+                    matrixDigest: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                    checkedAt: "2026-10-08T12:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
   /v1/obligations:
     get:
       operationId: listObligations
@@ -3286,6 +3600,14 @@ components:
       description: The legal hold identifier.
       schema: { $ref: "#/components/schemas/LegalHoldId" }
       example: 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    AuthorizationId:
+      name: authorizationId
+      in: path
+      required: true
+      description: The customer authorization identifier.
+      schema: { $ref: "#/components/schemas/AuthorizationId" }
+      example: 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
 
     ObligationId:
       name: obligationId
@@ -6031,3 +6353,327 @@ components:
       required: [reason]
       properties:
         reason: { $ref: "#/components/schemas/LegalHoldReason" }
+
+    ServiceState:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: ServiceState
+      enum: [INFORM, COMPUTE, PREPARE, FILE, REPRESENT, ADVISE]
+      example: FILE
+
+    LegalStatus:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: LegalStatus
+      enum: [DIRECT_ALLOWED, DIRECT_WITH_AUTH, QUALIFIED_PERSON_REQUIRED, PARTNER_REQUIRED, CUSTOMER_ONLY, COUNSEL_PENDING, PROHIBITED, SUSPENDED]
+      example: DIRECT_WITH_AUTH
+
+    AuthorizationType:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: AuthorizationType
+      enum: [NONE, CONTRACT, DECLARATION, POA, TAX_INFORMATION, PORTAL_DELEGATION, FILING_MANDATE]
+      example: FILING_MANDATE
+
+    AuthorizationPermission:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: AuthorizationPermission
+      enum: [READ_INFO, PREPARE, SUBMIT, RECEIVE_NOTICE, REPRESENT, SIGN]
+      example: SUBMIT
+
+    FundsPosture:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: FundsPosture
+      enum: [NO_CUSTODY, INSTRUCTION_ONLY, PSP_PARTNER, LICENSED_PROGRAM]
+      example: NO_CUSTODY
+
+    AuthorityCode:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: AuthorityCode
+      description: An authority within a country, as the matrix names it.
+      minLength: 1
+      maxLength: 128
+      example: DE-ELSTER
+
+    AuthorizationId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: AuthorizationId
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    LegalRule:
+      type: object
+      title: LegalRule
+      additionalProperties: false
+      required: [id, version, country, authority, service, status, provider, authorizationType, requiresPeriods, requiresMatters, funds, opinionRef, effectiveFrom]
+      properties:
+        id:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        version:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+        country: { $ref: "#/components/schemas/CountryCode" }
+        authority: { $ref: "#/components/schemas/AuthorityCode" }
+        service: { $ref: "#/components/schemas/ServiceState" }
+        status: { $ref: "#/components/schemas/LegalStatus" }
+        provider:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The Zoiko entity or approved partner that performs the service.
+        authorizationType: { $ref: "#/components/schemas/AuthorizationType" }
+        requiresPeriods:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: The authority accepts no generic grant; an authorization names its periods.
+        requiresMatters:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: The authority accepts no generic grant; an authorization names its matters.
+        qualification:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        credential:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The kind of credential the authority needs — never a credential.
+        funds: { $ref: "#/components/schemas/FundsPosture" }
+        opinionRef:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The counsel memo or authority source the rule rests on.
+        effectiveFrom: { $ref: "#/components/schemas/Timestamp" }
+        effectiveTo: { $ref: "#/components/schemas/Timestamp" }
+
+    LegalMatrix:
+      type: object
+      title: LegalMatrix
+      additionalProperties: false
+      required: [version, draft, rules]
+      properties:
+        version:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The matrix edition; empty when the cell has none.
+        draft:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: A matrix nobody has approved. Loads in development only.
+        digest: { $ref: "#/components/schemas/Digest" }
+        rules:
+          type: array
+          items: { $ref: "#/components/schemas/LegalRule" }
+
+    AuthorizationEvent:
+      type: object
+      title: AuthorizationEvent
+      additionalProperties: false
+      required: [seq, kind, recordedAt, recordedBy]
+      properties:
+        seq:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        kind:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [GRANTED, REVOKED, SUPERSEDED]
+        reason:
+          x-ztax-privacy: { class: P2, purposes: [PURP-LEGAL, PURP-EVID], retention: RET-EVIDENCE, redaction: REDACT, aiAllowed: NONE }
+          type: string
+        supersededBy: { $ref: "#/components/schemas/AuthorizationId" }
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+
+    AuthorizationMatter:
+      x-ztax-privacy: { class: P2, purposes: [PURP-FILE, PURP-LEGAL, PURP-EVID], retention: RET-EVIDENCE, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: AuthorizationMatter
+      description: A form or matter a grant covers, as the customer named it.
+      minLength: 1
+      maxLength: 255
+      example: UStVA
+
+    AuthorizationEvidence:
+      x-ztax-privacy: { class: P2, purposes: [PURP-FILE, PURP-LEGAL, PURP-EVID], retention: RET-EVIDENCE, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: AuthorizationEvidence
+      description: A reference to the signed artifact, consent proof or authority acknowledgement.
+      minLength: 1
+      maxLength: 255
+      example: "doc:mandate-2026.pdf"
+
+    CredentialRef:
+      x-ztax-privacy: { class: P2, purposes: [PURP-FILE, PURP-LEGAL, PURP-EVID], retention: RET-EVIDENCE, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: CredentialRef
+      description: Where the authority credential is held in the secrets vault. Never the credential.
+      pattern: "^(vault|awssm|gcpsm|azkv)://[A-Za-z0-9._/-]{1,240}$"
+      example: vault://tax/de/elster/cert
+
+    Representative:
+      x-ztax-privacy: { class: P1, purposes: [PURP-FILE, PURP-LEGAL, PURP-EVID], retention: RET-EVIDENCE, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: Representative
+      description: The individual or entity acting under the grant.
+      maxLength: 255
+
+    CustomerAuthorization:
+      type: object
+      title: CustomerAuthorization
+      additionalProperties: false
+      required: [id, legalEntityId, country, authority, type, permissions, matters, effectiveFrom, evidence, status, inForce, recordedAt, recordedBy, history]
+      properties:
+        id: { $ref: "#/components/schemas/AuthorizationId" }
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        country: { $ref: "#/components/schemas/CountryCode" }
+        authority: { $ref: "#/components/schemas/AuthorityCode" }
+        type: { $ref: "#/components/schemas/AuthorizationType" }
+        permissions:
+          type: array
+          items: { $ref: "#/components/schemas/AuthorizationPermission" }
+        matters:
+          type: array
+          items: { $ref: "#/components/schemas/AuthorizationMatter" }
+        periodFrom: { $ref: "#/components/schemas/LegalPeriod" }
+        periodTo: { $ref: "#/components/schemas/LegalPeriod" }
+        representative: { $ref: "#/components/schemas/Representative" }
+        effectiveFrom: { $ref: "#/components/schemas/Timestamp" }
+        expiresAt: { $ref: "#/components/schemas/Timestamp" }
+        evidence:
+          type: array
+          items: { $ref: "#/components/schemas/AuthorizationEvidence" }
+        credentialRef: { $ref: "#/components/schemas/CredentialRef" }
+        supersedes: { $ref: "#/components/schemas/AuthorizationId" }
+        status:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [ACTIVE, REVOKED, SUPERSEDED]
+        inForce:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: Active, effective and not expired, now.
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+        history:
+          type: array
+          items: { $ref: "#/components/schemas/AuthorizationEvent" }
+
+    AuthorizationList:
+      type: object
+      title: AuthorizationList
+      additionalProperties: false
+      required: [authorizations]
+      properties:
+        authorizations:
+          type: array
+          items: { $ref: "#/components/schemas/CustomerAuthorization" }
+
+    AuthorizationRequest:
+      type: object
+      title: AuthorizationRequest
+      additionalProperties: false
+      required: [country, authority, type, permissions, effectiveFrom, evidence]
+      properties:
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        country: { $ref: "#/components/schemas/CountryCode" }
+        authority: { $ref: "#/components/schemas/AuthorityCode" }
+        type: { $ref: "#/components/schemas/AuthorizationType" }
+        permissions:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/AuthorizationPermission" }
+        matters:
+          type: array
+          maxItems: 100
+          items: { $ref: "#/components/schemas/AuthorizationMatter" }
+        periodFrom: { $ref: "#/components/schemas/LegalPeriod" }
+        periodTo: { $ref: "#/components/schemas/LegalPeriod" }
+        representative: { $ref: "#/components/schemas/Representative" }
+        effectiveFrom: { $ref: "#/components/schemas/Timestamp" }
+        expiresAt: { $ref: "#/components/schemas/Timestamp" }
+        evidence:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items: { $ref: "#/components/schemas/AuthorizationEvidence" }
+        credentialRef: { $ref: "#/components/schemas/CredentialRef" }
+        supersedes: { $ref: "#/components/schemas/AuthorizationId" }
+
+    RevocationRequest:
+      type: object
+      title: RevocationRequest
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
+          x-ztax-privacy: { class: P2, purposes: [PURP-LEGAL, PURP-EVID], retention: RET-EVIDENCE, redaction: REDACT, aiAllowed: NONE }
+          type: string
+          minLength: 1
+          maxLength: 1000
+
+    AuthorizationCheckRequest:
+      type: object
+      title: AuthorizationCheckRequest
+      additionalProperties: false
+      required: [country, authority, service]
+      properties:
+        country: { $ref: "#/components/schemas/CountryCode" }
+        authority: { $ref: "#/components/schemas/AuthorityCode" }
+        service: { $ref: "#/components/schemas/ServiceState" }
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        period: { $ref: "#/components/schemas/LegalPeriod" }
+        matter: { $ref: "#/components/schemas/AuthorizationMatter" }
+
+    RuleRef:
+      type: object
+      title: RuleRef
+      additionalProperties: false
+      required: [id, version]
+      properties:
+        id:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        version:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+
+    AuthorizationCheck:
+      type: object
+      title: AuthorizationCheck
+      additionalProperties: false
+      required: [allowed, status, checkedAt]
+      properties:
+        allowed:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+        status: { $ref: "#/components/schemas/LegalStatus" }
+        reason:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: Why the action is blocked; absent when it is allowed.
+          enum: [NO_RULE, RULE_CONFLICT, COUNSEL_PENDING, PROHIBITED, SUSPENDED, PARTNER_REQUIRED, CUSTOMER_ONLY, QUALIFIED_PERSON_REQUIRED, AUTHORIZATION_MISSING, AUTHORIZATION_EXPIRED, AUTHORIZATION_REVOKED, AUTHORIZATION_OUT_OF_SCOPE, CREDENTIAL_MISSING, MATRIX_UNAVAILABLE, ACTION_NOT_WELL_FORMED]
+        rule: { $ref: "#/components/schemas/RuleRef" }
+        authorizationId: { $ref: "#/components/schemas/AuthorizationId" }
+        matrixVersion:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        matrixDigest: { $ref: "#/components/schemas/Digest" }
+        detail:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        checkedAt: { $ref: "#/components/schemas/Timestamp" }
