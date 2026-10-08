@@ -8173,7 +8173,7 @@ requirements:
     owner: "CISO"
     applies_to: ["Data"]
     verification_method: AUDIT
-    verification_ref: "backend/internal/adapter/postgres/rls_integration_test.go::TestIntegrationTheAppRoleCannotBypassRowLevelSecurity"
+    verification_ref: null
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18827,7 +18827,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: AUDIT
-    verification_ref: "backend/internal/app/periods_integration_test.go::TestIntegrationFINREQ0089To0091APeriodClosesSealsAmendsAndReopensOnApproval"
+    verification_ref: null
     status: PROPOSED
     effective_from: null
     effective_to: null
