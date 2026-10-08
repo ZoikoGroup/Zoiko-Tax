@@ -1,0 +1,436 @@
+# Dependency vulnerability scanning — report-only (Sanchit approved:
+# "continue with report-only for now"). ZTAX-SEC-REQ-0097's statement,
+# quoted verbatim from docs/requirements.yaml:9164, is cited below:
+# "SAST/SCA/secret/IaC scanning MUST run in CI for applicable components."
+#
+# A separate workflow, not another job in ci.yml: ci.yml's `pull_request`
+# and `push` triggers both carry `paths-ignore: ['intelligence/**']`, so an
+# intelligence-only PR never runs ci.yml at all. This workflow carries no
+# paths filter on either trigger, so every PR and every push to main is
+# scanned regardless of which directory changed.
+#
+# Also runs daily: a dependency's CVE can be published against code nobody
+# touched since it was pulled in. A PR-triggered scan alone only re-checks a
+# graph when someone happens to open a PR against it.
+#
+# REPORT-ONLY, deliberately: a finding never fails the job. Only a scanner
+# that crashed, was misconfigured, or found no packages to scan fails it —
+# a broken scanner must never be mistaken for a clean one. See the exit-code
+# tables in each job below, read from each tool's own source/docs, not
+# guessed. Neither job uses `|| true`; each captures the real exit code and
+# branches on it explicitly.
+name: Dependency scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # 02:17 UTC: off-peak, and not the top of the hour -- GitHub's own
+    # guidance on scheduled workflows is to avoid :00, when load (and
+    # queuing delay) is highest.
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-scan-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Pinned so a scanner upgrade is a reviewed diff, the same discipline as
+  # ci.yml's GOLANGCI_LINT_VERSION.
+  #
+  # OSV_SCANNER_VERSION: google/osv-scanner's GitHub "latest release" (API
+  # releases/latest), confirmed current.
+  #
+  # GOVULNCHECK_VERSION: NOT read from golang/vuln's GitHub "latest
+  # release" page -- that page is stale and stops at v1.1.4 (Jan 2025). The
+  # project kept tagging without publishing further GitHub Releases; v1.8.0
+  # is confirmed as the latest real tag via both the GitHub tags API and
+  # the Go module proxy (proxy.golang.org/golang.org/x/vuln/@latest).
+  OSV_SCANNER_VERSION: v2.6.0
+  GOVULNCHECK_VERSION: v1.8.0
+
+jobs:
+  osv:
+    # Known limitations, confirmed by actually running the scan command
+    # below from the repo root and inspecting osv-results.json's source
+    # paths -- not assumed from osv-scanner's documentation:
+    #   - intelligence/pyproject.toml is NOT scanned at all. osv-scanner has
+    #     no extractor for PEP 621 dependency lists without a lockfile, so
+    #     neither its pinned runtime dependency (grpcio==1.84.0) nor its
+    #     unpinned dev extras appear anywhere in the results.
+    #   - sdk/go/go.mod is walked (the log says "found 1 package") but that
+    #     one package is the module itself with zero external dependencies,
+    #     filtered as "local/unscannable" -- it never reaches the results.
+    #   - sdk/dotnet/src/ZoikoTax.Sdk/packages.lock.json is walked but has
+    #     zero packages in it (a thin SDK with no package references), so
+    #     it cannot appear in the results either, regardless of
+    #     --all-packages.
+    #   - --experimental-exclude vendor did not fully exclude
+    #     backend/vendor/ on a local Windows run: one vendored file
+    #     (go.opentelemetry.io/otel/requirements.txt, codespell==2.4.3,
+    #     upstream OTel's own dev-tool pin, not a ZoikoTax dependency) was
+    #     still scanned. Not re-verified on this Linux runner; low impact,
+    #     since that file is not ours.
+    #   - Binary artifacts, container images and IaC are out of scope for
+    #     this job; it is a source/lockfile scan only.
+    name: dependency scan · all ecosystems (OSV-Scanner)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+
+      # osv-scanner v2.6.0's own go.mod requires a newer Go than
+      # backend/go.mod (confirmed on the first real CI run: "requires go >=
+      # 1.27.0" against the runner's 1.25.11), so only this install step is
+      # allowed to fetch a newer toolchain just for itself. GOTOOLCHAIN=auto
+      # is set at the step level only, not job- or workflow-wide: the
+      # resulting osv-scanner binary is standalone once built, and every
+      # later step still runs on the pinned backend/go.mod toolchain. A
+      # failure here fails the job on purpose -- a broken scanner must never
+      # be mistaken for a clean one.
+      - name: install osv-scanner
+        env:
+          GOTOOLCHAIN: auto
+        run: |
+          go install github.com/google/osv-scanner/v2/cmd/osv-scanner@${{ env.OSV_SCANNER_VERSION }}
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      # Manifests this scan actually reaches, confirmed by running this
+      # exact command from the repo root and inspecting the resulting
+      # osv-results.json source paths: backend/go.mod,
+      # backend/tools/fiscalfloat/go.mod, frontend/contracts/sdk-typescript
+      # package-lock.json, sdk/python/requirements-dev.txt,
+      # sdk/dotnet/tests/ZoikoTax.Sdk.Tests/packages.lock.json, sdk/java/
+      # pom.xml. See the job-level "Known limitations" comment above for
+      # what this same run did NOT reach (intelligence/pyproject.toml,
+      # sdk/go/go.mod, sdk/dotnet/src/ZoikoTax.Sdk/packages.lock.json).
+      #
+      # --all-packages matters here, not just for the evidence: without it,
+      # osv-scanner's own filterResults (pkg/osvscanner/filter.go) drops a
+      # source from the JSON entirely once none of its packages has a
+      # finding -- "Don't want to include the package source at all if
+      # there are no vulns." A clean lockfile would silently vanish from
+      # the "scanned" list below instead of being reported as clean.
+      #
+      # --experimental-exclude vendor: go.mod/go.sum already name every
+      # module vendored into backend/vendor/, so scanning the vendored tree
+      # itself would just re-report the same modules a second time by a
+      # different route. KNOWN CAVEAT, observed not assumed, from an
+      # earlier local run of this same scanner: this exclude did not fully
+      # take effect on Windows -- one vendored file
+      # (backend/vendor/go.opentelemetry.io/otel/requirements.txt,
+      # codespell==2.4.3, upstream OTel's own dev-tool pin, not a ZoikoTax
+      # dependency) was still scanned. Not re-verified on this Linux runner;
+      # low impact either way, since that one file is not ours.
+      - name: scan every ecosystem recursively (ZTAX-SEC-REQ-0097)
+        run: |
+          mkdir -p dep-scan-evidence
+
+          # Exit codes, confirmed from osv-scanner v2.6.0's own source
+          # (cmd/osv-scanner/internal/cmd/run.go):
+          #   0   = clean
+          #   1   = ErrVulnerabilitiesFound -- vulnerabilities found
+          #   127 = generic error (HasErrored with no more specific code)
+          #   128 = ErrNoPackagesFound -- no package sources found
+          #   129 = ErrAPIFailed -- the OSV API call failed
+          #   130 = invalid scanner config
+          # Only 1 is a "continue" outcome; every other nonzero code is a
+          # scan failure, not a result, and must fail the job.
+          set +e
+          osv-scanner scan source \
+            --recursive \
+            --all-packages \
+            --format json \
+            --output-file dep-scan-evidence/osv-results.json \
+            --experimental-exclude vendor \
+            .
+          code=$?
+          set -e
+
+          echo "osv-scanner exit code: $code"
+          if [ "$code" -eq 0 ]; then
+            echo "osv-scanner: clean"
+          elif [ "$code" -eq 1 ]; then
+            echo "::warning::osv-scanner found vulnerabilities (exit 1) -- report-only phase, not failing the job. See the job summary and the uploaded evidence."
+          else
+            echo "::error::osv-scanner exited $code, which is neither 0 (clean) nor 1 (vulnerabilities found) -- treating this as a crashed/incomplete scan, not a clean result. See the step log above for osv-scanner's own error output."
+            exit 1
+          fi
+
+      - name: job summary -- severity counts and scanned manifests
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from collections import Counter
+
+          evidence_path = "dep-scan-evidence/osv-results.json"
+          summary_path = os.environ["GITHUB_STEP_SUMMARY"]
+
+          with open(summary_path, "a", encoding="utf-8") as out:
+              out.write("## OSV-Scanner dependency scan\n\n")
+
+              if not os.path.isfile(evidence_path):
+                  out.write(
+                      "No evidence file was produced (the scan likely failed "
+                      "before writing output -- see the previous step's log).\n"
+                  )
+                  raise SystemExit(0)
+
+              with open(evidence_path, encoding="utf-8") as f:
+                  data = json.load(f)
+
+              results = data.get("results", [])
+
+              # group.max_severity (pkg/models GroupInfo.MaxSeverity) is NOT
+              # consistently a named rating -- in practice it is often a raw
+              # CVSS base score string (e.g. "8.7"), confirmed by running
+              # this exact scan locally in an earlier exploration. Bucket a
+              # numeric score into the standard CVSS 3.x qualitative rating
+              # (FIRST.org: 9.0-10.0 Critical, 7.0-8.9 High, 4.0-6.9 Medium,
+              # 0.1-3.9 Low, 0 None); anything non-numeric (e.g. "UNKNOWN")
+              # is used as its own bucket label unchanged.
+              def bucket(raw):
+                  if not raw:
+                      return "UNKNOWN"
+                  try:
+                      score = float(raw)
+                  except ValueError:
+                      return raw.upper()
+                  if score >= 9.0:
+                      return "CRITICAL"
+                  if score >= 7.0:
+                      return "HIGH"
+                  if score >= 4.0:
+                      return "MEDIUM"
+                  if score > 0.0:
+                      return "LOW"
+                  return "NONE"
+
+              severity_counts = Counter()
+              for source in results:
+                  for pkg in source.get("packages", []):
+                      for group in pkg.get("groups", []):
+                          severity_counts[bucket(group.get("max_severity"))] += 1
+
+              out.write("### Vulnerability groups by severity\n\n")
+              if severity_counts:
+                  out.write("| Severity | Count |\n|---|---|\n")
+                  known_order = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "NONE", "UNKNOWN"]
+                  remaining = sorted(k for k in severity_counts if k not in known_order)
+                  for sev in known_order + remaining:
+                      if sev in severity_counts:
+                          out.write(f"| {sev} | {severity_counts[sev]} |\n")
+              else:
+                  out.write("No vulnerability groups found.\n")
+
+              scanned_paths = sorted(
+                  {
+                      source["source"]["path"]
+                      for source in results
+                      if source.get("source", {}).get("path")
+                  }
+              )
+              out.write(f"\n### Manifest/lockfile paths scanned ({len(scanned_paths)})\n\n")
+              if scanned_paths:
+                  for p in scanned_paths:
+                      out.write(f"- `{p}`\n")
+              else:
+                  out.write("None.\n")
+          PY
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always() && hashFiles('dep-scan-evidence/osv-results.json') != ''
+        with:
+          name: osv-scanner-evidence
+          path: dep-scan-evidence/
+          if-no-files-found: warn
+          retention-days: 30
+
+  govulncheck:
+    name: dependency scan · Go reachability (govulncheck, backend/)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+
+      # govulncheck v1.8.0's own go.mod requires a newer Go than
+      # backend/go.mod (confirmed on the first real CI run: "requires go >=
+      # 1.26.0" against the runner's 1.25.11), so only this install step is
+      # allowed to fetch a newer toolchain just for itself. GOTOOLCHAIN=auto
+      # is set at the step level only, not job- or workflow-wide: the
+      # resulting govulncheck binary is standalone once built, and the scan
+      # step below still runs on the pinned backend/go.mod toolchain
+      # (1.25.11) -- that is what actually ships, and what the scan's
+      # stdlib findings must be judged against, not whatever newer
+      # toolchain happened to build the scanner itself. A failure here
+      # fails the job on purpose -- a broken scanner must never be mistaken
+      # for a clean one.
+      - name: install govulncheck
+        env:
+          GOTOOLCHAIN: auto
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@${{ env.GOVULNCHECK_VERSION }}
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      # govulncheck's own exit-code contract, confirmed from golang/vuln
+      # v1.8.0's source (internal/scan/errors.go and internal/scan/text.go):
+      #   0 = success (no vulnerabilities) -- AND -format json/sarif/openvex
+      #       always return 0 regardless of findings: the vulnerabilities-
+      #       found error is only ever returned from the text handler's own
+      #       Flush (internal/scan/text.go), never from the JSON handler's.
+      #   2 = usage error (errUsage, errNoPatterns, errNoPackagesMatched)
+      #   3 = errVulnerabilitiesFound -- "returns exit status 3 when running
+      #       without the -json flag" (internal/scan/errors.go's own comment)
+      #   1 = any other error that isn't one of the above (I/O failure, Go
+      #       version mismatch, etc. -- cmd/govulncheck/main.go's fallback)
+      # So the -format json invocation below can only legitimately exit 0;
+      # a nonzero exit from it is itself a crash signal. The real
+      # clean/vulnerable/error signal comes from the second, text-format
+      # invocation, whose exit code this step inspects directly.
+      - name: govulncheck (backend/)
+        working-directory: backend
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/dep-scan-evidence"
+          evidence_file="$GITHUB_WORKSPACE/dep-scan-evidence/govulncheck-backend.json"
+
+          set +e
+          govulncheck -format json ./... > "$evidence_file"
+          json_code=$?
+          set -e
+          echo "govulncheck -format json exit code: $json_code"
+          if [ "$json_code" -ne 0 ]; then
+            echo "::error::govulncheck -format json exited $json_code -- -format json should always exit 0 regardless of findings, so a nonzero code here means the scan itself failed, not that vulnerabilities were found."
+            exit 1
+          fi
+
+          set +e
+          govulncheck ./...
+          text_code=$?
+          set -e
+          echo "govulncheck (text) exit code: $text_code"
+          if [ "$text_code" -eq 0 ]; then
+            echo "govulncheck: clean"
+          elif [ "$text_code" -eq 3 ]; then
+            echo "::warning::govulncheck found vulnerabilities (exit 3) -- report-only phase, not failing the job. See the job summary and the uploaded evidence."
+          else
+            echo "::error::govulncheck exited $text_code, which is neither 0 (clean) nor 3 (vulnerabilities found) -- treating this as a crashed/incomplete scan, not a clean result (2 = usage error, 1 = other unexpected error). See the step log above."
+            exit 1
+          fi
+
+      - name: job summary
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+
+          evidence_path = "dep-scan-evidence/govulncheck-backend.json"
+          summary_path = os.environ["GITHUB_STEP_SUMMARY"]
+
+          with open(summary_path, "a", encoding="utf-8") as out:
+              out.write("## govulncheck dependency scan (backend/)\n\n")
+
+              if not os.path.isfile(evidence_path):
+                  out.write("No evidence file was produced.\n")
+                  raise SystemExit(0)
+
+              # govulncheck's -format json output is NOT one-JSON-object-
+              # per-line (confirmed by actually running it: each message is
+              # itself pretty-printed across many lines). It is a bare
+              # sequence of JSON values with no separators, so it has to be
+              # decoded with json.JSONDecoder.raw_decode in a loop rather
+              # than split on newlines.
+              with open(evidence_path, encoding="utf-8") as f:
+                  content = f.read()
+
+              decoder = json.JSONDecoder()
+              idx, n = 0, len(content)
+              findings = []
+              while idx < n:
+                  while idx < n and content[idx] in " \t\r\n":
+                      idx += 1
+                  if idx >= n:
+                      break
+                  obj, idx = decoder.raw_decode(content, idx)
+                  finding = obj.get("finding")
+                  if finding:
+                      findings.append(finding)
+
+              # Reachability level, from trace[0] of each finding:
+              #   "called"        -- trace[0] has a "function" key (symbol-level:
+              #                      the vulnerable function is actually reached)
+              #   "imported only" -- has "package" but no "function"
+              #   "required only" -- module only (no "package", no "function")
+              # Only "called" findings make govulncheck's TEXT-mode invocation
+              # warn (exit 3, handled above) -- "imported only" and "required
+              # only" are present in the JSON evidence but do not affect the
+              # text-mode exit code, by govulncheck's own design (default scan
+              # level is "symbol": it reports the full dependency graph's known
+              # vulnerabilities but only treats a *called* one as a result).
+              #
+              # These counts are per JSON finding record, not deduplicated by
+              # OSV ID: confirmed locally that the same ID can appear twice,
+              # once per level it has a trace for (e.g. GO-2026-6443 appeared
+              # as both "required only" and "imported only" for the same
+              # module). The text-mode summary line counts unique IDs at
+              # their deepest level instead, so its "N vulnerabilities in
+              # imports / M in requires" phrasing will not always equal these
+              # table row counts one-to-one.
+              def level(finding):
+                  trace0 = (finding.get("trace") or [{}])[0]
+                  if "function" in trace0:
+                      return "called"
+                  if "package" in trace0:
+                      return "imported only"
+                  return "required only"
+
+              counts = {"called": 0, "imported only": 0, "required only": 0}
+              for finding in findings:
+                  counts[level(finding)] += 1
+
+              out.write(f"### Findings ({len(findings)})\n\n")
+              out.write(
+                  f"called: {counts['called']} · imported only: {counts['imported only']} "
+                  f"· required only: {counts['required only']}\n\n"
+              )
+              if not findings:
+                  out.write("No vulnerabilities found.\n")
+              else:
+                  out.write("| OSV ID | Level | Module | Fixed in |\n|---|---|---|---|\n")
+                  for finding in findings:
+                      osv = finding.get("osv", "?")
+                      fixed = finding.get("fixed_version", "-")
+                      trace = finding.get("trace") or [{}]
+                      mod = trace[0].get("module", "?")
+                      ver = trace[0].get("version", "?")
+                      out.write(f"| {osv} | {level(finding)} | {mod}@{ver} | {fixed} |\n")
+          PY
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always() && hashFiles('dep-scan-evidence/govulncheck-backend.json') != ''
+        with:
+          name: govulncheck-evidence-backend
+          path: dep-scan-evidence/govulncheck-backend.json
+          if-no-files-found: warn
+          retention-days: 30
