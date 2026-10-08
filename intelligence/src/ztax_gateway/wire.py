@@ -115,6 +115,19 @@ def _string(value: Any, where: str) -> str:
     return value
 
 
+# common.schema.json#/$defs/identifier: maxLength 128.
+_IDENTIFIER_MAX = 128
+
+
+def _checked_identifier(value: Any, where: str) -> str:
+    s = _string(value, where)
+    if len(s) > _IDENTIFIER_MAX:
+        raise WireError(
+            f"wire: {where} is {len(s)} chars, exceeding the "
+            f"{_IDENTIFIER_MAX}-char identifier limit (common.schema.json#/$defs/identifier)"
+        )
+    return s
+
 def decode_call(data: bytes) -> Call:
     """Decode and validate one call, or raise ``WireError``."""
     try:
@@ -151,6 +164,10 @@ def decode_call(data: bytes) -> Call:
     if not isinstance(classes, list) or not classes:
         raise WireError("wire: governance.data_classes must name at least one class")
     for c in classes:
+        if not isinstance(c, str):
+            raise WireError(
+                f"wire: governance.data_classes element {c!r} is not a string"
+            )
         if c not in _PRIVACY_CLASSES:
             raise WireError(f"wire: data class {c!r} is not a PRIV-001 class")
     if len(set(classes)) != len(classes):
@@ -168,10 +185,10 @@ def decode_call(data: bytes) -> Call:
         kind=kind,
         governance=Governance(
             tenant_id=tenant,
-            use_case=_string(g["use_case"], "governance.use_case"),
+            use_case=_checked_identifier(g["use_case"], "governance.use_case"),
             authority_outcome=authority,
             risk_tier=risk,
-            region=_string(g["region"], "governance.region"),
+            region=_checked_identifier(g["region"], "governance.region"),
             data_classes=tuple(classes),
         ),
         subject_ref=subject,
@@ -182,8 +199,14 @@ def decode_call(data: bytes) -> Call:
 def encode_reply(reply: Reply) -> bytes:
     """Encode one reply. Refuses a reply that could not be evidenced."""
     for name in ("model_profile", "provider_profile", "prompt_profile", "ai_train_version"):
-        if not getattr(reply, name):
+        val = getattr(reply, name)
+        if not val:
             raise WireError(f"wire: reply has no {name}; an unevidenced reply is never sent")
+        if len(val) > 128:
+            raise WireError(
+                f"wire: {name} is {len(val)} chars, exceeding the 128-char "
+                "identifier limit (common.schema.json#identifier)"
+            )
     if not _CONFIDENCE.match(reply.confidence):
         raise WireError(
             f"wire: confidence {reply.confidence!r} is not a canonical decimal in [0, 1]"

@@ -193,7 +193,7 @@ def handler(gateway: Gateway) -> grpc.GenericRpcHandler:
             log.exception("gateway: unhandled error")
             _abort(
                 context,
-                GatewayError(grpc.StatusCode.INTERNAL, REASON_UNAVAILABLE, "internal error"),
+                GatewayError(grpc.StatusCode.UNAVAILABLE, REASON_UNAVAILABLE, "internal error"),
             )
 
     return grpc.method_handlers_generic_handler(
