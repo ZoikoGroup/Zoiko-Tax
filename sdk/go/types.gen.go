@@ -621,6 +621,63 @@ func (e Outcome) Valid() bool {
 	}
 }
 
+// Defines values for PeriodState.
+const (
+	PeriodStateAMENDMENTACTIVE PeriodState = "AMENDMENT_ACTIVE"
+	PeriodStateHARDCLOSE       PeriodState = "HARD_CLOSE"
+	PeriodStateOPEN            PeriodState = "OPEN"
+	PeriodStateREOPENED        PeriodState = "REOPENED"
+	PeriodStateSEALED          PeriodState = "SEALED"
+	PeriodStateSOFTCLOSE       PeriodState = "SOFT_CLOSE"
+)
+
+// Valid indicates whether the value is a known member of the PeriodState enum.
+func (e PeriodState) Valid() bool {
+	switch e {
+	case PeriodStateAMENDMENTACTIVE:
+		return true
+	case PeriodStateHARDCLOSE:
+		return true
+	case PeriodStateOPEN:
+		return true
+	case PeriodStateREOPENED:
+		return true
+	case PeriodStateSEALED:
+		return true
+	case PeriodStateSOFTCLOSE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PeriodTransitionRequestTo.
+const (
+	PeriodTransitionRequestToAMENDMENTACTIVE PeriodTransitionRequestTo = "AMENDMENT_ACTIVE"
+	PeriodTransitionRequestToHARDCLOSE       PeriodTransitionRequestTo = "HARD_CLOSE"
+	PeriodTransitionRequestToOPEN            PeriodTransitionRequestTo = "OPEN"
+	PeriodTransitionRequestToSEALED          PeriodTransitionRequestTo = "SEALED"
+	PeriodTransitionRequestToSOFTCLOSE       PeriodTransitionRequestTo = "SOFT_CLOSE"
+)
+
+// Valid indicates whether the value is a known member of the PeriodTransitionRequestTo enum.
+func (e PeriodTransitionRequestTo) Valid() bool {
+	switch e {
+	case PeriodTransitionRequestToAMENDMENTACTIVE:
+		return true
+	case PeriodTransitionRequestToHARDCLOSE:
+		return true
+	case PeriodTransitionRequestToOPEN:
+		return true
+	case PeriodTransitionRequestToSEALED:
+		return true
+	case PeriodTransitionRequestToSOFTCLOSE:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RateBasis.
 const (
 	RateBasisCOMPOUND RateBasis = "COMPOUND"
@@ -1023,6 +1080,17 @@ type ClassificationProposalRequest struct {
 
 	// SubjectRef The caller's reference for the item, e.g. a catalog SKU.
 	SubjectRef string `json:"subjectRef"`
+}
+
+// CloseManifestDocument A close manifest exactly as digested, base64 canonical JSON.
+type CloseManifestDocument struct {
+	Body []byte `json:"body"`
+
+	// Digest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	Digest Digest `json:"digest"`
 }
 
 // CommitRequest defines model for CommitRequest.
@@ -1698,6 +1766,9 @@ type JournalList struct {
 // LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
 type LegalEntityID = string
 
+// LegalPeriod A subledger legal period, a month.
+type LegalPeriod = string
+
 // MoneyValue An amount and its currency, never one without the other.
 type MoneyValue struct {
 	// Amount A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
@@ -1837,6 +1908,65 @@ type Outcome string
 
 // PaymentReference A payment provider's reference. It can identify a payer's transaction, so logs carry it redacted.
 type PaymentReference = string
+
+// PeriodEvent defines model for PeriodEvent.
+type PeriodEvent struct {
+	// ApprovedBy On a reopening, the second person who approved it.
+	ApprovedBy *string `json:"approvedBy,omitempty"`
+
+	// ManifestDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	ManifestDigest *Digest `json:"manifestDigest,omitempty"`
+
+	// Reason Free text entered by an operator.
+	Reason *PeriodReason `json:"reason,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy Who moved the period; on a reopening, who requested it.
+	RecordedBy *string          `json:"recordedBy,omitempty"`
+	RequestID  *ReopenRequestID `json:"requestId,omitempty"`
+	Seq        int32            `json:"seq"`
+	State      PeriodState      `json:"state"`
+}
+
+// PeriodReason Free text entered by an operator.
+type PeriodReason = string
+
+// PeriodReopenRequest defines model for PeriodReopenRequest.
+type PeriodReopenRequest struct {
+	ID ReopenRequestID `json:"id"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod `json:"period"`
+
+	// Reason Free text entered by an operator.
+	Reason PeriodReason `json:"reason"`
+
+	// RequestedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RequestedAt Timestamp `json:"requestedAt"`
+	RequestedBy string    `json:"requestedBy"`
+}
+
+// PeriodState defines model for PeriodState.
+type PeriodState string
+
+// PeriodTransitionRequest defines model for PeriodTransitionRequest.
+type PeriodTransitionRequest struct {
+	// Reason Free text entered by an operator.
+	Reason *PeriodReason             `json:"reason,omitempty"`
+	To     PeriodTransitionRequestTo `json:"to"`
+}
+
+// PeriodTransitionRequestTo defines model for PeriodTransitionRequest.To.
+type PeriodTransitionRequestTo string
 
 // Problem RFC 9457 Problem Details, with the `ztx_` extensions from ADR-0016 §2.5.
 // The extensions carry identifiers rather than data: an error that needs
@@ -2090,6 +2220,15 @@ type RefundRequest struct {
 // `UNCERTAIN` means the provider's answer did not say whether the money
 // moved; it is neither paid nor failed.
 type RefundStatus string
+
+// ReopenRequestBody defines model for ReopenRequestBody.
+type ReopenRequestBody struct {
+	// Reason Free text entered by an operator.
+	Reason PeriodReason `json:"reason"`
+}
+
+// ReopenRequestID defines model for ReopenRequestId.
+type ReopenRequestID = string
 
 // ReplayReport defines model for ReplayReport.
 type ReplayReport struct {
@@ -2385,6 +2524,24 @@ type SubledgerBalances struct {
 
 	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
 	LegalEntityID LegalEntityID `json:"legalEntityId"`
+}
+
+// SubledgerPeriod defines model for SubledgerPeriod.
+type SubledgerPeriod struct {
+	History []PeriodEvent `json:"history"`
+
+	// Intact Whether the period's journals and balances today are exactly the ones its latest manifest sealed. Absent until the period is first hard-closed.
+	Intact *bool `json:"intact,omitempty"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// Manifest A close manifest exactly as digested, base64 canonical JSON.
+	Manifest *CloseManifestDocument `json:"manifest,omitempty"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod `json:"period"`
+	State  PeriodState `json:"state"`
 }
 
 // Tenant defines model for Tenant.
@@ -2822,6 +2979,12 @@ type ReportRefundJSONRequestBody = RefundReportRequest
 
 // SealPeriodJSONRequestBody defines body for SealPeriod for application/json ContentType.
 type SealPeriodJSONRequestBody = SealRequest
+
+// RequestPeriodReopenJSONRequestBody defines body for RequestPeriodReopen for application/json ContentType.
+type RequestPeriodReopenJSONRequestBody = ReopenRequestBody
+
+// TransitionSubledgerPeriodJSONRequestBody defines body for TransitionSubledgerPeriod for application/json ContentType.
+type TransitionSubledgerPeriodJSONRequestBody = PeriodTransitionRequest
 
 // AdjustTransactionJSONRequestBody defines body for AdjustTransaction for application/json ContentType.
 type AdjustTransactionJSONRequestBody = CommitRequest

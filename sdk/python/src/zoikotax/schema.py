@@ -1144,6 +1144,50 @@ class DocumentLineage(TypedDict):
     documents: list[FiscalDocument]
 
 
+LegalPeriod: TypeAlias = str
+"""
+A subledger legal period, a month.
+"""
+
+
+PeriodState: TypeAlias = Literal['OPEN', 'SOFT_CLOSE', 'HARD_CLOSE', 'REOPENED', 'AMENDMENT_ACTIVE', 'SEALED']
+
+
+PeriodReason: TypeAlias = str
+"""
+Free text entered by an operator.
+"""
+
+
+class CloseManifestDocument(TypedDict):
+    """
+    A close manifest exactly as digested, base64 canonical JSON.
+    """
+
+    digest: Digest
+    body: str
+
+
+class PeriodTransitionRequest(TypedDict):
+    to: Literal['OPEN', 'SOFT_CLOSE', 'HARD_CLOSE', 'AMENDMENT_ACTIVE', 'SEALED']
+    reason: NotRequired[PeriodReason]
+
+
+ReopenRequestId: TypeAlias = str
+
+
+class ReopenRequestBody(TypedDict):
+    reason: PeriodReason
+
+
+class PeriodReopenRequest(TypedDict):
+    id: ReopenRequestId
+    period: LegalPeriod
+    reason: PeriodReason
+    requestedAt: Timestamp
+    requestedBy: str
+
+
 class ReplayReport(TypedDict):
     decisionId: DecisionId
     verdict: ReplayVerdict
@@ -1259,3 +1303,32 @@ class Capabilities(TypedDict):
     Every event type this deployment emits, and so the types a webhook may subscribe to.
     """
     content: NotRequired[ContentCapability]
+
+
+class PeriodEvent(TypedDict):
+    seq: int
+    state: PeriodState
+    reason: NotRequired[PeriodReason]
+    recordedAt: Timestamp
+    recordedBy: NotRequired[str]
+    """
+    Who moved the period; on a reopening, who requested it.
+    """
+    approvedBy: NotRequired[str]
+    """
+    On a reopening, the second person who approved it.
+    """
+    requestId: NotRequired[ReopenRequestId]
+    manifestDigest: NotRequired[Digest]
+
+
+class SubledgerPeriod(TypedDict):
+    period: LegalPeriod
+    legalEntityId: LegalEntityId
+    state: PeriodState
+    history: list[PeriodEvent]
+    manifest: NotRequired[CloseManifestDocument]
+    intact: NotRequired[bool]
+    """
+    Whether the period's journals and balances today are exactly the ones its latest manifest sealed. Absent until the period is first hard-closed.
+    """

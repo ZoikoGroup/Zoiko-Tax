@@ -289,3 +289,12 @@ func JobID(g Generator) (id.JobID, error) {
 	}
 	return id.NewJobID(u), nil
 }
+
+// ReopenRequestID returns a fresh ReopenRequestID.
+func ReopenRequestID(g Generator) (id.ReopenRequestID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.ReopenRequestID{}, err
+	}
+	return id.NewReopenRequestID(u), nil
+}

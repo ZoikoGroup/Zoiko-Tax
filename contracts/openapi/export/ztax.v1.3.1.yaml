@@ -2668,6 +2668,229 @@ paths:
           $ref: "#/components/responses/Internal"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/subledger/periods/{period}:
+    get:
+      operationId: getSubledgerPeriod
+      tags:
+        - subledger
+      summary: A legal period's state, history and close manifest
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. A legal period is a month of the
+        tenant's default legal entity; one with no history is `OPEN`. A
+        hard-closed period carries its latest close manifest — the canonical
+        bytes and their digest — and `intact`: whether the journals and
+        control balances posted into it today are exactly the ones the
+        manifest sealed (ZTAX-FIN-REQ-0089).
+      parameters:
+        - $ref: "#/components/parameters/LegalPeriod"
+      responses:
+        "200":
+          description: The period.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubledgerPeriod"
+              examples:
+                default:
+                  summary: A hard-closed September
+                  value:
+                    period: 2026-09
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    state: HARD_CLOSE
+                    history:
+                      - seq: 1
+                        state: HARD_CLOSE
+                        reason: month end
+                        recordedAt: 2026-10-02T09:00:00.000000Z
+                        manifestDigest: zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f
+                    manifest:
+                      digest: zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f
+                      body: eyJhcnRpZmFjdCI6InRjc2wtY2xvc2UtbWFuaWZlc3QifQ==
+                    intact: true
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/subledger/periods/{period}/transitions:
+    post:
+      operationId: transitionSubledgerPeriod
+      tags:
+        - subledger
+      summary: Close a period, open an amendment window, or seal it
+      description: |
+        `OPERATOR`. Moves the period (ZTAX-FIN-REQ-0088): `OPEN` ⇄
+        `SOFT_CLOSE` → `HARD_CLOSE` → `AMENDMENT_ACTIVE` → `HARD_CLOSE`, and
+        `HARD_CLOSE` → `SEALED`, which is final. A hard close seals the
+        period's journals, control balances, documents dated in it and open
+        exceptions in a new close manifest, naming the previous one
+        (ZTAX-FIN-REQ-0089, -0092, -0093).
+
+        After a hard close nothing posts into the period by the normal path:
+        a commit or a correction whose journal falls in it is refused with
+        `STATE_TRANSITION_INVALID`. Inside an `AMENDMENT_ACTIVE` window it
+        posts, marked as an amendment (ZTAX-FIN-REQ-0090). `SOFT_CLOSE` takes
+        adjustment and rounding journals only.
+
+        `REOPENED` is not a transition: it takes a reopen request and a
+        second person's approval.
+      parameters:
+        - $ref: "#/components/parameters/LegalPeriod"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PeriodTransitionRequest"
+            examples:
+              default:
+                summary: Close September
+                value:
+                  to: HARD_CLOSE
+                  reason: month end
+      responses:
+        "200":
+          description: The period after the move.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubledgerPeriod"
+              examples:
+                default:
+                  summary: Hard-closed
+                  value:
+                    period: 2026-09
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    state: HARD_CLOSE
+                    history:
+                      - seq: 1
+                        state: HARD_CLOSE
+                        reason: month end
+                        recordedAt: 2026-10-02T09:00:00.000000Z
+                        manifestDigest: zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f
+                    manifest:
+                      digest: zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f
+                      body: eyJhcnRpZmFjdCI6InRjc2wtY2xvc2UtbWFuaWZlc3QifQ==
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/subledger/periods/{period}/reopen-requests:
+    post:
+      operationId: requestPeriodReopen
+      tags:
+        - subledger
+      summary: Ask to reopen a hard-closed period
+      description: |
+        `OPERATOR`. Records a request, with its reason, to reopen a
+        hard-closed period. Nothing moves until someone else approves it
+        (ZTAX-FIN-REQ-0091). A sealed period cannot be reopened.
+      parameters:
+        - $ref: "#/components/parameters/LegalPeriod"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReopenRequestBody"
+            examples:
+              default:
+                summary: A late supplier credit
+                value:
+                  reason: A supplier credit dated in September arrived after close.
+      responses:
+        "201":
+          description: The request, awaiting approval.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PeriodReopenRequest"
+              examples:
+                default:
+                  summary: Awaiting approval
+                  value:
+                    id: 01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    period: 2026-09
+                    reason: A supplier credit dated in September arrived after close.
+                    requestedAt: 2026-10-05T10:00:00.000000Z
+                    requestedBy: 01920a40-aaaa-7bbb-8ccc-000000000d01
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/subledger/periods/{period}/reopen-requests/{requestId}/approval:
+    post:
+      operationId: approvePeriodReopen
+      tags:
+        - subledger
+      summary: Approve someone else's request to reopen a period
+      description: |
+        `ADMIN`, and never the person who made the request
+        (ZTAX-FIN-REQ-0091). The period becomes `REOPENED`; every earlier
+        close manifest stays, and the next hard close writes a new one naming
+        the last. A request is approved once.
+      parameters:
+        - $ref: "#/components/parameters/LegalPeriod"
+        - $ref: "#/components/parameters/ReopenRequestId"
+      responses:
+        "200":
+          description: The reopened period.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubledgerPeriod"
+              examples:
+                default:
+                  summary: Reopened
+                  value:
+                    period: 2026-09
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    state: REOPENED
+                    history:
+                      - seq: 1
+                        state: HARD_CLOSE
+                        recordedAt: 2026-10-02T09:00:00.000000Z
+                        manifestDigest: zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f
+                      - seq: 2
+                        state: REOPENED
+                        reason: A supplier credit dated in September arrived after close.
+                        recordedAt: 2026-10-05T11:00:00.000000Z
+                        requestId: 01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/obligations:
     get:
       operationId: listObligations
@@ -3058,6 +3281,22 @@ components:
       schema:
         $ref: "#/components/schemas/DocumentId"
       example: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+    LegalPeriod:
+      name: period
+      in: path
+      required: true
+      description: The legal period, a month.
+      schema:
+        $ref: "#/components/schemas/LegalPeriod"
+      example: 2026-09
+    ReopenRequestId:
+      name: requestId
+      in: path
+      required: true
+      description: The reopen request.
+      schema:
+        $ref: "#/components/schemas/ReopenRequestId"
+      example: 01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
     Limit:
       name: limit
       in: query
@@ -6110,6 +6349,203 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/FiscalDocument"
+    LegalPeriod:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: LegalPeriod
+      description: A subledger legal period, a month.
+      pattern: ^[0-9]{4}-(0[1-9]|1[0-2])$
+      example: 2026-09
+    PeriodState:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: PeriodState
+      enum:
+        - OPEN
+        - SOFT_CLOSE
+        - HARD_CLOSE
+        - REOPENED
+        - AMENDMENT_ACTIVE
+        - SEALED
+      example: HARD_CLOSE
+    PeriodReason:
+      x-ztax-privacy:
+        class: P2
+        purposes:
+          - PURP-RECON
+          - PURP-EVID
+        retention: RET-FISCAL
+        redaction: REDACT
+        aiAllowed: NONE
+      type: string
+      title: PeriodReason
+      description: Free text entered by an operator.
+      maxLength: 1000
+      example: month end
+    PeriodEvent:
+      type: object
+      title: PeriodEvent
+      additionalProperties: false
+      required:
+        - seq
+        - state
+        - recordedAt
+      properties:
+        seq:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        state:
+          $ref: "#/components/schemas/PeriodState"
+        reason:
+          $ref: "#/components/schemas/PeriodReason"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+          description: Who moved the period; on a reopening, who requested it.
+        approvedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+          description: On a reopening, the second person who approved it.
+        requestId:
+          $ref: "#/components/schemas/ReopenRequestId"
+        manifestDigest:
+          $ref: "#/components/schemas/Digest"
+    CloseManifestDocument:
+      type: object
+      title: CloseManifestDocument
+      description: A close manifest exactly as digested, base64 canonical JSON.
+      additionalProperties: false
+      required:
+        - digest
+        - body
+      properties:
+        digest:
+          $ref: "#/components/schemas/Digest"
+        body:
+          x-ztax-privacy:
+            class: P5
+            purposes:
+              - PURP-RECON
+              - PURP-EVID
+            retention: RET-FISCAL
+            redaction: REDACT
+            aiAllowed: NONE
+            evidencePolicy: RAW_REQUIRED
+          type: string
+          format: byte
+    SubledgerPeriod:
+      type: object
+      title: SubledgerPeriod
+      additionalProperties: false
+      required:
+        - period
+        - legalEntityId
+        - state
+        - history
+      properties:
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        state:
+          $ref: "#/components/schemas/PeriodState"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/PeriodEvent"
+        manifest:
+          $ref: "#/components/schemas/CloseManifestDocument"
+        intact:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: Whether the period's journals and balances today are exactly the ones its latest manifest sealed. Absent until the period is first hard-closed.
+    PeriodTransitionRequest:
+      type: object
+      title: PeriodTransitionRequest
+      additionalProperties: false
+      required:
+        - to
+      properties:
+        to:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - OPEN
+            - SOFT_CLOSE
+            - HARD_CLOSE
+            - AMENDMENT_ACTIVE
+            - SEALED
+        reason:
+          $ref: "#/components/schemas/PeriodReason"
+    ReopenRequestId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ReopenRequestId
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+    ReopenRequestBody:
+      type: object
+      title: ReopenRequestBody
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          $ref: "#/components/schemas/PeriodReason"
+    PeriodReopenRequest:
+      type: object
+      title: PeriodReopenRequest
+      additionalProperties: false
+      required:
+        - id
+        - period
+        - reason
+        - requestedAt
+        - requestedBy
+      properties:
+        id:
+          $ref: "#/components/schemas/ReopenRequestId"
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+        reason:
+          $ref: "#/components/schemas/PeriodReason"
+        requestedAt:
+          $ref: "#/components/schemas/Timestamp"
+        requestedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
     ReplayReport:
       type: object
       title: ReplayReport

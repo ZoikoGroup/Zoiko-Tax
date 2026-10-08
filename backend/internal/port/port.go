@@ -598,3 +598,51 @@ type DocumentRepository interface {
 	// has already cancelled.
 	CancelledLines(ctx context.Context, documentID id.FiscalDocumentID) (map[id.FiscalLineID]bool, error)
 }
+
+// ---------------------------------------------------------------------------
+// subledger period close (ZTAX-FIN-001 §20–§22)
+// ---------------------------------------------------------------------------
+
+// ReopenRequest is a request to reopen a hard-closed period, waiting for a
+// second person's approval.
+type ReopenRequest struct {
+	ID          id.ReopenRequestID
+	TenantID    id.TenantID
+	LegalEntity id.LegalEntityID
+	Period      string
+	Reason      string
+	RequestedAt time.Time
+	RequestedBy id.UserID
+}
+
+// PeriodPopulation is everything a close manifest seals.
+type PeriodPopulation struct {
+	Journals   []id.JournalID
+	Balances   []subledger.ManifestBalance
+	Documents  []subledger.ManifestDocument
+	Exceptions []subledger.ManifestException
+}
+
+// PeriodRepository holds the subledger's legal periods.
+//
+// Posting and moving a period serialize on one lock per legal entity and
+// period, taken shared by a posting and exclusive by a transition: postings
+// into one month do not wait for each other, and a close waits for the
+// postings in flight, and they for it.
+type PeriodRepository interface {
+	LockForPosting(ctx context.Context, legalEntity id.LegalEntityID, period string) error
+	LockForTransition(ctx context.Context, legalEntity id.LegalEntityID, period string) error
+	// History returns a period's events, oldest first; none is OPEN.
+	History(ctx context.Context, legalEntity id.LegalEntityID, period string) ([]subledger.PeriodEvent, error)
+	// AppendEvent writes the next event; a sequence already taken is an
+	// optimistic conflict.
+	AppendEvent(ctx context.Context, e subledger.PeriodEvent) error
+	// Population reads what a close of the period would seal.
+	Population(ctx context.Context, legalEntity id.LegalEntityID, period string) (PeriodPopulation, error)
+	// PutManifest stores a sealed manifest's canonical bytes under its digest.
+	PutManifest(ctx context.Context, legalEntity id.LegalEntityID, period string, digest canonical.Digest, body []byte, at time.Time) error
+	// Manifest returns a stored manifest's canonical bytes.
+	Manifest(ctx context.Context, digest canonical.Digest) ([]byte, error)
+	CreateReopenRequest(ctx context.Context, r ReopenRequest) error
+	ReopenRequest(ctx context.Context, requestID id.ReopenRequestID) (ReopenRequest, error)
+}

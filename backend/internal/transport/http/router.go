@@ -99,6 +99,10 @@ type Router struct {
 	// Documents serves the fiscal documents. Nil wherever Determination is,
 	// since documents present its decisions.
 	Documents *app.DocumentService
+
+	// Periods serves the subledger's legal periods: close, amendment
+	// windows, and reopening on approval. Nil wherever Determination is.
+	Periods *app.PeriodService
 }
 
 // Trains are the seven release-train versions, as the contract names them.
@@ -213,6 +217,12 @@ func (rt *Router) routes() []struct {
 		{Route{"GET", "/v1/seals/{sealId}", false, []security.Role{admin, auditor, analyst}}, rt.handleGetSeal},
 		{Route{"GET", "/v1/seals/{sealId}/verification", false, []security.Role{admin, auditor, analyst}}, rt.handleVerifySeal},
 		{Route{"GET", "/v1/subledger/balances", false, []security.Role{operator, analyst, auditor}}, rt.handleSubledgerBalances},
+		{Route{"GET", "/v1/subledger/periods/{period}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetPeriod},
+		{Route{"POST", "/v1/subledger/periods/{period}/transitions", false, []security.Role{operator}}, rt.handleTransitionPeriod},
+		{Route{"POST", "/v1/subledger/periods/{period}/reopen-requests", false, []security.Role{operator}}, rt.handleRequestReopen},
+		// Approval is ADMIN's, and never the requester's: the service refuses
+		// a self-approval whatever roles the approver holds.
+		{Route{"POST", "/v1/subledger/periods/{period}/reopen-requests/{requestId}/approval", false, []security.Role{admin}}, rt.handleApproveReopen},
 		{Route{"GET", "/v1/obligations", false, []security.Role{operator, analyst, auditor}}, rt.handleListObligations},
 		{Route{"GET", "/v1/obligations/{obligationId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetObligation},
 		{Route{"POST", "/v1/obligations/{obligationId}/transitions", false, []security.Role{operator}}, rt.handleTransitionObligation},

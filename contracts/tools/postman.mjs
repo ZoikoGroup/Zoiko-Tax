@@ -124,13 +124,14 @@ const FOLDERS = [
   {
     name: "06 · Determination — needs content and an OPERATOR",
     description:
-      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously. Last, the subledger period `{{period}}` — `2000-01` by default, a month nothing posts into, so a run never closes one that matters — is hard-closed, a reopen is requested, and the requester's own approval is refused (ZTAX-FIN-REQ-0091).\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
     operations: [
       "createQuote", "commitTransaction", "getDecision", "replayDecision", "listDecisionJournals",
       "getSubledgerBalances", "listObligations", "getObligation", "transitionObligation",
       "issueDocument", "getDocument", "correctDocument", "getDocumentLineage",
       "adjustTransaction", "refundTransaction", "getRefund", "reportRefund", "proposeClassification",
       "submitBatch", "getJob", "getDecisionInclusion",
+      "getSubledgerPeriod", "transitionSubledgerPeriod", "requestPeriodReopen", "approvePeriodReopen",
     ],
     prerequest: [
       "if (pm.variables.get('runDetermination') !== 'true') {",
@@ -337,6 +338,23 @@ const OPERATION_TESTS = {
     "pm.test('one root, the invoice first', function () {",
     "  pm.response.to.have.status(200);",
     "  pm.expect(pm.response.json().documents[0].status).to.eql('VOIDED');",
+    "});",
+  ],
+  transitionSubledgerPeriod: [
+    "pm.test('ZTAX-FIN-REQ-0089 — closed with a manifest, or already closed by an earlier run', function () {",
+    "  pm.expect([200, 409]).to.include(pm.response.code);",
+    "  if (pm.response.code === 200) { pm.expect(pm.response.json().manifest.digest).to.match(/^zt1:/); }",
+    "});",
+  ],
+  requestPeriodReopen: [
+    "pm.test('a reopen is requested and nothing moves yet', function () {",
+    "  pm.expect([201, 409]).to.include(pm.response.code);",
+    "});",
+    "if (pm.response.code === 201) { pm.collectionVariables.set('requestId', pm.response.json().id); }",
+  ],
+  approvePeriodReopen: [
+    "pm.test('ZTAX-FIN-REQ-0091 — the requester cannot approve their own reopen', function () {",
+    "  pm.expect([403, 404]).to.include(pm.response.code);",
     "});",
   ],
   submitBatch: [
@@ -825,6 +843,8 @@ function variables(overlay, contractDigest, local) {
     { key: "jobId", value: "", type: "string" },
     { key: "sealId", value: "", type: "string" },
     { key: "documentId", value: "", type: "string" },
+    { key: "period", value: "2000-01", type: "string" },
+    { key: "requestId", value: "", type: "string" },
     // Minted once per run by `07`, and reused by the requests that must share it.
     { key: "reusedKey", value: "", type: "string" },
 

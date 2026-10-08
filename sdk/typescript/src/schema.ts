@@ -1097,6 +1097,110 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/subledger/periods/{period}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A legal period's state, history and close manifest
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. A legal period is a month of the
+         *     tenant's default legal entity; one with no history is `OPEN`. A
+         *     hard-closed period carries its latest close manifest — the canonical
+         *     bytes and their digest — and `intact`: whether the journals and
+         *     control balances posted into it today are exactly the ones the
+         *     manifest sealed (ZTAX-FIN-REQ-0089).
+         */
+        get: operations["getSubledgerPeriod"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/subledger/periods/{period}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close a period, open an amendment window, or seal it
+         * @description `OPERATOR`. Moves the period (ZTAX-FIN-REQ-0088): `OPEN` ⇄
+         *     `SOFT_CLOSE` → `HARD_CLOSE` → `AMENDMENT_ACTIVE` → `HARD_CLOSE`, and
+         *     `HARD_CLOSE` → `SEALED`, which is final. A hard close seals the
+         *     period's journals, control balances, documents dated in it and open
+         *     exceptions in a new close manifest, naming the previous one
+         *     (ZTAX-FIN-REQ-0089, -0092, -0093).
+         *
+         *     After a hard close nothing posts into the period by the normal path:
+         *     a commit or a correction whose journal falls in it is refused with
+         *     `STATE_TRANSITION_INVALID`. Inside an `AMENDMENT_ACTIVE` window it
+         *     posts, marked as an amendment (ZTAX-FIN-REQ-0090). `SOFT_CLOSE` takes
+         *     adjustment and rounding journals only.
+         *
+         *     `REOPENED` is not a transition: it takes a reopen request and a
+         *     second person's approval.
+         */
+        post: operations["transitionSubledgerPeriod"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/subledger/periods/{period}/reopen-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask to reopen a hard-closed period
+         * @description `OPERATOR`. Records a request, with its reason, to reopen a
+         *     hard-closed period. Nothing moves until someone else approves it
+         *     (ZTAX-FIN-REQ-0091). A sealed period cannot be reopened.
+         */
+        post: operations["requestPeriodReopen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/subledger/periods/{period}/reopen-requests/{requestId}/approval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve someone else's request to reopen a period
+         * @description `ADMIN`, and never the person who made the request
+         *     (ZTAX-FIN-REQ-0091). The period becomes `REOPENED`; every earlier
+         *     close manifest stays, and the next hard close writes a new one naming
+         *     the last. A request is approved once.
+         */
+        post: operations["approvePeriodReopen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/obligations": {
         parameters: {
             query?: never;
@@ -2493,6 +2597,88 @@ export interface components {
         DocumentLineage: {
             documents: components["schemas"]["FiscalDocument"][];
         };
+        /**
+         * LegalPeriod
+         * @description A subledger legal period, a month.
+         * @example 2026-09
+         */
+        LegalPeriod: string;
+        /**
+         * PeriodState
+         * @example HARD_CLOSE
+         * @enum {string}
+         */
+        PeriodState: "OPEN" | "SOFT_CLOSE" | "HARD_CLOSE" | "REOPENED" | "AMENDMENT_ACTIVE" | "SEALED";
+        /**
+         * PeriodReason
+         * @description Free text entered by an operator.
+         * @example month end
+         */
+        PeriodReason: string;
+        /** PeriodEvent */
+        PeriodEvent: {
+            /** Format: int32 */
+            seq: number;
+            state: components["schemas"]["PeriodState"];
+            reason?: components["schemas"]["PeriodReason"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /**
+             * Format: uuid
+             * @description Who moved the period; on a reopening, who requested it.
+             */
+            recordedBy?: string;
+            /**
+             * Format: uuid
+             * @description On a reopening, the second person who approved it.
+             */
+            approvedBy?: string;
+            requestId?: components["schemas"]["ReopenRequestId"];
+            manifestDigest?: components["schemas"]["Digest"];
+        };
+        /**
+         * CloseManifestDocument
+         * @description A close manifest exactly as digested, base64 canonical JSON.
+         */
+        CloseManifestDocument: {
+            digest: components["schemas"]["Digest"];
+            /** Format: byte */
+            body: string;
+        };
+        /** SubledgerPeriod */
+        SubledgerPeriod: {
+            period: components["schemas"]["LegalPeriod"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            state: components["schemas"]["PeriodState"];
+            history: components["schemas"]["PeriodEvent"][];
+            manifest?: components["schemas"]["CloseManifestDocument"];
+            /** @description Whether the period's journals and balances today are exactly the ones its latest manifest sealed. Absent until the period is first hard-closed. */
+            intact?: boolean;
+        };
+        /** PeriodTransitionRequest */
+        PeriodTransitionRequest: {
+            /** @enum {string} */
+            to: "OPEN" | "SOFT_CLOSE" | "HARD_CLOSE" | "AMENDMENT_ACTIVE" | "SEALED";
+            reason?: components["schemas"]["PeriodReason"];
+        };
+        /**
+         * ReopenRequestId
+         * Format: uuid
+         * @example 01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        ReopenRequestId: string;
+        /** ReopenRequestBody */
+        ReopenRequestBody: {
+            reason: components["schemas"]["PeriodReason"];
+        };
+        /** PeriodReopenRequest */
+        PeriodReopenRequest: {
+            id: components["schemas"]["ReopenRequestId"];
+            period: components["schemas"]["LegalPeriod"];
+            reason: components["schemas"]["PeriodReason"];
+            requestedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            requestedBy: string;
+        };
         /** ReplayReport */
         ReplayReport: {
             decisionId: components["schemas"]["DecisionId"];
@@ -2655,6 +2841,16 @@ export interface components {
          * @example 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
          */
         DocumentId: components["schemas"]["DocumentId"];
+        /**
+         * @description The legal period, a month.
+         * @example 2026-09
+         */
+        LegalPeriod: components["schemas"]["LegalPeriod"];
+        /**
+         * @description The reopen request.
+         * @example 01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        ReopenRequestId: components["schemas"]["ReopenRequestId"];
         /**
          * @description Maximum number of items to return. The server caps this independently,
          *     so a larger value is not an error and does not return more.
@@ -4129,6 +4325,147 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getSubledgerPeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The legal period, a month.
+                 * @example 2026-09
+                 */
+                period: components["parameters"]["LegalPeriod"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The period. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubledgerPeriod"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    transitionSubledgerPeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The legal period, a month.
+                 * @example 2026-09
+                 */
+                period: components["parameters"]["LegalPeriod"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PeriodTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description The period after the move. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubledgerPeriod"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    requestPeriodReopen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The legal period, a month.
+                 * @example 2026-09
+                 */
+                period: components["parameters"]["LegalPeriod"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReopenRequestBody"];
+            };
+        };
+        responses: {
+            /** @description The request, awaiting approval. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodReopenRequest"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    approvePeriodReopen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The legal period, a month.
+                 * @example 2026-09
+                 */
+                period: components["parameters"]["LegalPeriod"];
+                /**
+                 * @description The reopen request.
+                 * @example 01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                requestId: components["parameters"]["ReopenRequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The reopened period. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubledgerPeriod"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };

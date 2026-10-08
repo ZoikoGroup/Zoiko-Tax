@@ -127,6 +127,9 @@ type (
 
 	// JobID identifies one asynchronous job: a batch of commits.
 	JobID struct{ base }
+
+	// ReopenRequestID identifies one request to reopen a closed period.
+	ReopenRequestID struct{ base }
 )
 
 // The constructors. Each takes a uuid.UUID that idgen produced, or that the
@@ -213,6 +216,9 @@ func NewDeliveryID(u uuid.UUID) DeliveryID { return DeliveryID{base{u}} }
 
 // NewJobID wraps a raw UUID as a JobID.
 func NewJobID(u uuid.UUID) JobID { return JobID{base{u}} }
+
+// NewReopenRequestID wraps a raw UUID as a ReopenRequestID.
+func NewReopenRequestID(u uuid.UUID) ReopenRequestID { return ReopenRequestID{base{u}} }
 
 // parse is the shared text ingress. Identifiers arrive from a URL path, a
 // cookie lookup or a database column, and all three can carry something that is
@@ -394,4 +400,13 @@ func ParseJobID(s string) (JobID, error) {
 		return JobID{}, err
 	}
 	return NewJobID(u), nil
+}
+
+// ParseReopenRequestID reads a ReopenRequestID from its canonical string form.
+func ParseReopenRequestID(s string) (ReopenRequestID, error) {
+	u, err := parse("reopen request id", s)
+	if err != nil {
+		return ReopenRequestID{}, err
+	}
+	return NewReopenRequestID(u), nil
 }

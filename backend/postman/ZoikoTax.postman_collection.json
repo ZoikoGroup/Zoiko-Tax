@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:50d72072a4287679dca97e64227a25ce169a88cbeb924c8c97f0697bc8cf6ea3`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:ddeea84b2b6b83f86e9240517c0a837bb3a5b6168ebca606460e067ac2bf3e7d`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -2031,7 +2031,7 @@
     },
     {
       "name": "06 · Determination — needs content and an OPERATOR",
-      "description": "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "description": "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously. Last, the subledger period `{{period}}` — `2000-01` by default, a month nothing posts into, so a run never closes one that matters — is hard-closed, a reopen is requested, and the requester's own approval is refused (ZTAX-FIN-REQ-0091).\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
       "item": [
         {
           "name": "POST /v1/quotes — Quote a transaction without recording it",
@@ -3735,6 +3735,325 @@
               }
             }
           ]
+        },
+        {
+          "name": "GET /v1/subledger/periods/{period} — A legal period's state, history and close manifest",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/subledger/periods/{{period}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subledger",
+                "periods",
+                "{{period}}"
+              ]
+            },
+            "description": "A legal period's state, history and close manifest\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. A legal period is a month of the\ntenant's default legal entity; one with no history is `OPEN`. A\nhard-closed period carries its latest close manifest — the canonical\nbytes and their digest — and `intact`: whether the journals and\ncontrol balances posted into it today are exactly the ones the\nmanifest sealed (ZTAX-FIN-REQ-0089)."
+          },
+          "response": [
+            {
+              "name": "200 · A hard-closed September",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/subledger/periods/{{period}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "subledger",
+                    "periods",
+                    "{{period}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"state\": \"HARD_CLOSE\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"state\": \"HARD_CLOSE\",\n      \"reason\": \"month end\",\n      \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"manifestDigest\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\"\n    }\n  ],\n  \"manifest\": {\n    \"digest\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n    \"body\": \"eyJhcnRpZmFjdCI6InRjc2wtY2xvc2UtbWFuaWZlc3QifQ==\"\n  },\n  \"intact\": true\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getSubledgerPeriod returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/subledger/periods/{period}/transitions — Close a period, open an amendment window, or seal it",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"HARD_CLOSE\",\n  \"reason\": \"month end\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/subledger/periods/{{period}}/transitions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subledger",
+                "periods",
+                "{{period}}",
+                "transitions"
+              ]
+            },
+            "description": "Close a period, open an amendment window, or seal it\n\n`OPERATOR`. Moves the period (ZTAX-FIN-REQ-0088): `OPEN` ⇄\n`SOFT_CLOSE` → `HARD_CLOSE` → `AMENDMENT_ACTIVE` → `HARD_CLOSE`, and\n`HARD_CLOSE` → `SEALED`, which is final. A hard close seals the\nperiod's journals, control balances, documents dated in it and open\nexceptions in a new close manifest, naming the previous one\n(ZTAX-FIN-REQ-0089, -0092, -0093).\n\nAfter a hard close nothing posts into the period by the normal path:\na commit or a correction whose journal falls in it is refused with\n`STATE_TRANSITION_INVALID`. Inside an `AMENDMENT_ACTIVE` window it\nposts, marked as an amendment (ZTAX-FIN-REQ-0090). `SOFT_CLOSE` takes\nadjustment and rounding journals only.\n\n`REOPENED` is not a transition: it takes a reopen request and a\nsecond person's approval."
+          },
+          "response": [
+            {
+              "name": "200 · Hard-closed",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/subledger/periods/{{period}}/transitions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "subledger",
+                    "periods",
+                    "{{period}}",
+                    "transitions"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"state\": \"HARD_CLOSE\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"state\": \"HARD_CLOSE\",\n      \"reason\": \"month end\",\n      \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"manifestDigest\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\"\n    }\n  ],\n  \"manifest\": {\n    \"digest\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n    \"body\": \"eyJhcnRpZmFjdCI6InRjc2wtY2xvc2UtbWFuaWZlc3QifQ==\"\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('transitionSubledgerPeriod returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('ZTAX-FIN-REQ-0089 — closed with a manifest, or already closed by an earlier run', function () {",
+                  "  pm.expect([200, 409]).to.include(pm.response.code);",
+                  "  if (pm.response.code === 200) { pm.expect(pm.response.json().manifest.digest).to.match(/^zt1:/); }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/subledger/periods/{period}/reopen-requests — Ask to reopen a hard-closed period",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"A supplier credit dated in September arrived after close.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/subledger/periods/{{period}}/reopen-requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subledger",
+                "periods",
+                "{{period}}",
+                "reopen-requests"
+              ]
+            },
+            "description": "Ask to reopen a hard-closed period\n\n`OPERATOR`. Records a request, with its reason, to reopen a\nhard-closed period. Nothing moves until someone else approves it\n(ZTAX-FIN-REQ-0091). A sealed period cannot be reopened."
+          },
+          "response": [
+            {
+              "name": "201 · Awaiting approval",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/subledger/periods/{{period}}/reopen-requests",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "subledger",
+                    "periods",
+                    "{{period}}",
+                    "reopen-requests"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"period\": \"2026-09\",\n  \"reason\": \"A supplier credit dated in September arrived after close.\",\n  \"requestedAt\": \"2026-10-05T10:00:00.000000Z\",\n  \"requestedBy\": \"01920a40-aaaa-7bbb-8ccc-000000000d01\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('requestPeriodReopen returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('a reopen is requested and nothing moves yet', function () {",
+                  "  pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('requestId', pm.response.json().id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/subledger/periods/{period}/reopen-requests/{requestId}/approval — Approve someone else's request to reopen a period",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/subledger/periods/{{period}}/reopen-requests/{{requestId}}/approval",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subledger",
+                "periods",
+                "{{period}}",
+                "reopen-requests",
+                "{{requestId}}",
+                "approval"
+              ]
+            },
+            "description": "Approve someone else's request to reopen a period\n\n`ADMIN`, and never the person who made the request\n(ZTAX-FIN-REQ-0091). The period becomes `REOPENED`; every earlier\nclose manifest stays, and the next hard close writes a new one naming\nthe last. A request is approved once."
+          },
+          "response": [
+            {
+              "name": "200 · Reopened",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/subledger/periods/{{period}}/reopen-requests/{{requestId}}/approval",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "subledger",
+                    "periods",
+                    "{{period}}",
+                    "reopen-requests",
+                    "{{requestId}}",
+                    "approval"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"state\": \"REOPENED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"state\": \"HARD_CLOSE\",\n      \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"manifestDigest\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\"\n    },\n    {\n      \"seq\": 2,\n      \"state\": \"REOPENED\",\n      \"reason\": \"A supplier credit dated in September arrived after close.\",\n      \"recordedAt\": \"2026-10-05T11:00:00.000000Z\",\n      \"requestId\": \"01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('approvePeriodReopen returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('ZTAX-FIN-REQ-0091 — the requester cannot approve their own reopen', function () {",
+                  "  pm.expect([403, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ],
       "event": [
@@ -4829,6 +5148,16 @@
       "type": "string"
     },
     {
+      "key": "period",
+      "value": "2000-01",
+      "type": "string"
+    },
+    {
+      "key": "requestId",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "reusedKey",
       "value": "",
       "type": "string"
@@ -4840,7 +5169,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:50d72072a4287679dca97e64227a25ce169a88cbeb924c8c97f0697bc8cf6ea3",
+      "value": "sha256:ddeea84b2b6b83f86e9240517c0a837bb3a5b6168ebca606460e067ac2bf3e7d",
       "type": "string"
     }
   ]

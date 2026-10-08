@@ -1725,6 +1725,133 @@
         "aiAllowed": "NONE",
         "note": "The operator whose act moved the document; NULL when a correction's commit did."
       }
+    },
+    "tcsl_close_manifest": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "manifest_digest": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "legal_period": {
+        "class": "P0"
+      },
+      "body": {
+        "class": "P5",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "The period's sealed population: journal and document ids, control balances, open exceptions. Aggregates, and ids that resolve to fiscal records."
+      },
+      "created_at": {
+        "class": "P0"
+      }
+    },
+    "tcsl_reopen_request": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "request_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "legal_period": {
+        "class": "P0"
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by an operator."
+      },
+      "requested_at": {
+        "class": "P0"
+      },
+      "requested_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The operator who asked to reopen the period."
+      }
+    },
+    "tcsl_period_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "legal_period": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "state": {
+        "class": "P0"
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by an operator."
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The operator who moved the period; on a reopening, the requester."
+      },
+      "request_id": {
+        "class": "P0"
+      },
+      "approved_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The second person who approved a reopening."
+      },
+      "manifest_digest": {
+        "class": "P0"
+      }
     }
   }
 }

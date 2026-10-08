@@ -82,6 +82,13 @@ type RefundService struct {
 	clock       clock.Clock
 	ids         idgen.Generator
 	idempotency *Idempotency
+	periods     port.PeriodRepository
+}
+
+// WithPeriods guards a completed refund's posting against its period.
+func (s *RefundService) WithPeriods(p port.PeriodRepository) *RefundService {
+	s.periods = p
+	return s
 }
 
 // NewRefundService wires the service.
@@ -391,6 +398,9 @@ func (s *RefundService) post(ctx context.Context, rf settlement.Refund, complete
 	}, jid, completed.RecordedAt)
 	if err != nil {
 		return internal(err, "The refund's posting does not post.")
+	}
+	if j, err = guardPosting(ctx, s.periods, j); err != nil {
+		return err
 	}
 	return s.journals.Append(ctx, j)
 }

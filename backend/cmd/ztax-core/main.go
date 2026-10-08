@@ -142,7 +142,8 @@ func run() error {
 		// Refunds read what commits posted, so they are served wherever the
 		// determination surface is.
 		router.Refunds = app.NewRefundService(store.Decisions(), store.Journals(), store.Refunds(), store.Outbox(),
-			store, clk, ids, app.NewIdempotency(store.Idempotency(), store, clk))
+			store, clk, ids, app.NewIdempotency(store.Idempotency(), store, clk)).WithPeriods(store.Periods())
+		router.Periods = app.NewPeriodService(store.Periods(), store.LegalEntities(), store, clk, ids)
 		router.Batches = app.NewBatchService(store.Batches(), router.Determination,
 			app.NewIdempotency(store.Idempotency(), store, clk), clk, ids)
 		go runBatchWorker(ctx, router.Batches, log)
@@ -461,6 +462,7 @@ func wireDetermination(cfg config.Config, store *postgres.Store, content *rule.H
 		WithFiscal(app.FiscalStores{
 			Accumulators: store.Accumulators(), Journals: store.Journals(),
 			LegalEntities: store.LegalEntities(), Outbox: store.Outbox(), Obligations: store.Obligations(),
+			Periods: store.Periods(),
 		})
 	log.Info("determination surface enabled", "evidence.dir", cfg.EvidenceDir)
 	return svc, nil
