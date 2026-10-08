@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.zoikotax.com/governance/quarantine/v1",
+  "title": "ZoikoTax flaky-test quarantine register",
+  "description": "ADR-0018 §2.12 / control 6: a flaky test is quarantined, never retried in CI. Expiry, the sole-verification rule (QA-REQ-0105) and the test_ref/skip-marker round trip are enforced by docs/tools/check_quarantine.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["quarantine"],
+  "properties": {
+    "quarantine": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "nonEmpty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quarantine_id", "test_ref", "owner", "defect", "reason",
+        "quarantined_at", "expires_at", "coverage_impact"
+      ],
+      "properties": {
+        "quarantine_id": {
+          "type": "string",
+          "pattern": "^ZTAX-QUAR-[0-9]{4}-[0-9]{4}$"
+        },
+        "test_ref": {
+          "description": "path, or path::TestName",
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "owner": { "$ref": "#/$defs/nonEmpty" },
+        "defect": {
+          "description": "An issue id or link text.",
+          "$ref": "#/$defs/nonEmpty"
+        },
+        "reason": { "$ref": "#/$defs/nonEmpty" },
+        "quarantined_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "expires_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "coverage_impact": { "$ref": "#/$defs/nonEmpty" },
+        "requirement_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^ZTAX-[A-Z][A-Z0-9]*-REQ-[0-9]{4}$"
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  }
+}

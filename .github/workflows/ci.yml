@@ -490,6 +490,14 @@ jobs:
       - name: the register, the requirements and the waivers agree
         run: python docs/tools/check_registry.py
 
+      # ADR-0018 control 6, §2.12: a flaky test is quarantined, never
+      # retried in CI. Rejects an expired or incomplete quarantine entry, a
+      # quarantine that is the sole verification_ref of a requirement
+      # (QA-REQ-0105), and a mismatch between docs/quarantine.yaml and the
+      # QUARANTINE: <id> skip markers in the test trees it names.
+      - name: quarantine register (ADR-0018 control 6)
+        run: python docs/tools/check_quarantine.py
+
       # Requirement → test → evidence (#18). Runs each registered
       # verification_ref and uploads the result; non-blocking by design for individual
       # FAIL/ERROR counts, but a ratchet regression against docs/trace_baseline.json

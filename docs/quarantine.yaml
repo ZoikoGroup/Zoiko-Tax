@@ -1,0 +1,56 @@
+# ZoikoTax flaky-test quarantine register — ADR-0018 §2.12, control 6.
+#
+# "Flaky tests are quarantined and fixed, never retried — in a certification
+# chain, a retry that turns red into green is destroyed evidence." (§2.12)
+# "No test retries in CI; flakes are quarantined with an owner and a
+# deadline." (control 6, §5.1) Tests are never retried in CI; a flake is
+# quarantined here instead, validated by docs/tools/check_quarantine.py
+# against docs/schema/quarantine.schema.json.
+#
+# CI rejects a quarantine entry that:
+#   - is invalid against the schema, or duplicates another entry's ID
+#   - has expired (expires_at in the past) — a quarantine with no live
+#     deadline reads as a permanent exemption, which it is not
+#   - has an empty owner, reason, defect or coverage_impact (QA-REQ-0103,
+#     QA-REQ-0104)
+#   - names a test_ref path that does not exist, or one outside the test
+#     trees this register's checker actually scans (backend/,
+#     intelligence/tests/, sdk/, contracts/) — a quarantine it cannot verify
+#   - names a requirement_id not in docs/requirements.yaml
+#   - is the sole verification_ref of a registered requirement (QA-REQ-0105:
+#     "The sole verification of a mandatory gate MUST NOT be quarantined")
+#   - has no matching `QUARANTINE: <id>` skip marker in its own test_ref
+#     file, or a marker found in a test file names an ID not registered
+#     here, or the marker is only a comment with no skip call behind it —
+#     the test would still run
+#
+# How to quarantine a test: the skip ITSELF must carry the marker, on the
+# SAME LINE as the skip call or decorator — a comment near it, on its own
+# line, is not a quarantine, because the test keeps running. File the
+# defect, add the register entry below, and add the skip, all in the same
+# PR:
+#
+#   Go:         t.Skip("QUARANTINE: ZTAX-QUAR-2026-0001")
+#   pytest:     @pytest.mark.skip(reason="QUARANTINE: ZTAX-QUAR-2026-0001")
+#               (or, inside the test body: pytest.skip("QUARANTINE: ..."))
+#   JavaScript: test.skip("QUARANTINE: ZTAX-QUAR-2026-0001", () => {});
+#               (node:test; it.skip(/describe.skip( for Mocha/Jest-style
+#               suites, or the inline form
+#               test("name", { skip: "QUARANTINE: ..." }, fn))
+#   Java:       @Disabled("QUARANTINE: ZTAX-QUAR-2026-0001")
+#   .NET:       [Fact(Skip = "QUARANTINE: ZTAX-QUAR-2026-0001")]
+#
+# Shape:
+#
+#   - quarantine_id: ZTAX-QUAR-2026-0001
+#     test_ref: "backend/internal/domain/foo/foo_test.go::TestBarIsFlaky"
+#     owner: "Head of Testing"
+#     defect: "JIRA-1234"
+#     reason: "Intermittent timeout under -race; root cause not yet isolated"
+#     quarantined_at: "2026-10-08"
+#     expires_at: "2026-11-08"
+#     coverage_impact: "Backend domain foo loses TestBarIsFlaky's assertion until re-enabled; no other test covers this path"
+#     requirement_ids: []
+#
+# There are none. Nothing is quarantined.
+quarantine: []
