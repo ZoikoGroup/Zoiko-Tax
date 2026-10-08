@@ -298,3 +298,12 @@ func ReopenRequestID(g Generator) (id.ReopenRequestID, error) {
 	}
 	return id.NewReopenRequestID(u), nil
 }
+
+// ReconItemID returns a fresh ReconItemID.
+func ReconItemID(g Generator) (id.ReconItemID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.ReconItemID{}, err
+	}
+	return id.NewReconItemID(u), nil
+}

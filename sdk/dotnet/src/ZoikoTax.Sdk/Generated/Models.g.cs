@@ -2910,6 +2910,253 @@ namespace ZoikoTax.Sdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ReconStage
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"R1_CALCULATED_TO_DOCUMENT")]
+        R1_CALCULATED_TO_DOCUMENT = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"R2_DOCUMENT_TO_COLLECTION")]
+        R2_DOCUMENT_TO_COLLECTION = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"R3_DOCUMENT_TO_SUBLEDGER")]
+        R3_DOCUMENT_TO_SUBLEDGER = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"R4_SUBLEDGER_TO_RETURN")]
+        R4_SUBLEDGER_TO_RETURN = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"R5_RETURN_TO_REMITTANCE")]
+        R5_RETURN_TO_REMITTANCE = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"R6_SUBLEDGER_TO_GL")]
+        R6_SUBLEDGER_TO_GL = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"R7_END_TO_END")]
+        R7_END_TO_END = 6,
+
+    }
+
+    /// <summary>
+    /// FIN-001 §18's root-cause taxonomy (ZTAX-FIN-REQ-0083).
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum RootCause
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CLASSIFICATION")]
+        CLASSIFICATION = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"JURISDICTION")]
+        JURISDICTION = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"TAX_RULE")]
+        TAX_RULE = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ROUNDING")]
+        ROUNDING = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"FX")]
+        FX = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DOCUMENT")]
+        DOCUMENT = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"COLLECTION")]
+        COLLECTION = 6,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"POSTING")]
+        POSTING = 7,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RETURN")]
+        RETURN = 8,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REMITTANCE")]
+        REMITTANCE = 9,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"GL")]
+        GL = 10,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"TIMING")]
+        TIMING = 11,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DATA")]
+        DATA = 12,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"OTHER")]
+        OTHER = 13,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReconciliationRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("period")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-(0[1-9]|1[0-2])$")]
+        public string Period { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReconResolution
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("actor")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ReconResolutionActor>))]
+        public ReconResolutionActor Actor { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("resolver")]
+        public System.Guid? Resolver { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("action")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ReconResolutionAction>))]
+        public ReconResolutionAction Action { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("rootCause")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RootCause>))]
+        public RootCause RootCause { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("evidence")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<string> Evidence { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("resolvedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string ResolvedAt { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// One comparison. `variance` is observed minus expected, exact,
+    /// <br/>whatever the status (ZTAX-FIN-REQ-0081); absent when one side is.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReconciliationItem
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("stage")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ReconStage>))]
+        public ReconStage Stage { get; set; } = default!;
+
+        /// <summary>
+        /// The canonical id compared on, such as `decision:&lt;id&gt;` or `refund:&lt;id&gt;`.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("matchKey")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string MatchKey { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("expected")]
+        public MoneyValue? Expected { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("observed")]
+        public MoneyValue? Observed { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("variance")]
+        public MoneyValue? Variance { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ReconciliationItemStatus>))]
+        public ReconciliationItemStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("rootCause")]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RootCause>))]
+        public RootCause? RootCause { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("detail")]
+        public string? Detail { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("resolution")]
+        public ReconResolution? Resolution { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReconciliationRun
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("period")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-(0[1-9]|1[0-2])$")]
+        public string Period { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("legalEntityId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid LegalEntityId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("ranAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RanAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("ranBy")]
+        public System.Guid? RanBy { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("firstBreak")]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ReconStage>))]
+        public ReconStage? FirstBreak { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("unavailable")]
+        // TODO(system.text.json): Add ItemConverterType with enum converter when supported
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<ReconStage> Unavailable { get; set; } = new System.Collections.ObjectModel.Collection<ReconStage>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("items")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<ReconciliationItem> Items { get; set; } = new System.Collections.ObjectModel.Collection<ReconciliationItem>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ResolutionRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(1000, MinimumLength = 1)]
+        public string Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("action")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ResolutionRequestAction>))]
+        public ResolutionRequestAction Action { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("rootCause")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RootCause>))]
+        public RootCause RootCause { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("evidence")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.MinLength(1)]
+        [System.ComponentModel.DataAnnotations.MaxLength(50)]
+        public System.Collections.Generic.ICollection<string> Evidence { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ReplayReport
     {
 
@@ -3327,6 +3574,102 @@ namespace ZoikoTax.Sdk
 
         [System.Runtime.Serialization.EnumMember(Value = @"SEALED")]
         SEALED = 4,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ReconResolutionActor
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"HUMAN")]
+        HUMAN = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AI_A3")]
+        AI_A3 = 1,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ReconResolutionAction
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ADJUST")]
+        ADJUST = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RECLASSIFY")]
+        RECLASSIFY = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AMEND")]
+        AMEND = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"WAIT")]
+        WAIT = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"WAIVE_WITH_APPROVAL")]
+        WAIVE_WITH_APPROVAL = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"EXTERNAL_CORRECTION")]
+        EXTERNAL_CORRECTION = 5,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ReconciliationItemStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"MATCHED")]
+        MATCHED = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"TOLERANCE_MATCH")]
+        TOLERANCE_MATCH = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"UNMATCHED")]
+        UNMATCHED = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PARTIAL")]
+        PARTIAL = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DUPLICATE")]
+        DUPLICATE = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"MISSING")]
+        MISSING = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CONFLICTED")]
+        CONFLICTED = 6,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PENDING")]
+        PENDING = 7,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"EXPLAINED")]
+        EXPLAINED = 8,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RESOLVED")]
+        RESOLVED = 9,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ResolutionRequestAction
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ADJUST")]
+        ADJUST = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RECLASSIFY")]
+        RECLASSIFY = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AMEND")]
+        AMEND = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"WAIT")]
+        WAIT = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"WAIVE_WITH_APPROVAL")]
+        WAIVE_WITH_APPROVAL = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"EXTERNAL_CORRECTION")]
+        EXTERNAL_CORRECTION = 5,
 
     }
 

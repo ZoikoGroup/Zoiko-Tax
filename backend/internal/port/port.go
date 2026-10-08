@@ -28,6 +28,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/obligation"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/outbox"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/reconciliation"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/settlement"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/subledger"
@@ -156,6 +157,9 @@ type DecisionRepository interface {
 	AsOf(ctx context.Context, businessKey string, decisionTime, eventTime time.Time) (evidence.Record, error)
 	// History is every version of a business key, oldest first.
 	History(ctx context.Context, businessKey string) ([]evidence.Record, error)
+	// CurrentInWindow is the current version of every business key whose
+	// decision's event fell in [from, to): what a period reconciles.
+	CurrentInWindow(ctx context.Context, from, to time.Time) ([]evidence.Record, error)
 	// SealLeaves returns the leaves of every decision recorded in
 	// [from, to), in evidence.LeafOrder.
 	SealLeaves(ctx context.Context, from, to time.Time) ([]evidence.SealLeaf, error)
@@ -597,6 +601,10 @@ type DocumentRepository interface {
 	// CancelledLines reports which lines of a document a void or credit note
 	// has already cancelled.
 	CancelledLines(ctx context.Context, documentID id.FiscalDocumentID) (map[id.FiscalLineID]bool, error)
+	// TaxByDecision sums the tax every document presents for each decision —
+	// invoices positive, voids and credits negative — in the documents'
+	// currency. A decision no document cites is absent.
+	TaxByDecision(ctx context.Context, decisions []id.DecisionID) (map[id.DecisionID]fiscal.Money, error)
 }
 
 // ---------------------------------------------------------------------------
@@ -645,4 +653,28 @@ type PeriodRepository interface {
 	Manifest(ctx context.Context, digest canonical.Digest) ([]byte, error)
 	CreateReopenRequest(ctx context.Context, r ReopenRequest) error
 	ReopenRequest(ctx context.Context, requestID id.ReopenRequestID) (ReopenRequest, error)
+}
+
+// ---------------------------------------------------------------------------
+// reconciliation (ZTAX-FIN-001 §17–§20)
+// ---------------------------------------------------------------------------
+
+// ReconResolution is a resolution of one item, as stored.
+type ReconResolution struct {
+	Item id.ReconItemID
+	reconciliation.Resolution
+}
+
+// ReconciliationRepository stores runs, their items and resolutions.
+// Append-only by interface and by grant.
+type ReconciliationRepository interface {
+	// CreateRun writes a run and every item it compared.
+	CreateRun(ctx context.Context, r reconciliation.Run, items []reconciliation.RunItem) error
+	// Run returns a run, its items in order, and their resolutions.
+	Run(ctx context.Context, runID id.ReconciliationID) (reconciliation.Run, []reconciliation.RunItem, []ReconResolution, error)
+	// Item returns one item.
+	Item(ctx context.Context, itemID id.ReconItemID) (reconciliation.RunItem, error)
+	// Resolve records an item's resolution; a second resolution of one item
+	// is refused as a conflict.
+	Resolve(ctx context.Context, r ReconResolution) error
 }

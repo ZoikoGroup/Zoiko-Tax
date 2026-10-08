@@ -1201,6 +1201,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/reconciliations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reconcile a legal period stage by stage
+         * @description `OPERATOR`. Compares the period (ZTAX-FIN-001 §17–§20) and records
+         *     every item, matched or not, with its exact variance:
+         *
+         *     - **R1**, calculated to document: each current decision whose event
+         *       fell in the period, its decided tax against the tax every document
+         *       presents for it, voids and credits included. `MISSING` is a
+         *       decision no document presents.
+         *     - **R3**, decision to subledger: the decided tax against what the
+         *       decision's posting put on `TAX_COLLECTED_LIABILITY`, and each
+         *       completed refund against its `REFUND` journal.
+         *
+         *     R2, R4, R5 and R6 compare records this cell does not hold yet and are
+         *     listed in `unavailable` — never silently left out
+         *     (ZTAX-FIN-REQ-0077). `firstBreak` is R7: the first stage, in order,
+         *     with an exception, so a clean later stage cannot hide an earlier
+         *     break. No tolerance applies; none is configured and none is assumed
+         *     (ZTAX-FIN-REQ-0080).
+         */
+        post: operations["runReconciliation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reconciliations/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A reconciliation run, with its items and their resolutions
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. A run is a record: a later run of the same period is a run of its own.
+         */
+        get: operations["getReconciliation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reconciliations/{runId}/items/{itemId}/resolution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve one exception, with its evidence
+         * @description `OPERATOR`. Records who resolved the exception, why, how, its root
+         *     cause, and at least one piece of evidence (ZTAX-FIN-REQ-0084). An
+         *     item is resolved once; a matched item is not an exception and is
+         *     refused with `409 STATE_TRANSITION_INVALID`.
+         */
+        post: operations["resolveReconciliationItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/obligations": {
         parameters: {
             query?: never;
@@ -2679,6 +2758,93 @@ export interface components {
             /** Format: uuid */
             requestedBy: string;
         };
+        /**
+         * RunId
+         * Format: uuid
+         * @example 01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        RunId: string;
+        /**
+         * ItemId
+         * Format: uuid
+         * @example 01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f
+         */
+        ItemId: string;
+        /**
+         * ReconStage
+         * @example R1_CALCULATED_TO_DOCUMENT
+         * @enum {string}
+         */
+        ReconStage: "R1_CALCULATED_TO_DOCUMENT" | "R2_DOCUMENT_TO_COLLECTION" | "R3_DOCUMENT_TO_SUBLEDGER" | "R4_SUBLEDGER_TO_RETURN" | "R5_RETURN_TO_REMITTANCE" | "R6_SUBLEDGER_TO_GL" | "R7_END_TO_END";
+        /**
+         * RootCause
+         * @description FIN-001 §18's root-cause taxonomy (ZTAX-FIN-REQ-0083).
+         * @example TIMING
+         * @enum {string}
+         */
+        RootCause: "CLASSIFICATION" | "JURISDICTION" | "TAX_RULE" | "ROUNDING" | "FX" | "DOCUMENT" | "COLLECTION" | "POSTING" | "RETURN" | "REMITTANCE" | "GL" | "TIMING" | "DATA" | "OTHER";
+        /**
+         * EvidenceReference
+         * @description A reference to evidence a resolution relies on — a document id, a ticket, a statement line.
+         * @example bss:invoice-run-2026-10-01
+         */
+        EvidenceReference: string;
+        /** ReconciliationRequest */
+        ReconciliationRequest: {
+            period: components["schemas"]["LegalPeriod"];
+        };
+        /** ReconResolution */
+        ReconResolution: {
+            /** @enum {string} */
+            actor: "HUMAN" | "AI_A3";
+            /** Format: uuid */
+            resolver?: string;
+            reason: string;
+            /** @enum {string} */
+            action: "ADJUST" | "RECLASSIFY" | "AMEND" | "WAIT" | "WAIVE_WITH_APPROVAL" | "EXTERNAL_CORRECTION";
+            rootCause: components["schemas"]["RootCause"];
+            evidence: components["schemas"]["EvidenceReference"][];
+            resolvedAt: components["schemas"]["Timestamp"];
+        };
+        /**
+         * ReconciliationItem
+         * @description One comparison. `variance` is observed minus expected, exact,
+         *     whatever the status (ZTAX-FIN-REQ-0081); absent when one side is.
+         */
+        ReconciliationItem: {
+            id: components["schemas"]["ItemId"];
+            stage: components["schemas"]["ReconStage"];
+            /** @description The canonical id compared on, such as `decision:<id>` or `refund:<id>`. */
+            matchKey: string;
+            expected?: components["schemas"]["MoneyValue"];
+            observed?: components["schemas"]["MoneyValue"];
+            variance?: components["schemas"]["MoneyValue"];
+            /** @enum {string} */
+            status: "MATCHED" | "TOLERANCE_MATCH" | "UNMATCHED" | "PARTIAL" | "DUPLICATE" | "MISSING" | "CONFLICTED" | "PENDING" | "EXPLAINED" | "RESOLVED";
+            rootCause?: components["schemas"]["RootCause"];
+            detail?: string;
+            resolution?: components["schemas"]["ReconResolution"];
+        };
+        /** ReconciliationRun */
+        ReconciliationRun: {
+            id: components["schemas"]["RunId"];
+            period: components["schemas"]["LegalPeriod"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            ranAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            ranBy?: string;
+            firstBreak?: components["schemas"]["ReconStage"];
+            unavailable: components["schemas"]["ReconStage"][];
+            items: components["schemas"]["ReconciliationItem"][];
+        };
+        /** ResolutionRequest */
+        ResolutionRequest: {
+            reason: string;
+            /** @enum {string} */
+            action: "ADJUST" | "RECLASSIFY" | "AMEND" | "WAIT" | "WAIVE_WITH_APPROVAL" | "EXTERNAL_CORRECTION";
+            rootCause: components["schemas"]["RootCause"];
+            evidence: components["schemas"]["EvidenceReference"][];
+        };
         /** ReplayReport */
         ReplayReport: {
             decisionId: components["schemas"]["DecisionId"];
@@ -2851,6 +3017,16 @@ export interface components {
          * @example 01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
          */
         ReopenRequestId: components["schemas"]["ReopenRequestId"];
+        /**
+         * @description The reconciliation run.
+         * @example 01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        RunId: components["schemas"]["RunId"];
+        /**
+         * @description The run item.
+         * @example 01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f
+         */
+        ItemId: components["schemas"]["ItemId"];
         /**
          * @description Maximum number of items to return. The server caps this independently,
          *     so a larger value is not an error and does not return more.
@@ -4459,6 +4635,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SubledgerPeriod"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    runReconciliation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReconciliationRequest"];
+            };
+        };
+        responses: {
+            /** @description The run. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationRun"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getReconciliation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The reconciliation run.
+                 * @example 01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                runId: components["parameters"]["RunId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The run. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationRun"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    resolveReconciliationItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The reconciliation run.
+                 * @example 01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                runId: components["parameters"]["RunId"];
+                /**
+                 * @description The run item.
+                 * @example 01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                 */
+                itemId: components["parameters"]["ItemId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolutionRequest"];
+            };
+        };
+        responses: {
+            /** @description The resolved item. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationItem"];
                 };
             };
             400: components["responses"]["Validation"];

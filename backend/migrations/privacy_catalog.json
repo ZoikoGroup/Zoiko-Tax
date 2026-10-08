@@ -1852,6 +1852,163 @@
       "manifest_digest": {
         "class": "P0"
       }
+    },
+    "recon_run": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "run_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "legal_period": {
+        "class": "P0"
+      },
+      "ran_at": {
+        "class": "P0"
+      },
+      "ran_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The operator who ran the reconciliation."
+      },
+      "first_break": {
+        "class": "P0"
+      },
+      "unavailable": {
+        "class": "P0"
+      }
+    },
+    "recon_item": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "item_id": {
+        "class": "P0"
+      },
+      "run_id": {
+        "class": "P0"
+      },
+      "ordinal": {
+        "class": "P0"
+      },
+      "stage": {
+        "class": "P0"
+      },
+      "match_key": {
+        "class": "P0",
+        "note": "A canonical id the stage compares on: a decision or refund id, never a customer reference."
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "expected": {
+        "class": "P5",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "One decision's or refund's tax as one stage expects it."
+      },
+      "observed": {
+        "class": "P5",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "The same, as the next stage observed it."
+      },
+      "variance": {
+        "class": "P5",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "Observed minus expected, exact."
+      },
+      "status": {
+        "class": "P0"
+      },
+      "root_cause": {
+        "class": "P0"
+      },
+      "detail": {
+        "class": "P0",
+        "note": "A sentence the comparison wrote; carries no amount."
+      }
+    },
+    "recon_resolution": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "item_id": {
+        "class": "P0"
+      },
+      "actor": {
+        "class": "P0"
+      },
+      "resolver": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who resolved the exception."
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by an operator."
+      },
+      "action": {
+        "class": "P0"
+      },
+      "root_cause": {
+        "class": "P0"
+      },
+      "evidence": {
+        "class": "P2",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "References to the evidence a resolution relies on: document ids, ticket numbers."
+      },
+      "resolved_at": {
+        "class": "P0"
+      }
     }
   }
 }

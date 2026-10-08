@@ -170,6 +170,24 @@
       "public": false
     },
     {
+      "method": "POST",
+      "path": "/v1/reconciliations",
+      "operationId": "runReconciliation",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/reconciliations/{runId}",
+      "operationId": "getReconciliation",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/reconciliations/{runId}/items/{itemId}/resolution",
+      "operationId": "resolveReconciliationItem",
+      "public": false
+    },
+    {
       "method": "GET",
       "path": "/v1/refunds/{refundId}",
       "operationId": "getRefund",

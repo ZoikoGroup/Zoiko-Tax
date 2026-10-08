@@ -92,6 +92,8 @@ tags:
     description: Period seals, their verification, and the inclusion proof that ties one decision to a signed root.
   - name: documents
     description: Fiscal documents that present committed decisions, and the voids, credits and rebills that correct them. Never edited.
+  - name: reconciliation
+    description: R1 to R7 over a legal period, every item recorded with its exact variance, every resolution with its evidence.
 security:
   - sessionCookie: []
 paths:
@@ -2891,6 +2893,193 @@ paths:
           $ref: "#/components/responses/Internal"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/reconciliations:
+    post:
+      operationId: runReconciliation
+      tags:
+        - reconciliation
+      summary: Reconcile a legal period stage by stage
+      description: |
+        `OPERATOR`. Compares the period (ZTAX-FIN-001 §17–§20) and records
+        every item, matched or not, with its exact variance:
+
+        - **R1**, calculated to document: each current decision whose event
+          fell in the period, its decided tax against the tax every document
+          presents for it, voids and credits included. `MISSING` is a
+          decision no document presents.
+        - **R3**, decision to subledger: the decided tax against what the
+          decision's posting put on `TAX_COLLECTED_LIABILITY`, and each
+          completed refund against its `REFUND` journal.
+
+        R2, R4, R5 and R6 compare records this cell does not hold yet and are
+        listed in `unavailable` — never silently left out
+        (ZTAX-FIN-REQ-0077). `firstBreak` is R7: the first stage, in order,
+        with an exception, so a clean later stage cannot hide an earlier
+        break. No tolerance applies; none is configured and none is assumed
+        (ZTAX-FIN-REQ-0080).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReconciliationRequest"
+            examples:
+              default:
+                summary: September
+                value:
+                  period: 2026-09
+      responses:
+        "201":
+          description: The run.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReconciliationRun"
+              examples:
+                default:
+                  summary: One decision never documented
+                  value:
+                    id: 01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    period: 2026-09
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    ranAt: 2026-10-03T09:00:00.000000Z
+                    firstBreak: R1_CALCULATED_TO_DOCUMENT
+                    unavailable:
+                      - R2_DOCUMENT_TO_COLLECTION
+                      - R4_SUBLEDGER_TO_RETURN
+                      - R5_RETURN_TO_REMITTANCE
+                      - R6_SUBLEDGER_TO_GL
+                    items:
+                      - id: 01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                        stage: R1_CALCULATED_TO_DOCUMENT
+                        matchKey: decision:01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                        expected:
+                          amount: "21.11"
+                          currency: EUR
+                        status: MISSING
+                        detail: expected and not observed
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/reconciliations/{runId}:
+    get:
+      operationId: getReconciliation
+      tags:
+        - reconciliation
+      summary: A reconciliation run, with its items and their resolutions
+      description: "`OPERATOR`, `ANALYST` or `AUDITOR`. A run is a record: a later run of the same period is a run of its own."
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+      responses:
+        "200":
+          description: The run.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReconciliationRun"
+              examples:
+                default:
+                  summary: A clean run
+                  value:
+                    id: 01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    period: 2026-09
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    ranAt: 2026-10-03T09:00:00.000000Z
+                    unavailable:
+                      - R2_DOCUMENT_TO_COLLECTION
+                      - R4_SUBLEDGER_TO_RETURN
+                      - R5_RETURN_TO_REMITTANCE
+                      - R6_SUBLEDGER_TO_GL
+                    items: []
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/reconciliations/{runId}/items/{itemId}/resolution:
+    post:
+      operationId: resolveReconciliationItem
+      tags:
+        - reconciliation
+      summary: Resolve one exception, with its evidence
+      description: |
+        `OPERATOR`. Records who resolved the exception, why, how, its root
+        cause, and at least one piece of evidence (ZTAX-FIN-REQ-0084). An
+        item is resolved once; a matched item is not an exception and is
+        refused with `409 STATE_TRANSITION_INVALID`.
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+        - $ref: "#/components/parameters/ItemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolutionRequest"
+            examples:
+              default:
+                summary: Billed in the next run
+                value:
+                  reason: Billed in the October invoice run.
+                  action: WAIT
+                  rootCause: TIMING
+                  evidence:
+                    - bss:invoice-run-2026-10-01
+      responses:
+        "200":
+          description: The resolved item.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReconciliationItem"
+              examples:
+                default:
+                  summary: Resolved
+                  value:
+                    id: 01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                    stage: R1_CALCULATED_TO_DOCUMENT
+                    matchKey: decision:01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    expected:
+                      amount: "21.11"
+                      currency: EUR
+                    status: RESOLVED
+                    resolution:
+                      actor: HUMAN
+                      resolver: 01920a40-aaaa-7bbb-8ccc-000000000d01
+                      reason: Billed in the October invoice run.
+                      action: WAIT
+                      rootCause: TIMING
+                      evidence:
+                        - bss:invoice-run-2026-10-01
+                      resolvedAt: 2026-10-03T10:00:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/obligations:
     get:
       operationId: listObligations
@@ -3297,6 +3486,22 @@ components:
       schema:
         $ref: "#/components/schemas/ReopenRequestId"
       example: 01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+    RunId:
+      name: runId
+      in: path
+      required: true
+      description: The reconciliation run.
+      schema:
+        $ref: "#/components/schemas/RunId"
+      example: 01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+    ItemId:
+      name: itemId
+      in: path
+      required: true
+      description: The run item.
+      schema:
+        $ref: "#/components/schemas/ItemId"
+      example: 01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f
     Limit:
       name: limit
       in: query
@@ -6546,6 +6751,272 @@ components:
             redaction: NONE
           type: string
           format: uuid
+    RunId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RunId
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+    ItemId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ItemId
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f
+    ReconStage:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ReconStage
+      enum:
+        - R1_CALCULATED_TO_DOCUMENT
+        - R2_DOCUMENT_TO_COLLECTION
+        - R3_DOCUMENT_TO_SUBLEDGER
+        - R4_SUBLEDGER_TO_RETURN
+        - R5_RETURN_TO_REMITTANCE
+        - R6_SUBLEDGER_TO_GL
+        - R7_END_TO_END
+      example: R1_CALCULATED_TO_DOCUMENT
+    RootCause:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RootCause
+      description: FIN-001 §18's root-cause taxonomy (ZTAX-FIN-REQ-0083).
+      enum:
+        - CLASSIFICATION
+        - JURISDICTION
+        - TAX_RULE
+        - ROUNDING
+        - FX
+        - DOCUMENT
+        - COLLECTION
+        - POSTING
+        - RETURN
+        - REMITTANCE
+        - GL
+        - TIMING
+        - DATA
+        - OTHER
+      example: TIMING
+    EvidenceReference:
+      x-ztax-privacy:
+        class: P2
+        purposes:
+          - PURP-RECON
+          - PURP-EVID
+        retention: RET-FISCAL
+        redaction: REDACT
+        aiAllowed: NONE
+      type: string
+      title: EvidenceReference
+      description: A reference to evidence a resolution relies on — a document id, a ticket, a statement line.
+      minLength: 1
+      maxLength: 500
+      example: bss:invoice-run-2026-10-01
+    ReconciliationRequest:
+      type: object
+      title: ReconciliationRequest
+      additionalProperties: false
+      required:
+        - period
+      properties:
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+    ReconResolution:
+      type: object
+      title: ReconResolution
+      additionalProperties: false
+      required:
+        - actor
+        - reason
+        - action
+        - rootCause
+        - evidence
+        - resolvedAt
+      properties:
+        actor:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - HUMAN
+            - AI_A3
+        resolver:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+        reason:
+          x-ztax-privacy:
+            class: P2
+            purposes:
+              - PURP-RECON
+              - PURP-EVID
+            retention: RET-FISCAL
+            redaction: REDACT
+            aiAllowed: NONE
+          type: string
+        action:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - ADJUST
+            - RECLASSIFY
+            - AMEND
+            - WAIT
+            - WAIVE_WITH_APPROVAL
+            - EXTERNAL_CORRECTION
+        rootCause:
+          $ref: "#/components/schemas/RootCause"
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/EvidenceReference"
+        resolvedAt:
+          $ref: "#/components/schemas/Timestamp"
+    ReconciliationItem:
+      type: object
+      title: ReconciliationItem
+      description: |
+        One comparison. `variance` is observed minus expected, exact,
+        whatever the status (ZTAX-FIN-REQ-0081); absent when one side is.
+      additionalProperties: false
+      required:
+        - id
+        - stage
+        - matchKey
+        - status
+      properties:
+        id:
+          $ref: "#/components/schemas/ItemId"
+        stage:
+          $ref: "#/components/schemas/ReconStage"
+        matchKey:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The canonical id compared on, such as `decision:<id>` or `refund:<id>`.
+        expected:
+          $ref: "#/components/schemas/MoneyValue"
+        observed:
+          $ref: "#/components/schemas/MoneyValue"
+        variance:
+          $ref: "#/components/schemas/MoneyValue"
+        status:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - MATCHED
+            - TOLERANCE_MATCH
+            - UNMATCHED
+            - PARTIAL
+            - DUPLICATE
+            - MISSING
+            - CONFLICTED
+            - PENDING
+            - EXPLAINED
+            - RESOLVED
+        rootCause:
+          $ref: "#/components/schemas/RootCause"
+        detail:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        resolution:
+          $ref: "#/components/schemas/ReconResolution"
+    ReconciliationRun:
+      type: object
+      title: ReconciliationRun
+      additionalProperties: false
+      required:
+        - id
+        - period
+        - legalEntityId
+        - ranAt
+        - unavailable
+        - items
+      properties:
+        id:
+          $ref: "#/components/schemas/RunId"
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        ranAt:
+          $ref: "#/components/schemas/Timestamp"
+        ranBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+        firstBreak:
+          $ref: "#/components/schemas/ReconStage"
+        unavailable:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReconStage"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReconciliationItem"
+    ResolutionRequest:
+      type: object
+      title: ResolutionRequest
+      additionalProperties: false
+      required:
+        - reason
+        - action
+        - rootCause
+        - evidence
+      properties:
+        reason:
+          x-ztax-privacy:
+            class: P2
+            purposes:
+              - PURP-RECON
+              - PURP-EVID
+            retention: RET-FISCAL
+            redaction: REDACT
+            aiAllowed: NONE
+          type: string
+          minLength: 1
+          maxLength: 1000
+        action:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - ADJUST
+            - RECLASSIFY
+            - AMEND
+            - WAIT
+            - WAIVE_WITH_APPROVAL
+            - EXTERNAL_CORRECTION
+        rootCause:
+          $ref: "#/components/schemas/RootCause"
+        evidence:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/EvidenceReference"
     ReplayReport:
       type: object
       title: ReplayReport

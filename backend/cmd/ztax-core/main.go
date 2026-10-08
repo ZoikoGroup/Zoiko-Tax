@@ -149,6 +149,7 @@ func run() error {
 		go runBatchWorker(ctx, router.Batches, log)
 		router.Documents = app.NewDocumentService(router.Determination, store.Documents(),
 			app.NewIdempotency(store.Idempotency(), store, clk))
+		router.Reconciliations = app.NewReconciliationService(router.Documents, store.Refunds(), store.Reconciliations())
 	}
 	models, closeModels, err := wireModelGateway(cfg, clk, ids, log)
 	if err != nil {

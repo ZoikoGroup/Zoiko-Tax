@@ -130,6 +130,9 @@ type (
 
 	// ReopenRequestID identifies one request to reopen a closed period.
 	ReopenRequestID struct{ base }
+
+	// ReconItemID identifies one compared item of a reconciliation run.
+	ReconItemID struct{ base }
 )
 
 // The constructors. Each takes a uuid.UUID that idgen produced, or that the
@@ -219,6 +222,9 @@ func NewJobID(u uuid.UUID) JobID { return JobID{base{u}} }
 
 // NewReopenRequestID wraps a raw UUID as a ReopenRequestID.
 func NewReopenRequestID(u uuid.UUID) ReopenRequestID { return ReopenRequestID{base{u}} }
+
+// NewReconItemID wraps a raw UUID as a ReconItemID.
+func NewReconItemID(u uuid.UUID) ReconItemID { return ReconItemID{base{u}} }
 
 // parse is the shared text ingress. Identifiers arrive from a URL path, a
 // cookie lookup or a database column, and all three can carry something that is
@@ -409,4 +415,13 @@ func ParseReopenRequestID(s string) (ReopenRequestID, error) {
 		return ReopenRequestID{}, err
 	}
 	return NewReopenRequestID(u), nil
+}
+
+// ParseReconItemID reads a ReconItemID from its canonical string form.
+func ParseReconItemID(s string) (ReconItemID, error) {
+	u, err := parse("reconciliation item id", s)
+	if err != nil {
+		return ReconItemID{}, err
+	}
+	return NewReconItemID(u), nil
 }

@@ -63,7 +63,13 @@ const (
 		JOIN ztax.fiscal_document cd ON cd.tenant_id = c.tenant_id AND cd.document_id = c.document_id
 		JOIN ztax.fiscal_line o ON o.tenant_id = c.tenant_id AND o.line_id = c.predecessor_line_id
 		WHERE c.tenant_id = $1 AND o.document_id = $2 AND cd.document_type IN ('VOID', 'CREDIT_NOTE')`
-	sqlDocLock = `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`
+	sqlDocLock          = `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`
+	sqlDocTaxByDecision = `SELECT t.decision_id, d.currency, SUM(t.amount)
+		FROM ztax.fiscal_line_tax t
+		JOIN ztax.fiscal_line l ON l.tenant_id = t.tenant_id AND l.line_id = t.line_id
+		JOIN ztax.fiscal_document d ON d.tenant_id = l.tenant_id AND d.document_id = l.document_id
+		WHERE t.tenant_id = $1 AND t.decision_id = ANY($2)
+		GROUP BY t.decision_id, d.currency`
 )
 
 // DocumentRepo implements port.DocumentRepository.
@@ -279,6 +285,47 @@ func (r *DocumentRepo) CancelledLines(ctx context.Context, documentID id.FiscalD
 		out[id.NewFiscalLineID(u)] = true
 	}
 	return out, mapError(rows.Err(), "read cancelled lines")
+}
+
+// TaxByDecision sums the documented tax of each decision.
+func (r *DocumentRepo) TaxByDecision(ctx context.Context, decisions []id.DecisionID) (map[id.DecisionID]fiscal.Money, error) {
+	tenant, err := tenantOf(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]uuid.UUID, len(decisions))
+	for i, d := range decisions {
+		ids[i] = d.UUID()
+	}
+	out := map[id.DecisionID]fiscal.Money{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	rows, err := r.s.db(ctx).Query(ctx, sqlDocTaxByDecision, tenant.UUID(), ids)
+	if err != nil {
+		return nil, mapError(err, "sum documented tax")
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var (
+			u        uuid.UUID
+			currency string
+			sum      Numeric
+		)
+		if err := rows.Scan(&u, &currency, &sum); err != nil {
+			return nil, mapError(err, "scan documented tax")
+		}
+		dec := id.NewDecisionID(u)
+		if _, dup := out[dec]; dup {
+			return nil, documentFault(nil, "A decision is documented in more than one currency.")
+		}
+		m, err := sum.Money(fiscal.Currency(currency))
+		if err != nil {
+			return nil, err
+		}
+		out[dec] = m
+	}
+	return out, mapError(rows.Err(), "sum documented tax")
 }
 
 func (r *DocumentRepo) scanDocument(ctx context.Context, tenant id.TenantID, sql string, args ...any) (port.DocumentRecord, error) {

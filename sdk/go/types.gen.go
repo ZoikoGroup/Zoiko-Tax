@@ -702,6 +702,129 @@ func (e RateBasis) Valid() bool {
 	}
 }
 
+// Defines values for ReconResolutionAction.
+const (
+	ReconResolutionActionADJUST             ReconResolutionAction = "ADJUST"
+	ReconResolutionActionAMEND              ReconResolutionAction = "AMEND"
+	ReconResolutionActionEXTERNALCORRECTION ReconResolutionAction = "EXTERNAL_CORRECTION"
+	ReconResolutionActionRECLASSIFY         ReconResolutionAction = "RECLASSIFY"
+	ReconResolutionActionWAIT               ReconResolutionAction = "WAIT"
+	ReconResolutionActionWAIVEWITHAPPROVAL  ReconResolutionAction = "WAIVE_WITH_APPROVAL"
+)
+
+// Valid indicates whether the value is a known member of the ReconResolutionAction enum.
+func (e ReconResolutionAction) Valid() bool {
+	switch e {
+	case ReconResolutionActionADJUST:
+		return true
+	case ReconResolutionActionAMEND:
+		return true
+	case ReconResolutionActionEXTERNALCORRECTION:
+		return true
+	case ReconResolutionActionRECLASSIFY:
+		return true
+	case ReconResolutionActionWAIT:
+		return true
+	case ReconResolutionActionWAIVEWITHAPPROVAL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReconResolutionActor.
+const (
+	ReconResolutionActorAIA3  ReconResolutionActor = "AI_A3"
+	ReconResolutionActorHUMAN ReconResolutionActor = "HUMAN"
+)
+
+// Valid indicates whether the value is a known member of the ReconResolutionActor enum.
+func (e ReconResolutionActor) Valid() bool {
+	switch e {
+	case ReconResolutionActorAIA3:
+		return true
+	case ReconResolutionActorHUMAN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReconStage.
+const (
+	ReconStageR1CALCULATEDTODOCUMENT ReconStage = "R1_CALCULATED_TO_DOCUMENT"
+	ReconStageR2DOCUMENTTOCOLLECTION ReconStage = "R2_DOCUMENT_TO_COLLECTION"
+	ReconStageR3DOCUMENTTOSUBLEDGER  ReconStage = "R3_DOCUMENT_TO_SUBLEDGER"
+	ReconStageR4SUBLEDGERTORETURN    ReconStage = "R4_SUBLEDGER_TO_RETURN"
+	ReconStageR5RETURNTOREMITTANCE   ReconStage = "R5_RETURN_TO_REMITTANCE"
+	ReconStageR6SUBLEDGERTOGL        ReconStage = "R6_SUBLEDGER_TO_GL"
+	ReconStageR7ENDTOEND             ReconStage = "R7_END_TO_END"
+)
+
+// Valid indicates whether the value is a known member of the ReconStage enum.
+func (e ReconStage) Valid() bool {
+	switch e {
+	case ReconStageR1CALCULATEDTODOCUMENT:
+		return true
+	case ReconStageR2DOCUMENTTOCOLLECTION:
+		return true
+	case ReconStageR3DOCUMENTTOSUBLEDGER:
+		return true
+	case ReconStageR4SUBLEDGERTORETURN:
+		return true
+	case ReconStageR5RETURNTOREMITTANCE:
+		return true
+	case ReconStageR6SUBLEDGERTOGL:
+		return true
+	case ReconStageR7ENDTOEND:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReconciliationItemStatus.
+const (
+	ReconciliationItemStatusCONFLICTED     ReconciliationItemStatus = "CONFLICTED"
+	ReconciliationItemStatusDUPLICATE      ReconciliationItemStatus = "DUPLICATE"
+	ReconciliationItemStatusEXPLAINED      ReconciliationItemStatus = "EXPLAINED"
+	ReconciliationItemStatusMATCHED        ReconciliationItemStatus = "MATCHED"
+	ReconciliationItemStatusMISSING        ReconciliationItemStatus = "MISSING"
+	ReconciliationItemStatusPARTIAL        ReconciliationItemStatus = "PARTIAL"
+	ReconciliationItemStatusPENDING        ReconciliationItemStatus = "PENDING"
+	ReconciliationItemStatusRESOLVED       ReconciliationItemStatus = "RESOLVED"
+	ReconciliationItemStatusTOLERANCEMATCH ReconciliationItemStatus = "TOLERANCE_MATCH"
+	ReconciliationItemStatusUNMATCHED      ReconciliationItemStatus = "UNMATCHED"
+)
+
+// Valid indicates whether the value is a known member of the ReconciliationItemStatus enum.
+func (e ReconciliationItemStatus) Valid() bool {
+	switch e {
+	case ReconciliationItemStatusCONFLICTED:
+		return true
+	case ReconciliationItemStatusDUPLICATE:
+		return true
+	case ReconciliationItemStatusEXPLAINED:
+		return true
+	case ReconciliationItemStatusMATCHED:
+		return true
+	case ReconciliationItemStatusMISSING:
+		return true
+	case ReconciliationItemStatusPARTIAL:
+		return true
+	case ReconciliationItemStatusPENDING:
+		return true
+	case ReconciliationItemStatusRESOLVED:
+		return true
+	case ReconciliationItemStatusTOLERANCEMATCH:
+		return true
+	case ReconciliationItemStatusUNMATCHED:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RefundOutcome.
 const (
 	RefundOutcomeACCEPTED  RefundOutcome = "ACCEPTED"
@@ -777,6 +900,36 @@ func (e ReplayVerdict) Valid() bool {
 	}
 }
 
+// Defines values for ResolutionRequestAction.
+const (
+	ResolutionRequestActionADJUST             ResolutionRequestAction = "ADJUST"
+	ResolutionRequestActionAMEND              ResolutionRequestAction = "AMEND"
+	ResolutionRequestActionEXTERNALCORRECTION ResolutionRequestAction = "EXTERNAL_CORRECTION"
+	ResolutionRequestActionRECLASSIFY         ResolutionRequestAction = "RECLASSIFY"
+	ResolutionRequestActionWAIT               ResolutionRequestAction = "WAIT"
+	ResolutionRequestActionWAIVEWITHAPPROVAL  ResolutionRequestAction = "WAIVE_WITH_APPROVAL"
+)
+
+// Valid indicates whether the value is a known member of the ResolutionRequestAction enum.
+func (e ResolutionRequestAction) Valid() bool {
+	switch e {
+	case ResolutionRequestActionADJUST:
+		return true
+	case ResolutionRequestActionAMEND:
+		return true
+	case ResolutionRequestActionEXTERNALCORRECTION:
+		return true
+	case ResolutionRequestActionRECLASSIFY:
+		return true
+	case ResolutionRequestActionWAIT:
+		return true
+	case ResolutionRequestActionWAIVEWITHAPPROVAL:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Role.
 const (
 	RoleADMIN    Role = "ADMIN"
@@ -795,6 +948,60 @@ func (e Role) Valid() bool {
 	case RoleAUDITOR:
 		return true
 	case RoleOPERATOR:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RootCause.
+const (
+	RootCauseCLASSIFICATION RootCause = "CLASSIFICATION"
+	RootCauseCOLLECTION     RootCause = "COLLECTION"
+	RootCauseDATA           RootCause = "DATA"
+	RootCauseDOCUMENT       RootCause = "DOCUMENT"
+	RootCauseFX             RootCause = "FX"
+	RootCauseGL             RootCause = "GL"
+	RootCauseJURISDICTION   RootCause = "JURISDICTION"
+	RootCauseOTHER          RootCause = "OTHER"
+	RootCausePOSTING        RootCause = "POSTING"
+	RootCauseREMITTANCE     RootCause = "REMITTANCE"
+	RootCauseRETURN         RootCause = "RETURN"
+	RootCauseROUNDING       RootCause = "ROUNDING"
+	RootCauseTAXRULE        RootCause = "TAX_RULE"
+	RootCauseTIMING         RootCause = "TIMING"
+)
+
+// Valid indicates whether the value is a known member of the RootCause enum.
+func (e RootCause) Valid() bool {
+	switch e {
+	case RootCauseCLASSIFICATION:
+		return true
+	case RootCauseCOLLECTION:
+		return true
+	case RootCauseDATA:
+		return true
+	case RootCauseDOCUMENT:
+		return true
+	case RootCauseFX:
+		return true
+	case RootCauseGL:
+		return true
+	case RootCauseJURISDICTION:
+		return true
+	case RootCauseOTHER:
+		return true
+	case RootCausePOSTING:
+		return true
+	case RootCauseREMITTANCE:
+		return true
+	case RootCauseRETURN:
+		return true
+	case RootCauseROUNDING:
+		return true
+	case RootCauseTAXRULE:
+		return true
+	case RootCauseTIMING:
 		return true
 	default:
 		return false
@@ -1505,6 +1712,9 @@ type Emitted map[string]ResultValue
 // EventType An event type this cell emits, as the AsyncAPI contract names it.
 type EventType string
 
+// EvidenceReference A reference to evidence a resolution relies on — a document id, a ticket, a statement line.
+type EvidenceReference = string
+
 // ExternalReference Another system's identifier for the document (ZTAX-DOM-REQ-0003). Never a key, never parsed, never assumed unique.
 type ExternalReference struct {
 	Namespace    string `json:"namespace"`
@@ -1628,6 +1838,9 @@ type InclusionProof struct {
 	// SealID A period seal. A UUIDv7 in lowercase canonical form.
 	SealID SealID `json:"sealId"`
 }
+
+// ItemID defines model for ItemId.
+type ItemID = string
 
 // Job defines model for Job.
 type Job struct {
@@ -2127,6 +2340,86 @@ type ReadSet map[string]MoneyValue
 // an unrecognised code would break on an additive change (ADR-0010 §2.6).
 type ReasonCode = string
 
+// ReconResolution defines model for ReconResolution.
+type ReconResolution struct {
+	Action   ReconResolutionAction `json:"action"`
+	Actor    ReconResolutionActor  `json:"actor"`
+	Evidence []EvidenceReference   `json:"evidence"`
+	Reason   string                `json:"reason"`
+
+	// ResolvedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	ResolvedAt Timestamp `json:"resolvedAt"`
+	Resolver   *string   `json:"resolver,omitempty"`
+
+	// RootCause FIN-001 §18's root-cause taxonomy (ZTAX-FIN-REQ-0083).
+	RootCause RootCause `json:"rootCause"`
+}
+
+// ReconResolutionAction defines model for ReconResolution.Action.
+type ReconResolutionAction string
+
+// ReconResolutionActor defines model for ReconResolution.Actor.
+type ReconResolutionActor string
+
+// ReconStage defines model for ReconStage.
+type ReconStage string
+
+// ReconciliationItem One comparison. `variance` is observed minus expected, exact,
+// whatever the status (ZTAX-FIN-REQ-0081); absent when one side is.
+type ReconciliationItem struct {
+	Detail *string `json:"detail,omitempty"`
+
+	// Expected An amount and its currency, never one without the other.
+	Expected *MoneyValue `json:"expected,omitempty"`
+	ID       ItemID      `json:"id"`
+
+	// MatchKey The canonical id compared on, such as `decision:<id>` or `refund:<id>`.
+	MatchKey string `json:"matchKey"`
+
+	// Observed An amount and its currency, never one without the other.
+	Observed   *MoneyValue      `json:"observed,omitempty"`
+	Resolution *ReconResolution `json:"resolution,omitempty"`
+
+	// RootCause FIN-001 §18's root-cause taxonomy (ZTAX-FIN-REQ-0083).
+	RootCause *RootCause               `json:"rootCause,omitempty"`
+	Stage     ReconStage               `json:"stage"`
+	Status    ReconciliationItemStatus `json:"status"`
+
+	// Variance An amount and its currency, never one without the other.
+	Variance *MoneyValue `json:"variance,omitempty"`
+}
+
+// ReconciliationItemStatus defines model for ReconciliationItem.Status.
+type ReconciliationItemStatus string
+
+// ReconciliationRequest defines model for ReconciliationRequest.
+type ReconciliationRequest struct {
+	// Period A subledger legal period, a month.
+	Period LegalPeriod `json:"period"`
+}
+
+// ReconciliationRun defines model for ReconciliationRun.
+type ReconciliationRun struct {
+	FirstBreak *ReconStage          `json:"firstBreak,omitempty"`
+	ID         RunID                `json:"id"`
+	Items      []ReconciliationItem `json:"items"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod `json:"period"`
+
+	// RanAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RanAt       Timestamp    `json:"ranAt"`
+	RanBy       *string      `json:"ranBy,omitempty"`
+	Unavailable []ReconStage `json:"unavailable"`
+}
+
 // Refund A refund of tax a committed decision charged. `status` is the latest
 // event's; `history` is every event, oldest first.
 type Refund struct {
@@ -2262,6 +2555,19 @@ type ReplayReport struct {
 // ReplayVerdict defines model for ReplayVerdict.
 type ReplayVerdict string
 
+// ResolutionRequest defines model for ResolutionRequest.
+type ResolutionRequest struct {
+	Action   ResolutionRequestAction `json:"action"`
+	Evidence []EvidenceReference     `json:"evidence"`
+	Reason   string                  `json:"reason"`
+
+	// RootCause FIN-001 §18's root-cause taxonomy (ZTAX-FIN-REQ-0083).
+	RootCause RootCause `json:"rootCause"`
+}
+
+// ResolutionRequestAction defines model for ResolutionRequest.Action.
+type ResolutionRequestAction string
+
 // ResultValue One emitted value. `type` says which other members are present:
 // `amount` and `currency` for `MONEY`; `value` and `basis` for `RATE`;
 // `value` and `unit` for `QUANTITY`; `flag` for `BOOL`; `text` for
@@ -2323,6 +2629,12 @@ type RoleRequest struct {
 	// authorization matrix entry, not a string a caller may invent.
 	Role Role `json:"role"`
 }
+
+// RootCause FIN-001 §18's root-cause taxonomy (ZTAX-FIN-REQ-0083).
+type RootCause string
+
+// RunID defines model for RunId.
+type RunID = string
 
 // Seal A signed statement that the decisions recorded in `[periodStart, periodEnd)` were exactly these.
 type Seal struct {
@@ -2973,6 +3285,12 @@ type TransitionObligationJSONRequestBody = ObligationTransitionRequest
 
 // CreateQuoteJSONRequestBody defines body for CreateQuote for application/json ContentType.
 type CreateQuoteJSONRequestBody = QuoteRequest
+
+// RunReconciliationJSONRequestBody defines body for RunReconciliation for application/json ContentType.
+type RunReconciliationJSONRequestBody = ReconciliationRequest
+
+// ResolveReconciliationItemJSONRequestBody defines body for ResolveReconciliationItem for application/json ContentType.
+type ResolveReconciliationItemJSONRequestBody = ResolutionRequest
 
 // ReportRefundJSONRequestBody defines body for ReportRefund for application/json ContentType.
 type ReportRefundJSONRequestBody = RefundReportRequest

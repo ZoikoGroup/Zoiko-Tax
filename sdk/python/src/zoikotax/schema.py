@@ -1188,6 +1188,81 @@ class PeriodReopenRequest(TypedDict):
     requestedBy: str
 
 
+RunId: TypeAlias = str
+
+
+ItemId: TypeAlias = str
+
+
+ReconStage: TypeAlias = Literal['R1_CALCULATED_TO_DOCUMENT', 'R2_DOCUMENT_TO_COLLECTION', 'R3_DOCUMENT_TO_SUBLEDGER', 'R4_SUBLEDGER_TO_RETURN', 'R5_RETURN_TO_REMITTANCE', 'R6_SUBLEDGER_TO_GL', 'R7_END_TO_END']
+
+
+RootCause: TypeAlias = Literal['CLASSIFICATION', 'JURISDICTION', 'TAX_RULE', 'ROUNDING', 'FX', 'DOCUMENT', 'COLLECTION', 'POSTING', 'RETURN', 'REMITTANCE', 'GL', 'TIMING', 'DATA', 'OTHER']
+"""
+FIN-001 §18's root-cause taxonomy (ZTAX-FIN-REQ-0083).
+"""
+
+
+EvidenceReference: TypeAlias = str
+"""
+A reference to evidence a resolution relies on — a document id, a ticket, a statement line.
+"""
+
+
+class ReconciliationRequest(TypedDict):
+    period: LegalPeriod
+
+
+class ReconResolution(TypedDict):
+    actor: Literal['HUMAN', 'AI_A3']
+    resolver: NotRequired[str]
+    reason: str
+    action: Literal['ADJUST', 'RECLASSIFY', 'AMEND', 'WAIT', 'WAIVE_WITH_APPROVAL', 'EXTERNAL_CORRECTION']
+    rootCause: RootCause
+    evidence: list[EvidenceReference]
+    resolvedAt: Timestamp
+
+
+class ReconciliationItem(TypedDict):
+    """
+    One comparison. `variance` is observed minus expected, exact,
+    whatever the status (ZTAX-FIN-REQ-0081); absent when one side is.
+
+    """
+
+    id: ItemId
+    stage: ReconStage
+    matchKey: str
+    """
+    The canonical id compared on, such as `decision:<id>` or `refund:<id>`.
+    """
+    expected: NotRequired[MoneyValue]
+    observed: NotRequired[MoneyValue]
+    variance: NotRequired[MoneyValue]
+    status: Literal['MATCHED', 'TOLERANCE_MATCH', 'UNMATCHED', 'PARTIAL', 'DUPLICATE', 'MISSING', 'CONFLICTED', 'PENDING', 'EXPLAINED', 'RESOLVED']
+    rootCause: NotRequired[RootCause]
+    detail: NotRequired[str]
+    resolution: NotRequired[ReconResolution]
+
+
+class ReconciliationRun(TypedDict):
+    id: RunId
+    period: LegalPeriod
+    legalEntityId: LegalEntityId
+    ranAt: Timestamp
+    ranBy: NotRequired[str]
+    firstBreak: NotRequired[ReconStage]
+    unavailable: list[ReconStage]
+    items: list[ReconciliationItem]
+
+
+class ResolutionRequest(TypedDict):
+    reason: str
+    action: Literal['ADJUST', 'RECLASSIFY', 'AMEND', 'WAIT', 'WAIVE_WITH_APPROVAL', 'EXTERNAL_CORRECTION']
+    rootCause: RootCause
+    evidence: list[EvidenceReference]
+
+
 class ReplayReport(TypedDict):
     decisionId: DecisionId
     verdict: ReplayVerdict

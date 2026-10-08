@@ -494,7 +494,8 @@ func (s *DocumentService) billable(ctx context.Context, d document.Document) ([]
 }
 
 // decidedTax is one decision's tax by component: the emitted amounts its
-// bundle posts to the subledger. The decision must be the current version
+// bundle posts to the subledger, which must be in cur — or, with cur empty,
+// in whatever currency the decision decided them. The decision must be the current version
 // of its business key — a superseded decision's posting has been reversed,
 // and billing it would present tax the ledger no longer holds.
 func (s *DocumentService) decidedTax(ctx context.Context, decisionID id.DecisionID, cur fiscal.Currency) (map[string]fiscal.Money, error) {
@@ -528,7 +529,7 @@ func (s *DocumentService) decidedTax(ctx context.Context, decisionID id.Decision
 		if !ok || v.Type != rule.TypeMoney {
 			continue
 		}
-		if v.Money.Currency() != cur {
+		if cur != "" && v.Money.Currency() != cur {
 			return nil, errs.Invalid("currency", errs.ReasonCurrencyMismatch,
 				fmt.Sprintf("Decision %s decided %s in %s; the document is in %s.", decisionID, l.Emitted, v.Money.Currency(), cur))
 		}

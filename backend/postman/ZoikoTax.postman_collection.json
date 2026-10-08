@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:ddeea84b2b6b83f86e9240517c0a837bb3a5b6168ebca606460e067ac2bf3e7d`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:2fa570894a4ae32d29f451446f7a77ac642948b357e35377e41fd5e396798900`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -2031,7 +2031,7 @@
     },
     {
       "name": "06 · Determination — needs content and an OPERATOR",
-      "description": "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously. Last, the subledger period `{{period}}` — `2000-01` by default, a month nothing posts into, so a run never closes one that matters — is hard-closed, a reopen is requested, and the requester's own approval is refused (ZTAX-FIN-REQ-0091).\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "description": "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously. Last, the subledger period `{{period}}` — `2000-01` by default, a month nothing posts into, so a run never closes one that matters — is hard-closed, a reopen is requested, and the requester's own approval is refused (ZTAX-FIN-REQ-0091). `runReconciliation` reconciles September and captures `runId`; the resolution of the example item answers `404` in a fresh run, since its id is the example's.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
       "item": [
         {
           "name": "POST /v1/quotes — Quote a transaction without recording it",
@@ -4054,6 +4054,242 @@
               }
             }
           ]
+        },
+        {
+          "name": "POST /v1/reconciliations — Reconcile a legal period stage by stage",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"period\": \"2026-09\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/reconciliations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "reconciliations"
+              ]
+            },
+            "description": "Reconcile a legal period stage by stage\n\n`OPERATOR`. Compares the period (ZTAX-FIN-001 §17–§20) and records\nevery item, matched or not, with its exact variance:\n\n- **R1**, calculated to document: each current decision whose event\n  fell in the period, its decided tax against the tax every document\n  presents for it, voids and credits included. `MISSING` is a\n  decision no document presents.\n- **R3**, decision to subledger: the decided tax against what the\n  decision's posting put on `TAX_COLLECTED_LIABILITY`, and each\n  completed refund against its `REFUND` journal.\n\nR2, R4, R5 and R6 compare records this cell does not hold yet and are\nlisted in `unavailable` — never silently left out\n(ZTAX-FIN-REQ-0077). `firstBreak` is R7: the first stage, in order,\nwith an exception, so a clean later stage cannot hide an earlier\nbreak. No tolerance applies; none is configured and none is assumed\n(ZTAX-FIN-REQ-0080)."
+          },
+          "response": [
+            {
+              "name": "201 · One decision never documented",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/reconciliations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "reconciliations"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"ranAt\": \"2026-10-03T09:00:00.000000Z\",\n  \"firstBreak\": \"R1_CALCULATED_TO_DOCUMENT\",\n  \"unavailable\": [\n    \"R2_DOCUMENT_TO_COLLECTION\",\n    \"R4_SUBLEDGER_TO_RETURN\",\n    \"R5_RETURN_TO_REMITTANCE\",\n    \"R6_SUBLEDGER_TO_GL\"\n  ],\n  \"items\": [\n    {\n      \"id\": \"01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f\",\n      \"stage\": \"R1_CALCULATED_TO_DOCUMENT\",\n      \"matchKey\": \"decision:01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n      \"expected\": {\n        \"amount\": \"21.11\",\n        \"currency\": \"EUR\"\n      },\n      \"status\": \"MISSING\",\n      \"detail\": \"expected and not observed\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('runReconciliation returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('ZTAX-FIN-REQ-0077 — every stage not compared is named', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().unavailable).to.include('R2_DOCUMENT_TO_COLLECTION');",
+                  "});",
+                  "pm.collectionVariables.set('runId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/reconciliations/{runId} — A reconciliation run, with its items and their resolutions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/reconciliations/{{runId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "reconciliations",
+                "{{runId}}"
+              ]
+            },
+            "description": "A reconciliation run, with its items and their resolutions\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. A run is a record: a later run of the same period is a run of its own."
+          },
+          "response": [
+            {
+              "name": "200 · A clean run",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/reconciliations/{{runId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "reconciliations",
+                    "{{runId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"ranAt\": \"2026-10-03T09:00:00.000000Z\",\n  \"unavailable\": [\n    \"R2_DOCUMENT_TO_COLLECTION\",\n    \"R4_SUBLEDGER_TO_RETURN\",\n    \"R5_RETURN_TO_REMITTANCE\",\n    \"R6_SUBLEDGER_TO_GL\"\n  ],\n  \"items\": []\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getReconciliation returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/reconciliations/{runId}/items/{itemId}/resolution — Resolve one exception, with its evidence",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Billed in the October invoice run.\",\n  \"action\": \"WAIT\",\n  \"rootCause\": \"TIMING\",\n  \"evidence\": [\n    \"bss:invoice-run-2026-10-01\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/reconciliations/{{runId}}/items/{{itemId}}/resolution",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "reconciliations",
+                "{{runId}}",
+                "items",
+                "{{itemId}}",
+                "resolution"
+              ]
+            },
+            "description": "Resolve one exception, with its evidence\n\n`OPERATOR`. Records who resolved the exception, why, how, its root\ncause, and at least one piece of evidence (ZTAX-FIN-REQ-0084). An\nitem is resolved once; a matched item is not an exception and is\nrefused with `409 STATE_TRANSITION_INVALID`."
+          },
+          "response": [
+            {
+              "name": "200 · Resolved",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/reconciliations/{{runId}}/items/{{itemId}}/resolution",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "reconciliations",
+                    "{{runId}}",
+                    "items",
+                    "{{itemId}}",
+                    "resolution"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f\",\n  \"stage\": \"R1_CALCULATED_TO_DOCUMENT\",\n  \"matchKey\": \"decision:01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n  \"expected\": {\n    \"amount\": \"21.11\",\n    \"currency\": \"EUR\"\n  },\n  \"status\": \"RESOLVED\",\n  \"resolution\": {\n    \"actor\": \"HUMAN\",\n    \"resolver\": \"01920a40-aaaa-7bbb-8ccc-000000000d01\",\n    \"reason\": \"Billed in the October invoice run.\",\n    \"action\": \"WAIT\",\n    \"rootCause\": \"TIMING\",\n    \"evidence\": [\n      \"bss:invoice-run-2026-10-01\"\n    ],\n    \"resolvedAt\": \"2026-10-03T10:00:00.000000Z\"\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('resolveReconciliationItem returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('a resolution needs an item of the run', function () {",
+                  "  pm.expect([200, 404, 409]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
         }
       ],
       "event": [
@@ -5158,6 +5394,11 @@
       "type": "string"
     },
     {
+      "key": "runId",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "reusedKey",
       "value": "",
       "type": "string"
@@ -5169,7 +5410,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:ddeea84b2b6b83f86e9240517c0a837bb3a5b6168ebca606460e067ac2bf3e7d",
+      "value": "sha256:2fa570894a4ae32d29f451446f7a77ac642948b357e35377e41fd5e396798900",
       "type": "string"
     }
   ]

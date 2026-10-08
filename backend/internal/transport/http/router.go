@@ -103,6 +103,10 @@ type Router struct {
 	// Periods serves the subledger's legal periods: close, amendment
 	// windows, and reopening on approval. Nil wherever Determination is.
 	Periods *app.PeriodService
+
+	// Reconciliations runs and resolves R1–R7 over a legal period. Nil
+	// wherever Determination is.
+	Reconciliations *app.ReconciliationService
 }
 
 // Trains are the seven release-train versions, as the contract names them.
@@ -223,6 +227,9 @@ func (rt *Router) routes() []struct {
 		// Approval is ADMIN's, and never the requester's: the service refuses
 		// a self-approval whatever roles the approver holds.
 		{Route{"POST", "/v1/subledger/periods/{period}/reopen-requests/{requestId}/approval", false, []security.Role{admin}}, rt.handleApproveReopen},
+		{Route{"POST", "/v1/reconciliations", false, []security.Role{operator}}, rt.handleRunReconciliation},
+		{Route{"GET", "/v1/reconciliations/{runId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetReconciliation},
+		{Route{"POST", "/v1/reconciliations/{runId}/items/{itemId}/resolution", false, []security.Role{operator}}, rt.handleResolveReconItem},
 		{Route{"GET", "/v1/obligations", false, []security.Role{operator, analyst, auditor}}, rt.handleListObligations},
 		{Route{"GET", "/v1/obligations/{obligationId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetObligation},
 		{Route{"POST", "/v1/obligations/{obligationId}/transitions", false, []security.Role{operator}}, rt.handleTransitionObligation},
