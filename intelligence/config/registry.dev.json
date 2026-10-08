@@ -3,7 +3,7 @@
     {
       "use_case_id": "classification-review",
       "owner": "lane-l",
-      "description": "Propose an ontology mapping for a catalog item, for human review (ZTAX-CLS-REQ-0082). Advisory only.",
+      "description": "Propose an ontology mapping for a catalog item, for human review (ZTAX-CLS-REQ-0082). The AI output is an advisory classification proposal; a qualified human reviewer constructs the authoritative ClassificationDecision (ADR-0006 §2.6).",
       "max_risk_tier": "T2",
       "max_authority": "A1",
       "permitted_regions": [
@@ -13,9 +13,10 @@
         "P0",
         "P1"
       ],
+      "suspended": false,
       "route": {
-        "model_profile": "model:unassigned",
-        "provider_profile": "provider:unassigned",
+        "model_profile": "model:fake-v1",
+        "provider_profile": "provider:fake",
         "prompt_profile": "prompt:classification-review-v1"
       }
     }
