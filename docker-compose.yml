@@ -40,8 +40,11 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      # $$ defers to the container's own environment, set just above.
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      # $$ defers to the container's own environment, set just above. Over
+      # TCP, not the socket: on a fresh volume the image's init server answers
+      # on the socket only, and a socket check passes while every TCP client
+      # (ztax-migrate first) is still refused.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -147,9 +150,26 @@ services:
       # is a draft, refused outside development; it is a worked posture, not
       # a legal opinion.
       ZTAX_LEGAL_MATRIX: /etc/ztax/legal/matrix.json
+
+      # Content, evidence and period seals: off unless .env turns them on (see
+      # .env.example). A cell with no content is a legitimate deployment
+      # before A4, and a stack that refused to start until somebody had run
+      # `make content` would break the one-command setup. The directories are
+      # mounted either way; empty ones are simply unused.
+      ZTAX_CONTENT_DIR: ${ZTAX_CONTENT_DIR:-}
+      ZTAX_CONTENT_KEYRING: ${ZTAX_CONTENT_KEYRING:-}
+      ZTAX_EVIDENCE_DIR: ${ZTAX_EVIDENCE_DIR:-}
+      ZTAX_SEAL_KEYRING: ${ZTAX_SEAL_KEYRING:-}
+      ZTAX_SEAL_SIGNING_KEY: ${ZTAX_SEAL_SIGNING_KEY:-}
+      ZTAX_SEAL_KEY_ID: ${ZTAX_SEAL_KEY_ID:-}
     volumes:
       - ./intelligence/config/registry.dev.json:/etc/ztax/ai/registry.json:ro
       - ./content/legal/authorization-matrix.dev.json:/etc/ztax/legal/matrix.json:ro
+      - ./content/build:/etc/ztax/content:ro
+      - ./content/.keys:/etc/ztax/content-keys:ro
+      - ./.seal-keys:/etc/ztax/seal-keys:ro
+      # The one place the cell writes: recorded decisions' evidence objects.
+      - ./.evidence:/var/lib/ztax/evidence
 
     # The binary writes nothing to disk. Enforcing that here means a future
     # change that starts writing fails loudly in development rather than in a

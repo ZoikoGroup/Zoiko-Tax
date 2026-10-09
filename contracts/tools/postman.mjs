@@ -279,7 +279,7 @@ const OPERATION_TESTS = {
     "});",
   ],
   listObligations: [
-    "pm.test('ZTAX-OBL-001 §4 — the commit assessed into the period\'s return', function () {",
+    "pm.test('ZTAX-OBL-001 §4 — the commit assessed into the period return', function () {",
     "  pm.response.to.have.status(200);",
     "  pm.expect(pm.response.json().obligations.length).to.be.at.least(1);",
     "});",
@@ -315,6 +315,14 @@ const OPERATION_TESTS = {
     "});",
     "// The original is superseded now; a refund is made against the current version.",
     "pm.collectionVariables.set('decisionId', pm.response.json().id);",
+  ],
+  listSeals: [
+    "// A seal made by an earlier run makes this run's sealPeriod a 409, which",
+    "// captures nothing; the latest seal stands in, so the reads after it",
+    "// still have one to read and verify.",
+    "if (pm.response.code === 200 && pm.response.json().seals.length > 0) {",
+    "  pm.collectionVariables.set('sealId', pm.response.json().seals[0].id);",
+    "}",
   ],
   sealPeriod: [
     "pm.test('ADR-0011 §2.4 — sealed, or refused for a reason the cell states', function () {",
@@ -967,6 +975,9 @@ function variables(overlay, contractDigest, local) {
     { key: "period", value: "2000-01", type: "string" },
     { key: "requestId", value: "", type: "string" },
     { key: "runId", value: "", type: "string" },
+    // Well-formed and nothing's, like deliveryId: the example item is not in
+    // a fresh run, so its resolution answers 404 rather than a parse error.
+    { key: "itemId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
     { key: "holdId", value: "", type: "string" },
     { key: "authorizationId", value: "", type: "string" },
     // Minted once per run by `07`, and reused by the requests that must share it.

@@ -1634,7 +1634,13 @@
                 "exec": [
                   "pm.test('listSeals returns a status the contract declares', function () {",
                   "  pm.expect(pm.response.code).to.be.oneOf([200, 503]);",
-                  "});"
+                  "});",
+                  "// A seal made by an earlier run makes this run's sealPeriod a 409, which",
+                  "// captures nothing; the latest seal stands in, so the reads after it",
+                  "// still have one to read and verify.",
+                  "if (pm.response.code === 200 && pm.response.json().seals.length > 0) {",
+                  "  pm.collectionVariables.set('sealId', pm.response.json().seals[0].id);",
+                  "}"
                 ]
               }
             }
@@ -3722,7 +3728,7 @@
                   "pm.test('listObligations returns a status the contract declares', function () {",
                   "  pm.expect(pm.response.code).to.be.oneOf([200]);",
                   "});",
-                  "pm.test('ZTAX-OBL-001 §4 — the commit assessed into the period's return', function () {",
+                  "pm.test('ZTAX-OBL-001 §4 — the commit assessed into the period return', function () {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.json().obligations.length).to.be.at.least(1);",
                   "});",
@@ -5471,7 +5477,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"0.00\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5527,7 +5533,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"0.00\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5583,7 +5589,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"99.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"0.00\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"99.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5638,7 +5644,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.0\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"0.00\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.0\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5689,7 +5695,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"0.00\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5744,7 +5750,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": 45.0, \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  },\n  \"accumulators\": { \"threshold.ecoLevyYtd\": { \"amount\": \"0.00\", \"currency\": \"EUR\" } }\n}",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": 45.0, \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5799,7 +5805,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": null, \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  },\n  \"accumulators\": { \"threshold.ecoLevyYtd\": { \"amount\": \"0.00\", \"currency\": \"EUR\" } }\n}",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": null, \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5854,7 +5860,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": \"45.00\", \"Currency\": \"USD\", \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  },\n  \"accumulators\": { \"threshold.ecoLevyYtd\": { \"amount\": \"0.00\", \"currency\": \"EUR\" } }\n}",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": \"45.00\", \"Currency\": \"USD\", \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -6546,6 +6552,11 @@
     {
       "key": "runId",
       "value": "",
+      "type": "string"
+    },
+    {
+      "key": "itemId",
+      "value": "00000000-0000-7000-8000-000000000000",
       "type": "string"
     },
     {

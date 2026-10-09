@@ -188,12 +188,6 @@
                 "line.reducedRateApplies": false,
                 "line.exemptCertificateHeld": false
               }
-            },
-            "accumulators": {
-              "threshold.ecoLevyYtd": {
-                "amount": "0.00",
-                "currency": "EUR"
-              }
             }
           },
           "description": "ADR-0013 §2.4. The first of four: this one establishes the record, and requests 2 to 4 are the interesting ones.",
@@ -231,12 +225,6 @@
               "flags": {
                 "line.reducedRateApplies": false,
                 "line.exemptCertificateHeld": false
-              }
-            },
-            "accumulators": {
-              "threshold.ecoLevyYtd": {
-                "amount": "0.00",
-                "currency": "EUR"
               }
             }
           },
@@ -276,12 +264,6 @@
                 "line.reducedRateApplies": false,
                 "line.exemptCertificateHeld": false
               }
-            },
-            "accumulators": {
-              "threshold.ecoLevyYtd": {
-                "amount": "0.00",
-                "currency": "EUR"
-              }
             }
           },
           "description": "Must be a 409 `IDEMPOTENCY_KEY_REUSE` and must not execute (ADR-0013 §2.4).\n\nReplaying the original response would be worse than either alternative: the caller would believe the amount it sent was the amount recorded.",
@@ -319,12 +301,6 @@
                 "line.reducedRateApplies": false,
                 "line.exemptCertificateHeld": false
               }
-            },
-            "accumulators": {
-              "threshold.ecoLevyYtd": {
-                "amount": "0.00",
-                "currency": "EUR"
-              }
             }
           },
           "description": "`\"45.0\"` is not `\"45.00\"`. Scale is semantic (ADR-0011 §2.2), so the canonical request digest differs and this is a different request under a used key.\n\nA server that compared parsed numbers would replay request 1 here, and hand back a decision made at a precision the caller did not send.",
@@ -359,12 +335,6 @@
                 "line.reducedRateApplies": false,
                 "line.exemptCertificateHeld": false
               }
-            },
-            "accumulators": {
-              "threshold.ecoLevyYtd": {
-                "amount": "0.00",
-                "currency": "EUR"
-              }
             }
           },
           "description": "`Idempotency-Key` is mandatory on `:commit`, `:adjust`, `:refund` and `POST /v1/batches` (ADR-0013 §2.1). Rejected before any work begins.",
@@ -382,7 +352,7 @@
           "headers": {
             "Idempotency-Key": "{{$guid}}"
           },
-          "rawBody": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": 45.0, \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  },\n  \"accumulators\": { \"threshold.ecoLevyYtd\": { \"amount\": \"0.00\", \"currency\": \"EUR\" } }\n}",
+          "rawBody": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": 45.0, \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  }\n}",
           "description": "**The request in this collection that matters most.**\n\n`\"amount\": 45.0` must be rejected, never coerced. A 2xx here is a Critical finding rather than a test failure: RFC 8785 serializes JSON numbers through IEEE 754 doubles (ADR-0011 §1.1), so an amount that is ever a JSON number has lost precision before canonicalization sees it — and the loss is invisible, because 45.0 survives and 0.1 does not.\n\nThe body is raw text rather than a structured one, because the whole point is to send a token a correct client cannot produce.",
           "test": [
             "pm.test('a JSON number is never an amount', function () {",
@@ -398,7 +368,7 @@
           "headers": {
             "Idempotency-Key": "{{$guid}}"
           },
-          "rawBody": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": null, \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  },\n  \"accumulators\": { \"threshold.ecoLevyYtd\": { \"amount\": \"0.00\", \"currency\": \"EUR\" } }\n}",
+          "rawBody": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": null, \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  }\n}",
           "description": "ADR-0011 §2.1 P3 on the path where it costs the most. \"The amount was explicitly cleared\" and \"the integration did not send an amount\" are different events with different fiscal consequences.",
           "test": [
             "pm.test('null is refused rather than normalised', function () {",
@@ -414,7 +384,7 @@
           "headers": {
             "Idempotency-Key": "{{$guid}}"
           },
-          "rawBody": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": \"45.00\", \"Currency\": \"USD\", \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  },\n  \"accumulators\": { \"threshold.ecoLevyYtd\": { \"amount\": \"0.00\", \"currency\": \"EUR\" } }\n}",
+          "rawBody": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": \"45.00\", \"Currency\": \"USD\", \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  }\n}",
           "description": "ADR-0011 P5 below the top level. `Currency` beside `currency` is refused, not matched case-insensitively: encoding/json would otherwise let the later key win, and the decision would be recorded in whichever currency happened to come last.",
           "test": [
             "pm.test('an undeclared nested field is refused', function () {",
