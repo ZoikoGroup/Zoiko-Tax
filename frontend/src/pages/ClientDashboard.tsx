@@ -229,13 +229,16 @@ export const ClientDashboard = ({ period }: ClientDashboardProps) => {
           </div>
         </div>
         <div className="ztax-title-actions">
-          <div className="ztax-attention-chip">
-            <span>
-              {d.actions.length === 0
-                ? 'Nothing needs attention'
-                : `▲ What needs attention: ${p0} P0 | ${p1} P1 items require action`}
-            </span>
-          </div>
+          {d.actions.length === 0 ? (
+            <div className="ztax-scope-badge">
+              <span className="ztax-green-dot" />
+              <span>Nothing needs attention</span>
+            </div>
+          ) : (
+            <div className="ztax-attention-chip">
+              <span>▲ What needs attention: {p0} P0 | {p1} P1 items require action</span>
+            </div>
+          )}
           <button type="button" className="ztax-btn-copper" onClick={reload}>
             Refresh
           </button>
@@ -356,7 +359,7 @@ export const ClientDashboard = ({ period }: ClientDashboardProps) => {
             <span className="ztax-timestamp">{d.actions.length} open</span>
           </div>
           {d.actions.length === 0 ? (
-            <p className="ztax-alert-desc">Nothing in the record needs a person right now.</p>
+            <p className="ztax-empty-note">Nothing in the record needs a person right now.</p>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table className="ztax-action-table">

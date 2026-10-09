@@ -370,9 +370,15 @@ export class ZoikoTaxClient {
       signal.addEventListener("abort", () => controller.abort(signal.reason), { once: true });
     }
 
+    // Called as a plain function, never as `this.#fetch(...)`: a browser's
+    // fetch throws "Illegal invocation" when `this` is anything but the
+    // window or undefined, and the client is neither. Node's fetch does not
+    // care, which is how this once passed every test and failed every call
+    // in a browser.
+    const fetchImpl = this.#fetch;
     let response: Response;
     try {
-      response = await this.#fetch(`${this.#baseUrl}${path}`, {
+      response = await fetchImpl(`${this.#baseUrl}${path}`, {
         method,
         headers,
         body: body === undefined ? null : JSON.stringify(body),

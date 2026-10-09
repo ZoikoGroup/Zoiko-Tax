@@ -149,6 +149,28 @@ test("a limit becomes a query parameter and an absent one does not", async () =>
   assert.ok(calls[1].url.endsWith("/v1/admin/users"));
 });
 
+test("fetch is not called as a method of the client, as a browser requires", async () => {
+  // A browser's fetch throws "Illegal invocation" when `this` is not the
+  // window; this stand-in does the same for any `this` but globalThis or
+  // undefined, so the default and a supplied fetch are both held to it.
+  const original = globalThis.fetch;
+  const strict = function (url) {
+    if (this !== undefined && this !== globalThis) {
+      throw new TypeError("Illegal invocation");
+    }
+    return Promise.resolve(json(200, { url }));
+  };
+  globalThis.fetch = strict;
+  try {
+    const byDefault = await new ZoikoTaxClient({ baseUrl: "/api" }).getCapabilities();
+    const supplied = await new ZoikoTaxClient({ baseUrl: "/api", fetch: strict }).getCapabilities();
+    assert.equal(byDefault.ok, true, byDefault.ok ? "" : byDefault.error.message);
+    assert.equal(supplied.ok, true, supplied.ok ? "" : supplied.error.message);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
 test("the dashboard is read relative to a same-origin prefix, with its period", async () => {
   const dashboard = { period: "2026-09", determinations: { tax: [{ amount: "882.00", currency: "EUR" }] } };
   const { fetch, calls } = stub(json(200, dashboard));
