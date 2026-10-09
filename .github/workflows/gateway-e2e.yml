@@ -1,0 +1,101 @@
+# Runs the two Go-to-Python end-to-end tests
+# (backend/internal/adapter/gateway/e2e_python_test.go) for real, against a
+# real Python Gateway process, not skipped.
+#
+# Why this exists: both TestCrossLanguageBoundary and
+# TestFakeRuntimeCrossesTheBoundary call t.Skip when ZTAX_E2E_PYTHON is
+# unset, because the Go job does not carry the AI train's Python toolchain.
+# ci.yml's backend job never sets that variable, so neither test has ever
+# actually run in CI -- only locally, by hand, with a Python environment
+# someone built themselves. This workflow installs the Gateway package and
+# sets ZTAX_E2E_PYTHON so both tests run for real on every change.
+#
+# A separate workflow, not another job in ci.yml, and deliberately with NO
+# paths filter: ci.yml's `pull_request` and `push` triggers both carry
+# `paths-ignore: ['intelligence/**']`, so an intelligence-only change --
+# exactly the kind most likely to break the Python side of this boundary --
+# would never reach these tests if they ran inside ci.yml.
+#
+# ZTAX_GATEWAY_RUNTIME=fake (what TestFakeRuntimeCrossesTheBoundary starts
+# the Python process with) is development/test-only and is refused outside
+# ZTAX_ENVIRONMENT=development (ADR-0006 §2.1, ADR-0017) -- server.py itself
+# enforces this; the test only exercises the one path that is actually
+# permitted to use it.
+#
+# A SKIP is treated as a failure here, deliberately: the state this workflow
+# exists to end is exactly "both tests silently skip and the job still shows
+# green." A green run that proves nothing is worse than a red one that is
+# honest about it.
+#
+# Not added to ci.yml's "all gates green" aggregate -- that job, and this
+# workflow's inclusion in it, belongs in ci.yml, which is not touched here.
+name: gateway e2e
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A superseded run proves nothing. Cancel it and keep the runner for the head.
+concurrency:
+  group: gateway-e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: gateway e2e · Go ↔ Python, for real
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: backend/go.mod
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      # Non-editable: this proves the Gateway runs the way it is actually
+      # shipped (installed), not the way it happens to sit on disk in a
+      # checkout.
+      - name: install the Gateway
+        run: python -m pip install ./intelligence
+
+      # ZTAX_E2E_PYTHON must be the SAME interpreter pip just installed into,
+      # never a second "a python" found some other way -- $(command -v
+      # python) is exactly the one setup-python put first on PATH and the
+      # one the install step above just ran under.
+      #
+      # A SKIP here is a failure, not a pass: grep for both exact PASS lines
+      # and refuse any SKIP line, after the real run, so this cannot go
+      # green by quietly not running either test.
+      - name: the two Go-to-Python e2e tests, for real
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          export ZTAX_E2E_PYTHON="$(command -v python)"
+
+          go test -count=1 -v -run '^(TestCrossLanguageBoundary|TestFakeRuntimeCrossesTheBoundary)$' ./internal/adapter/gateway/ | tee /tmp/e2e.txt
+
+          ok=true
+          if ! grep -qF -- "--- PASS: TestCrossLanguageBoundary" /tmp/e2e.txt; then
+            echo "::error::TestCrossLanguageBoundary did not report --- PASS -- see the log above"
+            ok=false
+          fi
+          if ! grep -qF -- "--- PASS: TestFakeRuntimeCrossesTheBoundary" /tmp/e2e.txt; then
+            echo "::error::TestFakeRuntimeCrossesTheBoundary did not report --- PASS -- see the log above"
+            ok=false
+          fi
+          if grep -qF -- "--- SKIP" /tmp/e2e.txt; then
+            echo "::error::a gateway e2e test was SKIPPED -- ZTAX_E2E_PYTHON must be set to a Python with the Gateway installed; a skip here is treated as a failure, not a pass"
+            ok=false
+          fi
+          if [ "$ok" != true ]; then
+            exit 1
+          fi

@@ -156,6 +156,8 @@ services:
       ZTAX_GATEWAY_AI_TRAIN: 0.0.0-dev
       ZTAX_GATEWAY_ADDRESS: "[::]:8443"
       ZTAX_GATEWAY_INSECURE_LOCAL: "true"
+      # Development only; rejected outside ZTAX_ENVIRONMENT=development (ADR-0006 §2.1, ADR-0017)
+      ZTAX_GATEWAY_RUNTIME: "fake"
     volumes:
       - ./intelligence/config/registry.dev.json:/etc/ztax/ai/registry.json:ro
     read_only: true

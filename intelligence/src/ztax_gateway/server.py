@@ -32,6 +32,7 @@ from typing import Any, NoReturn
 
 import grpc
 
+from .fake_runtime import FakeRuntime
 from .governance import GovernanceRefusedError, Refusal, UseCase, UseCaseRegistry
 from .provenance import AuthorityOutcome, Provenance, RiskTier
 from .runtime import (
@@ -243,10 +244,31 @@ def serve(
 def load_config(path: Path) -> tuple[UseCaseRegistry, RoutingTable]:
     """Read the registry and routing from a JSON file.
 
-    The file is a reviewed AI-train artifact:
-    ``{"use_cases": [{"use_case_id", "owner", "description", "max_risk_tier",
-    "max_authority", "permitted_regions", "route": {"model_profile",
-    "provider_profile", "prompt_profile"}}]}``.
+    The file is a reviewed AI-train artifact with the schema::
+
+        {
+          "use_cases": [
+            {
+              "use_case_id":          str,
+              "owner":                str,
+              "description":          str,
+              "max_risk_tier":        str,   # T0-T4
+              "max_authority":        str,   # A0-A4
+              "permitted_regions":    [str], # optional; empty = no region allowed
+              "permitted_data_classes": [str], # optional; informational only
+              "suspended":            bool,  # optional; default false
+              "route": {
+                "model_profile":    str,
+                "provider_profile": str,
+                "prompt_profile":   str
+              }
+            }
+          ]
+        }
+
+    A ``"suspended": true`` entry is registered with its ``suspended`` flag
+    set, so the Gateway refuses it with ``AI_USE_CASE_SUSPENDED`` rather than
+    ``AI_UNKNOWN_USE_CASE``.
     """
     doc: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     registry = UseCaseRegistry()
@@ -259,6 +281,7 @@ def load_config(path: Path) -> tuple[UseCaseRegistry, RoutingTable]:
             max_risk_tier=RiskTier(entry["max_risk_tier"]),
             max_authority=AuthorityOutcome(entry["max_authority"]),
             permitted_regions=frozenset(entry.get("permitted_regions", [])),
+            suspended=bool(entry.get("suspended", False)),
         )
         registry.register(uc)
         r = entry["route"]
@@ -270,6 +293,41 @@ def load_config(path: Path) -> tuple[UseCaseRegistry, RoutingTable]:
 
 def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
+
+
+def _runtime() -> ModelRuntime:
+    """Resolve the model runtime from the environment.
+
+    ``ZTAX_GATEWAY_RUNTIME`` controls which runtime is started:
+
+    * ``"unconfigured"`` (default) — ``UnconfiguredRuntime``, which refuses
+      every call.  This is the safe default for any unreviewed deployment.
+    * ``"fake"`` — ``FakeRuntime``, which returns canned answers without
+      calling any real provider.  Allowed **only** when
+      ``ZTAX_ENVIRONMENT == "development"``; any other environment exits with
+      a non-zero code because a fake runtime must never run in production.
+
+    Any other value is also refused with a non-zero exit, so a typo in the
+    env var fails loudly rather than silently falling back to an unsafe state.
+    """
+    runtime_name = _env("ZTAX_GATEWAY_RUNTIME", "unconfigured")
+    if runtime_name == "unconfigured":
+        return UnconfiguredRuntime()
+    if runtime_name == "fake":
+        if _env("ZTAX_ENVIRONMENT") != "development":
+            print(
+                "gateway: ZTAX_GATEWAY_RUNTIME=fake is only permitted when "
+                "ZTAX_ENVIRONMENT=development",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+        return FakeRuntime()
+    print(
+        f"gateway: unknown ZTAX_GATEWAY_RUNTIME value {runtime_name!r}; "
+        "expected 'unconfigured' or 'fake'",
+        file=sys.stderr,
+    )
+    raise SystemExit(2)
 
 
 def main() -> int:
@@ -287,7 +345,7 @@ def main() -> int:
         )
         return 2
     registry, routes = load_config(Path(config))
-    gateway = Gateway(registry, routes, UnconfiguredRuntime(), region, train)
+    gateway = Gateway(registry, routes, _runtime(), region, train)
 
     cert, key, ca = (
         _env("ZTAX_GATEWAY_TLS_CERT"),
