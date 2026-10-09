@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DocumentCommitted",
+  "description": "A fiscal document was committed (ZTAX-FIN-001 §3–§6): an invoice, debit note or adjustment, or a void, credit note or rebill of one. Emitted in the transaction that committed it. Thin: it names the document, its lineage and the decisions it pins, and carries no amount; read the document from GET /v1/documents/{documentId}. A correction's commit also moved its predecessor's status, which the predecessor's read shows.",
+  "$comment": "Producer: backend/internal/app/documents.go (emit). Event type com.zoikotax.document.committed; schema ref ztax:events/document-committed/1.0.0. Partition key document/<rootId>, so a chain's documents arrive in commit order.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "documentId",
+    "type",
+    "rootId",
+    "predecessors",
+    "legalEntityId",
+    "issueDate",
+    "taxPoint",
+    "currency",
+    "decisionIds",
+    "recordedAt"
+  ],
+  "properties": {
+    "documentId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "enum": [
+        "INVOICE",
+        "DEBIT_NOTE",
+        "ADJUSTMENT",
+        "VOID",
+        "CREDIT_NOTE",
+        "REBILL"
+      ]
+    },
+    "rootId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "predecessors": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "legalEntityId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "issueDate": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "taxPoint": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "decisionIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "reasonCode": {
+      "type": "string",
+      "pattern": "^CORRECTION_[A-Z0-9_]+$"
+    },
+    "recordedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

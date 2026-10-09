@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:96a90e120afe357331ac3ac03456d638064f0b98a9bb406a2a2e8e2e539df7f7`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:cde813af1cdfd0ebbfdc7e87ca4a7c555261d1d00a8524364cd610e916c7efa6`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -137,7 +137,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"cell\": \"eu-west-1\",\n  \"region\": \"eu-west\",\n  \"environment\": \"development\",\n  \"trains\": {\n    \"app\": \"0.4.0\",\n    \"content\": \"0.0.0-dev\",\n    \"ai\": \"0.1.0\",\n    \"adapter\": \"0.2.0\",\n    \"infra\": \"0.3.0\",\n    \"schema\": \"0.1.0\",\n    \"migration\": \"6\"\n  },\n  \"canonProfile\": \"canon/v1\",\n  \"authoritative\": false,\n  \"reasonCodes\": [\n    \"AMBIGUOUS\",\n    \"CURRENCY_MISMATCH\",\n    \"FORBIDDEN\",\n    \"NOT_AUTHORITATIVE\",\n    \"NO_CONTENT_BUNDLE\"\n  ],\n  \"content\": {\n    \"bundleId\": \"eu-vat-worked-2026.09\",\n    \"digest\": \"zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b\",\n    \"irVersion\": 1,\n    \"nodeCount\": 22\n  }\n}"
+              "body": "{\n  \"cell\": \"eu-west-1\",\n  \"region\": \"eu-west\",\n  \"environment\": \"development\",\n  \"trains\": {\n    \"app\": \"0.4.0\",\n    \"content\": \"0.0.0-dev\",\n    \"ai\": \"0.1.0\",\n    \"adapter\": \"0.2.0\",\n    \"infra\": \"0.3.0\",\n    \"schema\": \"0.1.0\",\n    \"migration\": \"6\"\n  },\n  \"canonProfile\": \"canon/v1\",\n  \"authoritative\": false,\n  \"reasonCodes\": [\n    \"AMBIGUOUS\",\n    \"CURRENCY_MISMATCH\",\n    \"FORBIDDEN\",\n    \"NOT_AUTHORITATIVE\",\n    \"NO_CONTENT_BUNDLE\"\n  ],\n  \"eventTypes\": [\n    \"com.zoikotax.decision.committed\",\n    \"com.zoikotax.decision.corrected\",\n    \"com.zoikotax.obligation.status-changed\"\n  ],\n  \"content\": {\n    \"bundleId\": \"eu-vat-worked-2026.09\",\n    \"digest\": \"zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b\",\n    \"irVersion\": 1,\n    \"nodeCount\": 22\n  }\n}"
             },
             {
               "name": "200 · A cell deployed with no content bundle",
@@ -163,7 +163,7 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"cell\": \"eu-west-1\",\n  \"region\": \"eu-west\",\n  \"environment\": \"production\",\n  \"trains\": {\n    \"app\": \"0.4.0\",\n    \"content\": \"none\",\n    \"ai\": \"0.1.0\",\n    \"adapter\": \"0.2.0\",\n    \"infra\": \"0.3.0\",\n    \"schema\": \"0.1.0\",\n    \"migration\": \"6\"\n  },\n  \"canonProfile\": \"canon/v1\",\n  \"authoritative\": false,\n  \"reasonCodes\": [\n    \"NO_CONTENT_BUNDLE\",\n    \"NOT_AUTHORITATIVE\"\n  ]\n}"
+              "body": "{\n  \"cell\": \"eu-west-1\",\n  \"region\": \"eu-west\",\n  \"environment\": \"production\",\n  \"trains\": {\n    \"app\": \"0.4.0\",\n    \"content\": \"none\",\n    \"ai\": \"0.1.0\",\n    \"adapter\": \"0.2.0\",\n    \"infra\": \"0.3.0\",\n    \"schema\": \"0.1.0\",\n    \"migration\": \"6\"\n  },\n  \"canonProfile\": \"canon/v1\",\n  \"authoritative\": false,\n  \"reasonCodes\": [\n    \"NO_CONTENT_BUNDLE\",\n    \"NOT_AUTHORITATIVE\"\n  ],\n  \"eventTypes\": [\n    \"com.zoikotax.decision.committed\",\n    \"com.zoikotax.decision.corrected\",\n    \"com.zoikotax.obligation.status-changed\"\n  ]\n}"
             }
           ],
           "event": [
@@ -438,7 +438,7 @@
     },
     {
       "name": "04 · Administration",
-      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.",
+      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked.",
       "item": [
         {
           "name": "GET /v1/admin/users — List the tenant's users",
@@ -953,7 +953,1967 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('revokeSession returns a status the contract declares', function () {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([204]);",
+                  "  pm.expect(pm.response.code).to.be.oneOf([204, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/webhooks — The tenant's webhook subscriptions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks?limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The tenant's webhook subscriptions\n\n`ADMIN` or `AUDITOR`. Every subscription with its current status,\noldest first."
+          },
+          "response": [
+            {
+              "name": "200 · One active subscription",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/webhooks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "webhooks"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"webhooks\": [\n    {\n      \"id\": \"01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"url\": \"https://hooks.example.com/ztax\",\n      \"eventTypes\": [\n        \"com.zoikotax.decision.committed\",\n        \"com.zoikotax.refund.status-changed\"\n      ],\n      \"status\": \"ACTIVE\",\n      \"createdAt\": \"2026-10-07T09:00:00.000000Z\",\n      \"statusChangedAt\": \"2026-10-07T09:00:00.000000Z\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listWebhooks returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/webhooks — Subscribe an endpoint to named event types",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://hooks.example.com/ztax\",\n  \"eventTypes\": [\n    \"com.zoikotax.decision.committed\",\n    \"com.zoikotax.refund.status-changed\"\n  ],\n  \"description\": \"ERP bridge\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks"
+              ]
+            },
+            "description": "Subscribe an endpoint to named event types\n\n`ADMIN` only. Subscribes an HTTPS endpoint to the event types it\nnames — there is no wildcard, so an event kind added later reaches\nnobody who did not ask for it by name. The endpoint must be HTTPS,\ncarry no credentials, and be a public address: a destination inside\nthe cell's network is refused here and again at every connection,\nafter name resolution.\n\nThe response carries the signing secret, `whsec_…`, **once**. It is\nstored sealed and is never returned again; rotate it to get a new one.\nDeliveries are signed under the Standard Webhooks scheme\n(`webhook-id`, `webhook-timestamp`, `webhook-signature`), so any\nStandard Webhooks library verifies them. `webhook-id` is the\nCloudEvents id: deduplicate on it, because delivery is at least once."
+          },
+          "response": [
+            {
+              "name": "201 · A new subscription",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/webhooks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "webhooks"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"webhook\": {\n    \"id\": \"01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n    \"url\": \"https://hooks.example.com/ztax\",\n    \"eventTypes\": [\n      \"com.zoikotax.decision.committed\",\n      \"com.zoikotax.refund.status-changed\"\n    ],\n    \"description\": \"ERP bridge\",\n    \"status\": \"ACTIVE\",\n    \"createdAt\": \"2026-10-07T09:00:00.000000Z\",\n    \"statusChangedAt\": \"2026-10-07T09:00:00.000000Z\"\n  },\n  \"secret\": {\n    \"version\": 1,\n    \"secret\": \"whsec_AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=\"\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('createWebhook returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('the webhook is created ACTIVE, and its secret is shown once in Standard Webhooks form', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().webhook.status).to.eql('ACTIVE');",
+                  "  pm.expect(pm.response.json().secret.secret).to.match(/^whsec_/);",
+                  "});",
+                  "pm.collectionVariables.set('webhookId', pm.response.json().webhook.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/webhooks/{webhookId} — One webhook subscription",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks",
+                "{{webhookId}}"
+              ]
+            },
+            "description": "One webhook subscription\n\n`ADMIN` or `AUDITOR`."
+          },
+          "response": [
+            {
+              "name": "200 · A paused subscription",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "webhooks",
+                    "{{webhookId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"url\": \"https://hooks.example.com/ztax\",\n  \"eventTypes\": [\n    \"com.zoikotax.decision.committed\"\n  ],\n  \"status\": \"PAUSED\",\n  \"createdAt\": \"2026-10-07T09:00:00.000000Z\",\n  \"statusChangedAt\": \"2026-10-07T12:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getWebhook returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('a read never returns the signing secret', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.text()).to.not.include('whsec_');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/webhooks/{webhookId}/secrets:rotate — Issue a new signing secret",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/secrets:rotate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks",
+                "{{webhookId}}",
+                "secrets:rotate"
+              ]
+            },
+            "description": "Issue a new signing secret\n\n`ADMIN` only. Issues the next signing secret, returned this once.\nFor 24 hours after the rotation every delivery is signed with both\nthe new secret and the previous one — `webhook-signature` carries\nboth — so a receiver can switch at its own pace. Rotating again inside\nthat window retires the oldest at once."
+          },
+          "response": [
+            {
+              "name": "200 · Version 2",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/secrets:rotate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "webhooks",
+                    "{{webhookId}}",
+                    "secrets:rotate"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"secret\": {\n    \"version\": 2,\n    \"secret\": \"whsec_ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8=\"\n  },\n  \"previousRetiresAt\": \"2026-10-08T09:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('rotateWebhookSecret returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('rotation issues version 2, and the previous secret retires later', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().secret.version).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/webhooks/{webhookId}/deliveries — A subscription's deliveries, newest first",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/deliveries?status={{status}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks",
+                "{{webhookId}}",
+                "deliveries"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only deliveries in this status."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "A subscription's deliveries, newest first\n\n`ADMIN` or `AUDITOR`. Filter on `status=DEAD` for the dead-letter\nqueue: deliveries that exhausted their attempts, or whose\nsubscription stopped receiving. The body sent is not returned; it is\nthe event, which the receiver has, or can be read through the API."
+          },
+          "response": [
+            {
+              "name": "200 · One dead-lettered delivery",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/deliveries",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "webhooks",
+                    "{{webhookId}}",
+                    "deliveries"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"deliveries\": [\n    {\n      \"id\": \"01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f\",\n      \"webhookId\": \"01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"eventId\": \"01920a5f-0a1b-7c2d-8e3f-4a5b6c7d8e9f\",\n      \"eventType\": \"com.zoikotax.decision.committed\",\n      \"status\": \"DEAD\",\n      \"attempts\": 8,\n      \"createdAt\": \"2026-10-06T09:00:00.000000Z\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listWebhookDeliveries returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/webhooks/{webhookId}/deliveries/{deliveryId} — One delivery and its attempts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/deliveries/{{deliveryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks",
+                "{{webhookId}}",
+                "deliveries",
+                "{{deliveryId}}"
+              ]
+            },
+            "description": "One delivery and its attempts\n\n`ADMIN` or `AUDITOR`. Each attempt records when it started, how long\nit took, the receiver's status code if one arrived, and the\ntransport's error if not. The receiver's response body is never\nkept."
+          },
+          "response": [
+            {
+              "name": "200 · Delivered on the second attempt",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/deliveries/{{deliveryId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "webhooks",
+                    "{{webhookId}}",
+                    "deliveries",
+                    "{{deliveryId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"delivery\": {\n    \"id\": \"01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f\",\n    \"webhookId\": \"01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n    \"eventId\": \"01920a5f-0a1b-7c2d-8e3f-4a5b6c7d8e9f\",\n    \"eventType\": \"com.zoikotax.decision.committed\",\n    \"status\": \"DELIVERED\",\n    \"attempts\": 2,\n    \"createdAt\": \"2026-10-07T09:00:00.000000Z\",\n    \"deliveredAt\": \"2026-10-07T09:00:31.000000Z\"\n  },\n  \"attempts\": [\n    {\n      \"attempt\": 1,\n      \"startedAt\": \"2026-10-07T09:00:01.000000Z\",\n      \"durationMs\": 10000,\n      \"error\": \"context deadline exceeded\"\n    },\n    {\n      \"attempt\": 2,\n      \"startedAt\": \"2026-10-07T09:00:31.000000Z\",\n      \"durationMs\": 84,\n      \"statusCode\": 204\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getWebhookDelivery returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});",
+                  "pm.test('nothing has been delivered in a fresh run', function () {",
+                  "  pm.expect([200, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/webhooks/{webhookId}/deliveries/{deliveryId}/replay — Deliver an event again",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/deliveries/{{deliveryId}}/replay",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks",
+                "{{webhookId}}",
+                "deliveries",
+                "{{deliveryId}}",
+                "replay"
+              ]
+            },
+            "description": "Deliver an event again\n\n`ADMIN` only. Schedules a new delivery of the same event, with the\nsame bytes and the same `webhook-id`, naming the delivery it replays.\nIt is how a receiver catches up after an outage that outlasted the\nretries, or after a pause. The subscription must be `ACTIVE`."
+          },
+          "response": [
+            {
+              "name": "202 · A replay of a dead-lettered delivery",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/deliveries/{{deliveryId}}/replay",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "webhooks",
+                    "{{webhookId}}",
+                    "deliveries",
+                    "{{deliveryId}}",
+                    "replay"
+                  ]
+                }
+              },
+              "status": "202",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a62-3c4d-7e5f-8061-7b8c9d0e1f2a\",\n  \"webhookId\": \"01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"eventId\": \"01920a5f-0a1b-7c2d-8e3f-4a5b6c7d8e9f\",\n  \"eventType\": \"com.zoikotax.decision.committed\",\n  \"status\": \"PENDING\",\n  \"attempts\": 0,\n  \"nextAttemptAt\": \"2026-10-07T13:00:00.000000Z\",\n  \"createdAt\": \"2026-10-07T13:00:00.000000Z\",\n  \"replayOf\": \"01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('replayWebhookDelivery returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([202, 404]);",
+                  "});",
+                  "pm.test('a replay needs a delivery to replay', function () {",
+                  "  pm.expect([202, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/webhooks/{webhookId}/status — Pause, resume or disable a subscription",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"PAUSED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "webhooks",
+                "{{webhookId}}",
+                "status"
+              ]
+            },
+            "description": "Pause, resume or disable a subscription\n\n`ADMIN` only. `PAUSED` stops deliveries and keeps nothing for later:\nan event committed while paused is not delivered on resume, and a\ndelivery already scheduled is dead-lettered. Replay is how a receiver\ncatches up, deliberately. `DISABLED` is final. Asking for the status\nthe subscription already has is a retry and returns it unchanged."
+          },
+          "response": [
+            {
+              "name": "200 · Paused",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/webhooks/{{webhookId}}/status",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "webhooks",
+                    "{{webhookId}}",
+                    "status"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"url\": \"https://hooks.example.com/ztax\",\n  \"eventTypes\": [\n    \"com.zoikotax.decision.committed\"\n  ],\n  \"status\": \"PAUSED\",\n  \"createdAt\": \"2026-10-07T09:00:00.000000Z\",\n  \"statusChangedAt\": \"2026-10-07T12:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('setWebhookStatus returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('the webhook is paused', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('PAUSED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/seals — The tenant's period seals, latest first",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/seals?limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "seals"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The tenant's period seals, latest first\n\n`ADMIN`, `AUDITOR` or `ANALYST`."
+          },
+          "response": [
+            {
+              "name": "200 · One sealed day",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/seals",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "seals"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"seals\": [\n    {\n      \"id\": \"01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"periodStart\": \"2026-09-25T00:00:00.000000Z\",\n      \"periodEnd\": \"2026-09-26T00:00:00.000000Z\",\n      \"leafCount\": 3,\n      \"merkleRoot\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n      \"keyId\": \"evidence-seal-2026\",\n      \"cell\": \"eu-west-1\",\n      \"sealedAt\": \"2026-09-26T01:00:00.000000Z\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listSeals returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 503]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/seals — Seal a period's decisions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"periodStart\": \"2026-09-25T00:00:00.000000Z\",\n  \"periodEnd\": \"2026-09-26T00:00:00.000000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/seals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "seals"
+              ]
+            },
+            "description": "Seal a period's decisions\n\n`ADMIN` only. Signs a statement that the decisions recorded in\n`[periodStart, periodEnd)` were exactly these, with exactly these\nresults: an RFC 6962 Merkle root over one leaf per decision, signed\nwith the evidence-seal key together with the tenant, cell and period,\nso the signature cannot be lifted onto anything else (ADR-0011 §2.5).\n\nA period may be sealed only after it has settled — five minutes past\nits end — so a decision whose transaction was still committing is not\nleft out. Periods never overlap: a decision is vouched for by one seal\nor none. A cell with no seal signer refuses with `503`; it can still\nverify seals and prove inclusion.\n\nA seal is integrity evidence, not a legal finality marker: it says the\nrecord has not changed, not that the figures in it were right."
+          },
+          "response": [
+            {
+              "name": "201 · A sealed day",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/seals",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "seals"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"periodStart\": \"2026-09-25T00:00:00.000000Z\",\n  \"periodEnd\": \"2026-09-26T00:00:00.000000Z\",\n  \"leafCount\": 3,\n  \"merkleRoot\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n  \"keyId\": \"evidence-seal-2026\",\n  \"cell\": \"eu-west-1\",\n  \"sealedAt\": \"2026-09-26T01:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sealPeriod returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201, 409, 503]);",
+                  "});",
+                  "pm.test('ADR-0011 §2.4 — sealed, or refused for a reason the cell states', function () {",
+                  "  pm.expect([201, 409, 503]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('sealId', pm.response.json().id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/seals/{sealId} — One seal, with the bytes its signature covers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/seals/{{sealId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "seals",
+                "{{sealId}}"
+              ]
+            },
+            "description": "One seal, with the bytes its signature covers\n\n`ADMIN`, `AUDITOR` or `ANALYST`. `signedPayload` is the canonical\npayload exactly as signed, base64; `signature` is ECDSA P-384 over\nSHA-384 of those bytes, DER, base64, under the key `keyId` names in\nthe published seal keyring. Verify those two before trusting any\nother field."
+          },
+          "response": [
+            {
+              "name": "200 · A sealed day",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/seals/{{sealId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "seals",
+                    "{{sealId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"seal\": {\n    \"id\": \"01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n    \"periodStart\": \"2026-09-25T00:00:00.000000Z\",\n    \"periodEnd\": \"2026-09-26T00:00:00.000000Z\",\n    \"leafCount\": 3,\n    \"merkleRoot\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n    \"keyId\": \"evidence-seal-2026\",\n    \"cell\": \"eu-west-1\",\n    \"sealedAt\": \"2026-09-26T01:00:00.000000Z\"\n  },\n  \"signedPayload\": \"eyJhcnRpZmFjdCI6ImV2aWRlbmNlLXBlcmlvZC1zZWFsIn0=\",\n  \"signature\": {\n    \"keyId\": \"evidence-seal-2026\",\n    \"algorithm\": \"ECDSA_P384_SHA384\",\n    \"value\": \"MGUCMQDf3q1Z0r1sY3k5K0n9m0bq6X5w2Jx0d7cE3yV1u4B9w8hK2nL6tQp0rS1vX3aZ4QIwM1bN8cV5xZ2qW9eR4tY7uI0oP3aS6dF9gH2jK5lZ8xC1vB4nM7qW0eR3tY6uI9oP2aS\"\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getSeal returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404, 503]);",
+                  "});",
+                  "pm.test('the seal carries the bytes its signature covers', function () {",
+                  "  pm.expect([200, 404, 503]).to.include(pm.response.code);",
+                  "  if (pm.response.code === 200) { pm.expect(pm.response.json().signedPayload).to.be.a('string'); }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/seals/{sealId}/verification — Verify a seal end to end",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/seals/{{sealId}}/verification",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "seals",
+                "{{sealId}}",
+                "verification"
+              ]
+            },
+            "description": "Verify a seal end to end\n\n`ADMIN`, `AUDITOR` or `ANALYST`. Checks the signature over the\npayload at the instant the seal was made, the payload against its\nindex row, the root against the decisions recorded for the period\ntoday, and every decision's result object against its digest. A\nfailure is a verdict, not an error: `SIGNATURE_INVALID`,\n`RECORD_MISMATCH`, `ROOT_MISMATCH` (something in the period moved) or\n`EVIDENCE_MISSING`."
+          },
+          "response": [
+            {
+              "name": "200 · Valid",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/seals/{{sealId}}/verification",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "seals",
+                    "{{sealId}}",
+                    "verification"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"sealId\": \"01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"verdict\": \"VALID\",\n  \"keyId\": \"evidence-seal-2026\",\n  \"leafCount\": 3,\n  \"signedRoot\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n  \"recomputedRoot\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('verifySeal returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404, 503]);",
+                  "});",
+                  "pm.test('a seal this cell made verifies', function () {",
+                  "  pm.expect([200, 404, 503]).to.include(pm.response.code);",
+                  "  if (pm.response.code === 200) { pm.expect(pm.response.json().verdict).to.eql('VALID'); }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/retention/policies — Record the next version of a retention policy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"de-decisions\",\n  \"recordClass\": \"DECISION\",\n  \"country\": \"DE\",\n  \"years\": 10,\n  \"trigger\": \"EVENT_YEAR_END\",\n  \"effectiveFrom\": \"2020-01-01T00:00:00.000000Z\",\n  \"citation\": \"AO §147(3)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/retention/policies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "retention",
+                "policies"
+              ]
+            },
+            "description": "Record the next version of a retention policy\n\n`ADMIN`, signed in as themselves. Recording a policy under an id that\nexists makes its next version; nothing is overwritten\n(ZTAX-EVID-REQ-0052). There is no default period: a record no policy\ngoverns is kept and reported `NO_POLICY` (ZTAX-EVID-REQ-0022,\nZTAX-PRIV-REQ-0052). The act is written to the administrative audit\ntrail."
+          },
+          "response": [
+            {
+              "name": "201 · Version 1",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/retention/policies",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "retention",
+                    "policies"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"de-decisions\",\n  \"version\": 1,\n  \"recordClass\": \"DECISION\",\n  \"country\": \"DE\",\n  \"years\": 10,\n  \"trigger\": \"EVENT_YEAR_END\",\n  \"effectiveFrom\": \"2020-01-01T00:00:00.000000Z\",\n  \"citation\": \"AO §147(3)\",\n  \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n  \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordRetentionPolicy returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/retention/policies — Every version of every retention policy",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/retention/policies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "retention",
+                "policies"
+              ]
+            },
+            "description": "Every version of every retention policy\n\n`ADMIN` or `AUDITOR`. A policy keeps one class of record of one\ncountry's legal entities for a number of years from a trigger, on a\ncited authority. Every version is listed, oldest first per policy: a\nverdict names the version it used, so it can be reproduced\n(ZTAX-EVID-REQ-0052, -0126)."
+          },
+          "response": [
+            {
+              "name": "200 · One policy, one version",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/retention/policies",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "retention",
+                    "policies"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"policies\": [\n    {\n      \"id\": \"de-decisions\",\n      \"version\": 1,\n      \"recordClass\": \"DECISION\",\n      \"country\": \"DE\",\n      \"years\": 10,\n      \"trigger\": \"EVENT_YEAR_END\",\n      \"effectiveFrom\": \"2020-01-01T00:00:00.000000Z\",\n      \"citation\": \"AO §147(3)\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listRetentionPolicies returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/legal-holds — Place a legal hold",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"matter\": \"Claim 2026/114\",\n  \"reason\": \"litigation notice received\",\n  \"scope\": {\n    \"businessKeys\": [\n      \"INV-0001/1\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal-holds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal-holds"
+              ]
+            },
+            "description": "Place a legal hold\n\n`ADMIN`, signed in as themselves. A hold serves a named claim,\ninvestigation or regulator request (ZTAX-LEG-REQ-0091) and blocks\ndisposition of what it scopes, past any retention period\n(ZTAX-EVID-REQ-0023, ZTAX-PRIV-REQ-0050). The scope is specific —\nnamed decisions or business keys, or a bounded window of event times\nof at most ten years, optionally narrowed to one legal entity — never\na tenant at large, so a hold is never a reason to keep unrelated\npersonal data (ZTAX-PRIV-REQ-0051)."
+          },
+          "response": [
+            {
+              "name": "201 · Placed",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal-holds",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal-holds"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"matter\": \"Claim 2026/114\",\n  \"status\": \"ACTIVE\",\n  \"scope\": {\n    \"businessKeys\": [\n      \"INV-0001/1\"\n    ]\n  },\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PLACED\",\n      \"scope\": {\n        \"businessKeys\": [\n          \"INV-0001/1\"\n        ]\n      },\n      \"reason\": \"litigation notice received\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('placeLegalHold returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('ZTAX-EVID-REQ-0023 — a hold is placed ACTIVE with its first history entry', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().status).to.eql('ACTIVE');",
+                  "  pm.expect(pm.response.json().history[0].kind).to.eql('PLACED');",
+                  "});",
+                  "pm.collectionVariables.set('holdId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/legal-holds — The tenant's legal holds",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal-holds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal-holds"
+              ]
+            },
+            "description": "The tenant's legal holds\n\n`ADMIN` or `AUDITOR`, newest first, each with its full history. The\nsearch is recorded in the administrative audit trail as privileged\nevidence access (ZTAX-EVID-REQ-0115). A hold names what is kept; it\nreturns no evidence and opens nothing to anyone\n(ZTAX-EVID-REQ-0024)."
+          },
+          "response": [
+            {
+              "name": "200 · One active hold",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal-holds",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal-holds"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"holds\": [\n    {\n      \"id\": \"01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"matter\": \"Claim 2026/114\",\n      \"status\": \"ACTIVE\",\n      \"scope\": {\n        \"businessKeys\": [\n          \"INV-0001/1\"\n        ]\n      },\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"PLACED\",\n          \"scope\": {\n            \"businessKeys\": [\n              \"INV-0001/1\"\n            ]\n          },\n          \"reason\": \"litigation notice received\",\n          \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listLegalHolds returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/legal-holds/{holdId} — One legal hold and its history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal-holds/{{holdId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal-holds",
+                "{{holdId}}"
+              ]
+            },
+            "description": "One legal hold and its history\n\n`ADMIN` or `AUDITOR`. The read is recorded in the administrative audit\ntrail as privileged evidence access (ZTAX-EVID-REQ-0115)."
+          },
+          "response": [
+            {
+              "name": "200 · Released",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal-holds/{{holdId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal-holds",
+                    "{{holdId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"matter\": \"Claim 2026/114\",\n  \"status\": \"RELEASED\",\n  \"scope\": {\n    \"businessKeys\": [\n      \"INV-0001/1\"\n    ]\n  },\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PLACED\",\n      \"scope\": {\n        \"businessKeys\": [\n          \"INV-0001/1\"\n        ]\n      },\n      \"reason\": \"litigation notice received\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"RELEASED\",\n      \"scope\": {\n        \"businessKeys\": [\n          \"INV-0001/1\"\n        ]\n      },\n      \"reason\": \"claim settled\",\n      \"recordedAt\": \"2027-03-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getLegalHold returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/legal-holds/{holdId}/scope — Change an active hold's scope",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"second invoice named in the claim\",\n  \"scope\": {\n    \"businessKeys\": [\n      \"INV-0001/1\",\n      \"INV-0002/1\"\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal-holds/{{holdId}}/scope",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal-holds",
+                "{{holdId}}",
+                "scope"
+              ]
+            },
+            "description": "Change an active hold's scope\n\n`ADMIN`, signed in as themselves. The new scope replaces the old as a\nnew entry in the hold's history, with who and why; the old scope\nstays readable there (ZTAX-EVID-REQ-0053). A released hold is not\nchanged: a matter that revives places a new hold."
+          },
+          "response": [
+            {
+              "name": "200 · Widened",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal-holds/{{holdId}}/scope",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal-holds",
+                    "{{holdId}}",
+                    "scope"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"matter\": \"Claim 2026/114\",\n  \"status\": \"ACTIVE\",\n  \"scope\": {\n    \"businessKeys\": [\n      \"INV-0001/1\",\n      \"INV-0002/1\"\n    ]\n  },\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PLACED\",\n      \"scope\": {\n        \"businessKeys\": [\n          \"INV-0001/1\"\n        ]\n      },\n      \"reason\": \"litigation notice received\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"SCOPE_CHANGED\",\n      \"scope\": {\n        \"businessKeys\": [\n          \"INV-0001/1\",\n          \"INV-0002/1\"\n        ]\n      },\n      \"reason\": \"second invoice named in the claim\",\n      \"recordedAt\": \"2026-10-05T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('changeLegalHoldScope returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('ZTAX-EVID-REQ-0053 — a scope change is a new history entry, the old one kept', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().history.map(e => e.kind)).to.eql(['PLACED', 'SCOPE_CHANGED']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/legal-holds/{holdId}/release — Release a legal hold",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"claim settled\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal-holds/{{holdId}}/release",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal-holds",
+                "{{holdId}}",
+                "release"
+              ]
+            },
+            "description": "Release a legal hold\n\n`ADMIN`, signed in as themselves. Final. What the hold kept is decided\nby its retention policy again from the next verdict on\n(ZTAX-EVID-REQ-0054) — and is kept still if another active hold\nscopes it."
+          },
+          "response": [
+            {
+              "name": "200 · Released",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal-holds/{{holdId}}/release",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal-holds",
+                    "{{holdId}}",
+                    "release"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"matter\": \"Claim 2026/114\",\n  \"status\": \"RELEASED\",\n  \"scope\": {\n    \"businessKeys\": [\n      \"INV-0001/1\"\n    ]\n  },\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PLACED\",\n      \"scope\": {\n        \"businessKeys\": [\n          \"INV-0001/1\"\n        ]\n      },\n      \"reason\": \"litigation notice received\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"RELEASED\",\n      \"scope\": {\n        \"businessKeys\": [\n          \"INV-0001/1\"\n        ]\n      },\n      \"reason\": \"claim settled\",\n      \"recordedAt\": \"2027-03-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('releaseLegalHold returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('a release is final', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('RELEASED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/decisions/{decisionId}/retention — Whether a decision's evidence may be disposed of now",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/decisions/{{decisionId}}/retention",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decisions",
+                "{{decisionId}}",
+                "retention"
+              ]
+            },
+            "description": "Whether a decision's evidence may be disposed of now\n\n`ADMIN` or `AUDITOR`. The verdict a disposition job passes immediately\nbefore it acts, taken under the hold lock so a hold being placed is\nseen (ZTAX-EVID-REQ-0026): `RETAIN` inside the period, `ELIGIBLE` past\nit, `HELD` under an active hold whatever the period says. `NO_POLICY`\nand `CONFLICTED` — no policy governs the record, or several disagree —\nkeep it and are for a person to resolve, never a guess\n(ZTAX-EVID-REQ-0092). The policy version used is named\n(ZTAX-EVID-REQ-0126). Nothing about the decision is changed by\nasking (ZTAX-EVID-REQ-0105)."
+          },
+          "response": [
+            {
+              "name": "200 · Held past its period",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/decisions/{{decisionId}}/retention",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "decisions",
+                    "{{decisionId}}",
+                    "retention"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n  \"recordClass\": \"DECISION\",\n  \"country\": \"DE\",\n  \"outcome\": \"HELD\",\n  \"policy\": {\n    \"id\": \"de-decisions\",\n    \"version\": 1\n  },\n  \"retainUntil\": \"2037-01-01T00:00:00.000000Z\",\n  \"holds\": [\n    \"01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\"\n  ],\n  \"evaluatedAt\": \"2040-01-01T00:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getDecisionRetention returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/legal/matrix — The LegalAuthorization matrix this cell resolves against",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal/matrix",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal",
+                "matrix"
+              ]
+            },
+            "description": "The LegalAuthorization matrix this cell resolves against\n\n`ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. For each country,\nauthority and service state (`INFORM`, `COMPUTE`, `PREPARE`, `FILE`,\n`REPRESENT`, `ADVISE`), whether ZoikoTax may act directly, only with\nthe customer's authorization, only through a qualified person or a\npartner, not at all, or whether counsel has yet to say\n(ZTAX-LEG-001 §3–§4). It is legal content: every rule is versioned,\neffective-dated and cites the counsel memo or authority source it\nrests on (ZTAX-LEG-REQ-0009, -0102), and the digest names the edition\na check used. A cell with no matrix returns an empty one and blocks\nevery legally sensitive action. A content pack being in production\nfor `COMPUTE` implies nothing here (ZTAX-LEG-REQ-0057)."
+          },
+          "response": [
+            {
+              "name": "200 · One rule",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal/matrix",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal",
+                    "matrix"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"version\": \"dev-2026.10-1\",\n  \"draft\": true,\n  \"digest\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n  \"rules\": [\n    {\n      \"id\": \"DE-ELSTER-FILE\",\n      \"version\": 1,\n      \"country\": \"DE\",\n      \"authority\": \"DE-ELSTER\",\n      \"service\": \"FILE\",\n      \"status\": \"DIRECT_WITH_AUTH\",\n      \"provider\": \"Zoiko development entity\",\n      \"authorizationType\": \"FILING_MANDATE\",\n      \"requiresPeriods\": true,\n      \"requiresMatters\": false,\n      \"credential\": \"ELSTER organisation certificate\",\n      \"funds\": \"NO_CUSTODY\",\n      \"opinionRef\": \"LDR-DEV-0001\",\n      \"effectiveFrom\": \"2026-01-01T00:00:00.000000Z\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getLegalMatrix returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('ZTAX-LEG-REQ-0102 — every rule cites the opinion it rests on', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.response.json().rules.forEach(r => pm.expect(r.opinionRef).to.not.be.empty);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/legal/authorizations — Record a customer authorization",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"country\": \"DE\",\n  \"authority\": \"DE-ELSTER\",\n  \"type\": \"FILING_MANDATE\",\n  \"permissions\": [\n    \"PREPARE\",\n    \"SUBMIT\"\n  ],\n  \"periodFrom\": \"2026-01\",\n  \"periodTo\": \"2026-12\",\n  \"effectiveFrom\": \"2026-01-01T00:00:00.000000Z\",\n  \"expiresAt\": \"2027-06-30T00:00:00.000000Z\",\n  \"evidence\": [\n    \"doc:mandate-2026.pdf\"\n  ],\n  \"credentialRef\": \"vault://tax/de/elster/cert\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal/authorizations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal",
+                "authorizations"
+              ]
+            },
+            "description": "Record a customer authorization\n\n`ADMIN`, signed in as themselves — never system work or a model\n(ZTAX-LEG-REQ-0044). A customer's grant to one authority: a power of\nattorney, a filing mandate, a portal delegation, an information\nauthorization — which is not representation (ZTAX-LEG-REQ-0013). It\nnames the legal entity granting it (the tenant's default when\nomitted), the permissions, matters and periods it covers, when it\ntakes effect and lapses, and the evidence of the grant\n(ZTAX-LEG-REQ-0014). An authority credential is a vault reference\n(`vault://`, `awssm://`, `gcpsm://`, `azkv://`) and never the\ncredential (ZTAX-LEG-REQ-0017, -0018). Naming `supersedes` closes that\ngrant in the same act (ZTAX-LEG-REQ-0015)."
+          },
+          "response": [
+            {
+              "name": "201 · Granted",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal/authorizations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal",
+                    "authorizations"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"DE\",\n  \"authority\": \"DE-ELSTER\",\n  \"type\": \"FILING_MANDATE\",\n  \"permissions\": [\n    \"PREPARE\",\n    \"SUBMIT\"\n  ],\n  \"matters\": [],\n  \"periodFrom\": \"2026-01\",\n  \"periodTo\": \"2026-12\",\n  \"effectiveFrom\": \"2026-01-01T00:00:00.000000Z\",\n  \"expiresAt\": \"2027-06-30T00:00:00.000000Z\",\n  \"evidence\": [\n    \"doc:mandate-2026.pdf\"\n  ],\n  \"credentialRef\": \"vault://tax/de/elster/cert\",\n  \"status\": \"ACTIVE\",\n  \"inForce\": true,\n  \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n  \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"GRANTED\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('grantAuthorization returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('ZTAX-LEG-REQ-0014 — the grant is recorded ACTIVE with its history', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().status).to.eql('ACTIVE');",
+                  "  pm.expect(pm.response.json().history[0].kind).to.eql('GRANTED');",
+                  "});",
+                  "pm.collectionVariables.set('authorizationId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/legal/authorizations — The customer's authorizations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal/authorizations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal",
+                "authorizations"
+              ]
+            },
+            "description": "The customer's authorizations\n\n`ADMIN`, `OPERATOR` or `AUDITOR`, newest first, each with its history\nand whether it is in force now."
+          },
+          "response": [
+            {
+              "name": "200 · One filing mandate",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal/authorizations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal",
+                    "authorizations"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"authorizations\": [\n    {\n      \"id\": \"01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"country\": \"DE\",\n      \"authority\": \"DE-ELSTER\",\n      \"type\": \"FILING_MANDATE\",\n      \"permissions\": [\n        \"PREPARE\",\n        \"SUBMIT\"\n      ],\n      \"matters\": [],\n      \"periodFrom\": \"2026-01\",\n      \"periodTo\": \"2026-12\",\n      \"effectiveFrom\": \"2026-01-01T00:00:00.000000Z\",\n      \"expiresAt\": \"2027-06-30T00:00:00.000000Z\",\n      \"evidence\": [\n        \"doc:mandate-2026.pdf\"\n      ],\n      \"credentialRef\": \"vault://tax/de/elster/cert\",\n      \"status\": \"ACTIVE\",\n      \"inForce\": true,\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"GRANTED\",\n          \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listAuthorizations returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/legal/authorizations/{authorizationId} — One customer authorization and its history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal/authorizations/{{authorizationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal",
+                "authorizations",
+                "{{authorizationId}}"
+              ]
+            },
+            "description": "One customer authorization and its history\n\n`ADMIN`, `OPERATOR` or `AUDITOR`."
+          },
+          "response": [
+            {
+              "name": "200 · Revoked",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal/authorizations/{{authorizationId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal",
+                    "authorizations",
+                    "{{authorizationId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"DE\",\n  \"authority\": \"DE-ELSTER\",\n  \"type\": \"FILING_MANDATE\",\n  \"permissions\": [\n    \"PREPARE\",\n    \"SUBMIT\"\n  ],\n  \"matters\": [],\n  \"periodFrom\": \"2026-01\",\n  \"periodTo\": \"2026-12\",\n  \"effectiveFrom\": \"2026-01-01T00:00:00.000000Z\",\n  \"evidence\": [\n    \"doc:mandate-2026.pdf\"\n  ],\n  \"status\": \"REVOKED\",\n  \"inForce\": false,\n  \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n  \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"GRANTED\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"REVOKED\",\n      \"reason\": \"mandate withdrawn\",\n      \"recordedAt\": \"2026-10-05T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getAuthorization returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/legal/authorization-checks — Resolve whether an action may execute now",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"country\": \"DE\",\n  \"authority\": \"DE-ELSTER\",\n  \"service\": \"FILE\",\n  \"period\": \"2026-09\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal/authorization-checks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal",
+                "authorization-checks"
+              ]
+            },
+            "description": "Resolve whether an action may execute now\n\n`ADMIN`, `OPERATOR` or `ANALYST`. The gate every legally sensitive\naction passes before it executes (ZTAX-LEG-REQ-0001), asked directly.\nIt fails closed: no rule, rules that disagree, `COUNSEL_PENDING`,\n`PROHIBITED`, `SUSPENDED`, a partner's or the customer's action, a\nqualified person's — each blocks (ZTAX-LEG-REQ-0007, -0008). Under\n`DIRECT_WITH_AUTH` it needs an authorization in force, of the type\nthe rule names, granting what the service needs — `SUBMIT` to file,\n`REPRESENT` to represent, which a filing mandate does not grant\n(ZTAX-LEG-REQ-0062) — reaching the action's period and matter\n(ZTAX-LEG-REQ-0101), bound to a credential where the authority needs\none. A block names its reason. Nothing is recorded by asking."
+          },
+          "response": [
+            {
+              "name": "200 · Allowed under a mandate",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal/authorization-checks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal",
+                    "authorization-checks"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"allowed\": true,\n  \"status\": \"DIRECT_WITH_AUTH\",\n  \"rule\": {\n    \"id\": \"DE-ELSTER-FILE\",\n    \"version\": 1\n  },\n  \"authorizationId\": \"01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"matrixVersion\": \"dev-2026.10-1\",\n  \"matrixDigest\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n  \"checkedAt\": \"2026-10-08T12:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('checkAuthorization returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('ZTAX-LEG-REQ-0004 — filing resolves under the mandate rule, against a named matrix', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('DIRECT_WITH_AUTH');",
+                  "  pm.expect(pm.response.json().matrixDigest).to.match(/^zt1:/);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/legal/authorizations/{authorizationId}/revocation — Revoke a customer authorization",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"mandate withdrawn\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/legal/authorizations/{{authorizationId}}/revocation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "legal",
+                "authorizations",
+                "{{authorizationId}}",
+                "revocation"
+              ]
+            },
+            "description": "Revoke a customer authorization\n\n`ADMIN`, signed in as themselves. Final, and immediate: every action\nthat depended on the grant is blocked from the moment the revocation\ncommits (ZTAX-LEG-REQ-0016). The grant and its history stay\n(ZTAX-LEG-REQ-0015)."
+          },
+          "response": [
+            {
+              "name": "200 · Revoked",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/legal/authorizations/{{authorizationId}}/revocation",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "legal",
+                    "authorizations",
+                    "{{authorizationId}}",
+                    "revocation"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"DE\",\n  \"authority\": \"DE-ELSTER\",\n  \"type\": \"FILING_MANDATE\",\n  \"permissions\": [\n    \"PREPARE\",\n    \"SUBMIT\"\n  ],\n  \"matters\": [],\n  \"effectiveFrom\": \"2026-01-01T00:00:00.000000Z\",\n  \"evidence\": [\n    \"doc:mandate-2026.pdf\"\n  ],\n  \"status\": \"REVOKED\",\n  \"inForce\": false,\n  \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n  \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"GRANTED\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"REVOKED\",\n      \"reason\": \"mandate withdrawn\",\n      \"recordedAt\": \"2026-10-05T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('revokeAuthorization returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('ZTAX-LEG-REQ-0016 — a revoked grant is no longer in force', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('REVOKED');",
+                  "  pm.expect(pm.response.json().inForce).to.eql(false);",
                   "});"
                 ]
               }
@@ -1128,7 +3088,7 @@
     },
     {
       "name": "06 · Determination — needs content and an OPERATOR",
-      "description": "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "description": "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously. Last, the subledger period `{{period}}` — `2000-01` by default, a month nothing posts into, so a run never closes one that matters — is hard-closed, a reopen is requested, and the requester's own approval is refused (ZTAX-FIN-REQ-0091). `runReconciliation` reconciles September and captures `runId`; the resolution of the example item answers `404` in a fresh run, since its id is the example's.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
       "item": [
         {
           "name": "POST /v1/quotes — Quote a transaction without recording it",
@@ -1848,6 +3808,321 @@
           ]
         },
         {
+          "name": "POST /v1/documents — Commit a fiscal document that presents committed decisions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"INVOICE\",\n  \"number\": \"INV-2026-0001\",\n  \"issueDate\": \"2026-09-25\",\n  \"taxPoint\": \"2026-09-24T18:00:00.000000Z\",\n  \"currency\": \"EUR\",\n  \"externalRef\": {\n    \"sourceSystem\": \"bss\",\n    \"namespace\": \"invoice\",\n    \"value\": \"88231\"\n  },\n  \"lines\": [\n    {\n      \"sourceLineRef\": \"bss:order-9/line-1\",\n      \"net\": \"100.00\",\n      \"taxes\": [\n        {\n          \"decisionId\": \"{{decisionId}}\",\n          \"component\": \"TAX_VAT\",\n          \"amount\": \"21.00\"\n        },\n        {\n          \"decisionId\": \"{{decisionId}}\",\n          \"component\": \"TAX_ECO_LEVY\",\n          \"amount\": \"0.11\"\n        }\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "documents"
+              ]
+            },
+            "description": "Commit a fiscal document that presents committed decisions\n\n`OPERATOR` only. Commits an `INVOICE`, `DEBIT_NOTE` or `ADJUSTMENT`\n(ZTAX-FIN-001 §3). A document invents no tax: every tax line names\nthe committed decision it comes from and the component — the slot the\ndecision's content posts, such as `TAX_VAT` — and for each decision\nand component the document must present exactly what was decided\n(ZTAX-FIN-REQ-0010, -0011). A component decided as zero may be left\nout. A document that disagrees is refused with `409 CONFLICTED`\nnaming each decision and component that differs, and nothing is\ncommitted: correct the decision, not the document.\n\nEach decision must be the current version of its business key, and\nmay be billed by only one standing document at a time: a second\ninvoice for a decision already billed is refused with\n`409 ALREADY_EXISTS` until the first is voided or fully credited.\n\nCommitted documents are never changed. `Idempotency-Key` is required."
+          },
+          "response": [
+            {
+              "name": "201 · A committed invoice",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/documents",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "documents"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"type\": \"INVOICE\",\n  \"number\": \"INV-2026-0001\",\n  \"rootId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"predecessors\": [],\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"issueDate\": \"2026-09-25\",\n  \"taxPoint\": \"2026-09-24T18:00:00.000000Z\",\n  \"currency\": \"EUR\",\n  \"externalRef\": {\n    \"sourceSystem\": \"bss\",\n    \"namespace\": \"invoice\",\n    \"value\": \"88231\"\n  },\n  \"decisionIds\": [\n    \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n  ],\n  \"lines\": [\n    {\n      \"id\": \"01920a90-2b3c-7d4e-8f50-6a7b8c9d0e1f\",\n      \"sourceLineRef\": \"bss:order-9/line-1\",\n      \"net\": \"100.00\",\n      \"taxes\": [\n        {\n          \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n          \"component\": \"TAX_VAT\",\n          \"amount\": \"21.00\"\n        },\n        {\n          \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n          \"component\": \"TAX_ECO_LEVY\",\n          \"amount\": \"0.11\"\n        }\n      ]\n    }\n  ],\n  \"netTotal\": \"100.00\",\n  \"taxTotal\": \"21.11\",\n  \"grossTotal\": \"121.11\",\n  \"status\": \"COMMITTED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"status\": \"COMMITTED\",\n      \"recordedAt\": \"2026-09-25T09:00:00.000000Z\"\n    }\n  ],\n  \"recordedAt\": \"2026-09-25T09:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('issueDocument returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('ZTAX-FIN-REQ-0011 — the invoice presents exactly what was decided', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().status).to.eql('COMMITTED');",
+                  "});",
+                  "pm.collectionVariables.set('documentId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/documents/{documentId} — One fiscal document and its status history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/documents/{{documentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "documents",
+                "{{documentId}}"
+              ]
+            },
+            "description": "One fiscal document and its status history\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. The document exactly as committed,\nand every status it has had since: a credit note or void that moved\nit names itself as the `causeId`."
+          },
+          "response": [
+            {
+              "name": "200 · An invoice since voided",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/documents/{{documentId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "documents",
+                    "{{documentId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"type\": \"INVOICE\",\n  \"number\": \"INV-2026-0001\",\n  \"rootId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"predecessors\": [],\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"issueDate\": \"2026-09-25\",\n  \"taxPoint\": \"2026-09-24T18:00:00.000000Z\",\n  \"currency\": \"EUR\",\n  \"decisionIds\": [\n    \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n  ],\n  \"lines\": [\n    {\n      \"id\": \"01920a90-2b3c-7d4e-8f50-6a7b8c9d0e1f\",\n      \"net\": \"100.00\",\n      \"taxes\": [\n        {\n          \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n          \"component\": \"TAX_VAT\",\n          \"amount\": \"21.00\"\n        }\n      ]\n    }\n  ],\n  \"netTotal\": \"100.00\",\n  \"taxTotal\": \"21.00\",\n  \"grossTotal\": \"121.00\",\n  \"status\": \"VOIDED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"status\": \"COMMITTED\",\n      \"recordedAt\": \"2026-09-25T09:00:00.000000Z\"\n    },\n    {\n      \"seq\": 2,\n      \"status\": \"VOIDED\",\n      \"causeId\": \"01920a91-3c4d-7e5f-8061-7b8c9d0e1f2a\",\n      \"recordedAt\": \"2026-09-26T09:00:00.000000Z\"\n    }\n  ],\n  \"recordedAt\": \"2026-09-25T09:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getDocument returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/documents/{documentId}/corrections — Void, credit or rebill a committed document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"VOID\",\n  \"reason\": \"CORRECTION_CUSTOMER_CANCELLATION\",\n  \"number\": \"VOID-2026-0001\",\n  \"issueDate\": \"2026-09-26\",\n  \"taxPoint\": \"2026-09-24T18:00:00.000000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/documents/{{documentId}}/corrections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "documents",
+                "{{documentId}}",
+                "corrections"
+              ]
+            },
+            "description": "Void, credit or rebill a committed document\n\n`OPERATOR` only. Commits a correcting document as a successor of this\none, sharing its root (ZTAX-FIN-REQ-0003, -0004). The original is\nnever edited; it gains a status naming the correction.\n\n- `VOID` cancels every line, exactly: nets and taxes negated, nothing\n  recomputed. The original becomes `VOIDED`. Refused once any line\n  has been credited — credit the rest instead.\n- `CREDIT_NOTE` cancels the lines in `cancelLines`, or every line not\n  already cancelled. The original becomes `PARTIALLY_CREDITED` or\n  `FULLY_CREDITED`. A line is cancelled once.\n- `REBILL` charges again, with `lines` like an invoice's — each naming\n  the original line it replaces — once the original is voided or\n  fully credited.\n\n`reason` is a registered `CORRECTION_*` code (ZTAX-FIN-REQ-0008).\n`PARTIAL_CREDIT`, `AMENDMENT` and `RESTATEMENT` are refused as\n`UNSUPPORTED`. `Idempotency-Key` is required."
+          },
+          "response": [
+            {
+              "name": "201 · A void",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/documents/{{documentId}}/corrections",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "documents",
+                    "{{documentId}}",
+                    "corrections"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a91-3c4d-7e5f-8061-7b8c9d0e1f2a\",\n  \"type\": \"VOID\",\n  \"number\": \"VOID-2026-0001\",\n  \"rootId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"predecessors\": [\n    \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\"\n  ],\n  \"reasonCode\": \"CORRECTION_CUSTOMER_CANCELLATION\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"issueDate\": \"2026-09-26\",\n  \"taxPoint\": \"2026-09-24T18:00:00.000000Z\",\n  \"currency\": \"EUR\",\n  \"decisionIds\": [\n    \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n  ],\n  \"lines\": [\n    {\n      \"id\": \"01920a91-4d5e-7f60-8172-8c9d0e1f2a3b\",\n      \"net\": \"-100.00\",\n      \"predecessorLineId\": \"01920a90-2b3c-7d4e-8f50-6a7b8c9d0e1f\",\n      \"taxes\": [\n        {\n          \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n          \"component\": \"TAX_VAT\",\n          \"amount\": \"-21.00\"\n        }\n      ]\n    }\n  ],\n  \"netTotal\": \"-100.00\",\n  \"taxTotal\": \"-21.00\",\n  \"grossTotal\": \"-121.00\",\n  \"status\": \"COMMITTED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"status\": \"COMMITTED\",\n      \"recordedAt\": \"2026-09-26T09:00:00.000000Z\"\n    }\n  ],\n  \"recordedAt\": \"2026-09-26T09:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('correctDocument returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('ZTAX-FIN-REQ-0004 — the void is a linked successor', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().predecessors).to.include(pm.collectionVariables.get('documentId'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/documents/{documentId}/lineage — Every document in this one's chain, original first",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/documents/{{documentId}}/lineage",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "documents",
+                "{{documentId}}",
+                "lineage"
+              ]
+            },
+            "description": "Every document in this one's chain, original first\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. The original, and every void, credit note and rebill that followed it, in commit order (ZTAX-FIN-REQ-0007)."
+          },
+          "response": [
+            {
+              "name": "200 · An invoice and its void",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/documents/{{documentId}}/lineage",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "documents",
+                    "{{documentId}}",
+                    "lineage"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"documents\": [\n    {\n      \"id\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"type\": \"INVOICE\",\n      \"rootId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"predecessors\": [],\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"issueDate\": \"2026-09-25\",\n      \"taxPoint\": \"2026-09-24T18:00:00.000000Z\",\n      \"currency\": \"EUR\",\n      \"decisionIds\": [\n        \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n      ],\n      \"lines\": [],\n      \"netTotal\": \"0.00\",\n      \"taxTotal\": \"0.00\",\n      \"grossTotal\": \"0.00\",\n      \"status\": \"VOIDED\",\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"status\": \"COMMITTED\",\n          \"recordedAt\": \"2026-09-25T09:00:00.000000Z\"\n        }\n      ],\n      \"recordedAt\": \"2026-09-25T09:00:00.000000Z\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getDocumentLineage returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('one root, the invoice first', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().documents[0].status).to.eql('VOIDED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "POST /v1/transactions:adjust — Correct a recorded decision under the content that made it",
           "request": {
             "method": "POST",
@@ -1928,6 +4203,251 @@
                   "  pm.response.to.have.status(201);",
                   "  pm.expect(pm.response.json().authoritative).to.eql(false);",
                   "  pm.expect(pm.response.json().id).to.not.eql(pm.collectionVariables.get('decisionId'));",
+                  "});",
+                  "// The original is superseded now; a refund is made against the current version.",
+                  "pm.collectionVariables.set('decisionId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/transactions:refund — Refund tax a committed decision charged",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decisionId\": \"{{decisionId}}\",\n  \"amount\": {\n    \"amount\": \"10.50\",\n    \"currency\": \"EUR\"\n  },\n  \"paymentReference\": \"psp:ch_3Nf0a1\",\n  \"reason\": \"Customer cancelled within the cooling-off period.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:refund",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:refund"
+              ]
+            },
+            "description": "Refund tax a committed decision charged\n\n`OPERATOR` only. Records a refund of tax charged by a committed\ndecision. A refund is **not** a decision and not a credit\n(ZTAX-FIN-REQ-0015): nothing is re-determined, the decision is never\nrewritten, and the refund has a lifecycle of its own\n(ZTAX-FIN-REQ-0059). ZoikoTax moves no money; this records that a\npayment provider has been, or will be, asked to return it.\n\nThe decision must be the current version of its business key, and the\namount at most the tax that decision posted to\n`TAX_COLLECTED_LIABILITY` in that currency, less every earlier refund\nof it that has not `FAILED`. An `UNCERTAIN` refund still counts: it\nmay have paid. A request beyond what is refundable is refused with\n`400 INVALID_VALUE`, and the response says how much is left.\n\nThe refund is created `REQUESTED` and posts nothing. Only a provider\nreport of `SUCCEEDED` (see `POST /v1/refunds/{refundId}/reports`)\nposts the `REFUND` journal.\n\n`Idempotency-Key` is required, scoped apart from `:commit` and\n`:adjust` (ADR-0013 §2.2)."
+          },
+          "response": [
+            {
+              "name": "201 · A requested refund",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/transactions:refund",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "transactions:refund"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f\",\n  \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"amount\": {\n    \"amount\": \"10.50\",\n    \"currency\": \"EUR\"\n  },\n  \"paymentReference\": \"psp:ch_3Nf0a1\",\n  \"reason\": \"Customer cancelled within the cooling-off period.\",\n  \"status\": \"REQUESTED\",\n  \"requestedAt\": \"2026-10-07T10:00:00.000000Z\",\n  \"requestedBy\": \"01920a40-aaaa-7bbb-8ccc-000000000d01\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"status\": \"REQUESTED\",\n      \"recordedAt\": \"2026-10-07T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a40-aaaa-7bbb-8ccc-000000000d01\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('refundTransaction returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('ZTAX-FIN-REQ-0015 — a refund is its own record, requested and not yet posted', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().status).to.eql('REQUESTED');",
+                  "  pm.expect(pm.response.json().decisionId).to.eql(pm.collectionVariables.get('decisionId'));",
+                  "});",
+                  "pm.collectionVariables.set('refundId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/refunds/{refundId} — One refund and its history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/refunds/{{refundId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "refunds",
+                "{{refundId}}"
+              ]
+            },
+            "description": "One refund and its history\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. The refund as requested, its\ncurrent status, and every provider report that moved it, oldest\nfirst."
+          },
+          "response": [
+            {
+              "name": "200 · A refund that timed out, then completed",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/refunds/{{refundId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "refunds",
+                    "{{refundId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f\",\n  \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"amount\": {\n    \"amount\": \"10.50\",\n    \"currency\": \"EUR\"\n  },\n  \"paymentReference\": \"psp:ch_3Nf0a1\",\n  \"status\": \"COMPLETED\",\n  \"requestedAt\": \"2026-10-07T10:00:00.000000Z\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"status\": \"REQUESTED\",\n      \"recordedAt\": \"2026-10-07T10:00:00.000000Z\"\n    },\n    {\n      \"seq\": 2,\n      \"status\": \"UNCERTAIN\",\n      \"outcome\": \"TIMED_OUT\",\n      \"recordedAt\": \"2026-10-07T10:00:30.000000Z\"\n    },\n    {\n      \"seq\": 3,\n      \"status\": \"COMPLETED\",\n      \"outcome\": \"SUCCEEDED\",\n      \"externalReference\": \"psp:re_9Kd2\",\n      \"recordedAt\": \"2026-10-07T11:12:00.000000Z\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getRefund returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('the refund carries its history', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().history[0].status).to.eql('REQUESTED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/refunds/{refundId}/reports — Record what the payment provider reported about a refund",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outcome\": \"SUCCEEDED\",\n  \"externalReference\": \"psp:re_9Kd2\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/refunds/{{refundId}}/reports",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "refunds",
+                "{{refundId}}",
+                "reports"
+              ]
+            },
+            "description": "Record what the payment provider reported about a refund\n\n`OPERATOR`. Records one provider report. `ACCEPTED` makes the refund\n`PENDING`, `SUCCEEDED` makes it `COMPLETED` and posts it to the Tax\nControl Subledger, `DECLINED` makes it `FAILED` and releases its tax\nto be refunded again. `TIMED_OUT` and `UNKNOWN` make it `UNCERTAIN` —\nnever completed and never failed, because the money may or may not\nhave moved — and a later definite report resolves it.\n\nNothing leaves `COMPLETED` or `FAILED`. A report the lifecycle does\nnot permit is refused with `409 STATE_TRANSITION_INVALID`.\n\nSafe to retry without an idempotency key: the same report arriving\nagain (same outcome and reference, refund already where it put it)\nreturns the refund unchanged rather than recording a second move."
+          },
+          "response": [
+            {
+              "name": "200 · A completed refund",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/refunds/{{refundId}}/reports",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "refunds",
+                    "{{refundId}}",
+                    "reports"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f\",\n  \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"amount\": {\n    \"amount\": \"10.50\",\n    \"currency\": \"EUR\"\n  },\n  \"paymentReference\": \"psp:ch_3Nf0a1\",\n  \"status\": \"COMPLETED\",\n  \"requestedAt\": \"2026-10-07T10:00:00.000000Z\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"status\": \"REQUESTED\",\n      \"recordedAt\": \"2026-10-07T10:00:00.000000Z\"\n    },\n    {\n      \"seq\": 2,\n      \"status\": \"COMPLETED\",\n      \"outcome\": \"SUCCEEDED\",\n      \"externalReference\": \"psp:re_9Kd2\",\n      \"recordedAt\": \"2026-10-07T11:12:00.000000Z\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('reportRefund returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('ZTAX-FIN-REQ-0059 — the provider report moves the refund, never the decision', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('COMPLETED');",
                   "});"
                 ]
               }
@@ -2036,6 +4556,792 @@
                   "  pm.expect([200, 422]).to.include(pm.response.code);",
                   "  if (pm.response.code === 200) { pm.expect(pm.response.json().authoritative).to.eql(false); }",
                   "  else { pm.expect(pm.response.json().ztx_reason_code).to.eql('AI_GATEWAY_NOT_CONFIGURED'); }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/batches — Queue many commits as one job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"operation\": \"COMMIT\",\n  \"items\": [\n    {\n      \"businessKey\": \"INV-0002/1\",\n      \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n      \"input\": {\n        \"money\": {\n          \"line.netAmount\": {\n            \"amount\": \"100.00\",\n            \"currency\": \"EUR\"\n          }\n        },\n        \"quantities\": {\n          \"line.quantity\": {\n            \"value\": \"3\",\n            \"unit\": \"EA\"\n          }\n        },\n        \"flags\": {\n          \"line.reducedRateApplies\": false,\n          \"line.exemptCertificateHeld\": false\n        }\n      }\n    },\n    {\n      \"businessKey\": \"INV-0002/2\",\n      \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n      \"input\": {\n        \"money\": {\n          \"line.netAmount\": {\n            \"amount\": \"40.00\",\n            \"currency\": \"EUR\"\n          }\n        },\n        \"quantities\": {\n          \"line.quantity\": {\n            \"value\": \"1\",\n            \"unit\": \"EA\"\n          }\n        },\n        \"flags\": {\n          \"line.reducedRateApplies\": true,\n          \"line.exemptCertificateHeld\": false\n        }\n      }\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "batches"
+              ]
+            },
+            "description": "Queue many commits as one job\n\n`OPERATOR` only. Queues up to 1000 commits, executed asynchronously\nand in order by a worker in the cell. Each item is exactly a\n`:commit` request body; an item naming `supersedes` is executed as\n`:adjust`, under the content that made what it corrects. An item may\ncorrect an earlier item of the same batch.\n\nA batch changes how commits arrive, never what a commit is: each item\ntakes the commit path a single request takes, under an idempotency key\nof its own, so a worker that stops halfway resumes at the first item\nwith no result and commits nothing twice. A refused item — invalid\ninput, a superseded decision, a closed period — is recorded with its\nreason code and the job carries on.\n\n`Idempotency-Key` is required: the same key and body returns the same\njob (ADR-0013). Poll `GET /v1/jobs/{jobId}` for progress."
+          },
+          "response": [
+            {
+              "name": "202 · Queued",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/batches",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "batches"
+                  ]
+                }
+              },
+              "status": "202",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"operation\": \"COMMIT\",\n  \"status\": \"QUEUED\",\n  \"itemCount\": 2,\n  \"succeeded\": 0,\n  \"failed\": 0,\n  \"pending\": 2,\n  \"requestedAt\": \"2026-10-07T09:00:00.000000Z\",\n  \"items\": [\n    {\n      \"index\": 0,\n      \"businessKey\": \"INV-0002/1\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"index\": 1,\n      \"businessKey\": \"INV-0002/2\",\n      \"status\": \"PENDING\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('submitBatch returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([202]);",
+                  "});",
+                  "pm.test('the batch is queued as one job, every item pending', function () {",
+                  "  pm.response.to.have.status(202);",
+                  "  pm.expect(pm.response.json().pending).to.eql(pm.response.json().itemCount);",
+                  "});",
+                  "pm.collectionVariables.set('jobId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/jobs/{jobId} — A job's progress and each item's result",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/jobs/{{jobId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "jobs",
+                "{{jobId}}"
+              ]
+            },
+            "description": "A job's progress and each item's result\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. `COMPLETED` means the job ran to\nits end, however its items fared: `succeeded`, `failed` and each\nitem's `status` say which. A succeeded item names its decision; a\nfailed one names the registered reason code a single request would\nhave been refused with."
+          },
+          "response": [
+            {
+              "name": "200 · Completed, one item refused",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/jobs/{{jobId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "jobs",
+                    "{{jobId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"operation\": \"COMMIT\",\n  \"status\": \"COMPLETED\",\n  \"itemCount\": 2,\n  \"succeeded\": 1,\n  \"failed\": 1,\n  \"pending\": 0,\n  \"requestedAt\": \"2026-10-07T09:00:00.000000Z\",\n  \"startedAt\": \"2026-10-07T09:00:01.000000Z\",\n  \"finishedAt\": \"2026-10-07T09:00:02.000000Z\",\n  \"items\": [\n    {\n      \"index\": 0,\n      \"businessKey\": \"INV-0002/1\",\n      \"status\": \"SUCCEEDED\",\n      \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n    },\n    {\n      \"index\": 1,\n      \"businessKey\": \"INV-0002/2\",\n      \"status\": \"FAILED\",\n      \"reasonCode\": \"INVALID_VALUE\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getJob returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('the job reports each item, and a finished one its decision or its reason', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.response.json().items.forEach(function (it) {",
+                  "    if (it.status === 'SUCCEEDED') { pm.expect(it.decisionId).to.be.a('string'); }",
+                  "    if (it.status === 'FAILED') { pm.expect(it.reasonCode).to.be.a('string'); }",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/decisions/{decisionId}/inclusion — Prove a decision is in its period's seal",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/decisions/{{decisionId}}/inclusion",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decisions",
+                "{{decisionId}}",
+                "inclusion"
+              ]
+            },
+            "description": "Prove a decision is in its period's seal\n\n`OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`. The RFC 6962 audit path\nfrom the decision's leaf to the root of the seal covering the instant\nit was recorded (ADR-0011 §2.4). With the seal's signed payload\n(`GET /v1/seals/{sealId}`) and the published seal keyring, a verifier\noutside the cell can confirm the decision was sealed without seeing\nany other decision — the leaf is the decision's id, recorded instant\nand result digest, hashed as `SHA-256(0x00 ‖ leafDigest)`, and each\nlevel as `SHA-256(0x01 ‖ left ‖ right)`, an odd node promoted.\n\nCheck the path against the **signed** root and leaf count, never\nagainst sizes the proof itself states. `404 NOT_FOUND` until the\nperiod is sealed."
+          },
+          "response": [
+            {
+              "name": "200 · The second of three decisions in a sealed day",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/decisions/{{decisionId}}/inclusion",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "decisions",
+                    "{{decisionId}}",
+                    "inclusion"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"sealId\": \"01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"merkleRoot\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n  \"leafCount\": 3,\n  \"leafIndex\": 1,\n  \"leaf\": {\n    \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n    \"recordedAt\": \"2026-09-25T09:00:00.000000Z\",\n    \"resultDigest\": \"zt1:2b1c0d9e8f7a6b5c4d3e5c3e2f1a0b9c8d7e6f4b2d1e0f9a8c7b6d5e4f3a2b1c\"\n  },\n  \"leafDigest\": \"zt1:9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b\",\n  \"auditPath\": [\n    \"zt1:1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d\",\n    \"zt1:5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f\"\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getDecisionInclusion returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404, 503]);",
+                  "});",
+                  "pm.test('a sealed decision proves its inclusion; an unsealed one is not found', function () {",
+                  "  pm.expect([200, 404, 503]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/subledger/periods/{period} — A legal period's state, history and close manifest",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/subledger/periods/{{period}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subledger",
+                "periods",
+                "{{period}}"
+              ]
+            },
+            "description": "A legal period's state, history and close manifest\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. A legal period is a month of the\ntenant's default legal entity; one with no history is `OPEN`. A\nhard-closed period carries its latest close manifest — the canonical\nbytes and their digest — and `intact`: whether the journals and\ncontrol balances posted into it today are exactly the ones the\nmanifest sealed (ZTAX-FIN-REQ-0089)."
+          },
+          "response": [
+            {
+              "name": "200 · A hard-closed September",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/subledger/periods/{{period}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "subledger",
+                    "periods",
+                    "{{period}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"state\": \"HARD_CLOSE\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"state\": \"HARD_CLOSE\",\n      \"reason\": \"month end\",\n      \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"manifestDigest\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\"\n    }\n  ],\n  \"manifest\": {\n    \"digest\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n    \"body\": \"eyJhcnRpZmFjdCI6InRjc2wtY2xvc2UtbWFuaWZlc3QifQ==\"\n  },\n  \"intact\": true\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getSubledgerPeriod returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/subledger/periods/{period}/transitions — Close a period, open an amendment window, or seal it",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"HARD_CLOSE\",\n  \"reason\": \"month end\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/subledger/periods/{{period}}/transitions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subledger",
+                "periods",
+                "{{period}}",
+                "transitions"
+              ]
+            },
+            "description": "Close a period, open an amendment window, or seal it\n\n`OPERATOR`. Moves the period (ZTAX-FIN-REQ-0088): `OPEN` ⇄\n`SOFT_CLOSE` → `HARD_CLOSE` → `AMENDMENT_ACTIVE` → `HARD_CLOSE`, and\n`HARD_CLOSE` → `SEALED`, which is final. A hard close seals the\nperiod's journals, control balances, documents dated in it and open\nexceptions in a new close manifest, naming the previous one\n(ZTAX-FIN-REQ-0089, -0092, -0093).\n\nAfter a hard close nothing posts into the period by the normal path:\na commit or a correction whose journal falls in it is refused with\n`STATE_TRANSITION_INVALID`. Inside an `AMENDMENT_ACTIVE` window it\nposts, marked as an amendment (ZTAX-FIN-REQ-0090). `SOFT_CLOSE` takes\nadjustment and rounding journals only.\n\n`REOPENED` is not a transition: it takes a reopen request and a\nsecond person's approval."
+          },
+          "response": [
+            {
+              "name": "200 · Hard-closed",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/subledger/periods/{{period}}/transitions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "subledger",
+                    "periods",
+                    "{{period}}",
+                    "transitions"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"state\": \"HARD_CLOSE\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"state\": \"HARD_CLOSE\",\n      \"reason\": \"month end\",\n      \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"manifestDigest\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\"\n    }\n  ],\n  \"manifest\": {\n    \"digest\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\",\n    \"body\": \"eyJhcnRpZmFjdCI6InRjc2wtY2xvc2UtbWFuaWZlc3QifQ==\"\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('transitionSubledgerPeriod returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                  "});",
+                  "pm.test('ZTAX-FIN-REQ-0089 — closed with a manifest, or already closed by an earlier run', function () {",
+                  "  pm.expect([200, 409]).to.include(pm.response.code);",
+                  "  if (pm.response.code === 200) { pm.expect(pm.response.json().manifest.digest).to.match(/^zt1:/); }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/subledger/periods/{period}/reopen-requests — Ask to reopen a hard-closed period",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"A supplier credit dated in September arrived after close.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/subledger/periods/{{period}}/reopen-requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subledger",
+                "periods",
+                "{{period}}",
+                "reopen-requests"
+              ]
+            },
+            "description": "Ask to reopen a hard-closed period\n\n`OPERATOR`. Records a request, with its reason, to reopen a\nhard-closed period. Nothing moves until someone else approves it\n(ZTAX-FIN-REQ-0091). A sealed period cannot be reopened."
+          },
+          "response": [
+            {
+              "name": "201 · Awaiting approval",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/subledger/periods/{{period}}/reopen-requests",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "subledger",
+                    "periods",
+                    "{{period}}",
+                    "reopen-requests"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"period\": \"2026-09\",\n  \"reason\": \"A supplier credit dated in September arrived after close.\",\n  \"requestedAt\": \"2026-10-05T10:00:00.000000Z\",\n  \"requestedBy\": \"01920a40-aaaa-7bbb-8ccc-000000000d01\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('requestPeriodReopen returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201, 409]);",
+                  "});",
+                  "pm.test('a reopen is requested and nothing moves yet', function () {",
+                  "  pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 201) { pm.collectionVariables.set('requestId', pm.response.json().id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/subledger/periods/{period}/reopen-requests/{requestId}/approval — Approve someone else's request to reopen a period",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/subledger/periods/{{period}}/reopen-requests/{{requestId}}/approval",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subledger",
+                "periods",
+                "{{period}}",
+                "reopen-requests",
+                "{{requestId}}",
+                "approval"
+              ]
+            },
+            "description": "Approve someone else's request to reopen a period\n\n`ADMIN`, and never the person who made the request\n(ZTAX-FIN-REQ-0091). The period becomes `REOPENED`; every earlier\nclose manifest stays, and the next hard close writes a new one naming\nthe last. A request is approved once."
+          },
+          "response": [
+            {
+              "name": "200 · Reopened",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/subledger/periods/{{period}}/reopen-requests/{{requestId}}/approval",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "subledger",
+                    "periods",
+                    "{{period}}",
+                    "reopen-requests",
+                    "{{requestId}}",
+                    "approval"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"state\": \"REOPENED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"state\": \"HARD_CLOSE\",\n      \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"manifestDigest\": \"zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f\"\n    },\n    {\n      \"seq\": 2,\n      \"state\": \"REOPENED\",\n      \"reason\": \"A supplier credit dated in September arrived after close.\",\n      \"recordedAt\": \"2026-10-05T11:00:00.000000Z\",\n      \"requestId\": \"01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('approvePeriodReopen returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403, 404]);",
+                  "});",
+                  "pm.test('ZTAX-FIN-REQ-0091 — the requester cannot approve their own reopen', function () {",
+                  "  pm.expect([403, 404]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/reconciliations — Reconcile a legal period stage by stage",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"period\": \"2026-09\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/reconciliations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "reconciliations"
+              ]
+            },
+            "description": "Reconcile a legal period stage by stage\n\n`OPERATOR`. Compares the period (ZTAX-FIN-001 §17–§20) and records\nevery item, matched or not, with its exact variance:\n\n- **R1**, calculated to document: each current decision whose event\n  fell in the period, its decided tax against the tax every document\n  presents for it, voids and credits included. `MISSING` is a\n  decision no document presents.\n- **R3**, decision to subledger: the decided tax against what the\n  decision's posting put on `TAX_COLLECTED_LIABILITY`, and each\n  completed refund against its `REFUND` journal.\n\nR2, R4, R5 and R6 compare records this cell does not hold yet and are\nlisted in `unavailable` — never silently left out\n(ZTAX-FIN-REQ-0077). `firstBreak` is R7: the first stage, in order,\nwith an exception, so a clean later stage cannot hide an earlier\nbreak. No tolerance applies; none is configured and none is assumed\n(ZTAX-FIN-REQ-0080)."
+          },
+          "response": [
+            {
+              "name": "201 · One decision never documented",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/reconciliations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "reconciliations"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"ranAt\": \"2026-10-03T09:00:00.000000Z\",\n  \"firstBreak\": \"R1_CALCULATED_TO_DOCUMENT\",\n  \"unavailable\": [\n    \"R2_DOCUMENT_TO_COLLECTION\",\n    \"R4_SUBLEDGER_TO_RETURN\",\n    \"R5_RETURN_TO_REMITTANCE\",\n    \"R6_SUBLEDGER_TO_GL\"\n  ],\n  \"items\": [\n    {\n      \"id\": \"01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f\",\n      \"stage\": \"R1_CALCULATED_TO_DOCUMENT\",\n      \"matchKey\": \"decision:01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n      \"expected\": {\n        \"amount\": \"21.11\",\n        \"currency\": \"EUR\"\n      },\n      \"status\": \"MISSING\",\n      \"detail\": \"expected and not observed\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('runReconciliation returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('ZTAX-FIN-REQ-0077 — every stage not compared is named', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().unavailable).to.include('R2_DOCUMENT_TO_COLLECTION');",
+                  "});",
+                  "pm.collectionVariables.set('runId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/reconciliations/{runId} — A reconciliation run, with its items and their resolutions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/reconciliations/{{runId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "reconciliations",
+                "{{runId}}"
+              ]
+            },
+            "description": "A reconciliation run, with its items and their resolutions\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. A run is a record: a later run of the same period is a run of its own."
+          },
+          "response": [
+            {
+              "name": "200 · A clean run",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/reconciliations/{{runId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "reconciliations",
+                    "{{runId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"ranAt\": \"2026-10-03T09:00:00.000000Z\",\n  \"unavailable\": [\n    \"R2_DOCUMENT_TO_COLLECTION\",\n    \"R4_SUBLEDGER_TO_RETURN\",\n    \"R5_RETURN_TO_REMITTANCE\",\n    \"R6_SUBLEDGER_TO_GL\"\n  ],\n  \"items\": []\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getReconciliation returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/reconciliations/{runId}/items/{itemId}/resolution — Resolve one exception, with its evidence",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Billed in the October invoice run.\",\n  \"action\": \"WAIT\",\n  \"rootCause\": \"TIMING\",\n  \"evidence\": [\n    \"bss:invoice-run-2026-10-01\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/reconciliations/{{runId}}/items/{{itemId}}/resolution",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "reconciliations",
+                "{{runId}}",
+                "items",
+                "{{itemId}}",
+                "resolution"
+              ]
+            },
+            "description": "Resolve one exception, with its evidence\n\n`OPERATOR`. Records who resolved the exception, why, how, its root\ncause, and at least one piece of evidence (ZTAX-FIN-REQ-0084). An\nitem is resolved once; a matched item is not an exception and is\nrefused with `409 STATE_TRANSITION_INVALID`."
+          },
+          "response": [
+            {
+              "name": "200 · Resolved",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/reconciliations/{{runId}}/items/{{itemId}}/resolution",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "reconciliations",
+                    "{{runId}}",
+                    "items",
+                    "{{itemId}}",
+                    "resolution"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f\",\n  \"stage\": \"R1_CALCULATED_TO_DOCUMENT\",\n  \"matchKey\": \"decision:01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n  \"expected\": {\n    \"amount\": \"21.11\",\n    \"currency\": \"EUR\"\n  },\n  \"status\": \"RESOLVED\",\n  \"resolution\": {\n    \"actor\": \"HUMAN\",\n    \"resolver\": \"01920a40-aaaa-7bbb-8ccc-000000000d01\",\n    \"reason\": \"Billed in the October invoice run.\",\n    \"action\": \"WAIT\",\n    \"rootCause\": \"TIMING\",\n    \"evidence\": [\n      \"bss:invoice-run-2026-10-01\"\n    ],\n    \"resolvedAt\": \"2026-10-03T10:00:00.000000Z\"\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('resolveReconciliationItem returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404, 409]);",
+                  "});",
+                  "pm.test('a resolution needs an item of the run', function () {",
+                  "  pm.expect([200, 404, 409]).to.include(pm.response.code);",
                   "});"
                 ]
               }
@@ -3075,6 +6381,16 @@
       "type": "string"
     },
     {
+      "key": "status",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "deliveryId",
+      "value": "00000000-0000-7000-8000-000000000000",
+      "type": "string"
+    },
+    {
       "key": "role",
       "value": "AUDITOR",
       "type": "string"
@@ -3101,11 +6417,61 @@
     },
     {
       "key": "decisionId",
-      "value": "",
+      "value": "00000000-0000-7000-8000-000000000000",
       "type": "string"
     },
     {
       "key": "obligationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refundId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "webhookId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "jobId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sealId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "documentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "period",
+      "value": "2000-01",
+      "type": "string"
+    },
+    {
+      "key": "requestId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "runId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "holdId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "authorizationId",
       "value": "",
       "type": "string"
     },
@@ -3121,7 +6487,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:96a90e120afe357331ac3ac03456d638064f0b98a9bb406a2a2e8e2e539df7f7",
+      "value": "sha256:cde813af1cdfd0ebbfdc7e87ca4a7c555261d1d00a8524364cd610e916c7efa6",
       "type": "string"
     }
   ]

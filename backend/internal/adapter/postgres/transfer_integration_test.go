@@ -165,7 +165,7 @@ func TestIntegrationTransferLogRefusesWhatTheDomainRefuses(t *testing.T) {
 
 	// And the table itself, for a writer that is not the adapter: P7 is not a
 	// transferable class.
-	_, err = c.pool.Exec(c.ctx, `
+	_, err = ownerPool(t).Exec(c.ctx, `
 		INSERT INTO ztax.cross_cell_transfer (tenant_id, transfer_id, source_cell, destination_cell,
 			profile_id, profile_version, mechanism, purpose, data_classes, content_digest,
 			requested_by, approved_by, recorded_at)

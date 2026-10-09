@@ -18,16 +18,23 @@ import (
 
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/accumulator"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/batch"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/document"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/fiscal"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/idempotency"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/identity"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/legal"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/obligation"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/outbox"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/reconciliation"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/retention"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/settlement"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/subledger"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/webhook"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 )
 
@@ -152,6 +159,9 @@ type DecisionRepository interface {
 	AsOf(ctx context.Context, businessKey string, decisionTime, eventTime time.Time) (evidence.Record, error)
 	// History is every version of a business key, oldest first.
 	History(ctx context.Context, businessKey string) ([]evidence.Record, error)
+	// CurrentInWindow is the current version of every business key whose
+	// decision's event fell in [from, to): what a period reconciles.
+	CurrentInWindow(ctx context.Context, from, to time.Time) ([]evidence.Record, error)
 	// SealLeaves returns the leaves of every decision recorded in
 	// [from, to), in evidence.LeafOrder.
 	SealLeaves(ctx context.Context, from, to time.Time) ([]evidence.SealLeaf, error)
@@ -197,6 +207,8 @@ type SealRepository interface {
 	Overlapping(ctx context.Context, from, to time.Time) ([]evidence.SealRecord, error)
 	Append(ctx context.Context, r evidence.SealRecord) error
 	ByID(ctx context.Context, sealID id.SealID) (evidence.SealRecord, error)
+	// List returns the tenant's seals, latest period first.
+	List(ctx context.Context, limit int) ([]evidence.SealRecord, error)
 }
 
 // ---------------------------------------------------------------------------
@@ -414,4 +426,303 @@ type ObligationContribution struct {
 // the event commits with the state change that caused it, or neither does.
 type OutboxWriter interface {
 	Append(ctx context.Context, e outbox.Event) error
+}
+
+// ---------------------------------------------------------------------------
+// refunds (ZTAX-FIN-001 §14)
+// ---------------------------------------------------------------------------
+
+// RefundRepository stores refunds: an immutable header and an append-only
+// history of what the payment provider reported (ZTAX-FIN-REQ-0059).
+type RefundRepository interface {
+	// LockDecision serializes the refunds of one decision until the
+	// transaction ends, so two refunds admitted concurrently cannot both find
+	// the same tax still refundable.
+	LockDecision(ctx context.Context, decisionID id.DecisionID) error
+	// Create writes the header and its REQUESTED event.
+	Create(ctx context.Context, r settlement.Refund) error
+	// Append writes the next event. An event whose sequence another writer
+	// has already used is refused as a conflict: the writer read a history
+	// that is no longer current.
+	Append(ctx context.Context, e settlement.RefundEvent) error
+	// ByID returns a refund and its history, oldest event first.
+	ByID(ctx context.Context, refundID id.RefundID) (settlement.Refund, []settlement.RefundEvent, error)
+	// ForDecision returns the refunds of one decision, each with its current
+	// event, oldest first.
+	ForDecision(ctx context.Context, decisionID id.DecisionID) ([]RefundState, error)
+}
+
+// RefundState is a refund and its current event.
+type RefundState struct {
+	Refund  settlement.Refund
+	Current settlement.RefundEvent
+}
+
+// ---------------------------------------------------------------------------
+// webhooks (W2 lane K)
+// ---------------------------------------------------------------------------
+
+// SealedSecret is one version of a webhook's signing secret, sealed under the
+// cell's webhook key. Only the app layer, holding the key, opens it.
+type SealedSecret struct {
+	webhook.SecretVersion
+	Sealed []byte
+}
+
+// WebhookState is a subscription and its current status.
+type WebhookState struct {
+	Subscription webhook.Subscription
+	Status       webhook.StatusChange
+}
+
+// WebhookRepository stores webhooks and their deliveries.
+//
+// Every method but ClaimDue reads the tenant from the context. ClaimDue is
+// the dispatcher's, which serves the whole cell as the outbox relay does, and
+// returns each delivery with its tenant so the work on it can be scoped.
+type WebhookRepository interface {
+	// Create writes a subscription, its ACTIVE status and its first secret.
+	Create(ctx context.Context, s webhook.Subscription, first webhook.StatusChange, secret SealedSecret) error
+	// Lock serializes the writers of one subscription's status and secrets
+	// until the transaction ends.
+	Lock(ctx context.Context, webhookID id.WebhookID) error
+	ByID(ctx context.Context, webhookID id.WebhookID) (WebhookState, error)
+	List(ctx context.Context, limit int) ([]WebhookState, error)
+	// Matching returns the ACTIVE subscriptions that receive an event type.
+	Matching(ctx context.Context, eventType string) ([]webhook.Subscription, error)
+	// AppendStatus writes the next status; a sequence already taken is an
+	// optimistic conflict.
+	AppendStatus(ctx context.Context, c webhook.StatusChange) error
+	// Secrets returns every version, oldest first.
+	Secrets(ctx context.Context, webhookID id.WebhookID) ([]SealedSecret, error)
+	// AppendSecret writes the next version; a version already taken is an
+	// optimistic conflict.
+	AppendSecret(ctx context.Context, s SealedSecret) error
+
+	// InsertDelivery writes a delivery. It reports false, and no error, for a
+	// second fan-out of one event to one subscription.
+	InsertDelivery(ctx context.Context, d webhook.Delivery) (bool, error)
+	Delivery(ctx context.Context, deliveryID id.DeliveryID) (webhook.Delivery, []webhook.Attempt, error)
+	Deliveries(ctx context.Context, webhookID id.WebhookID, status webhook.DeliveryStatus, limit int) ([]webhook.Delivery, error)
+	// ClaimDue leases up to limit PENDING deliveries whose next attempt is
+	// due at now, across the cell: each is pushed lease into the future in
+	// the same statement, so a second dispatcher skips it and a dispatcher
+	// that dies mid-send leaves it to be retried when the lease lapses.
+	ClaimDue(ctx context.Context, now time.Time, lease time.Duration, limit int) ([]webhook.Delivery, error)
+	// RecordAttempt writes an attempt and the delivery's resulting state.
+	RecordAttempt(ctx context.Context, a webhook.Attempt, d webhook.Delivery) error
+	// Bury dead-letters a delivery without an attempt: its subscription has
+	// stopped receiving.
+	Bury(ctx context.Context, deliveryID id.DeliveryID) error
+}
+
+// WebhookSender makes one delivery request. The implementation is the egress
+// guard: it refuses a destination the policy forbids at the moment of
+// connection, and follows no redirect.
+type WebhookSender interface {
+	// Send POSTs body with headers and returns the receiver's status. An
+	// error means no status was received.
+	Send(ctx context.Context, url string, headers map[string]string, body []byte) (int, error)
+}
+
+// ---------------------------------------------------------------------------
+// batches and jobs (W2 lane K)
+// ---------------------------------------------------------------------------
+
+// BatchRepository stores batch jobs, their items and the items' results.
+//
+// ClaimNext serves the whole cell, as the outbox relay does, and returns the
+// job with its tenant; every other method reads the tenant from the context.
+type BatchRepository interface {
+	// Create writes a QUEUED job and its items.
+	Create(ctx context.Context, j batch.Job, items []batch.Item) error
+	// Job returns a job, its items' business keys in order, and the results
+	// recorded so far.
+	Job(ctx context.Context, jobID id.JobID) (batch.Job, []batch.Item, []batch.Result, error)
+	// ClaimNext leases the oldest job that is QUEUED, or RUNNING with a
+	// lapsed lease, marking it RUNNING until leaseUntil. False when there is
+	// none.
+	ClaimNext(ctx context.Context, now, leaseUntil time.Time) (batch.Job, bool, error)
+	// Renew extends a held lease. It refuses a job no longer RUNNING.
+	Renew(ctx context.Context, jobID id.JobID, leaseUntil time.Time) error
+	// Pending returns the items with no result yet, in order, requests
+	// included.
+	Pending(ctx context.Context, jobID id.JobID) ([]batch.Item, error)
+	// AppendResult records an item's outcome. It reports false when the item
+	// already has one: a worker that resumed after another finished it.
+	AppendResult(ctx context.Context, r batch.Result) (bool, error)
+	// Complete marks a job COMPLETED and releases its lease.
+	Complete(ctx context.Context, jobID id.JobID, at time.Time) error
+}
+
+// ---------------------------------------------------------------------------
+// fiscal documents (W2 lane J; ZTAX-FIN-001 §3–§6)
+// ---------------------------------------------------------------------------
+
+// DocumentRecord is a committed document as stored: the document, the totals
+// computed from its lines when it was committed, and who committed it.
+type DocumentRecord struct {
+	Document   document.Document
+	Net        fiscal.Money
+	Tax        fiscal.Money
+	Gross      fiscal.Money
+	RecordedAt time.Time
+	RecordedBy id.UserID
+}
+
+// DocumentCitation is a document that pins a decision, and where it stands.
+type DocumentCitation struct {
+	Document id.FiscalDocumentID
+	Type     document.Type
+	Status   document.Status
+}
+
+// DocumentRepository stores committed fiscal documents and their lifecycle.
+// Append-only by interface and by grant: there is no update and no delete.
+type DocumentRepository interface {
+	// Lock serializes the writers of one document chain until the
+	// transaction ends: two corrections of one invoice, or a correction and
+	// a rebill, are decided one after the other.
+	Lock(ctx context.Context, root id.FiscalDocumentID) error
+	// LockDecision serializes the billing of one decision, so it cannot be
+	// billed twice by two documents committed at once.
+	LockDecision(ctx context.Context, decisionID id.DecisionID) error
+	// Create writes a committed document — header, predecessors, pinned
+	// decisions, lines and their taxes — and its COMMITTED status.
+	Create(ctx context.Context, r DocumentRecord, first document.StatusEvent) error
+	// ByID returns a document and its status history, oldest first.
+	ByID(ctx context.Context, documentID id.FiscalDocumentID) (DocumentRecord, []document.StatusEvent, error)
+	// AppendStatus writes the next status event; a sequence already taken is
+	// an optimistic conflict.
+	AppendStatus(ctx context.Context, e document.StatusEvent) error
+	// Lineage returns every document sharing a root, in commit order.
+	Lineage(ctx context.Context, root id.FiscalDocumentID) ([]DocumentRecord, error)
+	// CitedBy returns the documents that pin a decision, with each one's
+	// current status.
+	CitedBy(ctx context.Context, decisionID id.DecisionID) ([]DocumentCitation, error)
+	// CancelledLines reports which lines of a document a void or credit note
+	// has already cancelled.
+	CancelledLines(ctx context.Context, documentID id.FiscalDocumentID) (map[id.FiscalLineID]bool, error)
+	// TaxByDecision sums the tax every document presents for each decision —
+	// invoices positive, voids and credits negative — in the documents'
+	// currency. A decision no document cites is absent.
+	TaxByDecision(ctx context.Context, decisions []id.DecisionID) (map[id.DecisionID]fiscal.Money, error)
+}
+
+// ---------------------------------------------------------------------------
+// subledger period close (ZTAX-FIN-001 §20–§22)
+// ---------------------------------------------------------------------------
+
+// ReopenRequest is a request to reopen a hard-closed period, waiting for a
+// second person's approval.
+type ReopenRequest struct {
+	ID          id.ReopenRequestID
+	TenantID    id.TenantID
+	LegalEntity id.LegalEntityID
+	Period      string
+	Reason      string
+	RequestedAt time.Time
+	RequestedBy id.UserID
+}
+
+// PeriodPopulation is everything a close manifest seals.
+type PeriodPopulation struct {
+	Journals   []id.JournalID
+	Balances   []subledger.ManifestBalance
+	Documents  []subledger.ManifestDocument
+	Exceptions []subledger.ManifestException
+}
+
+// PeriodRepository holds the subledger's legal periods.
+//
+// Posting and moving a period serialize on one lock per legal entity and
+// period, taken shared by a posting and exclusive by a transition: postings
+// into one month do not wait for each other, and a close waits for the
+// postings in flight, and they for it.
+type PeriodRepository interface {
+	LockForPosting(ctx context.Context, legalEntity id.LegalEntityID, period string) error
+	LockForTransition(ctx context.Context, legalEntity id.LegalEntityID, period string) error
+	// History returns a period's events, oldest first; none is OPEN.
+	History(ctx context.Context, legalEntity id.LegalEntityID, period string) ([]subledger.PeriodEvent, error)
+	// AppendEvent writes the next event; a sequence already taken is an
+	// optimistic conflict.
+	AppendEvent(ctx context.Context, e subledger.PeriodEvent) error
+	// Population reads what a close of the period would seal.
+	Population(ctx context.Context, legalEntity id.LegalEntityID, period string) (PeriodPopulation, error)
+	// PutManifest stores a sealed manifest's canonical bytes under its digest.
+	PutManifest(ctx context.Context, legalEntity id.LegalEntityID, period string, digest canonical.Digest, body []byte, at time.Time) error
+	// Manifest returns a stored manifest's canonical bytes.
+	Manifest(ctx context.Context, digest canonical.Digest) ([]byte, error)
+	CreateReopenRequest(ctx context.Context, r ReopenRequest) error
+	ReopenRequest(ctx context.Context, requestID id.ReopenRequestID) (ReopenRequest, error)
+}
+
+// ---------------------------------------------------------------------------
+// reconciliation (ZTAX-FIN-001 §17–§20)
+// ---------------------------------------------------------------------------
+
+// ReconResolution is a resolution of one item, as stored.
+type ReconResolution struct {
+	Item id.ReconItemID
+	reconciliation.Resolution
+}
+
+// ReconciliationRepository stores runs, their items and resolutions.
+// Append-only by interface and by grant.
+type ReconciliationRepository interface {
+	// CreateRun writes a run and every item it compared.
+	CreateRun(ctx context.Context, r reconciliation.Run, items []reconciliation.RunItem) error
+	// Run returns a run, its items in order, and their resolutions.
+	Run(ctx context.Context, runID id.ReconciliationID) (reconciliation.Run, []reconciliation.RunItem, []ReconResolution, error)
+	// Item returns one item.
+	Item(ctx context.Context, itemID id.ReconItemID) (reconciliation.RunItem, error)
+	// Resolve records an item's resolution; a second resolution of one item
+	// is refused as a conflict.
+	Resolve(ctx context.Context, r ReconResolution) error
+}
+
+// ---------------------------------------------------------------------------
+// retention and legal hold
+// ---------------------------------------------------------------------------
+
+// RetentionRepository holds retention policy versions and legal holds. Both
+// are append-only: a policy change is a new version, and a hold's state is
+// its event history.
+type RetentionRepository interface {
+	// AppendPolicy records a policy version. A version that already exists
+	// is a conflict.
+	AppendPolicy(ctx context.Context, p retention.Policy) error
+	// Policies returns every version of every policy, by id then version.
+	Policies(ctx context.Context) ([]retention.Policy, error)
+	// LockHolds serializes the tenant's hold writes with each other and with
+	// a disposition check, for the rest of the transaction.
+	LockHolds(ctx context.Context) error
+	// CreateHold records a hold and its PLACED event.
+	CreateHold(ctx context.Context, h retention.Hold, placed retention.HoldEvent) error
+	// AppendHoldEvent records the next event of a hold.
+	AppendHoldEvent(ctx context.Context, e retention.HoldEvent) error
+	// Hold returns one hold, folded from its history.
+	Hold(ctx context.Context, holdID id.LegalHoldID) (retention.Hold, error)
+	// Holds returns every hold of the tenant, newest first.
+	Holds(ctx context.Context) ([]retention.Hold, error)
+}
+
+// ---------------------------------------------------------------------------
+// customer authorizations
+// ---------------------------------------------------------------------------
+
+// AuthorizationRepository holds customer authorizations. A record is never
+// changed; its state is its event history.
+type AuthorizationRepository interface {
+	// Lock serializes the tenant's authorization writes for the rest of the
+	// transaction.
+	Lock(ctx context.Context) error
+	// Create records an authorization and its GRANTED event.
+	Create(ctx context.Context, a legal.Authorization, granted legal.Event) error
+	// AppendEvent records the next event of an authorization.
+	AppendEvent(ctx context.Context, authorizationID id.AuthorizationID, e legal.Event) error
+	// Authorization returns one, folded from its history.
+	Authorization(ctx context.Context, authorizationID id.AuthorizationID) (legal.Authorization, error)
+	// List returns the tenant's authorizations, newest first.
+	List(ctx context.Context) ([]legal.Authorization, error)
 }

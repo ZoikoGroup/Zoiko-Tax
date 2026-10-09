@@ -346,3 +346,25 @@ func EndToEnd(results map[Stage]StageResult) Trace {
 	}
 	return t
 }
+
+// Run is one reconciliation of a legal period: what was compared, when, by
+// whom, and what the end-to-end trace found. A run is a record, never
+// recomputed in place — a later run of the same period is a run of its own.
+type Run struct {
+	ID          id.ReconciliationID
+	TenantID    id.TenantID
+	LegalEntity id.LegalEntityID
+	Period      string
+	RanAt       time.Time
+	RanBy       id.UserID
+	FirstBreak  *Stage
+	Unavailable []Stage
+}
+
+// RunItem is one compared item of a run, with its own identity so it can be
+// resolved.
+type RunItem struct {
+	ID  id.ReconItemID
+	Run id.ReconciliationID
+	Item
+}

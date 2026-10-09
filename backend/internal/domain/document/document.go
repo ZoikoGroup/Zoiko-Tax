@@ -144,6 +144,9 @@ type Document struct {
 	// Restated marks a RESTATEMENT's figures as a recomputation, so they are
 	// never read as the original historical position (ZTAX-FIN-REQ-0018).
 	Restated bool
+	// External is the billing system's own reference for the document, kept
+	// beside the canonical id and never in place of it (ZTAX-DOM-REQ-0003).
+	External *id.ExternalReference
 }
 
 // Authoritative reports whether the document is committed fiscal history.
@@ -164,6 +167,11 @@ func (d Document) Validate() error {
 		return fmt.Errorf("document %s has no issue date or no tax point", d.ID)
 	case d.Currency == "":
 		return fmt.Errorf("document %s has no currency", d.ID)
+	}
+	if d.External != nil {
+		if err := d.External.Validate(); err != nil {
+			return fmt.Errorf("document %s: %w", d.ID, err)
+		}
 	}
 	if d.Type.corrects() {
 		if len(d.Predecessors) == 0 {

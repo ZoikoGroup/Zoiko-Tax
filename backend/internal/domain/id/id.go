@@ -114,6 +114,32 @@ type (
 
 	// ReconciliationID identifies one reconciliation run.
 	ReconciliationID struct{ base }
+
+	// RefundID identifies one refund: a payment-side return of tax against a
+	// committed decision, with a lifecycle of its own (ZTAX-FIN-REQ-0059).
+	RefundID struct{ base }
+
+	// WebhookID identifies one webhook subscription.
+	WebhookID struct{ base }
+
+	// DeliveryID identifies one delivery of one event to one webhook.
+	DeliveryID struct{ base }
+
+	// JobID identifies one asynchronous job: a batch of commits.
+	JobID struct{ base }
+
+	// ReopenRequestID identifies one request to reopen a closed period.
+	ReopenRequestID struct{ base }
+
+	// ReconItemID identifies one compared item of a reconciliation run.
+	ReconItemID struct{ base }
+
+	// LegalHoldID identifies one legal hold.
+	LegalHoldID struct{ base }
+
+	// AuthorizationID identifies one customer authorization: a power of
+	// attorney, a filing mandate, a portal delegation.
+	AuthorizationID struct{ base }
 )
 
 // The constructors. Each takes a uuid.UUID that idgen produced, or that the
@@ -189,6 +215,30 @@ func NewJournalID(u uuid.UUID) JournalID { return JournalID{base{u}} }
 // NewReconciliationID wraps a raw UUID as a ReconciliationID.
 func NewReconciliationID(u uuid.UUID) ReconciliationID { return ReconciliationID{base{u}} }
 
+// NewRefundID wraps a raw UUID as a RefundID.
+func NewRefundID(u uuid.UUID) RefundID { return RefundID{base{u}} }
+
+// NewWebhookID wraps a raw UUID as a WebhookID.
+func NewWebhookID(u uuid.UUID) WebhookID { return WebhookID{base{u}} }
+
+// NewDeliveryID wraps a raw UUID as a DeliveryID.
+func NewDeliveryID(u uuid.UUID) DeliveryID { return DeliveryID{base{u}} }
+
+// NewJobID wraps a raw UUID as a JobID.
+func NewJobID(u uuid.UUID) JobID { return JobID{base{u}} }
+
+// NewReopenRequestID wraps a raw UUID as a ReopenRequestID.
+func NewReopenRequestID(u uuid.UUID) ReopenRequestID { return ReopenRequestID{base{u}} }
+
+// NewReconItemID wraps a raw UUID as a ReconItemID.
+func NewReconItemID(u uuid.UUID) ReconItemID { return ReconItemID{base{u}} }
+
+// NewLegalHoldID wraps a raw UUID as a LegalHoldID.
+func NewLegalHoldID(u uuid.UUID) LegalHoldID { return LegalHoldID{base{u}} }
+
+// NewAuthorizationID wraps a raw UUID as an AuthorizationID.
+func NewAuthorizationID(u uuid.UUID) AuthorizationID { return AuthorizationID{base{u}} }
+
 // parse is the shared text ingress. Identifiers arrive from a URL path, a
 // cookie lookup or a database column, and all three can carry something that is
 // not a UUID.
@@ -234,6 +284,15 @@ func ParseSessionID(s string) (SessionID, error) {
 		return SessionID{}, err
 	}
 	return NewSessionID(u), nil
+}
+
+// ParseFiscalLineID reads a FiscalLineID from its canonical string form.
+func ParseFiscalLineID(s string) (FiscalLineID, error) {
+	u, err := parse("fiscal line id", s)
+	if err != nil {
+		return FiscalLineID{}, err
+	}
+	return NewFiscalLineID(u), nil
 }
 
 // ParseFiscalDocumentID reads a FiscalDocumentID from its canonical string form.
@@ -324,4 +383,76 @@ func ParseReconciliationID(s string) (ReconciliationID, error) {
 		return ReconciliationID{}, err
 	}
 	return NewReconciliationID(u), nil
+}
+
+// ParseRefundID reads a RefundID from its canonical string form.
+func ParseRefundID(s string) (RefundID, error) {
+	u, err := parse("refund id", s)
+	if err != nil {
+		return RefundID{}, err
+	}
+	return NewRefundID(u), nil
+}
+
+// ParseWebhookID reads a WebhookID from its canonical string form.
+func ParseWebhookID(s string) (WebhookID, error) {
+	u, err := parse("webhook id", s)
+	if err != nil {
+		return WebhookID{}, err
+	}
+	return NewWebhookID(u), nil
+}
+
+// ParseDeliveryID reads a DeliveryID from its canonical string form.
+func ParseDeliveryID(s string) (DeliveryID, error) {
+	u, err := parse("delivery id", s)
+	if err != nil {
+		return DeliveryID{}, err
+	}
+	return NewDeliveryID(u), nil
+}
+
+// ParseJobID reads a JobID from its canonical string form.
+func ParseJobID(s string) (JobID, error) {
+	u, err := parse("job id", s)
+	if err != nil {
+		return JobID{}, err
+	}
+	return NewJobID(u), nil
+}
+
+// ParseReopenRequestID reads a ReopenRequestID from its canonical string form.
+func ParseReopenRequestID(s string) (ReopenRequestID, error) {
+	u, err := parse("reopen request id", s)
+	if err != nil {
+		return ReopenRequestID{}, err
+	}
+	return NewReopenRequestID(u), nil
+}
+
+// ParseReconItemID reads a ReconItemID from its canonical string form.
+func ParseReconItemID(s string) (ReconItemID, error) {
+	u, err := parse("reconciliation item id", s)
+	if err != nil {
+		return ReconItemID{}, err
+	}
+	return NewReconItemID(u), nil
+}
+
+// ParseLegalHoldID reads a LegalHoldID from its canonical string form.
+func ParseLegalHoldID(s string) (LegalHoldID, error) {
+	u, err := parse("legal hold id", s)
+	if err != nil {
+		return LegalHoldID{}, err
+	}
+	return NewLegalHoldID(u), nil
+}
+
+// ParseAuthorizationID reads an AuthorizationID from its canonical string form.
+func ParseAuthorizationID(s string) (AuthorizationID, error) {
+	u, err := parse("authorization id", s)
+	if err != nil {
+		return AuthorizationID{}, err
+	}
+	return NewAuthorizationID(u), nil
 }

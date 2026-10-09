@@ -78,6 +78,43 @@ type Router struct {
 	// Classification proposes advisory ontology mappings through Models. Nil
 	// in a router built without one, which answers 503.
 	Classification *app.ClassificationService
+	// Refunds serves POST /v1/transactions:refund and the refund reads and
+	// provider reports. Nil in a cell deployed without the determination
+	// surface, which answers 503.
+	Refunds *app.RefundService
+
+	// Webhooks administers webhook subscriptions and reads their deliveries.
+	// Nil in a cell with no webhook key, which answers 503.
+	Webhooks *app.WebhookService
+
+	// Batches serves POST /v1/batches and GET /v1/jobs/{id}. Nil wherever
+	// Determination is, since every item takes the commit path.
+	Batches *app.BatchService
+
+	// Seals serves the period seals, their verification and decisions'
+	// inclusion proofs. Nil in a cell with no seal keyring, which answers
+	// 503.
+	Seals *app.SealService
+
+	// Documents serves the fiscal documents. Nil wherever Determination is,
+	// since documents present its decisions.
+	Documents *app.DocumentService
+
+	// Periods serves the subledger's legal periods: close, amendment
+	// windows, and reopening on approval. Nil wherever Determination is.
+	Periods *app.PeriodService
+
+	// Reconciliations runs and resolves R1–R7 over a legal period. Nil
+	// wherever Determination is.
+	Reconciliations *app.ReconciliationService
+
+	// Retention serves retention policies, legal holds and the disposition
+	// verdict.
+	Retention *app.RetentionService
+
+	// Legal serves the LegalAuthorization matrix, customer authorizations
+	// and the gate that resolves the two.
+	Legal *app.LegalService
 }
 
 // Trains are the seven release-train versions, as the contract names them.
@@ -152,16 +189,73 @@ func (rt *Router) routes() []struct {
 		{Route{"DELETE", "/v1/admin/sessions/{sessionId}", false, []security.Role{admin}}, rt.handleRevokeSession},
 		{Route{"GET", "/v1/admin/audit", false, []security.Role{admin, security.RoleAuditor}}, rt.handleListAudit},
 
+		// Webhooks. Which events leave the cell, and to where, is an egress
+		// decision and ADMIN's; it moves no figure, so no fiscal role holds
+		// it.
+		{Route{"GET", "/v1/webhooks", false, []security.Role{admin, auditor}}, rt.handleListWebhooks},
+		{Route{"POST", "/v1/webhooks", false, []security.Role{admin}}, rt.handleCreateWebhook},
+		{Route{"GET", "/v1/webhooks/{webhookId}", false, []security.Role{admin, auditor}}, rt.handleGetWebhook},
+		{Route{"POST", "/v1/webhooks/{webhookId}/status", false, []security.Role{admin}}, rt.handleSetWebhookStatus},
+		{Route{"POST", "/v1/webhooks/{webhookId}/secrets:rotate", false, []security.Role{admin}}, rt.handleRotateWebhookSecret},
+		{Route{"GET", "/v1/webhooks/{webhookId}/deliveries", false, []security.Role{admin, auditor}}, rt.handleListWebhookDeliveries},
+		{Route{"GET", "/v1/webhooks/{webhookId}/deliveries/{deliveryId}", false, []security.Role{admin, auditor}}, rt.handleGetWebhookDelivery},
+		{Route{"POST", "/v1/webhooks/{webhookId}/deliveries/{deliveryId}/replay", false, []security.Role{admin}}, rt.handleReplayWebhookDelivery},
+
 		// Determination. ADMIN is on none of them: administering a tenant's
 		// users is not a fiscal operation, and a role that could do both
 		// could grant itself the approval it then exercises.
 		{Route{"POST", "/v1/quotes", false, []security.Role{operator, analyst}}, rt.handleQuote},
 		{Route{"POST", "/v1/transactions:commit", false, []security.Role{operator}}, rt.handleCommit},
 		{Route{"POST", "/v1/transactions:adjust", false, []security.Role{operator}}, rt.handleAdjust},
+		{Route{"POST", "/v1/transactions:refund", false, []security.Role{operator}}, rt.handleRefund},
+		{Route{"GET", "/v1/refunds/{refundId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetRefund},
+		{Route{"POST", "/v1/batches", false, []security.Role{operator}}, rt.handleSubmitBatch},
+		{Route{"POST", "/v1/documents", false, []security.Role{operator}}, rt.handleIssueDocument},
+		{Route{"GET", "/v1/documents/{documentId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetDocument},
+		{Route{"POST", "/v1/documents/{documentId}/corrections", false, []security.Role{operator}}, rt.handleCorrectDocument},
+		{Route{"GET", "/v1/documents/{documentId}/lineage", false, []security.Role{operator, analyst, auditor}}, rt.handleDocumentLineage},
+		{Route{"GET", "/v1/jobs/{jobId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetJob},
+		{Route{"POST", "/v1/refunds/{refundId}/reports", false, []security.Role{operator}}, rt.handleReportRefund},
 		{Route{"GET", "/v1/decisions/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetDecision},
 		{Route{"POST", "/v1/replay/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleReplay},
 		{Route{"GET", "/v1/decisions/{decisionId}/journals", false, []security.Role{operator, analyst, auditor}}, rt.handleDecisionJournals},
+		{Route{"GET", "/v1/decisions/{decisionId}/inclusion", false, []security.Role{operator, analyst, auditor, admin}}, rt.handleDecisionInclusion},
+
+		// Period seals. Making one is ADMIN's — it is a statement about the
+		// record, not a fiscal act; reading and verifying one is for anyone
+		// who audits.
+		{Route{"GET", "/v1/seals", false, []security.Role{admin, auditor, analyst}}, rt.handleListSeals},
+		{Route{"POST", "/v1/seals", false, []security.Role{admin}}, rt.handleSealPeriod},
+		{Route{"GET", "/v1/seals/{sealId}", false, []security.Role{admin, auditor, analyst}}, rt.handleGetSeal},
+		{Route{"GET", "/v1/seals/{sealId}/verification", false, []security.Role{admin, auditor, analyst}}, rt.handleVerifySeal},
 		{Route{"GET", "/v1/subledger/balances", false, []security.Role{operator, analyst, auditor}}, rt.handleSubledgerBalances},
+		{Route{"GET", "/v1/subledger/periods/{period}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetPeriod},
+		{Route{"POST", "/v1/subledger/periods/{period}/transitions", false, []security.Role{operator}}, rt.handleTransitionPeriod},
+		{Route{"POST", "/v1/subledger/periods/{period}/reopen-requests", false, []security.Role{operator}}, rt.handleRequestReopen},
+		// Approval is ADMIN's, and never the requester's: the service refuses
+		// a self-approval whatever roles the approver holds.
+		{Route{"POST", "/v1/subledger/periods/{period}/reopen-requests/{requestId}/approval", false, []security.Role{admin}}, rt.handleApproveReopen},
+		{Route{"POST", "/v1/reconciliations", false, []security.Role{operator}}, rt.handleRunReconciliation},
+		{Route{"GET", "/v1/reconciliations/{runId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetReconciliation},
+		{Route{"POST", "/v1/reconciliations/{runId}/items/{itemId}/resolution", false, []security.Role{operator}}, rt.handleResolveReconItem},
+		{Route{"GET", "/v1/retention/policies", false, []security.Role{admin, auditor}}, rt.handleListRetentionPolicies},
+		{Route{"POST", "/v1/retention/policies", false, []security.Role{admin}}, rt.handleRecordRetentionPolicy},
+		// Hold reads are ADMIN's and AUDITOR's, and each is audited as
+		// privileged evidence access (ZTAX-EVID-REQ-0115).
+		{Route{"GET", "/v1/legal-holds", false, []security.Role{admin, auditor}}, rt.handleListLegalHolds},
+		{Route{"POST", "/v1/legal-holds", false, []security.Role{admin}}, rt.handlePlaceLegalHold},
+		{Route{"GET", "/v1/legal-holds/{holdId}", false, []security.Role{admin, auditor}}, rt.handleGetLegalHold},
+		{Route{"POST", "/v1/legal-holds/{holdId}/scope", false, []security.Role{admin}}, rt.handleChangeLegalHoldScope},
+		{Route{"POST", "/v1/legal-holds/{holdId}/release", false, []security.Role{admin}}, rt.handleReleaseLegalHold},
+		{Route{"GET", "/v1/decisions/{decisionId}/retention", false, []security.Role{admin, auditor}}, rt.handleGetDecisionRetention},
+		{Route{"GET", "/v1/legal/matrix", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetLegalMatrix},
+		// A grant is recorded and revoked by an administrator; the service
+		// also refuses one with no person behind it (ZTAX-LEG-REQ-0044).
+		{Route{"GET", "/v1/legal/authorizations", false, []security.Role{admin, operator, auditor}}, rt.handleListAuthorizations},
+		{Route{"POST", "/v1/legal/authorizations", false, []security.Role{admin}}, rt.handleGrantAuthorization},
+		{Route{"GET", "/v1/legal/authorizations/{authorizationId}", false, []security.Role{admin, operator, auditor}}, rt.handleGetAuthorization},
+		{Route{"POST", "/v1/legal/authorizations/{authorizationId}/revocation", false, []security.Role{admin}}, rt.handleRevokeAuthorization},
+		{Route{"POST", "/v1/legal/authorization-checks", false, []security.Role{admin, operator, analyst}}, rt.handleCheckAuthorization},
 		{Route{"GET", "/v1/obligations", false, []security.Role{operator, analyst, auditor}}, rt.handleListObligations},
 		{Route{"GET", "/v1/obligations/{obligationId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetObligation},
 		{Route{"POST", "/v1/obligations/{obligationId}/transitions", false, []security.Role{operator}}, rt.handleTransitionObligation},
@@ -281,6 +375,12 @@ func (rt *Router) handleCapabilities(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	events := app.Events()
+	eventTypes := make([]gen.EventType, len(events))
+	for i, e := range events {
+		eventTypes[i] = gen.EventType(e.Type)
+	}
+
 	writeJSON(w, r, rt.log, http.StatusOK, gen.Capabilities{
 		Cell:          rt.Cell,
 		Region:        rt.Region,
@@ -289,6 +389,7 @@ func (rt *Router) handleCapabilities(w http.ResponseWriter, r *http.Request) {
 		CanonProfile:  "canon/v1",
 		Authoritative: rt.Authoritative,
 		ReasonCodes:   names,
+		EventTypes:    eventTypes,
 		Content:       content,
 	})
 }

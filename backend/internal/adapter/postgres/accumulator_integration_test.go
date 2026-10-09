@@ -95,7 +95,7 @@ func (c *accCell) decision(t *testing.T) id.DecisionID {
 	d := id.NewDecisionID(uuid.Must(uuid.NewV7()))
 	digest := "zt1:" + strings.Repeat("0", 64)
 	now := time.Now().UTC()
-	_, err := c.pool.Exec(c.ctx, `
+	_, err := ownerPool(t).Exec(c.ctx, `
 		INSERT INTO ztax.tax_decision (
 			tenant_id, decision_id, business_key, valid_from, recorded_at, event_time, outcome,
 			bundle_id, bundle_digest, ir_version, canon_profile,

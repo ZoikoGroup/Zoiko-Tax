@@ -11,6 +11,8 @@ The API contract and the gates that keep it honest. Train: `SCHEMA`.
 | `openapi/ztax.v1.yaml` | **The contract.** OpenAPI 3.2.0, hand-authored, reviewed |
 | `openapi/export/ztax.v1.3.1.yaml` | The 3.1.0 export the toolchain reads. Generated, hash-checked |
 | `openapi/export/ztax.v1.routes.json` | The route table the server is checked against. Generated, hash-checked |
+| `asyncapi/ztax.events.v1.yaml` | **The event contract.** Every event a cell emits, as a CloudEvents message on the cell's channel (ADR-0014). Written to AsyncAPI 3.0.0; see its header for why not 3.1.0 yet |
+| `schemas/events/` | One JSON Schema per event payload. `backend/internal/app/events_test.go` fails when the producer's catalog, these schemas and the AsyncAPI document disagree, and the integration tier validates every event a real commit writes against its schema |
 | `tools/` | The downgrade step, the API lint and the route extractor |
 
 ## The gates

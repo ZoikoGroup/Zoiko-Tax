@@ -54,6 +54,7 @@ type sealHarness struct {
 	*harness
 	seals  *memSeals
 	sealer *app.SealService
+	ring   *kms.Keyring
 }
 
 // newSealHarness records three decisions during dayStart's day, then moves the
@@ -62,7 +63,7 @@ func newSealHarness(t testing.TB) (*sealHarness, []evidence.Decision) {
 	t.Helper()
 	h := newHarness(t)
 	signer, ring := sealKey(t, "evidence-seal-test-2026")
-	sh := &sealHarness{harness: h, seals: &memSeals{}}
+	sh := &sealHarness{harness: h, seals: &memSeals{}, ring: ring}
 	sh.sealer = app.NewSealService(h.decisions, sh.seals, h.store, noTx{}, signer, ring, h.clock,
 		&idgen.Sequential{}, "eu-west-1a", 0)
 
@@ -218,5 +219,63 @@ func TestSealAuthorization(t *testing.T) {
 	}
 	if _, err := sh.sealer.SealPeriod(context.Background(), dayStart, dayEnd); errs.ReasonOf(err) != errs.ReasonUnauthenticated {
 		t.Fatalf("an unauthenticated caller sealed: %v", err)
+	}
+}
+
+// An auditor outside the cell holds the published keyring and nothing else.
+// From GET /v1/seals/{id} and GET /v1/decisions/{id}/inclusion they verify
+// the signature over the payload, read the root and leaf count from the
+// signed bytes — not from the proof — and check each decision's path.
+func TestEVIDREQ0107And0072InclusionProofsVerifyOutsideTheCell(t *testing.T) {
+	sh, ds := newSealHarness(t)
+	rec := sh.seal(t)
+
+	doc, err := sh.sealer.Seal(as(security.RoleAuditor), rec.SealID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sh.ring.Verify(context.Background(), doc.Signature, doc.Payload, rec.SealedAt); err != nil {
+		t.Fatalf("the published keyring does not verify the seal: %v", err)
+	}
+	payload, err := evidence.DecodePeriodSeal(doc.Payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !payload.MerkleRoot.Equal(rec.MerkleRoot) || payload.LeafCount != 3 {
+		t.Fatalf("the signed payload says %s over %d", payload.MerkleRoot, payload.LeafCount)
+	}
+
+	for _, d := range ds {
+		seal, proof, err := sh.sealer.Inclusion(as(security.RoleAuditor), d.ID)
+		if err != nil {
+			t.Fatalf("%s: %v", d.ID, err)
+		}
+		if seal.SealID != rec.SealID || proof.Leaf.DecisionID != d.ID || !proof.Leaf.ResultDigest.Equal(d.ResultDigest) {
+			t.Fatalf("%s: proof for %+v in %s", d.ID, proof.Leaf, seal.SealID)
+		}
+		leaf, err := proof.Leaf.Digest()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := canonical.VerifyInclusion(leaf, proof.Index, payload.LeafCount, proof.Path, payload.MerkleRoot); err != nil {
+			t.Fatalf("%s does not verify against the signed root: %v", d.ID, err)
+		}
+	}
+}
+
+func TestInclusionOfAnUnsealedDecisionIsNotFound(t *testing.T) {
+	sh, _ := newSealHarness(t)
+	sh.seal(t)
+	later := sh.determine(t, "line-after-the-seal")
+	if _, _, err := sh.sealer.Inclusion(as(security.RoleAuditor), later.ID); !errs.IsCategory(err, errs.CategoryNotFound) {
+		t.Fatalf("an unsealed decision: %v", err)
+	}
+}
+
+func TestACellWithoutASignerVerifiesButDoesNotSeal(t *testing.T) {
+	sh, _ := newSealHarness(t)
+	verifier := app.NewSealService(sh.decisions, sh.seals, sh.store, noTx{}, nil, sh.ring, sh.clock, &idgen.Sequential{}, "eu-west-1a", 0)
+	if _, err := verifier.SealPeriod(system(), dayStart, dayEnd); errs.ReasonOf(err) != errs.ReasonUnavailable {
+		t.Fatalf("a signerless cell sealed: %v", err)
 	}
 }

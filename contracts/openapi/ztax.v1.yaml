@@ -104,6 +104,22 @@ tags:
     description: Advisory classification assistance through the Governed Model Gateway.
   - name: obligations
     description: Periodic returns assessed from committed decisions, and their lifecycle.
+  - name: refunds
+    description: Refunds of tax a committed decision charged. Their own lifecycle; never a decision, never a credit.
+  - name: webhooks
+    description: Delivery of the cell's events to endpoints a tenant names. Signed, retried, dead-lettered and replayable; egress-guarded.
+  - name: batches
+    description: Many commits queued as one asynchronous job, each item on the single-commit path.
+  - name: evidence
+    description: Period seals, their verification, and the inclusion proof that ties one decision to a signed root.
+  - name: documents
+    description: Fiscal documents that present committed decisions, and the voids, credits and rebills that correct them. Never edited.
+  - name: reconciliation
+    description: R1 to R7 over a legal period, every item recorded with its exact variance, every resolution with its evidence.
+  - name: retention
+    description: Versioned retention policies, legal holds, and the disposition verdict that weighs them. Nothing here deletes or rewrites a record.
+  - name: legal
+    description: The LegalAuthorization matrix, customer authorizations and powers of attorney, and the gate that resolves whether an action may execute. Fails closed.
 
 security:
   - sessionCookie: []
@@ -152,6 +168,7 @@ paths:
                     canonProfile: canon/v1
                     authoritative: false
                     reasonCodes: [AMBIGUOUS, CURRENCY_MISMATCH, FORBIDDEN, NOT_AUTHORITATIVE, NO_CONTENT_BUNDLE]
+                    eventTypes: [com.zoikotax.decision.committed, com.zoikotax.decision.corrected, com.zoikotax.obligation.status-changed]
                     content:
                       bundleId: eu-vat-worked-2026.09
                       digest: "zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b"
@@ -174,6 +191,7 @@ paths:
                     canonProfile: canon/v1
                     authoritative: false
                     reasonCodes: [NO_CONTENT_BUNDLE, NOT_AUTHORITATIVE]
+                    eventTypes: [com.zoikotax.decision.committed, com.zoikotax.decision.corrected, com.zoikotax.obligation.status-changed]
         "500": { $ref: "#/components/responses/Internal" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
@@ -929,6 +947,689 @@ paths:
         "500": { $ref: "#/components/responses/Internal" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
+  /v1/transactions:refund:
+    post:
+      operationId: refundTransaction
+      tags: [refunds]
+      summary: Refund tax a committed decision charged
+      description: |
+        `OPERATOR` only. Records a refund of tax charged by a committed
+        decision. A refund is **not** a decision and not a credit
+        (ZTAX-FIN-REQ-0015): nothing is re-determined, the decision is never
+        rewritten, and the refund has a lifecycle of its own
+        (ZTAX-FIN-REQ-0059). ZoikoTax moves no money; this records that a
+        payment provider has been, or will be, asked to return it.
+
+        The decision must be the current version of its business key, and the
+        amount at most the tax that decision posted to
+        `TAX_COLLECTED_LIABILITY` in that currency, less every earlier refund
+        of it that has not `FAILED`. An `UNCERTAIN` refund still counts: it
+        may have paid. A request beyond what is refundable is refused with
+        `400 INVALID_VALUE`, and the response says how much is left.
+
+        The refund is created `REQUESTED` and posts nothing. Only a provider
+        report of `SUCCEEDED` (see `POST /v1/refunds/{refundId}/reports`)
+        posts the `REFUND` journal.
+
+        `Idempotency-Key` is required, scoped apart from `:commit` and
+        `:adjust` (ADR-0013 §2.2).
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefundRequest"
+            examples:
+              default:
+                summary: Refund the VAT on one line
+                value:
+                  decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                  amount: { amount: "10.50", currency: EUR }
+                  paymentReference: "psp:ch_3Nf0a1"
+                  reason: Customer cancelled within the cooling-off period.
+      responses:
+        "201":
+          description: |
+            The refund, `REQUESTED`. A replayed response carries
+            `Idempotent-Replay: true` and is byte-for-byte the original.
+          headers:
+            Idempotent-Replay:
+              description: Present, and `true`, when this is the stored response to an earlier request with the same key.
+              schema: { type: boolean }
+              example: true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Refund"
+              examples:
+                default:
+                  summary: A requested refund
+                  value:
+                    id: 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+                    decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    amount: { amount: "10.50", currency: EUR }
+                    paymentReference: "psp:ch_3Nf0a1"
+                    reason: Customer cancelled within the cooling-off period.
+                    status: REQUESTED
+                    requestedAt: "2026-10-07T10:00:00.000000Z"
+                    requestedBy: 01920a40-aaaa-7bbb-8ccc-000000000d01
+                    history:
+                      - seq: 1
+                        status: REQUESTED
+                        recordedAt: "2026-10-07T10:00:00.000000Z"
+                        recordedBy: 01920a40-aaaa-7bbb-8ccc-000000000d01
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/refunds/{refundId}:
+    get:
+      operationId: getRefund
+      tags: [refunds]
+      summary: One refund and its history
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. The refund as requested, its
+        current status, and every provider report that moved it, oldest
+        first.
+      parameters:
+        - $ref: "#/components/parameters/RefundId"
+      responses:
+        "200":
+          description: The refund.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Refund"
+              examples:
+                default:
+                  summary: A refund that timed out, then completed
+                  value:
+                    id: 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+                    decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    amount: { amount: "10.50", currency: EUR }
+                    paymentReference: "psp:ch_3Nf0a1"
+                    status: COMPLETED
+                    requestedAt: "2026-10-07T10:00:00.000000Z"
+                    history:
+                      - seq: 1
+                        status: REQUESTED
+                        recordedAt: "2026-10-07T10:00:00.000000Z"
+                      - seq: 2
+                        status: UNCERTAIN
+                        outcome: TIMED_OUT
+                        recordedAt: "2026-10-07T10:00:30.000000Z"
+                      - seq: 3
+                        status: COMPLETED
+                        outcome: SUCCEEDED
+                        externalReference: "psp:re_9Kd2"
+                        recordedAt: "2026-10-07T11:12:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/refunds/{refundId}/reports:
+    post:
+      operationId: reportRefund
+      tags: [refunds]
+      summary: Record what the payment provider reported about a refund
+      description: |
+        `OPERATOR`. Records one provider report. `ACCEPTED` makes the refund
+        `PENDING`, `SUCCEEDED` makes it `COMPLETED` and posts it to the Tax
+        Control Subledger, `DECLINED` makes it `FAILED` and releases its tax
+        to be refunded again. `TIMED_OUT` and `UNKNOWN` make it `UNCERTAIN` —
+        never completed and never failed, because the money may or may not
+        have moved — and a later definite report resolves it.
+
+        Nothing leaves `COMPLETED` or `FAILED`. A report the lifecycle does
+        not permit is refused with `409 STATE_TRANSITION_INVALID`.
+
+        Safe to retry without an idempotency key: the same report arriving
+        again (same outcome and reference, refund already where it put it)
+        returns the refund unchanged rather than recording a second move.
+      parameters:
+        - $ref: "#/components/parameters/RefundId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefundReportRequest"
+            examples:
+              default:
+                summary: The provider paid the refund
+                value:
+                  outcome: SUCCEEDED
+                  externalReference: "psp:re_9Kd2"
+      responses:
+        "200":
+          description: The refund after the report.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Refund"
+              examples:
+                default:
+                  summary: A completed refund
+                  value:
+                    id: 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+                    decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    amount: { amount: "10.50", currency: EUR }
+                    paymentReference: "psp:ch_3Nf0a1"
+                    status: COMPLETED
+                    requestedAt: "2026-10-07T10:00:00.000000Z"
+                    history:
+                      - seq: 1
+                        status: REQUESTED
+                        recordedAt: "2026-10-07T10:00:00.000000Z"
+                      - seq: 2
+                        status: COMPLETED
+                        outcome: SUCCEEDED
+                        externalReference: "psp:re_9Kd2"
+                        recordedAt: "2026-10-07T11:12:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/webhooks:
+    get:
+      operationId: listWebhooks
+      tags: [webhooks]
+      summary: The tenant's webhook subscriptions
+      description: |
+        `ADMIN` or `AUDITOR`. Every subscription with its current status,
+        oldest first.
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The subscriptions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookList"
+              examples:
+                default:
+                  summary: One active subscription
+                  value:
+                    webhooks:
+                      - id: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        url: "https://hooks.example.com/ztax"
+                        eventTypes: [com.zoikotax.decision.committed, com.zoikotax.refund.status-changed]
+                        status: ACTIVE
+                        createdAt: "2026-10-07T09:00:00.000000Z"
+                        statusChangedAt: "2026-10-07T09:00:00.000000Z"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: createWebhook
+      tags: [webhooks]
+      summary: Subscribe an endpoint to named event types
+      description: |
+        `ADMIN` only. Subscribes an HTTPS endpoint to the event types it
+        names — there is no wildcard, so an event kind added later reaches
+        nobody who did not ask for it by name. The endpoint must be HTTPS,
+        carry no credentials, and be a public address: a destination inside
+        the cell's network is refused here and again at every connection,
+        after name resolution.
+
+        The response carries the signing secret, `whsec_…`, **once**. It is
+        stored sealed and is never returned again; rotate it to get a new one.
+        Deliveries are signed under the Standard Webhooks scheme
+        (`webhook-id`, `webhook-timestamp`, `webhook-signature`), so any
+        Standard Webhooks library verifies them. `webhook-id` is the
+        CloudEvents id: deduplicate on it, because delivery is at least once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookCreateRequest"
+            examples:
+              default:
+                summary: Decisions and refunds to the ERP bridge
+                value:
+                  url: "https://hooks.example.com/ztax"
+                  eventTypes: [com.zoikotax.decision.committed, com.zoikotax.refund.status-changed]
+                  description: ERP bridge
+      responses:
+        "201":
+          description: The subscription and its first signing secret, shown this once.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookCreated"
+              examples:
+                default:
+                  summary: A new subscription
+                  value:
+                    webhook:
+                      id: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                      url: "https://hooks.example.com/ztax"
+                      eventTypes: [com.zoikotax.decision.committed, com.zoikotax.refund.status-changed]
+                      description: ERP bridge
+                      status: ACTIVE
+                      createdAt: "2026-10-07T09:00:00.000000Z"
+                      statusChangedAt: "2026-10-07T09:00:00.000000Z"
+                    secret:
+                      version: 1
+                      secret: "whsec_AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/webhooks/{webhookId}:
+    get:
+      operationId: getWebhook
+      tags: [webhooks]
+      summary: One webhook subscription
+      description: "`ADMIN` or `AUDITOR`."
+      parameters:
+        - $ref: "#/components/parameters/WebhookId"
+      responses:
+        "200":
+          description: The subscription.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Webhook"
+              examples:
+                default:
+                  summary: A paused subscription
+                  value:
+                    id: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    url: "https://hooks.example.com/ztax"
+                    eventTypes: [com.zoikotax.decision.committed]
+                    status: PAUSED
+                    createdAt: "2026-10-07T09:00:00.000000Z"
+                    statusChangedAt: "2026-10-07T12:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/webhooks/{webhookId}/status:
+    post:
+      operationId: setWebhookStatus
+      tags: [webhooks]
+      summary: Pause, resume or disable a subscription
+      description: |
+        `ADMIN` only. `PAUSED` stops deliveries and keeps nothing for later:
+        an event committed while paused is not delivered on resume, and a
+        delivery already scheduled is dead-lettered. Replay is how a receiver
+        catches up, deliberately. `DISABLED` is final. Asking for the status
+        the subscription already has is a retry and returns it unchanged.
+      parameters:
+        - $ref: "#/components/parameters/WebhookId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookStatusRequest"
+            examples:
+              default:
+                summary: Pause during a receiver migration
+                value:
+                  status: PAUSED
+      responses:
+        "200":
+          description: The subscription after the change.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Webhook"
+              examples:
+                default:
+                  summary: Paused
+                  value:
+                    id: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    url: "https://hooks.example.com/ztax"
+                    eventTypes: [com.zoikotax.decision.committed]
+                    status: PAUSED
+                    createdAt: "2026-10-07T09:00:00.000000Z"
+                    statusChangedAt: "2026-10-07T12:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/webhooks/{webhookId}/secrets:rotate:
+    post:
+      operationId: rotateWebhookSecret
+      tags: [webhooks]
+      summary: Issue a new signing secret
+      description: |
+        `ADMIN` only. Issues the next signing secret, returned this once.
+        For 24 hours after the rotation every delivery is signed with both
+        the new secret and the previous one — `webhook-signature` carries
+        both — so a receiver can switch at its own pace. Rotating again inside
+        that window retires the oldest at once.
+      parameters:
+        - $ref: "#/components/parameters/WebhookId"
+      responses:
+        "200":
+          description: The new secret, and when the previous one stops signing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookSecretRotation"
+              examples:
+                default:
+                  summary: Version 2
+                  value:
+                    secret:
+                      version: 2
+                      secret: "whsec_ICEiIyQlJicoKSorLC0uLzAxMjM0NTY3ODk6Ozw9Pj8="
+                    previousRetiresAt: "2026-10-08T09:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/webhooks/{webhookId}/deliveries:
+    get:
+      operationId: listWebhookDeliveries
+      tags: [webhooks]
+      summary: A subscription's deliveries, newest first
+      description: |
+        `ADMIN` or `AUDITOR`. Filter on `status=DEAD` for the dead-letter
+        queue: deliveries that exhausted their attempts, or whose
+        subscription stopped receiving. The body sent is not returned; it is
+        the event, which the receiver has, or can be read through the API.
+      parameters:
+        - $ref: "#/components/parameters/WebhookId"
+        - name: status
+          in: query
+          required: false
+          description: Only deliveries in this status.
+          schema: { $ref: "#/components/schemas/DeliveryStatus" }
+          example: DEAD
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The deliveries.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookDeliveryList"
+              examples:
+                default:
+                  summary: One dead-lettered delivery
+                  value:
+                    deliveries:
+                      - id: 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                        webhookId: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        eventId: 01920a5f-0a1b-7c2d-8e3f-4a5b6c7d8e9f
+                        eventType: com.zoikotax.decision.committed
+                        status: DEAD
+                        attempts: 8
+                        createdAt: "2026-10-06T09:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/webhooks/{webhookId}/deliveries/{deliveryId}:
+    get:
+      operationId: getWebhookDelivery
+      tags: [webhooks]
+      summary: One delivery and its attempts
+      description: |
+        `ADMIN` or `AUDITOR`. Each attempt records when it started, how long
+        it took, the receiver's status code if one arrived, and the
+        transport's error if not. The receiver's response body is never
+        kept.
+      parameters:
+        - $ref: "#/components/parameters/WebhookId"
+        - $ref: "#/components/parameters/DeliveryId"
+      responses:
+        "200":
+          description: The delivery.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookDeliveryDetail"
+              examples:
+                default:
+                  summary: Delivered on the second attempt
+                  value:
+                    delivery:
+                      id: 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                      webhookId: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                      eventId: 01920a5f-0a1b-7c2d-8e3f-4a5b6c7d8e9f
+                      eventType: com.zoikotax.decision.committed
+                      status: DELIVERED
+                      attempts: 2
+                      createdAt: "2026-10-07T09:00:00.000000Z"
+                      deliveredAt: "2026-10-07T09:00:31.000000Z"
+                    attempts:
+                      - attempt: 1
+                        startedAt: "2026-10-07T09:00:01.000000Z"
+                        durationMs: 10000
+                        error: "context deadline exceeded"
+                      - attempt: 2
+                        startedAt: "2026-10-07T09:00:31.000000Z"
+                        durationMs: 84
+                        statusCode: 204
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/webhooks/{webhookId}/deliveries/{deliveryId}/replay:
+    post:
+      operationId: replayWebhookDelivery
+      tags: [webhooks]
+      summary: Deliver an event again
+      description: |
+        `ADMIN` only. Schedules a new delivery of the same event, with the
+        same bytes and the same `webhook-id`, naming the delivery it replays.
+        It is how a receiver catches up after an outage that outlasted the
+        retries, or after a pause. The subscription must be `ACTIVE`.
+      parameters:
+        - $ref: "#/components/parameters/WebhookId"
+        - $ref: "#/components/parameters/DeliveryId"
+      responses:
+        "202":
+          description: The new delivery, scheduled now.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookDelivery"
+              examples:
+                default:
+                  summary: A replay of a dead-lettered delivery
+                  value:
+                    id: 01920a62-3c4d-7e5f-8061-7b8c9d0e1f2a
+                    webhookId: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    eventId: 01920a5f-0a1b-7c2d-8e3f-4a5b6c7d8e9f
+                    eventType: com.zoikotax.decision.committed
+                    status: PENDING
+                    attempts: 0
+                    nextAttemptAt: "2026-10-07T13:00:00.000000Z"
+                    createdAt: "2026-10-07T13:00:00.000000Z"
+                    replayOf: 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/batches:
+    post:
+      operationId: submitBatch
+      tags: [batches]
+      summary: Queue many commits as one job
+      description: |
+        `OPERATOR` only. Queues up to 1000 commits, executed asynchronously
+        and in order by a worker in the cell. Each item is exactly a
+        `:commit` request body; an item naming `supersedes` is executed as
+        `:adjust`, under the content that made what it corrects. An item may
+        correct an earlier item of the same batch.
+
+        A batch changes how commits arrive, never what a commit is: each item
+        takes the commit path a single request takes, under an idempotency key
+        of its own, so a worker that stops halfway resumes at the first item
+        with no result and commits nothing twice. A refused item — invalid
+        input, a superseded decision, a closed period — is recorded with its
+        reason code and the job carries on.
+
+        `Idempotency-Key` is required: the same key and body returns the same
+        job (ADR-0013). Poll `GET /v1/jobs/{jobId}` for progress.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchRequest"
+            examples:
+              default:
+                summary: Two lines
+                value:
+                  operation: COMMIT
+                  items:
+                    - businessKey: INV-0002/1
+                      eventTime: "2026-09-24T18:00:00.000000Z"
+                      input:
+                        money:
+                          line.netAmount: { amount: "100.00", currency: EUR }
+                        quantities:
+                          line.quantity: { value: "3", unit: EA }
+                        flags:
+                          line.reducedRateApplies: false
+                          line.exemptCertificateHeld: false
+                    - businessKey: INV-0002/2
+                      eventTime: "2026-09-24T18:00:00.000000Z"
+                      input:
+                        money:
+                          line.netAmount: { amount: "40.00", currency: EUR }
+                        quantities:
+                          line.quantity: { value: "1", unit: EA }
+                        flags:
+                          line.reducedRateApplies: true
+                          line.exemptCertificateHeld: false
+      responses:
+        "202":
+          description: |
+            The job, queued. A replayed response carries
+            `Idempotent-Replay: true` and is byte-for-byte the original.
+          headers:
+            Idempotent-Replay:
+              description: Present, and `true`, when this is the stored response to an earlier request with the same key.
+              schema: { type: boolean }
+              example: true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+              examples:
+                default:
+                  summary: Queued
+                  value:
+                    id: 01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    operation: COMMIT
+                    status: QUEUED
+                    itemCount: 2
+                    succeeded: 0
+                    failed: 0
+                    pending: 2
+                    requestedAt: "2026-10-07T09:00:00.000000Z"
+                    items:
+                      - { index: 0, businessKey: INV-0002/1, status: PENDING }
+                      - { index: 1, businessKey: INV-0002/2, status: PENDING }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/jobs/{jobId}:
+    get:
+      operationId: getJob
+      tags: [batches]
+      summary: A job's progress and each item's result
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. `COMPLETED` means the job ran to
+        its end, however its items fared: `succeeded`, `failed` and each
+        item's `status` say which. A succeeded item names its decision; a
+        failed one names the registered reason code a single request would
+        have been refused with.
+      parameters:
+        - $ref: "#/components/parameters/JobId"
+      responses:
+        "200":
+          description: The job.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+              examples:
+                default:
+                  summary: Completed, one item refused
+                  value:
+                    id: 01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    operation: COMMIT
+                    status: COMPLETED
+                    itemCount: 2
+                    succeeded: 1
+                    failed: 1
+                    pending: 0
+                    requestedAt: "2026-10-07T09:00:00.000000Z"
+                    startedAt: "2026-10-07T09:00:01.000000Z"
+                    finishedAt: "2026-10-07T09:00:02.000000Z"
+                    items:
+                      - index: 0
+                        businessKey: INV-0002/1
+                        status: SUCCEEDED
+                        decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                      - index: 1
+                        businessKey: INV-0002/2
+                        status: FAILED
+                        reasonCode: INVALID_VALUE
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
   /v1/decisions/{decisionId}:
     get:
       operationId: getDecision
@@ -1072,6 +1773,510 @@ paths:
         "500": { $ref: "#/components/responses/Internal" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
+  /v1/decisions/{decisionId}/inclusion:
+    get:
+      operationId: getDecisionInclusion
+      tags: [evidence]
+      summary: Prove a decision is in its period's seal
+      description: |
+        `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`. The RFC 6962 audit path
+        from the decision's leaf to the root of the seal covering the instant
+        it was recorded (ADR-0011 §2.4). With the seal's signed payload
+        (`GET /v1/seals/{sealId}`) and the published seal keyring, a verifier
+        outside the cell can confirm the decision was sealed without seeing
+        any other decision — the leaf is the decision's id, recorded instant
+        and result digest, hashed as `SHA-256(0x00 ‖ leafDigest)`, and each
+        level as `SHA-256(0x01 ‖ left ‖ right)`, an odd node promoted.
+
+        Check the path against the **signed** root and leaf count, never
+        against sizes the proof itself states. `404 NOT_FOUND` until the
+        period is sealed.
+      parameters:
+        - $ref: "#/components/parameters/DecisionId"
+      responses:
+        "200":
+          description: The proof.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InclusionProof"
+              examples:
+                default:
+                  summary: The second of three decisions in a sealed day
+                  value:
+                    sealId: 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    merkleRoot: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                    leafCount: 3
+                    leafIndex: 1
+                    leaf:
+                      decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                      recordedAt: "2026-09-25T09:00:00.000000Z"
+                      resultDigest: "zt1:2b1c0d9e8f7a6b5c4d3e5c3e2f1a0b9c8d7e6f4b2d1e0f9a8c7b6d5e4f3a2b1c"
+                    leafDigest: "zt1:9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b"
+                    auditPath:
+                      - "zt1:1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d"
+                      - "zt1:5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/seals:
+    get:
+      operationId: listSeals
+      tags: [evidence]
+      summary: The tenant's period seals, latest first
+      description: "`ADMIN`, `AUDITOR` or `ANALYST`."
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The seals.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SealList"
+              examples:
+                default:
+                  summary: One sealed day
+                  value:
+                    seals:
+                      - id: 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        periodStart: "2026-09-25T00:00:00.000000Z"
+                        periodEnd: "2026-09-26T00:00:00.000000Z"
+                        leafCount: 3
+                        merkleRoot: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                        keyId: evidence-seal-2026
+                        cell: eu-west-1
+                        sealedAt: "2026-09-26T01:00:00.000000Z"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: sealPeriod
+      tags: [evidence]
+      summary: Seal a period's decisions
+      description: |
+        `ADMIN` only. Signs a statement that the decisions recorded in
+        `[periodStart, periodEnd)` were exactly these, with exactly these
+        results: an RFC 6962 Merkle root over one leaf per decision, signed
+        with the evidence-seal key together with the tenant, cell and period,
+        so the signature cannot be lifted onto anything else (ADR-0011 §2.5).
+
+        A period may be sealed only after it has settled — five minutes past
+        its end — so a decision whose transaction was still committing is not
+        left out. Periods never overlap: a decision is vouched for by one seal
+        or none. A cell with no seal signer refuses with `503`; it can still
+        verify seals and prove inclusion.
+
+        A seal is integrity evidence, not a legal finality marker: it says the
+        record has not changed, not that the figures in it were right.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SealRequest"
+            examples:
+              default:
+                summary: Seal one day
+                value:
+                  periodStart: "2026-09-25T00:00:00.000000Z"
+                  periodEnd: "2026-09-26T00:00:00.000000Z"
+      responses:
+        "201":
+          description: The seal.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Seal"
+              examples:
+                default:
+                  summary: A sealed day
+                  value:
+                    id: 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    periodStart: "2026-09-25T00:00:00.000000Z"
+                    periodEnd: "2026-09-26T00:00:00.000000Z"
+                    leafCount: 3
+                    merkleRoot: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                    keyId: evidence-seal-2026
+                    cell: eu-west-1
+                    sealedAt: "2026-09-26T01:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/seals/{sealId}:
+    get:
+      operationId: getSeal
+      tags: [evidence]
+      summary: One seal, with the bytes its signature covers
+      description: |
+        `ADMIN`, `AUDITOR` or `ANALYST`. `signedPayload` is the canonical
+        payload exactly as signed, base64; `signature` is ECDSA P-384 over
+        SHA-384 of those bytes, DER, base64, under the key `keyId` names in
+        the published seal keyring. Verify those two before trusting any
+        other field.
+      parameters:
+        - $ref: "#/components/parameters/SealId"
+      responses:
+        "200":
+          description: The seal and its signed document.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SealDocument"
+              examples:
+                default:
+                  summary: A sealed day
+                  value:
+                    seal:
+                      id: 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                      periodStart: "2026-09-25T00:00:00.000000Z"
+                      periodEnd: "2026-09-26T00:00:00.000000Z"
+                      leafCount: 3
+                      merkleRoot: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                      keyId: evidence-seal-2026
+                      cell: eu-west-1
+                      sealedAt: "2026-09-26T01:00:00.000000Z"
+                    signedPayload: "eyJhcnRpZmFjdCI6ImV2aWRlbmNlLXBlcmlvZC1zZWFsIn0="
+                    signature:
+                      keyId: evidence-seal-2026
+                      algorithm: ECDSA_P384_SHA384
+                      value: "MGUCMQDf3q1Z0r1sY3k5K0n9m0bq6X5w2Jx0d7cE3yV1u4B9w8hK2nL6tQp0rS1vX3aZ4QIwM1bN8cV5xZ2qW9eR4tY7uI0oP3aS6dF9gH2jK5lZ8xC1vB4nM7qW0eR3tY6uI9oP2aS"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/seals/{sealId}/verification:
+    get:
+      operationId: verifySeal
+      tags: [evidence]
+      summary: Verify a seal end to end
+      description: |
+        `ADMIN`, `AUDITOR` or `ANALYST`. Checks the signature over the
+        payload at the instant the seal was made, the payload against its
+        index row, the root against the decisions recorded for the period
+        today, and every decision's result object against its digest. A
+        failure is a verdict, not an error: `SIGNATURE_INVALID`,
+        `RECORD_MISMATCH`, `ROOT_MISMATCH` (something in the period moved) or
+        `EVIDENCE_MISSING`.
+      parameters:
+        - $ref: "#/components/parameters/SealId"
+      responses:
+        "200":
+          description: The verdict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SealVerification"
+              examples:
+                default:
+                  summary: Valid
+                  value:
+                    sealId: 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    verdict: VALID
+                    keyId: evidence-seal-2026
+                    leafCount: 3
+                    signedRoot: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                    recomputedRoot: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/documents:
+    post:
+      operationId: issueDocument
+      tags: [documents]
+      summary: Commit a fiscal document that presents committed decisions
+      description: |
+        `OPERATOR` only. Commits an `INVOICE`, `DEBIT_NOTE` or `ADJUSTMENT`
+        (ZTAX-FIN-001 §3). A document invents no tax: every tax line names
+        the committed decision it comes from and the component — the slot the
+        decision's content posts, such as `TAX_VAT` — and for each decision
+        and component the document must present exactly what was decided
+        (ZTAX-FIN-REQ-0010, -0011). A component decided as zero may be left
+        out. A document that disagrees is refused with `409 CONFLICTED`
+        naming each decision and component that differs, and nothing is
+        committed: correct the decision, not the document.
+
+        Each decision must be the current version of its business key, and
+        may be billed by only one standing document at a time: a second
+        invoice for a decision already billed is refused with
+        `409 ALREADY_EXISTS` until the first is voided or fully credited.
+
+        Committed documents are never changed. `Idempotency-Key` is required.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentRequest"
+            examples:
+              default:
+                summary: An invoice for one committed line
+                value:
+                  type: INVOICE
+                  number: INV-2026-0001
+                  issueDate: "2026-09-25"
+                  taxPoint: "2026-09-24T18:00:00.000000Z"
+                  currency: EUR
+                  externalRef: { sourceSystem: bss, namespace: invoice, value: "88231" }
+                  lines:
+                    - sourceLineRef: "bss:order-9/line-1"
+                      net: "100.00"
+                      taxes:
+                        - { decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f, component: TAX_VAT, amount: "21.00" }
+                        - { decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f, component: TAX_ECO_LEVY, amount: "0.11" }
+      responses:
+        "201":
+          description: |
+            The committed document. A replayed response carries
+            `Idempotent-Replay: true` and is byte-for-byte the original.
+          headers:
+            Idempotent-Replay:
+              description: Present, and `true`, when this is the stored response to an earlier request with the same key.
+              schema: { type: boolean }
+              example: true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FiscalDocument"
+              examples:
+                default:
+                  summary: A committed invoice
+                  value:
+                    id: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    type: INVOICE
+                    number: INV-2026-0001
+                    rootId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    predecessors: []
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    issueDate: "2026-09-25"
+                    taxPoint: "2026-09-24T18:00:00.000000Z"
+                    currency: EUR
+                    externalRef: { sourceSystem: bss, namespace: invoice, value: "88231" }
+                    decisionIds: [01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f]
+                    lines:
+                      - id: 01920a90-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                        sourceLineRef: "bss:order-9/line-1"
+                        net: "100.00"
+                        taxes:
+                          - { decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f, component: TAX_VAT, amount: "21.00" }
+                          - { decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f, component: TAX_ECO_LEVY, amount: "0.11" }
+                    netTotal: "100.00"
+                    taxTotal: "21.11"
+                    grossTotal: "121.11"
+                    status: COMMITTED
+                    history:
+                      - { seq: 1, status: COMMITTED, recordedAt: "2026-09-25T09:00:00.000000Z" }
+                    recordedAt: "2026-09-25T09:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/documents/{documentId}:
+    get:
+      operationId: getDocument
+      tags: [documents]
+      summary: One fiscal document and its status history
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. The document exactly as committed,
+        and every status it has had since: a credit note or void that moved
+        it names itself as the `causeId`.
+      parameters:
+        - $ref: "#/components/parameters/DocumentId"
+      responses:
+        "200":
+          description: The document.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FiscalDocument"
+              examples:
+                default:
+                  summary: An invoice since voided
+                  value:
+                    id: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    type: INVOICE
+                    number: INV-2026-0001
+                    rootId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    predecessors: []
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    issueDate: "2026-09-25"
+                    taxPoint: "2026-09-24T18:00:00.000000Z"
+                    currency: EUR
+                    decisionIds: [01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f]
+                    lines:
+                      - id: 01920a90-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                        net: "100.00"
+                        taxes:
+                          - { decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f, component: TAX_VAT, amount: "21.00" }
+                    netTotal: "100.00"
+                    taxTotal: "21.00"
+                    grossTotal: "121.00"
+                    status: VOIDED
+                    history:
+                      - { seq: 1, status: COMMITTED, recordedAt: "2026-09-25T09:00:00.000000Z" }
+                      - { seq: 2, status: VOIDED, causeId: 01920a91-3c4d-7e5f-8061-7b8c9d0e1f2a, recordedAt: "2026-09-26T09:00:00.000000Z" }
+                    recordedAt: "2026-09-25T09:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/documents/{documentId}/corrections:
+    post:
+      operationId: correctDocument
+      tags: [documents]
+      summary: Void, credit or rebill a committed document
+      description: |
+        `OPERATOR` only. Commits a correcting document as a successor of this
+        one, sharing its root (ZTAX-FIN-REQ-0003, -0004). The original is
+        never edited; it gains a status naming the correction.
+
+        - `VOID` cancels every line, exactly: nets and taxes negated, nothing
+          recomputed. The original becomes `VOIDED`. Refused once any line
+          has been credited — credit the rest instead.
+        - `CREDIT_NOTE` cancels the lines in `cancelLines`, or every line not
+          already cancelled. The original becomes `PARTIALLY_CREDITED` or
+          `FULLY_CREDITED`. A line is cancelled once.
+        - `REBILL` charges again, with `lines` like an invoice's — each naming
+          the original line it replaces — once the original is voided or
+          fully credited.
+
+        `reason` is a registered `CORRECTION_*` code (ZTAX-FIN-REQ-0008).
+        `PARTIAL_CREDIT`, `AMENDMENT` and `RESTATEMENT` are refused as
+        `UNSUPPORTED`. `Idempotency-Key` is required.
+      parameters:
+        - $ref: "#/components/parameters/DocumentId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CorrectionRequest"
+            examples:
+              default:
+                summary: Void an invoice the customer cancelled
+                value:
+                  type: VOID
+                  reason: CORRECTION_CUSTOMER_CANCELLATION
+                  number: VOID-2026-0001
+                  issueDate: "2026-09-26"
+                  taxPoint: "2026-09-24T18:00:00.000000Z"
+      responses:
+        "201":
+          description: The correcting document.
+          headers:
+            Idempotent-Replay:
+              description: Present, and `true`, when this is the stored response to an earlier request with the same key.
+              schema: { type: boolean }
+              example: true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FiscalDocument"
+              examples:
+                default:
+                  summary: A void
+                  value:
+                    id: 01920a91-3c4d-7e5f-8061-7b8c9d0e1f2a
+                    type: VOID
+                    number: VOID-2026-0001
+                    rootId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    predecessors: [01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f]
+                    reasonCode: CORRECTION_CUSTOMER_CANCELLATION
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    issueDate: "2026-09-26"
+                    taxPoint: "2026-09-24T18:00:00.000000Z"
+                    currency: EUR
+                    decisionIds: [01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f]
+                    lines:
+                      - id: 01920a91-4d5e-7f60-8172-8c9d0e1f2a3b
+                        net: "-100.00"
+                        predecessorLineId: 01920a90-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                        taxes:
+                          - { decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f, component: TAX_VAT, amount: "-21.00" }
+                    netTotal: "-100.00"
+                    taxTotal: "-21.00"
+                    grossTotal: "-121.00"
+                    status: COMMITTED
+                    history:
+                      - { seq: 1, status: COMMITTED, recordedAt: "2026-09-26T09:00:00.000000Z" }
+                    recordedAt: "2026-09-26T09:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/IdempotencyConflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/documents/{documentId}/lineage:
+    get:
+      operationId: getDocumentLineage
+      tags: [documents]
+      summary: Every document in this one's chain, original first
+      description: "`OPERATOR`, `ANALYST` or `AUDITOR`. The original, and every void, credit note and rebill that followed it, in commit order (ZTAX-FIN-REQ-0007)."
+      parameters:
+        - $ref: "#/components/parameters/DocumentId"
+      responses:
+        "200":
+          description: The chain.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentLineage"
+              examples:
+                default:
+                  summary: An invoice and its void
+                  value:
+                    documents:
+                      - id: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        type: INVOICE
+                        rootId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        predecessors: []
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        issueDate: "2026-09-25"
+                        taxPoint: "2026-09-24T18:00:00.000000Z"
+                        currency: EUR
+                        decisionIds: [01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f]
+                        lines: []
+                        netTotal: "0.00"
+                        taxTotal: "0.00"
+                        grossTotal: "0.00"
+                        status: VOIDED
+                        history: [{ seq: 1, status: COMMITTED, recordedAt: "2026-09-25T09:00:00.000000Z" }]
+                        recordedAt: "2026-09-25T09:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
   /v1/subledger/balances:
     get:
       operationId: getSubledgerBalances
@@ -1101,6 +2306,990 @@ paths:
                       - { account: TAX_RECEIVABLE_CONTROL, currency: EUR, debits: "21.11", credits: "0" }
         "401": { $ref: "#/components/responses/Unauthenticated" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/subledger/periods/{period}:
+    get:
+      operationId: getSubledgerPeriod
+      tags: [subledger]
+      summary: A legal period's state, history and close manifest
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. A legal period is a month of the
+        tenant's default legal entity; one with no history is `OPEN`. A
+        hard-closed period carries its latest close manifest — the canonical
+        bytes and their digest — and `intact`: whether the journals and
+        control balances posted into it today are exactly the ones the
+        manifest sealed (ZTAX-FIN-REQ-0089).
+      parameters:
+        - $ref: "#/components/parameters/LegalPeriod"
+      responses:
+        "200":
+          description: The period.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubledgerPeriod"
+              examples:
+                default:
+                  summary: A hard-closed September
+                  value:
+                    period: "2026-09"
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    state: HARD_CLOSE
+                    history:
+                      - { seq: 1, state: HARD_CLOSE, reason: month end, recordedAt: "2026-10-02T09:00:00.000000Z", manifestDigest: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f" }
+                    manifest:
+                      digest: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                      body: "eyJhcnRpZmFjdCI6InRjc2wtY2xvc2UtbWFuaWZlc3QifQ=="
+                    intact: true
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/subledger/periods/{period}/transitions:
+    post:
+      operationId: transitionSubledgerPeriod
+      tags: [subledger]
+      summary: Close a period, open an amendment window, or seal it
+      description: |
+        `OPERATOR`. Moves the period (ZTAX-FIN-REQ-0088): `OPEN` ⇄
+        `SOFT_CLOSE` → `HARD_CLOSE` → `AMENDMENT_ACTIVE` → `HARD_CLOSE`, and
+        `HARD_CLOSE` → `SEALED`, which is final. A hard close seals the
+        period's journals, control balances, documents dated in it and open
+        exceptions in a new close manifest, naming the previous one
+        (ZTAX-FIN-REQ-0089, -0092, -0093).
+
+        After a hard close nothing posts into the period by the normal path:
+        a commit or a correction whose journal falls in it is refused with
+        `STATE_TRANSITION_INVALID`. Inside an `AMENDMENT_ACTIVE` window it
+        posts, marked as an amendment (ZTAX-FIN-REQ-0090). `SOFT_CLOSE` takes
+        adjustment and rounding journals only.
+
+        `REOPENED` is not a transition: it takes a reopen request and a
+        second person's approval.
+      parameters:
+        - $ref: "#/components/parameters/LegalPeriod"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PeriodTransitionRequest"
+            examples:
+              default:
+                summary: Close September
+                value:
+                  to: HARD_CLOSE
+                  reason: month end
+      responses:
+        "200":
+          description: The period after the move.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubledgerPeriod"
+              examples:
+                default:
+                  summary: Hard-closed
+                  value:
+                    period: "2026-09"
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    state: HARD_CLOSE
+                    history:
+                      - { seq: 1, state: HARD_CLOSE, reason: month end, recordedAt: "2026-10-02T09:00:00.000000Z", manifestDigest: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f" }
+                    manifest:
+                      digest: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                      body: "eyJhcnRpZmFjdCI6InRjc2wtY2xvc2UtbWFuaWZlc3QifQ=="
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/subledger/periods/{period}/reopen-requests:
+    post:
+      operationId: requestPeriodReopen
+      tags: [subledger]
+      summary: Ask to reopen a hard-closed period
+      description: |
+        `OPERATOR`. Records a request, with its reason, to reopen a
+        hard-closed period. Nothing moves until someone else approves it
+        (ZTAX-FIN-REQ-0091). A sealed period cannot be reopened.
+      parameters:
+        - $ref: "#/components/parameters/LegalPeriod"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReopenRequestBody"
+            examples:
+              default:
+                summary: A late supplier credit
+                value:
+                  reason: A supplier credit dated in September arrived after close.
+      responses:
+        "201":
+          description: The request, awaiting approval.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PeriodReopenRequest"
+              examples:
+                default:
+                  summary: Awaiting approval
+                  value:
+                    id: 01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    period: "2026-09"
+                    reason: A supplier credit dated in September arrived after close.
+                    requestedAt: "2026-10-05T10:00:00.000000Z"
+                    requestedBy: 01920a40-aaaa-7bbb-8ccc-000000000d01
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/subledger/periods/{period}/reopen-requests/{requestId}/approval:
+    post:
+      operationId: approvePeriodReopen
+      tags: [subledger]
+      summary: Approve someone else's request to reopen a period
+      description: |
+        `ADMIN`, and never the person who made the request
+        (ZTAX-FIN-REQ-0091). The period becomes `REOPENED`; every earlier
+        close manifest stays, and the next hard close writes a new one naming
+        the last. A request is approved once.
+      parameters:
+        - $ref: "#/components/parameters/LegalPeriod"
+        - $ref: "#/components/parameters/ReopenRequestId"
+      responses:
+        "200":
+          description: The reopened period.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubledgerPeriod"
+              examples:
+                default:
+                  summary: Reopened
+                  value:
+                    period: "2026-09"
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    state: REOPENED
+                    history:
+                      - { seq: 1, state: HARD_CLOSE, recordedAt: "2026-10-02T09:00:00.000000Z", manifestDigest: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f" }
+                      - { seq: 2, state: REOPENED, reason: A supplier credit dated in September arrived after close., recordedAt: "2026-10-05T11:00:00.000000Z", requestId: 01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/reconciliations:
+    post:
+      operationId: runReconciliation
+      tags: [reconciliation]
+      summary: Reconcile a legal period stage by stage
+      description: |
+        `OPERATOR`. Compares the period (ZTAX-FIN-001 §17–§20) and records
+        every item, matched or not, with its exact variance:
+
+        - **R1**, calculated to document: each current decision whose event
+          fell in the period, its decided tax against the tax every document
+          presents for it, voids and credits included. `MISSING` is a
+          decision no document presents.
+        - **R3**, decision to subledger: the decided tax against what the
+          decision's posting put on `TAX_COLLECTED_LIABILITY`, and each
+          completed refund against its `REFUND` journal.
+
+        R2, R4, R5 and R6 compare records this cell does not hold yet and are
+        listed in `unavailable` — never silently left out
+        (ZTAX-FIN-REQ-0077). `firstBreak` is R7: the first stage, in order,
+        with an exception, so a clean later stage cannot hide an earlier
+        break. No tolerance applies; none is configured and none is assumed
+        (ZTAX-FIN-REQ-0080).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReconciliationRequest"
+            examples:
+              default:
+                summary: September
+                value:
+                  period: "2026-09"
+      responses:
+        "201":
+          description: The run.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReconciliationRun"
+              examples:
+                default:
+                  summary: One decision never documented
+                  value:
+                    id: 01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    period: "2026-09"
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    ranAt: "2026-10-03T09:00:00.000000Z"
+                    firstBreak: R1_CALCULATED_TO_DOCUMENT
+                    unavailable: [R2_DOCUMENT_TO_COLLECTION, R4_SUBLEDGER_TO_RETURN, R5_RETURN_TO_REMITTANCE, R6_SUBLEDGER_TO_GL]
+                    items:
+                      - id: 01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                        stage: R1_CALCULATED_TO_DOCUMENT
+                        matchKey: "decision:01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f"
+                        expected: { amount: "21.11", currency: EUR }
+                        status: MISSING
+                        detail: expected and not observed
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/reconciliations/{runId}:
+    get:
+      operationId: getReconciliation
+      tags: [reconciliation]
+      summary: A reconciliation run, with its items and their resolutions
+      description: "`OPERATOR`, `ANALYST` or `AUDITOR`. A run is a record: a later run of the same period is a run of its own."
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+      responses:
+        "200":
+          description: The run.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReconciliationRun"
+              examples:
+                default:
+                  summary: A clean run
+                  value:
+                    id: 01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    period: "2026-09"
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    ranAt: "2026-10-03T09:00:00.000000Z"
+                    unavailable: [R2_DOCUMENT_TO_COLLECTION, R4_SUBLEDGER_TO_RETURN, R5_RETURN_TO_REMITTANCE, R6_SUBLEDGER_TO_GL]
+                    items: []
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/reconciliations/{runId}/items/{itemId}/resolution:
+    post:
+      operationId: resolveReconciliationItem
+      tags: [reconciliation]
+      summary: Resolve one exception, with its evidence
+      description: |
+        `OPERATOR`. Records who resolved the exception, why, how, its root
+        cause, and at least one piece of evidence (ZTAX-FIN-REQ-0084). An
+        item is resolved once; a matched item is not an exception and is
+        refused with `409 STATE_TRANSITION_INVALID`.
+      parameters:
+        - $ref: "#/components/parameters/RunId"
+        - $ref: "#/components/parameters/ItemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolutionRequest"
+            examples:
+              default:
+                summary: Billed in the next run
+                value:
+                  reason: Billed in the October invoice run.
+                  action: WAIT
+                  rootCause: TIMING
+                  evidence: ["bss:invoice-run-2026-10-01"]
+      responses:
+        "200":
+          description: The resolved item.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReconciliationItem"
+              examples:
+                default:
+                  summary: Resolved
+                  value:
+                    id: 01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                    stage: R1_CALCULATED_TO_DOCUMENT
+                    matchKey: "decision:01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f"
+                    expected: { amount: "21.11", currency: EUR }
+                    status: RESOLVED
+                    resolution:
+                      actor: HUMAN
+                      resolver: 01920a40-aaaa-7bbb-8ccc-000000000d01
+                      reason: Billed in the October invoice run.
+                      action: WAIT
+                      rootCause: TIMING
+                      evidence: ["bss:invoice-run-2026-10-01"]
+                      resolvedAt: "2026-10-03T10:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/retention/policies:
+    get:
+      operationId: listRetentionPolicies
+      tags: [retention]
+      summary: Every version of every retention policy
+      description: |
+        `ADMIN` or `AUDITOR`. A policy keeps one class of record of one
+        country's legal entities for a number of years from a trigger, on a
+        cited authority. Every version is listed, oldest first per policy: a
+        verdict names the version it used, so it can be reproduced
+        (ZTAX-EVID-REQ-0052, -0126).
+      responses:
+        "200":
+          description: The policies.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetentionPolicyList"
+              examples:
+                default:
+                  summary: One policy, one version
+                  value:
+                    policies:
+                      - { id: de-decisions, version: 1, recordClass: DECISION, country: DE, years: 10, trigger: EVENT_YEAR_END, effectiveFrom: "2020-01-01T00:00:00.000000Z", citation: "AO §147(3)", recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: recordRetentionPolicy
+      tags: [retention]
+      summary: Record the next version of a retention policy
+      description: |
+        `ADMIN`, signed in as themselves. Recording a policy under an id that
+        exists makes its next version; nothing is overwritten
+        (ZTAX-EVID-REQ-0052). There is no default period: a record no policy
+        governs is kept and reported `NO_POLICY` (ZTAX-EVID-REQ-0022,
+        ZTAX-PRIV-REQ-0052). The act is written to the administrative audit
+        trail.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RetentionPolicyRequest"
+            examples:
+              default:
+                summary: Ten years from the end of the year
+                value:
+                  id: de-decisions
+                  recordClass: DECISION
+                  country: DE
+                  years: 10
+                  trigger: EVENT_YEAR_END
+                  effectiveFrom: "2020-01-01T00:00:00.000000Z"
+                  citation: "AO §147(3)"
+      responses:
+        "201":
+          description: The version recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetentionPolicy"
+              examples:
+                default:
+                  summary: Version 1
+                  value: { id: de-decisions, version: 1, recordClass: DECISION, country: DE, years: 10, trigger: EVENT_YEAR_END, effectiveFrom: "2020-01-01T00:00:00.000000Z", citation: "AO §147(3)", recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/legal-holds:
+    get:
+      operationId: listLegalHolds
+      tags: [retention]
+      summary: The tenant's legal holds
+      description: |
+        `ADMIN` or `AUDITOR`, newest first, each with its full history. The
+        search is recorded in the administrative audit trail as privileged
+        evidence access (ZTAX-EVID-REQ-0115). A hold names what is kept; it
+        returns no evidence and opens nothing to anyone
+        (ZTAX-EVID-REQ-0024).
+      responses:
+        "200":
+          description: The holds.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalHoldList"
+              examples:
+                default:
+                  summary: One active hold
+                  value:
+                    holds:
+                      - id: 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        matter: "Claim 2026/114"
+                        status: ACTIVE
+                        scope: { businessKeys: ["INV-0001/1"] }
+                        history:
+                          - { seq: 1, kind: PLACED, scope: { businessKeys: ["INV-0001/1"] }, reason: litigation notice received, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: placeLegalHold
+      tags: [retention]
+      summary: Place a legal hold
+      description: |
+        `ADMIN`, signed in as themselves. A hold serves a named claim,
+        investigation or regulator request (ZTAX-LEG-REQ-0091) and blocks
+        disposition of what it scopes, past any retention period
+        (ZTAX-EVID-REQ-0023, ZTAX-PRIV-REQ-0050). The scope is specific —
+        named decisions or business keys, or a bounded window of event times
+        of at most ten years, optionally narrowed to one legal entity — never
+        a tenant at large, so a hold is never a reason to keep unrelated
+        personal data (ZTAX-PRIV-REQ-0051).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LegalHoldRequest"
+            examples:
+              default:
+                summary: Hold one invoice line
+                value:
+                  matter: "Claim 2026/114"
+                  reason: litigation notice received
+                  scope: { businessKeys: ["INV-0001/1"] }
+      responses:
+        "201":
+          description: The hold.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalHold"
+              examples:
+                default:
+                  summary: Placed
+                  value:
+                    id: 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    matter: "Claim 2026/114"
+                    status: ACTIVE
+                    scope: { businessKeys: ["INV-0001/1"] }
+                    history:
+                      - { seq: 1, kind: PLACED, scope: { businessKeys: ["INV-0001/1"] }, reason: litigation notice received, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/legal-holds/{holdId}:
+    get:
+      operationId: getLegalHold
+      tags: [retention]
+      summary: One legal hold and its history
+      description: |
+        `ADMIN` or `AUDITOR`. The read is recorded in the administrative audit
+        trail as privileged evidence access (ZTAX-EVID-REQ-0115).
+      parameters:
+        - $ref: "#/components/parameters/LegalHoldId"
+      responses:
+        "200":
+          description: The hold.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalHold"
+              examples:
+                default:
+                  summary: Released
+                  value:
+                    id: 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    matter: "Claim 2026/114"
+                    status: RELEASED
+                    scope: { businessKeys: ["INV-0001/1"] }
+                    history:
+                      - { seq: 1, kind: PLACED, scope: { businessKeys: ["INV-0001/1"] }, reason: litigation notice received, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                      - { seq: 2, kind: RELEASED, scope: { businessKeys: ["INV-0001/1"] }, reason: claim settled, recordedAt: "2027-03-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/legal-holds/{holdId}/scope:
+    post:
+      operationId: changeLegalHoldScope
+      tags: [retention]
+      summary: Change an active hold's scope
+      description: |
+        `ADMIN`, signed in as themselves. The new scope replaces the old as a
+        new entry in the hold's history, with who and why; the old scope
+        stays readable there (ZTAX-EVID-REQ-0053). A released hold is not
+        changed: a matter that revives places a new hold.
+      parameters:
+        - $ref: "#/components/parameters/LegalHoldId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LegalHoldScopeRequest"
+            examples:
+              default:
+                summary: Widen to a second line
+                value:
+                  reason: second invoice named in the claim
+                  scope: { businessKeys: ["INV-0001/1", "INV-0002/1"] }
+      responses:
+        "200":
+          description: The hold after the change.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalHold"
+              examples:
+                default:
+                  summary: Widened
+                  value:
+                    id: 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    matter: "Claim 2026/114"
+                    status: ACTIVE
+                    scope: { businessKeys: ["INV-0001/1", "INV-0002/1"] }
+                    history:
+                      - { seq: 1, kind: PLACED, scope: { businessKeys: ["INV-0001/1"] }, reason: litigation notice received, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                      - { seq: 2, kind: SCOPE_CHANGED, scope: { businessKeys: ["INV-0001/1", "INV-0002/1"] }, reason: second invoice named in the claim, recordedAt: "2026-10-05T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/legal-holds/{holdId}/release:
+    post:
+      operationId: releaseLegalHold
+      tags: [retention]
+      summary: Release a legal hold
+      description: |
+        `ADMIN`, signed in as themselves. Final. What the hold kept is decided
+        by its retention policy again from the next verdict on
+        (ZTAX-EVID-REQ-0054) — and is kept still if another active hold
+        scopes it.
+      parameters:
+        - $ref: "#/components/parameters/LegalHoldId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LegalHoldReleaseRequest"
+            examples:
+              default:
+                summary: Settled
+                value:
+                  reason: claim settled
+      responses:
+        "200":
+          description: The released hold.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalHold"
+              examples:
+                default:
+                  summary: Released
+                  value:
+                    id: 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    matter: "Claim 2026/114"
+                    status: RELEASED
+                    scope: { businessKeys: ["INV-0001/1"] }
+                    history:
+                      - { seq: 1, kind: PLACED, scope: { businessKeys: ["INV-0001/1"] }, reason: litigation notice received, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                      - { seq: 2, kind: RELEASED, scope: { businessKeys: ["INV-0001/1"] }, reason: claim settled, recordedAt: "2027-03-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/decisions/{decisionId}/retention:
+    get:
+      operationId: getDecisionRetention
+      tags: [retention]
+      summary: Whether a decision's evidence may be disposed of now
+      description: |
+        `ADMIN` or `AUDITOR`. The verdict a disposition job passes immediately
+        before it acts, taken under the hold lock so a hold being placed is
+        seen (ZTAX-EVID-REQ-0026): `RETAIN` inside the period, `ELIGIBLE` past
+        it, `HELD` under an active hold whatever the period says. `NO_POLICY`
+        and `CONFLICTED` — no policy governs the record, or several disagree —
+        keep it and are for a person to resolve, never a guess
+        (ZTAX-EVID-REQ-0092). The policy version used is named
+        (ZTAX-EVID-REQ-0126). Nothing about the decision is changed by
+        asking (ZTAX-EVID-REQ-0105).
+      parameters:
+        - $ref: "#/components/parameters/DecisionId"
+      responses:
+        "200":
+          description: The verdict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetentionVerdict"
+              examples:
+                default:
+                  summary: Held past its period
+                  value:
+                    decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    recordClass: DECISION
+                    country: DE
+                    outcome: HELD
+                    policy: { id: de-decisions, version: 1 }
+                    retainUntil: "2037-01-01T00:00:00.000000Z"
+                    holds: [01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f]
+                    evaluatedAt: "2040-01-01T00:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/legal/matrix:
+    get:
+      operationId: getLegalMatrix
+      tags: [legal]
+      summary: The LegalAuthorization matrix this cell resolves against
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. For each country,
+        authority and service state (`INFORM`, `COMPUTE`, `PREPARE`, `FILE`,
+        `REPRESENT`, `ADVISE`), whether ZoikoTax may act directly, only with
+        the customer's authorization, only through a qualified person or a
+        partner, not at all, or whether counsel has yet to say
+        (ZTAX-LEG-001 §3–§4). It is legal content: every rule is versioned,
+        effective-dated and cites the counsel memo or authority source it
+        rests on (ZTAX-LEG-REQ-0009, -0102), and the digest names the edition
+        a check used. A cell with no matrix returns an empty one and blocks
+        every legally sensitive action. A content pack being in production
+        for `COMPUTE` implies nothing here (ZTAX-LEG-REQ-0057).
+      responses:
+        "200":
+          description: The matrix.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LegalMatrix"
+              examples:
+                default:
+                  summary: One rule
+                  value:
+                    version: dev-2026.10-1
+                    draft: true
+                    digest: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                    rules:
+                      - { id: DE-ELSTER-FILE, version: 1, country: DE, authority: DE-ELSTER, service: FILE, status: DIRECT_WITH_AUTH, provider: Zoiko development entity, authorizationType: FILING_MANDATE, requiresPeriods: true, requiresMatters: false, credential: ELSTER organisation certificate, funds: NO_CUSTODY, opinionRef: LDR-DEV-0001, effectiveFrom: "2026-01-01T00:00:00.000000Z" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+
+  /v1/legal/authorizations:
+    get:
+      operationId: listAuthorizations
+      tags: [legal]
+      summary: The customer's authorizations
+      description: |
+        `ADMIN`, `OPERATOR` or `AUDITOR`, newest first, each with its history
+        and whether it is in force now.
+      responses:
+        "200":
+          description: The authorizations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthorizationList"
+              examples:
+                default:
+                  summary: One filing mandate
+                  value:
+                    authorizations:
+                      - id: 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        country: DE
+                        authority: DE-ELSTER
+                        type: FILING_MANDATE
+                        permissions: [PREPARE, SUBMIT]
+                        matters: []
+                        periodFrom: "2026-01"
+                        periodTo: "2026-12"
+                        effectiveFrom: "2026-01-01T00:00:00.000000Z"
+                        expiresAt: "2027-06-30T00:00:00.000000Z"
+                        evidence: ["doc:mandate-2026.pdf"]
+                        credentialRef: vault://tax/de/elster/cert
+                        status: ACTIVE
+                        inForce: true
+                        recordedAt: "2026-10-01T09:00:00.000000Z"
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                        history:
+                          - { seq: 1, kind: GRANTED, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: grantAuthorization
+      tags: [legal]
+      summary: Record a customer authorization
+      description: |
+        `ADMIN`, signed in as themselves — never system work or a model
+        (ZTAX-LEG-REQ-0044). A customer's grant to one authority: a power of
+        attorney, a filing mandate, a portal delegation, an information
+        authorization — which is not representation (ZTAX-LEG-REQ-0013). It
+        names the legal entity granting it (the tenant's default when
+        omitted), the permissions, matters and periods it covers, when it
+        takes effect and lapses, and the evidence of the grant
+        (ZTAX-LEG-REQ-0014). An authority credential is a vault reference
+        (`vault://`, `awssm://`, `gcpsm://`, `azkv://`) and never the
+        credential (ZTAX-LEG-REQ-0017, -0018). Naming `supersedes` closes that
+        grant in the same act (ZTAX-LEG-REQ-0015).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthorizationRequest"
+            examples:
+              default:
+                summary: A filing mandate for 2026
+                value:
+                  country: DE
+                  authority: DE-ELSTER
+                  type: FILING_MANDATE
+                  permissions: [PREPARE, SUBMIT]
+                  periodFrom: "2026-01"
+                  periodTo: "2026-12"
+                  effectiveFrom: "2026-01-01T00:00:00.000000Z"
+                  expiresAt: "2027-06-30T00:00:00.000000Z"
+                  evidence: ["doc:mandate-2026.pdf"]
+                  credentialRef: vault://tax/de/elster/cert
+      responses:
+        "201":
+          description: The authorization.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerAuthorization"
+              examples:
+                default:
+                  summary: Granted
+                  value:
+                    id: 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: DE
+                    authority: DE-ELSTER
+                    type: FILING_MANDATE
+                    permissions: [PREPARE, SUBMIT]
+                    matters: []
+                    periodFrom: "2026-01"
+                    periodTo: "2026-12"
+                    effectiveFrom: "2026-01-01T00:00:00.000000Z"
+                    expiresAt: "2027-06-30T00:00:00.000000Z"
+                    evidence: ["doc:mandate-2026.pdf"]
+                    credentialRef: vault://tax/de/elster/cert
+                    status: ACTIVE
+                    inForce: true
+                    recordedAt: "2026-10-01T09:00:00.000000Z"
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - { seq: 1, kind: GRANTED, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/legal/authorizations/{authorizationId}:
+    get:
+      operationId: getAuthorization
+      tags: [legal]
+      summary: One customer authorization and its history
+      description: "`ADMIN`, `OPERATOR` or `AUDITOR`."
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationId"
+      responses:
+        "200":
+          description: The authorization.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerAuthorization"
+              examples:
+                default:
+                  summary: Revoked
+                  value:
+                    id: 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: DE
+                    authority: DE-ELSTER
+                    type: FILING_MANDATE
+                    permissions: [PREPARE, SUBMIT]
+                    matters: []
+                    periodFrom: "2026-01"
+                    periodTo: "2026-12"
+                    effectiveFrom: "2026-01-01T00:00:00.000000Z"
+                    evidence: ["doc:mandate-2026.pdf"]
+                    status: REVOKED
+                    inForce: false
+                    recordedAt: "2026-10-01T09:00:00.000000Z"
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - { seq: 1, kind: GRANTED, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                      - { seq: 2, kind: REVOKED, reason: mandate withdrawn, recordedAt: "2026-10-05T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/legal/authorizations/{authorizationId}/revocation:
+    post:
+      operationId: revokeAuthorization
+      tags: [legal]
+      summary: Revoke a customer authorization
+      description: |
+        `ADMIN`, signed in as themselves. Final, and immediate: every action
+        that depended on the grant is blocked from the moment the revocation
+        commits (ZTAX-LEG-REQ-0016). The grant and its history stay
+        (ZTAX-LEG-REQ-0015).
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RevocationRequest"
+            examples:
+              default:
+                summary: Withdrawn
+                value:
+                  reason: mandate withdrawn
+      responses:
+        "200":
+          description: The revoked authorization.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerAuthorization"
+              examples:
+                default:
+                  summary: Revoked
+                  value:
+                    id: 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: DE
+                    authority: DE-ELSTER
+                    type: FILING_MANDATE
+                    permissions: [PREPARE, SUBMIT]
+                    matters: []
+                    effectiveFrom: "2026-01-01T00:00:00.000000Z"
+                    evidence: ["doc:mandate-2026.pdf"]
+                    status: REVOKED
+                    inForce: false
+                    recordedAt: "2026-10-01T09:00:00.000000Z"
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - { seq: 1, kind: GRANTED, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                      - { seq: 2, kind: REVOKED, reason: mandate withdrawn, recordedAt: "2026-10-05T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/legal/authorization-checks:
+    post:
+      operationId: checkAuthorization
+      tags: [legal]
+      summary: Resolve whether an action may execute now
+      description: |
+        `ADMIN`, `OPERATOR` or `ANALYST`. The gate every legally sensitive
+        action passes before it executes (ZTAX-LEG-REQ-0001), asked directly.
+        It fails closed: no rule, rules that disagree, `COUNSEL_PENDING`,
+        `PROHIBITED`, `SUSPENDED`, a partner's or the customer's action, a
+        qualified person's — each blocks (ZTAX-LEG-REQ-0007, -0008). Under
+        `DIRECT_WITH_AUTH` it needs an authorization in force, of the type
+        the rule names, granting what the service needs — `SUBMIT` to file,
+        `REPRESENT` to represent, which a filing mandate does not grant
+        (ZTAX-LEG-REQ-0062) — reaching the action's period and matter
+        (ZTAX-LEG-REQ-0101), bound to a credential where the authority needs
+        one. A block names its reason. Nothing is recorded by asking.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthorizationCheckRequest"
+            examples:
+              default:
+                summary: File September's return
+                value:
+                  country: DE
+                  authority: DE-ELSTER
+                  service: FILE
+                  period: "2026-09"
+      responses:
+        "200":
+          description: The resolution, allowed or not.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthorizationCheck"
+              examples:
+                default:
+                  summary: Allowed under a mandate
+                  value:
+                    allowed: true
+                    status: DIRECT_WITH_AUTH
+                    rule: { id: DE-ELSTER-FILE, version: 1 }
+                    authorizationId: 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    matrixVersion: dev-2026.10-1
+                    matrixDigest: "zt1:4f2a8c1e0b9d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f"
+                    checkedAt: "2026-10-08T12:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
         "500": { $ref: "#/components/responses/Internal" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
@@ -1404,6 +3593,22 @@ components:
       schema: { $ref: "#/components/schemas/DecisionId" }
       example: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
 
+    LegalHoldId:
+      name: holdId
+      in: path
+      required: true
+      description: The legal hold identifier.
+      schema: { $ref: "#/components/schemas/LegalHoldId" }
+      example: 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    AuthorizationId:
+      name: authorizationId
+      in: path
+      required: true
+      description: The customer authorization identifier.
+      schema: { $ref: "#/components/schemas/AuthorizationId" }
+      example: 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
     ObligationId:
       name: obligationId
       in: path
@@ -1411,6 +3616,86 @@ components:
       description: The obligation row identifier.
       schema: { $ref: "#/components/schemas/ObligationId" }
       example: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+
+    RefundId:
+      name: refundId
+      in: path
+      required: true
+      description: The refund identifier.
+      schema: { $ref: "#/components/schemas/RefundId" }
+      example: 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+
+    WebhookId:
+      name: webhookId
+      in: path
+      required: true
+      description: The webhook subscription.
+      schema: { $ref: "#/components/schemas/WebhookId" }
+      example: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    DeliveryId:
+      name: deliveryId
+      in: path
+      required: true
+      description: The delivery.
+      schema: { $ref: "#/components/schemas/DeliveryId" }
+      example: 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      description: The job.
+      schema: { $ref: "#/components/schemas/JobId" }
+      example: 01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    SealId:
+      name: sealId
+      in: path
+      required: true
+      description: The seal.
+      schema: { $ref: "#/components/schemas/SealId" }
+      example: 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      description: The fiscal document.
+      schema: { $ref: "#/components/schemas/DocumentId" }
+      example: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    LegalPeriod:
+      name: period
+      in: path
+      required: true
+      description: The legal period, a month.
+      schema: { $ref: "#/components/schemas/LegalPeriod" }
+      example: "2026-09"
+
+    ReopenRequestId:
+      name: requestId
+      in: path
+      required: true
+      description: The reopen request.
+      schema: { $ref: "#/components/schemas/ReopenRequestId" }
+      example: 01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    RunId:
+      name: runId
+      in: path
+      required: true
+      description: The reconciliation run.
+      schema: { $ref: "#/components/schemas/RunId" }
+      example: 01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    ItemId:
+      name: itemId
+      in: path
+      required: true
+      description: The run item.
+      schema: { $ref: "#/components/schemas/ItemId" }
+      example: 01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f
 
     Limit:
       name: limit
@@ -1935,7 +4220,7 @@ components:
       type: object
       title: Capabilities
       additionalProperties: false
-      required: [cell, region, environment, trains, canonProfile, authoritative, reasonCodes]
+      required: [cell, region, environment, trains, canonProfile, authoritative, reasonCodes, eventTypes]
       properties:
         cell:
           x-ztax-privacy: { class: P0 }
@@ -1974,6 +4259,10 @@ components:
           type: array
           description: Every reason code this deployment can emit.
           items: { $ref: "#/components/schemas/ReasonCode" }
+        eventTypes:
+          type: array
+          description: Every event type this deployment emits, and so the types a webhook may subscribe to.
+          items: { $ref: "#/components/schemas/EventType" }
         content:
           $ref: "#/components/schemas/ContentCapability"
 
@@ -2716,6 +5005,1076 @@ components:
           enum: [false]
         provenance: { $ref: "#/components/schemas/AiProvenance" }
 
+    RefundId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: RefundId
+      description: A refund identifier. A UUIDv7 in lowercase canonical form (ADR-0012 §2.1).
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+
+    RefundStatus:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: RefundStatus
+      description: |
+        A refund's own lifecycle (ZTAX-FIN-REQ-0059), separate from any credit.
+        `UNCERTAIN` means the provider's answer did not say whether the money
+        moved; it is neither paid nor failed.
+      enum: [REQUESTED, PENDING, COMPLETED, FAILED, UNCERTAIN]
+      example: PENDING
+
+    RefundOutcome:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: RefundOutcome
+      description: What the payment provider reported.
+      enum: [ACCEPTED, SUCCEEDED, DECLINED, TIMED_OUT, UNKNOWN]
+      example: SUCCEEDED
+
+    PaymentReference:
+      x-ztax-privacy: { class: P5, purposes: [PURP-RECON, PURP-EVID], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE, evidencePolicy: RAW_REQUIRED }
+      type: string
+      title: PaymentReference
+      description: A payment provider's reference. It can identify a payer's transaction, so logs carry it redacted.
+      minLength: 1
+      maxLength: 255
+      example: "psp:ch_3Nf0a1"
+
+    RefundRequest:
+      type: object
+      title: RefundRequest
+      additionalProperties: false
+      required: [decisionId, amount, paymentReference]
+      properties:
+        decisionId: { $ref: "#/components/schemas/DecisionId" }
+        amount: { $ref: "#/components/schemas/MoneyValue" }
+        paymentReference: { $ref: "#/components/schemas/PaymentReference" }
+        reason:
+          x-ztax-privacy: { class: P2, purposes: [PURP-RECON, PURP-EVID], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE }
+          type: string
+          maxLength: 1000
+          description: Why the refund is made. Free text; it may name the customer.
+
+    RefundEvent:
+      type: object
+      title: RefundEvent
+      description: One entry in a refund's history. The first is the request; each later one is a provider report that moved it.
+      additionalProperties: false
+      required: [seq, status, recordedAt]
+      properties:
+        seq:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        status: { $ref: "#/components/schemas/RefundStatus" }
+        outcome: { $ref: "#/components/schemas/RefundOutcome" }
+        externalReference: { $ref: "#/components/schemas/PaymentReference" }
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+          description: The user who recorded the event. Absent for system work.
+
+    Refund:
+      type: object
+      title: Refund
+      description: |
+        A refund of tax a committed decision charged. `status` is the latest
+        event's; `history` is every event, oldest first.
+      additionalProperties: false
+      required: [id, decisionId, legalEntityId, amount, paymentReference, status, requestedAt, history]
+      properties:
+        id: { $ref: "#/components/schemas/RefundId" }
+        decisionId: { $ref: "#/components/schemas/DecisionId" }
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        amount: { $ref: "#/components/schemas/MoneyValue" }
+        paymentReference: { $ref: "#/components/schemas/PaymentReference" }
+        reason:
+          x-ztax-privacy: { class: P2, purposes: [PURP-RECON, PURP-EVID], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE }
+          type: string
+        status: { $ref: "#/components/schemas/RefundStatus" }
+        requestedAt: { $ref: "#/components/schemas/Timestamp" }
+        requestedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+          description: The user who requested the refund. Absent for system work.
+        history:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/RefundEvent" }
+
+    RefundReportRequest:
+      type: object
+      title: RefundReportRequest
+      additionalProperties: false
+      required: [outcome]
+      properties:
+        outcome: { $ref: "#/components/schemas/RefundOutcome" }
+        externalReference: { $ref: "#/components/schemas/PaymentReference" }
+
+    WebhookId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: WebhookId
+      description: A webhook subscription. A UUIDv7 in lowercase canonical form.
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    DeliveryId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: DeliveryId
+      description: One delivery of one event to one webhook.
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+
+    EventType:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: EventType
+      description: An event type this cell emits, as the AsyncAPI contract names it.
+      enum:
+        - com.zoikotax.decision.committed
+        - com.zoikotax.decision.corrected
+        - com.zoikotax.obligation.status-changed
+        - com.zoikotax.accumulator.threshold-crossed
+        - com.zoikotax.refund.requested
+        - com.zoikotax.refund.status-changed
+        - com.zoikotax.document.committed
+      example: com.zoikotax.decision.committed
+
+    WebhookStatus:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: WebhookStatus
+      enum: [ACTIVE, PAUSED, DISABLED]
+      example: ACTIVE
+
+    DeliveryStatus:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: DeliveryStatus
+      description: "`PENDING` awaits its next attempt; `DEAD` is the dead-letter state, kept and replayable."
+      enum: [PENDING, DELIVERED, DEAD]
+      example: DEAD
+
+    WebhookUrl:
+      x-ztax-privacy: { class: P2, purposes: [PURP-SVCOPS, PURP-SEC], retention: RET-OPERATIONAL, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: WebhookUrl
+      description: An HTTPS endpoint at a public address, with no credentials in it.
+      format: uri
+      minLength: 8
+      maxLength: 2048
+      example: "https://hooks.example.com/ztax"
+
+    WebhookCreateRequest:
+      type: object
+      title: WebhookCreateRequest
+      additionalProperties: false
+      required: [url, eventTypes]
+      properties:
+        url: { $ref: "#/components/schemas/WebhookUrl" }
+        eventTypes:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/EventType" }
+        description:
+          x-ztax-privacy: { class: P2, purposes: [PURP-SVCOPS], retention: RET-OPERATIONAL, redaction: REDACT, aiAllowed: NONE }
+          type: string
+          maxLength: 500
+
+    Webhook:
+      type: object
+      title: Webhook
+      additionalProperties: false
+      required: [id, url, eventTypes, status, createdAt, statusChangedAt]
+      properties:
+        id: { $ref: "#/components/schemas/WebhookId" }
+        url: { $ref: "#/components/schemas/WebhookUrl" }
+        eventTypes:
+          type: array
+          items: { $ref: "#/components/schemas/EventType" }
+        description:
+          x-ztax-privacy: { class: P2, purposes: [PURP-SVCOPS], retention: RET-OPERATIONAL, redaction: REDACT, aiAllowed: NONE }
+          type: string
+        status: { $ref: "#/components/schemas/WebhookStatus" }
+        createdAt: { $ref: "#/components/schemas/Timestamp" }
+        statusChangedAt: { $ref: "#/components/schemas/Timestamp" }
+
+    WebhookList:
+      type: object
+      title: WebhookList
+      additionalProperties: false
+      required: [webhooks]
+      properties:
+        webhooks:
+          type: array
+          items: { $ref: "#/components/schemas/Webhook" }
+
+    WebhookSecret:
+      type: object
+      title: WebhookSecret
+      description: A signing secret, in the form Standard Webhooks libraries take. Returned once, by the response that issued it.
+      additionalProperties: false
+      required: [version, secret]
+      properties:
+        version:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        secret:
+          x-ztax-privacy: { class: P7, purposes: [PURP-SEC], retention: RET-OPERATIONAL, redaction: NO_LOG, aiAllowed: NONE }
+          type: string
+          pattern: "^whsec_[A-Za-z0-9+/]{43}=$"
+
+    WebhookCreated:
+      type: object
+      title: WebhookCreated
+      additionalProperties: false
+      required: [webhook, secret]
+      properties:
+        webhook: { $ref: "#/components/schemas/Webhook" }
+        secret: { $ref: "#/components/schemas/WebhookSecret" }
+
+    WebhookStatusRequest:
+      type: object
+      title: WebhookStatusRequest
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/WebhookStatus" }
+
+    WebhookSecretRotation:
+      type: object
+      title: WebhookSecretRotation
+      additionalProperties: false
+      required: [secret, previousRetiresAt]
+      properties:
+        secret: { $ref: "#/components/schemas/WebhookSecret" }
+        previousRetiresAt: { $ref: "#/components/schemas/Timestamp" }
+
+    WebhookDelivery:
+      type: object
+      title: WebhookDelivery
+      additionalProperties: false
+      required: [id, webhookId, eventId, eventType, status, attempts, createdAt]
+      properties:
+        id: { $ref: "#/components/schemas/DeliveryId" }
+        webhookId: { $ref: "#/components/schemas/WebhookId" }
+        eventId:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          format: uuid
+          description: The CloudEvents id, sent as `webhook-id`. The receiver's deduplication key.
+        eventType: { $ref: "#/components/schemas/EventType" }
+        status: { $ref: "#/components/schemas/DeliveryStatus" }
+        attempts:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        nextAttemptAt: { $ref: "#/components/schemas/Timestamp" }
+        createdAt: { $ref: "#/components/schemas/Timestamp" }
+        deliveredAt: { $ref: "#/components/schemas/Timestamp" }
+        replayOf: { $ref: "#/components/schemas/DeliveryId" }
+
+    WebhookDeliveryList:
+      type: object
+      title: WebhookDeliveryList
+      additionalProperties: false
+      required: [deliveries]
+      properties:
+        deliveries:
+          type: array
+          items: { $ref: "#/components/schemas/WebhookDelivery" }
+
+    WebhookAttempt:
+      type: object
+      title: WebhookAttempt
+      additionalProperties: false
+      required: [attempt, startedAt, durationMs]
+      properties:
+        attempt:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        startedAt: { $ref: "#/components/schemas/Timestamp" }
+        durationMs:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        statusCode:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          description: The receiver's HTTP status. Absent when no response arrived.
+        error:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The transport's error, when no 2xx arrived. Never the receiver's response body.
+
+    WebhookDeliveryDetail:
+      type: object
+      title: WebhookDeliveryDetail
+      additionalProperties: false
+      required: [delivery, attempts]
+      properties:
+        delivery: { $ref: "#/components/schemas/WebhookDelivery" }
+        attempts:
+          type: array
+          items: { $ref: "#/components/schemas/WebhookAttempt" }
+
+    JobId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: JobId
+      description: An asynchronous job. A UUIDv7 in lowercase canonical form.
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    BatchRequest:
+      type: object
+      title: BatchRequest
+      additionalProperties: false
+      required: [operation, items]
+      properties:
+        operation:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [COMMIT]
+          description: What each item does. `COMMIT` commits it, or corrects with it when it names `supersedes`.
+        items:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items: { $ref: "#/components/schemas/CommitRequest" }
+
+    JobItem:
+      type: object
+      title: JobItem
+      additionalProperties: false
+      required: [index, businessKey, status]
+      properties:
+        index:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        businessKey: { $ref: "#/components/schemas/BusinessKey" }
+        status:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [PENDING, SUCCEEDED, FAILED]
+        decisionId: { $ref: "#/components/schemas/DecisionId" }
+        reasonCode: { $ref: "#/components/schemas/ReasonCode" }
+
+    Job:
+      type: object
+      title: Job
+      additionalProperties: false
+      required: [id, operation, status, itemCount, succeeded, failed, pending, requestedAt, items]
+      properties:
+        id: { $ref: "#/components/schemas/JobId" }
+        operation:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [COMMIT]
+        status:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [QUEUED, RUNNING, COMPLETED]
+        itemCount:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+        succeeded:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+        failed:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+        pending:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+        requestedAt: { $ref: "#/components/schemas/Timestamp" }
+        startedAt: { $ref: "#/components/schemas/Timestamp" }
+        finishedAt: { $ref: "#/components/schemas/Timestamp" }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/JobItem" }
+
+    SealId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SealId
+      description: A period seal. A UUIDv7 in lowercase canonical form.
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    SealRequest:
+      type: object
+      title: SealRequest
+      additionalProperties: false
+      required: [periodStart, periodEnd]
+      properties:
+        periodStart: { $ref: "#/components/schemas/Timestamp" }
+        periodEnd: { $ref: "#/components/schemas/Timestamp" }
+
+    Seal:
+      type: object
+      title: Seal
+      description: A signed statement that the decisions recorded in `[periodStart, periodEnd)` were exactly these.
+      additionalProperties: false
+      required: [id, periodStart, periodEnd, leafCount, merkleRoot, keyId, cell, sealedAt]
+      properties:
+        id: { $ref: "#/components/schemas/SealId" }
+        periodStart: { $ref: "#/components/schemas/Timestamp" }
+        periodEnd: { $ref: "#/components/schemas/Timestamp" }
+        leafCount:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        merkleRoot: { $ref: "#/components/schemas/Digest" }
+        keyId:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        cell:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        sealedAt: { $ref: "#/components/schemas/Timestamp" }
+
+    SealList:
+      type: object
+      title: SealList
+      additionalProperties: false
+      required: [seals]
+      properties:
+        seals:
+          type: array
+          items: { $ref: "#/components/schemas/Seal" }
+
+    SealSignature:
+      type: object
+      title: SealSignature
+      additionalProperties: false
+      required: [keyId, algorithm, value]
+      properties:
+        keyId:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        algorithm:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [ECDSA_P384_SHA384]
+        value:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          format: byte
+          description: The DER signature, base64.
+
+    SealDocument:
+      type: object
+      title: SealDocument
+      additionalProperties: false
+      required: [seal, signedPayload, signature]
+      properties:
+        seal: { $ref: "#/components/schemas/Seal" }
+        signedPayload:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          format: byte
+          description: The canonical payload exactly as signed, base64. It names the tenant, cell, period, leaf count, leaf order and root.
+        signature: { $ref: "#/components/schemas/SealSignature" }
+
+    SealVerification:
+      type: object
+      title: SealVerification
+      additionalProperties: false
+      required: [sealId, verdict, keyId, leafCount, signedRoot]
+      properties:
+        sealId: { $ref: "#/components/schemas/SealId" }
+        verdict:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [VALID, SIGNATURE_INVALID, RECORD_MISMATCH, ROOT_MISMATCH, EVIDENCE_MISSING]
+        keyId:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        leafCount:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+        signedRoot: { $ref: "#/components/schemas/Digest" }
+        recomputedRoot: { $ref: "#/components/schemas/Digest" }
+        detail:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: What failed, for the operator. Absent when VALID.
+
+    SealLeaf:
+      type: object
+      title: SealLeaf
+      description: One decision's leaf. Its digest is the canonical (canon/v1) digest of exactly these three members.
+      additionalProperties: false
+      required: [decisionId, recordedAt, resultDigest]
+      properties:
+        decisionId: { $ref: "#/components/schemas/DecisionId" }
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        resultDigest: { $ref: "#/components/schemas/Digest" }
+
+    InclusionProof:
+      type: object
+      title: InclusionProof
+      additionalProperties: false
+      required: [sealId, merkleRoot, leafCount, leafIndex, leaf, leafDigest, auditPath]
+      properties:
+        sealId: { $ref: "#/components/schemas/SealId" }
+        merkleRoot: { $ref: "#/components/schemas/Digest" }
+        leafCount:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+        leafIndex:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        leaf: { $ref: "#/components/schemas/SealLeaf" }
+        leafDigest: { $ref: "#/components/schemas/Digest" }
+        auditPath:
+          type: array
+          description: Sibling node hashes from the leaf's level to the root, in the digest form.
+          items: { $ref: "#/components/schemas/Digest" }
+
+    DocumentId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: DocumentId
+      description: A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    DocumentLineId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: DocumentLineId
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920a90-2b3c-7d4e-8f50-6a7b8c9d0e1f
+
+    DocumentNumber:
+      x-ztax-privacy: { class: P5, purposes: [PURP-TAX-CALC, PURP-RECON, PURP-EVID, PURP-FILE], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE, evidencePolicy: RAW_REQUIRED }
+      type: string
+      title: DocumentNumber
+      description: The legal, customer-visible document number (ZTAX-FIN-REQ-0006). Kept apart from the id.
+      minLength: 1
+      maxLength: 255
+      example: INV-2026-0001
+
+    ExternalReference:
+      type: object
+      title: ExternalReference
+      description: Another system's identifier for the document (ZTAX-DOM-REQ-0003). Never a key, never parsed, never assumed unique.
+      additionalProperties: false
+      required: [sourceSystem, namespace, value]
+      properties:
+        sourceSystem:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          minLength: 1
+          maxLength: 255
+        namespace:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          minLength: 1
+          maxLength: 255
+        value:
+          x-ztax-privacy: { class: P5, purposes: [PURP-TAX-CALC, PURP-RECON, PURP-EVID], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE, evidencePolicy: RAW_REQUIRED }
+          type: string
+          minLength: 1
+          maxLength: 255
+
+    DocumentTax:
+      type: object
+      title: DocumentTax
+      description: One tax on one line, naming the committed decision it comes from and the component the decision's content posts.
+      additionalProperties: false
+      required: [decisionId, component, amount]
+      properties:
+        decisionId: { $ref: "#/components/schemas/DecisionId" }
+        component:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          minLength: 1
+          maxLength: 128
+          example: TAX_VAT
+        amount: { $ref: "#/components/schemas/Decimal" }
+
+    SourceLineRef:
+      x-ztax-privacy: { class: P5, purposes: [PURP-TAX-CALC, PURP-RECON, PURP-EVID], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE, evidencePolicy: RAW_REQUIRED }
+      type: string
+      title: SourceLineRef
+      description: The billing or ERP line a document line came from (ZTAX-FIN-REQ-0020).
+      maxLength: 255
+      example: "bss:order-9/line-1"
+
+    DocumentLineRequest:
+      type: object
+      title: DocumentLineRequest
+      additionalProperties: false
+      required: [net, taxes]
+      properties:
+        sourceLineRef: { $ref: "#/components/schemas/SourceLineRef" }
+        componentInstance:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          maxLength: 255
+        net: { $ref: "#/components/schemas/Decimal" }
+        discount: { $ref: "#/components/schemas/Decimal" }
+        allocationRef:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          maxLength: 255
+          description: Required with a discount — the allocation that produced it (ZTAX-FIN-REQ-0021).
+        predecessorLineId: { $ref: "#/components/schemas/DocumentLineId" }
+        taxes:
+          type: array
+          items: { $ref: "#/components/schemas/DocumentTax" }
+
+    DocumentRequest:
+      type: object
+      title: DocumentRequest
+      additionalProperties: false
+      required: [type, issueDate, taxPoint, currency, lines]
+      properties:
+        type:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [INVOICE, DEBIT_NOTE, ADJUSTMENT]
+        number: { $ref: "#/components/schemas/DocumentNumber" }
+        issueDate: { $ref: "#/components/schemas/CivilDate" }
+        taxPoint: { $ref: "#/components/schemas/Timestamp" }
+        currency: { $ref: "#/components/schemas/CurrencyCode" }
+        externalRef: { $ref: "#/components/schemas/ExternalReference" }
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items: { $ref: "#/components/schemas/DocumentLineRequest" }
+
+    CorrectionRequest:
+      type: object
+      title: CorrectionRequest
+      additionalProperties: false
+      required: [type, reason, issueDate, taxPoint]
+      properties:
+        type:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [VOID, CREDIT_NOTE, REBILL]
+        reason: { $ref: "#/components/schemas/ReasonCode" }
+        number: { $ref: "#/components/schemas/DocumentNumber" }
+        issueDate: { $ref: "#/components/schemas/CivilDate" }
+        taxPoint: { $ref: "#/components/schemas/Timestamp" }
+        cancelLines:
+          type: array
+          description: A credit note's lines to cancel; absent is every line not yet cancelled.
+          items: { $ref: "#/components/schemas/DocumentLineId" }
+        lines:
+          type: array
+          description: A rebill's lines, each naming the original line it replaces.
+          maxItems: 1000
+          items: { $ref: "#/components/schemas/DocumentLineRequest" }
+
+    DocumentLine:
+      type: object
+      title: DocumentLine
+      additionalProperties: false
+      required: [id, net, taxes]
+      properties:
+        id: { $ref: "#/components/schemas/DocumentLineId" }
+        sourceLineRef: { $ref: "#/components/schemas/SourceLineRef" }
+        componentInstance:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        net: { $ref: "#/components/schemas/Decimal" }
+        discount: { $ref: "#/components/schemas/Decimal" }
+        allocationRef:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        predecessorLineId: { $ref: "#/components/schemas/DocumentLineId" }
+        taxes:
+          type: array
+          items: { $ref: "#/components/schemas/DocumentTax" }
+
+    DocumentStatusEvent:
+      type: object
+      title: DocumentStatusEvent
+      additionalProperties: false
+      required: [seq, status, recordedAt]
+      properties:
+        seq:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        status:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [COMMITTED, ISSUED, DELIVERED, ACCEPTED, PARTIALLY_CREDITED, FULLY_CREDITED, VOIDED, REFUNDED, AMENDED, DISPUTED, CLOSED, SUSPENDED]
+        causeId: { $ref: "#/components/schemas/DocumentId" }
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+
+    FiscalDocument:
+      type: object
+      title: FiscalDocument
+      description: |
+        A committed fiscal document. Amounts are in `currency`; a cancelling
+        document's are negative. `status` is the latest of `history`.
+      additionalProperties: false
+      required: [id, type, rootId, predecessors, legalEntityId, issueDate, taxPoint, currency, decisionIds, lines, netTotal, taxTotal, grossTotal, status, history, recordedAt]
+      properties:
+        id: { $ref: "#/components/schemas/DocumentId" }
+        type:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [INVOICE, CREDIT_NOTE, DEBIT_NOTE, PARTIAL_CREDIT, VOID, REFUND, REBILL, ADJUSTMENT, AMENDMENT, RESTATEMENT]
+        number: { $ref: "#/components/schemas/DocumentNumber" }
+        rootId: { $ref: "#/components/schemas/DocumentId" }
+        predecessors:
+          type: array
+          items: { $ref: "#/components/schemas/DocumentId" }
+        reasonCode: { $ref: "#/components/schemas/ReasonCode" }
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        issueDate: { $ref: "#/components/schemas/CivilDate" }
+        taxPoint: { $ref: "#/components/schemas/Timestamp" }
+        currency: { $ref: "#/components/schemas/CurrencyCode" }
+        externalRef: { $ref: "#/components/schemas/ExternalReference" }
+        decisionIds:
+          type: array
+          items: { $ref: "#/components/schemas/DecisionId" }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/DocumentLine" }
+        netTotal: { $ref: "#/components/schemas/Decimal" }
+        taxTotal: { $ref: "#/components/schemas/Decimal" }
+        grossTotal: { $ref: "#/components/schemas/Decimal" }
+        status:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [COMMITTED, ISSUED, DELIVERED, ACCEPTED, PARTIALLY_CREDITED, FULLY_CREDITED, VOIDED, REFUNDED, AMENDED, DISPUTED, CLOSED, SUSPENDED]
+        history:
+          type: array
+          items: { $ref: "#/components/schemas/DocumentStatusEvent" }
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+
+    DocumentLineage:
+      type: object
+      title: DocumentLineage
+      additionalProperties: false
+      required: [documents]
+      properties:
+        documents:
+          type: array
+          items: { $ref: "#/components/schemas/FiscalDocument" }
+
+    LegalPeriod:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: LegalPeriod
+      description: A subledger legal period, a month.
+      pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$"
+      example: "2026-09"
+
+    PeriodState:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: PeriodState
+      enum: [OPEN, SOFT_CLOSE, HARD_CLOSE, REOPENED, AMENDMENT_ACTIVE, SEALED]
+      example: HARD_CLOSE
+
+    PeriodReason:
+      x-ztax-privacy: { class: P2, purposes: [PURP-RECON, PURP-EVID], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: PeriodReason
+      description: Free text entered by an operator.
+      maxLength: 1000
+      example: month end
+
+    PeriodEvent:
+      type: object
+      title: PeriodEvent
+      additionalProperties: false
+      required: [seq, state, recordedAt]
+      properties:
+        seq:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        state: { $ref: "#/components/schemas/PeriodState" }
+        reason: { $ref: "#/components/schemas/PeriodReason" }
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+          description: Who moved the period; on a reopening, who requested it.
+        approvedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+          description: On a reopening, the second person who approved it.
+        requestId: { $ref: "#/components/schemas/ReopenRequestId" }
+        manifestDigest: { $ref: "#/components/schemas/Digest" }
+
+    CloseManifestDocument:
+      type: object
+      title: CloseManifestDocument
+      description: A close manifest exactly as digested, base64 canonical JSON.
+      additionalProperties: false
+      required: [digest, body]
+      properties:
+        digest: { $ref: "#/components/schemas/Digest" }
+        body:
+          x-ztax-privacy: { class: P5, purposes: [PURP-RECON, PURP-EVID], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE, evidencePolicy: RAW_REQUIRED }
+          type: string
+          format: byte
+
+    SubledgerPeriod:
+      type: object
+      title: SubledgerPeriod
+      additionalProperties: false
+      required: [period, legalEntityId, state, history]
+      properties:
+        period: { $ref: "#/components/schemas/LegalPeriod" }
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        state: { $ref: "#/components/schemas/PeriodState" }
+        history:
+          type: array
+          items: { $ref: "#/components/schemas/PeriodEvent" }
+        manifest: { $ref: "#/components/schemas/CloseManifestDocument" }
+        intact:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: Whether the period's journals and balances today are exactly the ones its latest manifest sealed. Absent until the period is first hard-closed.
+
+    PeriodTransitionRequest:
+      type: object
+      title: PeriodTransitionRequest
+      additionalProperties: false
+      required: [to]
+      properties:
+        to:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [OPEN, SOFT_CLOSE, HARD_CLOSE, AMENDMENT_ACTIVE, SEALED]
+        reason: { $ref: "#/components/schemas/PeriodReason" }
+
+    ReopenRequestId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: ReopenRequestId
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    ReopenRequestBody:
+      type: object
+      title: ReopenRequestBody
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { $ref: "#/components/schemas/PeriodReason" }
+
+    PeriodReopenRequest:
+      type: object
+      title: PeriodReopenRequest
+      additionalProperties: false
+      required: [id, period, reason, requestedAt, requestedBy]
+      properties:
+        id: { $ref: "#/components/schemas/ReopenRequestId" }
+        period: { $ref: "#/components/schemas/LegalPeriod" }
+        reason: { $ref: "#/components/schemas/PeriodReason" }
+        requestedAt: { $ref: "#/components/schemas/Timestamp" }
+        requestedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+
+    RunId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: RunId
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    ItemId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: ItemId
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f
+
+    ReconStage:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: ReconStage
+      enum: [R1_CALCULATED_TO_DOCUMENT, R2_DOCUMENT_TO_COLLECTION, R3_DOCUMENT_TO_SUBLEDGER, R4_SUBLEDGER_TO_RETURN, R5_RETURN_TO_REMITTANCE, R6_SUBLEDGER_TO_GL, R7_END_TO_END]
+      example: R1_CALCULATED_TO_DOCUMENT
+
+    RootCause:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: RootCause
+      description: FIN-001 §18's root-cause taxonomy (ZTAX-FIN-REQ-0083).
+      enum: [CLASSIFICATION, JURISDICTION, TAX_RULE, ROUNDING, FX, DOCUMENT, COLLECTION, POSTING, RETURN, REMITTANCE, GL, TIMING, DATA, OTHER]
+      example: TIMING
+
+    EvidenceReference:
+      x-ztax-privacy: { class: P2, purposes: [PURP-RECON, PURP-EVID], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: EvidenceReference
+      description: A reference to evidence a resolution relies on — a document id, a ticket, a statement line.
+      minLength: 1
+      maxLength: 500
+      example: "bss:invoice-run-2026-10-01"
+
+    ReconciliationRequest:
+      type: object
+      title: ReconciliationRequest
+      additionalProperties: false
+      required: [period]
+      properties:
+        period: { $ref: "#/components/schemas/LegalPeriod" }
+
+    ReconResolution:
+      type: object
+      title: ReconResolution
+      additionalProperties: false
+      required: [actor, reason, action, rootCause, evidence, resolvedAt]
+      properties:
+        actor:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [HUMAN, AI_A3]
+        resolver:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+        reason:
+          x-ztax-privacy: { class: P2, purposes: [PURP-RECON, PURP-EVID], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE }
+          type: string
+        action:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [ADJUST, RECLASSIFY, AMEND, WAIT, WAIVE_WITH_APPROVAL, EXTERNAL_CORRECTION]
+        rootCause: { $ref: "#/components/schemas/RootCause" }
+        evidence:
+          type: array
+          items: { $ref: "#/components/schemas/EvidenceReference" }
+        resolvedAt: { $ref: "#/components/schemas/Timestamp" }
+
+    ReconciliationItem:
+      type: object
+      title: ReconciliationItem
+      description: |
+        One comparison. `variance` is observed minus expected, exact,
+        whatever the status (ZTAX-FIN-REQ-0081); absent when one side is.
+      additionalProperties: false
+      required: [id, stage, matchKey, status]
+      properties:
+        id: { $ref: "#/components/schemas/ItemId" }
+        stage: { $ref: "#/components/schemas/ReconStage" }
+        matchKey:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The canonical id compared on, such as `decision:<id>` or `refund:<id>`.
+        expected: { $ref: "#/components/schemas/MoneyValue" }
+        observed: { $ref: "#/components/schemas/MoneyValue" }
+        variance: { $ref: "#/components/schemas/MoneyValue" }
+        status:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [MATCHED, TOLERANCE_MATCH, UNMATCHED, PARTIAL, DUPLICATE, MISSING, CONFLICTED, PENDING, EXPLAINED, RESOLVED]
+        rootCause: { $ref: "#/components/schemas/RootCause" }
+        detail:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        resolution: { $ref: "#/components/schemas/ReconResolution" }
+
+    ReconciliationRun:
+      type: object
+      title: ReconciliationRun
+      additionalProperties: false
+      required: [id, period, legalEntityId, ranAt, unavailable, items]
+      properties:
+        id: { $ref: "#/components/schemas/RunId" }
+        period: { $ref: "#/components/schemas/LegalPeriod" }
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        ranAt: { $ref: "#/components/schemas/Timestamp" }
+        ranBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+        firstBreak: { $ref: "#/components/schemas/ReconStage" }
+        unavailable:
+          type: array
+          items: { $ref: "#/components/schemas/ReconStage" }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ReconciliationItem" }
+
+    ResolutionRequest:
+      type: object
+      title: ResolutionRequest
+      additionalProperties: false
+      required: [reason, action, rootCause, evidence]
+      properties:
+        reason:
+          x-ztax-privacy: { class: P2, purposes: [PURP-RECON, PURP-EVID], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE }
+          type: string
+          minLength: 1
+          maxLength: 1000
+        action:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [ADJUST, RECLASSIFY, AMEND, WAIT, WAIVE_WITH_APPROVAL, EXTERNAL_CORRECTION]
+        rootCause: { $ref: "#/components/schemas/RootCause" }
+        evidence:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: { $ref: "#/components/schemas/EvidenceReference" }
+
     ReplayReport:
       type: object
       title: ReplayReport
@@ -2732,3 +6091,589 @@ components:
           type: string
           description: For `DIVERGED`, the first path at which the results differ. A path, never a value.
           example: $.emitted.TAX_VAT.amount
+
+    RetentionPolicyId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: RetentionPolicyId
+      description: A retention policy's stable name; its versions share it.
+      minLength: 1
+      maxLength: 128
+      example: de-decisions
+
+    RetentionRecordClass:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: RetentionRecordClass
+      enum: [DECISION, DOCUMENT, JOURNAL, REFUND]
+      example: DECISION
+
+    RetentionTrigger:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: RetentionTrigger
+      description: |
+        What the period runs from: the taxable event, the record's making, or
+        the end of the calendar year of the event.
+      enum: [EVENT_TIME, RECORDED_AT, EVENT_YEAR_END]
+      example: EVENT_YEAR_END
+
+    CountryCode:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: CountryCode
+      description: ISO 3166-1 alpha-2.
+      pattern: "^[A-Z]{2}$"
+      example: DE
+
+    RetentionPolicyRequest:
+      type: object
+      title: RetentionPolicyRequest
+      additionalProperties: false
+      required: [id, recordClass, country, years, trigger, effectiveFrom, citation]
+      properties:
+        id: { $ref: "#/components/schemas/RetentionPolicyId" }
+        recordClass: { $ref: "#/components/schemas/RetentionRecordClass" }
+        country: { $ref: "#/components/schemas/CountryCode" }
+        years:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+          maximum: 100
+        trigger: { $ref: "#/components/schemas/RetentionTrigger" }
+        effectiveFrom: { $ref: "#/components/schemas/Timestamp" }
+        citation:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: The statute, regulation or contract the period comes from.
+
+    RetentionPolicy:
+      type: object
+      title: RetentionPolicy
+      additionalProperties: false
+      required: [id, version, recordClass, country, years, trigger, effectiveFrom, citation, recordedAt, recordedBy]
+      properties:
+        id: { $ref: "#/components/schemas/RetentionPolicyId" }
+        version:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        recordClass: { $ref: "#/components/schemas/RetentionRecordClass" }
+        country: { $ref: "#/components/schemas/CountryCode" }
+        years:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+        trigger: { $ref: "#/components/schemas/RetentionTrigger" }
+        effectiveFrom: { $ref: "#/components/schemas/Timestamp" }
+        citation:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+          description: The administrator who recorded this version.
+
+    RetentionPolicyList:
+      type: object
+      title: RetentionPolicyList
+      additionalProperties: false
+      required: [policies]
+      properties:
+        policies:
+          type: array
+          items: { $ref: "#/components/schemas/RetentionPolicy" }
+
+    PolicyVersionRef:
+      type: object
+      title: PolicyVersionRef
+      additionalProperties: false
+      required: [id, version]
+      properties:
+        id: { $ref: "#/components/schemas/RetentionPolicyId" }
+        version:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+
+    RetentionVerdict:
+      type: object
+      title: RetentionVerdict
+      additionalProperties: false
+      required: [decisionId, recordClass, outcome, evaluatedAt]
+      properties:
+        decisionId: { $ref: "#/components/schemas/DecisionId" }
+        recordClass: { $ref: "#/components/schemas/RetentionRecordClass" }
+        country: { $ref: "#/components/schemas/CountryCode" }
+        outcome:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [RETAIN, HELD, ELIGIBLE, NO_POLICY, CONFLICTED]
+        policy: { $ref: "#/components/schemas/PolicyVersionRef" }
+        candidates:
+          type: array
+          description: For `CONFLICTED`, the policies that disagree.
+          items: { $ref: "#/components/schemas/PolicyVersionRef" }
+        retainUntil: { $ref: "#/components/schemas/Timestamp" }
+        holds:
+          type: array
+          description: The active holds that scope the record.
+          items: { $ref: "#/components/schemas/LegalHoldId" }
+        detail:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: Why a record is `NO_POLICY` or `CONFLICTED`.
+        evaluatedAt: { $ref: "#/components/schemas/Timestamp" }
+
+    LegalHoldId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: LegalHoldId
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    LegalHoldReason:
+      x-ztax-privacy: { class: P2, purposes: [PURP-LEGAL, PURP-EVID], retention: RET-LEGAL-HOLD, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: LegalHoldReason
+      description: Free text entered by an administrator.
+      minLength: 1
+      maxLength: 1000
+      example: litigation notice received
+
+    LegalHoldScope:
+      type: object
+      title: LegalHoldScope
+      description: |
+        What a hold covers. Every criterion given must hold: named decisions
+        or business keys, a window of event times `[eventFrom, eventTo)`, and
+        a legal entity narrowing either. At least names or a window; a window
+        alone spans at most ten years.
+      additionalProperties: false
+      properties:
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        businessKeys:
+          type: array
+          maxItems: 1000
+          items: { $ref: "#/components/schemas/BusinessKey" }
+        decisionIds:
+          type: array
+          maxItems: 1000
+          items: { $ref: "#/components/schemas/DecisionId" }
+        eventFrom: { $ref: "#/components/schemas/Timestamp" }
+        eventTo: { $ref: "#/components/schemas/Timestamp" }
+
+    LegalHoldEvent:
+      type: object
+      title: LegalHoldEvent
+      additionalProperties: false
+      required: [seq, kind, scope, reason, recordedAt, recordedBy]
+      properties:
+        seq:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        kind:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [PLACED, SCOPE_CHANGED, RELEASED]
+        scope: { $ref: "#/components/schemas/LegalHoldScope" }
+        reason: { $ref: "#/components/schemas/LegalHoldReason" }
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+
+    LegalHold:
+      type: object
+      title: LegalHold
+      additionalProperties: false
+      required: [id, matter, status, scope, history]
+      properties:
+        id: { $ref: "#/components/schemas/LegalHoldId" }
+        matter:
+          x-ztax-privacy: { class: P2, purposes: [PURP-LEGAL, PURP-EVID], retention: RET-LEGAL-HOLD, redaction: REDACT, aiAllowed: NONE }
+          type: string
+          description: The claim, investigation or regulator request the hold serves.
+        status:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [ACTIVE, RELEASED]
+        scope: { $ref: "#/components/schemas/LegalHoldScope" }
+        history:
+          type: array
+          items: { $ref: "#/components/schemas/LegalHoldEvent" }
+
+    LegalHoldList:
+      type: object
+      title: LegalHoldList
+      additionalProperties: false
+      required: [holds]
+      properties:
+        holds:
+          type: array
+          items: { $ref: "#/components/schemas/LegalHold" }
+
+    LegalHoldRequest:
+      type: object
+      title: LegalHoldRequest
+      additionalProperties: false
+      required: [matter, reason, scope]
+      properties:
+        matter:
+          x-ztax-privacy: { class: P2, purposes: [PURP-LEGAL, PURP-EVID], retention: RET-LEGAL-HOLD, redaction: REDACT, aiAllowed: NONE }
+          type: string
+          minLength: 1
+          maxLength: 255
+        reason: { $ref: "#/components/schemas/LegalHoldReason" }
+        scope: { $ref: "#/components/schemas/LegalHoldScope" }
+
+    LegalHoldScopeRequest:
+      type: object
+      title: LegalHoldScopeRequest
+      additionalProperties: false
+      required: [reason, scope]
+      properties:
+        reason: { $ref: "#/components/schemas/LegalHoldReason" }
+        scope: { $ref: "#/components/schemas/LegalHoldScope" }
+
+    LegalHoldReleaseRequest:
+      type: object
+      title: LegalHoldReleaseRequest
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { $ref: "#/components/schemas/LegalHoldReason" }
+
+    ServiceState:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: ServiceState
+      enum: [INFORM, COMPUTE, PREPARE, FILE, REPRESENT, ADVISE]
+      example: FILE
+
+    LegalStatus:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: LegalStatus
+      enum: [DIRECT_ALLOWED, DIRECT_WITH_AUTH, QUALIFIED_PERSON_REQUIRED, PARTNER_REQUIRED, CUSTOMER_ONLY, COUNSEL_PENDING, PROHIBITED, SUSPENDED]
+      example: DIRECT_WITH_AUTH
+
+    AuthorizationType:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: AuthorizationType
+      enum: [NONE, CONTRACT, DECLARATION, POA, TAX_INFORMATION, PORTAL_DELEGATION, FILING_MANDATE]
+      example: FILING_MANDATE
+
+    AuthorizationPermission:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: AuthorizationPermission
+      enum: [READ_INFO, PREPARE, SUBMIT, RECEIVE_NOTICE, REPRESENT, SIGN]
+      example: SUBMIT
+
+    FundsPosture:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: FundsPosture
+      enum: [NO_CUSTODY, INSTRUCTION_ONLY, PSP_PARTNER, LICENSED_PROGRAM]
+      example: NO_CUSTODY
+
+    AuthorityCode:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: AuthorityCode
+      description: An authority within a country, as the matrix names it.
+      minLength: 1
+      maxLength: 128
+      example: DE-ELSTER
+
+    AuthorizationId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: AuthorizationId
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+
+    LegalRule:
+      type: object
+      title: LegalRule
+      additionalProperties: false
+      required: [id, version, country, authority, service, status, provider, authorizationType, requiresPeriods, requiresMatters, funds, opinionRef, effectiveFrom]
+      properties:
+        id:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        version:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+        country: { $ref: "#/components/schemas/CountryCode" }
+        authority: { $ref: "#/components/schemas/AuthorityCode" }
+        service: { $ref: "#/components/schemas/ServiceState" }
+        status: { $ref: "#/components/schemas/LegalStatus" }
+        provider:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The Zoiko entity or approved partner that performs the service.
+        authorizationType: { $ref: "#/components/schemas/AuthorizationType" }
+        requiresPeriods:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: The authority accepts no generic grant; an authorization names its periods.
+        requiresMatters:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: The authority accepts no generic grant; an authorization names its matters.
+        qualification:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        credential:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The kind of credential the authority needs — never a credential.
+        funds: { $ref: "#/components/schemas/FundsPosture" }
+        opinionRef:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The counsel memo or authority source the rule rests on.
+        effectiveFrom: { $ref: "#/components/schemas/Timestamp" }
+        effectiveTo: { $ref: "#/components/schemas/Timestamp" }
+
+    LegalMatrix:
+      type: object
+      title: LegalMatrix
+      additionalProperties: false
+      required: [version, draft, rules]
+      properties:
+        version:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The matrix edition; empty when the cell has none.
+        draft:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: A matrix nobody has approved. Loads in development only.
+        digest: { $ref: "#/components/schemas/Digest" }
+        rules:
+          type: array
+          items: { $ref: "#/components/schemas/LegalRule" }
+
+    AuthorizationEvent:
+      type: object
+      title: AuthorizationEvent
+      additionalProperties: false
+      required: [seq, kind, recordedAt, recordedBy]
+      properties:
+        seq:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        kind:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [GRANTED, REVOKED, SUPERSEDED]
+        reason:
+          x-ztax-privacy: { class: P2, purposes: [PURP-LEGAL, PURP-EVID], retention: RET-EVIDENCE, redaction: REDACT, aiAllowed: NONE }
+          type: string
+        supersededBy: { $ref: "#/components/schemas/AuthorizationId" }
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+
+    AuthorizationMatter:
+      x-ztax-privacy: { class: P2, purposes: [PURP-FILE, PURP-LEGAL, PURP-EVID], retention: RET-EVIDENCE, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: AuthorizationMatter
+      description: A form or matter a grant covers, as the customer named it.
+      minLength: 1
+      maxLength: 255
+      example: UStVA
+
+    AuthorizationEvidence:
+      x-ztax-privacy: { class: P2, purposes: [PURP-FILE, PURP-LEGAL, PURP-EVID], retention: RET-EVIDENCE, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: AuthorizationEvidence
+      description: A reference to the signed artifact, consent proof or authority acknowledgement.
+      minLength: 1
+      maxLength: 255
+      example: "doc:mandate-2026.pdf"
+
+    CredentialRef:
+      x-ztax-privacy: { class: P2, purposes: [PURP-FILE, PURP-LEGAL, PURP-EVID], retention: RET-EVIDENCE, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: CredentialRef
+      description: Where the authority credential is held in the secrets vault. Never the credential.
+      pattern: "^(vault|awssm|gcpsm|azkv)://[A-Za-z0-9._/-]{1,240}$"
+      example: vault://tax/de/elster/cert
+
+    Representative:
+      x-ztax-privacy: { class: P1, purposes: [PURP-FILE, PURP-LEGAL, PURP-EVID], retention: RET-EVIDENCE, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: Representative
+      description: The individual or entity acting under the grant.
+      maxLength: 255
+
+    CustomerAuthorization:
+      type: object
+      title: CustomerAuthorization
+      additionalProperties: false
+      required: [id, legalEntityId, country, authority, type, permissions, matters, effectiveFrom, evidence, status, inForce, recordedAt, recordedBy, history]
+      properties:
+        id: { $ref: "#/components/schemas/AuthorizationId" }
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        country: { $ref: "#/components/schemas/CountryCode" }
+        authority: { $ref: "#/components/schemas/AuthorityCode" }
+        type: { $ref: "#/components/schemas/AuthorizationType" }
+        permissions:
+          type: array
+          items: { $ref: "#/components/schemas/AuthorizationPermission" }
+        matters:
+          type: array
+          items: { $ref: "#/components/schemas/AuthorizationMatter" }
+        periodFrom: { $ref: "#/components/schemas/LegalPeriod" }
+        periodTo: { $ref: "#/components/schemas/LegalPeriod" }
+        representative: { $ref: "#/components/schemas/Representative" }
+        effectiveFrom: { $ref: "#/components/schemas/Timestamp" }
+        expiresAt: { $ref: "#/components/schemas/Timestamp" }
+        evidence:
+          type: array
+          items: { $ref: "#/components/schemas/AuthorizationEvidence" }
+        credentialRef: { $ref: "#/components/schemas/CredentialRef" }
+        supersedes: { $ref: "#/components/schemas/AuthorizationId" }
+        status:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [ACTIVE, REVOKED, SUPERSEDED]
+        inForce:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: Active, effective and not expired, now.
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+        history:
+          type: array
+          items: { $ref: "#/components/schemas/AuthorizationEvent" }
+
+    AuthorizationList:
+      type: object
+      title: AuthorizationList
+      additionalProperties: false
+      required: [authorizations]
+      properties:
+        authorizations:
+          type: array
+          items: { $ref: "#/components/schemas/CustomerAuthorization" }
+
+    AuthorizationRequest:
+      type: object
+      title: AuthorizationRequest
+      additionalProperties: false
+      required: [country, authority, type, permissions, effectiveFrom, evidence]
+      properties:
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        country: { $ref: "#/components/schemas/CountryCode" }
+        authority: { $ref: "#/components/schemas/AuthorityCode" }
+        type: { $ref: "#/components/schemas/AuthorizationType" }
+        permissions:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/AuthorizationPermission" }
+        matters:
+          type: array
+          maxItems: 100
+          items: { $ref: "#/components/schemas/AuthorizationMatter" }
+        periodFrom: { $ref: "#/components/schemas/LegalPeriod" }
+        periodTo: { $ref: "#/components/schemas/LegalPeriod" }
+        representative: { $ref: "#/components/schemas/Representative" }
+        effectiveFrom: { $ref: "#/components/schemas/Timestamp" }
+        expiresAt: { $ref: "#/components/schemas/Timestamp" }
+        evidence:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items: { $ref: "#/components/schemas/AuthorizationEvidence" }
+        credentialRef: { $ref: "#/components/schemas/CredentialRef" }
+        supersedes: { $ref: "#/components/schemas/AuthorizationId" }
+
+    RevocationRequest:
+      type: object
+      title: RevocationRequest
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
+          x-ztax-privacy: { class: P2, purposes: [PURP-LEGAL, PURP-EVID], retention: RET-EVIDENCE, redaction: REDACT, aiAllowed: NONE }
+          type: string
+          minLength: 1
+          maxLength: 1000
+
+    AuthorizationCheckRequest:
+      type: object
+      title: AuthorizationCheckRequest
+      additionalProperties: false
+      required: [country, authority, service]
+      properties:
+        country: { $ref: "#/components/schemas/CountryCode" }
+        authority: { $ref: "#/components/schemas/AuthorityCode" }
+        service: { $ref: "#/components/schemas/ServiceState" }
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        period: { $ref: "#/components/schemas/LegalPeriod" }
+        matter: { $ref: "#/components/schemas/AuthorizationMatter" }
+
+    RuleRef:
+      type: object
+      title: RuleRef
+      additionalProperties: false
+      required: [id, version]
+      properties:
+        id:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        version:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+
+    AuthorizationCheck:
+      type: object
+      title: AuthorizationCheck
+      additionalProperties: false
+      required: [allowed, status, checkedAt]
+      properties:
+        allowed:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+        status: { $ref: "#/components/schemas/LegalStatus" }
+        reason:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: Why the action is blocked; absent when it is allowed.
+          enum: [NO_RULE, RULE_CONFLICT, COUNSEL_PENDING, PROHIBITED, SUSPENDED, PARTNER_REQUIRED, CUSTOMER_ONLY, QUALIFIED_PERSON_REQUIRED, AUTHORIZATION_MISSING, AUTHORIZATION_EXPIRED, AUTHORIZATION_REVOKED, AUTHORIZATION_OUT_OF_SCOPE, CREDENTIAL_MISSING, MATRIX_UNAVAILABLE, ACTION_NOT_WELL_FORMED]
+        rule: { $ref: "#/components/schemas/RuleRef" }
+        authorizationId: { $ref: "#/components/schemas/AuthorizationId" }
+        matrixVersion:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        matrixDigest: { $ref: "#/components/schemas/Digest" }
+        detail:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        checkedAt: { $ref: "#/components/schemas/Timestamp" }

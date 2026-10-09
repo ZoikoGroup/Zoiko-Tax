@@ -253,3 +253,75 @@ func ReconciliationID(g Generator) (id.ReconciliationID, error) {
 	}
 	return id.NewReconciliationID(u), nil
 }
+
+// RefundID returns a fresh RefundID.
+func RefundID(g Generator) (id.RefundID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.RefundID{}, err
+	}
+	return id.NewRefundID(u), nil
+}
+
+// WebhookID returns a fresh WebhookID.
+func WebhookID(g Generator) (id.WebhookID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.WebhookID{}, err
+	}
+	return id.NewWebhookID(u), nil
+}
+
+// DeliveryID returns a fresh DeliveryID.
+func DeliveryID(g Generator) (id.DeliveryID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.DeliveryID{}, err
+	}
+	return id.NewDeliveryID(u), nil
+}
+
+// JobID returns a fresh JobID.
+func JobID(g Generator) (id.JobID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.JobID{}, err
+	}
+	return id.NewJobID(u), nil
+}
+
+// ReopenRequestID returns a fresh ReopenRequestID.
+func ReopenRequestID(g Generator) (id.ReopenRequestID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.ReopenRequestID{}, err
+	}
+	return id.NewReopenRequestID(u), nil
+}
+
+// ReconItemID returns a fresh ReconItemID.
+func ReconItemID(g Generator) (id.ReconItemID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.ReconItemID{}, err
+	}
+	return id.NewReconItemID(u), nil
+}
+
+// LegalHoldID returns a fresh LegalHoldID.
+func LegalHoldID(g Generator) (id.LegalHoldID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.LegalHoldID{}, err
+	}
+	return id.NewLegalHoldID(u), nil
+}
+
+// AuthorizationID returns a fresh AuthorizationID.
+func AuthorizationID(g Generator) (id.AuthorizationID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.AuthorizationID{}, err
+	}
+	return id.NewAuthorizationID(u), nil
+}

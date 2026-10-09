@@ -248,7 +248,7 @@ func TestIntegrationCrossingIsRecordedWithItsEvent(t *testing.T) {
 		t.Fatalf("crossings %+v", crossings)
 	}
 	var events int
-	if err := c.store.Pool().QueryRow(c.ctx,
+	if err := ownerPool(t).QueryRow(c.ctx,
 		`SELECT count(*) FROM ztax.outbox WHERE tenant_id = $1 AND event_type = $2`,
 		c.tenant.UUID(), app.EventThresholdCrossed).Scan(&events); err != nil {
 		t.Fatal(err)

@@ -1,0 +1,87 @@
+{
+  "version": "dev-2026.10-1",
+  "draft": true,
+  "rules": [
+    {
+      "id": "DE-ELSTER-COMPUTE",
+      "version": 1,
+      "country": "DE",
+      "authority": "DE-ELSTER",
+      "service": "COMPUTE",
+      "status": "DIRECT_ALLOWED",
+      "provider": "Zoiko development entity",
+      "authorizationType": "NONE",
+      "funds": "NO_CUSTODY",
+      "opinionRef": "LDR-DEV-0001 — development posture, not a legal opinion",
+      "effectiveFrom": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "DE-ELSTER-PREPARE",
+      "version": 1,
+      "country": "DE",
+      "authority": "DE-ELSTER",
+      "service": "PREPARE",
+      "status": "DIRECT_ALLOWED",
+      "provider": "Zoiko development entity",
+      "authorizationType": "NONE",
+      "funds": "NO_CUSTODY",
+      "opinionRef": "LDR-DEV-0001 — development posture, not a legal opinion",
+      "effectiveFrom": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "DE-ELSTER-FILE",
+      "version": 1,
+      "country": "DE",
+      "authority": "DE-ELSTER",
+      "service": "FILE",
+      "status": "DIRECT_WITH_AUTH",
+      "provider": "Zoiko development entity",
+      "authorizationType": "FILING_MANDATE",
+      "requiresPeriods": true,
+      "credential": "ELSTER organisation certificate",
+      "funds": "NO_CUSTODY",
+      "opinionRef": "LDR-DEV-0001 — development posture, not a legal opinion",
+      "effectiveFrom": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "DE-ELSTER-REPRESENT",
+      "version": 1,
+      "country": "DE",
+      "authority": "DE-ELSTER",
+      "service": "REPRESENT",
+      "status": "QUALIFIED_PERSON_REQUIRED",
+      "provider": "Zoiko development entity",
+      "authorizationType": "POA",
+      "qualification": "Steuerberater admitted under StBerG",
+      "funds": "NO_CUSTODY",
+      "opinionRef": "LDR-DEV-0001 — development posture, not a legal opinion",
+      "effectiveFrom": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "DE-ELSTER-ADVISE",
+      "version": 1,
+      "country": "DE",
+      "authority": "DE-ELSTER",
+      "service": "ADVISE",
+      "status": "PARTNER_REQUIRED",
+      "provider": "Approved advisory partner",
+      "authorizationType": "NONE",
+      "funds": "NO_CUSTODY",
+      "opinionRef": "LDR-DEV-0001 — development posture, not a legal opinion",
+      "effectiveFrom": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "GB-HMRC-FILE",
+      "version": 1,
+      "country": "GB",
+      "authority": "GB-HMRC",
+      "service": "FILE",
+      "status": "COUNSEL_PENDING",
+      "provider": "Zoiko development entity",
+      "authorizationType": "PORTAL_DELEGATION",
+      "funds": "NO_CUSTODY",
+      "opinionRef": "LDR-DEV-0002 — awaiting counsel",
+      "effectiveFrom": "2026-01-01T00:00:00Z"
+    }
+  ]
+}

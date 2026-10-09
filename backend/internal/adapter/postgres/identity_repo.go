@@ -52,6 +52,7 @@ var _ port.TenantRepository = (*TenantRepo)(nil)
 
 // Create inserts a tenant.
 func (r *TenantRepo) Create(ctx context.Context, t identity.Tenant) error {
+	ctx = tenantScope(ctx, t.ID)
 	_, err := r.s.db(ctx).Exec(ctx, sqlTenantInsert,
 		t.ID.UUID(), t.Slug, t.DisplayName, t.ResidencyRegion, t.HomeCell, string(t.Status), t.CreatedAt)
 	return mapError(err, "insert tenant")
@@ -59,17 +60,23 @@ func (r *TenantRepo) Create(ctx context.Context, t identity.Tenant) error {
 
 // ByID reads one tenant.
 func (r *TenantRepo) ByID(ctx context.Context, tenantID id.TenantID) (identity.Tenant, error) {
+	ctx = tenantScope(ctx, tenantID)
 	return scanTenant(r.s.db(ctx).QueryRow(ctx, sqlTenantByID, tenantID.UUID()))
 }
 
 // BySlug reads one tenant by its handle. This is the sign-in path's first
 // lookup, before any tenant is in scope.
 func (r *TenantRepo) BySlug(ctx context.Context, slug string) (identity.Tenant, error) {
+	// Cell-wide: resolving a slug is how sign-in learns which tenant it is in.
+	ctx = CellScope(ctx)
 	return scanTenant(r.s.db(ctx).QueryRow(ctx, sqlTenantBySlug, slug))
 }
 
 // List returns tenants in the cell, newest first.
 func (r *TenantRepo) List(ctx context.Context, limit int) ([]identity.Tenant, error) {
+	// Cell-wide: the cell's tenant register, for the operator tooling that
+	// provisions tenants.
+	ctx = CellScope(ctx)
 	rows, err := r.s.db(ctx).Query(ctx, sqlTenantList, capLimit(limit))
 	if err != nil {
 		return nil, mapError(err, "list tenants")
@@ -89,6 +96,7 @@ func (r *TenantRepo) List(ctx context.Context, limit int) ([]identity.Tenant, er
 
 // SetStatus changes a tenant's status and records why.
 func (r *TenantRepo) SetStatus(ctx context.Context, tenantID id.TenantID, status identity.TenantStatus, reason string, actor *id.UserID, at time.Time) error {
+	ctx = tenantScope(ctx, tenantID)
 	db := r.s.db(ctx)
 	if _, err := db.Exec(ctx, sqlTenantSetStatus, tenantID.UUID(), string(status)); err != nil {
 		return mapError(err, "set tenant status")
@@ -199,6 +207,7 @@ func (r *UserRepo) ByID(ctx context.Context, userID id.UserID) (identity.User, e
 // one place in this package where the tenant predicate is not taken from the
 // context, and it is why the parameter exists on the interface at all.
 func (r *UserRepo) ByEmail(ctx context.Context, tenantID id.TenantID, email string) (identity.User, error) {
+	ctx = tenantScope(ctx, tenantID)
 	u, err := scanUser(r.s.db(ctx).QueryRow(ctx, sqlUserByEmail, tenantID.UUID(), identity.NormalizeEmail(email)))
 	if err != nil {
 		return identity.User{}, err
@@ -414,6 +423,7 @@ var _ port.SessionRepository = (*SessionRepo)(nil)
 
 // Create inserts a session.
 func (r *SessionRepo) Create(ctx context.Context, s identity.Session) error {
+	ctx = tenantScope(ctx, s.TenantID)
 	var ip *string
 	if s.ClientIP != "" {
 		ip = &s.ClientIP
@@ -426,6 +436,9 @@ func (r *SessionRepo) Create(ctx context.Context, s identity.Session) error {
 
 // ByTokenDigest resolves a cookie to a session.
 func (r *SessionRepo) ByTokenDigest(ctx context.Context, digest []byte) (identity.Session, error) {
+	// Cell-wide: a cookie names no tenant, and a digest resolves to exactly
+	// one session or none — the row says whose it is.
+	ctx = CellScope(ctx)
 	return scanSession(r.s.db(ctx).QueryRow(ctx, sqlSessionByDigest, digest))
 }
 
@@ -491,6 +504,8 @@ func (r *SessionRepo) RevokeAllForUser(ctx context.Context, userID id.UserID, re
 // background sweep and is not tenant-scoped, because it is the platform
 // reclaiming its own state rather than anyone reading anyone's data.
 func (r *SessionRepo) DeleteExpired(ctx context.Context, before time.Time) (int, error) {
+	// Cell-wide housekeeping: every tenant's expired sessions.
+	ctx = CellScope(ctx)
 	tag, err := r.s.db(ctx).Exec(ctx, sqlSessionDeleteExpired, before)
 	if err != nil {
 		return 0, mapError(err, "delete expired sessions")
