@@ -87,6 +87,13 @@ func (s *SealService) SealPeriod(ctx context.Context, start, end time.Time) (evi
 	if err != nil {
 		return evidence.SealRecord{}, err
 	}
+	if s.signer == nil {
+		// A cell with the keyring and no signer verifies seals and proves
+		// inclusion; it does not make seals. Outside development that is
+		// every cell until a KMS signer is wired.
+		return evidence.SealRecord{}, errs.New(errs.CategoryUnavailable, errs.ReasonUnavailable,
+			"This cell has no evidence-seal signer. Nothing was sealed.")
+	}
 	start, end = start.UTC().Truncate(time.Microsecond), end.UTC().Truncate(time.Microsecond)
 	if !end.After(start) {
 		return evidence.SealRecord{}, errs.Invalid("periodEnd", errs.ReasonInvalidValue,
@@ -296,4 +303,86 @@ func compareSealRecord(rec evidence.SealRecord, p evidence.PeriodSeal, keyID str
 		return "signing key differs from the one recorded"
 	}
 	return ""
+}
+
+// Seals lists the tenant's seals, latest period first.
+func (s *SealService) Seals(ctx context.Context, limit int) ([]evidence.SealRecord, error) {
+	if _, err := requireRoleOrSystem(ctx, security.RoleAdmin, security.RoleAuditor, security.RoleAnalyst); err != nil {
+		return nil, err
+	}
+	return s.seals.List(ctx, limit)
+}
+
+// SealDocument is a seal with the exact bytes its signature covers, so a
+// verifier outside the cell can check it against the published keyring
+// without trusting anything the cell says about it.
+type SealDocument struct {
+	Record    evidence.SealRecord
+	Payload   []byte
+	Signature kms.Signature
+}
+
+// Seal reads one seal and its signed payload.
+func (s *SealService) Seal(ctx context.Context, sealID id.SealID) (SealDocument, error) {
+	if _, err := requireRoleOrSystem(ctx, security.RoleAdmin, security.RoleAuditor, security.RoleAnalyst); err != nil {
+		return SealDocument{}, err
+	}
+	rec, err := s.seals.ByID(ctx, sealID)
+	if err != nil {
+		return SealDocument{}, err
+	}
+	docBytes, err := s.evidence.Get(ctx, rec.SealObjectDigest)
+	if err != nil {
+		return SealDocument{}, err
+	}
+	var doc signedSeal
+	dec := json.NewDecoder(bytes.NewReader(docBytes))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&doc); err != nil {
+		return SealDocument{}, integrity(err, "The seal object is not a signed seal.")
+	}
+	payload, err := base64.StdEncoding.DecodeString(doc.Payload)
+	if err != nil {
+		return SealDocument{}, integrity(err, "The seal payload is not base64.")
+	}
+	return SealDocument{Record: rec, Payload: payload, Signature: doc.Signature}, nil
+}
+
+// Inclusion proves a decision is in the seal covering the instant it was
+// recorded: its leaf, its position and the audit path to the signed root.
+// The proof is checked against the seal's signed root and leaf count before
+// it is returned, so a period that has moved since it was sealed is reported
+// as the integrity failure it is rather than handed out as a proof that does
+// not verify.
+func (s *SealService) Inclusion(ctx context.Context, decisionID id.DecisionID) (evidence.SealRecord, evidence.Inclusion, error) {
+	if _, err := requireRoleOrSystem(ctx, security.RoleAdmin, security.RoleAuditor, security.RoleAnalyst, security.RoleOperator); err != nil {
+		return evidence.SealRecord{}, evidence.Inclusion{}, err
+	}
+	rec, err := s.decisions.ByID(ctx, decisionID)
+	if err != nil {
+		return evidence.SealRecord{}, evidence.Inclusion{}, err
+	}
+	at := rec.RecordedAt.UTC()
+	covering, err := s.seals.Overlapping(ctx, at, at.Add(time.Microsecond))
+	if err != nil {
+		return evidence.SealRecord{}, evidence.Inclusion{}, err
+	}
+	if len(covering) == 0 {
+		return evidence.SealRecord{}, evidence.Inclusion{}, errs.New(errs.CategoryNotFound, errs.ReasonNotFound,
+			"The period this decision was recorded in has not been sealed yet.")
+	}
+	seal := covering[0]
+	leaves, err := s.decisions.SealLeaves(ctx, seal.PeriodStart, seal.PeriodEnd)
+	if err != nil {
+		return evidence.SealRecord{}, evidence.Inclusion{}, err
+	}
+	proof, err := evidence.PeriodInclusion(leaves, decisionID)
+	if err != nil {
+		return evidence.SealRecord{}, evidence.Inclusion{}, integrity(err, "The decision is not among the leaves of the seal that covers it.")
+	}
+	if err := proof.Verify(seal.MerkleRoot, seal.LeafCount); err != nil {
+		return evidence.SealRecord{}, evidence.Inclusion{}, integrity(err,
+			"The sealed period no longer reproduces its signed root; verify the seal.")
+	}
+	return seal, proof, nil
 }

@@ -47,6 +47,10 @@ type FiscalStores struct {
 	LegalEntities port.LegalEntityRepository
 	Outbox        port.OutboxWriter
 	Obligations   port.ObligationRepository
+	// Periods guards every posting against its legal period's state
+	// (period.go). Optional so a store wired without period close posts
+	// as though every period were open; a cell always wires it.
+	Periods port.PeriodRepository
 }
 
 func (f FiscalStores) complete() bool {
@@ -305,6 +309,9 @@ func (s *DeterminationService) post(ctx context.Context, tenant id.TenantID, b *
 		return err
 	}
 	for _, j := range journals {
+		if j, err = guardPosting(ctx, s.fiscal.Periods, j); err != nil {
+			return err
+		}
 		if err := s.fiscal.Journals.Append(ctx, j); err != nil {
 			return err
 		}
@@ -384,6 +391,12 @@ func (s *DeterminationService) reversePosting(ctx context.Context, prior id.Deci
 		}
 		r, err := j.Reverse(rid, at, subledger.SourceEvent{Kind: SourceDecisionSuperseded, ID: prior.String()})
 		if err != nil {
+			return err
+		}
+		// A reversal keeps the reversed journal's legal period
+		// (ZTAX-FIN-REQ-0095), so correcting a decision whose period is
+		// closed takes that period's amendment window.
+		if r, err = guardPosting(ctx, s.fiscal.Periods, r); err != nil {
 			return err
 		}
 		if err := s.fiscal.Journals.Append(ctx, r); err != nil {

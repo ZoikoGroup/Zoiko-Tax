@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/accumulator"
@@ -174,7 +173,7 @@ func (r *AccumulatorRepo) LockAll(ctx context.Context, refs []accumulator.Ref) (
 	if err != nil {
 		return nil, err
 	}
-	if _, inTx := ctx.Value(txKey{}).(pgx.Tx); !inTx {
+	if !inTx(ctx) {
 		// Outside a transaction each lock would be released at the end of its
 		// own statement, and the caller would apply contributions to totals
 		// another commit is free to change underneath it.

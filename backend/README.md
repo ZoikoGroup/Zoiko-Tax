@@ -25,9 +25,15 @@ The content compiler and bundle signing (`internal/content`, `cmd/ztax-contentc`
 - **Redaction.** Classified values travel as `privacy.Value`, whose only log, format, JSON and span-attribute form is redacted (ADR-0015 §2.2); every binary's logger sits on a redacting handler that is the denylist backstop and keeps fiscal amounts out of telemetry (§2.3).
 - **Tracing.** OpenTelemetry to a cell-local collector over OTLP/gRPC, all seven trains as resource attributes, a head sampler that never drops commit, adjust or refund, and trace ids on every log line and Problem. Off until a deployment names its collector (`ZTAX_OTLP_ENDPOINT`).
 
-Not wired to the HTTP surface yet: the decision and seal services have no endpoints. The quote and commit endpoints that call them are W2 lane K.
+**W2 lane K's core surface is in.** Quote, commit, adjust, decisions and replay were first; since then:
 
-What does not exist: any actual tax content beyond the `eu-vat` sample pack, and the Model Gateway client. The gateway's transport waits on the schema-to-proto pipeline ADR-0006 §2.2 requires, which is W2 lane K; the Python side is in the same position. `ZTAX-DET-001` and `ZTAX-JUR-001` are drafted and registered, still DRAFT, so rule semantics beyond the IR's current instructions are W2 lane H.
+- **Refunds** — `POST /v1/transactions:refund`, a lifecycle of its own (`REQUESTED → PENDING/COMPLETED/FAILED/UNCERTAIN`) bounded by the tax the decision posted, never a decision and never a credit (ZTAX-FIN-REQ-0015, -0059). Only `COMPLETED` posts.
+- **Events** — commits, corrections, obligation moves, threshold crossings and refunds leave through the outbox under an AsyncAPI contract (`contracts/asyncapi`), with payload schemas checked against what the code emits.
+- **Webhooks** — subscriptions to named event types, Standard Webhooks signing with rotation, retry to a dead letter, replay, and an egress guard in the dialer that refuses the cell's own network after name resolution.
+- **Batches and jobs** — `POST /v1/batches` and `GET /v1/jobs/{id}`: up to 1000 commits as one job, each item on the single-commit path under its own idempotency key, so a worker that dies resumes without committing twice.
+- **Period seals** — `POST /v1/seals`, read, verify, and `GET /v1/decisions/{id}/inclusion`, an RFC 6962 audit path from one decision to a signed root that an auditor checks with the published keyring alone.
+
+What does not exist: any actual tax content beyond the `eu-vat` sample pack; deterministic classification, jurisdiction resolution and fiscal documents on the commit path (their domain packages exist and are tested, unwired); and a KMS signer, so outside development a cell verifies seals and does not make them. `ZTAX-DET-001` and `ZTAX-JUR-001` are drafted and registered, still DRAFT, so rule semantics beyond the IR's current instructions are W2 lane H.
 
 **Both remaining W0 controls are closed.** ADR-0001 control 2 (`NUMERIC` bound to `apd.Decimal`, no path narrowing to `float64`) is discharged by the conformance suite in `internal/adapter/postgres`, which runs against a real PostgreSQL. Control 6 (`apd` vendored) is done, and `make vendor-verify` detects drift or a local patch.
 
@@ -167,7 +173,7 @@ Still lane B: signed-artifact admission in the regional clusters, and the tier 3
 
 ## Postman
 
-[`postman/`](postman/README.md) — one collection, 29 requests, **generated from [`contracts/openapi/ztax.v1.yaml`](../contracts/openapi/ztax.v1.yaml)** and hash-checked, so it cannot disagree with the contract. The local cell's values ride along as collection variables, so there is no environment file to import beside it.
+[`postman/`](postman/README.md) — one collection, 60 requests, **generated from [`contracts/openapi/ztax.v1.yaml`](../contracts/openapi/ztax.v1.yaml)** and hash-checked, so it cannot disagree with the contract. The local cell's values ride along as collection variables, so there is no environment file to import beside it.
 
 The seven requests in `90 · Contract conformance` are the ones worth running: each sends something a well-behaved client would never send — an unknown field, an explicit null, an invented role, a sign-in for a user that does not exist — and each asserts a control against an endpoint that exists today.
 

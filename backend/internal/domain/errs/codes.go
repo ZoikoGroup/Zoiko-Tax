@@ -278,6 +278,44 @@ var (
 		"lane-g",
 		"No active rule covers this transaction shape. Recorded as a decision; not authoritative.")
 
+	// ---- fiscal document correction reasons (ZTAX-FIN-REQ-0008) ----------
+	//
+	// Why a document was voided, credited or rebilled. Like the determination
+	// outcomes these are never an error: they are recorded on the correcting
+	// document, and are registered here so that a reason means one thing in
+	// a document, in an event and in evidence. The category is never used.
+
+	// ReasonCorrectionPricingError is a charge billed at the wrong price.
+	ReasonCorrectionPricingError = Register("CORRECTION_PRICING_ERROR", CategoryValidation,
+		"lane-j",
+		"The original document billed the wrong price or quantity; the correction restates what should have been billed.")
+
+	// ReasonCorrectionCustomerCancellation is a sale the customer cancelled.
+	ReasonCorrectionCustomerCancellation = Register("CORRECTION_CUSTOMER_CANCELLATION", CategoryValidation,
+		"lane-j",
+		"The customer cancelled what was billed, within whatever right the sale gave them.")
+
+	// ReasonCorrectionDuplicateBilling is a charge billed twice.
+	ReasonCorrectionDuplicateBilling = Register("CORRECTION_DUPLICATE_BILLING", CategoryValidation,
+		"lane-j",
+		"The same supply was billed on more than one document; the correction removes the duplicate.")
+
+	// ReasonCorrectionServiceNotProvided is a charge for a supply that did
+	// not happen.
+	ReasonCorrectionServiceNotProvided = Register("CORRECTION_SERVICE_NOT_PROVIDED", CategoryValidation,
+		"lane-j",
+		"The supply billed was not, or not fully, provided.")
+
+	// ReasonCorrectionTaxRedetermined is tax corrected by a new decision.
+	ReasonCorrectionTaxRedetermined = Register("CORRECTION_TAX_REDETERMINED", CategoryValidation,
+		"lane-j",
+		"The tax on the original was corrected by a later decision under the content that made it; the correction carries that decision's tax.")
+
+	// ReasonCorrectionCustomerData is a document addressed or described wrongly.
+	ReasonCorrectionCustomerData = Register("CORRECTION_CUSTOMER_DATA", CategoryValidation,
+		"lane-j",
+		"The original document carried wrong customer or document data; the figures may be unchanged.")
+
 	// ---- authorization level (Build Plan A0–A4) --------------------------
 
 	// ReasonNotAuthoritative is the gate that matters most in this estate: no

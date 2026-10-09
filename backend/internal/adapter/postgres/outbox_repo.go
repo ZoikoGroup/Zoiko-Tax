@@ -85,6 +85,8 @@ func (r *OutboxRepo) Append(ctx context.Context, e outbox.Event) error {
 // relay that claimed rows, committed, and then published would have a window
 // where a crash loses the claim and the rows are never retried.
 func (r *OutboxRepo) Claim(ctx context.Context, limit int) ([]outbox.Event, error) {
+	// Cell-wide, as the relay is: one outbox, every tenant's events.
+	ctx = CellScope(ctx)
 	rows, err := r.s.db(ctx).Query(ctx, sqlOutboxClaim, limit)
 	if err != nil {
 		return nil, mapError(err, "claim outbox events")
@@ -115,6 +117,7 @@ func (r *OutboxRepo) Claim(ctx context.Context, limit int) ([]outbox.Event, erro
 
 // MarkPublished records a successful delivery.
 func (r *OutboxRepo) MarkPublished(ctx context.Context, eventID id.OutboxID, at time.Time) error {
+	ctx = CellScope(ctx)
 	_, err := r.s.db(ctx).Exec(ctx, sqlOutboxMarkPublished, eventID.UUID(), at)
 	return mapError(err, "mark outbox published")
 }
@@ -122,6 +125,7 @@ func (r *OutboxRepo) MarkPublished(ctx context.Context, eventID id.OutboxID, at 
 // RecordFailure counts a failed delivery without marking the row published, so
 // the next pass retries it.
 func (r *OutboxRepo) RecordFailure(ctx context.Context, eventID id.OutboxID, reason string) error {
+	ctx = CellScope(ctx)
 	// Truncated: last_error is an operational breadcrumb, and a driver error
 	// from a broker can be very long.
 	if len(reason) > 500 {
@@ -133,6 +137,8 @@ func (r *OutboxRepo) RecordFailure(ctx context.Context, eventID id.OutboxID, rea
 
 // Lag returns the age of the oldest unpublished event.
 func (r *OutboxRepo) Lag(ctx context.Context) (time.Duration, error) {
+	// The SLI is the cell's oldest unpublished event, whoever's it is.
+	ctx = CellScope(ctx)
 	var seconds float64
 	if err := r.s.db(ctx).QueryRow(ctx, sqlOutboxLag).Scan(&seconds); err != nil {
 		return 0, mapError(err, "read outbox lag")

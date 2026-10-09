@@ -204,7 +204,7 @@ func (s *DeterminationService) settleObligation(ctx context.Context, tenant id.T
 		if err != nil {
 			return internal(err, "The obligation could not be created.")
 		}
-		return s.fiscal.Obligations.Append(ctx, obligation.Obligation{
+		return s.appendObligation(ctx, obligation.Obligation{
 			ID: oid, TenantID: tenant, BusinessKey: at.key, RecordedAt: now,
 			JurisdictionID: at.decl.Jurisdiction, Type: at.decl.Type, Period: at.period,
 			Status: obligation.StatusOpen, Assessed: &total,
@@ -213,7 +213,7 @@ func (s *DeterminationService) settleObligation(ctx context.Context, tenant id.T
 			Content:    obligation.ContentRef{BundleID: b.ID(), BundleDigest: b.Digest()},
 			Duty:       obligation.DutyKind(at.decl.Duty), Due: obligation.DueDates{Legal: at.period.Due},
 			Timezone: at.loc.String(),
-		})
+		}, nil)
 	}
 	if err != nil {
 		return err
@@ -248,7 +248,7 @@ func (s *DeterminationService) settleObligation(ctx context.Context, tenant id.T
 	}
 	next.Assessed = &total
 	next.RecordedBy = id.UserID{}
-	return s.fiscal.Obligations.Append(ctx, next)
+	return s.appendObligation(ctx, next, &cur)
 }
 
 // defaultLegalEntity is the entity a commit posts and assesses for.
@@ -405,7 +405,7 @@ func (s *DeterminationService) TransitionObligation(ctx context.Context, obligat
 		next.Assessed = &total
 	}
 	next.RecordedBy = sc.Subject()
-	if err := s.fiscal.Obligations.Append(txCtx, next); err != nil {
+	if err := s.appendObligation(txCtx, next, &cur); err != nil {
 		return ObligationView{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {

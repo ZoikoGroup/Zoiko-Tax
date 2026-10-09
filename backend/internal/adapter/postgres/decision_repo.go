@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
@@ -61,6 +60,15 @@ const (
 	sqlDecisionHistory = `SELECT ` + sqlDecisionColumns + `
 		FROM ztax.tax_decision WHERE tenant_id = $1 AND business_key = $2
 		ORDER BY recorded_at, decision_id`
+
+	// The current versions — those nothing supersedes — of the decisions whose
+	// event fell in [from, to): the population a reconciliation compares.
+	sqlDecisionCurrentInWindow = `SELECT ` + sqlDecisionColumns + `
+		FROM ztax.tax_decision d
+		WHERE d.tenant_id = $1 AND d.event_time >= $2 AND d.event_time < $3
+		  AND NOT EXISTS (SELECT 1 FROM ztax.tax_decision s
+		                  WHERE s.tenant_id = d.tenant_id AND s.supersedes_id = d.decision_id)
+		ORDER BY d.event_time, d.decision_id`
 
 	// The seal's leaves, in evidence.LeafOrder. The half-open interval is the
 	// period's own: a decision recorded exactly at the boundary belongs to the
@@ -147,6 +155,29 @@ func (r *DecisionRepo) History(ctx context.Context, businessKey string) ([]evide
 		out = append(out, rec)
 	}
 	return out, mapError(rows.Err(), "read decision history")
+}
+
+// CurrentInWindow returns the current decisions whose event fell in
+// [from, to).
+func (r *DecisionRepo) CurrentInWindow(ctx context.Context, from, to time.Time) ([]evidence.Record, error) {
+	tenant, err := tenantOf(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := r.s.db(ctx).Query(ctx, sqlDecisionCurrentInWindow, tenant.UUID(), from.UTC(), to.UTC())
+	if err != nil {
+		return nil, mapError(err, "read current decisions")
+	}
+	defer rows.Close()
+	var out []evidence.Record
+	for rows.Next() {
+		rec, err := scanDecision(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, rec)
+	}
+	return out, mapError(rows.Err(), "read current decisions")
 }
 
 // SealLeaves reads the leaves for a period.
@@ -260,6 +291,9 @@ const (
 	sqlSealByID = `SELECT ` + sqlSealColumns + `
 		FROM ztax.evidence_period_seal WHERE tenant_id = $1 AND seal_id = $2`
 
+	sqlSealList = `SELECT ` + sqlSealColumns + `
+		FROM ztax.evidence_period_seal WHERE tenant_id = $1 ORDER BY period_start DESC LIMIT $2`
+
 	sqlSealOverlapping = `SELECT ` + sqlSealColumns + `
 		FROM   ztax.evidence_period_seal
 		WHERE  tenant_id = $1 AND period_start < $3 AND period_end > $2
@@ -284,7 +318,7 @@ func (r *SealRepo) LockSealing(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if _, inTx := ctx.Value(txKey{}).(pgx.Tx); !inTx {
+	if !inTx(ctx) {
 		// Outside a transaction the lock would be released at the end of
 		// this one statement, and the caller would believe it held a lock it
 		// does not.
@@ -339,6 +373,31 @@ func (r *SealRepo) ByID(ctx context.Context, sealID id.SealID) (evidence.SealRec
 		return evidence.SealRecord{}, err
 	}
 	return scanSeal(r.s.db(ctx).QueryRow(ctx, sqlSealByID, tenant.UUID(), sealID.UUID()))
+}
+
+// List returns the tenant's seals, latest period first.
+func (r *SealRepo) List(ctx context.Context, limit int) ([]evidence.SealRecord, error) {
+	tenant, err := tenantOf(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if limit <= 0 || limit > 500 {
+		limit = 500
+	}
+	rows, err := r.s.db(ctx).Query(ctx, sqlSealList, tenant.UUID(), limit)
+	if err != nil {
+		return nil, mapError(err, "list seals")
+	}
+	defer rows.Close()
+	var out []evidence.SealRecord
+	for rows.Next() {
+		rec, err := scanSeal(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, rec)
+	}
+	return out, mapError(rows.Err(), "list seals")
 }
 
 func scanSeal(row scanner) (evidence.SealRecord, error) {

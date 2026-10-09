@@ -254,6 +254,24 @@ func (r *memDecisions) History(_ context.Context, key string) ([]evidence.Record
 	return out, nil
 }
 
+func (r *memDecisions) CurrentInWindow(_ context.Context, from, to time.Time) ([]evidence.Record, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	superseded := map[id.DecisionID]bool{}
+	for _, x := range r.rows {
+		if x.Supersedes != nil {
+			superseded[*x.Supersedes] = true
+		}
+	}
+	var out []evidence.Record
+	for _, x := range r.rows {
+		if !superseded[x.DecisionID] && !x.EventTime.Before(from) && x.EventTime.Before(to) {
+			out = append(out, x)
+		}
+	}
+	return out, nil
+}
+
 func (r *memDecisions) SealLeaves(_ context.Context, from, to time.Time) ([]evidence.SealLeaf, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -315,6 +333,12 @@ func (r *memSeals) ByID(_ context.Context, sealID id.SealID) (evidence.SealRecor
 		}
 	}
 	return evidence.SealRecord{}, errs.New(errs.CategoryNotFound, errs.ReasonNotFound, "no such seal")
+}
+
+func (r *memSeals) List(context.Context, int) ([]evidence.SealRecord, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]evidence.SealRecord(nil), r.rows...), nil
 }
 
 func (r *memSeals) rewrite(sealID id.SealID, f func(*evidence.SealRecord)) {

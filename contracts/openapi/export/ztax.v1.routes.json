@@ -80,6 +80,12 @@
       "public": false
     },
     {
+      "method": "POST",
+      "path": "/v1/batches",
+      "operationId": "submitBatch",
+      "public": false
+    },
+    {
       "method": "GET",
       "path": "/v1/capabilities",
       "operationId": "getCapabilities",
@@ -99,8 +105,116 @@
     },
     {
       "method": "GET",
+      "path": "/v1/decisions/{decisionId}/inclusion",
+      "operationId": "getDecisionInclusion",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/decisions/{decisionId}/journals",
       "operationId": "listDecisionJournals",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/decisions/{decisionId}/retention",
+      "operationId": "getDecisionRetention",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/documents",
+      "operationId": "issueDocument",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/documents/{documentId}",
+      "operationId": "getDocument",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/documents/{documentId}/corrections",
+      "operationId": "correctDocument",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/documents/{documentId}/lineage",
+      "operationId": "getDocumentLineage",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/jobs/{jobId}",
+      "operationId": "getJob",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/legal-holds",
+      "operationId": "listLegalHolds",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/legal-holds",
+      "operationId": "placeLegalHold",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/legal-holds/{holdId}",
+      "operationId": "getLegalHold",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/legal-holds/{holdId}/release",
+      "operationId": "releaseLegalHold",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/legal-holds/{holdId}/scope",
+      "operationId": "changeLegalHoldScope",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/legal/authorization-checks",
+      "operationId": "checkAuthorization",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/legal/authorizations",
+      "operationId": "listAuthorizations",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/legal/authorizations",
+      "operationId": "grantAuthorization",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/legal/authorizations/{authorizationId}",
+      "operationId": "getAuthorization",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/legal/authorizations/{authorizationId}/revocation",
+      "operationId": "revokeAuthorization",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/legal/matrix",
+      "operationId": "getLegalMatrix",
       "public": false
     },
     {
@@ -129,14 +243,104 @@
     },
     {
       "method": "POST",
+      "path": "/v1/reconciliations",
+      "operationId": "runReconciliation",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/reconciliations/{runId}",
+      "operationId": "getReconciliation",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/reconciliations/{runId}/items/{itemId}/resolution",
+      "operationId": "resolveReconciliationItem",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/refunds/{refundId}",
+      "operationId": "getRefund",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/refunds/{refundId}/reports",
+      "operationId": "reportRefund",
+      "public": false
+    },
+    {
+      "method": "POST",
       "path": "/v1/replay/{decisionId}",
       "operationId": "replayDecision",
       "public": false
     },
     {
       "method": "GET",
+      "path": "/v1/retention/policies",
+      "operationId": "listRetentionPolicies",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/retention/policies",
+      "operationId": "recordRetentionPolicy",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/seals",
+      "operationId": "listSeals",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/seals",
+      "operationId": "sealPeriod",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/seals/{sealId}",
+      "operationId": "getSeal",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/seals/{sealId}/verification",
+      "operationId": "verifySeal",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/subledger/balances",
       "operationId": "getSubledgerBalances",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/subledger/periods/{period}",
+      "operationId": "getSubledgerPeriod",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/subledger/periods/{period}/reopen-requests",
+      "operationId": "requestPeriodReopen",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/subledger/periods/{period}/reopen-requests/{requestId}/approval",
+      "operationId": "approvePeriodReopen",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/subledger/periods/{period}/transitions",
+      "operationId": "transitionSubledgerPeriod",
       "public": false
     },
     {
@@ -149,6 +353,60 @@
       "method": "POST",
       "path": "/v1/transactions:commit",
       "operationId": "commitTransaction",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/transactions:refund",
+      "operationId": "refundTransaction",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/webhooks",
+      "operationId": "listWebhooks",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/webhooks",
+      "operationId": "createWebhook",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/webhooks/{webhookId}",
+      "operationId": "getWebhook",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/webhooks/{webhookId}/deliveries",
+      "operationId": "listWebhookDeliveries",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/webhooks/{webhookId}/deliveries/{deliveryId}",
+      "operationId": "getWebhookDelivery",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/webhooks/{webhookId}/deliveries/{deliveryId}/replay",
+      "operationId": "replayWebhookDelivery",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/webhooks/{webhookId}/secrets:rotate",
+      "operationId": "rotateWebhookSecret",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/webhooks/{webhookId}/status",
+      "operationId": "setWebhookStatus",
       "public": false
     }
   ]

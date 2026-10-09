@@ -196,6 +196,16 @@ func ParseKeyring(data []byte) (*Keyring, error) {
 	return ring, nil
 }
 
+// Window returns the validity window the keyring trusts a key for, so a
+// signer for the key can be built to the same window it will be verified in.
+func (r *Keyring) Window(keyID string) (notBefore, notAfter time.Time, ok bool) {
+	e, ok := r.keys[keyID]
+	if !ok {
+		return time.Time{}, time.Time{}, false
+	}
+	return e.notBefore, e.notAfter, true
+}
+
 // KeyIDs reports the identifiers this keyring holds, for the startup log line.
 // It is the keyring's identity in an incident investigation: "which keys was
 // this cell willing to trust" is otherwise unanswerable after the fact.

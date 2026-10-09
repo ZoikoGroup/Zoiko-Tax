@@ -436,6 +436,331 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/transactions:refund": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refund tax a committed decision charged
+         * @description `OPERATOR` only. Records a refund of tax charged by a committed
+         *     decision. A refund is **not** a decision and not a credit
+         *     (ZTAX-FIN-REQ-0015): nothing is re-determined, the decision is never
+         *     rewritten, and the refund has a lifecycle of its own
+         *     (ZTAX-FIN-REQ-0059). ZoikoTax moves no money; this records that a
+         *     payment provider has been, or will be, asked to return it.
+         *
+         *     The decision must be the current version of its business key, and the
+         *     amount at most the tax that decision posted to
+         *     `TAX_COLLECTED_LIABILITY` in that currency, less every earlier refund
+         *     of it that has not `FAILED`. An `UNCERTAIN` refund still counts: it
+         *     may have paid. A request beyond what is refundable is refused with
+         *     `400 INVALID_VALUE`, and the response says how much is left.
+         *
+         *     The refund is created `REQUESTED` and posts nothing. Only a provider
+         *     report of `SUCCEEDED` (see `POST /v1/refunds/{refundId}/reports`)
+         *     posts the `REFUND` journal.
+         *
+         *     `Idempotency-Key` is required, scoped apart from `:commit` and
+         *     `:adjust` (ADR-0013 §2.2).
+         */
+        post: operations["refundTransaction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/refunds/{refundId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One refund and its history
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. The refund as requested, its
+         *     current status, and every provider report that moved it, oldest
+         *     first.
+         */
+        get: operations["getRefund"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/refunds/{refundId}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record what the payment provider reported about a refund
+         * @description `OPERATOR`. Records one provider report. `ACCEPTED` makes the refund
+         *     `PENDING`, `SUCCEEDED` makes it `COMPLETED` and posts it to the Tax
+         *     Control Subledger, `DECLINED` makes it `FAILED` and releases its tax
+         *     to be refunded again. `TIMED_OUT` and `UNKNOWN` make it `UNCERTAIN` —
+         *     never completed and never failed, because the money may or may not
+         *     have moved — and a later definite report resolves it.
+         *
+         *     Nothing leaves `COMPLETED` or `FAILED`. A report the lifecycle does
+         *     not permit is refused with `409 STATE_TRANSITION_INVALID`.
+         *
+         *     Safe to retry without an idempotency key: the same report arriving
+         *     again (same outcome and reference, refund already where it put it)
+         *     returns the refund unchanged rather than recording a second move.
+         */
+        post: operations["reportRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/webhooks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The tenant's webhook subscriptions
+         * @description `ADMIN` or `AUDITOR`. Every subscription with its current status,
+         *     oldest first.
+         */
+        get: operations["listWebhooks"];
+        put?: never;
+        /**
+         * Subscribe an endpoint to named event types
+         * @description `ADMIN` only. Subscribes an HTTPS endpoint to the event types it
+         *     names — there is no wildcard, so an event kind added later reaches
+         *     nobody who did not ask for it by name. The endpoint must be HTTPS,
+         *     carry no credentials, and be a public address: a destination inside
+         *     the cell's network is refused here and again at every connection,
+         *     after name resolution.
+         *
+         *     The response carries the signing secret, `whsec_…`, **once**. It is
+         *     stored sealed and is never returned again; rotate it to get a new one.
+         *     Deliveries are signed under the Standard Webhooks scheme
+         *     (`webhook-id`, `webhook-timestamp`, `webhook-signature`), so any
+         *     Standard Webhooks library verifies them. `webhook-id` is the
+         *     CloudEvents id: deduplicate on it, because delivery is at least once.
+         */
+        post: operations["createWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/webhooks/{webhookId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One webhook subscription
+         * @description `ADMIN` or `AUDITOR`.
+         */
+        get: operations["getWebhook"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/webhooks/{webhookId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause, resume or disable a subscription
+         * @description `ADMIN` only. `PAUSED` stops deliveries and keeps nothing for later:
+         *     an event committed while paused is not delivered on resume, and a
+         *     delivery already scheduled is dead-lettered. Replay is how a receiver
+         *     catches up, deliberately. `DISABLED` is final. Asking for the status
+         *     the subscription already has is a retry and returns it unchanged.
+         */
+        post: operations["setWebhookStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/webhooks/{webhookId}/secrets:rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue a new signing secret
+         * @description `ADMIN` only. Issues the next signing secret, returned this once.
+         *     For 24 hours after the rotation every delivery is signed with both
+         *     the new secret and the previous one — `webhook-signature` carries
+         *     both — so a receiver can switch at its own pace. Rotating again inside
+         *     that window retires the oldest at once.
+         */
+        post: operations["rotateWebhookSecret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/webhooks/{webhookId}/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A subscription's deliveries, newest first
+         * @description `ADMIN` or `AUDITOR`. Filter on `status=DEAD` for the dead-letter
+         *     queue: deliveries that exhausted their attempts, or whose
+         *     subscription stopped receiving. The body sent is not returned; it is
+         *     the event, which the receiver has, or can be read through the API.
+         */
+        get: operations["listWebhookDeliveries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/webhooks/{webhookId}/deliveries/{deliveryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One delivery and its attempts
+         * @description `ADMIN` or `AUDITOR`. Each attempt records when it started, how long
+         *     it took, the receiver's status code if one arrived, and the
+         *     transport's error if not. The receiver's response body is never
+         *     kept.
+         */
+        get: operations["getWebhookDelivery"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/webhooks/{webhookId}/deliveries/{deliveryId}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deliver an event again
+         * @description `ADMIN` only. Schedules a new delivery of the same event, with the
+         *     same bytes and the same `webhook-id`, naming the delivery it replays.
+         *     It is how a receiver catches up after an outage that outlasted the
+         *     retries, or after a pause. The subscription must be `ACTIVE`.
+         */
+        post: operations["replayWebhookDelivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue many commits as one job
+         * @description `OPERATOR` only. Queues up to 1000 commits, executed asynchronously
+         *     and in order by a worker in the cell. Each item is exactly a
+         *     `:commit` request body; an item naming `supersedes` is executed as
+         *     `:adjust`, under the content that made what it corrects. An item may
+         *     correct an earlier item of the same batch.
+         *
+         *     A batch changes how commits arrive, never what a commit is: each item
+         *     takes the commit path a single request takes, under an idempotency key
+         *     of its own, so a worker that stops halfway resumes at the first item
+         *     with no result and commits nothing twice. A refused item — invalid
+         *     input, a superseded decision, a closed period — is recorded with its
+         *     reason code and the job carries on.
+         *
+         *     `Idempotency-Key` is required: the same key and body returns the same
+         *     job (ADR-0013). Poll `GET /v1/jobs/{jobId}` for progress.
+         */
+        post: operations["submitBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/jobs/{jobId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A job's progress and each item's result
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. `COMPLETED` means the job ran to
+         *     its end, however its items fared: `succeeded`, `failed` and each
+         *     item's `status` say which. A succeeded item names its decision; a
+         *     failed one names the registered reason code a single request would
+         *     have been refused with.
+         */
+        get: operations["getJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/decisions/{decisionId}": {
         parameters: {
             query?: never;
@@ -516,6 +841,237 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/decisions/{decisionId}/inclusion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Prove a decision is in its period's seal
+         * @description `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`. The RFC 6962 audit path
+         *     from the decision's leaf to the root of the seal covering the instant
+         *     it was recorded (ADR-0011 §2.4). With the seal's signed payload
+         *     (`GET /v1/seals/{sealId}`) and the published seal keyring, a verifier
+         *     outside the cell can confirm the decision was sealed without seeing
+         *     any other decision — the leaf is the decision's id, recorded instant
+         *     and result digest, hashed as `SHA-256(0x00 ‖ leafDigest)`, and each
+         *     level as `SHA-256(0x01 ‖ left ‖ right)`, an odd node promoted.
+         *
+         *     Check the path against the **signed** root and leaf count, never
+         *     against sizes the proof itself states. `404 NOT_FOUND` until the
+         *     period is sealed.
+         */
+        get: operations["getDecisionInclusion"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/seals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The tenant's period seals, latest first
+         * @description `ADMIN`, `AUDITOR` or `ANALYST`.
+         */
+        get: operations["listSeals"];
+        put?: never;
+        /**
+         * Seal a period's decisions
+         * @description `ADMIN` only. Signs a statement that the decisions recorded in
+         *     `[periodStart, periodEnd)` were exactly these, with exactly these
+         *     results: an RFC 6962 Merkle root over one leaf per decision, signed
+         *     with the evidence-seal key together with the tenant, cell and period,
+         *     so the signature cannot be lifted onto anything else (ADR-0011 §2.5).
+         *
+         *     A period may be sealed only after it has settled — five minutes past
+         *     its end — so a decision whose transaction was still committing is not
+         *     left out. Periods never overlap: a decision is vouched for by one seal
+         *     or none. A cell with no seal signer refuses with `503`; it can still
+         *     verify seals and prove inclusion.
+         *
+         *     A seal is integrity evidence, not a legal finality marker: it says the
+         *     record has not changed, not that the figures in it were right.
+         */
+        post: operations["sealPeriod"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/seals/{sealId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One seal, with the bytes its signature covers
+         * @description `ADMIN`, `AUDITOR` or `ANALYST`. `signedPayload` is the canonical
+         *     payload exactly as signed, base64; `signature` is ECDSA P-384 over
+         *     SHA-384 of those bytes, DER, base64, under the key `keyId` names in
+         *     the published seal keyring. Verify those two before trusting any
+         *     other field.
+         */
+        get: operations["getSeal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/seals/{sealId}/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Verify a seal end to end
+         * @description `ADMIN`, `AUDITOR` or `ANALYST`. Checks the signature over the
+         *     payload at the instant the seal was made, the payload against its
+         *     index row, the root against the decisions recorded for the period
+         *     today, and every decision's result object against its digest. A
+         *     failure is a verdict, not an error: `SIGNATURE_INVALID`,
+         *     `RECORD_MISMATCH`, `ROOT_MISMATCH` (something in the period moved) or
+         *     `EVIDENCE_MISSING`.
+         */
+        get: operations["verifySeal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Commit a fiscal document that presents committed decisions
+         * @description `OPERATOR` only. Commits an `INVOICE`, `DEBIT_NOTE` or `ADJUSTMENT`
+         *     (ZTAX-FIN-001 §3). A document invents no tax: every tax line names
+         *     the committed decision it comes from and the component — the slot the
+         *     decision's content posts, such as `TAX_VAT` — and for each decision
+         *     and component the document must present exactly what was decided
+         *     (ZTAX-FIN-REQ-0010, -0011). A component decided as zero may be left
+         *     out. A document that disagrees is refused with `409 CONFLICTED`
+         *     naming each decision and component that differs, and nothing is
+         *     committed: correct the decision, not the document.
+         *
+         *     Each decision must be the current version of its business key, and
+         *     may be billed by only one standing document at a time: a second
+         *     invoice for a decision already billed is refused with
+         *     `409 ALREADY_EXISTS` until the first is voided or fully credited.
+         *
+         *     Committed documents are never changed. `Idempotency-Key` is required.
+         */
+        post: operations["issueDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One fiscal document and its status history
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. The document exactly as committed,
+         *     and every status it has had since: a credit note or void that moved
+         *     it names itself as the `causeId`.
+         */
+        get: operations["getDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/documents/{documentId}/corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void, credit or rebill a committed document
+         * @description `OPERATOR` only. Commits a correcting document as a successor of this
+         *     one, sharing its root (ZTAX-FIN-REQ-0003, -0004). The original is
+         *     never edited; it gains a status naming the correction.
+         *
+         *     - `VOID` cancels every line, exactly: nets and taxes negated, nothing
+         *       recomputed. The original becomes `VOIDED`. Refused once any line
+         *       has been credited — credit the rest instead.
+         *     - `CREDIT_NOTE` cancels the lines in `cancelLines`, or every line not
+         *       already cancelled. The original becomes `PARTIALLY_CREDITED` or
+         *       `FULLY_CREDITED`. A line is cancelled once.
+         *     - `REBILL` charges again, with `lines` like an invoice's — each naming
+         *       the original line it replaces — once the original is voided or
+         *       fully credited.
+         *
+         *     `reason` is a registered `CORRECTION_*` code (ZTAX-FIN-REQ-0008).
+         *     `PARTIAL_CREDIT`, `AMENDMENT` and `RESTATEMENT` are refused as
+         *     `UNSUPPORTED`. `Idempotency-Key` is required.
+         */
+        post: operations["correctDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/documents/{documentId}/lineage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every document in this one's chain, original first
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. The original, and every void, credit note and rebill that followed it, in commit order (ZTAX-FIN-REQ-0007).
+         */
+        get: operations["getDocumentLineage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/subledger/balances": {
         parameters: {
             query?: never;
@@ -535,6 +1091,490 @@ export interface paths {
         get: operations["getSubledgerBalances"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/subledger/periods/{period}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A legal period's state, history and close manifest
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. A legal period is a month of the
+         *     tenant's default legal entity; one with no history is `OPEN`. A
+         *     hard-closed period carries its latest close manifest — the canonical
+         *     bytes and their digest — and `intact`: whether the journals and
+         *     control balances posted into it today are exactly the ones the
+         *     manifest sealed (ZTAX-FIN-REQ-0089).
+         */
+        get: operations["getSubledgerPeriod"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/subledger/periods/{period}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close a period, open an amendment window, or seal it
+         * @description `OPERATOR`. Moves the period (ZTAX-FIN-REQ-0088): `OPEN` ⇄
+         *     `SOFT_CLOSE` → `HARD_CLOSE` → `AMENDMENT_ACTIVE` → `HARD_CLOSE`, and
+         *     `HARD_CLOSE` → `SEALED`, which is final. A hard close seals the
+         *     period's journals, control balances, documents dated in it and open
+         *     exceptions in a new close manifest, naming the previous one
+         *     (ZTAX-FIN-REQ-0089, -0092, -0093).
+         *
+         *     After a hard close nothing posts into the period by the normal path:
+         *     a commit or a correction whose journal falls in it is refused with
+         *     `STATE_TRANSITION_INVALID`. Inside an `AMENDMENT_ACTIVE` window it
+         *     posts, marked as an amendment (ZTAX-FIN-REQ-0090). `SOFT_CLOSE` takes
+         *     adjustment and rounding journals only.
+         *
+         *     `REOPENED` is not a transition: it takes a reopen request and a
+         *     second person's approval.
+         */
+        post: operations["transitionSubledgerPeriod"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/subledger/periods/{period}/reopen-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask to reopen a hard-closed period
+         * @description `OPERATOR`. Records a request, with its reason, to reopen a
+         *     hard-closed period. Nothing moves until someone else approves it
+         *     (ZTAX-FIN-REQ-0091). A sealed period cannot be reopened.
+         */
+        post: operations["requestPeriodReopen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/subledger/periods/{period}/reopen-requests/{requestId}/approval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve someone else's request to reopen a period
+         * @description `ADMIN`, and never the person who made the request
+         *     (ZTAX-FIN-REQ-0091). The period becomes `REOPENED`; every earlier
+         *     close manifest stays, and the next hard close writes a new one naming
+         *     the last. A request is approved once.
+         */
+        post: operations["approvePeriodReopen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reconciliations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reconcile a legal period stage by stage
+         * @description `OPERATOR`. Compares the period (ZTAX-FIN-001 §17–§20) and records
+         *     every item, matched or not, with its exact variance:
+         *
+         *     - **R1**, calculated to document: each current decision whose event
+         *       fell in the period, its decided tax against the tax every document
+         *       presents for it, voids and credits included. `MISSING` is a
+         *       decision no document presents.
+         *     - **R3**, decision to subledger: the decided tax against what the
+         *       decision's posting put on `TAX_COLLECTED_LIABILITY`, and each
+         *       completed refund against its `REFUND` journal.
+         *
+         *     R2, R4, R5 and R6 compare records this cell does not hold yet and are
+         *     listed in `unavailable` — never silently left out
+         *     (ZTAX-FIN-REQ-0077). `firstBreak` is R7: the first stage, in order,
+         *     with an exception, so a clean later stage cannot hide an earlier
+         *     break. No tolerance applies; none is configured and none is assumed
+         *     (ZTAX-FIN-REQ-0080).
+         */
+        post: operations["runReconciliation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reconciliations/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A reconciliation run, with its items and their resolutions
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. A run is a record: a later run of the same period is a run of its own.
+         */
+        get: operations["getReconciliation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reconciliations/{runId}/items/{itemId}/resolution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve one exception, with its evidence
+         * @description `OPERATOR`. Records who resolved the exception, why, how, its root
+         *     cause, and at least one piece of evidence (ZTAX-FIN-REQ-0084). An
+         *     item is resolved once; a matched item is not an exception and is
+         *     refused with `409 STATE_TRANSITION_INVALID`.
+         */
+        post: operations["resolveReconciliationItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/retention/policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every version of every retention policy
+         * @description `ADMIN` or `AUDITOR`. A policy keeps one class of record of one
+         *     country's legal entities for a number of years from a trigger, on a
+         *     cited authority. Every version is listed, oldest first per policy: a
+         *     verdict names the version it used, so it can be reproduced
+         *     (ZTAX-EVID-REQ-0052, -0126).
+         */
+        get: operations["listRetentionPolicies"];
+        put?: never;
+        /**
+         * Record the next version of a retention policy
+         * @description `ADMIN`, signed in as themselves. Recording a policy under an id that
+         *     exists makes its next version; nothing is overwritten
+         *     (ZTAX-EVID-REQ-0052). There is no default period: a record no policy
+         *     governs is kept and reported `NO_POLICY` (ZTAX-EVID-REQ-0022,
+         *     ZTAX-PRIV-REQ-0052). The act is written to the administrative audit
+         *     trail.
+         */
+        post: operations["recordRetentionPolicy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/legal-holds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The tenant's legal holds
+         * @description `ADMIN` or `AUDITOR`, newest first, each with its full history. The
+         *     search is recorded in the administrative audit trail as privileged
+         *     evidence access (ZTAX-EVID-REQ-0115). A hold names what is kept; it
+         *     returns no evidence and opens nothing to anyone
+         *     (ZTAX-EVID-REQ-0024).
+         */
+        get: operations["listLegalHolds"];
+        put?: never;
+        /**
+         * Place a legal hold
+         * @description `ADMIN`, signed in as themselves. A hold serves a named claim,
+         *     investigation or regulator request (ZTAX-LEG-REQ-0091) and blocks
+         *     disposition of what it scopes, past any retention period
+         *     (ZTAX-EVID-REQ-0023, ZTAX-PRIV-REQ-0050). The scope is specific —
+         *     named decisions or business keys, or a bounded window of event times
+         *     of at most ten years, optionally narrowed to one legal entity — never
+         *     a tenant at large, so a hold is never a reason to keep unrelated
+         *     personal data (ZTAX-PRIV-REQ-0051).
+         */
+        post: operations["placeLegalHold"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/legal-holds/{holdId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One legal hold and its history
+         * @description `ADMIN` or `AUDITOR`. The read is recorded in the administrative audit
+         *     trail as privileged evidence access (ZTAX-EVID-REQ-0115).
+         */
+        get: operations["getLegalHold"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/legal-holds/{holdId}/scope": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change an active hold's scope
+         * @description `ADMIN`, signed in as themselves. The new scope replaces the old as a
+         *     new entry in the hold's history, with who and why; the old scope
+         *     stays readable there (ZTAX-EVID-REQ-0053). A released hold is not
+         *     changed: a matter that revives places a new hold.
+         */
+        post: operations["changeLegalHoldScope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/legal-holds/{holdId}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Release a legal hold
+         * @description `ADMIN`, signed in as themselves. Final. What the hold kept is decided
+         *     by its retention policy again from the next verdict on
+         *     (ZTAX-EVID-REQ-0054) — and is kept still if another active hold
+         *     scopes it.
+         */
+        post: operations["releaseLegalHold"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/decisions/{decisionId}/retention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether a decision's evidence may be disposed of now
+         * @description `ADMIN` or `AUDITOR`. The verdict a disposition job passes immediately
+         *     before it acts, taken under the hold lock so a hold being placed is
+         *     seen (ZTAX-EVID-REQ-0026): `RETAIN` inside the period, `ELIGIBLE` past
+         *     it, `HELD` under an active hold whatever the period says. `NO_POLICY`
+         *     and `CONFLICTED` — no policy governs the record, or several disagree —
+         *     keep it and are for a person to resolve, never a guess
+         *     (ZTAX-EVID-REQ-0092). The policy version used is named
+         *     (ZTAX-EVID-REQ-0126). Nothing about the decision is changed by
+         *     asking (ZTAX-EVID-REQ-0105).
+         */
+        get: operations["getDecisionRetention"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/legal/matrix": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The LegalAuthorization matrix this cell resolves against
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. For each country,
+         *     authority and service state (`INFORM`, `COMPUTE`, `PREPARE`, `FILE`,
+         *     `REPRESENT`, `ADVISE`), whether ZoikoTax may act directly, only with
+         *     the customer's authorization, only through a qualified person or a
+         *     partner, not at all, or whether counsel has yet to say
+         *     (ZTAX-LEG-001 §3–§4). It is legal content: every rule is versioned,
+         *     effective-dated and cites the counsel memo or authority source it
+         *     rests on (ZTAX-LEG-REQ-0009, -0102), and the digest names the edition
+         *     a check used. A cell with no matrix returns an empty one and blocks
+         *     every legally sensitive action. A content pack being in production
+         *     for `COMPUTE` implies nothing here (ZTAX-LEG-REQ-0057).
+         */
+        get: operations["getLegalMatrix"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/legal/authorizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The customer's authorizations
+         * @description `ADMIN`, `OPERATOR` or `AUDITOR`, newest first, each with its history
+         *     and whether it is in force now.
+         */
+        get: operations["listAuthorizations"];
+        put?: never;
+        /**
+         * Record a customer authorization
+         * @description `ADMIN`, signed in as themselves — never system work or a model
+         *     (ZTAX-LEG-REQ-0044). A customer's grant to one authority: a power of
+         *     attorney, a filing mandate, a portal delegation, an information
+         *     authorization — which is not representation (ZTAX-LEG-REQ-0013). It
+         *     names the legal entity granting it (the tenant's default when
+         *     omitted), the permissions, matters and periods it covers, when it
+         *     takes effect and lapses, and the evidence of the grant
+         *     (ZTAX-LEG-REQ-0014). An authority credential is a vault reference
+         *     (`vault://`, `awssm://`, `gcpsm://`, `azkv://`) and never the
+         *     credential (ZTAX-LEG-REQ-0017, -0018). Naming `supersedes` closes that
+         *     grant in the same act (ZTAX-LEG-REQ-0015).
+         */
+        post: operations["grantAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/legal/authorizations/{authorizationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One customer authorization and its history
+         * @description `ADMIN`, `OPERATOR` or `AUDITOR`.
+         */
+        get: operations["getAuthorization"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/legal/authorizations/{authorizationId}/revocation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke a customer authorization
+         * @description `ADMIN`, signed in as themselves. Final, and immediate: every action
+         *     that depended on the grant is blocked from the moment the revocation
+         *     commits (ZTAX-LEG-REQ-0016). The grant and its history stay
+         *     (ZTAX-LEG-REQ-0015).
+         */
+        post: operations["revokeAuthorization"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/legal/authorization-checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve whether an action may execute now
+         * @description `ADMIN`, `OPERATOR` or `ANALYST`. The gate every legally sensitive
+         *     action passes before it executes (ZTAX-LEG-REQ-0001), asked directly.
+         *     It fails closed: no rule, rules that disagree, `COUNSEL_PENDING`,
+         *     `PROHIBITED`, `SUSPENDED`, a partner's or the customer's action, a
+         *     qualified person's — each blocks (ZTAX-LEG-REQ-0007, -0008). Under
+         *     `DIRECT_WITH_AUTH` it needs an authorization in force, of the type
+         *     the rule names, granting what the service needs — `SUBMIT` to file,
+         *     `REPRESENT` to represent, which a filing mandate does not grant
+         *     (ZTAX-LEG-REQ-0062) — reaching the action's period and matter
+         *     (ZTAX-LEG-REQ-0101), bound to a credential where the authority needs
+         *     one. A block names its reason. Nothing is recorded by asking.
+         */
+        post: operations["checkAuthorization"];
         delete?: never;
         options?: never;
         head?: never;
@@ -936,6 +1976,8 @@ export interface components {
             authoritative: boolean;
             /** @description Every reason code this deployment can emit. */
             reasonCodes: components["schemas"]["ReasonCode"][];
+            /** @description Every event type this deployment emits, and so the types a webhook may subscribe to. */
+            eventTypes: components["schemas"]["EventType"][];
             content?: components["schemas"]["ContentCapability"];
         };
         /**
@@ -1461,6 +2503,649 @@ export interface components {
             authoritative: false;
             provenance: components["schemas"]["AiProvenance"];
         };
+        /**
+         * RefundId
+         * Format: uuid
+         * @description A refund identifier. A UUIDv7 in lowercase canonical form (ADR-0012 §2.1).
+         * @example 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+         */
+        RefundId: string;
+        /**
+         * RefundStatus
+         * @description A refund's own lifecycle (ZTAX-FIN-REQ-0059), separate from any credit.
+         *     `UNCERTAIN` means the provider's answer did not say whether the money
+         *     moved; it is neither paid nor failed.
+         * @example PENDING
+         * @enum {string}
+         */
+        RefundStatus: "REQUESTED" | "PENDING" | "COMPLETED" | "FAILED" | "UNCERTAIN";
+        /**
+         * RefundOutcome
+         * @description What the payment provider reported.
+         * @example SUCCEEDED
+         * @enum {string}
+         */
+        RefundOutcome: "ACCEPTED" | "SUCCEEDED" | "DECLINED" | "TIMED_OUT" | "UNKNOWN";
+        /**
+         * PaymentReference
+         * @description A payment provider's reference. It can identify a payer's transaction, so logs carry it redacted.
+         * @example psp:ch_3Nf0a1
+         */
+        PaymentReference: string;
+        /** RefundRequest */
+        RefundRequest: {
+            decisionId: components["schemas"]["DecisionId"];
+            amount: components["schemas"]["MoneyValue"];
+            paymentReference: components["schemas"]["PaymentReference"];
+            /** @description Why the refund is made. Free text; it may name the customer. */
+            reason?: string;
+        };
+        /**
+         * RefundEvent
+         * @description One entry in a refund's history. The first is the request; each later one is a provider report that moved it.
+         */
+        RefundEvent: {
+            /** Format: int32 */
+            seq: number;
+            status: components["schemas"]["RefundStatus"];
+            outcome?: components["schemas"]["RefundOutcome"];
+            externalReference?: components["schemas"]["PaymentReference"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /**
+             * Format: uuid
+             * @description The user who recorded the event. Absent for system work.
+             */
+            recordedBy?: string;
+        };
+        /**
+         * Refund
+         * @description A refund of tax a committed decision charged. `status` is the latest
+         *     event's; `history` is every event, oldest first.
+         */
+        Refund: {
+            id: components["schemas"]["RefundId"];
+            decisionId: components["schemas"]["DecisionId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            amount: components["schemas"]["MoneyValue"];
+            paymentReference: components["schemas"]["PaymentReference"];
+            reason?: string;
+            status: components["schemas"]["RefundStatus"];
+            requestedAt: components["schemas"]["Timestamp"];
+            /**
+             * Format: uuid
+             * @description The user who requested the refund. Absent for system work.
+             */
+            requestedBy?: string;
+            history: components["schemas"]["RefundEvent"][];
+        };
+        /** RefundReportRequest */
+        RefundReportRequest: {
+            outcome: components["schemas"]["RefundOutcome"];
+            externalReference?: components["schemas"]["PaymentReference"];
+        };
+        /**
+         * WebhookId
+         * Format: uuid
+         * @description A webhook subscription. A UUIDv7 in lowercase canonical form.
+         * @example 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        WebhookId: string;
+        /**
+         * DeliveryId
+         * Format: uuid
+         * @description One delivery of one event to one webhook.
+         * @example 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+         */
+        DeliveryId: string;
+        /**
+         * EventType
+         * @description An event type this cell emits, as the AsyncAPI contract names it.
+         * @example com.zoikotax.decision.committed
+         * @enum {string}
+         */
+        EventType: "com.zoikotax.decision.committed" | "com.zoikotax.decision.corrected" | "com.zoikotax.obligation.status-changed" | "com.zoikotax.accumulator.threshold-crossed" | "com.zoikotax.refund.requested" | "com.zoikotax.refund.status-changed" | "com.zoikotax.document.committed";
+        /**
+         * WebhookStatus
+         * @example ACTIVE
+         * @enum {string}
+         */
+        WebhookStatus: "ACTIVE" | "PAUSED" | "DISABLED";
+        /**
+         * DeliveryStatus
+         * @description `PENDING` awaits its next attempt; `DEAD` is the dead-letter state, kept and replayable.
+         * @example DEAD
+         * @enum {string}
+         */
+        DeliveryStatus: "PENDING" | "DELIVERED" | "DEAD";
+        /**
+         * WebhookUrl
+         * Format: uri
+         * @description An HTTPS endpoint at a public address, with no credentials in it.
+         * @example https://hooks.example.com/ztax
+         */
+        WebhookUrl: string;
+        /** WebhookCreateRequest */
+        WebhookCreateRequest: {
+            url: components["schemas"]["WebhookUrl"];
+            eventTypes: components["schemas"]["EventType"][];
+            description?: string;
+        };
+        /** Webhook */
+        Webhook: {
+            id: components["schemas"]["WebhookId"];
+            url: components["schemas"]["WebhookUrl"];
+            eventTypes: components["schemas"]["EventType"][];
+            description?: string;
+            status: components["schemas"]["WebhookStatus"];
+            createdAt: components["schemas"]["Timestamp"];
+            statusChangedAt: components["schemas"]["Timestamp"];
+        };
+        /** WebhookList */
+        WebhookList: {
+            webhooks: components["schemas"]["Webhook"][];
+        };
+        /**
+         * WebhookSecret
+         * @description A signing secret, in the form Standard Webhooks libraries take. Returned once, by the response that issued it.
+         */
+        WebhookSecret: {
+            /** Format: int32 */
+            version: number;
+            secret: string;
+        };
+        /** WebhookCreated */
+        WebhookCreated: {
+            webhook: components["schemas"]["Webhook"];
+            secret: components["schemas"]["WebhookSecret"];
+        };
+        /** WebhookStatusRequest */
+        WebhookStatusRequest: {
+            status: components["schemas"]["WebhookStatus"];
+        };
+        /** WebhookSecretRotation */
+        WebhookSecretRotation: {
+            secret: components["schemas"]["WebhookSecret"];
+            previousRetiresAt: components["schemas"]["Timestamp"];
+        };
+        /** WebhookDelivery */
+        WebhookDelivery: {
+            id: components["schemas"]["DeliveryId"];
+            webhookId: components["schemas"]["WebhookId"];
+            /**
+             * Format: uuid
+             * @description The CloudEvents id, sent as `webhook-id`. The receiver's deduplication key.
+             */
+            eventId: string;
+            eventType: components["schemas"]["EventType"];
+            status: components["schemas"]["DeliveryStatus"];
+            /** Format: int32 */
+            attempts: number;
+            nextAttemptAt?: components["schemas"]["Timestamp"];
+            createdAt: components["schemas"]["Timestamp"];
+            deliveredAt?: components["schemas"]["Timestamp"];
+            replayOf?: components["schemas"]["DeliveryId"];
+        };
+        /** WebhookDeliveryList */
+        WebhookDeliveryList: {
+            deliveries: components["schemas"]["WebhookDelivery"][];
+        };
+        /** WebhookAttempt */
+        WebhookAttempt: {
+            /** Format: int32 */
+            attempt: number;
+            startedAt: components["schemas"]["Timestamp"];
+            /** Format: int32 */
+            durationMs: number;
+            /**
+             * Format: int32
+             * @description The receiver's HTTP status. Absent when no response arrived.
+             */
+            statusCode?: number;
+            /** @description The transport's error, when no 2xx arrived. Never the receiver's response body. */
+            error?: string;
+        };
+        /** WebhookDeliveryDetail */
+        WebhookDeliveryDetail: {
+            delivery: components["schemas"]["WebhookDelivery"];
+            attempts: components["schemas"]["WebhookAttempt"][];
+        };
+        /**
+         * JobId
+         * Format: uuid
+         * @description An asynchronous job. A UUIDv7 in lowercase canonical form.
+         * @example 01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        JobId: string;
+        /** BatchRequest */
+        BatchRequest: {
+            /**
+             * @description What each item does. `COMMIT` commits it, or corrects with it when it names `supersedes`.
+             * @enum {string}
+             */
+            operation: "COMMIT";
+            items: components["schemas"]["CommitRequest"][];
+        };
+        /** JobItem */
+        JobItem: {
+            /** Format: int32 */
+            index: number;
+            businessKey: components["schemas"]["BusinessKey"];
+            /** @enum {string} */
+            status: "PENDING" | "SUCCEEDED" | "FAILED";
+            decisionId?: components["schemas"]["DecisionId"];
+            reasonCode?: components["schemas"]["ReasonCode"];
+        };
+        /** Job */
+        Job: {
+            id: components["schemas"]["JobId"];
+            /** @enum {string} */
+            operation: "COMMIT";
+            /** @enum {string} */
+            status: "QUEUED" | "RUNNING" | "COMPLETED";
+            /** Format: int32 */
+            itemCount: number;
+            /** Format: int32 */
+            succeeded: number;
+            /** Format: int32 */
+            failed: number;
+            /** Format: int32 */
+            pending: number;
+            requestedAt: components["schemas"]["Timestamp"];
+            startedAt?: components["schemas"]["Timestamp"];
+            finishedAt?: components["schemas"]["Timestamp"];
+            items: components["schemas"]["JobItem"][];
+        };
+        /**
+         * SealId
+         * Format: uuid
+         * @description A period seal. A UUIDv7 in lowercase canonical form.
+         * @example 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        SealId: string;
+        /** SealRequest */
+        SealRequest: {
+            periodStart: components["schemas"]["Timestamp"];
+            periodEnd: components["schemas"]["Timestamp"];
+        };
+        /**
+         * Seal
+         * @description A signed statement that the decisions recorded in `[periodStart, periodEnd)` were exactly these.
+         */
+        Seal: {
+            id: components["schemas"]["SealId"];
+            periodStart: components["schemas"]["Timestamp"];
+            periodEnd: components["schemas"]["Timestamp"];
+            /** Format: int32 */
+            leafCount: number;
+            merkleRoot: components["schemas"]["Digest"];
+            keyId: string;
+            cell: string;
+            sealedAt: components["schemas"]["Timestamp"];
+        };
+        /** SealList */
+        SealList: {
+            seals: components["schemas"]["Seal"][];
+        };
+        /** SealSignature */
+        SealSignature: {
+            keyId: string;
+            /** @enum {string} */
+            algorithm: "ECDSA_P384_SHA384";
+            /**
+             * Format: byte
+             * @description The DER signature, base64.
+             */
+            value: string;
+        };
+        /** SealDocument */
+        SealDocument: {
+            seal: components["schemas"]["Seal"];
+            /**
+             * Format: byte
+             * @description The canonical payload exactly as signed, base64. It names the tenant, cell, period, leaf count, leaf order and root.
+             */
+            signedPayload: string;
+            signature: components["schemas"]["SealSignature"];
+        };
+        /** SealVerification */
+        SealVerification: {
+            sealId: components["schemas"]["SealId"];
+            /** @enum {string} */
+            verdict: "VALID" | "SIGNATURE_INVALID" | "RECORD_MISMATCH" | "ROOT_MISMATCH" | "EVIDENCE_MISSING";
+            keyId: string;
+            /** Format: int32 */
+            leafCount: number;
+            signedRoot: components["schemas"]["Digest"];
+            recomputedRoot?: components["schemas"]["Digest"];
+            /** @description What failed, for the operator. Absent when VALID. */
+            detail?: string;
+        };
+        /**
+         * SealLeaf
+         * @description One decision's leaf. Its digest is the canonical (canon/v1) digest of exactly these three members.
+         */
+        SealLeaf: {
+            decisionId: components["schemas"]["DecisionId"];
+            recordedAt: components["schemas"]["Timestamp"];
+            resultDigest: components["schemas"]["Digest"];
+        };
+        /** InclusionProof */
+        InclusionProof: {
+            sealId: components["schemas"]["SealId"];
+            merkleRoot: components["schemas"]["Digest"];
+            /** Format: int32 */
+            leafCount: number;
+            /** Format: int32 */
+            leafIndex: number;
+            leaf: components["schemas"]["SealLeaf"];
+            leafDigest: components["schemas"]["Digest"];
+            /** @description Sibling node hashes from the leaf's level to the root, in the digest form. */
+            auditPath: components["schemas"]["Digest"][];
+        };
+        /**
+         * DocumentId
+         * Format: uuid
+         * @description A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+         * @example 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        DocumentId: string;
+        /**
+         * DocumentLineId
+         * Format: uuid
+         * @example 01920a90-2b3c-7d4e-8f50-6a7b8c9d0e1f
+         */
+        DocumentLineId: string;
+        /**
+         * DocumentNumber
+         * @description The legal, customer-visible document number (ZTAX-FIN-REQ-0006). Kept apart from the id.
+         * @example INV-2026-0001
+         */
+        DocumentNumber: string;
+        /**
+         * ExternalReference
+         * @description Another system's identifier for the document (ZTAX-DOM-REQ-0003). Never a key, never parsed, never assumed unique.
+         */
+        ExternalReference: {
+            sourceSystem: string;
+            namespace: string;
+            value: string;
+        };
+        /**
+         * DocumentTax
+         * @description One tax on one line, naming the committed decision it comes from and the component the decision's content posts.
+         */
+        DocumentTax: {
+            decisionId: components["schemas"]["DecisionId"];
+            /** @example TAX_VAT */
+            component: string;
+            amount: components["schemas"]["Decimal"];
+        };
+        /**
+         * SourceLineRef
+         * @description The billing or ERP line a document line came from (ZTAX-FIN-REQ-0020).
+         * @example bss:order-9/line-1
+         */
+        SourceLineRef: string;
+        /** DocumentLineRequest */
+        DocumentLineRequest: {
+            sourceLineRef?: components["schemas"]["SourceLineRef"];
+            componentInstance?: string;
+            net: components["schemas"]["Decimal"];
+            discount?: components["schemas"]["Decimal"];
+            /** @description Required with a discount — the allocation that produced it (ZTAX-FIN-REQ-0021). */
+            allocationRef?: string;
+            predecessorLineId?: components["schemas"]["DocumentLineId"];
+            taxes: components["schemas"]["DocumentTax"][];
+        };
+        /** DocumentRequest */
+        DocumentRequest: {
+            /** @enum {string} */
+            type: "INVOICE" | "DEBIT_NOTE" | "ADJUSTMENT";
+            number?: components["schemas"]["DocumentNumber"];
+            issueDate: components["schemas"]["CivilDate"];
+            taxPoint: components["schemas"]["Timestamp"];
+            currency: components["schemas"]["CurrencyCode"];
+            externalRef?: components["schemas"]["ExternalReference"];
+            lines: components["schemas"]["DocumentLineRequest"][];
+        };
+        /** CorrectionRequest */
+        CorrectionRequest: {
+            /** @enum {string} */
+            type: "VOID" | "CREDIT_NOTE" | "REBILL";
+            reason: components["schemas"]["ReasonCode"];
+            number?: components["schemas"]["DocumentNumber"];
+            issueDate: components["schemas"]["CivilDate"];
+            taxPoint: components["schemas"]["Timestamp"];
+            /** @description A credit note's lines to cancel; absent is every line not yet cancelled. */
+            cancelLines?: components["schemas"]["DocumentLineId"][];
+            /** @description A rebill's lines, each naming the original line it replaces. */
+            lines?: components["schemas"]["DocumentLineRequest"][];
+        };
+        /** DocumentLine */
+        DocumentLine: {
+            id: components["schemas"]["DocumentLineId"];
+            sourceLineRef?: components["schemas"]["SourceLineRef"];
+            componentInstance?: string;
+            net: components["schemas"]["Decimal"];
+            discount?: components["schemas"]["Decimal"];
+            allocationRef?: string;
+            predecessorLineId?: components["schemas"]["DocumentLineId"];
+            taxes: components["schemas"]["DocumentTax"][];
+        };
+        /** DocumentStatusEvent */
+        DocumentStatusEvent: {
+            /** Format: int32 */
+            seq: number;
+            /** @enum {string} */
+            status: "COMMITTED" | "ISSUED" | "DELIVERED" | "ACCEPTED" | "PARTIALLY_CREDITED" | "FULLY_CREDITED" | "VOIDED" | "REFUNDED" | "AMENDED" | "DISPUTED" | "CLOSED" | "SUSPENDED";
+            causeId?: components["schemas"]["DocumentId"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy?: string;
+        };
+        /**
+         * FiscalDocument
+         * @description A committed fiscal document. Amounts are in `currency`; a cancelling
+         *     document's are negative. `status` is the latest of `history`.
+         */
+        FiscalDocument: {
+            id: components["schemas"]["DocumentId"];
+            /** @enum {string} */
+            type: "INVOICE" | "CREDIT_NOTE" | "DEBIT_NOTE" | "PARTIAL_CREDIT" | "VOID" | "REFUND" | "REBILL" | "ADJUSTMENT" | "AMENDMENT" | "RESTATEMENT";
+            number?: components["schemas"]["DocumentNumber"];
+            rootId: components["schemas"]["DocumentId"];
+            predecessors: components["schemas"]["DocumentId"][];
+            reasonCode?: components["schemas"]["ReasonCode"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            issueDate: components["schemas"]["CivilDate"];
+            taxPoint: components["schemas"]["Timestamp"];
+            currency: components["schemas"]["CurrencyCode"];
+            externalRef?: components["schemas"]["ExternalReference"];
+            decisionIds: components["schemas"]["DecisionId"][];
+            lines: components["schemas"]["DocumentLine"][];
+            netTotal: components["schemas"]["Decimal"];
+            taxTotal: components["schemas"]["Decimal"];
+            grossTotal: components["schemas"]["Decimal"];
+            /** @enum {string} */
+            status: "COMMITTED" | "ISSUED" | "DELIVERED" | "ACCEPTED" | "PARTIALLY_CREDITED" | "FULLY_CREDITED" | "VOIDED" | "REFUNDED" | "AMENDED" | "DISPUTED" | "CLOSED" | "SUSPENDED";
+            history: components["schemas"]["DocumentStatusEvent"][];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy?: string;
+        };
+        /** DocumentLineage */
+        DocumentLineage: {
+            documents: components["schemas"]["FiscalDocument"][];
+        };
+        /**
+         * LegalPeriod
+         * @description A subledger legal period, a month.
+         * @example 2026-09
+         */
+        LegalPeriod: string;
+        /**
+         * PeriodState
+         * @example HARD_CLOSE
+         * @enum {string}
+         */
+        PeriodState: "OPEN" | "SOFT_CLOSE" | "HARD_CLOSE" | "REOPENED" | "AMENDMENT_ACTIVE" | "SEALED";
+        /**
+         * PeriodReason
+         * @description Free text entered by an operator.
+         * @example month end
+         */
+        PeriodReason: string;
+        /** PeriodEvent */
+        PeriodEvent: {
+            /** Format: int32 */
+            seq: number;
+            state: components["schemas"]["PeriodState"];
+            reason?: components["schemas"]["PeriodReason"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /**
+             * Format: uuid
+             * @description Who moved the period; on a reopening, who requested it.
+             */
+            recordedBy?: string;
+            /**
+             * Format: uuid
+             * @description On a reopening, the second person who approved it.
+             */
+            approvedBy?: string;
+            requestId?: components["schemas"]["ReopenRequestId"];
+            manifestDigest?: components["schemas"]["Digest"];
+        };
+        /**
+         * CloseManifestDocument
+         * @description A close manifest exactly as digested, base64 canonical JSON.
+         */
+        CloseManifestDocument: {
+            digest: components["schemas"]["Digest"];
+            /** Format: byte */
+            body: string;
+        };
+        /** SubledgerPeriod */
+        SubledgerPeriod: {
+            period: components["schemas"]["LegalPeriod"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            state: components["schemas"]["PeriodState"];
+            history: components["schemas"]["PeriodEvent"][];
+            manifest?: components["schemas"]["CloseManifestDocument"];
+            /** @description Whether the period's journals and balances today are exactly the ones its latest manifest sealed. Absent until the period is first hard-closed. */
+            intact?: boolean;
+        };
+        /** PeriodTransitionRequest */
+        PeriodTransitionRequest: {
+            /** @enum {string} */
+            to: "OPEN" | "SOFT_CLOSE" | "HARD_CLOSE" | "AMENDMENT_ACTIVE" | "SEALED";
+            reason?: components["schemas"]["PeriodReason"];
+        };
+        /**
+         * ReopenRequestId
+         * Format: uuid
+         * @example 01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        ReopenRequestId: string;
+        /** ReopenRequestBody */
+        ReopenRequestBody: {
+            reason: components["schemas"]["PeriodReason"];
+        };
+        /** PeriodReopenRequest */
+        PeriodReopenRequest: {
+            id: components["schemas"]["ReopenRequestId"];
+            period: components["schemas"]["LegalPeriod"];
+            reason: components["schemas"]["PeriodReason"];
+            requestedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            requestedBy: string;
+        };
+        /**
+         * RunId
+         * Format: uuid
+         * @example 01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        RunId: string;
+        /**
+         * ItemId
+         * Format: uuid
+         * @example 01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f
+         */
+        ItemId: string;
+        /**
+         * ReconStage
+         * @example R1_CALCULATED_TO_DOCUMENT
+         * @enum {string}
+         */
+        ReconStage: "R1_CALCULATED_TO_DOCUMENT" | "R2_DOCUMENT_TO_COLLECTION" | "R3_DOCUMENT_TO_SUBLEDGER" | "R4_SUBLEDGER_TO_RETURN" | "R5_RETURN_TO_REMITTANCE" | "R6_SUBLEDGER_TO_GL" | "R7_END_TO_END";
+        /**
+         * RootCause
+         * @description FIN-001 §18's root-cause taxonomy (ZTAX-FIN-REQ-0083).
+         * @example TIMING
+         * @enum {string}
+         */
+        RootCause: "CLASSIFICATION" | "JURISDICTION" | "TAX_RULE" | "ROUNDING" | "FX" | "DOCUMENT" | "COLLECTION" | "POSTING" | "RETURN" | "REMITTANCE" | "GL" | "TIMING" | "DATA" | "OTHER";
+        /**
+         * EvidenceReference
+         * @description A reference to evidence a resolution relies on — a document id, a ticket, a statement line.
+         * @example bss:invoice-run-2026-10-01
+         */
+        EvidenceReference: string;
+        /** ReconciliationRequest */
+        ReconciliationRequest: {
+            period: components["schemas"]["LegalPeriod"];
+        };
+        /** ReconResolution */
+        ReconResolution: {
+            /** @enum {string} */
+            actor: "HUMAN" | "AI_A3";
+            /** Format: uuid */
+            resolver?: string;
+            reason: string;
+            /** @enum {string} */
+            action: "ADJUST" | "RECLASSIFY" | "AMEND" | "WAIT" | "WAIVE_WITH_APPROVAL" | "EXTERNAL_CORRECTION";
+            rootCause: components["schemas"]["RootCause"];
+            evidence: components["schemas"]["EvidenceReference"][];
+            resolvedAt: components["schemas"]["Timestamp"];
+        };
+        /**
+         * ReconciliationItem
+         * @description One comparison. `variance` is observed minus expected, exact,
+         *     whatever the status (ZTAX-FIN-REQ-0081); absent when one side is.
+         */
+        ReconciliationItem: {
+            id: components["schemas"]["ItemId"];
+            stage: components["schemas"]["ReconStage"];
+            /** @description The canonical id compared on, such as `decision:<id>` or `refund:<id>`. */
+            matchKey: string;
+            expected?: components["schemas"]["MoneyValue"];
+            observed?: components["schemas"]["MoneyValue"];
+            variance?: components["schemas"]["MoneyValue"];
+            /** @enum {string} */
+            status: "MATCHED" | "TOLERANCE_MATCH" | "UNMATCHED" | "PARTIAL" | "DUPLICATE" | "MISSING" | "CONFLICTED" | "PENDING" | "EXPLAINED" | "RESOLVED";
+            rootCause?: components["schemas"]["RootCause"];
+            detail?: string;
+            resolution?: components["schemas"]["ReconResolution"];
+        };
+        /** ReconciliationRun */
+        ReconciliationRun: {
+            id: components["schemas"]["RunId"];
+            period: components["schemas"]["LegalPeriod"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            ranAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            ranBy?: string;
+            firstBreak?: components["schemas"]["ReconStage"];
+            unavailable: components["schemas"]["ReconStage"][];
+            items: components["schemas"]["ReconciliationItem"][];
+        };
+        /** ResolutionRequest */
+        ResolutionRequest: {
+            reason: string;
+            /** @enum {string} */
+            action: "ADJUST" | "RECLASSIFY" | "AMEND" | "WAIT" | "WAIVE_WITH_APPROVAL" | "EXTERNAL_CORRECTION";
+            rootCause: components["schemas"]["RootCause"];
+            evidence: components["schemas"]["EvidenceReference"][];
+        };
         /** ReplayReport */
         ReplayReport: {
             decisionId: components["schemas"]["DecisionId"];
@@ -1473,6 +3158,350 @@ export interface components {
              * @example $.emitted.TAX_VAT.amount
              */
             divergence?: string;
+        };
+        /**
+         * RetentionPolicyId
+         * @description A retention policy's stable name; its versions share it.
+         * @example de-decisions
+         */
+        RetentionPolicyId: string;
+        /**
+         * RetentionRecordClass
+         * @example DECISION
+         * @enum {string}
+         */
+        RetentionRecordClass: "DECISION" | "DOCUMENT" | "JOURNAL" | "REFUND";
+        /**
+         * RetentionTrigger
+         * @description What the period runs from: the taxable event, the record's making, or
+         *     the end of the calendar year of the event.
+         * @example EVENT_YEAR_END
+         * @enum {string}
+         */
+        RetentionTrigger: "EVENT_TIME" | "RECORDED_AT" | "EVENT_YEAR_END";
+        /**
+         * CountryCode
+         * @description ISO 3166-1 alpha-2.
+         * @example DE
+         */
+        CountryCode: string;
+        /** RetentionPolicyRequest */
+        RetentionPolicyRequest: {
+            id: components["schemas"]["RetentionPolicyId"];
+            recordClass: components["schemas"]["RetentionRecordClass"];
+            country: components["schemas"]["CountryCode"];
+            /** Format: int32 */
+            years: number;
+            trigger: components["schemas"]["RetentionTrigger"];
+            effectiveFrom: components["schemas"]["Timestamp"];
+            /** @description The statute, regulation or contract the period comes from. */
+            citation: string;
+        };
+        /** RetentionPolicy */
+        RetentionPolicy: {
+            id: components["schemas"]["RetentionPolicyId"];
+            /** Format: int32 */
+            version: number;
+            recordClass: components["schemas"]["RetentionRecordClass"];
+            country: components["schemas"]["CountryCode"];
+            /** Format: int32 */
+            years: number;
+            trigger: components["schemas"]["RetentionTrigger"];
+            effectiveFrom: components["schemas"]["Timestamp"];
+            citation: string;
+            recordedAt: components["schemas"]["Timestamp"];
+            /**
+             * Format: uuid
+             * @description The administrator who recorded this version.
+             */
+            recordedBy: string;
+        };
+        /** RetentionPolicyList */
+        RetentionPolicyList: {
+            policies: components["schemas"]["RetentionPolicy"][];
+        };
+        /** PolicyVersionRef */
+        PolicyVersionRef: {
+            id: components["schemas"]["RetentionPolicyId"];
+            /** Format: int32 */
+            version: number;
+        };
+        /** RetentionVerdict */
+        RetentionVerdict: {
+            decisionId: components["schemas"]["DecisionId"];
+            recordClass: components["schemas"]["RetentionRecordClass"];
+            country?: components["schemas"]["CountryCode"];
+            /** @enum {string} */
+            outcome: "RETAIN" | "HELD" | "ELIGIBLE" | "NO_POLICY" | "CONFLICTED";
+            policy?: components["schemas"]["PolicyVersionRef"];
+            /** @description For `CONFLICTED`, the policies that disagree. */
+            candidates?: components["schemas"]["PolicyVersionRef"][];
+            retainUntil?: components["schemas"]["Timestamp"];
+            /** @description The active holds that scope the record. */
+            holds?: components["schemas"]["LegalHoldId"][];
+            /** @description Why a record is `NO_POLICY` or `CONFLICTED`. */
+            detail?: string;
+            evaluatedAt: components["schemas"]["Timestamp"];
+        };
+        /**
+         * LegalHoldId
+         * Format: uuid
+         * @example 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        LegalHoldId: string;
+        /**
+         * LegalHoldReason
+         * @description Free text entered by an administrator.
+         * @example litigation notice received
+         */
+        LegalHoldReason: string;
+        /**
+         * LegalHoldScope
+         * @description What a hold covers. Every criterion given must hold: named decisions
+         *     or business keys, a window of event times `[eventFrom, eventTo)`, and
+         *     a legal entity narrowing either. At least names or a window; a window
+         *     alone spans at most ten years.
+         */
+        LegalHoldScope: {
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            businessKeys?: components["schemas"]["BusinessKey"][];
+            decisionIds?: components["schemas"]["DecisionId"][];
+            eventFrom?: components["schemas"]["Timestamp"];
+            eventTo?: components["schemas"]["Timestamp"];
+        };
+        /** LegalHoldEvent */
+        LegalHoldEvent: {
+            /** Format: int32 */
+            seq: number;
+            /** @enum {string} */
+            kind: "PLACED" | "SCOPE_CHANGED" | "RELEASED";
+            scope: components["schemas"]["LegalHoldScope"];
+            reason: components["schemas"]["LegalHoldReason"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /** LegalHold */
+        LegalHold: {
+            id: components["schemas"]["LegalHoldId"];
+            /** @description The claim, investigation or regulator request the hold serves. */
+            matter: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "RELEASED";
+            scope: components["schemas"]["LegalHoldScope"];
+            history: components["schemas"]["LegalHoldEvent"][];
+        };
+        /** LegalHoldList */
+        LegalHoldList: {
+            holds: components["schemas"]["LegalHold"][];
+        };
+        /** LegalHoldRequest */
+        LegalHoldRequest: {
+            matter: string;
+            reason: components["schemas"]["LegalHoldReason"];
+            scope: components["schemas"]["LegalHoldScope"];
+        };
+        /** LegalHoldScopeRequest */
+        LegalHoldScopeRequest: {
+            reason: components["schemas"]["LegalHoldReason"];
+            scope: components["schemas"]["LegalHoldScope"];
+        };
+        /** LegalHoldReleaseRequest */
+        LegalHoldReleaseRequest: {
+            reason: components["schemas"]["LegalHoldReason"];
+        };
+        /**
+         * ServiceState
+         * @example FILE
+         * @enum {string}
+         */
+        ServiceState: "INFORM" | "COMPUTE" | "PREPARE" | "FILE" | "REPRESENT" | "ADVISE";
+        /**
+         * LegalStatus
+         * @example DIRECT_WITH_AUTH
+         * @enum {string}
+         */
+        LegalStatus: "DIRECT_ALLOWED" | "DIRECT_WITH_AUTH" | "QUALIFIED_PERSON_REQUIRED" | "PARTNER_REQUIRED" | "CUSTOMER_ONLY" | "COUNSEL_PENDING" | "PROHIBITED" | "SUSPENDED";
+        /**
+         * AuthorizationType
+         * @example FILING_MANDATE
+         * @enum {string}
+         */
+        AuthorizationType: "NONE" | "CONTRACT" | "DECLARATION" | "POA" | "TAX_INFORMATION" | "PORTAL_DELEGATION" | "FILING_MANDATE";
+        /**
+         * AuthorizationPermission
+         * @example SUBMIT
+         * @enum {string}
+         */
+        AuthorizationPermission: "READ_INFO" | "PREPARE" | "SUBMIT" | "RECEIVE_NOTICE" | "REPRESENT" | "SIGN";
+        /**
+         * FundsPosture
+         * @example NO_CUSTODY
+         * @enum {string}
+         */
+        FundsPosture: "NO_CUSTODY" | "INSTRUCTION_ONLY" | "PSP_PARTNER" | "LICENSED_PROGRAM";
+        /**
+         * AuthorityCode
+         * @description An authority within a country, as the matrix names it.
+         * @example DE-ELSTER
+         */
+        AuthorityCode: string;
+        /**
+         * AuthorizationId
+         * Format: uuid
+         * @example 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        AuthorizationId: string;
+        /** LegalRule */
+        LegalRule: {
+            id: string;
+            /** Format: int32 */
+            version: number;
+            country: components["schemas"]["CountryCode"];
+            authority: components["schemas"]["AuthorityCode"];
+            service: components["schemas"]["ServiceState"];
+            status: components["schemas"]["LegalStatus"];
+            /** @description The Zoiko entity or approved partner that performs the service. */
+            provider: string;
+            authorizationType: components["schemas"]["AuthorizationType"];
+            /** @description The authority accepts no generic grant; an authorization names its periods. */
+            requiresPeriods: boolean;
+            /** @description The authority accepts no generic grant; an authorization names its matters. */
+            requiresMatters: boolean;
+            qualification?: string;
+            /** @description The kind of credential the authority needs — never a credential. */
+            credential?: string;
+            funds: components["schemas"]["FundsPosture"];
+            /** @description The counsel memo or authority source the rule rests on. */
+            opinionRef: string;
+            effectiveFrom: components["schemas"]["Timestamp"];
+            effectiveTo?: components["schemas"]["Timestamp"];
+        };
+        /** LegalMatrix */
+        LegalMatrix: {
+            /** @description The matrix edition; empty when the cell has none. */
+            version: string;
+            /** @description A matrix nobody has approved. Loads in development only. */
+            draft: boolean;
+            digest?: components["schemas"]["Digest"];
+            rules: components["schemas"]["LegalRule"][];
+        };
+        /** AuthorizationEvent */
+        AuthorizationEvent: {
+            /** Format: int32 */
+            seq: number;
+            /** @enum {string} */
+            kind: "GRANTED" | "REVOKED" | "SUPERSEDED";
+            reason?: string;
+            supersededBy?: components["schemas"]["AuthorizationId"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /**
+         * AuthorizationMatter
+         * @description A form or matter a grant covers, as the customer named it.
+         * @example UStVA
+         */
+        AuthorizationMatter: string;
+        /**
+         * AuthorizationEvidence
+         * @description A reference to the signed artifact, consent proof or authority acknowledgement.
+         * @example doc:mandate-2026.pdf
+         */
+        AuthorizationEvidence: string;
+        /**
+         * CredentialRef
+         * @description Where the authority credential is held in the secrets vault. Never the credential.
+         * @example vault://tax/de/elster/cert
+         */
+        CredentialRef: string;
+        /**
+         * Representative
+         * @description The individual or entity acting under the grant.
+         */
+        Representative: string;
+        /** CustomerAuthorization */
+        CustomerAuthorization: {
+            id: components["schemas"]["AuthorizationId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            country: components["schemas"]["CountryCode"];
+            authority: components["schemas"]["AuthorityCode"];
+            type: components["schemas"]["AuthorizationType"];
+            permissions: components["schemas"]["AuthorizationPermission"][];
+            matters: components["schemas"]["AuthorizationMatter"][];
+            periodFrom?: components["schemas"]["LegalPeriod"];
+            periodTo?: components["schemas"]["LegalPeriod"];
+            representative?: components["schemas"]["Representative"];
+            effectiveFrom: components["schemas"]["Timestamp"];
+            expiresAt?: components["schemas"]["Timestamp"];
+            evidence: components["schemas"]["AuthorizationEvidence"][];
+            credentialRef?: components["schemas"]["CredentialRef"];
+            supersedes?: components["schemas"]["AuthorizationId"];
+            /** @enum {string} */
+            status: "ACTIVE" | "REVOKED" | "SUPERSEDED";
+            /** @description Active, effective and not expired, now. */
+            inForce: boolean;
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+            history: components["schemas"]["AuthorizationEvent"][];
+        };
+        /** AuthorizationList */
+        AuthorizationList: {
+            authorizations: components["schemas"]["CustomerAuthorization"][];
+        };
+        /** AuthorizationRequest */
+        AuthorizationRequest: {
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            country: components["schemas"]["CountryCode"];
+            authority: components["schemas"]["AuthorityCode"];
+            type: components["schemas"]["AuthorizationType"];
+            permissions: components["schemas"]["AuthorizationPermission"][];
+            matters?: components["schemas"]["AuthorizationMatter"][];
+            periodFrom?: components["schemas"]["LegalPeriod"];
+            periodTo?: components["schemas"]["LegalPeriod"];
+            representative?: components["schemas"]["Representative"];
+            effectiveFrom: components["schemas"]["Timestamp"];
+            expiresAt?: components["schemas"]["Timestamp"];
+            evidence: components["schemas"]["AuthorizationEvidence"][];
+            credentialRef?: components["schemas"]["CredentialRef"];
+            supersedes?: components["schemas"]["AuthorizationId"];
+        };
+        /** RevocationRequest */
+        RevocationRequest: {
+            reason: string;
+        };
+        /** AuthorizationCheckRequest */
+        AuthorizationCheckRequest: {
+            country: components["schemas"]["CountryCode"];
+            authority: components["schemas"]["AuthorityCode"];
+            service: components["schemas"]["ServiceState"];
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            period?: components["schemas"]["LegalPeriod"];
+            matter?: components["schemas"]["AuthorizationMatter"];
+        };
+        /** RuleRef */
+        RuleRef: {
+            id: string;
+            /** Format: int32 */
+            version: number;
+        };
+        /** AuthorizationCheck */
+        AuthorizationCheck: {
+            allowed: boolean;
+            status: components["schemas"]["LegalStatus"];
+            /**
+             * @description Why the action is blocked; absent when it is allowed.
+             * @enum {string}
+             */
+            reason?: "NO_RULE" | "RULE_CONFLICT" | "COUNSEL_PENDING" | "PROHIBITED" | "SUSPENDED" | "PARTNER_REQUIRED" | "CUSTOMER_ONLY" | "QUALIFIED_PERSON_REQUIRED" | "AUTHORIZATION_MISSING" | "AUTHORIZATION_EXPIRED" | "AUTHORIZATION_REVOKED" | "AUTHORIZATION_OUT_OF_SCOPE" | "CREDENTIAL_MISSING" | "MATRIX_UNAVAILABLE" | "ACTION_NOT_WELL_FORMED";
+            rule?: components["schemas"]["RuleRef"];
+            authorizationId?: components["schemas"]["AuthorizationId"];
+            matrixVersion?: string;
+            matrixDigest?: components["schemas"]["Digest"];
+            detail?: string;
+            checkedAt: components["schemas"]["Timestamp"];
         };
     };
     responses: {
@@ -1589,10 +3618,70 @@ export interface components {
          */
         DecisionId: components["schemas"]["DecisionId"];
         /**
+         * @description The legal hold identifier.
+         * @example 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        LegalHoldId: components["schemas"]["LegalHoldId"];
+        /**
+         * @description The customer authorization identifier.
+         * @example 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        AuthorizationId: components["schemas"]["AuthorizationId"];
+        /**
          * @description The obligation row identifier.
          * @example 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
          */
         ObligationId: components["schemas"]["ObligationId"];
+        /**
+         * @description The refund identifier.
+         * @example 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+         */
+        RefundId: components["schemas"]["RefundId"];
+        /**
+         * @description The webhook subscription.
+         * @example 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        WebhookId: components["schemas"]["WebhookId"];
+        /**
+         * @description The delivery.
+         * @example 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+         */
+        DeliveryId: components["schemas"]["DeliveryId"];
+        /**
+         * @description The job.
+         * @example 01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        JobId: components["schemas"]["JobId"];
+        /**
+         * @description The seal.
+         * @example 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        SealId: components["schemas"]["SealId"];
+        /**
+         * @description The fiscal document.
+         * @example 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        DocumentId: components["schemas"]["DocumentId"];
+        /**
+         * @description The legal period, a month.
+         * @example 2026-09
+         */
+        LegalPeriod: components["schemas"]["LegalPeriod"];
+        /**
+         * @description The reopen request.
+         * @example 01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        ReopenRequestId: components["schemas"]["ReopenRequestId"];
+        /**
+         * @description The reconciliation run.
+         * @example 01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+         */
+        RunId: components["schemas"]["RunId"];
+        /**
+         * @description The run item.
+         * @example 01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f
+         */
+        ItemId: components["schemas"]["ItemId"];
         /**
          * @description Maximum number of items to return. The server caps this independently,
          *     so a larger value is not an error and does not return more.
@@ -2157,6 +4246,483 @@ export interface operations {
             503: components["responses"]["Unavailable"];
         };
     };
+    refundTransaction: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefundRequest"];
+            };
+        };
+        responses: {
+            /**
+             * @description The refund, `REQUESTED`. A replayed response carries
+             *     `Idempotent-Replay: true` and is byte-for-byte the original.
+             */
+            201: {
+                headers: {
+                    /**
+                     * @description Present, and `true`, when this is the stored response to an earlier request with the same key.
+                     * @example true
+                     */
+                    "Idempotent-Replay"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refund"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["IdempotencyConflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getRefund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The refund identifier.
+                 * @example 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+                 */
+                refundId: components["parameters"]["RefundId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The refund. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refund"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    reportRefund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The refund identifier.
+                 * @example 01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f
+                 */
+                refundId: components["parameters"]["RefundId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefundReportRequest"];
+            };
+        };
+        responses: {
+            /** @description The refund after the report. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refund"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listWebhooks: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The subscriptions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description The subscription and its first signing secret, shown this once. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookCreated"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The webhook subscription.
+                 * @example 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                webhookId: components["parameters"]["WebhookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The subscription. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Webhook"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    setWebhookStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The webhook subscription.
+                 * @example 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                webhookId: components["parameters"]["WebhookId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description The subscription after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Webhook"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    rotateWebhookSecret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The webhook subscription.
+                 * @example 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                webhookId: components["parameters"]["WebhookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The new secret, and when the previous one stops signing. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookSecretRotation"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listWebhookDeliveries: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only deliveries in this status.
+                 * @example DEAD
+                 */
+                status?: components["schemas"]["DeliveryStatus"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description The webhook subscription.
+                 * @example 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                webhookId: components["parameters"]["WebhookId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deliveries. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDeliveryList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getWebhookDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The webhook subscription.
+                 * @example 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                webhookId: components["parameters"]["WebhookId"];
+                /**
+                 * @description The delivery.
+                 * @example 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                 */
+                deliveryId: components["parameters"]["DeliveryId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The delivery. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDeliveryDetail"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    replayWebhookDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The webhook subscription.
+                 * @example 01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                webhookId: components["parameters"]["WebhookId"];
+                /**
+                 * @description The delivery.
+                 * @example 01920a61-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                 */
+                deliveryId: components["parameters"]["DeliveryId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The new delivery, scheduled now. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDelivery"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    submitBatch: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchRequest"];
+            };
+        };
+        responses: {
+            /**
+             * @description The job, queued. A replayed response carries
+             *     `Idempotent-Replay: true` and is byte-for-byte the original.
+             */
+            202: {
+                headers: {
+                    /**
+                     * @description Present, and `true`, when this is the stored response to an earlier request with the same key.
+                     * @example true
+                     */
+                    "Idempotent-Replay"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Job"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["IdempotencyConflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The job.
+                 * @example 01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                jobId: components["parameters"]["JobId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The job. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Job"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
     getDecision: {
         parameters: {
             query?: never;
@@ -2250,6 +4816,326 @@ export interface operations {
             503: components["responses"]["Unavailable"];
         };
     };
+    getDecisionInclusion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The decision identifier.
+                 * @example 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                 */
+                decisionId: components["parameters"]["DecisionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The proof. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InclusionProof"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listSeals: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The seals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SealList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    sealPeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SealRequest"];
+            };
+        };
+        responses: {
+            /** @description The seal. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Seal"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getSeal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The seal.
+                 * @example 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                sealId: components["parameters"]["SealId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The seal and its signed document. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SealDocument"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    verifySeal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The seal.
+                 * @example 01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                sealId: components["parameters"]["SealId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The verdict. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SealVerification"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    issueDocument: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentRequest"];
+            };
+        };
+        responses: {
+            /**
+             * @description The committed document. A replayed response carries
+             *     `Idempotent-Replay: true` and is byte-for-byte the original.
+             */
+            201: {
+                headers: {
+                    /**
+                     * @description Present, and `true`, when this is the stored response to an earlier request with the same key.
+                     * @example true
+                     */
+                    "Idempotent-Replay"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FiscalDocument"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["IdempotencyConflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The fiscal document.
+                 * @example 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                documentId: components["parameters"]["DocumentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The document. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FiscalDocument"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    correctDocument: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /**
+                 * @description The fiscal document.
+                 * @example 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                documentId: components["parameters"]["DocumentId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CorrectionRequest"];
+            };
+        };
+        responses: {
+            /** @description The correcting document. */
+            201: {
+                headers: {
+                    /**
+                     * @description Present, and `true`, when this is the stored response to an earlier request with the same key.
+                     * @example true
+                     */
+                    "Idempotent-Replay"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FiscalDocument"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["IdempotencyConflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getDocumentLineage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The fiscal document.
+                 * @example 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                documentId: components["parameters"]["DocumentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The chain. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentLineage"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
     getSubledgerBalances: {
         parameters: {
             query?: never;
@@ -2270,6 +5156,672 @@ export interface operations {
             };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getSubledgerPeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The legal period, a month.
+                 * @example 2026-09
+                 */
+                period: components["parameters"]["LegalPeriod"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The period. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubledgerPeriod"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    transitionSubledgerPeriod: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The legal period, a month.
+                 * @example 2026-09
+                 */
+                period: components["parameters"]["LegalPeriod"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PeriodTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description The period after the move. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubledgerPeriod"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    requestPeriodReopen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The legal period, a month.
+                 * @example 2026-09
+                 */
+                period: components["parameters"]["LegalPeriod"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReopenRequestBody"];
+            };
+        };
+        responses: {
+            /** @description The request, awaiting approval. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodReopenRequest"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    approvePeriodReopen: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The legal period, a month.
+                 * @example 2026-09
+                 */
+                period: components["parameters"]["LegalPeriod"];
+                /**
+                 * @description The reopen request.
+                 * @example 01920aa0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                requestId: components["parameters"]["ReopenRequestId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The reopened period. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubledgerPeriod"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    runReconciliation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReconciliationRequest"];
+            };
+        };
+        responses: {
+            /** @description The run. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationRun"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getReconciliation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The reconciliation run.
+                 * @example 01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                runId: components["parameters"]["RunId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The run. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationRun"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    resolveReconciliationItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The reconciliation run.
+                 * @example 01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                runId: components["parameters"]["RunId"];
+                /**
+                 * @description The run item.
+                 * @example 01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                 */
+                itemId: components["parameters"]["ItemId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolutionRequest"];
+            };
+        };
+        responses: {
+            /** @description The resolved item. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationItem"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listRetentionPolicies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The policies. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionPolicyList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordRetentionPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetentionPolicyRequest"];
+            };
+        };
+        responses: {
+            /** @description The version recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionPolicy"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listLegalHolds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The holds. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalHoldList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    placeLegalHold: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegalHoldRequest"];
+            };
+        };
+        responses: {
+            /** @description The hold. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalHold"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getLegalHold: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The legal hold identifier.
+                 * @example 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                holdId: components["parameters"]["LegalHoldId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The hold. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalHold"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    changeLegalHoldScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The legal hold identifier.
+                 * @example 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                holdId: components["parameters"]["LegalHoldId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegalHoldScopeRequest"];
+            };
+        };
+        responses: {
+            /** @description The hold after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalHold"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    releaseLegalHold: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The legal hold identifier.
+                 * @example 01920ac0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                holdId: components["parameters"]["LegalHoldId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LegalHoldReleaseRequest"];
+            };
+        };
+        responses: {
+            /** @description The released hold. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalHold"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getDecisionRetention: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The decision identifier.
+                 * @example 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                 */
+                decisionId: components["parameters"]["DecisionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The verdict. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetentionVerdict"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getLegalMatrix: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The matrix. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LegalMatrix"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+        };
+    };
+    listAuthorizations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The authorizations. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorizationList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    grantAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthorizationRequest"];
+            };
+        };
+        responses: {
+            /** @description The authorization. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerAuthorization"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The customer authorization identifier.
+                 * @example 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                authorizationId: components["parameters"]["AuthorizationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The authorization. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerAuthorization"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    revokeAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The customer authorization identifier.
+                 * @example 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                authorizationId: components["parameters"]["AuthorizationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevocationRequest"];
+            };
+        };
+        responses: {
+            /** @description The revoked authorization. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerAuthorization"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    checkAuthorization: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthorizationCheckRequest"];
+            };
+        };
+        responses: {
+            /** @description The resolution, allowed or not. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthorizationCheck"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };

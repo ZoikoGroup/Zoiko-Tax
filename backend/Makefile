@@ -87,6 +87,18 @@ content-keys: ## Generate development release, author and approver keys and thei
 	@test -f $(CONTENT_KEYS)/author.pem   || $(CONTENTC) keygen -key $(CONTENT_KEYS)/author.pem   -keyring $(CONTENT_KEYS)/keyring.json -key-id $(CONTENT_AUTHOR_ID) $(KEY_WINDOW)
 	@test -f $(CONTENT_KEYS)/approver.pem || $(CONTENTC) keygen -key $(CONTENT_KEYS)/approver.pem -keyring $(CONTENT_KEYS)/keyring.json -key-id $(CONTENT_APPROVER_ID) $(KEY_WINDOW)
 
+# The evidence-seal hierarchy is its own (ADR-0017 §2.6): a key that can sign
+# a content bundle must not be able to sign a period seal, so the development
+# seal key lives apart from the content keys. Like them it is gitignored, and
+# kms refuses it outside development.
+SEAL_KEYS   ?= ../.seal-keys
+SEAL_KEY_ID ?= evidence-seal-dev-2026
+
+.PHONY: seal-keys
+seal-keys: ## Generate the development evidence-seal key and its keyring (ZTAX_SEAL_*)
+	@mkdir -p $(SEAL_KEYS)
+	@test -f $(SEAL_KEYS)/signing.pem || $(CONTENTC) keygen -key $(SEAL_KEYS)/signing.pem -keyring $(SEAL_KEYS)/keyring.json -key-id $(SEAL_KEY_ID) $(KEY_WINDOW)
+
 .PHONY: content
 content: content-keys ## Compile (pack + rights gates), approve four-eyes, seal (ADR-0005 2.1)
 	$(CONTENTC) compile -source $(CONTENT_PACK) -out $(CONTENT_BUILD)

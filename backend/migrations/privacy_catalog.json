@@ -325,25 +325,42 @@
       "document_id": {
         "class": "P0"
       },
-      "decision_id": {
-        "class": "P0"
-      },
-      "business_key": {
-        "class": "P0"
-      },
-      "valid_from": {
-        "class": "P0"
-      },
-      "valid_to": {
-        "class": "P0"
-      },
-      "recorded_at": {
-        "class": "P0"
-      },
-      "supersedes_id": {
+      "legal_entity_id": {
         "class": "P0"
       },
       "document_type": {
+        "class": "P0"
+      },
+      "document_number": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-RECON",
+          "PURP-EVID",
+          "PURP-FILE"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "The legal document number a customer holds; it identifies their transaction."
+      },
+      "root_id": {
+        "class": "P0"
+      },
+      "reason_code": {
+        "class": "P0"
+      },
+      "issue_date": {
+        "class": "P0"
+      },
+      "tax_point": {
+        "class": "P0"
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "restated": {
         "class": "P0"
       },
       "ext_source_system": {
@@ -364,9 +381,6 @@
         "evidencePolicy": "RAW_REQUIRED",
         "aiAllowed": "NONE",
         "note": "The customer's own document reference; may be a subscriber account or invoice number."
-      },
-      "currency": {
-        "class": "P0"
       },
       "net_total": {
         "class": "P5",
@@ -404,8 +418,19 @@
         "evidencePolicy": "RAW_REQUIRED",
         "aiAllowed": "NONE"
       },
-      "event_time": {
+      "recorded_at": {
         "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The operator who committed the document; NULL for system work."
       }
     },
     "fiscal_line": {
@@ -421,13 +446,7 @@
       "ordinal": {
         "class": "P0"
       },
-      "item_ref": {
-        "class": "P0"
-      },
-      "classification_id": {
-        "class": "P0"
-      },
-      "quantity": {
+      "source_line_ref": {
         "class": "P5",
         "purposes": [
           "PURP-TAX-CALC",
@@ -438,12 +457,9 @@
         "redaction": "REDACT",
         "evidencePolicy": "RAW_REQUIRED",
         "aiAllowed": "NONE",
-        "note": "Per-line quantity; for a telecom line, an individual's usage."
+        "note": "The billing system's line reference; may carry an account or order number."
       },
-      "unit": {
-        "class": "P0"
-      },
-      "currency": {
+      "component_instance": {
         "class": "P0"
       },
       "net_amount": {
@@ -458,7 +474,7 @@
         "evidencePolicy": "RAW_REQUIRED",
         "aiAllowed": "NONE"
       },
-      "tax_amount": {
+      "discount_amount": {
         "class": "P5",
         "purposes": [
           "PURP-TAX-CALC",
@@ -468,15 +484,13 @@
         "retention": "RET-FISCAL",
         "redaction": "REDACT",
         "evidencePolicy": "RAW_REQUIRED",
-        "aiAllowed": "NONE"
+        "aiAllowed": "NONE",
+        "note": "A line's allocated discount."
       },
-      "rounding_mode": {
+      "allocation_ref": {
         "class": "P0"
       },
-      "rounding_scale": {
-        "class": "P0"
-      },
-      "rounding_basis": {
+      "predecessor_line_id": {
         "class": "P0"
       }
     },
@@ -1236,6 +1250,1036 @@
       },
       "recorded_at": {
         "class": "P0"
+      }
+    },
+    "refund": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "refund_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "decision_id": {
+        "class": "P0"
+      },
+      "amount": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "Tax returned on one decision; a per-transaction figure, not an aggregate."
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "payment_reference": {
+        "class": "P5",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "The payment provider's reference for the refunded payment; it can identify a payer's transaction."
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by an operator; may name the customer."
+      },
+      "requested_at": {
+        "class": "P0"
+      },
+      "requested_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The user who requested the refund; NULL for system work."
+      }
+    },
+    "refund_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "refund_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "status": {
+        "class": "P0"
+      },
+      "outcome": {
+        "class": "P0"
+      },
+      "external_reference": {
+        "class": "P5",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "The provider's reference for its report on the refund."
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The user who recorded the provider's report; NULL for system work."
+      }
+    },
+    "webhook_subscription": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "webhook_id": {
+        "class": "P0"
+      },
+      "url": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SVCOPS",
+          "PURP-SEC"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "A customer's endpoint. The path or query may carry a customer identifier; logs carry it redacted."
+      },
+      "event_types": {
+        "class": "P0"
+      },
+      "description": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SVCOPS"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by an administrator."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who created the webhook; NULL for system work."
+      }
+    },
+    "webhook_status": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "webhook_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "status": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who changed the status."
+      }
+    },
+    "webhook_secret": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "webhook_id": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "sealed_secret": {
+        "class": "P7",
+        "purposes": [
+          "PURP-SEC"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "NO_LOG",
+        "aiAllowed": "NONE",
+        "note": "A signing secret, sealed under the cell's webhook key. Never logged, never returned after the response that issued it."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who issued the secret."
+      },
+      "retires_previous_at": {
+        "class": "P0"
+      }
+    },
+    "webhook_delivery": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "delivery_id": {
+        "class": "P0"
+      },
+      "webhook_id": {
+        "class": "P0"
+      },
+      "event_id": {
+        "class": "P0"
+      },
+      "event_type": {
+        "class": "P0"
+      },
+      "body": {
+        "class": "P5",
+        "purposes": [
+          "PURP-SVCOPS",
+          "PURP-EVID"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The CloudEvent as sent; carries what the event's payload carries, amounts included for refunds and threshold crossings."
+      },
+      "status": {
+        "class": "P0"
+      },
+      "attempts": {
+        "class": "P0"
+      },
+      "next_attempt_at": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "delivered_at": {
+        "class": "P0"
+      },
+      "replay_of": {
+        "class": "P0"
+      },
+      "replayed_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who replayed the delivery; NULL on a fan-out."
+      }
+    },
+    "webhook_attempt": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "delivery_id": {
+        "class": "P0"
+      },
+      "attempt": {
+        "class": "P0"
+      },
+      "started_at": {
+        "class": "P0"
+      },
+      "duration_ms": {
+        "class": "P0"
+      },
+      "status_code": {
+        "class": "P0"
+      },
+      "error": {
+        "class": "P0",
+        "note": "The transport's error class, truncated; never the response body."
+      }
+    },
+    "batch_job": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "job_id": {
+        "class": "P0"
+      },
+      "operation": {
+        "class": "P0"
+      },
+      "status": {
+        "class": "P0"
+      },
+      "item_count": {
+        "class": "P0"
+      },
+      "requested_at": {
+        "class": "P0"
+      },
+      "requested_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The operator who submitted the batch."
+      },
+      "started_at": {
+        "class": "P0"
+      },
+      "finished_at": {
+        "class": "P0"
+      },
+      "lease_until": {
+        "class": "P0"
+      }
+    },
+    "batch_item": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "job_id": {
+        "class": "P0"
+      },
+      "item_index": {
+        "class": "P0"
+      },
+      "business_key": {
+        "class": "P0"
+      },
+      "request": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "A queued commit's canonical request: the same transaction input a decision's envelope records."
+      }
+    },
+    "batch_item_result": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "job_id": {
+        "class": "P0"
+      },
+      "item_index": {
+        "class": "P0"
+      },
+      "status": {
+        "class": "P0"
+      },
+      "decision_id": {
+        "class": "P0"
+      },
+      "reason_code": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      }
+    },
+    "fiscal_document_predecessor": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "document_id": {
+        "class": "P0"
+      },
+      "predecessor_id": {
+        "class": "P0"
+      }
+    },
+    "fiscal_document_decision": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "document_id": {
+        "class": "P0"
+      },
+      "decision_id": {
+        "class": "P0"
+      }
+    },
+    "fiscal_line_tax": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "line_id": {
+        "class": "P0"
+      },
+      "ordinal": {
+        "class": "P0"
+      },
+      "decision_id": {
+        "class": "P0"
+      },
+      "component": {
+        "class": "P0"
+      },
+      "amount": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE"
+      }
+    },
+    "fiscal_document_status": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "document_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "status": {
+        "class": "P0"
+      },
+      "cause_id": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The operator whose act moved the document; NULL when a correction's commit did."
+      }
+    },
+    "tcsl_close_manifest": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "manifest_digest": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "legal_period": {
+        "class": "P0"
+      },
+      "body": {
+        "class": "P5",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "The period's sealed population: journal and document ids, control balances, open exceptions. Aggregates, and ids that resolve to fiscal records."
+      },
+      "created_at": {
+        "class": "P0"
+      }
+    },
+    "tcsl_reopen_request": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "request_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "legal_period": {
+        "class": "P0"
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by an operator."
+      },
+      "requested_at": {
+        "class": "P0"
+      },
+      "requested_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The operator who asked to reopen the period."
+      }
+    },
+    "tcsl_period_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "legal_period": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "state": {
+        "class": "P0"
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by an operator."
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The operator who moved the period; on a reopening, the requester."
+      },
+      "request_id": {
+        "class": "P0"
+      },
+      "approved_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The second person who approved a reopening."
+      },
+      "manifest_digest": {
+        "class": "P0"
+      }
+    },
+    "recon_run": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "run_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "legal_period": {
+        "class": "P0"
+      },
+      "ran_at": {
+        "class": "P0"
+      },
+      "ran_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The operator who ran the reconciliation."
+      },
+      "first_break": {
+        "class": "P0"
+      },
+      "unavailable": {
+        "class": "P0"
+      }
+    },
+    "recon_item": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "item_id": {
+        "class": "P0"
+      },
+      "run_id": {
+        "class": "P0"
+      },
+      "ordinal": {
+        "class": "P0"
+      },
+      "stage": {
+        "class": "P0"
+      },
+      "match_key": {
+        "class": "P0",
+        "note": "A canonical id the stage compares on: a decision or refund id, never a customer reference."
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "expected": {
+        "class": "P5",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "One decision's or refund's tax as one stage expects it."
+      },
+      "observed": {
+        "class": "P5",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "The same, as the next stage observed it."
+      },
+      "variance": {
+        "class": "P5",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "Observed minus expected, exact."
+      },
+      "status": {
+        "class": "P0"
+      },
+      "root_cause": {
+        "class": "P0"
+      },
+      "detail": {
+        "class": "P0",
+        "note": "A sentence the comparison wrote; carries no amount."
+      }
+    },
+    "recon_resolution": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "item_id": {
+        "class": "P0"
+      },
+      "actor": {
+        "class": "P0"
+      },
+      "resolver": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who resolved the exception."
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by an operator."
+      },
+      "action": {
+        "class": "P0"
+      },
+      "root_cause": {
+        "class": "P0"
+      },
+      "evidence": {
+        "class": "P2",
+        "purposes": [
+          "PURP-RECON",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "References to the evidence a resolution relies on: document ids, ticket numbers."
+      },
+      "resolved_at": {
+        "class": "P0"
+      }
+    },
+    "retention_policy": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "policy_id": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "record_class": {
+        "class": "P0"
+      },
+      "country_code": {
+        "class": "P0"
+      },
+      "years": {
+        "class": "P0"
+      },
+      "trigger_kind": {
+        "class": "P0"
+      },
+      "effective_from": {
+        "class": "P0"
+      },
+      "citation": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who recorded the policy version."
+      }
+    },
+    "legal_hold": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "hold_id": {
+        "class": "P0"
+      },
+      "matter": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-LEGAL-HOLD",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The claim, investigation or request the hold serves, as an operator named it."
+      },
+      "placed_at": {
+        "class": "P0"
+      },
+      "placed_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who placed the hold."
+      }
+    },
+    "legal_hold_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "hold_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "business_keys": {
+        "class": "P0"
+      },
+      "decision_ids": {
+        "class": "P0"
+      },
+      "event_from": {
+        "class": "P0"
+      },
+      "event_to": {
+        "class": "P0"
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-LEGAL-HOLD",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by an operator."
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who placed, changed or released the hold."
+      }
+    },
+    "customer_authorization": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "authorization_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "country_code": {
+        "class": "P0"
+      },
+      "authority": {
+        "class": "P0"
+      },
+      "auth_type": {
+        "class": "P0"
+      },
+      "permissions": {
+        "class": "P0"
+      },
+      "period_from": {
+        "class": "P0"
+      },
+      "period_to": {
+        "class": "P0"
+      },
+      "effective_from": {
+        "class": "P0"
+      },
+      "expires_at": {
+        "class": "P0"
+      },
+      "supersedes": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "matters": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Forms or matters the grant covers, as the customer named them."
+      },
+      "representative": {
+        "class": "P1",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The individual or entity acting under the grant."
+      },
+      "evidence": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "References to the signed artifact, consent proof or authority acknowledgement."
+      },
+      "credential_ref": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Where the authority credential is held in the secrets vault. Never the credential."
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who recorded the grant."
+      }
+    },
+    "customer_authorization_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "authorization_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by an administrator."
+      },
+      "superseded_by": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who granted, revoked or superseded the authorization."
       }
     }
   }

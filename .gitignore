@@ -37,6 +37,8 @@ content/.keys/
 
 # The local evidence store (ZTAX_EVIDENCE_DIR in .env.local.example).
 .evidence/
+# The development evidence-seal key (make seal-keys).
+.seal-keys/
 
 # Python
 __pycache__/

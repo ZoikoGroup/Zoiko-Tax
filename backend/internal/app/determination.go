@@ -332,7 +332,11 @@ const CommitRetention = 10 * 365 * 24 * time.Hour
 // CommitInput is one commit request.
 type CommitInput struct {
 	IdempotencyKey string
-	Determination  DetermineInput
+	// Scope overrides the endpoint the key is scoped to. Empty is the
+	// endpoint's own; a batch item sets its own scope, so a key a client
+	// chose for :commit can never replay a batch item or be replayed by one.
+	Scope         string
+	Determination DetermineInput
 	// Render produces the response a successful commit returns. It is the
 	// transport's, and its bytes are what every retry of this key receives.
 	Render func(evidence.Decision) ([]byte, error)
@@ -355,7 +359,7 @@ func (s *DeterminationService) Commit(ctx context.Context, in CommitInput) (Sett
 		return Settled{}, err
 	}
 	return s.idempotency.Do(ctx, Call{
-		Key:       idempotency.Key{TenantID: sc.Tenant(), Endpoint: CommitEndpoint, Value: in.IdempotencyKey},
+		Key:       idempotency.Key{TenantID: sc.Tenant(), Endpoint: scopeOr(in.Scope, CommitEndpoint), Value: in.IdempotencyKey},
 		Digest:    digest,
 		Retention: CommitRetention,
 		Execute: func(ctx context.Context) (Response, error) {
@@ -365,6 +369,9 @@ func (s *DeterminationService) Commit(ctx context.Context, in CommitInput) (Sett
 			}
 			d, err := s.record(ctx, sc, in.Determination, b, nil)
 			if err != nil {
+				return Response{}, err
+			}
+			if err := s.emitDecision(ctx, d); err != nil {
 				return Response{}, err
 			}
 			body, err := in.Render(d)
@@ -415,7 +422,7 @@ func (s *DeterminationService) Adjust(ctx context.Context, in CommitInput) (Sett
 		return Settled{}, err
 	}
 	return s.idempotency.Do(ctx, Call{
-		Key:       idempotency.Key{TenantID: sc.Tenant(), Endpoint: AdjustEndpoint, Value: in.IdempotencyKey},
+		Key:       idempotency.Key{TenantID: sc.Tenant(), Endpoint: scopeOr(in.Scope, AdjustEndpoint), Value: in.IdempotencyKey},
 		Digest:    digest,
 		Retention: CommitRetention,
 		Execute: func(ctx context.Context) (Response, error) {
@@ -425,6 +432,9 @@ func (s *DeterminationService) Adjust(ctx context.Context, in CommitInput) (Sett
 			}
 			d, err := s.record(ctx, sc, in.Determination, b, &rec)
 			if err != nil {
+				return Response{}, err
+			}
+			if err := s.emitDecision(ctx, d); err != nil {
 				return Response{}, err
 			}
 			body, err := in.Render(d)
@@ -456,22 +466,35 @@ func (s *DeterminationService) originalBundle(ctx context.Context, prior id.Deci
 // or an SDK's formatting match, and two that differ in any value — "45.00"
 // against "45.0" included, because scale is semantic — do not.
 func commitDigest(in DetermineInput) (canonical.Digest, error) {
-	supersedes := canonical.Absent()
-	if in.Supersedes != nil {
-		supersedes = canonical.String(in.Supersedes.String())
-	}
-	d, err := canonical.Sum(canonical.Object(
-		canonical.F("businessKey", canonical.String(in.BusinessKey)),
-		canonical.F("supersedes", supersedes),
-		canonical.F("eventTime", canonical.Time(in.EventTime.UTC().Truncate(time.Microsecond))),
-		canonical.F("input", in.Input.Canonical()),
-		canonical.F("accumulators", evidence.ReadSetCanonical(in.Accumulators)),
-	))
+	d, err := canonical.Sum(commitCanonical(in))
 	if err != nil {
 		return canonical.Digest{}, errs.Wrap(err, errs.CategoryValidation, errs.ReasonInvalidValue,
 			"The request cannot be put in canonical form.")
 	}
 	return d, nil
+}
+
+// commitCanonical is a commit request in canonical form: what its digest
+// covers, and what a queued batch item is stored as.
+func commitCanonical(in DetermineInput) canonical.Value {
+	supersedes := canonical.Absent()
+	if in.Supersedes != nil {
+		supersedes = canonical.String(in.Supersedes.String())
+	}
+	return canonical.Object(
+		canonical.F("businessKey", canonical.String(in.BusinessKey)),
+		canonical.F("supersedes", supersedes),
+		canonical.F("eventTime", canonical.Time(in.EventTime.UTC().Truncate(time.Microsecond))),
+		canonical.F("input", in.Input.Canonical()),
+		canonical.F("accumulators", evidence.ReadSetCanonical(in.Accumulators)),
+	)
+}
+
+func scopeOr(scope, endpoint string) string {
+	if scope != "" {
+		return scope
+	}
+	return endpoint
 }
 
 // ---------------------------------------------------------------------------

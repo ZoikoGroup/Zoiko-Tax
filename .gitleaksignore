@@ -1,2 +1,11 @@
 # Fake sk_live_ fixture in a since-removed hand-made report; not a real credential
 58173934c424a91cbd94f61b981b84d624904a53:docs/evidence/secret_scan_report.md:stripe-access-token:117
+# Webhook signing-secret examples in the contract: whsec_ over the byte runs
+# 0x00..0x1f and 0x20..0x3f. Illustrative, never issued to anyone.
+ffe68ebc642f73a1e6bc990a6ede429595d6615d:contracts/openapi/ztax.v1.yaml:generic-api-key:1221
+ffe68ebc642f73a1e6bc990a6ede429595d6615d:contracts/openapi/ztax.v1.yaml:generic-api-key:1335
+ffe68ebc642f73a1e6bc990a6ede429595d6615d:contracts/openapi/export/ztax.v1.3.1.yaml:generic-api-key:1384
+ffe68ebc642f73a1e6bc990a6ede429595d6615d:contracts/openapi/export/ztax.v1.3.1.yaml:generic-api-key:1518
+# The Standard Webhooks specification's published test vector, asserted so
+# our signatures match the spec byte for byte.
+ffe68ebc642f73a1e6bc990a6ede429595d6615d:backend/internal/domain/webhook/webhook_test.go:generic-api-key:71

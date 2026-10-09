@@ -97,7 +97,7 @@ const FOLDERS = [
   {
     name: "04 · Administration",
     description:
-      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.",
+      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked.",
     operations: [
       "listUsers",
       "createUser",
@@ -107,16 +107,46 @@ const FOLDERS = [
       "listAudit",
       "revokeRole",
       "revokeSession",
+      "listWebhooks",
+      "createWebhook",
+      "getWebhook",
+      "rotateWebhookSecret",
+      "listWebhookDeliveries",
+      "getWebhookDelivery",
+      "replayWebhookDelivery",
+      "setWebhookStatus",
+      "listSeals",
+      "sealPeriod",
+      "getSeal",
+      "verifySeal",
+      "recordRetentionPolicy",
+      "listRetentionPolicies",
+      "placeLegalHold",
+      "listLegalHolds",
+      "getLegalHold",
+      "changeLegalHoldScope",
+      "releaseLegalHold",
+      "getDecisionRetention",
+      "getLegalMatrix",
+      "grantAuthorization",
+      "listAuthorizations",
+      "getAuthorization",
+      "checkAuthorization",
+      "revokeAuthorization",
     ],
   },
   {
     name: "06 · Determination — needs content and an OPERATOR",
     description:
-      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously. Last, the subledger period `{{period}}` — `2000-01` by default, a month nothing posts into, so a run never closes one that matters — is hard-closed, a reopen is requested, and the requester's own approval is refused (ZTAX-FIN-REQ-0091). `runReconciliation` reconciles September and captures `runId`; the resolution of the example item answers `404` in a fresh run, since its id is the example's.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
     operations: [
       "createQuote", "commitTransaction", "getDecision", "replayDecision", "listDecisionJournals",
       "getSubledgerBalances", "listObligations", "getObligation", "transitionObligation",
-      "adjustTransaction", "proposeClassification",
+      "issueDocument", "getDocument", "correctDocument", "getDocumentLineage",
+      "adjustTransaction", "refundTransaction", "getRefund", "reportRefund", "proposeClassification",
+      "submitBatch", "getJob", "getDecisionInclusion",
+      "getSubledgerPeriod", "transitionSubledgerPeriod", "requestPeriodReopen", "approvePeriodReopen",
+      "runReconciliation", "getReconciliation", "resolveReconciliationItem",
     ],
     prerequest: [
       "if (pm.variables.get('runDetermination') !== 'true') {",
@@ -163,6 +193,18 @@ const VALUE_VARIABLES = {
   "01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f": "{{decisionId}}",
   // The obligation examples' id: the return the folder's commit assessed into.
   "01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01": "{{obligationId}}",
+  // The refund examples' id: the refund the folder just requested.
+  "01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f": "{{refundId}}",
+  // The seal examples' id: the seal folder 04 just made.
+  "01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{sealId}}",
+  // The document examples' id: the invoice the folder just issued.
+  "01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{documentId}}",
+  // The reconciliation examples' run id: the run the folder just made.
+  "01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{runId}}",
+  // The job example's id: the batch the folder just queued.
+  "01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{jobId}}",
+  // The webhook examples' id: the subscription folder 04 just created.
+  "01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{webhookId}}",
 };
 
 // Per-operation test scripts, beyond the status assertion every request gets.
@@ -269,6 +311,199 @@ const OPERATION_TESTS = {
     "  pm.response.to.have.status(201);",
     "  pm.expect(pm.response.json().authoritative).to.eql(false);",
     "  pm.expect(pm.response.json().id).to.not.eql(pm.collectionVariables.get('decisionId'));",
+    "});",
+    "// The original is superseded now; a refund is made against the current version.",
+    "pm.collectionVariables.set('decisionId', pm.response.json().id);",
+  ],
+  sealPeriod: [
+    "pm.test('ADR-0011 §2.4 — sealed, or refused for a reason the cell states', function () {",
+    "  pm.expect([201, 409, 503]).to.include(pm.response.code);",
+    "});",
+    "if (pm.response.code === 201) { pm.collectionVariables.set('sealId', pm.response.json().id); }",
+  ],
+  getSeal: [
+    "pm.test('the seal carries the bytes its signature covers', function () {",
+    "  pm.expect([200, 404, 503]).to.include(pm.response.code);",
+    "  if (pm.response.code === 200) { pm.expect(pm.response.json().signedPayload).to.be.a('string'); }",
+    "});",
+  ],
+  verifySeal: [
+    "pm.test('a seal this cell made verifies', function () {",
+    "  pm.expect([200, 404, 503]).to.include(pm.response.code);",
+    "  if (pm.response.code === 200) { pm.expect(pm.response.json().verdict).to.eql('VALID'); }",
+    "});",
+  ],
+  getDecisionInclusion: [
+    "pm.test('a sealed decision proves its inclusion; an unsealed one is not found', function () {",
+    "  pm.expect([200, 404, 503]).to.include(pm.response.code);",
+    "});",
+  ],
+  issueDocument: [
+    "pm.test('ZTAX-FIN-REQ-0011 — the invoice presents exactly what was decided', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().status).to.eql('COMMITTED');",
+    "});",
+    "pm.collectionVariables.set('documentId', pm.response.json().id);",
+  ],
+  correctDocument: [
+    "pm.test('ZTAX-FIN-REQ-0004 — the void is a linked successor', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().predecessors).to.include(pm.collectionVariables.get('documentId'));",
+    "});",
+  ],
+  getDocumentLineage: [
+    "pm.test('one root, the invoice first', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().documents[0].status).to.eql('VOIDED');",
+    "});",
+  ],
+  transitionSubledgerPeriod: [
+    "pm.test('ZTAX-FIN-REQ-0089 — closed with a manifest, or already closed by an earlier run', function () {",
+    "  pm.expect([200, 409]).to.include(pm.response.code);",
+    "  if (pm.response.code === 200) { pm.expect(pm.response.json().manifest.digest).to.match(/^zt1:/); }",
+    "});",
+  ],
+  requestPeriodReopen: [
+    "pm.test('a reopen is requested and nothing moves yet', function () {",
+    "  pm.expect([201, 409]).to.include(pm.response.code);",
+    "});",
+    "if (pm.response.code === 201) { pm.collectionVariables.set('requestId', pm.response.json().id); }",
+  ],
+  approvePeriodReopen: [
+    "pm.test('ZTAX-FIN-REQ-0091 — the requester cannot approve their own reopen', function () {",
+    "  pm.expect([403, 404]).to.include(pm.response.code);",
+    "});",
+  ],
+  runReconciliation: [
+    "pm.test('ZTAX-FIN-REQ-0077 — every stage not compared is named', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().unavailable).to.include('R2_DOCUMENT_TO_COLLECTION');",
+    "});",
+    "pm.collectionVariables.set('runId', pm.response.json().id);",
+  ],
+  resolveReconciliationItem: [
+    "pm.test('a resolution needs an item of the run', function () {",
+    "  pm.expect([200, 404, 409]).to.include(pm.response.code);",
+    "});",
+  ],
+  submitBatch: [
+    "pm.test('the batch is queued as one job, every item pending', function () {",
+    "  pm.response.to.have.status(202);",
+    "  pm.expect(pm.response.json().pending).to.eql(pm.response.json().itemCount);",
+    "});",
+    "pm.collectionVariables.set('jobId', pm.response.json().id);",
+  ],
+  getJob: [
+    "pm.test('the job reports each item, and a finished one its decision or its reason', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.response.json().items.forEach(function (it) {",
+    "    if (it.status === 'SUCCEEDED') { pm.expect(it.decisionId).to.be.a('string'); }",
+    "    if (it.status === 'FAILED') { pm.expect(it.reasonCode).to.be.a('string'); }",
+    "  });",
+    "});",
+  ],
+  placeLegalHold: [
+    "pm.test('ZTAX-EVID-REQ-0023 — a hold is placed ACTIVE with its first history entry', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().status).to.eql('ACTIVE');",
+    "  pm.expect(pm.response.json().history[0].kind).to.eql('PLACED');",
+    "});",
+    "pm.collectionVariables.set('holdId', pm.response.json().id);",
+  ],
+  changeLegalHoldScope: [
+    "pm.test('ZTAX-EVID-REQ-0053 — a scope change is a new history entry, the old one kept', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().history.map(e => e.kind)).to.eql(['PLACED', 'SCOPE_CHANGED']);",
+    "});",
+  ],
+  releaseLegalHold: [
+    "pm.test('a release is final', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().status).to.eql('RELEASED');",
+    "});",
+  ],
+  getLegalMatrix: [
+    "pm.test('ZTAX-LEG-REQ-0102 — every rule cites the opinion it rests on', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.response.json().rules.forEach(r => pm.expect(r.opinionRef).to.not.be.empty);",
+    "});",
+  ],
+  grantAuthorization: [
+    "pm.test('ZTAX-LEG-REQ-0014 — the grant is recorded ACTIVE with its history', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().status).to.eql('ACTIVE');",
+    "  pm.expect(pm.response.json().history[0].kind).to.eql('GRANTED');",
+    "});",
+    "pm.collectionVariables.set('authorizationId', pm.response.json().id);",
+  ],
+  checkAuthorization: [
+    "pm.test('ZTAX-LEG-REQ-0004 — filing resolves under the mandate rule, against a named matrix', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().status).to.eql('DIRECT_WITH_AUTH');",
+    "  pm.expect(pm.response.json().matrixDigest).to.match(/^zt1:/);",
+    "});",
+  ],
+  revokeAuthorization: [
+    "pm.test('ZTAX-LEG-REQ-0016 — a revoked grant is no longer in force', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().status).to.eql('REVOKED');",
+    "  pm.expect(pm.response.json().inForce).to.eql(false);",
+    "});",
+  ],
+  createWebhook: [
+    "pm.test('the webhook is created ACTIVE, and its secret is shown once in Standard Webhooks form', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().webhook.status).to.eql('ACTIVE');",
+    "  pm.expect(pm.response.json().secret.secret).to.match(/^whsec_/);",
+    "});",
+    "pm.collectionVariables.set('webhookId', pm.response.json().webhook.id);",
+  ],
+  getWebhook: [
+    "pm.test('a read never returns the signing secret', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.text()).to.not.include('whsec_');",
+    "});",
+  ],
+  rotateWebhookSecret: [
+    "pm.test('rotation issues version 2, and the previous secret retires later', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().secret.version).to.eql(2);",
+    "});",
+  ],
+  getWebhookDelivery: [
+    "pm.test('nothing has been delivered in a fresh run', function () {",
+    "  pm.expect([200, 404]).to.include(pm.response.code);",
+    "});",
+  ],
+  replayWebhookDelivery: [
+    "pm.test('a replay needs a delivery to replay', function () {",
+    "  pm.expect([202, 404]).to.include(pm.response.code);",
+    "});",
+  ],
+  setWebhookStatus: [
+    "pm.test('the webhook is paused', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().status).to.eql('PAUSED');",
+    "});",
+  ],
+  refundTransaction: [
+    "pm.test('ZTAX-FIN-REQ-0015 — a refund is its own record, requested and not yet posted', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().status).to.eql('REQUESTED');",
+    "  pm.expect(pm.response.json().decisionId).to.eql(pm.collectionVariables.get('decisionId'));",
+    "});",
+    "pm.collectionVariables.set('refundId', pm.response.json().id);",
+  ],
+  getRefund: [
+    "pm.test('the refund carries its history', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().history[0].status).to.eql('REQUESTED');",
+    "});",
+  ],
+  reportRefund: [
+    "pm.test('ZTAX-FIN-REQ-0059 — the provider report moves the refund, never the decision', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().status).to.eql('COMPLETED');",
     "});",
   ],
   replayDecision: [
@@ -392,6 +627,29 @@ function jsonBody(value) {
 // provider, which is every local stack.
 const ACCEPTED_OUTCOMES = {
   proposeClassification: ["422"],
+  // A fresh stack has one session, the run's own, which listSessions does not
+  // capture; there is then no other session to revoke.
+  revokeSession: ["404"],
+  // A fresh run has delivered nothing, so the example delivery is not found.
+  getWebhookDelivery: ["404"],
+  replayWebhookDelivery: ["404"],
+  // The local stack configures no seal keyring: the seal surface says so
+  // with 503 rather than pretending, and a seal made by an earlier run
+  // makes the next run's seal of the same period a conflict.
+  listSeals: ["503"],
+  sealPeriod: ["409", "503"],
+  getSeal: ["404", "503"],
+  verifySeal: ["404", "503"],
+  getDecisionInclusion: ["404", "503"],
+  // {{period}} is closed by the first run; later runs find it closed.
+  transitionSubledgerPeriod: ["409"],
+  requestPeriodReopen: ["409"],
+  // The requester cannot approve their own reopen.
+  approvePeriodReopen: ["403", "404"],
+  resolveReconciliationItem: ["404", "409"],
+  // The administration folder commits nothing, so {{decisionId}} names no
+  // decision there.
+  getDecisionRetention: ["404"],
 };
 
 /** The statuses an operation declares, for the generated status assertion. */
@@ -673,13 +931,29 @@ function variables(overlay, contractDigest, local) {
     { key: "newUserEmail", value: "", type: "string" },
     { key: "userId", value: "", type: "string" },
     { key: "sessionId", value: "", type: "string" },
+    // Query filters, empty so a request lists everything unless a run sets one.
+    { key: "status", value: "", type: "string" },
+    // A well-formed id nothing has: a fresh run has no delivery to name.
+    { key: "deliveryId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
     { key: "role", value: "AUDITOR", type: "string" },
     { key: "limit", value: "50", type: "string" },
     { key: "bundleDigest", value: "", type: "string" },
     { key: "decisionTime", value: "", type: "string" },
     { key: "eventTime", value: "", type: "string" },
-    { key: "decisionId", value: "", type: "string" },
+    // Well-formed and nothing's: captured by `06`'s commit, and until then
+    // the retention verdict in `04` asks about a decision that does not exist.
+    { key: "decisionId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
     { key: "obligationId", value: "", type: "string" },
+    { key: "refundId", value: "", type: "string" },
+    { key: "webhookId", value: "", type: "string" },
+    { key: "jobId", value: "", type: "string" },
+    { key: "sealId", value: "", type: "string" },
+    { key: "documentId", value: "", type: "string" },
+    { key: "period", value: "2000-01", type: "string" },
+    { key: "requestId", value: "", type: "string" },
+    { key: "runId", value: "", type: "string" },
+    { key: "holdId", value: "", type: "string" },
+    { key: "authorizationId", value: "", type: "string" },
     // Minted once per run by `07`, and reused by the requests that must share it.
     { key: "reusedKey", value: "", type: "string" },
 

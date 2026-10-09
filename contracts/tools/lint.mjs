@@ -50,6 +50,8 @@ const IDEMPOTENT = [
   "/v1/transactions:adjust",
   "/v1/transactions:refund",
   "/v1/batches",
+  "/v1/documents",
+  "/v1/documents/{documentId}/corrections",
 ];
 
 // Field names whose value is a fiscal quantity wherever it appears. A `type:

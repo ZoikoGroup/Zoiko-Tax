@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RefundStatusChanged",
+  "description": "A payment provider's report moved a refund (ZTAX-FIN-REQ-0059). Emitted in the transaction that recorded the report, once per move. UNCERTAIN is a status of its own: a consumer must not read it as either paid or failed. A move to COMPLETED is the one that posted the refund to the Tax Control Subledger.",
+  "$comment": "Producer: backend/internal/app/refund.go (emit). Event type com.zoikotax.refund.status-changed; schema ref ztax:events/refund-status-changed/1.0.0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "refundId",
+    "decisionId",
+    "legalEntityId",
+    "amount",
+    "currency",
+    "seq",
+    "status",
+    "recordedAt",
+    "previousStatus",
+    "outcome"
+  ],
+  "properties": {
+    "refundId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "decisionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "legalEntityId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "amount": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 2
+    },
+    "status": {
+      "enum": [
+        "PENDING",
+        "COMPLETED",
+        "FAILED",
+        "UNCERTAIN"
+      ]
+    },
+    "recordedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "previousStatus": {
+      "enum": [
+        "REQUESTED",
+        "PENDING",
+        "UNCERTAIN"
+      ]
+    },
+    "outcome": {
+      "enum": [
+        "ACCEPTED",
+        "SUCCEEDED",
+        "DECLINED",
+        "TIMED_OUT",
+        "UNKNOWN"
+      ]
+    }
+  }
+}

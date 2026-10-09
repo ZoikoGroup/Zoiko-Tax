@@ -23,9 +23,14 @@ import (
 	"time"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/adapter/postgres"
+	adapterwebhook "github.com/zoikogroup/zoikotax/backend/internal/adapter/webhook"
+	"github.com/zoikogroup/zoikotax/backend/internal/app"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/outbox"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
+	"github.com/zoikogroup/zoikotax/backend/internal/platform/clock"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/config"
+	"github.com/zoikogroup/zoikotax/backend/internal/platform/idgen"
+	"github.com/zoikogroup/zoikotax/backend/internal/platform/secretbox"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/secrets"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/telemetry"
 )
@@ -106,6 +111,24 @@ func run() error {
 	relay := &relay{store: store, publisher: publisher, log: log,
 		cell: cfg.Cell, region: cfg.Region, trains: trains}
 
+	// Webhooks ride on the relay: an event is fanned out to its subscriptions
+	// in the transaction that marks it published, so it is scheduled for
+	// delivery exactly when it leaves, and the dispatcher delivers on the same
+	// tick. A cell with no webhook key delivers nothing.
+	if cfg.WebhookKeyRef != "" {
+		key, err := secrets.Resolve(secrets.EnvResolver{Environment: cfg.Environment}, cfg.WebhookKeyRef)
+		if err != nil {
+			return err
+		}
+		box, err := secretbox.New(key)
+		if err != nil {
+			return err
+		}
+		relay.webhooks = app.NewDispatcher(store.Webhooks(), box, adapterwebhook.NewSender(cfg.WebhookAllowPrivate),
+			store, clock.System{}, idgen.V7{})
+		log.Info("webhook delivery enabled", "allow_private", cfg.WebhookAllowPrivate)
+	}
+
 	ticker := time.NewTicker(pollInterval)
 	defer ticker.Stop()
 
@@ -121,6 +144,7 @@ func run() error {
 				// the failure persists.
 				log.Warn("relay pass failed", "error", err.Error())
 			}
+			relay.dispatch(ctx)
 		}
 	}
 }
@@ -132,6 +156,28 @@ type relay struct {
 
 	cell, region string
 	trains       map[string]string
+
+	// webhooks is nil in a cell with no webhook key.
+	webhooks *app.Dispatcher
+}
+
+// webhookBatch bounds the deliveries one pass attempts.
+const webhookBatch = 50
+
+// dispatch makes one delivery pass. Like a relay pass, a failure is logged
+// and the next tick retries: the leases lapse and the deliveries come round
+// again.
+func (r *relay) dispatch(ctx context.Context) {
+	if r.webhooks == nil {
+		return
+	}
+	res, err := r.webhooks.Dispatch(ctx, webhookBatch)
+	if err != nil && !errors.Is(err, context.Canceled) {
+		r.log.Warn("webhook pass failed", "error", err.Error())
+	}
+	if res.Claimed > 0 {
+		r.log.Info("webhook pass", "claimed", res.Claimed, "delivered", res.Delivered, "failed", res.Failed, "dead", res.Dead)
+	}
 }
 
 // drain publishes one batch.
@@ -168,6 +214,18 @@ func (r *relay) drain(ctx context.Context) error {
 			}
 			r.log.Warn("publish failed", "event.id", e.ID.String(), "event.type", e.Type, "error", err.Error())
 			continue
+		}
+		if r.webhooks != nil {
+			// The bytes every attempt and every replay will send: rendered
+			// once, here, so a later train upgrade cannot change what a
+			// receiver gets for an event it may already have seen.
+			body, err := canonical.Encode(envelope)
+			if err != nil {
+				return err
+			}
+			if _, err := r.webhooks.FanOut(txCtx, e, body); err != nil {
+				return err
+			}
 		}
 		if err := r.store.Outbox().MarkPublished(txCtx, e.ID, time.Now().UTC()); err != nil {
 			return err

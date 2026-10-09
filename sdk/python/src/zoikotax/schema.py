@@ -697,6 +697,572 @@ class ClassificationProposal(TypedDict):
     provenance: AiProvenance
 
 
+RefundId: TypeAlias = str
+"""
+A refund identifier. A UUIDv7 in lowercase canonical form (ADR-0012 §2.1).
+"""
+
+
+RefundStatus: TypeAlias = Literal['REQUESTED', 'PENDING', 'COMPLETED', 'FAILED', 'UNCERTAIN']
+"""
+A refund's own lifecycle (ZTAX-FIN-REQ-0059), separate from any credit.
+`UNCERTAIN` means the provider's answer did not say whether the money
+moved; it is neither paid nor failed.
+
+"""
+
+
+RefundOutcome: TypeAlias = Literal['ACCEPTED', 'SUCCEEDED', 'DECLINED', 'TIMED_OUT', 'UNKNOWN']
+"""
+What the payment provider reported.
+"""
+
+
+PaymentReference: TypeAlias = str
+"""
+A payment provider's reference. It can identify a payer's transaction, so logs carry it redacted.
+"""
+
+
+class RefundRequest(TypedDict):
+    decisionId: DecisionId
+    amount: MoneyValue
+    paymentReference: PaymentReference
+    reason: NotRequired[str]
+    """
+    Why the refund is made. Free text; it may name the customer.
+    """
+
+
+class RefundEvent(TypedDict):
+    """
+    One entry in a refund's history. The first is the request; each later one is a provider report that moved it.
+    """
+
+    seq: int
+    status: RefundStatus
+    outcome: NotRequired[RefundOutcome]
+    externalReference: NotRequired[PaymentReference]
+    recordedAt: Timestamp
+    recordedBy: NotRequired[str]
+    """
+    The user who recorded the event. Absent for system work.
+    """
+
+
+class Refund(TypedDict):
+    """
+    A refund of tax a committed decision charged. `status` is the latest
+    event's; `history` is every event, oldest first.
+
+    """
+
+    id: RefundId
+    decisionId: DecisionId
+    legalEntityId: LegalEntityId
+    amount: MoneyValue
+    paymentReference: PaymentReference
+    reason: NotRequired[str]
+    status: RefundStatus
+    requestedAt: Timestamp
+    requestedBy: NotRequired[str]
+    """
+    The user who requested the refund. Absent for system work.
+    """
+    history: list[RefundEvent]
+
+
+class RefundReportRequest(TypedDict):
+    outcome: RefundOutcome
+    externalReference: NotRequired[PaymentReference]
+
+
+WebhookId: TypeAlias = str
+"""
+A webhook subscription. A UUIDv7 in lowercase canonical form.
+"""
+
+
+DeliveryId: TypeAlias = str
+"""
+One delivery of one event to one webhook.
+"""
+
+
+EventType: TypeAlias = Literal['com.zoikotax.decision.committed', 'com.zoikotax.decision.corrected', 'com.zoikotax.obligation.status-changed', 'com.zoikotax.accumulator.threshold-crossed', 'com.zoikotax.refund.requested', 'com.zoikotax.refund.status-changed', 'com.zoikotax.document.committed']
+"""
+An event type this cell emits, as the AsyncAPI contract names it.
+"""
+
+
+WebhookStatus: TypeAlias = Literal['ACTIVE', 'PAUSED', 'DISABLED']
+
+
+DeliveryStatus: TypeAlias = Literal['PENDING', 'DELIVERED', 'DEAD']
+"""
+`PENDING` awaits its next attempt; `DEAD` is the dead-letter state, kept and replayable.
+"""
+
+
+WebhookUrl: TypeAlias = str
+"""
+An HTTPS endpoint at a public address, with no credentials in it.
+"""
+
+
+class WebhookCreateRequest(TypedDict):
+    url: WebhookUrl
+    eventTypes: list[EventType]
+    description: NotRequired[str]
+
+
+class Webhook(TypedDict):
+    id: WebhookId
+    url: WebhookUrl
+    eventTypes: list[EventType]
+    description: NotRequired[str]
+    status: WebhookStatus
+    createdAt: Timestamp
+    statusChangedAt: Timestamp
+
+
+class WebhookList(TypedDict):
+    webhooks: list[Webhook]
+
+
+class WebhookSecret(TypedDict):
+    """
+    A signing secret, in the form Standard Webhooks libraries take. Returned once, by the response that issued it.
+    """
+
+    version: int
+    secret: str
+
+
+class WebhookCreated(TypedDict):
+    webhook: Webhook
+    secret: WebhookSecret
+
+
+class WebhookStatusRequest(TypedDict):
+    status: WebhookStatus
+
+
+class WebhookSecretRotation(TypedDict):
+    secret: WebhookSecret
+    previousRetiresAt: Timestamp
+
+
+class WebhookDelivery(TypedDict):
+    id: DeliveryId
+    webhookId: WebhookId
+    eventId: str
+    """
+    The CloudEvents id, sent as `webhook-id`. The receiver's deduplication key.
+    """
+    eventType: EventType
+    status: DeliveryStatus
+    attempts: int
+    nextAttemptAt: NotRequired[Timestamp]
+    createdAt: Timestamp
+    deliveredAt: NotRequired[Timestamp]
+    replayOf: NotRequired[DeliveryId]
+
+
+class WebhookDeliveryList(TypedDict):
+    deliveries: list[WebhookDelivery]
+
+
+class WebhookAttempt(TypedDict):
+    attempt: int
+    startedAt: Timestamp
+    durationMs: int
+    statusCode: NotRequired[int]
+    """
+    The receiver's HTTP status. Absent when no response arrived.
+    """
+    error: NotRequired[str]
+    """
+    The transport's error, when no 2xx arrived. Never the receiver's response body.
+    """
+
+
+class WebhookDeliveryDetail(TypedDict):
+    delivery: WebhookDelivery
+    attempts: list[WebhookAttempt]
+
+
+JobId: TypeAlias = str
+"""
+An asynchronous job. A UUIDv7 in lowercase canonical form.
+"""
+
+
+class BatchRequest(TypedDict):
+    operation: Literal['COMMIT']
+    """
+    What each item does. `COMMIT` commits it, or corrects with it when it names `supersedes`.
+    """
+    items: list[CommitRequest]
+
+
+class JobItem(TypedDict):
+    index: int
+    businessKey: BusinessKey
+    status: Literal['PENDING', 'SUCCEEDED', 'FAILED']
+    decisionId: NotRequired[DecisionId]
+    reasonCode: NotRequired[ReasonCode]
+
+
+class Job(TypedDict):
+    id: JobId
+    operation: Literal['COMMIT']
+    status: Literal['QUEUED', 'RUNNING', 'COMPLETED']
+    itemCount: int
+    succeeded: int
+    failed: int
+    pending: int
+    requestedAt: Timestamp
+    startedAt: NotRequired[Timestamp]
+    finishedAt: NotRequired[Timestamp]
+    items: list[JobItem]
+
+
+SealId: TypeAlias = str
+"""
+A period seal. A UUIDv7 in lowercase canonical form.
+"""
+
+
+class SealRequest(TypedDict):
+    periodStart: Timestamp
+    periodEnd: Timestamp
+
+
+class Seal(TypedDict):
+    """
+    A signed statement that the decisions recorded in `[periodStart, periodEnd)` were exactly these.
+    """
+
+    id: SealId
+    periodStart: Timestamp
+    periodEnd: Timestamp
+    leafCount: int
+    merkleRoot: Digest
+    keyId: str
+    cell: str
+    sealedAt: Timestamp
+
+
+class SealList(TypedDict):
+    seals: list[Seal]
+
+
+class SealSignature(TypedDict):
+    keyId: str
+    algorithm: Literal['ECDSA_P384_SHA384']
+    value: str
+    """
+    The DER signature, base64.
+    """
+
+
+class SealDocument(TypedDict):
+    seal: Seal
+    signedPayload: str
+    """
+    The canonical payload exactly as signed, base64. It names the tenant, cell, period, leaf count, leaf order and root.
+    """
+    signature: SealSignature
+
+
+class SealVerification(TypedDict):
+    sealId: SealId
+    verdict: Literal['VALID', 'SIGNATURE_INVALID', 'RECORD_MISMATCH', 'ROOT_MISMATCH', 'EVIDENCE_MISSING']
+    keyId: str
+    leafCount: int
+    signedRoot: Digest
+    recomputedRoot: NotRequired[Digest]
+    detail: NotRequired[str]
+    """
+    What failed, for the operator. Absent when VALID.
+    """
+
+
+class SealLeaf(TypedDict):
+    """
+    One decision's leaf. Its digest is the canonical (canon/v1) digest of exactly these three members.
+    """
+
+    decisionId: DecisionId
+    recordedAt: Timestamp
+    resultDigest: Digest
+
+
+class InclusionProof(TypedDict):
+    sealId: SealId
+    merkleRoot: Digest
+    leafCount: int
+    leafIndex: int
+    leaf: SealLeaf
+    leafDigest: Digest
+    auditPath: list[Digest]
+    """
+    Sibling node hashes from the leaf's level to the root, in the digest form.
+    """
+
+
+DocumentId: TypeAlias = str
+"""
+A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+"""
+
+
+DocumentLineId: TypeAlias = str
+
+
+DocumentNumber: TypeAlias = str
+"""
+The legal, customer-visible document number (ZTAX-FIN-REQ-0006). Kept apart from the id.
+"""
+
+
+class ExternalReference(TypedDict):
+    """
+    Another system's identifier for the document (ZTAX-DOM-REQ-0003). Never a key, never parsed, never assumed unique.
+    """
+
+    sourceSystem: str
+    namespace: str
+    value: str
+
+
+class DocumentTax(TypedDict):
+    """
+    One tax on one line, naming the committed decision it comes from and the component the decision's content posts.
+    """
+
+    decisionId: DecisionId
+    component: str
+    amount: Decimal
+
+
+SourceLineRef: TypeAlias = str
+"""
+The billing or ERP line a document line came from (ZTAX-FIN-REQ-0020).
+"""
+
+
+class DocumentLineRequest(TypedDict):
+    sourceLineRef: NotRequired[SourceLineRef]
+    componentInstance: NotRequired[str]
+    net: Decimal
+    discount: NotRequired[Decimal]
+    allocationRef: NotRequired[str]
+    """
+    Required with a discount — the allocation that produced it (ZTAX-FIN-REQ-0021).
+    """
+    predecessorLineId: NotRequired[DocumentLineId]
+    taxes: list[DocumentTax]
+
+
+class DocumentRequest(TypedDict):
+    type: Literal['INVOICE', 'DEBIT_NOTE', 'ADJUSTMENT']
+    number: NotRequired[DocumentNumber]
+    issueDate: CivilDate
+    taxPoint: Timestamp
+    currency: CurrencyCode
+    externalRef: NotRequired[ExternalReference]
+    lines: list[DocumentLineRequest]
+
+
+class CorrectionRequest(TypedDict):
+    type: Literal['VOID', 'CREDIT_NOTE', 'REBILL']
+    reason: ReasonCode
+    number: NotRequired[DocumentNumber]
+    issueDate: CivilDate
+    taxPoint: Timestamp
+    cancelLines: NotRequired[list[DocumentLineId]]
+    """
+    A credit note's lines to cancel; absent is every line not yet cancelled.
+    """
+    lines: NotRequired[list[DocumentLineRequest]]
+    """
+    A rebill's lines, each naming the original line it replaces.
+    """
+
+
+class DocumentLine(TypedDict):
+    id: DocumentLineId
+    sourceLineRef: NotRequired[SourceLineRef]
+    componentInstance: NotRequired[str]
+    net: Decimal
+    discount: NotRequired[Decimal]
+    allocationRef: NotRequired[str]
+    predecessorLineId: NotRequired[DocumentLineId]
+    taxes: list[DocumentTax]
+
+
+class DocumentStatusEvent(TypedDict):
+    seq: int
+    status: Literal['COMMITTED', 'ISSUED', 'DELIVERED', 'ACCEPTED', 'PARTIALLY_CREDITED', 'FULLY_CREDITED', 'VOIDED', 'REFUNDED', 'AMENDED', 'DISPUTED', 'CLOSED', 'SUSPENDED']
+    causeId: NotRequired[DocumentId]
+    recordedAt: Timestamp
+    recordedBy: NotRequired[str]
+
+
+class FiscalDocument(TypedDict):
+    """
+    A committed fiscal document. Amounts are in `currency`; a cancelling
+    document's are negative. `status` is the latest of `history`.
+
+    """
+
+    id: DocumentId
+    type: Literal['INVOICE', 'CREDIT_NOTE', 'DEBIT_NOTE', 'PARTIAL_CREDIT', 'VOID', 'REFUND', 'REBILL', 'ADJUSTMENT', 'AMENDMENT', 'RESTATEMENT']
+    number: NotRequired[DocumentNumber]
+    rootId: DocumentId
+    predecessors: list[DocumentId]
+    reasonCode: NotRequired[ReasonCode]
+    legalEntityId: LegalEntityId
+    issueDate: CivilDate
+    taxPoint: Timestamp
+    currency: CurrencyCode
+    externalRef: NotRequired[ExternalReference]
+    decisionIds: list[DecisionId]
+    lines: list[DocumentLine]
+    netTotal: Decimal
+    taxTotal: Decimal
+    grossTotal: Decimal
+    status: Literal['COMMITTED', 'ISSUED', 'DELIVERED', 'ACCEPTED', 'PARTIALLY_CREDITED', 'FULLY_CREDITED', 'VOIDED', 'REFUNDED', 'AMENDED', 'DISPUTED', 'CLOSED', 'SUSPENDED']
+    history: list[DocumentStatusEvent]
+    recordedAt: Timestamp
+    recordedBy: NotRequired[str]
+
+
+class DocumentLineage(TypedDict):
+    documents: list[FiscalDocument]
+
+
+LegalPeriod: TypeAlias = str
+"""
+A subledger legal period, a month.
+"""
+
+
+PeriodState: TypeAlias = Literal['OPEN', 'SOFT_CLOSE', 'HARD_CLOSE', 'REOPENED', 'AMENDMENT_ACTIVE', 'SEALED']
+
+
+PeriodReason: TypeAlias = str
+"""
+Free text entered by an operator.
+"""
+
+
+class CloseManifestDocument(TypedDict):
+    """
+    A close manifest exactly as digested, base64 canonical JSON.
+    """
+
+    digest: Digest
+    body: str
+
+
+class PeriodTransitionRequest(TypedDict):
+    to: Literal['OPEN', 'SOFT_CLOSE', 'HARD_CLOSE', 'AMENDMENT_ACTIVE', 'SEALED']
+    reason: NotRequired[PeriodReason]
+
+
+ReopenRequestId: TypeAlias = str
+
+
+class ReopenRequestBody(TypedDict):
+    reason: PeriodReason
+
+
+class PeriodReopenRequest(TypedDict):
+    id: ReopenRequestId
+    period: LegalPeriod
+    reason: PeriodReason
+    requestedAt: Timestamp
+    requestedBy: str
+
+
+RunId: TypeAlias = str
+
+
+ItemId: TypeAlias = str
+
+
+ReconStage: TypeAlias = Literal['R1_CALCULATED_TO_DOCUMENT', 'R2_DOCUMENT_TO_COLLECTION', 'R3_DOCUMENT_TO_SUBLEDGER', 'R4_SUBLEDGER_TO_RETURN', 'R5_RETURN_TO_REMITTANCE', 'R6_SUBLEDGER_TO_GL', 'R7_END_TO_END']
+
+
+RootCause: TypeAlias = Literal['CLASSIFICATION', 'JURISDICTION', 'TAX_RULE', 'ROUNDING', 'FX', 'DOCUMENT', 'COLLECTION', 'POSTING', 'RETURN', 'REMITTANCE', 'GL', 'TIMING', 'DATA', 'OTHER']
+"""
+FIN-001 §18's root-cause taxonomy (ZTAX-FIN-REQ-0083).
+"""
+
+
+EvidenceReference: TypeAlias = str
+"""
+A reference to evidence a resolution relies on — a document id, a ticket, a statement line.
+"""
+
+
+class ReconciliationRequest(TypedDict):
+    period: LegalPeriod
+
+
+class ReconResolution(TypedDict):
+    actor: Literal['HUMAN', 'AI_A3']
+    resolver: NotRequired[str]
+    reason: str
+    action: Literal['ADJUST', 'RECLASSIFY', 'AMEND', 'WAIT', 'WAIVE_WITH_APPROVAL', 'EXTERNAL_CORRECTION']
+    rootCause: RootCause
+    evidence: list[EvidenceReference]
+    resolvedAt: Timestamp
+
+
+class ReconciliationItem(TypedDict):
+    """
+    One comparison. `variance` is observed minus expected, exact,
+    whatever the status (ZTAX-FIN-REQ-0081); absent when one side is.
+
+    """
+
+    id: ItemId
+    stage: ReconStage
+    matchKey: str
+    """
+    The canonical id compared on, such as `decision:<id>` or `refund:<id>`.
+    """
+    expected: NotRequired[MoneyValue]
+    observed: NotRequired[MoneyValue]
+    variance: NotRequired[MoneyValue]
+    status: Literal['MATCHED', 'TOLERANCE_MATCH', 'UNMATCHED', 'PARTIAL', 'DUPLICATE', 'MISSING', 'CONFLICTED', 'PENDING', 'EXPLAINED', 'RESOLVED']
+    rootCause: NotRequired[RootCause]
+    detail: NotRequired[str]
+    resolution: NotRequired[ReconResolution]
+
+
+class ReconciliationRun(TypedDict):
+    id: RunId
+    period: LegalPeriod
+    legalEntityId: LegalEntityId
+    ranAt: Timestamp
+    ranBy: NotRequired[str]
+    firstBreak: NotRequired[ReconStage]
+    unavailable: list[ReconStage]
+    items: list[ReconciliationItem]
+
+
+class ResolutionRequest(TypedDict):
+    reason: str
+    action: Literal['ADJUST', 'RECLASSIFY', 'AMEND', 'WAIT', 'WAIVE_WITH_APPROVAL', 'EXTERNAL_CORRECTION']
+    rootCause: RootCause
+    evidence: list[EvidenceReference]
+
+
 class ReplayReport(TypedDict):
     decisionId: DecisionId
     verdict: ReplayVerdict
@@ -707,6 +1273,315 @@ class ReplayReport(TypedDict):
     """
     For `DIVERGED`, the first path at which the results differ. A path, never a value.
     """
+
+
+RetentionPolicyId: TypeAlias = str
+"""
+A retention policy's stable name; its versions share it.
+"""
+
+
+RetentionRecordClass: TypeAlias = Literal['DECISION', 'DOCUMENT', 'JOURNAL', 'REFUND']
+
+
+RetentionTrigger: TypeAlias = Literal['EVENT_TIME', 'RECORDED_AT', 'EVENT_YEAR_END']
+"""
+What the period runs from: the taxable event, the record's making, or
+the end of the calendar year of the event.
+
+"""
+
+
+CountryCode: TypeAlias = str
+"""
+ISO 3166-1 alpha-2.
+"""
+
+
+class RetentionPolicyRequest(TypedDict):
+    id: RetentionPolicyId
+    recordClass: RetentionRecordClass
+    country: CountryCode
+    years: int
+    trigger: RetentionTrigger
+    effectiveFrom: Timestamp
+    citation: str
+    """
+    The statute, regulation or contract the period comes from.
+    """
+
+
+class RetentionPolicy(TypedDict):
+    id: RetentionPolicyId
+    version: int
+    recordClass: RetentionRecordClass
+    country: CountryCode
+    years: int
+    trigger: RetentionTrigger
+    effectiveFrom: Timestamp
+    citation: str
+    recordedAt: Timestamp
+    recordedBy: str
+    """
+    The administrator who recorded this version.
+    """
+
+
+class RetentionPolicyList(TypedDict):
+    policies: list[RetentionPolicy]
+
+
+class PolicyVersionRef(TypedDict):
+    id: RetentionPolicyId
+    version: int
+
+
+LegalHoldId: TypeAlias = str
+
+
+LegalHoldReason: TypeAlias = str
+"""
+Free text entered by an administrator.
+"""
+
+
+class LegalHoldScope(TypedDict):
+    """
+    What a hold covers. Every criterion given must hold: named decisions
+    or business keys, a window of event times `[eventFrom, eventTo)`, and
+    a legal entity narrowing either. At least names or a window; a window
+    alone spans at most ten years.
+
+    """
+
+    legalEntityId: NotRequired[LegalEntityId]
+    businessKeys: NotRequired[list[BusinessKey]]
+    decisionIds: NotRequired[list[DecisionId]]
+    eventFrom: NotRequired[Timestamp]
+    eventTo: NotRequired[Timestamp]
+
+
+class LegalHoldEvent(TypedDict):
+    seq: int
+    kind: Literal['PLACED', 'SCOPE_CHANGED', 'RELEASED']
+    scope: LegalHoldScope
+    reason: LegalHoldReason
+    recordedAt: Timestamp
+    recordedBy: str
+
+
+class LegalHold(TypedDict):
+    id: LegalHoldId
+    matter: str
+    """
+    The claim, investigation or regulator request the hold serves.
+    """
+    status: Literal['ACTIVE', 'RELEASED']
+    scope: LegalHoldScope
+    history: list[LegalHoldEvent]
+
+
+class LegalHoldList(TypedDict):
+    holds: list[LegalHold]
+
+
+class LegalHoldRequest(TypedDict):
+    matter: str
+    reason: LegalHoldReason
+    scope: LegalHoldScope
+
+
+class LegalHoldScopeRequest(TypedDict):
+    reason: LegalHoldReason
+    scope: LegalHoldScope
+
+
+class LegalHoldReleaseRequest(TypedDict):
+    reason: LegalHoldReason
+
+
+ServiceState: TypeAlias = Literal['INFORM', 'COMPUTE', 'PREPARE', 'FILE', 'REPRESENT', 'ADVISE']
+
+
+LegalStatus: TypeAlias = Literal['DIRECT_ALLOWED', 'DIRECT_WITH_AUTH', 'QUALIFIED_PERSON_REQUIRED', 'PARTNER_REQUIRED', 'CUSTOMER_ONLY', 'COUNSEL_PENDING', 'PROHIBITED', 'SUSPENDED']
+
+
+AuthorizationType: TypeAlias = Literal['NONE', 'CONTRACT', 'DECLARATION', 'POA', 'TAX_INFORMATION', 'PORTAL_DELEGATION', 'FILING_MANDATE']
+
+
+AuthorizationPermission: TypeAlias = Literal['READ_INFO', 'PREPARE', 'SUBMIT', 'RECEIVE_NOTICE', 'REPRESENT', 'SIGN']
+
+
+FundsPosture: TypeAlias = Literal['NO_CUSTODY', 'INSTRUCTION_ONLY', 'PSP_PARTNER', 'LICENSED_PROGRAM']
+
+
+AuthorityCode: TypeAlias = str
+"""
+An authority within a country, as the matrix names it.
+"""
+
+
+AuthorizationId: TypeAlias = str
+
+
+class LegalRule(TypedDict):
+    id: str
+    version: int
+    country: CountryCode
+    authority: AuthorityCode
+    service: ServiceState
+    status: LegalStatus
+    provider: str
+    """
+    The Zoiko entity or approved partner that performs the service.
+    """
+    authorizationType: AuthorizationType
+    requiresPeriods: bool
+    """
+    The authority accepts no generic grant; an authorization names its periods.
+    """
+    requiresMatters: bool
+    """
+    The authority accepts no generic grant; an authorization names its matters.
+    """
+    qualification: NotRequired[str]
+    credential: NotRequired[str]
+    """
+    The kind of credential the authority needs — never a credential.
+    """
+    funds: FundsPosture
+    opinionRef: str
+    """
+    The counsel memo or authority source the rule rests on.
+    """
+    effectiveFrom: Timestamp
+    effectiveTo: NotRequired[Timestamp]
+
+
+class LegalMatrix(TypedDict):
+    version: str
+    """
+    The matrix edition; empty when the cell has none.
+    """
+    draft: bool
+    """
+    A matrix nobody has approved. Loads in development only.
+    """
+    digest: NotRequired[Digest]
+    rules: list[LegalRule]
+
+
+class AuthorizationEvent(TypedDict):
+    seq: int
+    kind: Literal['GRANTED', 'REVOKED', 'SUPERSEDED']
+    reason: NotRequired[str]
+    supersededBy: NotRequired[AuthorizationId]
+    recordedAt: Timestamp
+    recordedBy: str
+
+
+AuthorizationMatter: TypeAlias = str
+"""
+A form or matter a grant covers, as the customer named it.
+"""
+
+
+AuthorizationEvidence: TypeAlias = str
+"""
+A reference to the signed artifact, consent proof or authority acknowledgement.
+"""
+
+
+CredentialRef: TypeAlias = str
+"""
+Where the authority credential is held in the secrets vault. Never the credential.
+"""
+
+
+Representative: TypeAlias = str
+"""
+The individual or entity acting under the grant.
+"""
+
+
+class CustomerAuthorization(TypedDict):
+    id: AuthorizationId
+    legalEntityId: LegalEntityId
+    country: CountryCode
+    authority: AuthorityCode
+    type: AuthorizationType
+    permissions: list[AuthorizationPermission]
+    matters: list[AuthorizationMatter]
+    periodFrom: NotRequired[LegalPeriod]
+    periodTo: NotRequired[LegalPeriod]
+    representative: NotRequired[Representative]
+    effectiveFrom: Timestamp
+    expiresAt: NotRequired[Timestamp]
+    evidence: list[AuthorizationEvidence]
+    credentialRef: NotRequired[CredentialRef]
+    supersedes: NotRequired[AuthorizationId]
+    status: Literal['ACTIVE', 'REVOKED', 'SUPERSEDED']
+    inForce: bool
+    """
+    Active, effective and not expired, now.
+    """
+    recordedAt: Timestamp
+    recordedBy: str
+    history: list[AuthorizationEvent]
+
+
+class AuthorizationList(TypedDict):
+    authorizations: list[CustomerAuthorization]
+
+
+class AuthorizationRequest(TypedDict):
+    legalEntityId: NotRequired[LegalEntityId]
+    country: CountryCode
+    authority: AuthorityCode
+    type: AuthorizationType
+    permissions: list[AuthorizationPermission]
+    matters: NotRequired[list[AuthorizationMatter]]
+    periodFrom: NotRequired[LegalPeriod]
+    periodTo: NotRequired[LegalPeriod]
+    representative: NotRequired[Representative]
+    effectiveFrom: Timestamp
+    expiresAt: NotRequired[Timestamp]
+    evidence: list[AuthorizationEvidence]
+    credentialRef: NotRequired[CredentialRef]
+    supersedes: NotRequired[AuthorizationId]
+
+
+class RevocationRequest(TypedDict):
+    reason: str
+
+
+class AuthorizationCheckRequest(TypedDict):
+    country: CountryCode
+    authority: AuthorityCode
+    service: ServiceState
+    legalEntityId: NotRequired[LegalEntityId]
+    period: NotRequired[LegalPeriod]
+    matter: NotRequired[AuthorizationMatter]
+
+
+class RuleRef(TypedDict):
+    id: str
+    version: int
+
+
+class AuthorizationCheck(TypedDict):
+    allowed: bool
+    status: LegalStatus
+    reason: NotRequired[Literal['NO_RULE', 'RULE_CONFLICT', 'COUNSEL_PENDING', 'PROHIBITED', 'SUSPENDED', 'PARTNER_REQUIRED', 'CUSTOMER_ONLY', 'QUALIFIED_PERSON_REQUIRED', 'AUTHORIZATION_MISSING', 'AUTHORIZATION_EXPIRED', 'AUTHORIZATION_REVOKED', 'AUTHORIZATION_OUT_OF_SCOPE', 'CREDENTIAL_MISSING', 'MATRIX_UNAVAILABLE', 'ACTION_NOT_WELL_FORMED']]
+    """
+    Why the action is blocked; absent when it is allowed.
+    """
+    rule: NotRequired[RuleRef]
+    authorizationId: NotRequired[AuthorizationId]
+    matrixVersion: NotRequired[str]
+    matrixDigest: NotRequired[Digest]
+    detail: NotRequired[str]
+    checkedAt: Timestamp
 
 
 class V1AdminUsersGetResponse(TypedDict):
@@ -807,4 +1682,59 @@ class Capabilities(TypedDict):
     """
     Every reason code this deployment can emit.
     """
+    eventTypes: list[EventType]
+    """
+    Every event type this deployment emits, and so the types a webhook may subscribe to.
+    """
     content: NotRequired[ContentCapability]
+
+
+class PeriodEvent(TypedDict):
+    seq: int
+    state: PeriodState
+    reason: NotRequired[PeriodReason]
+    recordedAt: Timestamp
+    recordedBy: NotRequired[str]
+    """
+    Who moved the period; on a reopening, who requested it.
+    """
+    approvedBy: NotRequired[str]
+    """
+    On a reopening, the second person who approved it.
+    """
+    requestId: NotRequired[ReopenRequestId]
+    manifestDigest: NotRequired[Digest]
+
+
+class SubledgerPeriod(TypedDict):
+    period: LegalPeriod
+    legalEntityId: LegalEntityId
+    state: PeriodState
+    history: list[PeriodEvent]
+    manifest: NotRequired[CloseManifestDocument]
+    intact: NotRequired[bool]
+    """
+    Whether the period's journals and balances today are exactly the ones its latest manifest sealed. Absent until the period is first hard-closed.
+    """
+
+
+class RetentionVerdict(TypedDict):
+    decisionId: DecisionId
+    recordClass: RetentionRecordClass
+    country: NotRequired[CountryCode]
+    outcome: Literal['RETAIN', 'HELD', 'ELIGIBLE', 'NO_POLICY', 'CONFLICTED']
+    policy: NotRequired[PolicyVersionRef]
+    candidates: NotRequired[list[PolicyVersionRef]]
+    """
+    For `CONFLICTED`, the policies that disagree.
+    """
+    retainUntil: NotRequired[Timestamp]
+    holds: NotRequired[list[LegalHoldId]]
+    """
+    The active holds that scope the record.
+    """
+    detail: NotRequired[str]
+    """
+    Why a record is `NO_POLICY` or `CONFLICTED`.
+    """
+    evaluatedAt: Timestamp

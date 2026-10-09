@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DecisionCommitted",
+  "description": "A decision was committed (ADR-0013, ADR-0014). Emitted through the outbox in the commit's transaction, once per decision; a retried commit replays its stored response and emits nothing. The event is thin: it names the decision, its outcome and the content and evidence that produced it, and carries no amount. Read the figures from GET /v1/decisions/{decisionId}. Before A4 every decision is ADVISORY and authoritative is false.",
+  "$comment": "Producer: backend/internal/app/events.go (emitDecision). Event type com.zoikotax.decision.committed; schema ref ztax:events/decision-committed/1.0.0. Partition key decision/<businessKey>.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "decisionId",
+    "businessKey",
+    "outcome",
+    "reasonCode",
+    "authoritative",
+    "eventTime",
+    "recordedAt",
+    "bundleId",
+    "bundleDigest",
+    "envelopeDigest",
+    "resultDigest"
+  ],
+  "properties": {
+    "decisionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "businessKey": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "outcome": {
+      "enum": [
+        "AUTHORITATIVE",
+        "ADVISORY",
+        "AMBIGUOUS",
+        "CONFLICTED",
+        "UNSUPPORTED",
+        "REVIEW_REQUIRED"
+      ]
+    },
+    "reasonCode": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authoritative": {
+      "const": false
+    },
+    "eventTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "recordedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "bundleId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bundleDigest": {
+      "type": "string",
+      "pattern": "^zt1:[0-9a-f]{64}$"
+    },
+    "envelopeDigest": {
+      "type": "string",
+      "pattern": "^zt1:[0-9a-f]{64}$"
+    },
+    "resultDigest": {
+      "type": "string",
+      "pattern": "^zt1:[0-9a-f]{64}$"
+    }
+  }
+}

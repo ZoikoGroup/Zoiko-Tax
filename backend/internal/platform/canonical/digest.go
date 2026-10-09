@@ -130,3 +130,104 @@ func (d Digest) raw() ([]byte, error) {
 	}
 	return hex.DecodeString(rest)
 }
+
+// InclusionProof is the RFC 6962 audit path for the leaf at index: the
+// sibling hashes from the leaf's level to the root, in order. With the leaf,
+// its index and the tree size, it reproduces MerkleRoot(leaves) — so a
+// verifier holding one decision and a signed root can confirm the decision
+// was sealed without seeing any other leaf (ADR-0011 §2.4).
+//
+// The hashes are node hashes, not leaf digests, written in the digest form
+// so they travel as every other hash here does.
+func InclusionProof(leaves []Digest, index int) ([]Digest, error) {
+	if index < 0 || index >= len(leaves) {
+		return nil, fmt.Errorf("canonical: leaf %d is outside a tree of %d", index, len(leaves))
+	}
+	level := make([][]byte, len(leaves))
+	for i, leaf := range leaves {
+		raw, err := leaf.raw()
+		if err != nil {
+			return nil, fmt.Errorf("canonical: merkle leaf %d: %w", i, err)
+		}
+		level[i] = leafHash(raw)
+	}
+	var path []Digest
+	for len(level) > 1 {
+		sibling := index ^ 1
+		if sibling < len(level) {
+			path = append(path, Digest{s: DigestPrefix + hex.EncodeToString(level[sibling])})
+		}
+		next := make([][]byte, 0, (len(level)+1)/2)
+		for i := 0; i < len(level); i += 2 {
+			if i+1 == len(level) {
+				next = append(next, level[i])
+				continue
+			}
+			next = append(next, interiorHash(level[i], level[i+1]))
+		}
+		level, index = next, index/2
+	}
+	return path, nil
+}
+
+// VerifyInclusion checks an audit path: that leaf, at index in a tree of
+// size leaves, hashes up through path to root. It is the verifier's half of
+// InclusionProof, and needs nothing else from the tree.
+func VerifyInclusion(leaf Digest, index, size int, path []Digest, root Digest) error {
+	if index < 0 || index >= size {
+		return fmt.Errorf("canonical: leaf %d is outside a tree of %d", index, size)
+	}
+	raw, err := leaf.raw()
+	if err != nil {
+		return fmt.Errorf("canonical: leaf: %w", err)
+	}
+	cur := leafHash(raw)
+	used := 0
+	for size > 1 {
+		switch {
+		case index%2 == 1:
+			if used == len(path) {
+				return fmt.Errorf("canonical: the audit path is too short")
+			}
+			sib, err := path[used].raw()
+			if err != nil {
+				return fmt.Errorf("canonical: audit path %d: %w", used, err)
+			}
+			cur, used = interiorHash(sib, cur), used+1
+		case index+1 < size:
+			if used == len(path) {
+				return fmt.Errorf("canonical: the audit path is too short")
+			}
+			sib, err := path[used].raw()
+			if err != nil {
+				return fmt.Errorf("canonical: audit path %d: %w", used, err)
+			}
+			cur, used = interiorHash(cur, sib), used+1
+		}
+		// Otherwise the node is the odd one out at this level, promoted
+		// unchanged, exactly as MerkleRoot promotes it.
+		index, size = index/2, (size+1)/2
+	}
+	if used != len(path) {
+		return fmt.Errorf("canonical: the audit path is %d hashes too long", len(path)-used)
+	}
+	if got := (Digest{s: DigestPrefix + hex.EncodeToString(cur)}); !got.Equal(root) {
+		return fmt.Errorf("canonical: the path reaches %s, not the root %s", got, root)
+	}
+	return nil
+}
+
+func leafHash(raw []byte) []byte {
+	h := sha256.New()
+	h.Write([]byte{merkleLeafPrefix})
+	h.Write(raw)
+	return h.Sum(nil)
+}
+
+func interiorHash(left, right []byte) []byte {
+	h := sha256.New()
+	h.Write([]byte{merkleInteriorPrefix})
+	h.Write(left)
+	h.Write(right)
+	return h.Sum(nil)
+}

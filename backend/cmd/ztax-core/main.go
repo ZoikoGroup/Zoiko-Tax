@@ -31,6 +31,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/legal"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
@@ -38,6 +39,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/config"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/idgen"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/kms"
+	"github.com/zoikogroup/zoikotax/backend/internal/platform/secretbox"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/secrets"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/telemetry"
 	ztaxhttp "github.com/zoikogroup/zoikotax/backend/internal/transport/http"
@@ -131,6 +133,33 @@ func run() error {
 	if router.Determination, err = wireDetermination(cfg, store, content, clk, ids, log); err != nil {
 		return err
 	}
+	if router.Webhooks, err = wireWebhooks(cfg, store, clk, ids, log); err != nil {
+		return err
+	}
+	if router.Seals, err = wireSeals(cfg, store, clk, ids, log); err != nil {
+		return err
+	}
+	if router.Determination != nil {
+		// Refunds read what commits posted, so they are served wherever the
+		// determination surface is.
+		router.Refunds = app.NewRefundService(store.Decisions(), store.Journals(), store.Refunds(), store.Outbox(),
+			store, clk, ids, app.NewIdempotency(store.Idempotency(), store, clk)).WithPeriods(store.Periods())
+		router.Periods = app.NewPeriodService(store.Periods(), store.LegalEntities(), store, clk, ids)
+		router.Batches = app.NewBatchService(store.Batches(), router.Determination,
+			app.NewIdempotency(store.Idempotency(), store, clk), clk, ids)
+		go runBatchWorker(ctx, router.Batches, log)
+		router.Documents = app.NewDocumentService(router.Determination, store.Documents(),
+			app.NewIdempotency(store.Idempotency(), store, clk))
+		router.Reconciliations = app.NewReconciliationService(router.Documents, store.Refunds(), store.Reconciliations())
+	}
+	// Retention reads decisions as recorded; it needs no content, so it is
+	// served wherever the cell's store is.
+	router.Retention = app.NewRetentionService(store.Retention(), store.Decisions(), store.LegalEntities(), store.Audit(), store, clk, ids)
+	matrix, err := loadLegalMatrix(cfg, log)
+	if err != nil {
+		return err
+	}
+	router.Legal = app.NewLegalService(matrix, store.Authorizations(), store.LegalEntities(), store.Audit(), store, clk, ids)
 	models, closeModels, err := wireModelGateway(cfg, clk, ids, log)
 	if err != nil {
 		return err
@@ -443,9 +472,125 @@ func wireDetermination(cfg config.Config, store *postgres.Store, content *rule.H
 		WithFiscal(app.FiscalStores{
 			Accumulators: store.Accumulators(), Journals: store.Journals(),
 			LegalEntities: store.LegalEntities(), Outbox: store.Outbox(), Obligations: store.Obligations(),
+			Periods: store.Periods(),
 		})
 	log.Info("determination surface enabled", "evidence.dir", cfg.EvidenceDir)
 	return svc, nil
+}
+
+// runBatchWorker executes queued batches until ctx ends. Every replica runs
+// one; jobs are leased with SKIP LOCKED, so they share the queue without
+// coordinating. A pass that fails is logged and retried on the next tick: the
+// job's lease lapses and it is taken up again where its results end.
+func runBatchWorker(ctx context.Context, svc *app.BatchService, log *slog.Logger) {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+		for {
+			found, err := svc.Work(ctx)
+			if err != nil {
+				if ctx.Err() == nil {
+					log.Warn("batch pass failed", "error", err.Error())
+				}
+				break
+			}
+			if !found {
+				break
+			}
+		}
+	}
+}
+
+// loadLegalMatrix reads the LegalAuthorization matrix (ADR-LEG-001). With
+// none configured the cell still starts, and the gate blocks every legally
+// sensitive action: an unknown posture fails closed (ZTAX-LEG-REQ-0007). A
+// draft matrix — one nobody has approved — loads in development only.
+func loadLegalMatrix(cfg config.Config, log *slog.Logger) (legal.Matrix, error) {
+	if cfg.LegalMatrix == "" {
+		log.Warn("no legal authorization matrix configured; every legally sensitive action will be blocked")
+		return legal.Matrix{}, nil
+	}
+	// #nosec G304 -- a path from this process's own configuration.
+	b, err := os.ReadFile(cfg.LegalMatrix)
+	if err != nil {
+		return legal.Matrix{}, fmt.Errorf("legal matrix: %w", err)
+	}
+	m, err := legal.ParseMatrix(b)
+	if err != nil {
+		return legal.Matrix{}, err
+	}
+	if m.Draft && cfg.Environment != "development" {
+		return legal.Matrix{}, fmt.Errorf("legal matrix %s is a draft; a draft loads in development only", m.Version)
+	}
+	log.Info("legal authorization matrix loaded", "version", m.Version, "digest", m.Digest.String(), "rules", len(m.Rules), "draft", m.Draft)
+	return m, nil
+}
+
+// wireSeals builds the period-seal service (ADR-0011 §2.4). A cell with the
+// seal keyring verifies seals and proves inclusion; one that also has a
+// signing key seals. With neither, the seal surface answers 503.
+func wireSeals(cfg config.Config, store *postgres.Store, clk clock.Clock, ids idgen.Generator, log *slog.Logger) (*app.SealService, error) {
+	if cfg.SealKeyring == "" {
+		log.Warn("no seal keyring configured; the seal surface will refuse with 503")
+		return nil, nil
+	}
+	// #nosec G304 -- a path from this process's own configuration.
+	ringBytes, err := os.ReadFile(cfg.SealKeyring)
+	if err != nil {
+		return nil, fmt.Errorf("seal keyring: %w", err)
+	}
+	keyring, err := kms.ParseKeyring(ringBytes)
+	if err != nil {
+		return nil, err
+	}
+	objects, err := adapterevidence.NewFileStore(cfg.EvidenceDir)
+	if err != nil {
+		return nil, err
+	}
+	var signer kms.Signer
+	if cfg.SealSigningKey != "" {
+		notBefore, notAfter, ok := keyring.Window(cfg.SealKeyID)
+		if !ok {
+			return nil, fmt.Errorf("seal signing key %q is not in the seal keyring; its seals could not be verified", cfg.SealKeyID)
+		}
+		// #nosec G304 -- a path from this process's own configuration.
+		pemBytes, err := os.ReadFile(cfg.SealSigningKey)
+		if err != nil {
+			return nil, fmt.Errorf("seal signing key: %w", err)
+		}
+		local, err := kms.NewLocalSigner(cfg.Environment, pemBytes, cfg.SealKeyID, notBefore, notAfter)
+		if err != nil {
+			return nil, err
+		}
+		signer = local
+	}
+	log.Info("seal surface enabled", "seal.keys", keyring.KeyIDs(), "seal.signing", signer != nil)
+	return app.NewSealService(store.Decisions(), store.Seals(), objects, store, signer, keyring, clk, ids, cfg.Cell, 0), nil
+}
+
+// wireWebhooks builds the webhook administration service. A cell with no
+// webhook key serves no webhooks: the key seals every signing secret, and a
+// secret that cannot be sealed is not issued.
+func wireWebhooks(cfg config.Config, store *postgres.Store, clk clock.Clock, ids idgen.Generator, log *slog.Logger) (*app.WebhookService, error) {
+	if cfg.WebhookKeyRef == "" {
+		log.Warn("no webhook key configured; the webhook surface will refuse with 503")
+		return nil, nil
+	}
+	key, err := secrets.Resolve(secrets.EnvResolver{Environment: cfg.Environment}, cfg.WebhookKeyRef)
+	if err != nil {
+		return nil, err
+	}
+	box, err := secretbox.New(key)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("webhook surface enabled")
+	return app.NewWebhookService(store.Webhooks(), box, store, clk, ids, cfg.WebhookAllowPrivate), nil
 }
 
 // wireModelGateway builds the Governed Model Gateway client (ADR-0006). A cell

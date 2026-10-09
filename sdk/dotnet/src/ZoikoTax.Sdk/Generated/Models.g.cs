@@ -440,6 +440,14 @@ namespace ZoikoTax.Sdk
         [System.ComponentModel.DataAnnotations.Required]
         public System.Collections.Generic.ICollection<string> ReasonCodes { get; set; } = new System.Collections.ObjectModel.Collection<string>();
 
+        /// <summary>
+        /// Every event type this deployment emits, and so the types a webhook may subscribe to.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("eventTypes")]
+        // TODO(system.text.json): Add ItemConverterType with enum converter when supported
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<EventType> EventTypes { get; set; } = new System.Collections.ObjectModel.Collection<EventType>();
+
         [System.Text.Json.Serialization.JsonPropertyName("content")]
         public ContentCapability? Content { get; set; } = default!;
 
@@ -1570,6 +1578,1584 @@ namespace ZoikoTax.Sdk
 
     }
 
+    /// <summary>
+    /// A refund's own lifecycle (ZTAX-FIN-REQ-0059), separate from any credit.
+    /// <br/>`UNCERTAIN` means the provider's answer did not say whether the money
+    /// <br/>moved; it is neither paid nor failed.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum RefundStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REQUESTED")]
+        REQUESTED = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PENDING")]
+        PENDING = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"COMPLETED")]
+        COMPLETED = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"FAILED")]
+        FAILED = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"UNCERTAIN")]
+        UNCERTAIN = 4,
+
+    }
+
+    /// <summary>
+    /// What the payment provider reported.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum RefundOutcome
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ACCEPTED")]
+        ACCEPTED = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SUCCEEDED")]
+        SUCCEEDED = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DECLINED")]
+        DECLINED = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"TIMED_OUT")]
+        TIMED_OUT = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"UNKNOWN")]
+        UNKNOWN = 4,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RefundRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("decisionId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
+        public System.Guid DecisionId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public MoneyValue Amount { get; set; } = new MoneyValue();
+
+        [System.Text.Json.Serialization.JsonPropertyName("paymentReference")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(255, MinimumLength = 1)]
+        public string PaymentReference { get; set; } = default!;
+
+        /// <summary>
+        /// Why the refund is made. Free text; it may name the customer.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.ComponentModel.DataAnnotations.StringLength(1000)]
+        public string? Reason { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// One entry in a refund's history. The first is the request; each later one is a provider report that moved it.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RefundEvent
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("seq")]
+        [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
+        public int Seq { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RefundStatus>))]
+        public RefundStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("outcome")]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RefundOutcome>))]
+        public RefundOutcome? Outcome { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("externalReference")]
+        [System.ComponentModel.DataAnnotations.StringLength(255, MinimumLength = 1)]
+        public string? ExternalReference { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RecordedAt { get; set; } = default!;
+
+        /// <summary>
+        /// The user who recorded the event. Absent for system work.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("recordedBy")]
+        public System.Guid? RecordedBy { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// A refund of tax a committed decision charged. `status` is the latest
+    /// <br/>event's; `history` is every event, oldest first.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Refund
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("decisionId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
+        public System.Guid DecisionId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("legalEntityId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid LegalEntityId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public MoneyValue Amount { get; set; } = new MoneyValue();
+
+        [System.Text.Json.Serialization.JsonPropertyName("paymentReference")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(255, MinimumLength = 1)]
+        public string PaymentReference { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RefundStatus>))]
+        public RefundStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("requestedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RequestedAt { get; set; } = default!;
+
+        /// <summary>
+        /// The user who requested the refund. Absent for system work.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("requestedBy")]
+        public System.Guid? RequestedBy { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("history")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.MinLength(1)]
+        public System.Collections.Generic.ICollection<RefundEvent> History { get; set; } = new System.Collections.ObjectModel.Collection<RefundEvent>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RefundReportRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("outcome")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RefundOutcome>))]
+        public RefundOutcome Outcome { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("externalReference")]
+        [System.ComponentModel.DataAnnotations.StringLength(255, MinimumLength = 1)]
+        public string? ExternalReference { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// An event type this cell emits, as the AsyncAPI contract names it.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum EventType
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"com.zoikotax.decision.committed")]
+        Com_zoikotax_decision_committed = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"com.zoikotax.decision.corrected")]
+        Com_zoikotax_decision_corrected = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"com.zoikotax.obligation.status-changed")]
+        Com_zoikotax_obligation_statusChanged = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"com.zoikotax.accumulator.threshold-crossed")]
+        Com_zoikotax_accumulator_thresholdCrossed = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"com.zoikotax.refund.requested")]
+        Com_zoikotax_refund_requested = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"com.zoikotax.refund.status-changed")]
+        Com_zoikotax_refund_statusChanged = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"com.zoikotax.document.committed")]
+        Com_zoikotax_document_committed = 6,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum WebhookStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ACTIVE")]
+        ACTIVE = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PAUSED")]
+        PAUSED = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DISABLED")]
+        DISABLED = 2,
+
+    }
+
+    /// <summary>
+    /// `PENDING` awaits its next attempt; `DEAD` is the dead-letter state, kept and replayable.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum DeliveryStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PENDING")]
+        PENDING = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DELIVERED")]
+        DELIVERED = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DEAD")]
+        DEAD = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookCreateRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("url")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(2048, MinimumLength = 8)]
+        public System.Uri Url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("eventTypes")]
+        // TODO(system.text.json): Add ItemConverterType with enum converter when supported
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.MinLength(1)]
+        public System.Collections.Generic.ICollection<EventType> EventTypes { get; set; } = new System.Collections.ObjectModel.Collection<EventType>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        [System.ComponentModel.DataAnnotations.StringLength(500)]
+        public string? Description { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Webhook
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("url")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(2048, MinimumLength = 8)]
+        public System.Uri Url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("eventTypes")]
+        // TODO(system.text.json): Add ItemConverterType with enum converter when supported
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<EventType> EventTypes { get; set; } = new System.Collections.ObjectModel.Collection<EventType>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("description")]
+        public string? Description { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<WebhookStatus>))]
+        public WebhookStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string CreatedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("statusChangedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string StatusChangedAt { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookList
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("webhooks")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<Webhook> Webhooks { get; set; } = new System.Collections.ObjectModel.Collection<Webhook>();
+
+    }
+
+    /// <summary>
+    /// A signing secret, in the form Standard Webhooks libraries take. Returned once, by the response that issued it.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookSecret
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("version")]
+        [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
+        public int Version { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("secret")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^whsec_[A-Za-z0-9+/]{43}=$")]
+        public string Secret { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookCreated
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("webhook")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public Webhook Webhook { get; set; } = new Webhook();
+
+        [System.Text.Json.Serialization.JsonPropertyName("secret")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public WebhookSecret Secret { get; set; } = new WebhookSecret();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookStatusRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<WebhookStatus>))]
+        public WebhookStatus Status { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookSecretRotation
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("secret")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public WebhookSecret Secret { get; set; } = new WebhookSecret();
+
+        [System.Text.Json.Serialization.JsonPropertyName("previousRetiresAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string PreviousRetiresAt { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookDelivery
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("webhookId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid WebhookId { get; set; } = default!;
+
+        /// <summary>
+        /// The CloudEvents id, sent as `webhook-id`. The receiver's deduplication key.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("eventId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Guid EventId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("eventType")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<EventType>))]
+        public EventType EventType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<DeliveryStatus>))]
+        public DeliveryStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("attempts")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Attempts { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("nextAttemptAt")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string? NextAttemptAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string CreatedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("deliveredAt")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string? DeliveredAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("replayOf")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid? ReplayOf { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookDeliveryList
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("deliveries")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<WebhookDelivery> Deliveries { get; set; } = new System.Collections.ObjectModel.Collection<WebhookDelivery>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookAttempt
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("attempt")]
+        [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
+        public int Attempt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("startedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string StartedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("durationMs")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int DurationMs { get; set; } = default!;
+
+        /// <summary>
+        /// The receiver's HTTP status. Absent when no response arrived.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("statusCode")]
+        public int? StatusCode { get; set; } = default!;
+
+        /// <summary>
+        /// The transport's error, when no 2xx arrived. Never the receiver's response body.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("error")]
+        public string? Error { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class WebhookDeliveryDetail
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("delivery")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public WebhookDelivery Delivery { get; set; } = new WebhookDelivery();
+
+        [System.Text.Json.Serialization.JsonPropertyName("attempts")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<WebhookAttempt> Attempts { get; set; } = new System.Collections.ObjectModel.Collection<WebhookAttempt>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class BatchRequest
+    {
+
+        /// <summary>
+        /// What each item does. `COMMIT` commits it, or corrects with it when it names `supersedes`.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("operation")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<BatchRequestOperation>))]
+        public BatchRequestOperation Operation { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("items")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.MinLength(1)]
+        [System.ComponentModel.DataAnnotations.MaxLength(1000)]
+        public System.Collections.Generic.ICollection<CommitRequest> Items { get; set; } = new System.Collections.ObjectModel.Collection<CommitRequest>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class JobItem
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("index")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Index { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("businessKey")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(255, MinimumLength = 1)]
+        public string BusinessKey { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<JobItemStatus>))]
+        public JobItemStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("decisionId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
+        public System.Guid? DecisionId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reasonCode")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z][A-Z0-9_]*$")]
+        public string? ReasonCode { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Job
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("operation")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<JobOperation>))]
+        public JobOperation Operation { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<JobStatus>))]
+        public JobStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("itemCount")]
+        public int ItemCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("succeeded")]
+        public int Succeeded { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("failed")]
+        public int Failed { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pending")]
+        public int Pending { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("requestedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RequestedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("startedAt")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string? StartedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("finishedAt")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string? FinishedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("items")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<JobItem> Items { get; set; } = new System.Collections.ObjectModel.Collection<JobItem>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SealRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("periodStart")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string PeriodStart { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("periodEnd")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string PeriodEnd { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// A signed statement that the decisions recorded in `[periodStart, periodEnd)` were exactly these.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Seal
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("periodStart")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string PeriodStart { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("periodEnd")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string PeriodEnd { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("leafCount")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int LeafCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("merkleRoot")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string MerkleRoot { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("keyId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string KeyId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("cell")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Cell { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sealedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string SealedAt { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SealList
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("seals")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<Seal> Seals { get; set; } = new System.Collections.ObjectModel.Collection<Seal>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SealSignature
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("keyId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string KeyId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("algorithm")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<SealSignatureAlgorithm>))]
+        public SealSignatureAlgorithm Algorithm { get; set; } = default!;
+
+        /// <summary>
+        /// The DER signature, base64.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public byte[] Value { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SealDocument
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("seal")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public Seal Seal { get; set; } = new Seal();
+
+        /// <summary>
+        /// The canonical payload exactly as signed, base64. It names the tenant, cell, period, leaf count, leaf order and root.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("signedPayload")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public byte[] SignedPayload { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("signature")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public SealSignature Signature { get; set; } = new SealSignature();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SealVerification
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("sealId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid SealId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("verdict")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<SealVerificationVerdict>))]
+        public SealVerificationVerdict Verdict { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("keyId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string KeyId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("leafCount")]
+        public int LeafCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("signedRoot")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string SignedRoot { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recomputedRoot")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string? RecomputedRoot { get; set; } = default!;
+
+        /// <summary>
+        /// What failed, for the operator. Absent when VALID.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("detail")]
+        public string? Detail { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// One decision's leaf. Its digest is the canonical (canon/v1) digest of exactly these three members.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SealLeaf
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("decisionId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
+        public System.Guid DecisionId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RecordedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("resultDigest")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string ResultDigest { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class InclusionProof
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("sealId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid SealId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("merkleRoot")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string MerkleRoot { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("leafCount")]
+        public int LeafCount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("leafIndex")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int LeafIndex { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("leaf")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public SealLeaf Leaf { get; set; } = new SealLeaf();
+
+        [System.Text.Json.Serialization.JsonPropertyName("leafDigest")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string LeafDigest { get; set; } = default!;
+
+        /// <summary>
+        /// Sibling node hashes from the leaf's level to the root, in the digest form.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("auditPath")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<string> AuditPath { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+    }
+
+    /// <summary>
+    /// Another system's identifier for the document (ZTAX-DOM-REQ-0003). Never a key, never parsed, never assumed unique.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ExternalReference
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("sourceSystem")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(255, MinimumLength = 1)]
+        public string SourceSystem { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("namespace")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(255, MinimumLength = 1)]
+        public string Namespace { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("value")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(255, MinimumLength = 1)]
+        public string Value { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// One tax on one line, naming the committed decision it comes from and the component the decision's content posts.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DocumentTax
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("decisionId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
+        public System.Guid DecisionId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("component")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(128, MinimumLength = 1)]
+        public string Component { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amount")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(64)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$")]
+        public string Amount { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DocumentLineRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("sourceLineRef")]
+        [System.ComponentModel.DataAnnotations.StringLength(255)]
+        public string? SourceLineRef { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("componentInstance")]
+        [System.ComponentModel.DataAnnotations.StringLength(255)]
+        public string? ComponentInstance { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("net")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(64)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$")]
+        public string Net { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("discount")]
+        [System.ComponentModel.DataAnnotations.StringLength(64)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$")]
+        public string? Discount { get; set; } = default!;
+
+        /// <summary>
+        /// Required with a discount — the allocation that produced it (ZTAX-FIN-REQ-0021).
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("allocationRef")]
+        [System.ComponentModel.DataAnnotations.StringLength(255)]
+        public string? AllocationRef { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("predecessorLineId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid? PredecessorLineId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("taxes")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<DocumentTax> Taxes { get; set; } = new System.Collections.ObjectModel.Collection<DocumentTax>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DocumentRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<DocumentRequestType>))]
+        public DocumentRequestType Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("number")]
+        [System.ComponentModel.DataAnnotations.StringLength(255, MinimumLength = 1)]
+        public string? Number { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("issueDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")]
+        public string IssueDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("taxPoint")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string TaxPoint { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z]{3}$")]
+        public string Currency { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("externalRef")]
+        public ExternalReference? ExternalRef { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("lines")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.MinLength(1)]
+        [System.ComponentModel.DataAnnotations.MaxLength(1000)]
+        public System.Collections.Generic.ICollection<DocumentLineRequest> Lines { get; set; } = new System.Collections.ObjectModel.Collection<DocumentLineRequest>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CorrectionRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<CorrectionRequestType>))]
+        public CorrectionRequestType Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z][A-Z0-9_]*$")]
+        public string Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("number")]
+        [System.ComponentModel.DataAnnotations.StringLength(255, MinimumLength = 1)]
+        public string? Number { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("issueDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")]
+        public string IssueDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("taxPoint")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string TaxPoint { get; set; } = default!;
+
+        /// <summary>
+        /// A credit note's lines to cancel; absent is every line not yet cancelled.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("cancelLines")]
+        public System.Collections.Generic.ICollection<System.Guid>? CancelLines { get; set; } = default!;
+
+        /// <summary>
+        /// A rebill's lines, each naming the original line it replaces.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("lines")]
+        [System.ComponentModel.DataAnnotations.MaxLength(1000)]
+        public System.Collections.Generic.ICollection<DocumentLineRequest>? Lines { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DocumentLine
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sourceLineRef")]
+        [System.ComponentModel.DataAnnotations.StringLength(255)]
+        public string? SourceLineRef { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("componentInstance")]
+        public string? ComponentInstance { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("net")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(64)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$")]
+        public string Net { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("discount")]
+        [System.ComponentModel.DataAnnotations.StringLength(64)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$")]
+        public string? Discount { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("allocationRef")]
+        public string? AllocationRef { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("predecessorLineId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid? PredecessorLineId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("taxes")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<DocumentTax> Taxes { get; set; } = new System.Collections.ObjectModel.Collection<DocumentTax>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DocumentStatusEvent
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("seq")]
+        [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
+        public int Seq { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<DocumentStatusEventStatus>))]
+        public DocumentStatusEventStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("causeId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid? CauseId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RecordedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedBy")]
+        public System.Guid? RecordedBy { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// A committed fiscal document. Amounts are in `currency`; a cancelling
+    /// <br/>document's are negative. `status` is the latest of `history`.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class FiscalDocument
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<FiscalDocumentType>))]
+        public FiscalDocumentType Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("number")]
+        [System.ComponentModel.DataAnnotations.StringLength(255, MinimumLength = 1)]
+        public string? Number { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("rootId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid RootId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("predecessors")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<System.Guid> Predecessors { get; set; } = new System.Collections.ObjectModel.Collection<System.Guid>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("reasonCode")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z][A-Z0-9_]*$")]
+        public string? ReasonCode { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("legalEntityId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid LegalEntityId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("issueDate")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")]
+        public string IssueDate { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("taxPoint")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string TaxPoint { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z]{3}$")]
+        public string Currency { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("externalRef")]
+        public ExternalReference? ExternalRef { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("decisionIds")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<System.Guid> DecisionIds { get; set; } = new System.Collections.ObjectModel.Collection<System.Guid>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("lines")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<DocumentLine> Lines { get; set; } = new System.Collections.ObjectModel.Collection<DocumentLine>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("netTotal")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(64)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$")]
+        public string NetTotal { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("taxTotal")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(64)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$")]
+        public string TaxTotal { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("grossTotal")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(64)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$")]
+        public string GrossTotal { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<FiscalDocumentStatus>))]
+        public FiscalDocumentStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("history")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<DocumentStatusEvent> History { get; set; } = new System.Collections.ObjectModel.Collection<DocumentStatusEvent>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RecordedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedBy")]
+        public System.Guid? RecordedBy { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DocumentLineage
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("documents")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<FiscalDocument> Documents { get; set; } = new System.Collections.ObjectModel.Collection<FiscalDocument>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum PeriodState
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"OPEN")]
+        OPEN = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SOFT_CLOSE")]
+        SOFT_CLOSE = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"HARD_CLOSE")]
+        HARD_CLOSE = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REOPENED")]
+        REOPENED = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AMENDMENT_ACTIVE")]
+        AMENDMENT_ACTIVE = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SEALED")]
+        SEALED = 5,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PeriodEvent
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("seq")]
+        [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
+        public int Seq { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<PeriodState>))]
+        public PeriodState State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.ComponentModel.DataAnnotations.StringLength(1000)]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RecordedAt { get; set; } = default!;
+
+        /// <summary>
+        /// Who moved the period; on a reopening, who requested it.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("recordedBy")]
+        public System.Guid? RecordedBy { get; set; } = default!;
+
+        /// <summary>
+        /// On a reopening, the second person who approved it.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("approvedBy")]
+        public System.Guid? ApprovedBy { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("requestId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid? RequestId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("manifestDigest")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string? ManifestDigest { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// A close manifest exactly as digested, base64 canonical JSON.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CloseManifestDocument
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("digest")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string Digest { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("body")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public byte[] Body { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SubledgerPeriod
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("period")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-(0[1-9]|1[0-2])$")]
+        public string Period { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("legalEntityId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid LegalEntityId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<PeriodState>))]
+        public PeriodState State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("history")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<PeriodEvent> History { get; set; } = new System.Collections.ObjectModel.Collection<PeriodEvent>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("manifest")]
+        public CloseManifestDocument? Manifest { get; set; } = default!;
+
+        /// <summary>
+        /// Whether the period's journals and balances today are exactly the ones its latest manifest sealed. Absent until the period is first hard-closed.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("intact")]
+        public bool? Intact { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PeriodTransitionRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("to")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<PeriodTransitionRequestTo>))]
+        public PeriodTransitionRequestTo To { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.ComponentModel.DataAnnotations.StringLength(1000)]
+        public string? Reason { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReopenRequestBody
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(1000)]
+        public string Reason { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PeriodReopenRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("period")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-(0[1-9]|1[0-2])$")]
+        public string Period { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(1000)]
+        public string Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("requestedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RequestedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("requestedBy")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Guid RequestedBy { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ReconStage
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"R1_CALCULATED_TO_DOCUMENT")]
+        R1_CALCULATED_TO_DOCUMENT = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"R2_DOCUMENT_TO_COLLECTION")]
+        R2_DOCUMENT_TO_COLLECTION = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"R3_DOCUMENT_TO_SUBLEDGER")]
+        R3_DOCUMENT_TO_SUBLEDGER = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"R4_SUBLEDGER_TO_RETURN")]
+        R4_SUBLEDGER_TO_RETURN = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"R5_RETURN_TO_REMITTANCE")]
+        R5_RETURN_TO_REMITTANCE = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"R6_SUBLEDGER_TO_GL")]
+        R6_SUBLEDGER_TO_GL = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"R7_END_TO_END")]
+        R7_END_TO_END = 6,
+
+    }
+
+    /// <summary>
+    /// FIN-001 §18's root-cause taxonomy (ZTAX-FIN-REQ-0083).
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum RootCause
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CLASSIFICATION")]
+        CLASSIFICATION = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"JURISDICTION")]
+        JURISDICTION = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"TAX_RULE")]
+        TAX_RULE = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ROUNDING")]
+        ROUNDING = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"FX")]
+        FX = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DOCUMENT")]
+        DOCUMENT = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"COLLECTION")]
+        COLLECTION = 6,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"POSTING")]
+        POSTING = 7,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RETURN")]
+        RETURN = 8,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REMITTANCE")]
+        REMITTANCE = 9,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"GL")]
+        GL = 10,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"TIMING")]
+        TIMING = 11,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DATA")]
+        DATA = 12,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"OTHER")]
+        OTHER = 13,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReconciliationRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("period")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-(0[1-9]|1[0-2])$")]
+        public string Period { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReconResolution
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("actor")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ReconResolutionActor>))]
+        public ReconResolutionActor Actor { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("resolver")]
+        public System.Guid? Resolver { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("action")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ReconResolutionAction>))]
+        public ReconResolutionAction Action { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("rootCause")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RootCause>))]
+        public RootCause RootCause { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("evidence")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<string> Evidence { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("resolvedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string ResolvedAt { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// One comparison. `variance` is observed minus expected, exact,
+    /// <br/>whatever the status (ZTAX-FIN-REQ-0081); absent when one side is.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReconciliationItem
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("stage")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ReconStage>))]
+        public ReconStage Stage { get; set; } = default!;
+
+        /// <summary>
+        /// The canonical id compared on, such as `decision:&lt;id&gt;` or `refund:&lt;id&gt;`.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("matchKey")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string MatchKey { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("expected")]
+        public MoneyValue? Expected { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("observed")]
+        public MoneyValue? Observed { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("variance")]
+        public MoneyValue? Variance { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ReconciliationItemStatus>))]
+        public ReconciliationItemStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("rootCause")]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RootCause>))]
+        public RootCause? RootCause { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("detail")]
+        public string? Detail { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("resolution")]
+        public ReconResolution? Resolution { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ReconciliationRun
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("period")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-(0[1-9]|1[0-2])$")]
+        public string Period { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("legalEntityId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid LegalEntityId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("ranAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RanAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("ranBy")]
+        public System.Guid? RanBy { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("firstBreak")]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ReconStage>))]
+        public ReconStage? FirstBreak { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("unavailable")]
+        // TODO(system.text.json): Add ItemConverterType with enum converter when supported
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<ReconStage> Unavailable { get; set; } = new System.Collections.ObjectModel.Collection<ReconStage>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("items")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<ReconciliationItem> Items { get; set; } = new System.Collections.ObjectModel.Collection<ReconciliationItem>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ResolutionRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(1000, MinimumLength = 1)]
+        public string Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("action")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ResolutionRequestAction>))]
+        public ResolutionRequestAction Action { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("rootCause")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RootCause>))]
+        public RootCause RootCause { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("evidence")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.MinLength(1)]
+        [System.ComponentModel.DataAnnotations.MaxLength(50)]
+        public System.Collections.Generic.ICollection<string> Evidence { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+    }
+
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ReplayReport
     {
@@ -1603,6 +3189,918 @@ namespace ZoikoTax.Sdk
         /// </summary>
         [System.Text.Json.Serialization.JsonPropertyName("divergence")]
         public string? Divergence { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum RetentionRecordClass
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DECISION")]
+        DECISION = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DOCUMENT")]
+        DOCUMENT = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"JOURNAL")]
+        JOURNAL = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REFUND")]
+        REFUND = 3,
+
+    }
+
+    /// <summary>
+    /// What the period runs from: the taxable event, the record's making, or
+    /// <br/>the end of the calendar year of the event.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum RetentionTrigger
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"EVENT_TIME")]
+        EVENT_TIME = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RECORDED_AT")]
+        RECORDED_AT = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"EVENT_YEAR_END")]
+        EVENT_YEAR_END = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RetentionPolicyRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(128, MinimumLength = 1)]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordClass")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RetentionRecordClass>))]
+        public RetentionRecordClass RecordClass { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("country")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z]{2}$")]
+        public string Country { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("years")]
+        [System.ComponentModel.DataAnnotations.Range(1, 100)]
+        public int Years { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("trigger")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RetentionTrigger>))]
+        public RetentionTrigger Trigger { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effectiveFrom")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string EffectiveFrom { get; set; } = default!;
+
+        /// <summary>
+        /// The statute, regulation or contract the period comes from.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("citation")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(1000, MinimumLength = 1)]
+        public string Citation { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RetentionPolicy
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(128, MinimumLength = 1)]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("version")]
+        [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
+        public int Version { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordClass")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RetentionRecordClass>))]
+        public RetentionRecordClass RecordClass { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("country")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z]{2}$")]
+        public string Country { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("years")]
+        public int Years { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("trigger")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RetentionTrigger>))]
+        public RetentionTrigger Trigger { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effectiveFrom")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string EffectiveFrom { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("citation")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Citation { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RecordedAt { get; set; } = default!;
+
+        /// <summary>
+        /// The administrator who recorded this version.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("recordedBy")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Guid RecordedBy { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RetentionPolicyList
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("policies")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<RetentionPolicy> Policies { get; set; } = new System.Collections.ObjectModel.Collection<RetentionPolicy>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PolicyVersionRef
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(128, MinimumLength = 1)]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("version")]
+        public int Version { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RetentionVerdict
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("decisionId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
+        public System.Guid DecisionId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordClass")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RetentionRecordClass>))]
+        public RetentionRecordClass RecordClass { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("country")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z]{2}$")]
+        public string? Country { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("outcome")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RetentionVerdictOutcome>))]
+        public RetentionVerdictOutcome Outcome { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("policy")]
+        public PolicyVersionRef? Policy { get; set; } = default!;
+
+        /// <summary>
+        /// For `CONFLICTED`, the policies that disagree.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("candidates")]
+        public System.Collections.Generic.ICollection<PolicyVersionRef>? Candidates { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retainUntil")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string? RetainUntil { get; set; } = default!;
+
+        /// <summary>
+        /// The active holds that scope the record.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("holds")]
+        public System.Collections.Generic.ICollection<System.Guid>? Holds { get; set; } = default!;
+
+        /// <summary>
+        /// Why a record is `NO_POLICY` or `CONFLICTED`.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("detail")]
+        public string? Detail { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("evaluatedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string EvaluatedAt { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// What a hold covers. Every criterion given must hold: named decisions
+    /// <br/>or business keys, a window of event times `[eventFrom, eventTo)`, and
+    /// <br/>a legal entity narrowing either. At least names or a window; a window
+    /// <br/>alone spans at most ten years.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LegalHoldScope
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("legalEntityId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid? LegalEntityId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("businessKeys")]
+        [System.ComponentModel.DataAnnotations.MaxLength(1000)]
+        public System.Collections.Generic.ICollection<string>? BusinessKeys { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("decisionIds")]
+        [System.ComponentModel.DataAnnotations.MaxLength(1000)]
+        public System.Collections.Generic.ICollection<System.Guid>? DecisionIds { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("eventFrom")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string? EventFrom { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("eventTo")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string? EventTo { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LegalHoldEvent
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("seq")]
+        [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
+        public int Seq { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("kind")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<LegalHoldEventKind>))]
+        public LegalHoldEventKind Kind { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("scope")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public LegalHoldScope Scope { get; set; } = new LegalHoldScope();
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(1000, MinimumLength = 1)]
+        public string Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RecordedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedBy")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Guid RecordedBy { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LegalHold
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        /// <summary>
+        /// The claim, investigation or regulator request the hold serves.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("matter")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Matter { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<LegalHoldStatus>))]
+        public LegalHoldStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("scope")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public LegalHoldScope Scope { get; set; } = new LegalHoldScope();
+
+        [System.Text.Json.Serialization.JsonPropertyName("history")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<LegalHoldEvent> History { get; set; } = new System.Collections.ObjectModel.Collection<LegalHoldEvent>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LegalHoldList
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("holds")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<LegalHold> Holds { get; set; } = new System.Collections.ObjectModel.Collection<LegalHold>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LegalHoldRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("matter")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(255, MinimumLength = 1)]
+        public string Matter { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(1000, MinimumLength = 1)]
+        public string Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("scope")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public LegalHoldScope Scope { get; set; } = new LegalHoldScope();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LegalHoldScopeRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(1000, MinimumLength = 1)]
+        public string Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("scope")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public LegalHoldScope Scope { get; set; } = new LegalHoldScope();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LegalHoldReleaseRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(1000, MinimumLength = 1)]
+        public string Reason { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ServiceState
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"INFORM")]
+        INFORM = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"COMPUTE")]
+        COMPUTE = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PREPARE")]
+        PREPARE = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"FILE")]
+        FILE = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REPRESENT")]
+        REPRESENT = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ADVISE")]
+        ADVISE = 5,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum LegalStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DIRECT_ALLOWED")]
+        DIRECT_ALLOWED = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DIRECT_WITH_AUTH")]
+        DIRECT_WITH_AUTH = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"QUALIFIED_PERSON_REQUIRED")]
+        QUALIFIED_PERSON_REQUIRED = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PARTNER_REQUIRED")]
+        PARTNER_REQUIRED = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CUSTOMER_ONLY")]
+        CUSTOMER_ONLY = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"COUNSEL_PENDING")]
+        COUNSEL_PENDING = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PROHIBITED")]
+        PROHIBITED = 6,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SUSPENDED")]
+        SUSPENDED = 7,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum AuthorizationType
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"NONE")]
+        NONE = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CONTRACT")]
+        CONTRACT = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DECLARATION")]
+        DECLARATION = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"POA")]
+        POA = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"TAX_INFORMATION")]
+        TAX_INFORMATION = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PORTAL_DELEGATION")]
+        PORTAL_DELEGATION = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"FILING_MANDATE")]
+        FILING_MANDATE = 6,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum AuthorizationPermission
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"READ_INFO")]
+        READ_INFO = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PREPARE")]
+        PREPARE = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SUBMIT")]
+        SUBMIT = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RECEIVE_NOTICE")]
+        RECEIVE_NOTICE = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REPRESENT")]
+        REPRESENT = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SIGN")]
+        SIGN = 5,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum FundsPosture
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"NO_CUSTODY")]
+        NO_CUSTODY = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"INSTRUCTION_ONLY")]
+        INSTRUCTION_ONLY = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PSP_PARTNER")]
+        PSP_PARTNER = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"LICENSED_PROGRAM")]
+        LICENSED_PROGRAM = 3,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LegalRule
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("version")]
+        public int Version { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("country")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z]{2}$")]
+        public string Country { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("authority")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(128, MinimumLength = 1)]
+        public string Authority { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("service")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ServiceState>))]
+        public ServiceState Service { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<LegalStatus>))]
+        public LegalStatus Status { get; set; } = default!;
+
+        /// <summary>
+        /// The Zoiko entity or approved partner that performs the service.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("provider")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Provider { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("authorizationType")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<AuthorizationType>))]
+        public AuthorizationType AuthorizationType { get; set; } = default!;
+
+        /// <summary>
+        /// The authority accepts no generic grant; an authorization names its periods.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("requiresPeriods")]
+        public bool RequiresPeriods { get; set; } = default!;
+
+        /// <summary>
+        /// The authority accepts no generic grant; an authorization names its matters.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("requiresMatters")]
+        public bool RequiresMatters { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("qualification")]
+        public string? Qualification { get; set; } = default!;
+
+        /// <summary>
+        /// The kind of credential the authority needs — never a credential.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("credential")]
+        public string? Credential { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("funds")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<FundsPosture>))]
+        public FundsPosture Funds { get; set; } = default!;
+
+        /// <summary>
+        /// The counsel memo or authority source the rule rests on.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("opinionRef")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string OpinionRef { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effectiveFrom")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string EffectiveFrom { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effectiveTo")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string? EffectiveTo { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LegalMatrix
+    {
+
+        /// <summary>
+        /// The matrix edition; empty when the cell has none.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("version")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Version { get; set; } = default!;
+
+        /// <summary>
+        /// A matrix nobody has approved. Loads in development only.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("draft")]
+        public bool Draft { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("digest")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string? Digest { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("rules")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<LegalRule> Rules { get; set; } = new System.Collections.ObjectModel.Collection<LegalRule>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AuthorizationEvent
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("seq")]
+        [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
+        public int Seq { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("kind")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<AuthorizationEventKind>))]
+        public AuthorizationEventKind Kind { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("supersededBy")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid? SupersededBy { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RecordedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedBy")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Guid RecordedBy { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CustomerAuthorization
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("legalEntityId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid LegalEntityId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("country")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z]{2}$")]
+        public string Country { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("authority")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(128, MinimumLength = 1)]
+        public string Authority { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<AuthorizationType>))]
+        public AuthorizationType Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("permissions")]
+        // TODO(system.text.json): Add ItemConverterType with enum converter when supported
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<AuthorizationPermission> Permissions { get; set; } = new System.Collections.ObjectModel.Collection<AuthorizationPermission>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("matters")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<string> Matters { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("periodFrom")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-(0[1-9]|1[0-2])$")]
+        public string? PeriodFrom { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("periodTo")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-(0[1-9]|1[0-2])$")]
+        public string? PeriodTo { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("representative")]
+        [System.ComponentModel.DataAnnotations.StringLength(255)]
+        public string? Representative { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effectiveFrom")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string EffectiveFrom { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("expiresAt")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string? ExpiresAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("evidence")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<string> Evidence { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("credentialRef")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(vault|awssm|gcpsm|azkv)://[A-Za-z0-9._/-]{1,240}$")]
+        public string? CredentialRef { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("supersedes")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid? Supersedes { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<CustomerAuthorizationStatus>))]
+        public CustomerAuthorizationStatus Status { get; set; } = default!;
+
+        /// <summary>
+        /// Active, effective and not expired, now.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("inForce")]
+        public bool InForce { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RecordedAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedBy")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Guid RecordedBy { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("history")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<AuthorizationEvent> History { get; set; } = new System.Collections.ObjectModel.Collection<AuthorizationEvent>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AuthorizationList
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("authorizations")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<CustomerAuthorization> Authorizations { get; set; } = new System.Collections.ObjectModel.Collection<CustomerAuthorization>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AuthorizationRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("legalEntityId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid? LegalEntityId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("country")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z]{2}$")]
+        public string Country { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("authority")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(128, MinimumLength = 1)]
+        public string Authority { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<AuthorizationType>))]
+        public AuthorizationType Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("permissions")]
+        // TODO(system.text.json): Add ItemConverterType with enum converter when supported
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.MinLength(1)]
+        public System.Collections.Generic.ICollection<AuthorizationPermission> Permissions { get; set; } = new System.Collections.ObjectModel.Collection<AuthorizationPermission>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("matters")]
+        [System.ComponentModel.DataAnnotations.MaxLength(100)]
+        public System.Collections.Generic.ICollection<string>? Matters { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("periodFrom")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-(0[1-9]|1[0-2])$")]
+        public string? PeriodFrom { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("periodTo")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-(0[1-9]|1[0-2])$")]
+        public string? PeriodTo { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("representative")]
+        [System.ComponentModel.DataAnnotations.StringLength(255)]
+        public string? Representative { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effectiveFrom")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string EffectiveFrom { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("expiresAt")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string? ExpiresAt { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("evidence")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.MinLength(1)]
+        [System.ComponentModel.DataAnnotations.MaxLength(20)]
+        public System.Collections.Generic.ICollection<string> Evidence { get; set; } = new System.Collections.ObjectModel.Collection<string>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("credentialRef")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(vault|awssm|gcpsm|azkv)://[A-Za-z0-9._/-]{1,240}$")]
+        public string? CredentialRef { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("supersedes")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid? Supersedes { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RevocationRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(1000, MinimumLength = 1)]
+        public string Reason { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AuthorizationCheckRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("country")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z]{2}$")]
+        public string Country { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("authority")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(128, MinimumLength = 1)]
+        public string Authority { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("service")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ServiceState>))]
+        public ServiceState Service { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("legalEntityId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid? LegalEntityId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("period")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-(0[1-9]|1[0-2])$")]
+        public string? Period { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("matter")]
+        [System.ComponentModel.DataAnnotations.StringLength(255, MinimumLength = 1)]
+        public string? Matter { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RuleRef
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("version")]
+        public int Version { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AuthorizationCheck
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("allowed")]
+        public bool Allowed { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<LegalStatus>))]
+        public LegalStatus Status { get; set; } = default!;
+
+        /// <summary>
+        /// Why the action is blocked; absent when it is allowed.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<AuthorizationCheckReason>))]
+        public AuthorizationCheckReason? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("rule")]
+        public RuleRef? Rule { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("authorizationId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid? AuthorizationId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("matrixVersion")]
+        public string? MatrixVersion { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("matrixDigest")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^zt1:[0-9a-f]{64}$")]
+        public string? MatrixDigest { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("detail")]
+        public string? Detail { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("checkedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string CheckedAt { get; set; } = default!;
 
     }
 
@@ -1739,6 +4237,480 @@ namespace ZoikoTax.Sdk
 
         [System.Runtime.Serialization.EnumMember(Value = @"CLOSED")]
         CLOSED = 4,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum BatchRequestOperation
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"COMMIT")]
+        COMMIT = 0,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum JobItemStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PENDING")]
+        PENDING = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SUCCEEDED")]
+        SUCCEEDED = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"FAILED")]
+        FAILED = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum JobOperation
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"COMMIT")]
+        COMMIT = 0,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum JobStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"QUEUED")]
+        QUEUED = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RUNNING")]
+        RUNNING = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"COMPLETED")]
+        COMPLETED = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum SealSignatureAlgorithm
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ECDSA_P384_SHA384")]
+        ECDSA_P384_SHA384 = 0,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum SealVerificationVerdict
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"VALID")]
+        VALID = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SIGNATURE_INVALID")]
+        SIGNATURE_INVALID = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RECORD_MISMATCH")]
+        RECORD_MISMATCH = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ROOT_MISMATCH")]
+        ROOT_MISMATCH = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"EVIDENCE_MISSING")]
+        EVIDENCE_MISSING = 4,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum DocumentRequestType
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"INVOICE")]
+        INVOICE = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DEBIT_NOTE")]
+        DEBIT_NOTE = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ADJUSTMENT")]
+        ADJUSTMENT = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum CorrectionRequestType
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"VOID")]
+        VOID = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CREDIT_NOTE")]
+        CREDIT_NOTE = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REBILL")]
+        REBILL = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum DocumentStatusEventStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"COMMITTED")]
+        COMMITTED = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ISSUED")]
+        ISSUED = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DELIVERED")]
+        DELIVERED = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ACCEPTED")]
+        ACCEPTED = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PARTIALLY_CREDITED")]
+        PARTIALLY_CREDITED = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"FULLY_CREDITED")]
+        FULLY_CREDITED = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"VOIDED")]
+        VOIDED = 6,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REFUNDED")]
+        REFUNDED = 7,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AMENDED")]
+        AMENDED = 8,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DISPUTED")]
+        DISPUTED = 9,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CLOSED")]
+        CLOSED = 10,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SUSPENDED")]
+        SUSPENDED = 11,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum FiscalDocumentType
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"INVOICE")]
+        INVOICE = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CREDIT_NOTE")]
+        CREDIT_NOTE = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DEBIT_NOTE")]
+        DEBIT_NOTE = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PARTIAL_CREDIT")]
+        PARTIAL_CREDIT = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"VOID")]
+        VOID = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REFUND")]
+        REFUND = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REBILL")]
+        REBILL = 6,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ADJUSTMENT")]
+        ADJUSTMENT = 7,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AMENDMENT")]
+        AMENDMENT = 8,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RESTATEMENT")]
+        RESTATEMENT = 9,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum FiscalDocumentStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"COMMITTED")]
+        COMMITTED = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ISSUED")]
+        ISSUED = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DELIVERED")]
+        DELIVERED = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ACCEPTED")]
+        ACCEPTED = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PARTIALLY_CREDITED")]
+        PARTIALLY_CREDITED = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"FULLY_CREDITED")]
+        FULLY_CREDITED = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"VOIDED")]
+        VOIDED = 6,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REFUNDED")]
+        REFUNDED = 7,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AMENDED")]
+        AMENDED = 8,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DISPUTED")]
+        DISPUTED = 9,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CLOSED")]
+        CLOSED = 10,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SUSPENDED")]
+        SUSPENDED = 11,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum PeriodTransitionRequestTo
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"OPEN")]
+        OPEN = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SOFT_CLOSE")]
+        SOFT_CLOSE = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"HARD_CLOSE")]
+        HARD_CLOSE = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AMENDMENT_ACTIVE")]
+        AMENDMENT_ACTIVE = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SEALED")]
+        SEALED = 4,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ReconResolutionActor
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"HUMAN")]
+        HUMAN = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AI_A3")]
+        AI_A3 = 1,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ReconResolutionAction
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ADJUST")]
+        ADJUST = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RECLASSIFY")]
+        RECLASSIFY = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AMEND")]
+        AMEND = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"WAIT")]
+        WAIT = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"WAIVE_WITH_APPROVAL")]
+        WAIVE_WITH_APPROVAL = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"EXTERNAL_CORRECTION")]
+        EXTERNAL_CORRECTION = 5,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ReconciliationItemStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"MATCHED")]
+        MATCHED = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"TOLERANCE_MATCH")]
+        TOLERANCE_MATCH = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"UNMATCHED")]
+        UNMATCHED = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PARTIAL")]
+        PARTIAL = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DUPLICATE")]
+        DUPLICATE = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"MISSING")]
+        MISSING = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CONFLICTED")]
+        CONFLICTED = 6,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PENDING")]
+        PENDING = 7,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"EXPLAINED")]
+        EXPLAINED = 8,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RESOLVED")]
+        RESOLVED = 9,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ResolutionRequestAction
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ADJUST")]
+        ADJUST = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RECLASSIFY")]
+        RECLASSIFY = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AMEND")]
+        AMEND = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"WAIT")]
+        WAIT = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"WAIVE_WITH_APPROVAL")]
+        WAIVE_WITH_APPROVAL = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"EXTERNAL_CORRECTION")]
+        EXTERNAL_CORRECTION = 5,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum RetentionVerdictOutcome
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RETAIN")]
+        RETAIN = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"HELD")]
+        HELD = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ELIGIBLE")]
+        ELIGIBLE = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"NO_POLICY")]
+        NO_POLICY = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CONFLICTED")]
+        CONFLICTED = 4,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum LegalHoldEventKind
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PLACED")]
+        PLACED = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SCOPE_CHANGED")]
+        SCOPE_CHANGED = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RELEASED")]
+        RELEASED = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum LegalHoldStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ACTIVE")]
+        ACTIVE = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RELEASED")]
+        RELEASED = 1,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum AuthorizationEventKind
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"GRANTED")]
+        GRANTED = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REVOKED")]
+        REVOKED = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SUPERSEDED")]
+        SUPERSEDED = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum CustomerAuthorizationStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ACTIVE")]
+        ACTIVE = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REVOKED")]
+        REVOKED = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SUPERSEDED")]
+        SUPERSEDED = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum AuthorizationCheckReason
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"NO_RULE")]
+        NO_RULE = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RULE_CONFLICT")]
+        RULE_CONFLICT = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"COUNSEL_PENDING")]
+        COUNSEL_PENDING = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PROHIBITED")]
+        PROHIBITED = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SUSPENDED")]
+        SUSPENDED = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PARTNER_REQUIRED")]
+        PARTNER_REQUIRED = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CUSTOMER_ONLY")]
+        CUSTOMER_ONLY = 6,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"QUALIFIED_PERSON_REQUIRED")]
+        QUALIFIED_PERSON_REQUIRED = 7,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AUTHORIZATION_MISSING")]
+        AUTHORIZATION_MISSING = 8,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AUTHORIZATION_EXPIRED")]
+        AUTHORIZATION_EXPIRED = 9,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AUTHORIZATION_REVOKED")]
+        AUTHORIZATION_REVOKED = 10,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AUTHORIZATION_OUT_OF_SCOPE")]
+        AUTHORIZATION_OUT_OF_SCOPE = 11,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CREDENTIAL_MISSING")]
+        CREDENTIAL_MISSING = 12,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"MATRIX_UNAVAILABLE")]
+        MATRIX_UNAVAILABLE = 13,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ACTION_NOT_WELL_FORMED")]
+        ACTION_NOT_WELL_FORMED = 14,
 
     }
 

@@ -771,7 +771,7 @@ requirements:
     owner: "Chief Architect"
     applies_to: ["IDENTITY", "INT", "DOM"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/lifecycle_test.go::TestTotalsAndExternalReference"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -4023,7 +4023,7 @@ requirements:
     owner: "Chief Architect + GC"
     applies_to: ["Security"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/app/seal_test.go::TestEVIDREQ0107And0072InclusionProofsVerifyOutsideTheCell"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -4513,7 +4513,7 @@ requirements:
     owner: "Chief Architect + GC"
     applies_to: ["Evidence Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/app/seal_test.go::TestEVIDREQ0107And0072InclusionProofsVerifyOutsideTheCell"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -7865,7 +7865,7 @@ requirements:
     owner: "CISO"
     applies_to: ["Data"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/adapter/postgres/rls_integration_test.go::TestIntegrationSECREQ0027RowLevelSecurityIsolatesTenants"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -8187,7 +8187,7 @@ requirements:
     owner: "CISO"
     applies_to: ["Data"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/adapter/postgres/rls_integration_test.go::TestIntegrationSECREQ0027RowLevelSecurityIsolatesTenants"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -8201,7 +8201,7 @@ requirements:
     owner: "CISO"
     applies_to: ["QA"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/adapter/postgres/rls_integration_test.go::TestIntegrationSECREQ0027RowLevelSecurityIsolatesTenants"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17693,7 +17693,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["DET"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/app/documents_integration_test.go::TestIntegrationFINREQ0011ADocumentPresentsExactlyWhatWasDecided"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -17735,7 +17735,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/document/lifecycle_test.go::TestFINREQ0013ACreditNamesAndNegatesExactlyTheLinesItCancels"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18379,7 +18379,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/settlement/refund_test.go::TestFINREQ0059RefundLifecycleIsItsOwn"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18799,7 +18799,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/app/periods_integration_test.go::TestIntegrationFINREQ0089To0091APeriodClosesSealsAmendsAndReopensOnApproval"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -18813,7 +18813,7 @@ requirements:
     owner: "Head of Finance Systems"
     applies_to: ["FIN"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/domain/subledger/period_test.go::TestFINREQ0090LateEventsPostOnlyAsAmendments"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -19346,7 +19346,7 @@ requirements:
     owner: "Lane K — Integration & SDK"
     applies_to: ["backend", "APP", "SCHEMA"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "backend/internal/transport/http/idempotency_test.go::TestINTREQ0001AKeylessWriteIsRefusedBeforeAnyWork"
     status: PROPOSED
     effective_from: null
     effective_to: null

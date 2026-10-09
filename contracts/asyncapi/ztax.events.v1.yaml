@@ -1,0 +1,203 @@
+# ZoikoTax v1 events — the authoritative event contract (ADR-0014; Build Plan
+# W2 lane K, "AsyncAPI event and webhook definitions with CloudEvents
+# adapters").
+#
+# This file is to events what ../openapi/ztax.v1.yaml is to requests: the
+# source of truth, reviewed by people who do not read Go. Three registrations
+# of every event are kept in step and checked against one another in CI:
+#
+#   1. this document — the message and the channel a consumer receives it on;
+#   2. ../schemas/events/<name>.schema.json — the payload's JSON Schema;
+#   3. backend/internal/app/events.go — the type and schema reference the
+#      producer writes into the outbox.
+#
+# backend/internal/app/events_test.go fails on an event any one of the three
+# names and another does not, and on a payload the producer builds with a
+# member its schema does not declare or without one it requires.
+#
+# Version. The Build Plan names AsyncAPI 3.1.0. This document is written to
+# 3.0.0, which is what the toolchain available to this repository validates,
+# and uses nothing 3.1 changed; when a 3.1-capable validator is certified the
+# version line moves and nothing else does — the same arrangement the OpenAPI
+# contract has with its 3.1 export (ADR-0010 §2.2).
+#
+# Envelope. Every message is a CloudEvents 1.0 event in structured JSON mode
+# (ADR-0014 §2.5). The payload schemas below are the `data` member. The
+# envelope's `id` is the outbox row's key and the deduplication key: delivery
+# is at-least-once, and a consumer that has seen an id has seen the event.
+# `time` is when the change committed, not when it was delivered.
+
+asyncapi: 3.0.0
+
+info:
+  title: ZoikoTax events
+  version: "1.0.0"
+  description: |
+    What a ZoikoTax regional cell announces, and the guarantees it makes about
+    announcing it.
+
+    **At least once, per-aggregate order, nothing stronger.** An event is
+    written in the transaction that made the change it reports, so a committed
+    change always has its event and an event always describes a committed
+    change. It may be delivered more than once; deduplicate on the CloudEvents
+    `id`. Events with the same `subject` (the aggregate) arrive in the order
+    they were committed. There is no order across aggregates, tenants or
+    cells.
+
+    **Thin by default.** Events say what changed and where to read it. They
+    carry no fiscal amount a consumer could act on without the authorization
+    a read requires — read the decision or the obligation through the API.
+    A threshold crossing and a refund carry their amount, because there the
+    amount is what happened.
+
+    **Advisory before A4.** Every decision event carries
+    `authoritative: false` until the deployment may produce authoritative
+    output (see `GET /v1/capabilities`).
+  contact:
+    name: ZoikoTax integration
+    url: https://developers.zoikotax.com
+  license:
+    name: Proprietary
+    identifier: LicenseRef-ZoikoTax-Proprietary
+
+defaultContentType: application/cloudevents+json
+
+servers:
+  cell-broker:
+    host: "{cell}.events.zoikotax.internal"
+    protocol: kafka
+    description: |
+      The cell's own broker. Events never leave the cell's region through it;
+      a consumer in another region receives them by webhook, and that
+      delivery is a cross-cell transfer with its own record.
+    variables:
+      cell:
+        default: eu-west-1
+
+channels:
+  cellEvents:
+    address: "ztax.{cell}.events"
+    title: Cell events
+    description: |
+      Every event the cell emits, one topic per cell, partitioned by the
+      CloudEvents `subject` — the aggregate key — so per-aggregate order holds.
+    parameters:
+      cell:
+        description: The regional cell.
+    messages:
+      decisionCommitted: { $ref: "#/components/messages/decisionCommitted" }
+      decisionCorrected: { $ref: "#/components/messages/decisionCorrected" }
+      obligationStatusChanged: { $ref: "#/components/messages/obligationStatusChanged" }
+      thresholdCrossed: { $ref: "#/components/messages/thresholdCrossed" }
+      refundRequested: { $ref: "#/components/messages/refundRequested" }
+      refundStatusChanged: { $ref: "#/components/messages/refundStatusChanged" }
+      documentCommitted: { $ref: "#/components/messages/documentCommitted" }
+
+operations:
+  receiveCellEvents:
+    action: receive
+    channel: { $ref: "#/channels/cellEvents" }
+    summary: Receive the cell's events.
+    messages:
+      - $ref: "#/channels/cellEvents/messages/decisionCommitted"
+      - $ref: "#/channels/cellEvents/messages/decisionCorrected"
+      - $ref: "#/channels/cellEvents/messages/obligationStatusChanged"
+      - $ref: "#/channels/cellEvents/messages/thresholdCrossed"
+      - $ref: "#/channels/cellEvents/messages/refundRequested"
+      - $ref: "#/channels/cellEvents/messages/refundStatusChanged"
+      - $ref: "#/channels/cellEvents/messages/documentCommitted"
+
+components:
+  messageTraits:
+    cloudEvent:
+      description: |
+        CloudEvents 1.0 structured mode. `type` and `dataschema` identify the
+        message; `subject` is the partition key; the `ztx*` extension
+        attributes name the tenant, the cell, its region and the seven
+        release-train versions that produced the event.
+      headers:
+        type: object
+        required: [specversion, id, source, type, time, dataschema, datacontenttype, subject, ztxtenant, ztxcell, ztxregion]
+        properties:
+          specversion: { const: "1.0" }
+          id: { type: string, format: uuid, description: "The outbox row's key. Stable across redeliveries: deduplicate on it." }
+          source: { type: string, description: "/cells/<region>/<cell>" }
+          type: { type: string }
+          time: { type: string, format: date-time, description: When the change committed. }
+          dataschema: { type: string }
+          datacontenttype: { const: application/json }
+          subject: { type: string, description: The aggregate key; events with one subject arrive in commit order. }
+          ztxtenant: { type: string, format: uuid }
+          ztxcell: { type: string }
+          ztxregion: { type: string }
+          ztxtrainapp: { type: string }
+          ztxtraincontent: { type: string }
+          ztxtrainai: { type: string }
+          ztxtrainadapter: { type: string }
+          ztxtraininfra: { type: string }
+          ztxtrainschema: { type: string }
+          ztxtrainmigration: { type: string }
+
+  messages:
+    decisionCommitted:
+      name: com.zoikotax.decision.committed
+      title: Decision committed
+      summary: A decision was committed. Read its figures from GET /v1/decisions/{decisionId}.
+      traits: [{ $ref: "#/components/messageTraits/cloudEvent" }]
+      payload:
+        schemaFormat: application/schema+json;version=draft-2020-12
+        schema: { $ref: "../schemas/events/decision-committed.schema.json" }
+
+    decisionCorrected:
+      name: com.zoikotax.decision.corrected
+      title: Decision corrected
+      summary: A decision superseded an earlier one for the same business key.
+      traits: [{ $ref: "#/components/messageTraits/cloudEvent" }]
+      payload:
+        schemaFormat: application/schema+json;version=draft-2020-12
+        schema: { $ref: "../schemas/events/decision-corrected.schema.json" }
+
+    obligationStatusChanged:
+      name: com.zoikotax.obligation.status-changed
+      title: Obligation status changed
+      summary: An obligation was created, or moved to another status.
+      traits: [{ $ref: "#/components/messageTraits/cloudEvent" }]
+      payload:
+        schemaFormat: application/schema+json;version=draft-2020-12
+        schema: { $ref: "../schemas/events/obligation-status-changed.schema.json" }
+
+    thresholdCrossed:
+      name: com.zoikotax.accumulator.threshold-crossed
+      title: Threshold crossed
+      summary: A committed decision took an accumulator across a threshold, exactly once per threshold.
+      traits: [{ $ref: "#/components/messageTraits/cloudEvent" }]
+      payload:
+        schemaFormat: application/schema+json;version=draft-2020-12
+        schema: { $ref: "../schemas/events/threshold-crossed.schema.json" }
+
+    refundRequested:
+      name: com.zoikotax.refund.requested
+      title: Refund requested
+      summary: A refund of tax a committed decision charged was admitted. Nothing is paid or posted yet.
+      traits: [{ $ref: "#/components/messageTraits/cloudEvent" }]
+      payload:
+        schemaFormat: application/schema+json;version=draft-2020-12
+        schema: { $ref: "../schemas/events/refund-requested.schema.json" }
+
+    refundStatusChanged:
+      name: com.zoikotax.refund.status-changed
+      title: Refund status changed
+      summary: A payment provider's report moved a refund. UNCERTAIN is neither paid nor failed.
+      traits: [{ $ref: "#/components/messageTraits/cloudEvent" }]
+      payload:
+        schemaFormat: application/schema+json;version=draft-2020-12
+        schema: { $ref: "../schemas/events/refund-status-changed.schema.json" }
+
+    documentCommitted:
+      name: com.zoikotax.document.committed
+      title: Document committed
+      summary: A fiscal document, or a void, credit note or rebill of one, was committed. Read it from GET /v1/documents/{documentId}.
+      traits: [{ $ref: "#/components/messageTraits/cloudEvent" }]
+      payload:
+        schemaFormat: application/schema+json;version=draft-2020-12
+        schema: { $ref: "../schemas/events/document-committed.schema.json" }
