@@ -12069,7 +12069,7 @@ requirements:
     owner: "CTO + CCRO + GC"
     applies_to: ["AI"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "intelligence/tests/test_privacy_source_rights.py::TestCheckCorpusSource::test_retrieval_denied_blocks_corpus"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12097,7 +12097,7 @@ requirements:
     owner: "CTO + CCRO + GC"
     applies_to: ["AI"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "intelligence/tests/test_ai_security_controls.py::TestAdversarialScenarios::test_adv_sec_002_cross_tenant_leakage_blocked"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12139,7 +12139,7 @@ requirements:
     owner: "CTO + CCRO + GC"
     applies_to: ["AI Security"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "intelligence/tests/test_tool_broker.py::test_unknown_tool_is_refused"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12167,7 +12167,7 @@ requirements:
     owner: "CTO + CCRO + GC"
     applies_to: ["AI Security"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "intelligence/tests/test_tool_broker.py::test_privileged_action_class_cannot_be_registered"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12181,7 +12181,7 @@ requirements:
     owner: "CTO + CCRO + GC"
     applies_to: ["AI Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "intelligence/tests/test_tool_broker.py::test_mutate_call_without_token_is_refused"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12195,7 +12195,7 @@ requirements:
     owner: "CTO + CCRO + GC"
     applies_to: ["AI Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "intelligence/tests/test_tool_broker.py::test_steps_over_ceiling_is_refused"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12293,7 +12293,7 @@ requirements:
     owner: "CTO + CCRO + GC"
     applies_to: ["AI Security"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "intelligence/tests/test_ai_security_controls.py::TestAdversarialScenarios::test_adv_sec_001_output_injection_via_prohibited_key"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12321,7 +12321,7 @@ requirements:
     owner: "CTO + CCRO + GC"
     applies_to: ["AI Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "intelligence/tests/test_tool_broker.py::test_token_cost_over_ceiling_is_refused"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12363,7 +12363,7 @@ requirements:
     owner: "CTO + CCRO + GC"
     applies_to: ["AI Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "intelligence/tests/test_resilience.py::test_cross_region_never_widened_to_us"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12377,7 +12377,7 @@ requirements:
     owner: "CTO + CCRO + GC"
     applies_to: ["AI Platform"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "intelligence/tests/test_resilience.py::test_secrets_data_class_is_refused_on_model_outage"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12433,7 +12433,7 @@ requirements:
     owner: "CTO + CCRO + GC"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "intelligence/tests/test_human_review.py::test_full_audit_trail_item_then_approve"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12503,7 +12503,7 @@ requirements:
     owner: "CTO + CCRO + GC"
     applies_to: ["Monitoring"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "intelligence/tests/test_drift.py::test_abstention_drift_detected"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12545,7 +12545,7 @@ requirements:
     owner: "CTO + CCRO + GC"
     applies_to: ["Monitoring"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "intelligence/tests/test_capacity.py::test_consume_raises_on_token_limit_exceeded"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12643,7 +12643,7 @@ requirements:
     owner: "CTO + CCRO + GC"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "intelligence/tests/test_invocation_evidence.py::test_builder_sets_prompt_version_from_provenance"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12657,7 +12657,7 @@ requirements:
     owner: "CTO + CCRO + GC"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "intelligence/tests/test_invocation_evidence.py::test_add_retrieval_ref_stores_citation_id"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12671,7 +12671,7 @@ requirements:
     owner: "CTO + CCRO + GC"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "intelligence/tests/test_invocation_evidence.py::test_add_tool_call_appends_record"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -12685,7 +12685,7 @@ requirements:
     owner: "CTO + CCRO + GC"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "intelligence/tests/test_invocation_evidence.py::test_builder_sets_authority_outcome_from_provenance"
     status: PROPOSED
     effective_from: null
     effective_to: null
