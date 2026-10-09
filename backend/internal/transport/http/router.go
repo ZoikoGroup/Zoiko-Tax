@@ -115,6 +115,10 @@ type Router struct {
 	// Legal serves the LegalAuthorization matrix, customer authorizations
 	// and the gate that resolves the two.
 	Legal *app.LegalService
+
+	// Dashboard serves the Tax Command Center. It reads what was recorded
+	// and needs no content, so it is served wherever the store is.
+	Dashboard *app.DashboardService
 }
 
 // Trains are the seven release-train versions, as the contract names them.
@@ -259,6 +263,10 @@ func (rt *Router) routes() []struct {
 		{Route{"GET", "/v1/obligations", false, []security.Role{operator, analyst, auditor}}, rt.handleListObligations},
 		{Route{"GET", "/v1/obligations/{obligationId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetObligation},
 		{Route{"POST", "/v1/obligations/{obligationId}/transitions", false, []security.Role{operator}}, rt.handleTransitionObligation},
+
+		// The Tax Command Center: read-only aggregates. ADMIN is not on it,
+		// for the reason it is on no fiscal read above.
+		{Route{"GET", "/v1/dashboard", false, []security.Role{operator, analyst, auditor}}, rt.handleDashboard},
 
 		// Classification assistance: advisory, through the Governed Model
 		// Gateway only.

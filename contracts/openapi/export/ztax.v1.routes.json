@@ -99,6 +99,12 @@
     },
     {
       "method": "GET",
+      "path": "/v1/dashboard",
+      "operationId": "getDashboard",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/decisions/{decisionId}",
       "operationId": "getDecision",
       "public": false

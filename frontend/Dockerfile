@@ -16,9 +16,26 @@ ARG NODE_IMAGE=node:${NODE_VERSION}-alpine
 ARG RUNTIME_IMAGE=nginxinc/nginx-unprivileged:1.27-alpine
 
 # -----------------------------------------------------------------------------
+# The generated TypeScript SDK (ADR-0019 C4). It arrives as a second build
+# context named `sdk` (docker-compose.yml: additional_contexts), so this image
+# keeps ./frontend as its own context and still builds the client it calls the
+# cell through. Built here rather than copied: dist/ is not committed.
+FROM ${NODE_IMAGE} AS sdk-build
+
+WORKDIR /sdk/typescript
+COPY --from=sdk package.json package-lock.json tsconfig.json ./
+RUN npm ci
+COPY --from=sdk src ./src
+RUN npm run build
+
+# -----------------------------------------------------------------------------
 FROM ${NODE_IMAGE} AS build
 
+# package.json names the SDK as file:../sdk/typescript, so the app sits one
+# level below the SDK's parent, exactly as in the repository.
 WORKDIR /src
+COPY --from=sdk-build /sdk/typescript/package.json /sdk/typescript/package.json
+COPY --from=sdk-build /sdk/typescript/dist /sdk/typescript/dist
 
 # Dependencies first, so a source change does not re-resolve the graph.
 # `npm ci` installs exactly the lockfile, which is the point of committing one.

@@ -1,97 +1,98 @@
-import { useState } from 'react';
-import { DashboardLayout } from './components/layout/DashboardLayout';
-import { ClientDashboard } from './pages/ClientDashboard';
-import { AdminPanel } from './admin/AdminPanel';
-import { SignIn } from './admin/SignIn';
-import { useSession } from './admin/useSession';
-import { CellHealth } from './platform/CellHealth';
+import { useEffect, useMemo, useState } from 'react'
+
+import type { Capabilities } from '@zoikotax/sdk'
+
+import { AdminPanel } from './admin/AdminPanel'
+import { SignIn } from './admin/SignIn'
+import { useSession } from './admin/useSession'
+import { DashboardLayout } from './components/layout/DashboardLayout'
+import type { View } from './components/layout/Sidebar'
+import { recentPeriods } from './dashboard/format'
+import { ClientDashboard } from './pages/ClientDashboard'
+import { CellHealth } from './platform/CellHealth'
+import { ztax } from './platform/client'
 
 /**
- * ZoikoTax Shell.
+ * ZoikoTax shell.
  *
- * Renders the authoritative Tax Command Center Dashboard, with support for the
- * administrative session workspace when requested.
+ * Everything behind the session: the Tax Command Center reads the tenant's
+ * record and administration changes it, so neither renders for an anonymous
+ * visitor. The session is the HttpOnly cookie the cell set at sign-in; the
+ * client learns who it is from GET /v1/auth/session and holds nothing else
+ * (ADR-0019 C8).
  */
 export function App() {
-  const [viewMode, setViewMode] = useState<'dashboard' | 'admin'>('dashboard');
-  const { state, session, detail, refresh, signIn, signOut } = useSession();
+  const { state, session, detail, refresh, signIn, signOut } = useSession()
+  const [view, setView] = useState<View>('dashboard')
+  const periods = useMemo(() => recentPeriods(new Date(), 12), [])
+  const [period, setPeriod] = useState(periods[0] ?? '')
+  const [capabilities, setCapabilities] = useState<Capabilities | null>(null)
 
-  if (viewMode === 'admin') {
-    if (state === 'unreachable') {
-      return (
-        <main className="shell shell--narrow">
-          <header className="shell__header">
-            <h1>ZoikoTax Administration</h1>
-            <button
-              type="button"
-              className="btn btn--secondary mt-2"
-              onClick={() => setViewMode('dashboard')}
-            >
-              ← Back to Tax Command Center
-            </button>
-          </header>
-          <section className="panel" aria-labelledby="unreachable-heading">
-            <h2 id="unreachable-heading">The cell is not responding</h2>
-            <p className="panel__note">
-              Administration is unavailable until it does. This is not a sign-in failure, and
-              retrying your password will not help.
-            </p>
-            <p className="mono muted">{detail}</p>
-            <button type="button" className="btn" onClick={() => { void refresh() }}>
-              Try again
-            </button>
-            <CellHealth />
-          </section>
-        </main>
-      );
+  useEffect(() => {
+    if (state !== 'signed-in') {
+      return
     }
+    const controller = new AbortController()
+    void ztax.getCapabilities(controller.signal).then((result) => {
+      if (result.ok) {
+        setCapabilities(result.data)
+      }
+    })
+    return () => { controller.abort() }
+  }, [state])
 
-    if (state === 'checking') {
-      return (
-        <main className="shell shell--narrow">
-          <p className="muted" aria-live="polite">Checking your session…</p>
-        </main>
-      );
-    }
-
-    if (state === 'anonymous' || session === null) {
-      return (
-        <div>
-          <div className="p-3 text-right bg-white border-b">
-            <button
-              type="button"
-              className="text-xs text-blue-600 hover:underline cursor-pointer"
-              onClick={() => setViewMode('dashboard')}
-            >
-              ← Back to Tax Command Center
-            </button>
-          </div>
-          <SignIn onSignIn={signIn} />
-        </div>
-      );
-    }
-
+  if (state === 'checking') {
     return (
-      <div>
-        <div className="p-3 text-right bg-white border-b">
-          <button
-            type="button"
-            className="text-xs text-blue-600 hover:underline cursor-pointer"
-            onClick={() => setViewMode('dashboard')}
-          >
-            ← View Tax Command Center
+      <main className="shell shell--narrow">
+        <p className="muted" aria-live="polite">Checking your session…</p>
+      </main>
+    )
+  }
+
+  if (state === 'unreachable') {
+    return (
+      <main className="shell shell--narrow">
+        <section className="panel" aria-labelledby="unreachable-heading">
+          <h2 id="unreachable-heading">The cell is not responding</h2>
+          <p className="panel__note">
+            ZoikoTax is unavailable until it does. This is not a sign-in failure, and retrying your password will not
+            help.
+          </p>
+          <p className="mono muted">{detail}</p>
+          <button type="button" className="btn" onClick={() => { void refresh() }}>
+            Try again
           </button>
-        </div>
-        <AdminPanel session={session} onSignOut={signOut} onRefresh={refresh} />
-      </div>
-    );
+          <CellHealth />
+        </section>
+      </main>
+    )
+  }
+
+  if (state === 'anonymous' || session === null) {
+    return <SignIn onSignIn={signIn} />
   }
 
   return (
-    <DashboardLayout>
-      <ClientDashboard />
+    <DashboardLayout
+      view={view}
+      onNavigate={setView}
+      session={session}
+      capabilities={capabilities}
+      period={period}
+      periods={periods}
+      onPeriodChange={setPeriod}
+      onSignOut={() => {
+        setView('dashboard')
+        void signOut()
+      }}
+    >
+      {view === 'admin' ? (
+        <AdminPanel session={session} onSignOut={signOut} onRefresh={refresh} />
+      ) : (
+        <ClientDashboard period={period} />
+      )}
     </DashboardLayout>
-  );
+  )
 }
 
-export default App;
+export default App

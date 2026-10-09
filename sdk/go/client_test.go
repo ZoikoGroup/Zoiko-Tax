@@ -390,6 +390,25 @@ func TestALimitBecomesAQueryParameterAndAnAbsentOneDoesNot(t *testing.T) {
 	}
 }
 
+func TestAPeriodBecomesAQueryParameterAndAnAbsentOneDoesNot(t *testing.T) {
+	s := answer(200, "application/json", dashboardJSON)
+	c := newClient(t, s)
+
+	if _, err := c.GetDashboard(context.Background(), zoikotax.DashboardOptions{Period: "2026-09"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.GetDashboard(context.Background(), zoikotax.DashboardOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := s.calls[0]; got.method != "GET" || got.url != base+"/v1/dashboard?period=2026-09" {
+		t.Errorf("with a period: sent %s %s", got.method, got.url)
+	}
+	if got := s.calls[1]; got.method != "GET" || got.url != base+"/v1/dashboard" {
+		t.Errorf("without one: sent %s %s", got.method, got.url)
+	}
+}
+
 func TestARequestBodyIsSentAsJSONWithTheRightContentType(t *testing.T) {
 	s := answer(200, "application/json", `{"tenant":{},"user":{},"expiresAt":"2026-09-24T09:14:22.104000Z"}`)
 	c := newClient(t, s)
@@ -540,6 +559,10 @@ func TestEveryOperationSendsItsMethodAndPath(t *testing.T) {
 			_, err := c.ListAudit(ctx, zoikotax.ListOptions{})
 			return err
 		}},
+		{"GetDashboard", "GET", "/v1/dashboard", "", func(c *zoikotax.Client) error {
+			_, err := c.GetDashboard(ctx, zoikotax.DashboardOptions{})
+			return err
+		}},
 		{"CreateQuote", "POST", "/v1/quotes", `{"input":{"money":{"line.netAmount":{"amount":"100.00","currency":"EUR"}}},"eventTime":"2026-09-24T18:00:00.000000Z"}`, func(c *zoikotax.Client) error {
 			_, err := c.CreateQuote(ctx, zoikotax.QuoteRequest{EventTime: eventTime, Input: input})
 			return err
@@ -557,8 +580,8 @@ func TestEveryOperationSendsItsMethodAndPath(t *testing.T) {
 			return err
 		}},
 	}
-	if len(cases) != 18 {
-		t.Fatalf("cases = %d, want the contract's 18 operations", len(cases))
+	if len(cases) != 19 {
+		t.Fatalf("cases = %d, want the contract's 19 operations", len(cases))
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -637,5 +660,41 @@ func TestAListDecodesIntoGeneratedTypes(t *testing.T) {
 	// Detail is the recorded bytes, passed through as a string (ADR-0011 §2.7).
 	if r.Detail != `{"role":"AUDITOR"}` || r.ActorUserID == nil || *r.ActorUserID != "ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4B" {
 		t.Errorf("record = %+v", r)
+	}
+}
+
+// dashboardJSON is a minimal Dashboard: every required member, and one of each
+// optional one that a caller is most likely to read.
+const dashboardJSON = `{"asOf":"2026-10-09T10:32:00.000000Z","period":"2026-09","legalEntityId":"01920a4c-0000-7000-8000-00000000e001",` +
+	`"determinations":{"decisions":42,"tax":[{"amount":"882.00","currency":"EUR"}],"previousPeriod":"2026-08","previousDecisions":37,"previousTax":[],"reviewRequired":1},` +
+	`"liability":[],"obligations":{"windowDays":30,"due":2,"overdue":1,"amounts":[]},` +
+	`"reconciliation":{"runs":1,"matched":10,"breaks":1,"open":0},"evidence":{"decisions":42,"sealed":40,"seals":1},` +
+	`"jurisdictions":{"ready":1,"atRisk":0,"blocked":0,"authorities":[]},` +
+	`"actions":[{"kind":"OBLIGATION_OVERDUE","priority":"P0","title":"Return overdue","context":"DE VAT 2026-08","exposure":{"amount":"777.00","currency":"EUR"}}],` +
+	`"trend":{"currency":"EUR","points":[{"period":"2026-09","decisions":42,"liability":{"amount":"882.00","currency":"EUR"},"liabilityIndex":100}]}}`
+
+func TestTheDashboardDecodesIntoGeneratedTypes(t *testing.T) {
+	c := newClient(t, answer(200, "application/json", dashboardJSON))
+
+	d, err := c.GetDashboard(context.Background(), zoikotax.DashboardOptions{Period: "2026-09"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if d.Period != "2026-09" || d.Determinations.Decisions != 42 || d.Determinations.PreviousPeriod != "2026-08" {
+		t.Errorf("dashboard = %+v", d)
+	}
+	// An amount stays a string, with its scale intact.
+	if got := d.Determinations.Tax[0]; got.Amount != "882.00" || got.Currency != "EUR" {
+		t.Errorf("tax = %+v", got)
+	}
+	if a := d.Actions[0]; a.Kind != zoikotax.DashboardActionKindOBLIGATIONOVERDUE || a.Priority != zoikotax.DashboardPriorityP0 || a.Exposure == nil || a.Exposure.Amount != "777.00" || a.SubjectID != nil {
+		t.Errorf("action = %+v", a)
+	}
+	if d.Trend.Currency == nil || *d.Trend.Currency != "EUR" || d.Trend.Points[0].LiabilityIndex != 100 {
+		t.Errorf("trend = %+v", d.Trend)
+	}
+	if d.Reconciliation.Breaks != 1 || d.Evidence.Sealed != 40 || d.Obligations.Overdue != 1 {
+		t.Errorf("counts = %+v %+v %+v", d.Reconciliation, d.Evidence, d.Obligations)
 	}
 }

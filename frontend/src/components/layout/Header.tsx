@@ -1,141 +1,136 @@
-import {
-  IconChevronDown,
-  IconSearch,
-  IconBell,
-  IconBox,
-  IconGlobe,
-  IconDollarSign,
-  IconShieldCheck,
-} from '../common/DashboardIcons';
+import type { Capabilities } from '@zoikotax/sdk'
 
-export const Header = () => {
+import { periodLabel } from '../../dashboard/format'
+import type { SessionInfo } from '../../platform/api'
+import { IconBox, IconDollarSign, IconGlobe, IconShieldCheck } from '../common/DashboardIcons'
+
+export interface HeaderProps {
+  readonly session: SessionInfo
+  readonly capabilities: Capabilities | null
+  readonly period: string
+  readonly periods: readonly string[]
+  readonly onPeriodChange: (period: string) => void
+  readonly onSignOut: () => void
+}
+
+/** Two letters for the avatar: the user's own name, not a stock photo. */
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  const first = parts[0]?.[0] ?? '?'
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : ''
+  return `${first}${last}`.toUpperCase()
+}
+
+export const Header = ({ session, capabilities, period, periods, onPeriodChange, onSignOut }: HeaderProps) => {
+  const content = capabilities?.content
   return (
     <div className="ztax-header-wrapper">
-      {/* TIER 1: Enterprise Header Row */}
       <header className="ztax-header-tier1">
-        {/* Left: 5 Enterprise Selectors */}
         <div className="ztax-selector-group">
-          {/* Selector 1 */}
           <div className="ztax-selector-card">
-            <span className="ztax-selector-label">Global Telecom Group</span>
+            <span className="ztax-selector-label">Tenant</span>
             <div className="ztax-selector-value">
-              <span>Global Telecom Group</span>
-              <IconChevronDown style={{ width: 12, height: 12, color: '#6b7280' }} />
+              <span>{session.tenant.displayName}</span>
             </div>
           </div>
 
-          {/* Selector 2 */}
           <div className="ztax-selector-card">
             <span className="ztax-selector-label">Legal Entity</span>
             <div className="ztax-selector-value">
-              <span>Zoiko Telecom Ltd</span>
-              <IconChevronDown style={{ width: 12, height: 12, color: '#6b7280' }} />
+              <span>Default entity</span>
             </div>
           </div>
 
-          {/* Selector 3 */}
-          <div className="ztax-selector-card">
+          <label className="ztax-selector-card">
             <span className="ztax-selector-label">Tax Period</span>
-            <div className="ztax-selector-value">
-              <span>Apr 2026 - Jun 2026</span>
-              <IconChevronDown style={{ width: 12, height: 12, color: '#6b7280' }} />
-            </div>
-          </div>
+            <select
+              className="ztax-selector-select"
+              value={period}
+              onChange={(e) => { onPeriodChange(e.target.value) }}
+            >
+              {periods.map((p) => (
+                <option key={p} value={p}>
+                  {periodLabel(p)}
+                </option>
+              ))}
+            </select>
+          </label>
 
-          {/* Selector 4 */}
           <div className="ztax-selector-card">
             <span className="ztax-selector-label">Environment</span>
             <div className="ztax-selector-value">
-              <span>Production</span>
-              <IconChevronDown style={{ width: 12, height: 12, color: '#6b7280' }} />
+              <span>{capabilities === null ? '…' : `${capabilities.environment} · ${capabilities.cell}`}</span>
             </div>
           </div>
 
-          {/* Selector 5 */}
           <div className="ztax-selector-card">
-            <span className="ztax-selector-label">Role / User</span>
+            <span className="ztax-selector-label">Roles</span>
             <div className="ztax-selector-value">
-              <span>Tax Manager</span>
-              <IconChevronDown style={{ width: 12, height: 12, color: '#6b7280' }} />
+              <span>{session.user.roles.join(', ')}</span>
             </div>
           </div>
         </div>
 
-        {/* Right: Search, Notifications, User profile */}
         <div className="ztax-header-actions">
-          <button type="button" className="ztax-icon-btn" aria-label="Search">
-            <IconSearch style={{ width: 16, height: 16 }} />
-          </button>
-
-          <button type="button" className="ztax-icon-btn" aria-label="Notifications">
-            <IconBell style={{ width: 16, height: 16 }} />
-            <span className="ztax-dot-badge" />
-          </button>
-
           <div className="ztax-user-profile">
-            <img
-              src="/avatar_hreynolds.png"
-              alt="H. Reynolds"
-              className="ztax-user-avatar"
-            />
+            <span className="ztax-user-avatar ztax-user-initials" aria-hidden="true">
+              {initials(session.user.displayName)}
+            </span>
             <div className="ztax-user-info">
-              <span className="ztax-user-name">H. Reynolds</span>
-              <span className="ztax-user-role">TAX DIRECTOR</span>
+              <span className="ztax-user-name">{session.user.displayName}</span>
+              <span className="ztax-user-role">{session.user.email}</span>
             </div>
           </div>
+          <button type="button" className="ztax-link-blue" onClick={onSignOut}>
+            Sign out
+          </button>
         </div>
       </header>
 
-      {/* TIER 2: Secondary Context / Scope Filter Row */}
       <div className="ztax-header-tier2">
         <div className="ztax-scope-group">
-          {/* Card 1 */}
-          <div className="ztax-scope-card">
-            <IconBox style={{ width: 16, height: 16 }} />
-            <div className="ztax-scope-texts">
-              <span className="ztax-scope-label">Product / Service</span>
-              <span className="ztax-scope-value">Mobile | Fixed | Digital Services</span>
-            </div>
-            <IconChevronDown style={{ width: 12, height: 12, color: '#9ca3af' }} />
-          </div>
-
-          {/* Card 2 */}
           <div className="ztax-scope-card">
             <IconGlobe style={{ width: 16, height: 16 }} />
             <div className="ztax-scope-texts">
-              <span className="ztax-scope-label">Jurisdiction Scope</span>
-              <span className="ztax-scope-value">Global (120 jurisdictions)</span>
+              <span className="ztax-scope-label">Residency</span>
+              <span className="ztax-scope-value">{session.tenant.residencyRegion}</span>
             </div>
-            <IconChevronDown style={{ width: 12, height: 12, color: '#9ca3af' }} />
           </div>
 
-          {/* Card 3 */}
-          <div className="ztax-scope-card">
-            <IconDollarSign style={{ width: 16, height: 16 }} />
-            <div className="ztax-scope-texts">
-              <span className="ztax-scope-label">Currency</span>
-              <span className="ztax-scope-value">USD (US Dollar)</span>
-            </div>
-            <IconChevronDown style={{ width: 12, height: 12, color: '#9ca3af' }} />
-          </div>
-
-          {/* Card 4 */}
           <div className="ztax-scope-card">
             <IconShieldCheck style={{ width: 16, height: 16 }} />
             <div className="ztax-scope-texts">
-              <span className="ztax-scope-label">Certified Ruleset</span>
-              <span className="ztax-scope-value">EU + OECD + Local (v1.4.2)</span>
+              <span className="ztax-scope-label">Content Bundle</span>
+              <span className="ztax-scope-value">
+                {capabilities === null ? '…' : content === undefined ? 'None loaded' : content.bundleId}
+              </span>
             </div>
-            <IconChevronDown style={{ width: 12, height: 12, color: '#9ca3af' }} />
+          </div>
+
+          <div className="ztax-scope-card">
+            <IconDollarSign style={{ width: 16, height: 16 }} />
+            <div className="ztax-scope-texts">
+              <span className="ztax-scope-label">Output</span>
+              <span className="ztax-scope-value">
+                {capabilities === null ? '…' : capabilities.authoritative ? 'Authoritative' : 'Advisory (before A4)'}
+              </span>
+            </div>
+          </div>
+
+          <div className="ztax-scope-card">
+            <IconBox style={{ width: 16, height: 16 }} />
+            <div className="ztax-scope-texts">
+              <span className="ztax-scope-label">Canonical Form</span>
+              <span className="ztax-scope-value">{capabilities?.canonProfile ?? '…'}</span>
+            </div>
           </div>
         </div>
 
-        {/* Right Status Badge */}
         <div className="ztax-scope-badge">
           <span className="ztax-green-dot" />
-          <span>Scope & trust active</span>
+          <span>Session active until {session.expiresAt.slice(11, 16)} UTC</span>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

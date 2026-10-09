@@ -1703,6 +1703,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The Tax Command Center for one legal period
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. Read-only aggregates for the
+         *     tenant's default legal entity, computed from the record at request
+         *     time — decisions, Tax Control Subledger journals, obligations,
+         *     reconciliation runs, period seals, refunds, webhook deliveries and the
+         *     LegalAuthorization matrix. Nothing is stored and nothing is estimated:
+         *     every figure is a sum of rows another endpoint returns one by one.
+         *
+         *     Amounts are per currency and are never summed across currencies.
+         *     Liability is reported as credits and debits apart, never netted
+         *     (ZTAX-FIN-REQ-0044). `trend.points[].liabilityIndex` is a 0–100 scale
+         *     for drawing, relative to the largest point in `trend.currency`; it is
+         *     not an amount.
+         *
+         *     `period` defaults to the current month in UTC. Every figure but the
+         *     obligation window, the reconciliation counts, the evidence coverage
+         *     and the action list is scoped to it; those describe the tenant as it
+         *     stands today.
+         *
+         *     Served without a content bundle: it reads what was recorded, and in a
+         *     cell that has recorded nothing every count is zero.
+         */
+        get: operations["getDashboard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3502,6 +3541,175 @@ export interface components {
             matrixDigest?: components["schemas"]["Digest"];
             detail?: string;
             checkedAt: components["schemas"]["Timestamp"];
+        };
+        /**
+         * Dashboard
+         * @description The Tax Command Center for one legal period of the tenant's default legal entity.
+         */
+        Dashboard: {
+            asOf: components["schemas"]["Timestamp"];
+            period: components["schemas"]["LegalPeriod"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            determinations: components["schemas"]["DashboardDeterminations"];
+            /**
+             * @description `TAX_COLLECTED_LIABILITY` for the period, per currency, credits
+             *     and debits apart. Empty when nothing posted.
+             */
+            liability: components["schemas"]["ControlBalance"][];
+            obligations: components["schemas"]["DashboardObligations"];
+            reconciliation: components["schemas"]["DashboardReconciliation"];
+            evidence: components["schemas"]["DashboardEvidence"];
+            jurisdictions: components["schemas"]["DashboardJurisdictions"];
+            /** @description What needs a person, most urgent first. At most 25. */
+            actions: components["schemas"]["DashboardAction"][];
+            trend: components["schemas"]["DashboardTrend"];
+        };
+        /**
+         * DashboardDeterminations
+         * @description Decisions recorded in the period and the one before it, and the tax
+         *     their journals credited to `TAX_COLLECTED_LIABILITY`, per currency.
+         */
+        DashboardDeterminations: {
+            /** Format: int32 */
+            decisions: number;
+            tax: components["schemas"]["MoneyValue"][];
+            previousPeriod: components["schemas"]["LegalPeriod"];
+            /** Format: int32 */
+            previousDecisions: number;
+            previousTax: components["schemas"]["MoneyValue"][];
+            /**
+             * Format: int32
+             * @description Decisions in the period whose outcome needs a person — REVIEW_REQUIRED, AMBIGUOUS, CONFLICTED or UNSUPPORTED.
+             */
+            reviewRequired: number;
+        };
+        /**
+         * DashboardObligations
+         * @description Current obligations not yet filed whose due date falls within
+         *     `windowDays` of today in their own legal calendar, overdue ones
+         *     included, and the assessed amounts of all of them per currency.
+         */
+        DashboardObligations: {
+            /** Format: int32 */
+            windowDays: number;
+            /** Format: int32 */
+            due: number;
+            /** Format: int32 */
+            overdue: number;
+            amounts: components["schemas"]["MoneyValue"][];
+        };
+        /**
+         * DashboardReconciliation
+         * @description Items of the latest run of each legal period. `matched` counts
+         *     matched, explained and resolved items; `breaks` exceptions nobody has
+         *     resolved; `open` items still pending.
+         */
+        DashboardReconciliation: {
+            /** Format: int32 */
+            runs: number;
+            /** Format: int32 */
+            matched: number;
+            /** Format: int32 */
+            breaks: number;
+            /** Format: int32 */
+            open: number;
+        };
+        /**
+         * DashboardEvidence
+         * @description Seal coverage of the tenant's decisions: how many are recorded, and
+         *     how many fall inside a period seal and can therefore prove their
+         *     inclusion (ADR-0011 §2.4). Replay is not counted: its verdict is
+         *     computed on request and never stored.
+         */
+        DashboardEvidence: {
+            /** Format: int32 */
+            decisions: number;
+            /** Format: int32 */
+            sealed: number;
+            /** Format: int32 */
+            seals: number;
+        };
+        /**
+         * DashboardReadiness
+         * @description Whether filing with an authority could proceed now: `READY` when the
+         *     gate allows it, `AT_RISK` when only a customer authorization or
+         *     credential stands in the way, `BLOCKED` otherwise.
+         * @enum {string}
+         */
+        DashboardReadiness: "READY" | "AT_RISK" | "BLOCKED";
+        /** DashboardAuthority */
+        DashboardAuthority: {
+            country: components["schemas"]["CountryCode"];
+            authority: components["schemas"]["AuthorityCode"];
+            readiness: components["schemas"]["DashboardReadiness"];
+            /** @description The gate's reason when filing is not allowed; absent when it is. */
+            reason?: string;
+        };
+        /**
+         * DashboardJurisdictions
+         * @description Every authority the LegalAuthorization matrix names, resolved through
+         *     the gate for `FILE` in the period against the customer's
+         *     authorizations. The counts are of authorities.
+         */
+        DashboardJurisdictions: {
+            /** Format: int32 */
+            ready: number;
+            /** Format: int32 */
+            atRisk: number;
+            /** Format: int32 */
+            blocked: number;
+            authorities: components["schemas"]["DashboardAuthority"][];
+        };
+        /**
+         * DashboardActionKind
+         * @enum {string}
+         */
+        DashboardActionKind: "OBLIGATION_OVERDUE" | "OBLIGATION_ATTENTION" | "OBLIGATION_DUE" | "RECONCILIATION_BREAK" | "REFUND_UNCERTAIN" | "REFUND_FAILED" | "DECISION_REVIEW" | "WEBHOOK_DEAD";
+        /**
+         * DashboardPriority
+         * @description `P0` now, `P1` this week, `P2` this month.
+         * @enum {string}
+         */
+        DashboardPriority: "P0" | "P1" | "P2";
+        /**
+         * DashboardAction
+         * @description One thing that needs a person. `subjectId` names the obligation,
+         *     reconciliation item or refund it concerns, so a client can open it;
+         *     it is absent for an action that aggregates many records.
+         */
+        DashboardAction: {
+            kind: components["schemas"]["DashboardActionKind"];
+            priority: components["schemas"]["DashboardPriority"];
+            title: string;
+            context: string;
+            exposure?: components["schemas"]["MoneyValue"];
+            due?: components["schemas"]["CivilDate"];
+            /** Format: uuid */
+            subjectId?: string;
+        };
+        /** DashboardTrendPoint */
+        DashboardTrendPoint: {
+            period: components["schemas"]["LegalPeriod"];
+            /** Format: int32 */
+            decisions: number;
+            liability?: components["schemas"]["MoneyValue"];
+            /**
+             * Format: int32
+             * @description The point's liability as a share of the largest in the trend, 0–100, for drawing. Not an amount.
+             */
+            liabilityIndex: number;
+        };
+        /**
+         * DashboardTrend
+         * @description The eight periods ending with the reported one, oldest first:
+         *     decisions recorded, and tax credited to `TAX_COLLECTED_LIABILITY` in
+         *     `currency` — the currency most journals posted in over those periods.
+         *     `currency` and each point's `liability` are absent when nothing
+         *     posted.
+         */
+        DashboardTrend: {
+            currency?: components["schemas"]["CurrencyCode"];
+            points: components["schemas"]["DashboardTrendPoint"][];
         };
     };
     responses: {
@@ -5966,6 +6174,37 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getDashboard: {
+        parameters: {
+            query?: {
+                /**
+                 * @description The legal period to report, a month. Defaults to the current month in UTC.
+                 * @example 2026-09
+                 */
+                period?: components["schemas"]["LegalPeriod"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The dashboard for the period. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Dashboard"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };

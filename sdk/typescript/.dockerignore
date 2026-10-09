@@ -1,0 +1,4 @@
+# Built inside the image (frontend/Dockerfile, stage sdk-build); a host copy
+# is the wrong platform at best and stale at worst.
+node_modules
+dist

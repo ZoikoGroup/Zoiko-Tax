@@ -225,6 +225,43 @@ public sealed class ClientTests
         Assert.False(stub.Calls[0].Headers.ContainsKey("Idempotency-Key"));
     }
 
+    [Fact(DisplayName = "a period becomes a query parameter and an absent one does not")]
+    public async Task APeriodBecomesAQueryParameter()
+    {
+        var (client, stub) = Stub.Client(() => Stub.Json(HttpStatusCode.OK, DashboardBody()));
+
+        await client.GetDashboardAsync(period: "2026-09");
+        await client.GetDashboardAsync();
+
+        Assert.All(stub.Calls, call => Assert.Equal(HttpMethod.Get, call.Method));
+        Assert.Equal(Stub.BaseUrl + "/v1/dashboard?period=2026-09", stub.Calls[0].Uri.AbsoluteUri);
+        Assert.Equal(Stub.BaseUrl + "/v1/dashboard", stub.Calls[1].Uri.AbsoluteUri);
+        Assert.Null(stub.Calls[0].Body);
+    }
+
+    [Fact(DisplayName = "the dashboard decodes into the generated types")]
+    public async Task TheDashboardDecodesIntoGeneratedTypes()
+    {
+        var (client, _) = Stub.Client(() => Stub.Json(HttpStatusCode.OK, DashboardBody()));
+
+        var result = await client.GetDashboardAsync("2026-09");
+
+        Assert.True(result.IsOk);
+        var dashboard = result.Data;
+        Assert.Equal("2026-09", dashboard.Period);
+        Assert.Equal(Guid.Parse("01920a4c-0000-7000-8000-00000000e001"), dashboard.LegalEntityId);
+        Assert.Equal(42, dashboard.Determinations.Decisions);
+        // An amount stays a string, with its scale intact.
+        Assert.Equal("882.00", dashboard.Determinations.Tax.Single().Amount);
+        var action = dashboard.Actions.Single();
+        Assert.Equal(DashboardActionKind.OBLIGATION_OVERDUE, action.Kind);
+        Assert.Equal(DashboardPriority.P0, action.Priority);
+        Assert.Equal("777.00", action.Exposure?.Amount);
+        Assert.Null(action.SubjectId);
+        Assert.Equal(100, dashboard.Trend.Points.Single().LiabilityIndex);
+        Assert.Equal(1, dashboard.Reconciliation.Breaks);
+    }
+
     [Fact(DisplayName = "unwrap throws the error for callers who prefer exceptions")]
     public async Task UnwrapThrowsTheError()
     {
@@ -428,7 +465,7 @@ public sealed class ClientTests
         {
             "GetCapabilitiesAsync", "SignInAsync", "SignOutAsync", "GetSessionAsync", "ChangePasswordAsync",
             "GetTenantAsync", "ListUsersAsync", "CreateUserAsync", "SetUserStatusAsync", "GrantRoleAsync",
-            "RevokeRoleAsync", "ListSessionsAsync", "RevokeSessionAsync", "ListAuditAsync",
+            "RevokeRoleAsync", "ListSessionsAsync", "RevokeSessionAsync", "ListAuditAsync", "GetDashboardAsync",
             "CreateQuoteAsync", "CommitTransactionAsync", "GetDecisionAsync", "ReplayDecisionAsync",
         };
         var methods = typeof(ZoikoTaxClient).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
@@ -444,6 +481,45 @@ public sealed class ClientTests
         tenant = new { id = "ztn_01JBQ0S9C3X8Q1H6M2KX5R7F4A", slug = "acme", displayName = "Acme Telecom", residencyRegion = "eu-west", status = "ACTIVE" },
         user = UserBody(),
         expiresAt = "2026-09-24T09:14:22.104000Z",
+    };
+
+    // A minimal Dashboard: every required member, and the optional ones a
+    // caller is most likely to read.
+    private static object DashboardBody() => new
+    {
+        asOf = "2026-10-09T10:32:00.000000Z",
+        period = "2026-09",
+        legalEntityId = "01920a4c-0000-7000-8000-00000000e001",
+        determinations = new
+        {
+            decisions = 42,
+            tax = new[] { new { amount = "882.00", currency = "EUR" } },
+            previousPeriod = "2026-08",
+            previousDecisions = 37,
+            previousTax = Array.Empty<object>(),
+            reviewRequired = 1,
+        },
+        liability = Array.Empty<object>(),
+        obligations = new { windowDays = 30, due = 2, overdue = 1, amounts = Array.Empty<object>() },
+        reconciliation = new { runs = 1, matched = 10, breaks = 1, open = 0 },
+        evidence = new { decisions = 42, @sealed = 40, seals = 1 },
+        jurisdictions = new { ready = 1, atRisk = 0, blocked = 0, authorities = Array.Empty<object>() },
+        actions = new[]
+        {
+            new
+            {
+                kind = "OBLIGATION_OVERDUE",
+                priority = "P0",
+                title = "Return overdue",
+                context = "DE VAT 2026-08",
+                exposure = new { amount = "777.00", currency = "EUR" },
+            },
+        },
+        trend = new
+        {
+            currency = "EUR",
+            points = new[] { new { period = "2026-09", decisions = 42, liability = new { amount = "882.00", currency = "EUR" }, liabilityIndex = 100 } },
+        },
     };
 
     private static object UserBody() => new

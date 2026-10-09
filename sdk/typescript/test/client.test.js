@@ -149,6 +149,22 @@ test("a limit becomes a query parameter and an absent one does not", async () =>
   assert.ok(calls[1].url.endsWith("/v1/admin/users"));
 });
 
+test("the dashboard is read relative to a same-origin prefix, with its period", async () => {
+  const dashboard = { period: "2026-09", determinations: { tax: [{ amount: "882.00", currency: "EUR" }] } };
+  const { fetch, calls } = stub(json(200, dashboard));
+  // A browser client on the web tier's origin, which proxies /api to the cell.
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+
+  const result = await client.getDashboard({ period: "2026-09" });
+  await client.getDashboard();
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.determinations.tax[0].amount, "882.00");
+  assert.equal(calls[0].url, "/api/v1/dashboard?period=2026-09");
+  assert.equal(calls[0].init.method, "GET");
+  assert.equal(calls[1].url, "/api/v1/dashboard");
+});
+
 test("a request body is sent as JSON with the right content type", async () => {
   const { fetch, calls } = stub(json(200, { tenant: {}, user: {}, expiresAt: "" }));
   const client = new ZoikoTaxClient({ baseUrl: "https://eu-west-1.zoikotax.com", fetch });

@@ -750,3 +750,37 @@
 .ztax-link-green:hover {
   text-decoration: underline;
 }
+
+/* Live wiring: the period selector, the initials avatar, and workspaces this
+   build does not serve yet. */
+.ztax-selector-select {
+  margin-top: 2px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #111827;
+  padding: 0;
+  cursor: pointer;
+}
+
+.ztax-user-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #3d2f5a;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ztax-nav-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ztax-nav-item:disabled:hover {
+  background-color: transparent;
+  color: #a292be;
+}

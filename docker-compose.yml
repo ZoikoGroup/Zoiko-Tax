@@ -112,6 +112,10 @@ services:
       ZTAX_BOOTSTRAP_ADMIN_NAME: Acme Administrator
       ZTAX_BOOTSTRAP_ADMIN_PASSWORD_REF: local://bootstrap-admin
       ZTAX_LOCAL_SECRET_BOOTSTRAP_ADMIN: local-dev-only-password
+      # ADMIN reads no fiscal figure, so one local user could not see the
+      # dashboard. ANALYST is read-only; config refuses this outside
+      # development. Granted on every start, so an existing stack picks it up.
+      ZTAX_BOOTSTRAP_ADMIN_EXTRA_ROLES: ANALYST
       # The key that seals webhook signing secrets at rest. Development-only,
       # like every local:// value: the resolver refuses it anywhere else.
       ZTAX_WEBHOOK_KEY_REF: local://webhook-key
@@ -179,6 +183,10 @@ services:
   ztax-web:
     build:
       context: ./frontend
+      # The generated TypeScript SDK the client calls the cell through; the
+      # Dockerfile builds it from this context (ADR-0019 C4).
+      additional_contexts:
+        sdk: ./sdk/typescript
       target: ztax-web
     depends_on:
       # Started after the cell, but not dependent on it for its own health: the

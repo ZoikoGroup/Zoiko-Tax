@@ -54,6 +54,48 @@ def json_response(status: int, body: Any, headers: dict[str, str] | None = None)
     )
 
 
+# A minimal Dashboard: every required member, and the optional ones a caller is
+# most likely to read.
+DASHBOARD: dict[str, Any] = {
+    "asOf": "2026-10-09T10:32:00.000000Z",
+    "period": "2026-09",
+    "legalEntityId": "01920a4c-0000-7000-8000-00000000e001",
+    "determinations": {
+        "decisions": 42,
+        "tax": [{"amount": "882.00", "currency": "EUR"}],
+        "previousPeriod": "2026-08",
+        "previousDecisions": 37,
+        "previousTax": [],
+        "reviewRequired": 1,
+    },
+    "liability": [],
+    "obligations": {"windowDays": 30, "due": 2, "overdue": 1, "amounts": []},
+    "reconciliation": {"runs": 1, "matched": 10, "breaks": 1, "open": 0},
+    "evidence": {"decisions": 42, "sealed": 40, "seals": 1},
+    "jurisdictions": {"ready": 1, "atRisk": 0, "blocked": 0, "authorities": []},
+    "actions": [
+        {
+            "kind": "OBLIGATION_OVERDUE",
+            "priority": "P0",
+            "title": "Return overdue",
+            "context": "DE VAT 2026-08",
+            "exposure": {"amount": "777.00", "currency": "EUR"},
+        }
+    ],
+    "trend": {
+        "currency": "EUR",
+        "points": [
+            {
+                "period": "2026-09",
+                "decisions": 42,
+                "liability": {"amount": "882.00", "currency": "EUR"},
+                "liabilityIndex": 100,
+            }
+        ],
+    },
+}
+
+
 def problem(**overrides: Any) -> dict[str, Any]:
     return {
         "type": "https://errors.zoikotax.com/v1/forbidden",
@@ -289,6 +331,7 @@ class PythonSpecific(unittest.TestCase):
                 None,
             ),
             ("list_audit", lambda c: c.list_audit(), "GET", "/v1/admin/audit", None),
+            ("get_dashboard", lambda c: c.get_dashboard(), "GET", "/v1/dashboard", None),
             (
                 "create_quote",
                 lambda c: c.create_quote(quote),
@@ -318,8 +361,8 @@ class PythonSpecific(unittest.TestCase):
                 None,
             ),
         ]
-        # Eighteen operations in the contract, eighteen here.
-        self.assertEqual(len(cases), 18)
+        # Nineteen operations in the contract, nineteen here.
+        self.assertEqual(len(cases), 19)
         for name, call, method, path, body in cases:
             with self.subTest(name):
                 stub = Stub(HttpResponse(204))
@@ -332,6 +375,32 @@ class PythonSpecific(unittest.TestCase):
                 else:
                     assert sent.body is not None
                     self.assertEqual(json.loads(sent.body), body)
+
+    def test_a_period_becomes_a_query_parameter_and_an_absent_one_does_not(self) -> None:
+        stub = Stub(json_response(200, DASHBOARD))
+        c = client(stub)
+
+        c.get_dashboard("2026-09")
+        c.get_dashboard()
+
+        self.assertEqual(
+            [(sent.method, sent.url) for sent in stub.calls],
+            [("GET", BASE + "/v1/dashboard?period=2026-09"), ("GET", BASE + "/v1/dashboard")],
+        )
+
+    def test_the_dashboard_is_returned_as_the_contract_shapes_it(self) -> None:
+        result = client(Stub(json_response(200, DASHBOARD))).get_dashboard(period="2026-09")
+
+        assert isinstance(result, Ok)
+        dashboard = result.data
+        self.assertEqual(dashboard["period"], "2026-09")
+        self.assertEqual(dashboard["determinations"]["decisions"], 42)
+        # An amount stays a string, with its scale intact.
+        self.assertEqual(dashboard["determinations"]["tax"][0]["amount"], "882.00")
+        action = dashboard["actions"][0]
+        self.assertEqual((action["kind"], action["priority"]), ("OBLIGATION_OVERDUE", "P0"))
+        self.assertNotIn("subjectId", action)
+        self.assertEqual(dashboard["trend"]["points"][0]["liabilityIndex"], 100)
 
     def test_a_limit_of_zero_is_sent_rather_than_dropped_as_falsy(self) -> None:
         stub = Stub(json_response(200, {"records": []}))

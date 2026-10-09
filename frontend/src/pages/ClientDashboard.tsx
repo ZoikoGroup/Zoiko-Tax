@@ -1,45 +1,38 @@
-import { useState } from 'react';
-import {
-  IconFileText,
-  IconDollarSign,
-  IconCalendar,
-  IconShieldCheck,
-  IconAlertCircle,
-  IconSparkles,
-  IconChevronRight,
-} from '../components/common/DashboardIcons';
-import {
-  clientActionItems,
-  clientReadinessGauges,
-} from '../data/clientDashboardData';
+import type { ReactNode } from 'react'
 
-// Donut Progress Gauge matching client design
+import type { Dashboard, DashboardAction } from '@zoikotax/sdk'
+
+import {
+  IconAlertCircle,
+  IconCalendar,
+  IconDollarSign,
+  IconFileText,
+  IconShieldCheck,
+  IconSparkles,
+} from '../components/common/DashboardIcons'
+import { civilDate, countChange, instant, moneyLines, moneyText, percent, periodLabel } from '../dashboard/format'
+import { useDashboard } from '../dashboard/useDashboard'
+
+// Donut progress gauge. `percentage` is a ratio of counts, never of amounts.
 const CircularGauge = ({
   percentage,
   statusText,
   size = 96,
   strokeWidth = 8,
 }: {
-  percentage: number;
-  statusText: string;
-  size?: number;
-  strokeWidth?: number;
+  percentage: number | null
+  statusText: string
+  size?: number
+  strokeWidth?: number
 }) => {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (percentage / 100) * circumference;
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference - ((percentage ?? 0) / 100) * circumference
 
   return (
     <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
-      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="#e5e7eb"
-          strokeWidth={strokeWidth}
-          fill="transparent"
-        />
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }} aria-hidden="true">
+        <circle cx={size / 2} cy={size / 2} r={radius} stroke="#e5e7eb" strokeWidth={strokeWidth} fill="transparent" />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -65,367 +58,406 @@ const CircularGauge = ({
         }}
       >
         <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>
-          {percentage}%
+          {percentage === null ? '—' : `${percentage}%`}
         </span>
-        <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 500, marginTop: 4 }}>
-          {statusText}
-        </span>
+        <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 500, marginTop: 4 }}>{statusText}</span>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export const ClientDashboard = () => {
-  const [timeRange, setTimeRange] = useState<'7D' | '30D' | '90D'>('90D');
+interface Segment {
+  readonly label: string
+  readonly count: number
+  readonly color: string
+}
+
+const Gauge = ({ title, subtitle, percentage, statusText, segments }: {
+  title: string
+  subtitle: string
+  percentage: number | null
+  statusText: string
+  segments: readonly Segment[]
+}) => (
+  <div className="ztax-card ztax-gauge-card">
+    <div>
+      <h3 className="ztax-card-title">{title}</h3>
+      <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>{subtitle}</div>
+    </div>
+    <div className="ztax-gauge-content">
+      <CircularGauge percentage={percentage} statusText={statusText} size={86} strokeWidth={7} />
+      <div className="ztax-gauge-breakdown">
+        {segments.map((seg) => (
+          <div key={seg.label} className="ztax-breakdown-row">
+            <div className="ztax-breakdown-left">
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  backgroundColor: seg.color,
+                  display: 'inline-block',
+                  flexShrink: 0,
+                }}
+              />
+              <span>{seg.label}</span>
+            </div>
+            <span className="ztax-breakdown-count">{seg.count}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+)
+
+const priorityClass = (p: DashboardAction['priority']) =>
+  p === 'P0' ? 'ztax-badge-p0-red' : p === 'P1' ? 'ztax-badge-p1-yellow' : 'ztax-badge-p2-teal'
+
+const ACTION_VERB: Record<DashboardAction['kind'], string> = {
+  OBLIGATION_OVERDUE: 'File now',
+  OBLIGATION_ATTENTION: 'Resolve',
+  OBLIGATION_DUE: 'Prepare',
+  RECONCILIATION_BREAK: 'Investigate',
+  REFUND_UNCERTAIN: 'Confirm with provider',
+  REFUND_FAILED: 'Review',
+  DECISION_REVIEW: 'Review',
+  WEBHOOK_DEAD: 'Replay',
+}
+
+/** Two SVG paths from the trend: liability from the server's 0–100 index,
+ *  throughput from decision counts scaled to the busiest period. */
+function trendPaths(d: Dashboard): { liability: string; throughput: string } {
+  const points = d.trend.points
+  const width = 500
+  const top = 20
+  const bottom = 140
+  const step = points.length > 1 ? (width - 20) / (points.length - 1) : 0
+  const most = points.reduce((m, p) => Math.max(m, p.decisions), 0)
+  const y = (share: number) => bottom - ((bottom - top) * share) / 100
+  const path = (shares: number[]) =>
+    shares.map((s, i) => `${i === 0 ? 'M' : 'L'} ${10 + i * step} ${y(s)}`).join(' ')
+  return {
+    liability: path(points.map((p) => p.liabilityIndex)),
+    throughput: path(points.map((p) => (most > 0 ? (p.decisions * 100) / most : 0))),
+  }
+}
+
+const Kpi = ({ icon, title, lines, footer, badge }: {
+  icon: ReactNode
+  title: string
+  lines: string[]
+  footer: ReactNode
+  badge?: string | undefined
+}) => (
+  <div className="ztax-card">
+    <div className="ztax-kpi-header">
+      <div className="ztax-kpi-header-left">
+        {icon}
+        <span>{title}</span>
+      </div>
+      {badge === undefined ? null : <span className="ztax-badge-p0">{badge}</span>}
+    </div>
+    <div className="ztax-kpi-value">
+      {lines.map((line) => (
+        <div key={line}>{line}</div>
+      ))}
+    </div>
+    <div className="ztax-kpi-footer">{footer}</div>
+  </div>
+)
+
+const iconStyle = { width: 16, height: 16, color: '#9ca3af' }
+
+export interface ClientDashboardProps {
+  readonly period: string
+}
+
+export const ClientDashboard = ({ period }: ClientDashboardProps) => {
+  const { state, reload } = useDashboard(period)
+
+  if (state.status === 'loading') {
+    return <p className="muted" aria-live="polite">Reading the record for {periodLabel(period)}…</p>
+  }
+  if (state.status === 'forbidden') {
+    return (
+      <div className="ztax-card" role="alert">
+        <h2 className="ztax-card-title">The dashboard needs a fiscal role</h2>
+        <p className="ztax-alert-desc">
+          It reads decisions, journals and obligations, which <strong>OPERATOR</strong>, <strong>ANALYST</strong> or{' '}
+          <strong>AUDITOR</strong> may see. Administration alone does not include them. Ask an administrator to grant one.
+        </p>
+      </div>
+    )
+  }
+  if (state.status === 'error') {
+    return (
+      <div className="ztax-card" role="alert">
+        <h2 className="ztax-card-title">The dashboard could not be read</h2>
+        <p className="mono muted">{state.detail}</p>
+        <button type="button" className="ztax-btn-copper" onClick={reload}>
+          Try again
+        </button>
+      </div>
+    )
+  }
+
+  const d = state.data
+  const det = d.determinations
+  const p0 = d.actions.filter((a) => a.priority === 'P0').length
+  const p1 = d.actions.filter((a) => a.priority === 'P1').length
+  const change = countChange(det.decisions, det.previousDecisions)
+  const liability = d.liability[0]
+  const rec = d.reconciliation
+  const recTotal = rec.matched + rec.breaks + rec.open
+  const jur = d.jurisdictions
+  const jurTotal = jur.ready + jur.atRisk + jur.blocked
+  const ev = d.evidence
+  const paths = trendPaths(d)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* 1. Tax Command Center Title & Status Bar */}
       <div className="ztax-title-bar">
         <div>
-          <h1 className="ztax-title-text">
-            Tax Command Center
-          </h1>
+          <h1 className="ztax-title-text">Tax Command Center</h1>
           <div className="ztax-status-line">
             <span className="ztax-green-dot" />
             <span className="ztax-live-text">LIVE</span>
             <span style={{ color: '#d1d5db' }}>|</span>
-            <span>Authoritative view</span>
+            <span>{periodLabel(d.period)} · advisory view</span>
             <span style={{ color: '#d1d5db' }}>|</span>
-            <span>Last updated 21 Sep 2026, 10:42 (UTC)</span>
+            <span>Read {instant(d.asOf)}</span>
           </div>
         </div>
-
-        {/* Right Status Alert Badge & Action Button */}
         <div className="ztax-title-actions">
           <div className="ztax-attention-chip">
-            <span>▲ What needs attention: 3 P0 | 7 P1 items require action</span>
+            <span>
+              {d.actions.length === 0
+                ? 'Nothing needs attention'
+                : `▲ What needs attention: ${p0} P0 | ${p1} P1 items require action`}
+            </span>
           </div>
-
-          <button type="button" className="ztax-btn-copper">
-            Open Action Center
+          <button type="button" className="ztax-btn-copper" onClick={reload}>
+            Refresh
           </button>
         </div>
       </div>
 
-      {/* 2. Priority Action Center Alert Banner */}
-      <div className="ztax-alert-banner">
-        <IconAlertCircle className="ztax-alert-icon" style={{ width: 16, height: 16 }} />
-        <div className="ztax-alert-content">
-          <span className="ztax-alert-title">Priority Action Center</span>
-          <span className="ztax-alert-desc">
-            Critical and high priority items require your attention. Resolve to stay compliant and avoid exposure.
-          </span>
+      {p0 > 0 ? (
+        <div className="ztax-alert-banner">
+          <IconAlertCircle className="ztax-alert-icon" style={{ width: 16, height: 16 }} />
+          <div className="ztax-alert-content">
+            <span className="ztax-alert-title">Priority Action Center</span>
+            <span className="ztax-alert-desc">
+              {p0} critical {p0 === 1 ? 'item needs' : 'items need'} a person now. Resolve to stay compliant and avoid
+              exposure.
+            </span>
+          </div>
         </div>
-      </div>
+      ) : null}
 
-      {/* 3. ROW 1: 4 Key Metric / KPI Cards */}
       <div className="ztax-kpi-grid">
-        {/* Card 1: Determinations MTD */}
-        <div className="ztax-card">
-          <div className="ztax-kpi-header">
-            <div className="ztax-kpi-header-left">
-              <IconFileText style={{ width: 16, height: 16, color: '#9ca3af' }} />
-              <span>Determinations MTD</span>
-            </div>
-          </div>
-          <div className="ztax-kpi-value">
-            $ 12,482,360
-          </div>
-          <div className="ztax-kpi-footer">
-            <span className="ztax-delta-green">
-              ▲ + 6.3% <span className="ztax-delta-label">vs. last period</span>
+        <Kpi
+          icon={<IconFileText style={iconStyle} />}
+          title={`Determinations · ${periodLabel(d.period)}`}
+          lines={moneyLines(det.tax)}
+          footer={
+            <>
+              <span className={change?.up === false ? 'ztax-delta-label' : 'ztax-delta-green'}>
+                {det.decisions} decisions{' '}
+                {change === null ? null : (
+                  <>
+                    {change.text} <span className="ztax-delta-label">vs. {periodLabel(det.previousPeriod)}</span>
+                  </>
+                )}
+              </span>
+              {det.reviewRequired > 0 ? <span className="ztax-timestamp">{det.reviewRequired} need review</span> : null}
+            </>
+          }
+        />
+        <Kpi
+          icon={<IconDollarSign style={iconStyle} />}
+          title="Gross Fiscal Liability"
+          lines={d.liability.length === 0 ? ['—'] : d.liability.map((b) => moneyText({ amount: b.credits, currency: b.currency }))}
+          footer={
+            <>
+              <span className="ztax-delta-label">
+                {liability === undefined
+                  ? 'Nothing posted this period'
+                  : `Reversed ${d.liability.map((b) => moneyText({ amount: b.debits, currency: b.currency })).join(', ')}`}
+              </span>
+              <span className="ztax-timestamp">TAX_COLLECTED_LIABILITY</span>
+            </>
+          }
+        />
+        <Kpi
+          icon={<IconCalendar style={iconStyle} />}
+          title={`Obligations Due (${d.obligations.windowDays}D)`}
+          badge={d.obligations.overdue > 0 ? `${d.obligations.overdue} overdue` : undefined}
+          lines={moneyLines(d.obligations.amounts)}
+          footer={
+            <span className="ztax-delta-label">
+              {d.obligations.due} {d.obligations.due === 1 ? 'return' : 'returns'} not yet filed
             </span>
-            <span className="ztax-timestamp">Updated 10:32 UTC</span>
-          </div>
-        </div>
-
-        {/* Card 2: Gross Fiscal Liability */}
-        <div className="ztax-card">
-          <div className="ztax-kpi-header">
-            <div className="ztax-kpi-header-left">
-              <IconDollarSign style={{ width: 16, height: 16, color: '#9ca3af' }} />
-              <span>Gross Fiscal Liability</span>
-            </div>
-          </div>
-          <div className="ztax-kpi-value">
-            $ 8,764,221
-          </div>
-          <div className="ztax-kpi-footer">
-            <span className="ztax-delta-green">
-              ▲ + 4.8% <span className="ztax-delta-label">vs. last period</span>
+          }
+        />
+        <Kpi
+          icon={<IconShieldCheck style={iconStyle} />}
+          title="Reconciliation Integrity"
+          lines={[percent(rec.matched, recTotal) === null ? '—' : `${percent(rec.matched, recTotal)}%`]}
+          footer={
+            <span className="ztax-delta-label">
+              {rec.runs === 0 ? 'No reconciliation run yet' : `${rec.matched} of ${recTotal} items matched · ${rec.breaks} breaks`}
             </span>
-            <span className="ztax-timestamp">Updated 10:28 UTC</span>
-          </div>
-        </div>
-
-        {/* Card 3: Obligations Due (30D) */}
-        <div className="ztax-card">
-          <div className="ztax-kpi-header">
-            <div className="ztax-kpi-header-left">
-              <IconCalendar style={{ width: 16, height: 16, color: '#9ca3af' }} />
-              <span>Obligations Due (30D)</span>
-            </div>
-            <span className="ztax-badge-p0">
-              3 P0
-            </span>
-          </div>
-          <div className="ztax-kpi-value">
-            $ 3,215,607
-          </div>
-          <div className="ztax-kpi-footer">
-            <span className="ztax-delta-green">
-              ▲ + 12.6% <span className="ztax-delta-label">vs. last period</span>
-            </span>
-            <span className="ztax-timestamp">Updated 10:24 UTC</span>
-          </div>
-        </div>
-
-        {/* Card 4: Reconciliation Integrity */}
-        <div className="ztax-card">
-          <div className="ztax-kpi-header">
-            <div className="ztax-kpi-header-left">
-              <IconShieldCheck style={{ width: 16, height: 16, color: '#9ca3af' }} />
-              <span>Reconciliation Integrity</span>
-            </div>
-          </div>
-          <div className="ztax-kpi-value">
-            98.7%
-          </div>
-          <div className="ztax-kpi-footer">
-            <span className="ztax-delta-green">
-              ▲ + 1.4% <span className="ztax-delta-label">vs. last period</span>
-            </span>
-            <span className="ztax-timestamp">Updated 10:20 UTC</span>
-          </div>
-        </div>
+          }
+        />
       </div>
 
-      {/* 4. ROW 2: Left Trend Sparkline Chart & Right Priority Action Center */}
       <div className="ztax-split-row">
-        {/* Left: Throughput & effective liability trend */}
         <div className="ztax-card ztax-chart-card">
           <div>
-            {/* Header */}
             <div className="ztax-chart-header">
-              <h3 className="ztax-card-title">
-                Throughput & effective liability trend
-              </h3>
-              <div className="ztax-time-toggles">
-                <button
-                  type="button"
-                  onClick={() => setTimeRange('7D')}
-                  className={`ztax-toggle-btn ${timeRange === '7D' ? 'active' : ''}`}
-                >
-                  7D
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTimeRange('30D')}
-                  className={`ztax-toggle-btn ${timeRange === '30D' ? 'active' : ''}`}
-                >
-                  30D
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTimeRange('90D')}
-                  className={`ztax-toggle-btn ${timeRange === '90D' ? 'active' : ''}`}
-                >
-                  90D
-                </button>
-              </div>
+              <h3 className="ztax-card-title">Throughput & liability trend</h3>
+              <span className="ztax-timestamp">
+                {periodLabel(d.trend.points[0]?.period ?? d.period)} – {periodLabel(d.period)}
+              </span>
             </div>
-
-            {/* Clean SVG sparkline trend chart */}
             <div className="ztax-sparkline-container">
-              <svg viewBox="0 0 500 160" width="100%" height="100%" preserveAspectRatio="none">
-                {/* Horizontal guide lines */}
+              <svg
+                viewBox="0 0 500 160"
+                width="100%"
+                height="100%"
+                preserveAspectRatio="none"
+                role="img"
+                aria-label={`Decisions and tax credited per month, ${d.trend.points.map((p) => `${p.period}: ${p.decisions} decisions`).join('; ')}`}
+              >
                 <line x1="0" y1="30" x2="500" y2="30" stroke="#f3f4f6" strokeWidth="1" strokeDasharray="3 3" />
                 <line x1="0" y1="80" x2="500" y2="80" stroke="#f3f4f6" strokeWidth="1" strokeDasharray="3 3" />
                 <line x1="0" y1="130" x2="500" y2="130" stroke="#f3f4f6" strokeWidth="1" strokeDasharray="3 3" />
-
-                {/* Blue line: Effective liability */}
-                <path
-                  d="M 10 110 Q 70 85 130 95 T 250 65 T 370 85 T 450 35 T 495 40"
-                  fill="none"
-                  stroke="#5065f6"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                />
-
-                {/* Orange line: Throughput */}
-                <path
-                  d="M 10 140 Q 70 132 130 138 T 250 118 T 370 135 T 450 95 T 495 100"
-                  fill="none"
-                  stroke="#f97e28"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                />
+                <path d={paths.liability} fill="none" stroke="#5065f6" strokeWidth="2.5" strokeLinecap="round" />
+                <path d={paths.throughput} fill="none" stroke="#f97e28" strokeWidth="2.5" strokeLinecap="round" />
               </svg>
             </div>
           </div>
-
-          {/* Legend */}
           <div className="ztax-chart-legend">
             <div className="ztax-legend-item">
               <span className="ztax-legend-dot-blue" />
-              <span>Effective liability (USD)</span>
+              <span>Tax credited ({d.trend.currency ?? 'none posted'})</span>
             </div>
             <div className="ztax-legend-item">
               <span className="ztax-legend-dot-orange" />
-              <span>Throughput (transactions)</span>
+              <span>Throughput (decisions)</span>
             </div>
           </div>
         </div>
 
-        {/* Right: Priority Action Center Table */}
         <div className="ztax-card">
           <div className="ztax-table-header">
             <h3 className="ztax-card-title">Priority Action Center</h3>
-            <button type="button" className="ztax-link-blue">
-              View all (10)
-            </button>
+            <span className="ztax-timestamp">{d.actions.length} open</span>
           </div>
-
-          {/* Table */}
-          <div style={{ overflowX: 'auto' }}>
-            <table className="ztax-action-table">
-              <thead>
-                <tr>
-                  <th>P0/P1</th>
-                  <th>Issue</th>
-                  <th>Context</th>
-                  <th>Exposure</th>
-                  <th>Due / SLA</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clientActionItems.map(item => (
-                  <tr key={item.id}>
-                    <td style={{ paddingRight: 8 }}>
-                      <span
-                        className={`ztax-badge-priority ${
-                          item.priority === 'P0'
-                            ? 'ztax-badge-p0-red'
-                            : item.priority === 'P1'
-                            ? 'ztax-badge-p1-yellow'
-                            : 'ztax-badge-p2-teal'
-                        }`}
-                      >
-                        {item.priority}
-                      </span>
-                    </td>
-                    <td style={{ fontWeight: 500, color: '#111827', paddingRight: 8 }}>
-                      {item.issue}
-                    </td>
-                    <td style={{ color: '#6b7280', paddingRight: 8, whiteSpace: 'nowrap' }}>
-                      {item.context}
-                    </td>
-                    <td style={{ fontWeight: 700, color: '#111827', paddingRight: 8, whiteSpace: 'nowrap' }}>
-                      {item.exposure}
-                    </td>
-                    <td
-                      style={{
-                        paddingRight: 8,
-                        whiteSpace: 'nowrap',
-                        color: item.slaUrgent ? '#dc2626' : '#6b7280',
-                        fontWeight: item.slaUrgent ? 600 : 400,
-                      }}
-                    >
-                      {item.dueSla}
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <button type="button" className="ztax-table-action-btn">
-                        {item.actionText}
-                      </button>
-                    </td>
+          {d.actions.length === 0 ? (
+            <p className="ztax-alert-desc">Nothing in the record needs a person right now.</p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table className="ztax-action-table">
+                <thead>
+                  <tr>
+                    <th>Priority</th>
+                    <th>Issue</th>
+                    <th>Context</th>
+                    <th>Exposure</th>
+                    <th>Due</th>
+                    <th>Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {d.actions.map((item, i) => (
+                    <tr key={item.subjectId ?? `${item.kind}-${i}`}>
+                      <td style={{ paddingRight: 8 }}>
+                        <span className={`ztax-badge-priority ${priorityClass(item.priority)}`}>{item.priority}</span>
+                      </td>
+                      <td style={{ fontWeight: 500, color: '#111827', paddingRight: 8 }}>{item.title}</td>
+                      <td style={{ color: '#6b7280', paddingRight: 8, whiteSpace: 'nowrap' }}>{item.context}</td>
+                      <td style={{ fontWeight: 700, color: '#111827', paddingRight: 8, whiteSpace: 'nowrap' }}>
+                        {item.exposure === undefined ? '—' : moneyText(item.exposure)}
+                      </td>
+                      <td
+                        style={{
+                          paddingRight: 8,
+                          whiteSpace: 'nowrap',
+                          color: item.priority === 'P0' ? '#dc2626' : '#6b7280',
+                          fontWeight: item.priority === 'P0' ? 600 : 400,
+                        }}
+                      >
+                        {item.due === undefined ? '—' : civilDate(item.due)}
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <span className="ztax-table-action-btn">{ACTION_VERB[item.kind]}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* 5. ROW 3: 3 Gauges + 1 AI Advisory Card */}
       <div className="ztax-gauges-grid">
-        {clientReadinessGauges.map(gauge => (
-          <div key={gauge.id} className="ztax-card ztax-gauge-card">
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-              <div>
-                <h3 className="ztax-card-title">{gauge.title}</h3>
-                <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>{gauge.subtitle}</div>
-              </div>
-              <button type="button" className="ztax-link-blue">
-                View all
-              </button>
-            </div>
-
-            {/* Gauge & Legend side-by-side */}
-            <div className="ztax-gauge-content">
-              <CircularGauge
-                percentage={gauge.percentage}
-                statusText={gauge.statusLabel}
-                size={86}
-                strokeWidth={7}
-              />
-
-              <div className="ztax-gauge-breakdown">
-                {gauge.segments.map((seg, idx) => (
-                  <div key={idx} className="ztax-breakdown-row">
-                    <div className="ztax-breakdown-left">
-                      <span
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: '50%',
-                          backgroundColor: seg.color,
-                          display: 'inline-block',
-                          flexShrink: 0,
-                        }}
-                      />
-                      <span>{seg.label}</span>
-                    </div>
-                    <span className="ztax-breakdown-count">{seg.count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Card 4: AI ADVISORY */}
+        <Gauge
+          title="Jurisdiction Readiness"
+          subtitle={`Filing, ${jurTotal} ${jurTotal === 1 ? 'authority' : 'authorities'} in the legal matrix`}
+          percentage={percent(jur.ready, jurTotal)}
+          statusText={jurTotal === 0 ? 'No matrix' : 'Ready'}
+          segments={[
+            { label: 'Ready', count: jur.ready, color: '#10b981' },
+            { label: 'At risk', count: jur.atRisk, color: '#f59e0b' },
+            { label: 'Blocked', count: jur.blocked, color: '#ef4444' },
+          ]}
+        />
+        <Gauge
+          title="Reconciliation & Breaks"
+          subtitle={`Latest run of ${rec.runs} ${rec.runs === 1 ? 'period' : 'periods'}`}
+          percentage={percent(rec.matched, recTotal)}
+          statusText={recTotal === 0 ? 'No items' : 'Reconciled'}
+          segments={[
+            { label: 'Reconciled', count: rec.matched, color: '#0d9488' },
+            { label: 'Breaks', count: rec.breaks, color: '#f59e0b' },
+            { label: 'Open', count: rec.open, color: '#ef4444' },
+          ]}
+        />
+        <Gauge
+          title="Evidence & Seals"
+          subtitle={`${ev.seals} period ${ev.seals === 1 ? 'seal' : 'seals'} · immutable ledger`}
+          percentage={percent(ev.sealed, ev.decisions)}
+          statusText={ev.decisions === 0 ? 'No decisions' : 'Sealed'}
+          segments={[
+            { label: 'Sealed', count: ev.sealed, color: '#10b981' },
+            { label: 'Not yet sealed', count: ev.decisions - ev.sealed, color: '#f59e0b' },
+          ]}
+        />
         <div className="ztax-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
-            {/* Header */}
             <div className="ztax-ai-header">
               <IconSparkles style={{ width: 16, height: 16, color: '#059669' }} />
-              <span className="ztax-ai-badge">
-                AI ADVISORY
-              </span>
+              <span className="ztax-ai-badge">AUTHORITIES</span>
             </div>
-
-            {/* Content */}
-            <div className="ztax-ai-body">
-              Potential exposure detected in BR VAT due to upcoming rate change (Oct 2026).
-            </div>
-
-            <div className="ztax-ai-source">
-              Source: ZoikoTax Intelligence advises updating rulesets for BR region to local v1.4.3 before Sep 30.
-            </div>
+            {jur.authorities.length === 0 ? (
+              <div className="ztax-ai-body">No LegalAuthorization matrix is loaded; every filing is blocked.</div>
+            ) : (
+              <ul className="ztax-ai-body" style={{ margin: 0, paddingLeft: 16 }}>
+                {jur.authorities.map((a) => (
+                  <li key={`${a.country}-${a.authority}`}>
+                    {a.country} · {a.authority}: {a.readiness.replace('_', ' ').toLowerCase()}
+                    {a.reason === undefined ? '' : ` (${a.reason.replaceAll('_', ' ').toLowerCase()})`}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-
-          {/* Action Link */}
-          <div className="ztax-ai-action">
-            <button type="button" className="ztax-link-green">
-              <span>Review suggestion</span>
-              <IconChevronRight style={{ width: 12, height: 12 }} />
-            </button>
-          </div>
+          <div className="ztax-ai-source">Resolved through the same gate every filing passes.</div>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

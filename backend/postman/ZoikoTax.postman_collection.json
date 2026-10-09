@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:cde813af1cdfd0ebbfdc7e87ca4a7c555261d1d00a8524364cd610e916c7efa6`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:ae613d369d0a225c5fe0970eaa234bf2671a53dd96fe0af42718b0613f5155ae`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -438,7 +438,7 @@
     },
     {
       "name": "04 · Administration",
-      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked.",
+      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
       "item": [
         {
           "name": "GET /v1/admin/users — List the tenant's users",
@@ -2914,6 +2914,89 @@
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.json().status).to.eql('REVOKED');",
                   "  pm.expect(pm.response.json().inForce).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/dashboard — The Tax Command Center for one legal period",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/dashboard?period={{period}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "dashboard"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "{{period}}",
+                  "description": "The legal period to report, a month. Defaults to the current month in UTC."
+                }
+              ]
+            },
+            "description": "The Tax Command Center for one legal period\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. Read-only aggregates for the\ntenant's default legal entity, computed from the record at request\ntime — decisions, Tax Control Subledger journals, obligations,\nreconciliation runs, period seals, refunds, webhook deliveries and the\nLegalAuthorization matrix. Nothing is stored and nothing is estimated:\nevery figure is a sum of rows another endpoint returns one by one.\n\nAmounts are per currency and are never summed across currencies.\nLiability is reported as credits and debits apart, never netted\n(ZTAX-FIN-REQ-0044). `trend.points[].liabilityIndex` is a 0–100 scale\nfor drawing, relative to the largest point in `trend.currency`; it is\nnot an amount.\n\n`period` defaults to the current month in UTC. Every figure but the\nobligation window, the reconciliation counts, the evidence coverage\nand the action list is scoped to it; those describe the tenant as it\nstands today.\n\nServed without a content bundle: it reads what was recorded, and in a\ncell that has recorded nothing every count is zero."
+          },
+          "response": [
+            {
+              "name": "200 · A month with one overdue return and one reconciliation break",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/dashboard",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "dashboard"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"asOf\": \"2026-10-09T10:32:00.000000Z\",\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"determinations\": {\n    \"decisions\": 42,\n    \"tax\": [\n      {\n        \"amount\": \"882.00\",\n        \"currency\": \"EUR\"\n      }\n    ],\n    \"previousPeriod\": \"2026-08\",\n    \"previousDecisions\": 37,\n    \"previousTax\": [\n      {\n        \"amount\": \"777.00\",\n        \"currency\": \"EUR\"\n      }\n    ],\n    \"reviewRequired\": 1\n  },\n  \"liability\": [\n    {\n      \"account\": \"TAX_COLLECTED_LIABILITY\",\n      \"currency\": \"EUR\",\n      \"debits\": \"10.50\",\n      \"credits\": \"882.00\"\n    }\n  ],\n  \"obligations\": {\n    \"windowDays\": 30,\n    \"due\": 1,\n    \"overdue\": 1,\n    \"amounts\": [\n      {\n        \"amount\": \"882.00\",\n        \"currency\": \"EUR\"\n      }\n    ]\n  },\n  \"reconciliation\": {\n    \"runs\": 1,\n    \"matched\": 41,\n    \"breaks\": 1,\n    \"open\": 0\n  },\n  \"evidence\": {\n    \"decisions\": 79,\n    \"sealed\": 37,\n    \"seals\": 31\n  },\n  \"jurisdictions\": {\n    \"ready\": 0,\n    \"atRisk\": 1,\n    \"blocked\": 1,\n    \"authorities\": [\n      {\n        \"country\": \"DE\",\n        \"authority\": \"DE-ELSTER\",\n        \"readiness\": \"AT_RISK\",\n        \"reason\": \"AUTHORIZATION_MISSING\"\n      },\n      {\n        \"country\": \"GB\",\n        \"authority\": \"GB-HMRC\",\n        \"readiness\": \"BLOCKED\",\n        \"reason\": \"COUNSEL_PENDING\"\n      }\n    ]\n  },\n  \"actions\": [\n    {\n      \"kind\": \"OBLIGATION_OVERDUE\",\n      \"priority\": \"P0\",\n      \"title\": \"VAT_RETURN overdue\",\n      \"context\": \"jurisdiction:xa | 2026-07-01 to 2026-09-30\",\n      \"exposure\": {\n        \"amount\": \"882.00\",\n        \"currency\": \"EUR\"\n      },\n      \"due\": \"2026-10-20\",\n      \"subjectId\": \"01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01\"\n    },\n    {\n      \"kind\": \"RECONCILIATION_BREAK\",\n      \"priority\": \"P1\",\n      \"title\": \"R1_CALCULATED_TO_DOCUMENT MISSING\",\n      \"context\": \"2026-09 | decision:01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n      \"exposure\": {\n        \"amount\": \"21.11\",\n        \"currency\": \"EUR\"\n      },\n      \"subjectId\": \"01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f\"\n    }\n  ],\n  \"trend\": {\n    \"currency\": \"EUR\",\n    \"points\": [\n      {\n        \"period\": \"2026-08\",\n        \"decisions\": 37,\n        \"liability\": {\n          \"amount\": \"777.00\",\n          \"currency\": \"EUR\"\n        },\n        \"liabilityIndex\": 88\n      },\n      {\n        \"period\": \"2026-09\",\n        \"decisions\": 42,\n        \"liability\": {\n          \"amount\": \"882.00\",\n          \"currency\": \"EUR\"\n        },\n        \"liabilityIndex\": 100\n      }\n    ]\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getDashboard returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('the dashboard names its period and never sums across currencies', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const d = pm.response.json();",
+                  "  pm.expect(d.period).to.match(/^[0-9]{4}-(0[1-9]|1[0-2])$/);",
+                  "  const seen = d.determinations.tax.map(function (m) { return m.currency; });",
+                  "  pm.expect(seen.length).to.eql(new Set(seen).size);",
+                  "});",
+                  "pm.test('the trend is eight periods, oldest first, each indexed 0 to 100', function () {",
+                  "  const pts = pm.response.json().trend.points;",
+                  "  pm.expect(pts).to.have.lengthOf(8);",
+                  "  pts.forEach(function (p) { pm.expect(p.liabilityIndex).to.be.within(0, 100); });",
                   "});"
                 ]
               }
@@ -6229,10 +6312,10 @@
           "const contentType = pm.response.headers.get('Content-Type') || '';",
           "const path = '/' + pm.request.url.getPath().replace(/^\\/+/, '');",
           "",
-          "// Endpoints the contract does not carry yet. The collection includes requests",
-          "// for them so the intent is recorded and so W2 lane K has something to run",
-          "// against; until they exist they 404, and eighteen red rows would hide the",
-          "// rows that matter.",
+          "// Endpoints specified and not built yet, from the overlay's pendingPaths. A",
+          "// request for one records the intent; until it exists it 404s, and a wall of",
+          "// red rows would hide the rows that matter. Empty today — every path the",
+          "// contract declares is routed, so a 404 anywhere is a real failure.",
           "let pending = [];",
           "try {",
           "  pending = JSON.parse(pm.collectionVariables.get('pendingPaths') || '[]');",
@@ -6242,7 +6325,7 @@
           "const notImplemented = pm.response.code === 404 && pending.indexOf(path) !== -1;",
           "",
           "if (notImplemented) {",
-          "  pm.test('not implemented yet (W2 lane K) — assertions skipped', function () {",
+          "  pm.test('not implemented yet — assertions skipped', function () {",
           "    pm.expect(true).to.be.true;",
           "  });",
           "} else {",
@@ -6482,12 +6565,12 @@
     },
     {
       "key": "pendingPaths",
-      "value": "[\"/v1/transactions:adjust\",\"/v1/transactions:refund\"]",
+      "value": "[]",
       "type": "string"
     },
     {
       "key": "contractDigest",
-      "value": "sha256:cde813af1cdfd0ebbfdc7e87ca4a7c555261d1d00a8524364cd610e916c7efa6",
+      "value": "sha256:ae613d369d0a225c5fe0970eaa234bf2671a53dd96fe0af42718b0613f5155ae",
       "type": "string"
     }
   ]

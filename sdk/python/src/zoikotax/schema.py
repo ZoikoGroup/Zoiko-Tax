@@ -1584,6 +1584,149 @@ class AuthorizationCheck(TypedDict):
     checkedAt: Timestamp
 
 
+class DashboardDeterminations(TypedDict):
+    """
+    Decisions recorded in the period and the one before it, and the tax
+    their journals credited to `TAX_COLLECTED_LIABILITY`, per currency.
+
+    """
+
+    decisions: int
+    tax: list[MoneyValue]
+    previousPeriod: LegalPeriod
+    previousDecisions: int
+    previousTax: list[MoneyValue]
+    reviewRequired: int
+    """
+    Decisions in the period whose outcome needs a person — REVIEW_REQUIRED, AMBIGUOUS, CONFLICTED or UNSUPPORTED.
+    """
+
+
+class DashboardObligations(TypedDict):
+    """
+    Current obligations not yet filed whose due date falls within
+    `windowDays` of today in their own legal calendar, overdue ones
+    included, and the assessed amounts of all of them per currency.
+
+    """
+
+    windowDays: int
+    due: int
+    overdue: int
+    amounts: list[MoneyValue]
+
+
+class DashboardReconciliation(TypedDict):
+    """
+    Items of the latest run of each legal period. `matched` counts
+    matched, explained and resolved items; `breaks` exceptions nobody has
+    resolved; `open` items still pending.
+
+    """
+
+    runs: int
+    matched: int
+    breaks: int
+    open: int
+
+
+class DashboardEvidence(TypedDict):
+    """
+    Seal coverage of the tenant's decisions: how many are recorded, and
+    how many fall inside a period seal and can therefore prove their
+    inclusion (ADR-0011 §2.4). Replay is not counted: its verdict is
+    computed on request and never stored.
+
+    """
+
+    decisions: int
+    sealed: int
+    seals: int
+
+
+DashboardReadiness: TypeAlias = Literal['READY', 'AT_RISK', 'BLOCKED']
+"""
+Whether filing with an authority could proceed now: `READY` when the
+gate allows it, `AT_RISK` when only a customer authorization or
+credential stands in the way, `BLOCKED` otherwise.
+
+"""
+
+
+class DashboardAuthority(TypedDict):
+    country: CountryCode
+    authority: AuthorityCode
+    readiness: DashboardReadiness
+    reason: NotRequired[str]
+    """
+    The gate's reason when filing is not allowed; absent when it is.
+    """
+
+
+class DashboardJurisdictions(TypedDict):
+    """
+    Every authority the LegalAuthorization matrix names, resolved through
+    the gate for `FILE` in the period against the customer's
+    authorizations. The counts are of authorities.
+
+    """
+
+    ready: int
+    atRisk: int
+    blocked: int
+    authorities: list[DashboardAuthority]
+
+
+DashboardActionKind: TypeAlias = Literal['OBLIGATION_OVERDUE', 'OBLIGATION_ATTENTION', 'OBLIGATION_DUE', 'RECONCILIATION_BREAK', 'REFUND_UNCERTAIN', 'REFUND_FAILED', 'DECISION_REVIEW', 'WEBHOOK_DEAD']
+
+
+DashboardPriority: TypeAlias = Literal['P0', 'P1', 'P2']
+"""
+`P0` now, `P1` this week, `P2` this month.
+"""
+
+
+class DashboardAction(TypedDict):
+    """
+    One thing that needs a person. `subjectId` names the obligation,
+    reconciliation item or refund it concerns, so a client can open it;
+    it is absent for an action that aggregates many records.
+
+    """
+
+    kind: DashboardActionKind
+    priority: DashboardPriority
+    title: str
+    context: str
+    exposure: NotRequired[MoneyValue]
+    due: NotRequired[CivilDate]
+    subjectId: NotRequired[str]
+
+
+class DashboardTrendPoint(TypedDict):
+    period: LegalPeriod
+    decisions: int
+    liability: NotRequired[MoneyValue]
+    liabilityIndex: int
+    """
+    The point's liability as a share of the largest in the trend, 0–100, for drawing. Not an amount.
+    """
+
+
+class DashboardTrend(TypedDict):
+    """
+    The eight periods ending with the reported one, oldest first:
+    decisions recorded, and tax credited to `TAX_COLLECTED_LIABILITY` in
+    `currency` — the currency most journals posted in over those periods.
+    `currency` and each point's `liability` are absent when nothing
+    posted.
+
+    """
+
+    currency: NotRequired[CurrencyCode]
+    points: list[DashboardTrendPoint]
+
+
 class V1AdminUsersGetResponse(TypedDict):
     users: list[User]
 
@@ -1738,3 +1881,29 @@ class RetentionVerdict(TypedDict):
     Why a record is `NO_POLICY` or `CONFLICTED`.
     """
     evaluatedAt: Timestamp
+
+
+class Dashboard(TypedDict):
+    """
+    The Tax Command Center for one legal period of the tenant's default legal entity.
+    """
+
+    asOf: Timestamp
+    period: LegalPeriod
+    legalEntityId: LegalEntityId
+    determinations: DashboardDeterminations
+    liability: list[ControlBalance]
+    """
+    `TAX_COLLECTED_LIABILITY` for the period, per currency, credits
+    and debits apart. Empty when nothing posted.
+
+    """
+    obligations: DashboardObligations
+    reconciliation: DashboardReconciliation
+    evidence: DashboardEvidence
+    jurisdictions: DashboardJurisdictions
+    actions: list[DashboardAction]
+    """
+    What needs a person, most urgent first. At most 25.
+    """
+    trend: DashboardTrend

@@ -120,6 +120,8 @@ tags:
     description: Versioned retention policies, legal holds, and the disposition verdict that weighs them. Nothing here deletes or rewrites a record.
   - name: legal
     description: The LegalAuthorization matrix, customer authorizations and powers of attorney, and the gate that resolves whether an action may execute. Fails closed.
+  - name: dashboard
+    description: The Tax Command Center — read-only aggregates over the record the other surfaces write. Never a second source of any figure.
 
 security:
   - sessionCookie: []
@@ -3552,6 +3554,101 @@ paths:
                     ztx_retryable: false
         "503": { $ref: "#/components/responses/Unavailable" }
 
+  /v1/dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: The Tax Command Center for one legal period
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. Read-only aggregates for the
+        tenant's default legal entity, computed from the record at request
+        time — decisions, Tax Control Subledger journals, obligations,
+        reconciliation runs, period seals, refunds, webhook deliveries and the
+        LegalAuthorization matrix. Nothing is stored and nothing is estimated:
+        every figure is a sum of rows another endpoint returns one by one.
+
+        Amounts are per currency and are never summed across currencies.
+        Liability is reported as credits and debits apart, never netted
+        (ZTAX-FIN-REQ-0044). `trend.points[].liabilityIndex` is a 0–100 scale
+        for drawing, relative to the largest point in `trend.currency`; it is
+        not an amount.
+
+        `period` defaults to the current month in UTC. Every figure but the
+        obligation window, the reconciliation counts, the evidence coverage
+        and the action list is scoped to it; those describe the tenant as it
+        stands today.
+
+        Served without a content bundle: it reads what was recorded, and in a
+        cell that has recorded nothing every count is zero.
+      parameters:
+        - name: period
+          in: query
+          required: false
+          description: The legal period to report, a month. Defaults to the current month in UTC.
+          schema: { $ref: "#/components/schemas/LegalPeriod" }
+          example: "2026-09"
+      responses:
+        "200":
+          description: The dashboard for the period.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+              examples:
+                default:
+                  summary: A month with one overdue return and one reconciliation break
+                  value:
+                    asOf: "2026-10-09T10:32:00.000000Z"
+                    period: "2026-09"
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    determinations:
+                      decisions: 42
+                      tax: [{ amount: "882.00", currency: EUR }]
+                      previousPeriod: "2026-08"
+                      previousDecisions: 37
+                      previousTax: [{ amount: "777.00", currency: EUR }]
+                      reviewRequired: 1
+                    liability:
+                      - { account: TAX_COLLECTED_LIABILITY, currency: EUR, debits: "10.50", credits: "882.00" }
+                    obligations:
+                      windowDays: 30
+                      due: 1
+                      overdue: 1
+                      amounts: [{ amount: "882.00", currency: EUR }]
+                    reconciliation: { runs: 1, matched: 41, breaks: 1, open: 0 }
+                    evidence: { decisions: 79, sealed: 37, seals: 31 }
+                    jurisdictions:
+                      ready: 0
+                      atRisk: 1
+                      blocked: 1
+                      authorities:
+                        - { country: DE, authority: DE-ELSTER, readiness: AT_RISK, reason: AUTHORIZATION_MISSING }
+                        - { country: GB, authority: GB-HMRC, readiness: BLOCKED, reason: COUNSEL_PENDING }
+                    actions:
+                      - kind: OBLIGATION_OVERDUE
+                        priority: P0
+                        title: VAT_RETURN overdue
+                        context: "jurisdiction:xa | 2026-07-01 to 2026-09-30"
+                        exposure: { amount: "882.00", currency: EUR }
+                        due: "2026-10-20"
+                        subjectId: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                      - kind: RECONCILIATION_BREAK
+                        priority: P1
+                        title: R1_CALCULATED_TO_DOCUMENT MISSING
+                        context: "2026-09 | decision:01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f"
+                        exposure: { amount: "21.11", currency: EUR }
+                        subjectId: 01920ab0-2b3c-7d4e-8f50-6a7b8c9d0e1f
+                    trend:
+                      currency: EUR
+                      points:
+                        - { period: "2026-08", decisions: 37, liability: { amount: "777.00", currency: EUR }, liabilityIndex: 88 }
+                        - { period: "2026-09", decisions: 42, liability: { amount: "882.00", currency: EUR }, liabilityIndex: 100 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
 components:
   securitySchemes:
     sessionCookie:
@@ -6677,3 +6774,279 @@ components:
           x-ztax-privacy: { class: P0 }
           type: string
         checkedAt: { $ref: "#/components/schemas/Timestamp" }
+
+    Dashboard:
+      type: object
+      title: Dashboard
+      description: The Tax Command Center for one legal period of the tenant's default legal entity.
+      additionalProperties: false
+      required: [asOf, period, legalEntityId, determinations, liability, obligations, reconciliation, evidence, jurisdictions, actions, trend]
+      properties:
+        asOf: { $ref: "#/components/schemas/Timestamp" }
+        period: { $ref: "#/components/schemas/LegalPeriod" }
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        determinations: { $ref: "#/components/schemas/DashboardDeterminations" }
+        liability:
+          type: array
+          description: |
+            `TAX_COLLECTED_LIABILITY` for the period, per currency, credits
+            and debits apart. Empty when nothing posted.
+          items: { $ref: "#/components/schemas/ControlBalance" }
+        obligations: { $ref: "#/components/schemas/DashboardObligations" }
+        reconciliation: { $ref: "#/components/schemas/DashboardReconciliation" }
+        evidence: { $ref: "#/components/schemas/DashboardEvidence" }
+        jurisdictions: { $ref: "#/components/schemas/DashboardJurisdictions" }
+        actions:
+          type: array
+          description: What needs a person, most urgent first. At most 25.
+          items: { $ref: "#/components/schemas/DashboardAction" }
+        trend: { $ref: "#/components/schemas/DashboardTrend" }
+
+    DashboardDeterminations:
+      type: object
+      title: DashboardDeterminations
+      description: |
+        Decisions recorded in the period and the one before it, and the tax
+        their journals credited to `TAX_COLLECTED_LIABILITY`, per currency.
+      additionalProperties: false
+      required: [decisions, tax, previousPeriod, previousDecisions, previousTax, reviewRequired]
+      properties:
+        decisions:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        tax:
+          type: array
+          items: { $ref: "#/components/schemas/MoneyValue" }
+        previousPeriod: { $ref: "#/components/schemas/LegalPeriod" }
+        previousDecisions:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        previousTax:
+          type: array
+          items: { $ref: "#/components/schemas/MoneyValue" }
+        reviewRequired:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+          description: Decisions in the period whose outcome needs a person — REVIEW_REQUIRED, AMBIGUOUS, CONFLICTED or UNSUPPORTED.
+
+    DashboardObligations:
+      type: object
+      title: DashboardObligations
+      description: |
+        Current obligations not yet filed whose due date falls within
+        `windowDays` of today in their own legal calendar, overdue ones
+        included, and the assessed amounts of all of them per currency.
+      additionalProperties: false
+      required: [windowDays, due, overdue, amounts]
+      properties:
+        windowDays:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        due:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        overdue:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        amounts:
+          type: array
+          items: { $ref: "#/components/schemas/MoneyValue" }
+
+    DashboardReconciliation:
+      type: object
+      title: DashboardReconciliation
+      description: |
+        Items of the latest run of each legal period. `matched` counts
+        matched, explained and resolved items; `breaks` exceptions nobody has
+        resolved; `open` items still pending.
+      additionalProperties: false
+      required: [runs, matched, breaks, open]
+      properties:
+        runs:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        matched:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        breaks:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        open:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+
+    DashboardEvidence:
+      type: object
+      title: DashboardEvidence
+      description: |
+        Seal coverage of the tenant's decisions: how many are recorded, and
+        how many fall inside a period seal and can therefore prove their
+        inclusion (ADR-0011 §2.4). Replay is not counted: its verdict is
+        computed on request and never stored.
+      additionalProperties: false
+      required: [decisions, sealed, seals]
+      properties:
+        decisions:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        sealed:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        seals:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+
+    DashboardReadiness:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: DashboardReadiness
+      description: |
+        Whether filing with an authority could proceed now: `READY` when the
+        gate allows it, `AT_RISK` when only a customer authorization or
+        credential stands in the way, `BLOCKED` otherwise.
+      enum: [READY, AT_RISK, BLOCKED]
+
+    DashboardAuthority:
+      type: object
+      title: DashboardAuthority
+      additionalProperties: false
+      required: [country, authority, readiness]
+      properties:
+        country: { $ref: "#/components/schemas/CountryCode" }
+        authority: { $ref: "#/components/schemas/AuthorityCode" }
+        readiness: { $ref: "#/components/schemas/DashboardReadiness" }
+        reason:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The gate's reason when filing is not allowed; absent when it is.
+
+    DashboardJurisdictions:
+      type: object
+      title: DashboardJurisdictions
+      description: |
+        Every authority the LegalAuthorization matrix names, resolved through
+        the gate for `FILE` in the period against the customer's
+        authorizations. The counts are of authorities.
+      additionalProperties: false
+      required: [ready, atRisk, blocked, authorities]
+      properties:
+        ready:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        atRisk:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        blocked:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        authorities:
+          type: array
+          items: { $ref: "#/components/schemas/DashboardAuthority" }
+
+    DashboardActionKind:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: DashboardActionKind
+      enum: [OBLIGATION_OVERDUE, OBLIGATION_ATTENTION, OBLIGATION_DUE, RECONCILIATION_BREAK, REFUND_UNCERTAIN, REFUND_FAILED, DECISION_REVIEW, WEBHOOK_DEAD]
+
+    DashboardPriority:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: DashboardPriority
+      description: "`P0` now, `P1` this week, `P2` this month."
+      enum: [P0, P1, P2]
+
+    DashboardAction:
+      type: object
+      title: DashboardAction
+      description: |
+        One thing that needs a person. `subjectId` names the obligation,
+        reconciliation item or refund it concerns, so a client can open it;
+        it is absent for an action that aggregates many records.
+      additionalProperties: false
+      required: [kind, priority, title, context]
+      properties:
+        kind: { $ref: "#/components/schemas/DashboardActionKind" }
+        priority: { $ref: "#/components/schemas/DashboardPriority" }
+        title:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        context:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        exposure: { $ref: "#/components/schemas/MoneyValue" }
+        due: { $ref: "#/components/schemas/CivilDate" }
+        subjectId:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          format: uuid
+
+    DashboardTrendPoint:
+      type: object
+      title: DashboardTrendPoint
+      additionalProperties: false
+      required: [period, decisions, liabilityIndex]
+      properties:
+        period: { $ref: "#/components/schemas/LegalPeriod" }
+        decisions:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+        liability: { $ref: "#/components/schemas/MoneyValue" }
+        liabilityIndex:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 100
+          description: The point's liability as a share of the largest in the trend, 0–100, for drawing. Not an amount.
+
+    DashboardTrend:
+      type: object
+      title: DashboardTrend
+      description: |
+        The eight periods ending with the reported one, oldest first:
+        decisions recorded, and tax credited to `TAX_COLLECTED_LIABILITY` in
+        `currency` — the currency most journals posted in over those periods.
+        `currency` and each point's `liability` are absent when nothing
+        posted.
+      additionalProperties: false
+      required: [points]
+      properties:
+        currency: { $ref: "#/components/schemas/CurrencyCode" }
+        points:
+          type: array
+          items: { $ref: "#/components/schemas/DashboardTrendPoint" }

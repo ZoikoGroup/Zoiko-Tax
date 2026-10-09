@@ -58,6 +58,9 @@ export type UserStatus = components["schemas"]["UserStatus"];
 export type Quote = components["schemas"]["Quote"];
 export type Decision = components["schemas"]["Decision"];
 export type ReplayReport = components["schemas"]["ReplayReport"];
+export type Dashboard = components["schemas"]["Dashboard"];
+export type DashboardAction = components["schemas"]["DashboardAction"];
+export type MoneyValue = components["schemas"]["MoneyValue"];
 
 /**
  * A failed request.
@@ -327,6 +330,17 @@ export class ZoikoTaxClient {
    */
   replayDecision(decisionId: string, signal?: AbortSignal): Promise<Result<ReplayReport>> {
     return this.#send<ReplayReport>("POST", `/v1/replay/${encodeURIComponent(decisionId)}`, undefined, signal);
+  }
+
+  // --- dashboard ----------------------------------------------------------
+
+  /**
+   * The Tax Command Center for one legal period, `YYYY-MM`; the current month
+   * in UTC when omitted. Read-only aggregates, amounts per currency and never
+   * summed across currencies.
+   */
+  getDashboard(params: { period?: string } = {}, signal?: AbortSignal): Promise<Result<Dashboard>> {
+    return this.#send<Dashboard>("GET", `/v1/dashboard${query(params)}`, undefined, signal);
   }
 
   // --- transport ----------------------------------------------------------

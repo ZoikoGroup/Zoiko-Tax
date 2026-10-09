@@ -85,6 +85,11 @@ type Config struct {
 	BootstrapAdminEmail       string
 	BootstrapAdminName        string
 	BootstrapAdminPasswordRef string
+	// BootstrapAdminExtraRoles are further roles for the bootstrap
+	// administrator, granted on every start. Development only: ADMIN reads
+	// no fiscal figure, so a local stack with one user needs another role to
+	// see its own dashboard, and nowhere else should one person hold both.
+	BootstrapAdminExtraRoles []string
 
 	// Content names where this cell's signed rule bundle and the keyring that
 	// verifies it live. Both or neither: a bundle directory with no keyring
@@ -218,6 +223,7 @@ var known = map[string]struct {
 	"ZTAX_BOOTSTRAP_ADMIN_EMAIL":        {def: ""},
 	"ZTAX_BOOTSTRAP_ADMIN_NAME":         {def: ""},
 	"ZTAX_BOOTSTRAP_ADMIN_PASSWORD_REF": {def: ""},
+	"ZTAX_BOOTSTRAP_ADMIN_EXTRA_ROLES":  {def: ""},
 }
 
 // Load reads and validates configuration from the environment. It is called
@@ -290,6 +296,17 @@ func Load() (Config, error) {
 			return false
 		}
 	}
+	// list reads a comma-separated value; empty items are dropped, so a
+	// trailing comma is not a value nobody meant.
+	list := func(name string) []string {
+		var out []string
+		for _, v := range strings.Split(get(name), ",") {
+			if v = strings.TrimSpace(v); v != "" {
+				out = append(out, v)
+			}
+		}
+		return out
+	}
 
 	c := Config{
 		Cell:                get("ZTAX_CELL"),
@@ -340,6 +357,7 @@ func Load() (Config, error) {
 		BootstrapAdminEmail:       get("ZTAX_BOOTSTRAP_ADMIN_EMAIL"),
 		BootstrapAdminName:        get("ZTAX_BOOTSTRAP_ADMIN_NAME"),
 		BootstrapAdminPasswordRef: get("ZTAX_BOOTSTRAP_ADMIN_PASSWORD_REF"),
+		BootstrapAdminExtraRoles:  list("ZTAX_BOOTSTRAP_ADMIN_EXTRA_ROLES"),
 	}
 
 	// A deployment claiming authority outside development is refused here
@@ -391,6 +409,22 @@ func Load() (Config, error) {
 	if c.WebhookAllowPrivate && c.Environment != "development" {
 		problems = append(problems, fmt.Sprintf(
 			"ZTAX_WEBHOOK_ALLOW_PRIVATE: refused in environment %q; webhook egress never reaches private addresses", c.Environment))
+	}
+
+	// One person holding ADMIN and a fiscal role is the separation of duties
+	// the route table exists to prevent; a laptop with one user is the only
+	// place it is tolerated.
+	if len(c.BootstrapAdminExtraRoles) > 0 {
+		if c.Environment != "development" {
+			problems = append(problems, fmt.Sprintf(
+				"ZTAX_BOOTSTRAP_ADMIN_EXTRA_ROLES: refused in environment %q; ADMIN never holds a fiscal role outside development", c.Environment))
+		}
+		for _, r := range c.BootstrapAdminExtraRoles {
+			if r != "OPERATOR" && r != "ANALYST" && r != "AUDITOR" {
+				problems = append(problems, fmt.Sprintf(
+					"ZTAX_BOOTSTRAP_ADMIN_EXTRA_ROLES: %q is not OPERATOR, ANALYST or AUDITOR", r))
+			}
+		}
 	}
 
 	// A signing key without the keyring that verifies it would seal what this

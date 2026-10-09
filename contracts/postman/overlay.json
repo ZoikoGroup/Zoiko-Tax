@@ -11,16 +11,15 @@
     "",
     "pendingPaths lists surface that is specified and not built yet, so a 404 on",
     "one of those paths is reported as 'not implemented yet' rather than as a",
-    "red row hiding the rows that matter. The determination folder asserts the",
-    "controls on the endpoints that exist, and runs only when asked to.",
+    "red row hiding the rows that matter. It is empty today: every path the",
+    "contract declares is routed, and a 404 on one of them is a real failure.",
+    "The determination folders assert the controls on those endpoints, and run",
+    "only when asked to.",
     "",
     "Edit this file, then run `npm run postman` in contracts/. Editing the",
     "generated collection directly fails CI (ADR-0010 §2.1)."
   ],
-  "pendingPaths": [
-    "/v1/transactions:adjust",
-    "/v1/transactions:refund"
-  ],
+  "pendingPaths": [],
   "folders": [
     {
       "name": "05 · Contract conformance — with a session",
