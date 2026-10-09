@@ -18,8 +18,18 @@ import {
   IconSliders,
 } from '../common/DashboardIcons'
 
-/** The views this build serves. Every other entry is on the roadmap. */
-export type View = 'dashboard' | 'admin'
+/** The views this build serves. Every other entry has no backend yet. */
+export type View =
+  | 'dashboard'
+  | 'actions'
+  | 'determine'
+  | 'obligations'
+  | 'reconcile'
+  | 'documents'
+  | 'evidence'
+  | 'content'
+  | 'intelligence'
+  | 'admin'
 
 interface NavItem {
   readonly id: string
@@ -34,27 +44,27 @@ const NAV_GROUPS: readonly { title: string; items: readonly NavItem[] }[] = [
     title: 'WORKSPACE',
     items: [
       { id: 'home', label: 'Home', icon: <IconHome />, view: 'dashboard' },
-      { id: 'action-center', label: 'Action Center', icon: <IconActivity /> },
-      { id: 'determine', label: 'Determine', icon: <IconCompass /> },
-      { id: 'obligations', label: 'Obligations', icon: <IconFileText /> },
+      { id: 'action-center', label: 'Action Center', icon: <IconActivity />, view: 'actions' },
+      { id: 'determine', label: 'Determine', icon: <IconCompass />, view: 'determine' },
+      { id: 'obligations', label: 'Obligations', icon: <IconFileText />, view: 'obligations' },
       { id: 'compliance', label: 'Compliance', icon: <IconShield /> },
-      { id: 'reconcile', label: 'Reconcile', icon: <IconRotateCw /> },
+      { id: 'reconcile', label: 'Reconcile', icon: <IconRotateCw />, view: 'reconcile' },
     ],
   },
   {
     title: 'SETTLE & PROVE',
     items: [
       { id: 'remittance', label: 'Remittance', icon: <IconCreditCard /> },
-      { id: 'e-invoicing', label: 'E-Invoicing / CTC', icon: <IconFileCheck /> },
+      { id: 'e-invoicing', label: 'E-Invoicing / CTC', icon: <IconFileCheck />, view: 'documents' },
       { id: 'shadow-assurance', label: 'Shadow Assurance', icon: <IconEye /> },
-      { id: 'evidence', label: 'Evidence', icon: <IconArchive /> },
+      { id: 'evidence', label: 'Evidence', icon: <IconArchive />, view: 'evidence' },
     ],
   },
   {
     title: 'INTELLIGENCE',
     items: [
-      { id: 'intelligence', label: 'Intelligence', icon: <IconSettings /> },
-      { id: 'content', label: 'Content', icon: <IconDatabase /> },
+      { id: 'intelligence', label: 'Intelligence', icon: <IconSettings />, view: 'intelligence' },
+      { id: 'content', label: 'Content', icon: <IconDatabase />, view: 'content' },
       { id: 'reports', label: 'Reports', icon: <IconBarChart /> },
     ],
   },
@@ -90,7 +100,7 @@ export const Sidebar = ({ view, onNavigate }: SidebarProps) => (
                 type="button"
                 key={item.id}
                 disabled={target === undefined}
-                title={target === undefined ? 'Not available in this build yet' : undefined}
+                title={target === undefined ? 'No backend for this workspace yet' : undefined}
                 aria-current={isActive ? 'page' : undefined}
                 onClick={() => { if (target !== undefined) onNavigate(target) }}
                 className={`ztax-nav-item ${isActive ? 'active' : ''}`}

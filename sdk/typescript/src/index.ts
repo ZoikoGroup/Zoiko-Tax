@@ -62,6 +62,9 @@ export type Dashboard = components["schemas"]["Dashboard"];
 export type DashboardAction = components["schemas"]["DashboardAction"];
 export type MoneyValue = components["schemas"]["MoneyValue"];
 
+/** A schema of the contract by name: `S<"Obligation">`. */
+export type S<K extends keyof components["schemas"]> = components["schemas"][K];
+
 /**
  * A failed request.
  *
@@ -330,6 +333,225 @@ export class ZoikoTaxClient {
    */
   replayDecision(decisionId: string, signal?: AbortSignal): Promise<Result<ReplayReport>> {
     return this.#send<ReplayReport>("POST", `/v1/replay/${encodeURIComponent(decisionId)}`, undefined, signal);
+  }
+
+  // --- determination ---------------------------------------------------------
+  /** Adjust transaction. `POST /v1/transactions:adjust`. */
+  adjustTransaction(idempotencyKey: string, body: S<"CommitRequest">, signal?: AbortSignal): Promise<Result<S<"Decision">>> {
+    return this.#send<S<"Decision">>("POST", `/v1/transactions:adjust`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** Refund transaction. `POST /v1/transactions:refund`. */
+  refundTransaction(idempotencyKey: string, body: S<"RefundRequest">, signal?: AbortSignal): Promise<Result<S<"Refund">>> {
+    return this.#send<S<"Refund">>("POST", `/v1/transactions:refund`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** Get refund. `GET /v1/refunds/{refundId}`. */
+  getRefund(refundId: string, signal?: AbortSignal): Promise<Result<S<"Refund">>> {
+    return this.#send<S<"Refund">>("GET", `/v1/refunds/${encodeURIComponent(refundId)}`, undefined, signal);
+  }
+
+  /** Report refund. `POST /v1/refunds/{refundId}/reports`. */
+  reportRefund(refundId: string, body: S<"RefundReportRequest">, signal?: AbortSignal): Promise<Result<S<"Refund">>> {
+    return this.#send<S<"Refund">>("POST", `/v1/refunds/${encodeURIComponent(refundId)}/reports`, body, signal);
+  }
+
+  /** Submit batch. `POST /v1/batches`. */
+  submitBatch(idempotencyKey: string, body: S<"BatchRequest">, signal?: AbortSignal): Promise<Result<S<"Job">>> {
+    return this.#send<S<"Job">>("POST", `/v1/batches`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** Get job. `GET /v1/jobs/{jobId}`. */
+  getJob(jobId: string, signal?: AbortSignal): Promise<Result<S<"Job">>> {
+    return this.#send<S<"Job">>("GET", `/v1/jobs/${encodeURIComponent(jobId)}`, undefined, signal);
+  }
+
+  /** List decision journals. `GET /v1/decisions/{decisionId}/journals`. */
+  listDecisionJournals(decisionId: string, signal?: AbortSignal): Promise<Result<S<"JournalList">>> {
+    return this.#send<S<"JournalList">>("GET", `/v1/decisions/${encodeURIComponent(decisionId)}/journals`, undefined, signal);
+  }
+
+  /** Get decision inclusion. `GET /v1/decisions/{decisionId}/inclusion`. */
+  getDecisionInclusion(decisionId: string, signal?: AbortSignal): Promise<Result<S<"InclusionProof">>> {
+    return this.#send<S<"InclusionProof">>("GET", `/v1/decisions/${encodeURIComponent(decisionId)}/inclusion`, undefined, signal);
+  }
+
+  // --- subledger -------------------------------------------------------------
+  /** Get subledger balances. `GET /v1/subledger/balances`. */
+  getSubledgerBalances(signal?: AbortSignal): Promise<Result<S<"SubledgerBalances">>> {
+    return this.#send<S<"SubledgerBalances">>("GET", `/v1/subledger/balances`, undefined, signal);
+  }
+
+  /** Get subledger period. `GET /v1/subledger/periods/{period}`. */
+  getSubledgerPeriod(period: string, signal?: AbortSignal): Promise<Result<S<"SubledgerPeriod">>> {
+    return this.#send<S<"SubledgerPeriod">>("GET", `/v1/subledger/periods/${encodeURIComponent(period)}`, undefined, signal);
+  }
+
+  /** Transition subledger period. `POST /v1/subledger/periods/{period}/transitions`. */
+  transitionSubledgerPeriod(period: string, body: S<"PeriodTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"SubledgerPeriod">>> {
+    return this.#send<S<"SubledgerPeriod">>("POST", `/v1/subledger/periods/${encodeURIComponent(period)}/transitions`, body, signal);
+  }
+
+  /** Request period reopen. `POST /v1/subledger/periods/{period}/reopen-requests`. */
+  requestPeriodReopen(period: string, body: S<"ReopenRequestBody">, signal?: AbortSignal): Promise<Result<S<"PeriodReopenRequest">>> {
+    return this.#send<S<"PeriodReopenRequest">>("POST", `/v1/subledger/periods/${encodeURIComponent(period)}/reopen-requests`, body, signal);
+  }
+
+  /** Approve period reopen. `POST /v1/subledger/periods/{period}/reopen-requests/{requestId}/approval`. */
+  approvePeriodReopen(period: string, requestId: string, signal?: AbortSignal): Promise<Result<S<"SubledgerPeriod">>> {
+    return this.#send<S<"SubledgerPeriod">>("POST", `/v1/subledger/periods/${encodeURIComponent(period)}/reopen-requests/${encodeURIComponent(requestId)}/approval`, undefined, signal);
+  }
+
+  // --- obligations -----------------------------------------------------------
+  /** List obligations. `GET /v1/obligations`. */
+  listObligations(params: { status?: string; limit?: number } = {}, signal?: AbortSignal): Promise<Result<S<"ObligationList">>> {
+    return this.#send<S<"ObligationList">>("GET", `/v1/obligations${query(params)}`, undefined, signal);
+  }
+
+  /** Get obligation. `GET /v1/obligations/{obligationId}`. */
+  getObligation(obligationId: string, signal?: AbortSignal): Promise<Result<S<"Obligation">>> {
+    return this.#send<S<"Obligation">>("GET", `/v1/obligations/${encodeURIComponent(obligationId)}`, undefined, signal);
+  }
+
+  /** Transition obligation. `POST /v1/obligations/{obligationId}/transitions`. */
+  transitionObligation(obligationId: string, body: S<"ObligationTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"Obligation">>> {
+    return this.#send<S<"Obligation">>("POST", `/v1/obligations/${encodeURIComponent(obligationId)}/transitions`, body, signal);
+  }
+
+  // --- documents -------------------------------------------------------------
+  /** Issue document. `POST /v1/documents`. */
+  issueDocument(idempotencyKey: string, body: S<"DocumentRequest">, signal?: AbortSignal): Promise<Result<S<"FiscalDocument">>> {
+    return this.#send<S<"FiscalDocument">>("POST", `/v1/documents`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** Get document. `GET /v1/documents/{documentId}`. */
+  getDocument(documentId: string, signal?: AbortSignal): Promise<Result<S<"FiscalDocument">>> {
+    return this.#send<S<"FiscalDocument">>("GET", `/v1/documents/${encodeURIComponent(documentId)}`, undefined, signal);
+  }
+
+  /** Correct document. `POST /v1/documents/{documentId}/corrections`. */
+  correctDocument(documentId: string, idempotencyKey: string, body: S<"CorrectionRequest">, signal?: AbortSignal): Promise<Result<S<"FiscalDocument">>> {
+    return this.#send<S<"FiscalDocument">>("POST", `/v1/documents/${encodeURIComponent(documentId)}/corrections`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** Get document lineage. `GET /v1/documents/{documentId}/lineage`. */
+  getDocumentLineage(documentId: string, signal?: AbortSignal): Promise<Result<S<"DocumentLineage">>> {
+    return this.#send<S<"DocumentLineage">>("GET", `/v1/documents/${encodeURIComponent(documentId)}/lineage`, undefined, signal);
+  }
+
+  // --- reconciliation --------------------------------------------------------
+  /** Run reconciliation. `POST /v1/reconciliations`. */
+  runReconciliation(body: S<"ReconciliationRequest">, signal?: AbortSignal): Promise<Result<S<"ReconciliationRun">>> {
+    return this.#send<S<"ReconciliationRun">>("POST", `/v1/reconciliations`, body, signal);
+  }
+
+  /** Get reconciliation. `GET /v1/reconciliations/{runId}`. */
+  getReconciliation(runId: string, signal?: AbortSignal): Promise<Result<S<"ReconciliationRun">>> {
+    return this.#send<S<"ReconciliationRun">>("GET", `/v1/reconciliations/${encodeURIComponent(runId)}`, undefined, signal);
+  }
+
+  /** Resolve reconciliation item. `POST /v1/reconciliations/{runId}/items/{itemId}/resolution`. */
+  resolveReconciliationItem(runId: string, itemId: string, body: S<"ResolutionRequest">, signal?: AbortSignal): Promise<Result<S<"ReconciliationItem">>> {
+    return this.#send<S<"ReconciliationItem">>("POST", `/v1/reconciliations/${encodeURIComponent(runId)}/items/${encodeURIComponent(itemId)}/resolution`, body, signal);
+  }
+
+  // --- evidence --------------------------------------------------------------
+  /** List seals. `GET /v1/seals`. */
+  listSeals(params: { limit?: number } = {}, signal?: AbortSignal): Promise<Result<S<"SealList">>> {
+    return this.#send<S<"SealList">>("GET", `/v1/seals${query(params)}`, undefined, signal);
+  }
+
+  /** Seal period. `POST /v1/seals`. */
+  sealPeriod(body: S<"SealRequest">, signal?: AbortSignal): Promise<Result<S<"Seal">>> {
+    return this.#send<S<"Seal">>("POST", `/v1/seals`, body, signal);
+  }
+
+  /** Get seal. `GET /v1/seals/{sealId}`. */
+  getSeal(sealId: string, signal?: AbortSignal): Promise<Result<S<"SealDocument">>> {
+    return this.#send<S<"SealDocument">>("GET", `/v1/seals/${encodeURIComponent(sealId)}`, undefined, signal);
+  }
+
+  /** Verify seal. `GET /v1/seals/{sealId}/verification`. */
+  verifySeal(sealId: string, signal?: AbortSignal): Promise<Result<S<"SealVerification">>> {
+    return this.#send<S<"SealVerification">>("GET", `/v1/seals/${encodeURIComponent(sealId)}/verification`, undefined, signal);
+  }
+
+  // --- retention -------------------------------------------------------------
+  /** List retention policies. `GET /v1/retention/policies`. */
+  listRetentionPolicies(signal?: AbortSignal): Promise<Result<S<"RetentionPolicyList">>> {
+    return this.#send<S<"RetentionPolicyList">>("GET", `/v1/retention/policies`, undefined, signal);
+  }
+
+  /** Record retention policy. `POST /v1/retention/policies`. */
+  recordRetentionPolicy(body: S<"RetentionPolicyRequest">, signal?: AbortSignal): Promise<Result<S<"RetentionPolicy">>> {
+    return this.#send<S<"RetentionPolicy">>("POST", `/v1/retention/policies`, body, signal);
+  }
+
+  /** List legal holds. `GET /v1/legal-holds`. */
+  listLegalHolds(signal?: AbortSignal): Promise<Result<S<"LegalHoldList">>> {
+    return this.#send<S<"LegalHoldList">>("GET", `/v1/legal-holds`, undefined, signal);
+  }
+
+  /** Place legal hold. `POST /v1/legal-holds`. */
+  placeLegalHold(body: S<"LegalHoldRequest">, signal?: AbortSignal): Promise<Result<S<"LegalHold">>> {
+    return this.#send<S<"LegalHold">>("POST", `/v1/legal-holds`, body, signal);
+  }
+
+  /** Get legal hold. `GET /v1/legal-holds/{holdId}`. */
+  getLegalHold(holdId: string, signal?: AbortSignal): Promise<Result<S<"LegalHold">>> {
+    return this.#send<S<"LegalHold">>("GET", `/v1/legal-holds/${encodeURIComponent(holdId)}`, undefined, signal);
+  }
+
+  /** Change legal hold scope. `POST /v1/legal-holds/{holdId}/scope`. */
+  changeLegalHoldScope(holdId: string, body: S<"LegalHoldScopeRequest">, signal?: AbortSignal): Promise<Result<S<"LegalHold">>> {
+    return this.#send<S<"LegalHold">>("POST", `/v1/legal-holds/${encodeURIComponent(holdId)}/scope`, body, signal);
+  }
+
+  /** Release legal hold. `POST /v1/legal-holds/{holdId}/release`. */
+  releaseLegalHold(holdId: string, body: S<"LegalHoldReleaseRequest">, signal?: AbortSignal): Promise<Result<S<"LegalHold">>> {
+    return this.#send<S<"LegalHold">>("POST", `/v1/legal-holds/${encodeURIComponent(holdId)}/release`, body, signal);
+  }
+
+  /** Get decision retention. `GET /v1/decisions/{decisionId}/retention`. */
+  getDecisionRetention(decisionId: string, signal?: AbortSignal): Promise<Result<S<"RetentionVerdict">>> {
+    return this.#send<S<"RetentionVerdict">>("GET", `/v1/decisions/${encodeURIComponent(decisionId)}/retention`, undefined, signal);
+  }
+
+  // --- legal -----------------------------------------------------------------
+  /** Get legal matrix. `GET /v1/legal/matrix`. */
+  getLegalMatrix(signal?: AbortSignal): Promise<Result<S<"LegalMatrix">>> {
+    return this.#send<S<"LegalMatrix">>("GET", `/v1/legal/matrix`, undefined, signal);
+  }
+
+  /** List authorizations. `GET /v1/legal/authorizations`. */
+  listAuthorizations(signal?: AbortSignal): Promise<Result<S<"AuthorizationList">>> {
+    return this.#send<S<"AuthorizationList">>("GET", `/v1/legal/authorizations`, undefined, signal);
+  }
+
+  /** Grant authorization. `POST /v1/legal/authorizations`. */
+  grantAuthorization(body: S<"AuthorizationRequest">, signal?: AbortSignal): Promise<Result<S<"CustomerAuthorization">>> {
+    return this.#send<S<"CustomerAuthorization">>("POST", `/v1/legal/authorizations`, body, signal);
+  }
+
+  /** Get authorization. `GET /v1/legal/authorizations/{authorizationId}`. */
+  getAuthorization(authorizationId: string, signal?: AbortSignal): Promise<Result<S<"CustomerAuthorization">>> {
+    return this.#send<S<"CustomerAuthorization">>("GET", `/v1/legal/authorizations/${encodeURIComponent(authorizationId)}`, undefined, signal);
+  }
+
+  /** Revoke authorization. `POST /v1/legal/authorizations/{authorizationId}/revocation`. */
+  revokeAuthorization(authorizationId: string, body: S<"RevocationRequest">, signal?: AbortSignal): Promise<Result<S<"CustomerAuthorization">>> {
+    return this.#send<S<"CustomerAuthorization">>("POST", `/v1/legal/authorizations/${encodeURIComponent(authorizationId)}/revocation`, body, signal);
+  }
+
+  /** Check authorization. `POST /v1/legal/authorization-checks`. */
+  checkAuthorization(body: S<"AuthorizationCheckRequest">, signal?: AbortSignal): Promise<Result<S<"AuthorizationCheck">>> {
+    return this.#send<S<"AuthorizationCheck">>("POST", `/v1/legal/authorization-checks`, body, signal);
+  }
+
+  // --- classification --------------------------------------------------------
+  /** Propose classification. `POST /v1/classifications:propose`. */
+  proposeClassification(body: S<"ClassificationProposalRequest">, signal?: AbortSignal): Promise<Result<S<"ClassificationProposal">>> {
+    return this.#send<S<"ClassificationProposal">>("POST", `/v1/classifications:propose`, body, signal);
   }
 
   // --- dashboard ----------------------------------------------------------

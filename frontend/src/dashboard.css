@@ -790,3 +790,128 @@
   color: #6b7280;
   margin: 8px 0 0;
 }
+
+/* Workspace pages (src/ui/kit.tsx). */
+.ztax-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ztax-page-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ztax-page-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.ztax-error-note {
+  font-size: 12px;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 0;
+}
+
+.ztax-ok-note {
+  font-size: 12px;
+  color: #065f46;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 0;
+}
+
+.ztax-status {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.ztax-status--ok { background: #d1fae5; color: #065f46; }
+.ztax-status--warn { background: #fef3c7; color: #92400e; }
+.ztax-status--bad { background: #fee2e2; color: #991b1b; }
+.ztax-status--neutral { background: #e5e7eb; color: #374151; }
+
+.ztax-raw summary {
+  font-size: 11px;
+  color: #6b7280;
+  cursor: pointer;
+}
+.ztax-raw pre {
+  font-size: 11px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.ztax-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #374151;
+}
+.ztax-field input,
+.ztax-field select,
+.ztax-field textarea {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.ztax-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.ztax-form-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ztax-btn-copper:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.ztax-btn-quiet {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.ztax-kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  font-size: 12px;
+  margin: 0;
+}
+.ztax-kv dt { color: #6b7280; }
+.ztax-kv dd { margin: 0; color: #111827; }

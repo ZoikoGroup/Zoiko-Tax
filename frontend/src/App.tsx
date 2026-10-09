@@ -8,7 +8,15 @@ import { useSession } from './admin/useSession'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 import type { View } from './components/layout/Sidebar'
 import { recentPeriods } from './dashboard/format'
+import { ActionCenterPage } from './pages/ActionCenterPage'
 import { ClientDashboard } from './pages/ClientDashboard'
+import { ContentPage } from './pages/ContentPage'
+import { DeterminePage } from './pages/DeterminePage'
+import { DocumentsPage } from './pages/DocumentsPage'
+import { EvidencePage } from './pages/EvidencePage'
+import { IntelligencePage } from './pages/IntelligencePage'
+import { ObligationsPage } from './pages/ObligationsPage'
+import { ReconcilePage } from './pages/ReconcilePage'
 import { CellHealth } from './platform/CellHealth'
 import { ztax } from './platform/client'
 
@@ -86,11 +94,31 @@ export function App() {
         void signOut()
       }}
     >
-      {view === 'admin' ? (
-        <AdminPanel session={session} onSignOut={signOut} onRefresh={refresh} />
-      ) : (
-        <ClientDashboard period={period} />
-      )}
+      {(() => {
+        const page = { session, period, onNavigate: setView }
+        switch (view) {
+          case 'admin':
+            return <AdminPanel session={session} onSignOut={signOut} onRefresh={refresh} />
+          case 'actions':
+            return <ActionCenterPage {...page} />
+          case 'determine':
+            return <DeterminePage {...page} />
+          case 'obligations':
+            return <ObligationsPage {...page} />
+          case 'reconcile':
+            return <ReconcilePage {...page} />
+          case 'documents':
+            return <DocumentsPage {...page} />
+          case 'evidence':
+            return <EvidencePage {...page} />
+          case 'content':
+            return <ContentPage {...page} />
+          case 'intelligence':
+            return <IntelligencePage {...page} />
+          case 'dashboard':
+            return <ClientDashboard period={period} />
+        }
+      })()}
     </DashboardLayout>
   )
 }
