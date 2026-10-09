@@ -403,6 +403,11 @@ jobs:
       # change that breaks an image fails here. A matrix that built the same
       # images and then threw them away was three more runners asserting less —
       # it proved they compile, this proves they run.
+      # The stack reads its credentials and ports from .env, which is never
+      # committed; CI runs on the committed placeholders.
+      - name: .env from the example
+        run: cp .env.example .env
+
       - name: docker compose up
         run: docker compose up --build --detach --wait --wait-timeout 180
 

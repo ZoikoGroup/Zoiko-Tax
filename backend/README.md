@@ -135,7 +135,9 @@ make down-clean    # stop and destroy the volume
 | Administrator | `admin@acme.example` |
 | Password | `local-dev-only-password` |
 
-Open <http://localhost:3000> and sign in. The cell is on <http://localhost:8080>.
+These, the database credentials and the host ports all live in [`.env`](../.env.example) at the repository root, which `docker-compose.yml` reads; the compose file itself carries no credential. `make up` creates `.env` from [`.env.example`](../.env.example) on first run, and `docker compose` refuses to start without it. Edit `.env`, never the example — and when something else on the machine holds port 8080 or 3000, set `CORE_PORT` and `WEB_PORT` there.
+
+Open <http://localhost:3000> (`WEB_PORT`) and sign in. The cell is on <http://localhost:8080> (`CORE_PORT`). The administrator also holds `ANALYST` (`ZTAX_BOOTSTRAP_ADMIN_EXTRA_ROLES`), so one local user sees the dashboard as well as administration.
 
 **These credentials are development-only and the mechanism says so.** The password is resolved through `internal/platform/secrets`, which refuses `local://` references outside `development` — so the pattern ADR-0017 §2.4 forbids in a cell cannot be the thing that ships. `ZTAX_SECURE_COOKIES=false` is refused outside `development` for the same reason, and `ZTAX_AUTHORITATIVE=true` is refused outside `production`, because no authoritative fiscal output is permitted before A4.
 

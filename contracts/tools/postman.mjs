@@ -930,7 +930,7 @@ function variables(overlay, contractDigest, local) {
     { key: "baseUrl", value: "http://localhost:8080", type: "string" },
 
     // The local stack's bootstrap tenant and administrator, read from
-    // docker-compose.yml rather than copied from it. A copy drifted once: the
+    // .env.example (the stack's own source for them) rather than copied. A copy drifted once: the
     // collection carried a password the stack never set, so a plain `newman run`
     // failed at sign-in and every request after it was a 401.
     { key: "tenantSlug", value: local.tenant, type: "string" },
@@ -988,21 +988,29 @@ function uuidFrom(name) {
 }
 
 /**
- * The bootstrap tenant and administrator the local stack creates. A missing
- * value is an error rather than a default, because a default is how the
- * collection came to carry a password the stack does not use.
+ * The bootstrap tenant and administrator the local stack creates, read from
+ * the committed .env.example that docker-compose.yml takes them from (via
+ * .env). Never from .env itself: that file is a developer's own and is not in
+ * the tree, so a collection generated from it would differ by machine and fail
+ * its own check in CI.
+ *
+ * A missing value is an error rather than a default, because a default is how
+ * the collection came to carry a password the stack does not use.
  */
-function localBootstrap(composePath) {
-  const compose = parseDocument(readFileSync(composePath, "utf8")).toJS();
-  const env = compose?.services?.["ztax-core"]?.environment ?? {};
+function localBootstrap(envPath) {
+  const env = {};
+  for (const line of readFileSync(envPath, "utf8").split(/\r?\n/)) {
+    const m = /^([A-Z][A-Z0-9_]*)=(.*)$/.exec(line);
+    if (m) env[m[1]] = m[2];
+  }
   const local = {
     tenant: env.ZTAX_BOOTSTRAP_TENANT,
     email: env.ZTAX_BOOTSTRAP_ADMIN_EMAIL,
-    password: env.ZTAX_LOCAL_SECRET_BOOTSTRAP_ADMIN,
+    password: env.ZTAX_BOOTSTRAP_ADMIN_PASSWORD,
   };
   for (const [name, value] of Object.entries(local)) {
     if (typeof value !== "string" || value === "") {
-      throw new Error(`${composePath}: ztax-core sets no bootstrap ${name}, and the collection cannot sign in without it.`);
+      throw new Error(`${envPath}: sets no bootstrap ${name}, and the collection cannot sign in without it.`);
     }
   }
   return local;
@@ -1022,7 +1030,7 @@ function main(argv) {
     test: readFileSync(join(here, "..", "postman", "scripts", "collection.test.js"), "utf8").replace(/\n$/, "").split("\n"),
   };
 
-  const local = localBootstrap(join(here, "..", "..", "docker-compose.yml"));
+  const local = localBootstrap(join(here, "..", "..", ".env.example"));
   const rendered = JSON.stringify(build(doc, overlay, scripts, { path: source, local }), null, 2) + "\n";
   const digest = createHash("sha256").update(rendered).digest("hex");
   const hashLine = `${digest}  ${basename(target)}\n`;

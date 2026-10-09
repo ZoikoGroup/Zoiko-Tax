@@ -48,7 +48,7 @@ docker run --rm -v "${PWD}/postman:/etc/newman" postman/newman:alpine \
 
 On the local stack, a default run makes folders `00`–`05`, `08` and `90` green — 49 requests, 234 assertions. Folders `06`, `07` and `98` are skipped on purpose; see [Switches](#switches).
 
-`tenantSlug`, `adminEmail` and `adminPassword` default to the local stack's bootstrap values. The generator reads them from [`docker-compose.yml`](../../docker-compose.yml) instead of copying them. An earlier copy drifted: the collection carried a password the stack never set, so every run failed at sign-in and every request after it returned 401. Against any other cell, set `baseUrl`, `tenantSlug`, `adminEmail` and `adminPassword`:
+`tenantSlug`, `adminEmail` and `adminPassword` default to the local stack's bootstrap values. The generator reads them from [`.env.example`](../../.env.example), the same file the stack takes them from (through `.env`), instead of copying them. If you change them in your own `.env`, pass the new values with `--env-var`. An earlier copy drifted: the collection carried a password the stack never set, so every run failed at sign-in and every request after it returned 401. Against any other cell, set `baseUrl`, `tenantSlug`, `adminEmail` and `adminPassword`:
 
 ```bash
 newman run ZoikoTax.postman_collection.json \
