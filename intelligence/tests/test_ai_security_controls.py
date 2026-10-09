@@ -604,3 +604,333 @@ class TestTenantScopedIndexInspection:
 
     def test_shared_constant(self) -> None:
         assert TenantScopedIndex.SHARED == "__SHARED__"
+
+
+# ---------------------------------------------------------------------------
+# Adversarial scenarios — Chapter 17 §28
+#
+# Each case documents the *attack vector*, confirms the structural block fires,
+# and asserts the exact refusal code.  These tests exercise controls that are
+# already implemented in ai_security_controls.py (improper-output-handling and
+# cross-tenant retrieval); no new production code is needed.
+#
+# ADV-SEC-001  Output injection via prohibited key
+#              Attack: model embeds an executable key ("sql", "exec", etc.) in
+#              a structured output, hoping a downstream caller will forward it.
+#              Control: OutputSchemaValidator checks the global prohibited-key
+#              set before any schema traversal, and raises immediately.
+#
+# ADV-SEC-002  Cross-tenant RAG retrieval leakage
+#              Attack: a caller for tenant ACME queries the scoped index with a
+#              crafted query that in a naïve post-filter implementation could
+#              return BETA-tenant chunks if the SQL WHERE clause is missing.
+#              Control: TenantScopedIndex enforces the tenant filter in SQL,
+#              not as a Python post-filter.  Results cannot contain other
+#              tenants regardless of query content.
+#
+# ADV-SEC-003  Fail-closed on missing tenant context
+#              Attack: caller omits TenantContext entirely (or constructs one
+#              with an empty tenant_id), hoping the index falls back to
+#              returning everything.
+#              Control: TenantContext.__post_init__ raises immediately on empty
+#              fields; search() cannot be called with a None context (typed).
+#
+# ADV-SEC-004  Output schema bypass via undeclared extra key
+#              Attack: model output carries an extra key ("admin_override") not
+#              in the declared schema, hoping the lenient caller ignores it.
+#              Control: OutputSchemaValidator rejects extra keys when
+#              allow_extra=False (the strict default for governed outputs).
+# ---------------------------------------------------------------------------
+
+
+class TestAdversarialScenarios:
+    """Adversarial attack scenarios covered by ai_security_controls.py.
+
+    Chapter 17 §28 — improper output handling and cross-tenant retrieval.
+    These tests are attack-vector first: each documents what the attacker
+    attempts, then asserts the structural control blocks it.
+    """
+
+    # ------------------------------------------------------------------ #
+    # ADV-SEC-001: Output injection via prohibited key                    #
+    # ------------------------------------------------------------------ #
+
+    @pytest.mark.parametrize(
+        "injected_key,injected_value",
+        [
+            ("sql", "DROP TABLE tax_decisions;"),
+            ("exec", "os.system('rm -rf /')"),
+            ("code", "import subprocess; subprocess.run(['curl', 'evil.example'])"),
+            ("command", "kubectl delete all --all"),
+            ("script", "<script>alert(1)</script>"),
+            ("shell", "/bin/bash -c 'env'"),
+            ("eval", "__import__('os').getcwd()"),
+            ("expression", "1 == 1 OR 1 == 1"),
+        ],
+    )
+    def test_adv_sec_001_output_injection_via_prohibited_key(
+        self,
+        injected_key: str,
+        injected_value: str,
+    ) -> None:
+        """ADV-SEC-001: model injects executable content via a prohibited key.
+
+        A model (or a prompt-injection attack targeting the model) places an
+        executable payload under a key like "sql" or "exec" in a structured
+        output.  The validator must block this *before* any downstream system
+        sees the output.
+        """
+        v = OutputSchemaValidator()
+        v.register(
+            OutputSchema(
+                schema_id="classification-proposal-v1",
+                required_fields={
+                    "label": FieldType.STRING,
+                    "confidence": FieldType.FLOAT,
+                },
+                allow_extra=True,  # lenient schema to show the block still fires
+            )
+        )
+        malicious_output: dict[str, Any] = {
+            "label": "TAXABLE",
+            "confidence": 0.97,
+            injected_key: injected_value,
+        }
+        with pytest.raises(AISecurityError) as exc_info:
+            v.validate("classification-proposal-v1", malicious_output)
+        assert exc_info.value.refusal is AISecurityRefusal.OUTPUT_PROHIBITED_KEY, (
+            f"ADV-SEC-001 FAILED for key={injected_key!r}: "
+            f"expected OUTPUT_PROHIBITED_KEY, got {exc_info.value.refusal}"
+        )
+
+    def test_adv_sec_001_injection_blocked_even_with_allow_extra_true(self) -> None:
+        """Prohibited-key check fires even when allow_extra=True.
+
+        A caller who sets allow_extra=True to handle evolving model outputs
+        must not inadvertently permit executable keys to pass through.
+        """
+        v = OutputSchemaValidator()
+        v.register(
+            OutputSchema(
+                schema_id="lenient-v1",
+                required_fields={"label": FieldType.STRING},
+                allow_extra=True,
+            )
+        )
+        with pytest.raises(AISecurityError) as exc_info:
+            v.validate("lenient-v1", {"label": "ok", "sql": "SELECT 1"})
+        assert exc_info.value.refusal is AISecurityRefusal.OUTPUT_PROHIBITED_KEY
+
+    def test_adv_sec_001_injection_blocked_before_schema_violations(self) -> None:
+        """Prohibited-key check fires before other violations are accumulated.
+
+        An attacker cannot hide an injection behind schema errors hoping the
+        validator short-circuits before reaching the prohibited-key check.
+        """
+        v = OutputSchemaValidator()
+        v.register(
+            OutputSchema(
+                schema_id="strict-v1",
+                required_fields={"label": FieldType.STRING, "count": FieldType.INTEGER},
+            )
+        )
+        # Output is also missing "count" and has the wrong type for "label" —
+        # but the prohibited key must be caught first.
+        poisoned: dict[str, Any] = {"label": 999, "exec": "rm -rf /"}
+        with pytest.raises(AISecurityError) as exc_info:
+            v.validate("strict-v1", poisoned)
+        assert exc_info.value.refusal is AISecurityRefusal.OUTPUT_PROHIBITED_KEY
+
+    # ------------------------------------------------------------------ #
+    # ADV-SEC-002: Cross-tenant RAG retrieval leakage                     #
+    # ------------------------------------------------------------------ #
+
+    def test_adv_sec_002_cross_tenant_leakage_blocked(
+        self, tmp_path: Path
+    ) -> None:
+        """ADV-SEC-002: crafted query targeting another tenant's content is blocked.
+
+        In a naïve RAG implementation, a query containing words from another
+        tenant's documents might return their chunks if the WHERE clause is a
+        Python post-filter that can be bypassed.  In TenantScopedIndex the
+        filter is in SQL and structurally impossible to bypass.
+        """
+        # Ingest documents for two tenants with clearly distinct vocabulary.
+        acme_doc = tmp_path / "acme.md"
+        acme_doc.write_text(
+            "# ACME confidential\n\nACME proprietary fiscal strategy for Q4.\n",
+            encoding="utf-8",
+        )
+        beta_doc = tmp_path / "beta.md"
+        beta_doc.write_text(
+            "# BETA confidential\n\nBETA proprietary fiscal strategy for Q4.\n",
+            encoding="utf-8",
+        )
+        idx = TenantScopedIndex()
+        idx.build([acme_doc], tenant_id="acme", region="eu-west-1")
+        idx.build([beta_doc], tenant_id="beta", region="eu-west-1")
+
+        # Attacker is "acme" tenant and queries specifically for BETA content.
+        attacker_ctx = TenantContext(tenant_id="acme", region="eu-west-1")
+        results = idx.search("BETA proprietary", attacker_ctx)
+
+        beta_results = [r for r in results if r.tenant_id == "beta"]
+        assert beta_results == [], (
+            "ADV-SEC-002 FAILED: ACME tenant received BETA tenant chunks — "
+            f"leaked tenant_ids: {[r.tenant_id for r in results]}"
+        )
+
+    def test_adv_sec_002_cross_region_leakage_blocked(
+        self, tmp_path: Path
+    ) -> None:
+        """ADV-SEC-002 (variant): same tenant, different region — residency is enforced.
+
+        A tenant in eu-west-1 may not retrieve their own data ingested under
+        us-east-1, because the residency boundary is a hard SQL filter.
+        """
+        doc = tmp_path / "classified.md"
+        doc.write_text(
+            "# Classified regional data\n\nUS-east restricted tax data.\n",
+            encoding="utf-8",
+        )
+        idx = TenantScopedIndex()
+        idx.build([doc], tenant_id="acme", region="us-east-1")
+
+        # Attacker queries from EU region hoping to get US data.
+        eu_ctx = TenantContext(tenant_id="acme", region="eu-west-1")
+        results = idx.search("classified regional", eu_ctx)
+
+        us_results = [r for r in results if r.region == "us-east-1"]
+        assert us_results == [], (
+            "ADV-SEC-002 (region variant) FAILED: eu-west-1 query returned "
+            f"us-east-1 chunks — leaked regions: {[r.region for r in results]}"
+        )
+
+    # ------------------------------------------------------------------ #
+    # ADV-SEC-003: Fail-closed on missing or invalid tenant context       #
+    # ------------------------------------------------------------------ #
+
+    def test_adv_sec_003_empty_tenant_id_fails_closed(self) -> None:
+        """ADV-SEC-003: empty tenant_id is refused at TenantContext construction.
+
+        An attacker (or a buggy caller) who passes an empty tenant_id must not
+        get a context that returns everything; construction must fail closed.
+        """
+        with pytest.raises(AISecurityError) as exc_info:
+            TenantContext(tenant_id="", region="eu-west-1")
+        assert exc_info.value.refusal is AISecurityRefusal.TENANT_CONTEXT_INVALID, (
+            "ADV-SEC-003 FAILED: empty tenant_id did not raise TENANT_CONTEXT_INVALID"
+        )
+
+    def test_adv_sec_003_empty_region_fails_closed(self) -> None:
+        """ADV-SEC-003 (variant): empty region is refused at construction.
+
+        Residency is a mandatory data-class boundary.  An empty region must
+        not silently pass, which would mean no region filter in the SQL.
+        """
+        with pytest.raises(AISecurityError) as exc_info:
+            TenantContext(tenant_id="acme", region="")
+        assert exc_info.value.refusal is AISecurityRefusal.TENANT_CONTEXT_INVALID
+
+    def test_adv_sec_003_unbuilt_index_fails_closed(self, tmp_path: Path) -> None:
+        """ADV-SEC-003 (variant): search on an unbuilt index fails closed.
+
+        An attacker cannot search an empty or partially-built index; the
+        gate fires before any SQL is executed.
+        """
+        idx = TenantScopedIndex()
+        ctx = TenantContext(tenant_id="acme", region="eu-west-1")
+        with pytest.raises(AISecurityError):
+            idx.search("tax rules", ctx)
+
+    def test_adv_sec_003_build_with_empty_tenant_id_fails_closed(
+        self, tmp_path: Path
+    ) -> None:
+        """ADV-SEC-003 (variant): ingestion with empty tenant_id is blocked.
+
+        A caller who tries to build without a tenant_id (perhaps to create a
+        de facto world-readable bucket) is refused at build() time.
+        """
+        doc = tmp_path / "doc.md"
+        doc.write_text("# Test\n\nContent.\n", encoding="utf-8")
+        idx = TenantScopedIndex()
+        with pytest.raises(AISecurityError) as exc_info:
+            idx.build([doc], tenant_id="", region="eu-west-1")
+        assert exc_info.value.refusal is AISecurityRefusal.TENANT_CONTEXT_INVALID
+
+    # ------------------------------------------------------------------ #
+    # ADV-SEC-004: Output schema bypass via undeclared extra key          #
+    # ------------------------------------------------------------------ #
+
+    def test_adv_sec_004_extra_key_blocked_under_strict_schema(self) -> None:
+        """ADV-SEC-004: model returns an extra key not in the declared schema.
+
+        A model (or injection) adds "admin_override": true to a structured
+        output, hoping a downstream caller reads it and elevates privileges.
+        The strict default (allow_extra=False) blocks this.
+        """
+        v = OutputSchemaValidator()
+        v.register(
+            OutputSchema(
+                schema_id="proposal-v1",
+                required_fields={"label": FieldType.STRING, "confidence": FieldType.FLOAT},
+                allow_extra=False,  # strict — the default for A1+ outputs
+            )
+        )
+        malicious_output: dict[str, Any] = {
+            "label": "TAXABLE",
+            "confidence": 0.99,
+            "admin_override": True,  # attacker-injected
+        }
+        result = v.validate("proposal-v1", malicious_output)
+        assert result.passed is False, (
+            "ADV-SEC-004 FAILED: extra key 'admin_override' was not rejected "
+            "by the strict schema"
+        )
+        assert any("admin_override" in v_msg for v_msg in result.violations)
+
+    def test_adv_sec_004_validate_or_raise_blocks_extra_key(self) -> None:
+        """ADV-SEC-004 variant: validate_or_raise() stops execution on extra key.
+
+        In the invocation path, validate_or_raise() is used so that a violation
+        immediately stops execution rather than returning a result the caller
+        might check lazily.
+        """
+        v = OutputSchemaValidator()
+        v.register(
+            OutputSchema(
+                schema_id="strict-invocation-v1",
+                required_fields={"label": FieldType.STRING},
+                allow_extra=False,
+            )
+        )
+        with pytest.raises(AISecurityError) as exc_info:
+            v.validate_or_raise(
+                "strict-invocation-v1",
+                {"label": "ok", "bypass": "root"},
+            )
+        assert exc_info.value.refusal is AISecurityRefusal.OUTPUT_SCHEMA_VIOLATION
+
+    def test_adv_sec_004_schema_specific_prohibited_key_blocks_override(
+        self,
+    ) -> None:
+        """ADV-SEC-004 variant: schema-level prohibited_keys catch domain-specific attacks.
+
+        A schema for the human-review queue prohibits "auto_approve" because
+        no model output should be able to skip human review.  The validator
+        blocks any output that carries it.
+        """
+        v = OutputSchemaValidator()
+        v.register(
+            OutputSchema(
+                schema_id="review-proposal-v1",
+                required_fields={"proposal": FieldType.STRING},
+                prohibited_keys=frozenset({"auto_approve", "skip_review", "promote"}),
+            )
+        )
+        with pytest.raises(AISecurityError) as exc_info:
+            v.validate(
+                "review-proposal-v1",
+                {"proposal": "classify as EXEMPT", "auto_approve": True},
+            )
+        assert exc_info.value.refusal is AISecurityRefusal.OUTPUT_PROHIBITED_KEY

@@ -24,13 +24,36 @@ The cost that *is* real is coarse access control: everyone with repository acces
 
 ```
 src/ztax_gateway/
-  governance.py    the enforcement point — ADR-0006 §2.5's three refusals
-  provenance.py    the governance context, mirroring ai.Provenance on the Go side
-  decimal_wire.py  the fiscal boundary — ADR-0006 §2.3, canonical strings only
-  service.py       guarded(): the four steps every call takes
-  wire.py          the JSON wire form, strict both ways
-  runtime.py       routing and the model-runtime seam
-  server.py        the gRPC server (see "The transport")
+  governance.py            the enforcement point — ADR-0006 §2.5's three refusals
+  provenance.py            the governance context, mirroring ai.Provenance on the Go side
+  decimal_wire.py          the fiscal boundary — ADR-0006 §2.3, canonical strings only
+  service.py               guarded(): the four steps every call takes
+  wire.py                  the JSON wire form, strict both ways
+  runtime.py               routing and the model-runtime seam
+  fake_runtime.py          development-only canned runtime (see "The model runtime is a seam")
+  server.py                the gRPC server (see "The transport")
+  tool_broker.py           ToolCatalog, authorise(), guarded() — Chapter 17 §13, §16
+  classifier.py            SKU/ontology classifier, A3 constrained auto-accept guard
+  rag.py                   Provenance RAG over spec documents — Chapter 17 §9, §10
+  citation.py              tamper-evident source citation references
+  change_intelligence.py   ChangeCandidate extraction — Chapter 17 §8
+  human_review.py          ReviewQueue, ReviewDecision, EvidencePanel — Chapter 17 §20
+  invocation_evidence.py   InvocationEvidenceRecord, no-CoT ledger — Chapter 17 §14, §21
+  capacity.py              CapacityLedger, QuotaPolicy, FinOpsReport — Chapter 17 §23
+  observability.py         AuditBuffer, TelemetrySignal, OpenTelemetry — Chapter 17 §22
+  resilience.py            ProviderRegistry, FallbackRouter, DegradedMode — Chapter 17 §6, §24
+  evaluation.py            Evaluator, EvaluationRuleset — Chapter 17 §19
+  evaluation_adversarial.py adversarial harness, ADV-001..005, ReleaseGate — Chapter 17 §28
+  evaluation_quality.py    GoldSetStore, MetricEngine, ModelComparator — Chapter 17 §19
+  evaluation_runner.py     EvaluationRunner — Chapter 17 §19
+  evaluation_evidence.py   EvaluationEvidenceRecord — Chapter 17 §19, §21
+  ai_security_controls.py  OutputSchemaValidator, TenantScopedIndex — Chapter 17 §28
+  production_registries.py AIReleaseManifest, ManifestRegistry — Chapter 17 §14
+  production_gates.py      release gates G-AIARCH-01..21 — Chapter 17 §29
+  release_lifecycle.py     9-state lifecycle machine — Chapter 17 §29
+  privacy_source_rights.py source-rights and privacy controls — Chapter 17 §15
+  explanation.py           CustomerExplanationService — Chapter 17 §12
+  drift.py                 BehaviorFingerprint, DriftDetector — Chapter 17 §19, §21
 ```
 
 ### The enforcement point
@@ -67,6 +90,15 @@ Both decoders are strict: a JSON number anywhere is refused (ADR-0006 §2.3 — 
 
 **The model runtime is a seam.** `runtime.UnconfiguredRuntime` is the production default: a permitted call answers `AI_GATEWAY_NOT_CONFIGURED` until a provider adapter is approved and wired with credentials from the Gateway's own vault namespace (ADR-0017 §2.5). The governance path is real end to end; the model is not, yet.
 
+`fake_runtime.py` provides a development-only alternative. `FakeRuntime` returns canned, deterministic responses for every `Kind` and never makes any real provider call. It is enabled with two environment variables:
+
+```
+ZTAX_GATEWAY_RUNTIME=fake        # selects FakeRuntime instead of UnconfiguredRuntime
+ZTAX_ENVIRONMENT=development     # required guard; any other value exits non-zero
+```
+
+With neither variable set (the default), the Gateway behaves exactly as before: `UnconfiguredRuntime`. Setting `ZTAX_GATEWAY_RUNTIME=fake` in any environment other than `development` is refused at startup with a clear error and a non-zero exit code, so the fake cannot accidentally reach a real cell. Any unrecognised value of `ZTAX_GATEWAY_RUNTIME` is also refused at startup.
+
 **One registry, two readers.** The use-case registry and routing are a reviewed AI-train file (`config/registry.dev.json` for the local stack). The Gateway loads it with `server.load_config`; the Go pre-check loads the same file with `gateway.LoadPolicy`, so the two decisions are made against one registry.
 
 ```
@@ -79,7 +111,7 @@ python -m ztax_gateway.server   # needs ZTAX_GATEWAY_CONFIG, _REGION, _AI_TRAIN 
 
 ```
 pip install -e '.[dev]'
-python -m pytest          # 47 tests: the refusals, and the decimal boundary
+python -m pytest          # ~1900 tests across governance, codec, tools, classifiers, evaluation, RAG and more
 python -m ruff check .
 python -m mypy src tests  # strict, nothing waived
 ```
@@ -139,8 +171,9 @@ the `ToolProfile` and `ToolProvenance` immutability are verified, and the
 
 ## What is not here
 
-- **The Intelligence Fabric proper** — provenance RAG, the SKU/ontology classifier, Change Intelligence extraction, the Evaluation Service and the adversarial harness. W2 lane L.
-- **Any model provider integration.** The Gateway routes; nothing routes yet.
+- **Any live model provider integration.** `FakeRuntime` covers local development and CI. A real provider adapter requires Security/Lane C approval and vault credentials (ADR-0017 §2.5).
+- **Temporal filtering in `rag.py`.** `KnowledgeBase` does FTS5 BM25 search today. Chapter 17 §9 requires `CURRENT` vs `AS_KNOWN_THEN` bitemporal filtering — deferred to W2 lane L.
+- **Production mTLS.** `ZTAX_GATEWAY_INSECURE_LOCAL=true` is accepted only in `development`. Any deployed cell requires mutual TLS (ADR-0006 §2.1).
 
 ## The rule that holds regardless
 
