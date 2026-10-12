@@ -1,6 +1,6 @@
-"""Provenance RAG — Knowledge-Base over the ZoikoTax specification documents.
+"""Provenance RAG -- Knowledge-Base over the ZoikoTax specification documents.
 
-Chapter 17 §15 of the ZoikoTax Master Specification.
+Chapter 17 ss9 and ss10 of the ZoikoTax Master Specification.
 
 Every AI output that references a tax rule, a determination algorithm, or a
 jurisdiction requirement must be traceable to a specific chunk of an official
@@ -8,38 +8,59 @@ spec document.  This module provides that traceability by:
 
 1. **Ingesting** spec documents (Markdown files from ``docs/specs/``) into an
    in-process SQLite FTS5 full-text index.  No external vector database, no
-   network call, no embedding model — CI can run it offline.
+   network call, no embedding model -- CI can run it offline.
 
 2. **Searching** the index with a plain-text query and returning a ranked list
    of :class:`~ztax_gateway.citation.Citation` objects, one per matching chunk.
    Because results are ``Citation`` objects, every downstream use carries a
    tamper-evident reference to the source material that justified it.
 
-3. **Enforcing the fiscal boundary** — this module imports nothing from the
-   fiscal, tax_decision or subledger packages (ADR-0006 §2.6; the CI grep
+3. **Enforcing the fiscal boundary** -- this module imports nothing from the
+   fiscal, tax_decision or subledger packages (ADR-0006 s2.6; the CI grep
    enforces this).
+
+4. **Valid-time filtering** (Chapter 17 ss9/ss10) -- :meth:`KnowledgeBase.search`
+   applies a temporal filter based on the ``mode`` parameter:
+
+   * ``TemporalMode.CURRENT`` (default) -- returns chunks that are IN_FORCE
+     right now: ``effective_from <= _utcnow() < effective_to``.  Open bounds
+     are treated as open-ended (-inf / +inf).
+   * ``TemporalMode.AS_KNOWN_THEN`` -- requires a timezone-aware ``as_of``
+     datetime; returns chunks that were IN_FORCE at that point in time.
+
+   Setting ``historical_context=True`` additionally returns SUPERSEDED chunks
+   (those whose ``effective_to`` has passed) tagged with
+   ``TemporalStatus.SUPERSEDED``.  NOT_YET_EFFECTIVE chunks are never returned.
 
 Design rules
 ------------
-* **Immutable index** — once :meth:`KnowledgeBase.build` returns, the index is
+* **Immutable index** -- once :meth:`KnowledgeBase.build` returns, the index is
   read-only.  Attempting to ingest a document twice is a programming error, not
   a runtime condition.
-* **Chunk granularity** — documents are split at Markdown heading boundaries
+* **Chunk granularity** -- documents are split at Markdown heading boundaries
   (``#``, ``##``, ``###``).  Each heading + its body is one chunk, one
   ``SourceChunk``, one ``Citation``.
-* **No embeddings** — SQLite FTS5 BM25 ranking is sufficient for the spec
+* **No embeddings** -- SQLite FTS5 BM25 ranking is sufficient for the spec
   corpus (two documents, ~840 lines, ~56 KB total).  Embeddings are reserved
   for the W2 lane L upgrade.
-* **Deterministic citation IDs** — given the same file content, the same query
+* **Deterministic citation IDs** -- given the same file content, the same query
   always produces the same :class:`~ztax_gateway.citation.Citation` objects, so
   audit logs can be replayed and compared.
+* **Effective-window storage** -- ``effective_from`` and ``effective_to`` are
+  stored as ISO-8601 UTC strings (``YYYY-MM-DDTHH:MM:SS``) in two UNINDEXED
+  SQLite columns.  ``NULL`` effective_to means the chunk has no expiry.
+  Filtering is done in Python (not SQL) to avoid SQLite datetime ambiguities.
+* **Clock injection** -- _utcnow() is the single point of truth for "now" in
+  CURRENT mode so tests can monkeypatch it without touching the system clock.
 """
 
 from __future__ import annotations
 
+import enum
 import re
 import sqlite3
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Final
 
@@ -56,6 +77,8 @@ __all__: list[str] = [
     "KnowledgeBase",
     "KnowledgeBaseError",
     "SearchResult",
+    "TemporalMode",
+    "TemporalStatus",
 ]
 
 # ---------------------------------------------------------------------------
@@ -65,11 +88,69 @@ __all__: list[str] = [
 # Maximum number of results returned by a single search call.
 _DEFAULT_TOP_K: Final[int] = 5
 
-# Minimum query length — single-character queries are never meaningful.
+# Minimum query length -- single-character queries are never meaningful.
 _MIN_QUERY_LEN: Final[int] = 2
 
 # Regex that matches a Markdown heading line (ATX style, levels 1-3).
 _HEADING_RE: re.Pattern[str] = re.compile(r"^#{1,3}\s+.+", re.MULTILINE)
+
+# ISO-8601 format used for effective-date storage in SQLite.
+_ISO_FMT: Final[str] = "%Y-%m-%dT%H:%M:%S"
+
+
+# ---------------------------------------------------------------------------
+# Clock helper (monkeypatchable in tests)
+# ---------------------------------------------------------------------------
+
+
+def _utcnow() -> datetime:
+    """Return the current UTC time.
+
+    This is the single point of truth for CURRENT mode so that tests can
+    monkeypatch ``ztax_gateway.rag._utcnow`` without touching the system clock.
+    """
+    return datetime.now(tz=UTC)
+
+
+# ---------------------------------------------------------------------------
+# Enums
+# ---------------------------------------------------------------------------
+
+
+class TemporalMode(enum.Enum):
+    """Valid-time search mode (Chapter 17 ss9).
+
+    ``CURRENT``
+        Filter by the current wall-clock time.  Returns only IN_FORCE chunks
+        (effective_from <= now < effective_to).  ``as_of`` must be ``None``.
+
+    ``AS_KNOWN_THEN``
+        Filter by a historical point in time supplied via ``as_of``.  Returns
+        chunks that were IN_FORCE at that moment.  ``as_of`` must be a
+        timezone-aware datetime.
+    """
+
+    CURRENT = "CURRENT"
+    AS_KNOWN_THEN = "AS_KNOWN_THEN"
+
+
+class TemporalStatus(enum.Enum):
+    """Valid-time status of a chunk relative to the search point in time.
+
+    ``IN_FORCE``
+        The chunk is valid at the query point in time.
+
+    ``SUPERSEDED``
+        The chunk's effective_to has passed; it is no longer in force but is
+        returned when ``historical_context=True``.
+
+    ``NOT_YET_EFFECTIVE``
+        The chunk's effective_from is in the future; never returned.
+    """
+
+    IN_FORCE = "IN_FORCE"
+    SUPERSEDED = "SUPERSEDED"
+    NOT_YET_EFFECTIVE = "NOT_YET_EFFECTIVE"
 
 
 # ---------------------------------------------------------------------------
@@ -90,6 +171,13 @@ class Chunk:
     ``body`` is the full text of this section (heading + content lines).
 
     ``byte_start`` / ``byte_end`` are byte offsets into the *original* file.
+
+    ``effective_from`` is the UTC datetime from which this chunk is considered
+    in force.  ``None`` means the chunk has always been in force (no lower
+    bound).
+
+    ``effective_to`` is the UTC datetime at which this chunk is superseded
+    (exclusive).  ``None`` means the chunk has no expiry.
     """
 
     source_id: str
@@ -97,6 +185,8 @@ class Chunk:
     body: str
     byte_start: int
     byte_end: int
+    effective_from: datetime | None = None
+    effective_to: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,11 +196,15 @@ class SearchResult:
     ``chunk`` is the matching :class:`Chunk`.
     ``citation`` is the tamper-evident :class:`Citation` for that chunk.
     ``rank`` is the BM25 score as returned by SQLite FTS5 (lower is better).
+    ``temporal_status`` is the valid-time status of the chunk relative to the
+    search point in time.  Always ``TemporalStatus.IN_FORCE`` unless
+    ``historical_context=True`` was passed to :meth:`KnowledgeBase.search`.
     """
 
     chunk: Chunk
     citation: Citation
     rank: float
+    temporal_status: TemporalStatus = TemporalStatus.IN_FORCE
 
 
 # ---------------------------------------------------------------------------
@@ -149,7 +243,7 @@ def _chunk_document(path: Path) -> list[Chunk]:
     """
     raw: bytes = path.read_bytes()
     if not raw:
-        raise KnowledgeBaseError(f"rag: {path} is empty — cannot index an empty document")
+        raise KnowledgeBaseError(f"rag: {path} is empty -- cannot index an empty document")
 
     text: str = raw.decode("utf-8", errors="replace")
     source_id: str = path.as_posix()
@@ -177,7 +271,7 @@ def _chunk_document(path: Path) -> list[Chunk]:
         )
 
     if not heading_matches:
-        # No headings at all — treat the whole file as one chunk.
+        # No headings at all -- treat the whole file as one chunk.
         _add_chunk("Preamble", text, 0, len(text))
         return chunks
 
@@ -234,6 +328,8 @@ class KnowledgeBase:
             CREATE VIRTUAL TABLE IF NOT EXISTS chunks USING fts5(
                 chunk_id UNINDEXED,
                 source_id UNINDEXED,
+                effective_from UNINDEXED,
+                effective_to UNINDEXED,
                 heading,
                 body,
                 tokenize = 'porter unicode61'
@@ -252,6 +348,9 @@ class KnowledgeBase:
         *,
         rights_profiles: dict[str, RightsProfile] | None = None,
         customer_policy: CustomerPolicy | None = None,
+        effective_from: datetime | None = None,
+        effective_to: datetime | None = None,
+        effective_dates: dict[str, tuple[datetime | None, datetime | None]] | None = None,
     ) -> None:
         """Ingest one or more spec documents into the index.
 
@@ -265,6 +364,26 @@ class KnowledgeBase:
         ``USE_RETRIEVAL`` *and* ``USE_EMBEDDING``, the build is aborted with
         :class:`KnowledgeBaseError` (ZTAX-SRC-REQ-0004, ZTAX-PRIV-REQ-0073).
 
+        **Valid-time parameters** (Chapter 17 ss9):
+
+        *effective_from* / *effective_to* apply the same effective window to
+        **every** document in *paths*.  For per-document control, supply
+        *effective_dates* -- a mapping of ``path.as_posix()`` to a
+        ``(effective_from, effective_to)`` pair.  Per-document entries in
+        *effective_dates* take precedence over the flat *effective_from* /
+        *effective_to* defaults.  ``None`` means open-ended (no lower/upper
+        bound).
+
+        All ``datetime`` values **must** be timezone-aware UTC; naive datetimes
+        are rejected with :class:`KnowledgeBaseError` to prevent silent
+        timezone bugs in audit logs.
+
+        Every key in *effective_dates* must correspond to a ``path.as_posix()``
+        for one of the paths in this call; unknown keys are rejected.
+
+        When both bounds are supplied, ``effective_to`` must be strictly after
+        ``effective_from``; an inverted window is rejected.
+
         Args:
             paths:            Absolute paths to Markdown spec files.
             rights_profiles:  Optional mapping of ``path.as_posix()`` to
@@ -273,17 +392,41 @@ class KnowledgeBase:
                               without a rights check.
             customer_policy:  Optional customer-level policy passed through
                               to :func:`~ztax_gateway.privacy_source_rights.check_corpus_source`.
+            effective_from:   Default UTC lower bound for all ingested chunks.
+            effective_to:     Default UTC upper bound (exclusive) for all
+                              ingested chunks.
+            effective_dates:  Per-document overrides; keys are
+                              ``path.as_posix()`` strings.
 
         Raises:
             KnowledgeBaseError: if a path was already ingested, is missing,
-                is empty, or fails the source-rights gate.
+                is empty, fails the source-rights gate, a supplied datetime
+                is naive (timezone-unaware), an effective_dates key is unknown,
+                or a window has effective_to <= effective_from.
             FileNotFoundError: if a path does not exist on disk.
         """
+        _require_utc(effective_from, "effective_from")
+        _require_utc(effective_to, "effective_to")
+        _validate_window(effective_from, effective_to, "flat")
+
+        path_sids = {p.as_posix() for p in paths}
+
+        if effective_dates is not None:
+            for sid, (ef, et) in effective_dates.items():
+                if sid not in path_sids:
+                    raise KnowledgeBaseError(
+                        f"rag: effective_dates key {sid!r} is not among the paths"
+                        " in this build() call"
+                    )
+                _require_utc(ef, "effective_dates effective_from")
+                _require_utc(et, "effective_dates effective_to")
+                _validate_window(ef, et, f"effective_dates[{sid!r}]")
+
         for path in paths:
             sid = path.as_posix()
             if sid in self._ingested:
                 raise KnowledgeBaseError(
-                    f"rag: {path.name!r} has already been ingested — duplicate ingestion is a bug"
+                    f"rag: {path.name!r} has already been ingested -- duplicate ingestion is a bug"
                 )
             # Source-rights gate (ZTAX-SRC-REQ-0004, ZTAX-PRIV-REQ-0073).
             if rights_profiles is not None and sid in rights_profiles:
@@ -294,16 +437,29 @@ class KnowledgeBase:
                     )
                 except PrivacySourceRightsError as exc:
                     raise KnowledgeBaseError(
-                        f"rag: source {path.name!r} failed rights gate — {exc}"
+                        f"rag: source {path.name!r} failed rights gate -- {exc}"
                     ) from exc
-            self._ingest_one(path)
+            # Resolve per-document effective window.
+            doc_ef: datetime | None = effective_from
+            doc_et: datetime | None = effective_to
+            if effective_dates is not None and sid in effective_dates:
+                doc_ef, doc_et = effective_dates[sid]
+            self._ingest_one(path, effective_from=doc_ef, effective_to=doc_et)
             self._ingested.add(sid)
         self._built = True
 
-    def _ingest_one(self, path: Path) -> None:
+    def _ingest_one(
+        self,
+        path: Path,
+        *,
+        effective_from: datetime | None = None,
+        effective_to: datetime | None = None,
+    ) -> None:
         raw: bytes = path.read_bytes()
         doc_chunks = _chunk_document(path)
         rows = []
+        ef_str = _to_iso(effective_from)
+        et_str = _to_iso(effective_to)
         for doc_chunk in doc_chunks:
             # Build a Citation for this chunk using citation.py.
             source_chunk = SourceChunk(
@@ -313,13 +469,30 @@ class KnowledgeBase:
                 byte_end=doc_chunk.byte_end,
             )
             citation = combine([source_chunk])
-            # Use the row ID as the in-process key.
+            # Store the chunk with its effective window.
             chunk_id = len(self._chunks)
-            self._chunks[chunk_id] = doc_chunk
+            self._chunks[chunk_id] = Chunk(
+                source_id=doc_chunk.source_id,
+                heading=doc_chunk.heading,
+                body=doc_chunk.body,
+                byte_start=doc_chunk.byte_start,
+                byte_end=doc_chunk.byte_end,
+                effective_from=effective_from,
+                effective_to=effective_to,
+            )
             self._citations[chunk_id] = citation
-            rows.append((chunk_id, doc_chunk.source_id, doc_chunk.heading, doc_chunk.body))
+            rows.append((
+                chunk_id,
+                doc_chunk.source_id,
+                ef_str,
+                et_str,
+                doc_chunk.heading,
+                doc_chunk.body,
+            ))
         self._conn.executemany(
-            "INSERT INTO chunks (chunk_id, source_id, heading, body) VALUES (?, ?, ?, ?)",
+            "INSERT INTO chunks"
+            " (chunk_id, source_id, effective_from, effective_to, heading, body)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
             rows,
         )
         self._conn.commit()
@@ -328,24 +501,57 @@ class KnowledgeBase:
     # Searching
     # ------------------------------------------------------------------
 
-    def search(self, query: str, top_k: int = _DEFAULT_TOP_K) -> list[SearchResult]:
+    def search(
+        self,
+        query: str,
+        top_k: int = _DEFAULT_TOP_K,
+        *,
+        mode: TemporalMode = TemporalMode.CURRENT,
+        as_of: datetime | None = None,
+        historical_context: bool = False,
+    ) -> list[SearchResult]:
         """Return the top-*k* ranked results for *query*.
 
         Each result carries a :class:`~ztax_gateway.citation.Citation` that
         traces the matching chunk back to the exact bytes in the spec document,
         making any downstream AI output grounded and auditable.
 
+        **Valid-time filtering** (Chapter 17 ss9):
+
+        ``mode=TemporalMode.CURRENT`` (default)
+            The reference point is ``_utcnow()``.  Only IN_FORCE chunks are
+            returned by default.  ``as_of`` must be ``None``; supplying it
+            raises :class:`KnowledgeBaseError`.
+
+        ``mode=TemporalMode.AS_KNOWN_THEN``
+            The reference point is ``as_of``, which must be a timezone-aware
+            datetime.  Omitting ``as_of`` raises :class:`KnowledgeBaseError`.
+
+        When ``historical_context=True`` is supplied, SUPERSEDED chunks
+        (``effective_to`` has passed the reference point) are also returned,
+        tagged ``TemporalStatus.SUPERSEDED``.  NOT_YET_EFFECTIVE chunks are
+        never returned regardless of this flag.
+
+        Filtering happens on the full result set *before* ``top_k`` is applied
+        so that ``top_k`` accurately counts post-filter results.
+
         Args:
-            query: A plain-text search query (e.g. ``"inclusive extraction"``).
-            top_k: Maximum number of results to return.  Defaults to 5.
+            query:              Plain-text search query.
+            top_k:              Maximum number of results.  Defaults to 5.
+            mode:               ``TemporalMode.CURRENT`` or
+                                ``TemporalMode.AS_KNOWN_THEN``.
+            as_of:              Reference datetime for AS_KNOWN_THEN; must be
+                                timezone-aware.  Must be ``None`` for CURRENT.
+            historical_context: If ``True``, also include SUPERSEDED chunks
+                                tagged accordingly.
 
         Returns:
             A list of :class:`SearchResult` objects, ranked by BM25 score
-            (best match first).  May be shorter than *top_k* if fewer chunks
-            match.
+            (best match first).  May be shorter than *top_k*.
 
         Raises:
-            KnowledgeBaseError: if *query* is too short or the index is empty.
+            KnowledgeBaseError: for short query, unbuilt index, mode/as_of
+                mismatch, or naive datetime.
         """
         query = query.strip()
         if len(query) < _MIN_QUERY_LEN:
@@ -354,27 +560,54 @@ class KnowledgeBase:
             )
         if not self._built:
             raise KnowledgeBaseError(
-                "rag: knowledge base has not been built — call build() first"
+                "rag: knowledge base has not been built -- call build() first"
             )
 
-        # SQLite FTS5 rank() is negative BM25 (lower = better match).
-        # Use MATCH with porter stemming via the tokenizer configured above.
+        # Mode/as_of consistency.
+        if mode is TemporalMode.CURRENT and as_of is not None:
+            raise KnowledgeBaseError(
+                "rag: as_of must be None when mode=TemporalMode.CURRENT; "
+                "use mode=TemporalMode.AS_KNOWN_THEN to supply a reference datetime"
+            )
+        if mode is TemporalMode.AS_KNOWN_THEN and as_of is None:
+            raise KnowledgeBaseError(
+                "rag: as_of is required when mode=TemporalMode.AS_KNOWN_THEN"
+            )
+        if as_of is not None:
+            _require_utc(as_of, "as_of")
+
+        # Resolve the reference point.
+        ref: datetime = _utcnow() if mode is TemporalMode.CURRENT else as_of  # type: ignore[assignment]
+
+        # Retrieve ALL FTS matches ordered by rank; filter then slice.
         cursor = self._conn.execute(
             """
             SELECT chunk_id, rank
             FROM chunks
             WHERE chunks MATCH ?
             ORDER BY rank
-            LIMIT ?
             """,
-            (query, top_k),
+            (query,),
         )
         rows = cursor.fetchall()
+
+        if top_k == 0:
+            return []
+
         results: list[SearchResult] = []
         for chunk_id, rank in rows:
             chunk = self._chunks[chunk_id]
+            status = _temporal_status(chunk, ref)
+            if status is TemporalStatus.NOT_YET_EFFECTIVE:
+                continue
+            if status is TemporalStatus.SUPERSEDED and not historical_context:
+                continue
             citation = self._citations[chunk_id]
-            results.append(SearchResult(chunk=chunk, citation=citation, rank=rank))
+            results.append(
+                SearchResult(chunk=chunk, citation=citation, rank=rank, temporal_status=status)
+            )
+            if len(results) == top_k:
+                break
         return results
 
     # ------------------------------------------------------------------
@@ -394,3 +627,59 @@ class KnowledgeBase:
     def source_ids(self) -> frozenset[str]:
         """Return the set of source identifiers (file paths) that have been ingested."""
         return frozenset(self._ingested)
+
+
+# ---------------------------------------------------------------------------
+# Private helpers
+# ---------------------------------------------------------------------------
+
+
+def _require_utc(dt: datetime | None, param: str) -> None:
+    """Raise KnowledgeBaseError if *dt* is a naive (timezone-unaware) datetime."""
+    if dt is not None and dt.tzinfo is None:
+        raise KnowledgeBaseError(
+            f"rag: {param}={dt!r} is naive -- supply a UTC-aware datetime"
+            " (e.g. datetime.now(tz=datetime.UTC))"
+        )
+
+
+def _to_iso(dt: datetime | None) -> str | None:
+    """Format *dt* as an ISO-8601 UTC string for SQLite storage, or None."""
+    if dt is None:
+        return None
+    utc = dt.astimezone(UTC)
+    return utc.strftime(_ISO_FMT)
+
+
+def _validate_window(
+    ef: datetime | None, et: datetime | None, label: str
+) -> None:
+    """Raise KnowledgeBaseError if effective_to <= effective_from."""
+    if ef is not None and et is not None and et.astimezone(UTC) <= ef.astimezone(UTC):
+            raise KnowledgeBaseError(
+                f"rag: {label}: effective_to ({et!r}) must be strictly after"
+                f" effective_from ({ef!r})"
+            )
+
+
+def _temporal_status(chunk: Chunk, ref: datetime) -> TemporalStatus:
+    """Classify a chunk relative to the reference point *ref*.
+
+    Returns:
+        IN_FORCE          -- effective_from <= ref < effective_to
+        SUPERSEDED        -- ref >= effective_to (chunk has expired)
+        NOT_YET_EFFECTIVE -- ref < effective_from (chunk not yet active)
+    """
+    ref_utc = ref.astimezone(UTC)
+    ef = chunk.effective_from
+    et = chunk.effective_to
+
+    # Check NOT_YET_EFFECTIVE: ref is before effective_from.
+    if ef is not None and ref_utc < ef.astimezone(UTC):
+        return TemporalStatus.NOT_YET_EFFECTIVE
+
+    # Check SUPERSEDED: ref is at or after effective_to.
+    if et is not None and ref_utc >= et.astimezone(UTC):
+        return TemporalStatus.SUPERSEDED
+
+    return TemporalStatus.IN_FORCE
