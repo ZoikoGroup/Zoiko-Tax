@@ -24,10 +24,38 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  # Kept in step with ci.yml's own PYTHON_VERSION so the two workflows
+  # never silently drift onto different interpreters for the same gate.
+  PYTHON_VERSION: "3.12"
+
 jobs:
+  # QA-REQ-0099/0100: an open QA-SEV-1 defect MUST block a release outright,
+  # and an open QA-SEV-2 defect MUST block it too unless it carries a
+  # waiver whose requirement_id is exactly ZTAX-QA-REQ-0100 and that waiver
+  # is not yet expired (docs/tools/check_defects.py's blocking_defects()).
+  # --release is what turns that tool's otherwise-informational blocker
+  # list into a failing job; ci.yml's register job runs the same tool
+  # without the flag, where it only validates docs/defects.yaml's own
+  # shape and cross-references.
+  releasable:
+    name: known-defects gate (QA-REQ-0099, 0100)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: python -m pip install -r docs/tools/requirements.txt
+      - name: no open QA-SEV-1, and no open QA-SEV-2 without an unexpired QA-REQ-0100 waiver
+        run: python docs/tools/check_defects.py --release
+
   images:
     name: build, attest and publish ${{ matrix.service }}
     runs-on: ubuntu-latest
+    needs: releasable
     permissions:
       contents: read
       packages: write # push to GHCR

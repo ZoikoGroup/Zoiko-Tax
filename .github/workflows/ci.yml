@@ -498,6 +498,14 @@ jobs:
       - name: quarantine register (ADR-0018 control 6)
         run: python docs/tools/check_quarantine.py
 
+      # QA-REQ-0099/0100: a QA-SEV-1 defect always blocks; a QA-SEV-2 defect
+      # blocks unless it carries an unexpired waiver whose requirement_id is
+      # exactly ZTAX-QA-REQ-0100. This step only validates the register
+      # (schema, duplicate IDs, waiver cross-references); it does not judge
+      # --release here, since that is the manifest build's job below.
+      - name: defects register (QA-REQ-0099, 0100)
+        run: python docs/tools/check_defects.py
+
       # Requirement → test → evidence (#18). Runs each registered
       # verification_ref and uploads the result; non-blocking by design for individual
       # FAIL/ERROR counts, but a ratchet regression against docs/trace_baseline.json
@@ -514,6 +522,17 @@ jobs:
         run: python -m unittest docs.test_generate_traceability_report -v
       - name: generate traceability report
         run: python docs/generate_traceability_report.py
+
+      # QA-REQ-0109 to 0113: one ReleaseCertificationManifest, embedding the
+      # traceability snapshot just generated above plus the waivers,
+      # quarantine and defects registers, self-hashed for tamper evidence.
+      # Default --out (docs/evidence/release_manifest.json) rides the
+      # upload step below, which already uploads everything under
+      # docs/evidence/ -- no separate artifact needed.
+      - name: build the release certification manifest
+        run: python docs/tools/build_release_manifest.py build --version 0.0.0-ci --commit "$GITHUB_SHA"
+      - name: verify the release certification manifest (QA-REQ-0113)
+        run: python docs/tools/build_release_manifest.py verify docs/evidence/release_manifest.json
 
       - name: upload traceability evidence
         if: always()

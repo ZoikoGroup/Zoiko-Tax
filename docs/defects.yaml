@@ -1,0 +1,44 @@
+# ZoikoTax known-defects register — ZTAX-QA-REQ-0099, ZTAX-QA-REQ-0100.
+#
+# "QA-SEV-1 defects MUST block authoritative production release." (QA-REQ-0099)
+# "QA-SEV-2 defects MUST normally block release unless explicit governance
+# permits and risk is bounded." (QA-REQ-0100) A defect is a row here,
+# validated in CI by docs/tools/check_defects.py against
+# docs/schema/defects.schema.json.
+#
+# CI rejects a defect register that:
+#   - is invalid against the schema, or duplicates another entry's defect_id
+#   - names a waiver_id that does not exist in docs/waivers.yaml
+#   - is QA-SEV-1 and carries a waiver_id at all (QA-REQ-0099 has no
+#     exception -- a QA-SEV-1 defect cannot be waived, only resolved)
+#   - is QA-SEV-2, carries a waiver_id, and that waiver's requirement_id is
+#     not exactly ZTAX-QA-REQ-0100 (a waiver issued for a different
+#     requirement does not speak to this defect's severity at all)
+#
+# What actually blocks a release (--release) is narrower than what the gate
+# rejects: an OPEN QA-SEV-1 defect always blocks, and an OPEN QA-SEV-2
+# defect blocks unless it carries a waiver_id that is still unexpired as of
+# the day being judged. A waiver that has since expired is not a register
+# error -- docs/tools/check_registry.py already owns expiry as a register
+# rule -- but it does mean the defect it used to cover is blocking again.
+#
+# Shape:
+#
+#   - defect_id: ZTAX-DEF-2026-0001
+#     severity: QA-SEV-2
+#     status: OPEN
+#     title: "Reconciliation run occasionally double-counts a voided credit note"
+#     owner: "Head of Quality Engineering"
+#     opened_at: "2026-10-01"
+#     waiver_id: ZTAX-WVR-2026-0001   # optional; must resolve to a QA-REQ-0100 waiver
+#
+#   - defect_id: ZTAX-DEF-2026-0002
+#     severity: QA-SEV-1
+#     status: RESOLVED
+#     title: "Refund admission allowed a ninth concurrent refund past the bound"
+#     owner: "Head of Quality Engineering"
+#     opened_at: "2026-09-20"
+#     resolved_at: "2026-09-22"   # required once RESOLVED; forbidden while OPEN
+#
+# There are none. Nothing has been opened yet.
+defects: []

@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.zoikotax.com/governance/defects/v1",
+  "title": "ZoikoTax known-defects register",
+  "description": "ZTAX-QA-REQ-0099/0100: a QA-SEV-1 defect MUST block release unconditionally; a QA-SEV-2 defect MUST normally block release unless an explicit, unexpired ZTAX-QA-REQ-0100 waiver covers it. Cross-file rules (uniqueness, waiver resolution, severity-specific waiver rules, expiry-driven blocking) are enforced by docs/tools/check_defects.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["defects"],
+  "properties": {
+    "defects": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/defect" }
+    }
+  },
+  "$defs": {
+    "nonEmpty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "defect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "defect_id", "severity", "status", "title", "owner", "opened_at"
+      ],
+      "properties": {
+        "defect_id": {
+          "type": "string",
+          "pattern": "^ZTAX-DEF-[0-9]{4}-[0-9]{4}$"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["QA-SEV-1", "QA-SEV-2"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["OPEN", "RESOLVED"]
+        },
+        "title": { "$ref": "#/$defs/nonEmpty" },
+        "owner": { "$ref": "#/$defs/nonEmpty" },
+        "opened_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "resolved_at": {
+          "description": "Required iff status is RESOLVED; forbidden if OPEN -- enforced below, not by this property alone.",
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "waiver_id": {
+          "description": "Optional. If present, must name a waiver that exists in docs/waivers.yaml (check_defects.py).",
+          "type": "string",
+          "pattern": "^ZTAX-WVR-[0-9]{4}-[0-9]{4}$"
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "RESOLVED" } } },
+          "then": { "required": ["resolved_at"] }
+        },
+        {
+          "if": { "properties": { "status": { "const": "OPEN" } } },
+          "then": { "not": { "required": ["resolved_at"] } }
+        }
+      ]
+    }
+  }
+}
