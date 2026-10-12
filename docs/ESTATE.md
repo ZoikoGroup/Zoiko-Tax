@@ -43,5 +43,5 @@ Generated from [`register.yaml`](register.yaml) and [`requirements.yaml`](requir
 
 | Document | Kind | Owner | Due | Issue |
 |---|---|---|---|---|
-| `ZTAX-STR-003` | VERIFY | Executive Strategy | 2026-10-09 | Existing baseline not held in this repository. Version, approvers, publication hash and effective date are not yet registered. |
-| `ZTAX-ARCH-001` | VERIFY | CTO / Chief Architect | 2026-10-09 | Existing baseline not held in this repository. DOM-001 declares a hard dependency on it; the v2.0 approvers, publication hash and effective date are not yet registered. |
+| `ZTAX-STR-003` | VERIFY | Executive Strategy | 2026-10-23 | Existing baseline not held in this repository. Version, approvers, publication hash and effective date are not yet registered. |
+| `ZTAX-ARCH-001` | VERIFY | CTO / Chief Architect | 2026-10-23 | Existing baseline not held in this repository. DOM-001 declares a hard dependency on it; the v2.0 approvers, publication hash and effective date are not yet registered. |
