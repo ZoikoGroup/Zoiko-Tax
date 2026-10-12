@@ -21017,7 +21017,7 @@ requirements:
     owner: "Head of Quality Engineering"
     applies_to: ["Release"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "docs/tools/tests/test_check_defects.py"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -21157,7 +21157,7 @@ requirements:
     owner: "Head of Quality Engineering"
     applies_to: ["Release"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "docs/tools/tests/test_build_release_manifest.py"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -21171,7 +21171,7 @@ requirements:
     owner: "Head of Quality Engineering"
     applies_to: ["Release"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "docs/tools/tests/test_build_release_manifest.py"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -21185,7 +21185,7 @@ requirements:
     owner: "Head of Quality Engineering"
     applies_to: ["Release"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "docs/tools/tests/test_build_release_manifest.py"
     status: PROPOSED
     effective_from: null
     effective_to: null
@@ -21213,7 +21213,7 @@ requirements:
     owner: "Head of Quality Engineering"
     applies_to: ["Evidence"]
     verification_method: TEST
-    verification_ref: null
+    verification_ref: "docs/tools/tests/test_build_release_manifest.py"
     status: PROPOSED
     effective_from: null
     effective_to: null

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.zoikotax.com/governance/release-manifest/v1",
   "title": "ZoikoTax release certification manifest",
-  "description": "ZTAX-QA-001 §31 (QA-REQ-0109 to 0113): a release certification MUST produce a ReleaseCertificationManifest embedding the traceability snapshot and the known-defects/waiver registers as of build time, identifying a rollback/suspension path, and self-hashed for tamper evidence. Built and verified by docs/tools/build_release_manifest.py.",
+  "description": "ZTAX-QA-001 §31 (QA-REQ-0109 to 0113): a release certification MUST produce a ReleaseCertificationManifest embedding the traceability snapshot and the known-defects/waiver registers as of build time, identifying a rollback/suspension path, and self-hashed for tamper evidence. Built and verified by docs/tools/build_release_manifest.py. v1.1.0 adds the defects field (QA-REQ-0099/0100 blocking count).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -13,6 +13,7 @@
     "traceability",
     "waivers",
     "quarantine",
+    "defects",
     "rollback_ref",
     "manifest_hash"
   ],
@@ -66,6 +67,26 @@
           "items": { "type": "object" }
         },
         "count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "defects": {
+      "description": "docs/defects.yaml's register, embedded as-is (QA-REQ-0111). blocking_count is the number of currently-blocking defects under QA-REQ-0099/0100 (docs/tools/check_defects.py's blocking_defects()), not merely the open count.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["list", "count", "blocking_count"],
+      "properties": {
+        "list": {
+          "type": "array",
+          "items": { "type": "object" }
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocking_count": {
           "type": "integer",
           "minimum": 0
         }

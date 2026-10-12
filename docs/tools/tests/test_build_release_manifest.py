@@ -50,7 +50,10 @@ def base_summary() -> dict:
 def base_waivers() -> dict:
     return {"waivers": [
         {
-            "waiver_id": "ZTAX-WVR-2026-0001", "requirement_id": "ZTAX-TST-REQ-0001",
+            # requirement_id is ZTAX-QA-REQ-0100 on purpose: base_defects()'s
+            # QA-SEV-2 entry references this waiver, and a SEV-2 waiver only
+            # counts as cover when it is for exactly that requirement.
+            "waiver_id": "ZTAX-WVR-2026-0001", "requirement_id": "ZTAX-QA-REQ-0100",
             "scope": "s", "reason": "r", "risk": "k", "risk_owner": "o",
             "compensating_control": "c", "expires_at": "2026-12-31T23:59:59Z",
             "approvers": ["A", "B"], "approved_at": "2026-10-01",
@@ -68,20 +71,34 @@ def base_quarantine() -> dict:
     ]}
 
 
+def base_defects() -> dict:
+    return {"defects": [
+        {
+            # OPEN QA-SEV-2 covered by base_waivers()'s unexpired QA-REQ-0100
+            # waiver -- valid and non-blocking, as of GENERATED_AT's date.
+            "defect_id": "ZTAX-DEF-2026-0001", "severity": "QA-SEV-2", "status": "OPEN",
+            "title": "t", "owner": "o", "opened_at": "2026-10-01",
+            "waiver_id": "ZTAX-WVR-2026-0001",
+        },
+    ]}
+
+
 class Fixture:
     """A throwaway repository: the real schema plus small source registers."""
 
     def __init__(self) -> None:
         self.dir = Path(tempfile.mkdtemp(prefix="ztax-release-manifest-"))
         (self.dir / "docs" / "schema").mkdir(parents=True)
-        shutil.copy(
-            REPO / "docs" / "schema" / "release_manifest.schema.json",
-            self.dir / "docs" / "schema" / "release_manifest.schema.json",
-        )
+        # assemble() calls check_defects.run(root) internally, which needs
+        # defects.schema.json and waivers.schema.json too, not just this
+        # tool's own schema.
+        for name in ("release_manifest.schema.json", "defects.schema.json", "waivers.schema.json"):
+            shutil.copy(REPO / "docs" / "schema" / name, self.dir / "docs" / "schema" / name)
         (self.dir / "docs" / "evidence").mkdir(parents=True)
         self.summary = base_summary()
         self.waivers = base_waivers()
         self.quarantine = base_quarantine()
+        self.defects = base_defects()
 
     def write_sources(self) -> None:
         (self.dir / "docs" / "evidence" / "traceability_summary.json").write_text(
@@ -90,6 +107,8 @@ class Fixture:
             yaml.safe_dump(self.waivers, sort_keys=False), encoding="utf-8")
         (self.dir / "docs" / "quarantine.yaml").write_text(
             yaml.safe_dump(self.quarantine, sort_keys=False), encoding="utf-8")
+        (self.dir / "docs" / "defects.yaml").write_text(
+            yaml.safe_dump(self.defects, sort_keys=False), encoding="utf-8")
 
     def schema(self) -> dict:
         with (self.dir / "docs" / "schema" / "release_manifest.schema.json").open(encoding="utf-8") as f:
@@ -120,6 +139,8 @@ class Assemble(unittest.TestCase):
         self.assertIsNone(m["rollback_ref"])
         self.assertEqual(m["waivers"]["count"], 1)
         self.assertEqual(m["quarantine"]["count"], 1)
+        self.assertEqual(m["defects"]["count"], 1)
+        self.assertEqual(m["defects"]["blocking_count"], 0)
         self.assertEqual(m["traceability"], self.fx.summary)
         self.assertRegex(m["manifest_hash"], r"^[0-9a-f]{64}$")
         findings = brm.check_manifest(m, self.fx.schema(), "test")
@@ -207,6 +228,21 @@ class TamperDetection(unittest.TestCase):
         m["quarantine"]["entries"][0]["owner"] = "someone else"
         self.assertTamperDetected(m)
 
+    def test_tamper_defects_count(self) -> None:
+        m = copy.deepcopy(self.manifest)
+        m["defects"]["count"] = 0
+        self.assertTamperDetected(m)
+
+    def test_tamper_defects_blocking_count(self) -> None:
+        m = copy.deepcopy(self.manifest)
+        m["defects"]["blocking_count"] = 1
+        self.assertTamperDetected(m)
+
+    def test_tamper_embedded_defect_entry(self) -> None:
+        m = copy.deepcopy(self.manifest)
+        m["defects"]["list"][0]["severity"] = "QA-SEV-1"
+        self.assertTamperDetected(m)
+
     def test_tamper_manifest_hash_itself(self) -> None:
         m = copy.deepcopy(self.manifest)
         m["manifest_hash"] = "0" * 64
@@ -270,12 +306,33 @@ class MalformedSources(unittest.TestCase):
             brm.assemble(self.fx.dir, "1.2.3", COMMIT, GENERATED_AT, None)
         self.assertIn("must be a mapping", str(ctx.exception))
 
+    def test_defects_key_missing_raises(self) -> None:
+        self._write("docs/defects.yaml", "not_defects: []\n")
+        with self.assertRaises(brm.ManifestSourceError) as ctx:
+            brm.assemble(self.fx.dir, "1.2.3", COMMIT, GENERATED_AT, None)
+        self.assertIn("defects", str(ctx.exception))
+
+    def test_defects_value_not_a_list_raises(self) -> None:
+        self._write("docs/defects.yaml", "defects: not-a-list\n")
+        with self.assertRaises(brm.ManifestSourceError) as ctx:
+            brm.assemble(self.fx.dir, "1.2.3", COMMIT, GENERATED_AT, None)
+        self.assertIn("must be a list", str(ctx.exception))
+
+    def test_defects_top_level_not_a_mapping_raises(self) -> None:
+        self._write("docs/defects.yaml", "- just\n- a\n- list\n")
+        with self.assertRaises(brm.ManifestSourceError) as ctx:
+            brm.assemble(self.fx.dir, "1.2.3", COMMIT, GENERATED_AT, None)
+        self.assertIn("must be a mapping", str(ctx.exception))
+
     def test_empty_lists_still_build_with_count_zero(self) -> None:
         self._write("docs/waivers.yaml", "waivers: []\n")
         self._write("docs/quarantine.yaml", "quarantine: []\n")
+        self._write("docs/defects.yaml", "defects: []\n")
         m = brm.assemble(self.fx.dir, "1.2.3", COMMIT, GENERATED_AT, None)
         self.assertEqual(m["waivers"]["count"], 0)
         self.assertEqual(m["quarantine"]["count"], 0)
+        self.assertEqual(m["defects"]["count"], 0)
+        self.assertEqual(m["defects"]["blocking_count"], 0)
 
     def test_cli_build_fails_cleanly_on_malformed_waivers(self) -> None:
         self._write("docs/waivers.yaml", "waivers: not-a-list\n")
@@ -307,6 +364,87 @@ class MalformedSources(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertFalse(out.exists())
 
+    def test_cli_build_fails_cleanly_on_malformed_defects(self) -> None:
+        self._write("docs/defects.yaml", "defects: not-a-list\n")
+        out = self.fx.dir / "out" / "release_manifest.json"
+        rc = brm.main([
+            "--root", str(self.fx.dir), "build", "--version", "1.2.3", "--commit", COMMIT,
+            "--out", str(out), "--generated-at", GENERATED_AT,
+        ])
+        self.assertEqual(rc, 1)
+        self.assertFalse(out.exists())
+
+    # ---- a shape-valid-but-gate-invalid defects.yaml must also stop the build ----
+
+    def test_defect_missing_status_raises(self) -> None:
+        broken = {"defects": [
+            {"defect_id": "ZTAX-DEF-2026-0099", "severity": "QA-SEV-2",
+             "title": "t", "owner": "o", "opened_at": "2026-10-01"},
+        ]}
+        self._write("docs/defects.yaml", yaml.safe_dump(broken, sort_keys=False))
+        with self.assertRaises(brm.ManifestSourceError) as ctx:
+            brm.assemble(self.fx.dir, "1.2.3", COMMIT, GENERATED_AT, None)
+        self.assertIn("status", str(ctx.exception))
+
+    def test_cli_build_fails_cleanly_on_defect_missing_status(self) -> None:
+        broken = {"defects": [
+            {"defect_id": "ZTAX-DEF-2026-0099", "severity": "QA-SEV-2",
+             "title": "t", "owner": "o", "opened_at": "2026-10-01"},
+        ]}
+        self._write("docs/defects.yaml", yaml.safe_dump(broken, sort_keys=False))
+        out = self.fx.dir / "out" / "release_manifest.json"
+        rc = brm.main([
+            "--root", str(self.fx.dir), "build", "--version", "1.2.3", "--commit", COMMIT,
+            "--out", str(out), "--generated-at", GENERATED_AT,
+        ])
+        self.assertEqual(rc, 1)
+        self.assertFalse(out.exists())
+
+    def test_sev1_with_waiver_id_raises(self) -> None:
+        broken = {"defects": [
+            {"defect_id": "ZTAX-DEF-2026-0099", "severity": "QA-SEV-1", "status": "OPEN",
+             "title": "t", "owner": "o", "opened_at": "2026-10-01", "waiver_id": "ZTAX-WVR-2026-0001"},
+        ]}
+        self._write("docs/defects.yaml", yaml.safe_dump(broken, sort_keys=False))
+        with self.assertRaises(brm.ManifestSourceError) as ctx:
+            brm.assemble(self.fx.dir, "1.2.3", COMMIT, GENERATED_AT, None)
+        self.assertIn("QA-REQ-0099 has no exception", str(ctx.exception))
+
+    def test_cli_build_fails_cleanly_on_sev1_with_waiver_id(self) -> None:
+        broken = {"defects": [
+            {"defect_id": "ZTAX-DEF-2026-0099", "severity": "QA-SEV-1", "status": "OPEN",
+             "title": "t", "owner": "o", "opened_at": "2026-10-01", "waiver_id": "ZTAX-WVR-2026-0001"},
+        ]}
+        self._write("docs/defects.yaml", yaml.safe_dump(broken, sort_keys=False))
+        out = self.fx.dir / "out" / "release_manifest.json"
+        rc = brm.main([
+            "--root", str(self.fx.dir), "build", "--version", "1.2.3", "--commit", COMMIT,
+            "--out", str(out), "--generated-at", GENERATED_AT,
+        ])
+        self.assertEqual(rc, 1)
+        self.assertFalse(out.exists())
+
+    # ---- generated_at must be RFC 3339 UTC to whole seconds ---------------
+
+    def test_generated_at_with_fractional_seconds_raises(self) -> None:
+        with self.assertRaises(brm.ManifestSourceError) as ctx:
+            brm.assemble(self.fx.dir, "1.2.3", COMMIT, "2026-10-12T10:00:00.123Z", None)
+        self.assertIn("RFC 3339 UTC to whole seconds", str(ctx.exception))
+
+    def test_generated_at_not_a_date_raises(self) -> None:
+        with self.assertRaises(brm.ManifestSourceError) as ctx:
+            brm.assemble(self.fx.dir, "1.2.3", COMMIT, "not-a-date", None)
+        self.assertIn("RFC 3339 UTC to whole seconds", str(ctx.exception))
+
+    def test_cli_build_fails_cleanly_on_generated_at_with_fractional_seconds(self) -> None:
+        out = self.fx.dir / "out" / "release_manifest.json"
+        rc = brm.main([
+            "--root", str(self.fx.dir), "build", "--version", "1.2.3", "--commit", COMMIT,
+            "--out", str(out), "--generated-at", "2026-10-12T10:00:00.123Z",
+        ])
+        self.assertEqual(rc, 1)
+        self.assertFalse(out.exists())
+
 
 # ---------------------------------------------------------------------------
 # known-answer: pins the canonicalization itself, not just "it's stable"
@@ -324,8 +462,12 @@ class KnownAnswerHash(unittest.TestCase):
 
     # Computed once via assemble() with: version "1.2.3", commit COMMIT,
     # generated_at GENERATED_AT, rollback_ref "r", and exactly the
-    # base_summary() / base_waivers() / base_quarantine() fixtures above.
-    KNOWN_HASH = "719f2d1787b1db15a7f996690756fa5cc056fc6e8a57a040b5c892ae7fc52747"
+    # base_summary() / base_waivers() / base_quarantine() / base_defects()
+    # fixtures above. Changed from the prior pin (719f2d17...) because
+    # schema_version moved to "1.1.0" and the new "defects" field was added
+    # to the hashed body -- an intentional canonicalization-input change,
+    # not a drift to silently re-pin.
+    KNOWN_HASH = "7002e1bbb74abc336179efba108586e028fa8f8d2a8e758b8097472eab681b3a"
 
     def setUp(self) -> None:
         self.fx = Fixture()
@@ -345,15 +487,16 @@ class KnownAnswerHash(unittest.TestCase):
 
 
 class RealRegistersInRepo(unittest.TestCase):
-    """Builds against the REAL docs/waivers.yaml and docs/quarantine.yaml.
-    Only the traceability snapshot is a fixture, since that file is
-    generated by a separate tool and is not guaranteed to exist (or to have
-    any particular content) in a fresh checkout."""
+    """Builds against the REAL docs/waivers.yaml, docs/quarantine.yaml and
+    docs/defects.yaml. Only the traceability snapshot is a fixture, since
+    that file is generated by a separate tool and is not guaranteed to
+    exist (or to have any particular content) in a fresh checkout."""
 
     def setUp(self) -> None:
         self.fx = Fixture()  # schema + docs/evidence dir, but no write_sources()
         shutil.copy(REPO / "docs" / "waivers.yaml", self.fx.dir / "docs" / "waivers.yaml")
         shutil.copy(REPO / "docs" / "quarantine.yaml", self.fx.dir / "docs" / "quarantine.yaml")
+        shutil.copy(REPO / "docs" / "defects.yaml", self.fx.dir / "docs" / "defects.yaml")
         (self.fx.dir / "docs" / "evidence" / "traceability_summary.json").write_text(
             json.dumps(base_summary()), encoding="utf-8")
 
@@ -367,8 +510,11 @@ class RealRegistersInRepo(unittest.TestCase):
 
         real_waivers = yaml.safe_load((REPO / "docs" / "waivers.yaml").read_text(encoding="utf-8"))
         real_quarantine = yaml.safe_load((REPO / "docs" / "quarantine.yaml").read_text(encoding="utf-8"))
+        real_defects = yaml.safe_load((REPO / "docs" / "defects.yaml").read_text(encoding="utf-8"))
         self.assertEqual(m["waivers"]["count"], len(real_waivers["waivers"]))
         self.assertEqual(m["quarantine"]["count"], len(real_quarantine["quarantine"]))
+        self.assertEqual(m["defects"]["count"], len(real_defects["defects"]))
+        self.assertEqual(m["defects"]["count"], 0)  # docs/defects.yaml starts empty
 
 
 class SchemaRejection(unittest.TestCase):
@@ -484,6 +630,103 @@ class CliBuildAndVerify(unittest.TestCase):
             "--rollback-ref", "docs/runbooks/rollback.md", "--require-rollback",
         ])
         self.assertEqual(rc, 0)
+
+
+# ---------------------------------------------------------------------------
+# --require-releasable (QA-REQ-0099/0100)
+# ---------------------------------------------------------------------------
+
+
+class RequireReleasable(unittest.TestCase):
+    def setUp(self) -> None:
+        self.fx = Fixture()
+
+    def tearDown(self) -> None:
+        self.fx.close()
+
+    def test_require_releasable_succeeds_when_nothing_blocks(self) -> None:
+        # Fixture's default defect is a covered SEV-2 -- not blocking.
+        self.fx.write_sources()
+        out = self.fx.dir / "out" / "release_manifest.json"
+        rc = brm.main([
+            "--root", str(self.fx.dir), "build", "--version", "1.2.3", "--commit", COMMIT,
+            "--out", str(out), "--generated-at", GENERATED_AT, "--require-releasable",
+        ])
+        self.assertEqual(rc, 0)
+        self.assertTrue(out.is_file())
+
+    def test_require_releasable_fails_on_open_sev1(self) -> None:
+        self.fx.defects = {"defects": [
+            {"defect_id": "ZTAX-DEF-2026-0002", "severity": "QA-SEV-1", "status": "OPEN",
+             "title": "t", "owner": "o", "opened_at": "2026-10-01"},
+        ]}
+        self.fx.write_sources()
+        out = self.fx.dir / "out" / "release_manifest.json"
+        rc = brm.main([
+            "--root", str(self.fx.dir), "build", "--version", "1.2.3", "--commit", COMMIT,
+            "--out", str(out), "--generated-at", GENERATED_AT, "--require-releasable",
+        ])
+        self.assertEqual(rc, 1)
+        self.assertFalse(out.exists())
+
+    def test_blocking_without_require_releasable_warns_but_succeeds(self) -> None:
+        self.fx.defects = {"defects": [
+            {"defect_id": "ZTAX-DEF-2026-0002", "severity": "QA-SEV-1", "status": "OPEN",
+             "title": "t", "owner": "o", "opened_at": "2026-10-01"},
+        ]}
+        self.fx.write_sources()
+        out = self.fx.dir / "out" / "release_manifest.json"
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = brm.main([
+                "--root", str(self.fx.dir), "build", "--version", "1.2.3", "--commit", COMMIT,
+                "--out", str(out), "--generated-at", GENERATED_AT,
+            ])
+        self.assertEqual(rc, 0)
+        self.assertIn("WARNING:", buf.getvalue())
+        self.assertTrue(out.is_file())
+        manifest = json.loads(out.read_text(encoding="utf-8"))
+        self.assertEqual(manifest["defects"]["blocking_count"], 1)
+
+
+# ---------------------------------------------------------------------------
+# expiry is judged against generated_at as a full instant, not its date
+# ---------------------------------------------------------------------------
+
+
+class ExpiryBoundaryThroughBlockingCount(unittest.TestCase):
+    """The same same-day expiry boundary as
+    test_check_defects.py's TestExpiry, but through assemble()'s own
+    blocking_count -- proving generated_at is parsed as a full RFC 3339
+    instant, not truncated to its date, before being handed to
+    check_defects.blocking_defects()."""
+
+    def setUp(self) -> None:
+        self.fx = Fixture()
+        self.fx.waivers = {"waivers": [
+            {
+                "waiver_id": "ZTAX-WVR-2026-0001", "requirement_id": "ZTAX-QA-REQ-0100",
+                "scope": "s", "reason": "r", "risk": "k", "risk_owner": "o",
+                "compensating_control": "c", "expires_at": "2026-10-12T08:00:00Z",
+                "approvers": ["A", "B"], "approved_at": "2026-10-01",
+            },
+        ]}
+        self.fx.defects = {"defects": [
+            {"defect_id": "ZTAX-DEF-2026-0001", "severity": "QA-SEV-2", "status": "OPEN",
+             "title": "t", "owner": "o", "opened_at": "2026-10-01", "waiver_id": "ZTAX-WVR-2026-0001"},
+        ]}
+        self.fx.write_sources()
+
+    def tearDown(self) -> None:
+        self.fx.close()
+
+    def test_not_yet_expired_one_hour_before_the_instant(self) -> None:
+        m = brm.assemble(self.fx.dir, "1.2.3", COMMIT, "2026-10-12T07:00:00Z", None)
+        self.assertEqual(m["defects"]["blocking_count"], 0)
+
+    def test_expired_a_few_hours_after_the_instant_same_calendar_day(self) -> None:
+        m = brm.assemble(self.fx.dir, "1.2.3", COMMIT, "2026-10-12T12:00:00Z", None)
+        self.assertEqual(m["defects"]["blocking_count"], 1)
 
 
 if __name__ == "__main__":
