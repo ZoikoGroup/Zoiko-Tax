@@ -15,7 +15,7 @@ the other does not.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 
 
@@ -67,6 +67,12 @@ class Provenance:
     risk_tier: RiskTier
     authority_outcome: AuthorityOutcome
     ai_train_version: str
+    # data_classes carries every PRIV-001 class present in the request,
+    # mirroring Go's GovernanceContext.DataClasses. When empty, authorise()
+    # falls back to (data_class,) so all callers that pre-date this field
+    # continue to work without change. The trailing default makes this field
+    # backward-compatible: existing Provenance() calls need no update.
+    data_classes: tuple[str, ...] = field(default_factory=tuple)
 
     def validate(self) -> None:
         """Raise ``ValueError`` if this context cannot be acted on.

@@ -128,6 +128,7 @@ class Gateway:
             risk_tier=g.risk_tier,
             authority_outcome=g.authority_outcome,
             ai_train_version=self._train,
+            data_classes=g.data_classes,
         )
 
         def work(_: UseCase) -> Reply:
@@ -255,7 +256,7 @@ def load_config(path: Path) -> tuple[UseCaseRegistry, RoutingTable]:
               "max_risk_tier":        str,   # T0-T4
               "max_authority":        str,   # A0-A4
               "permitted_regions":    [str], # optional; empty = no region allowed
-              "permitted_data_classes": [str], # optional; informational only
+              "permitted_data_classes": [str], # optional; absent = deny all
               "suspended":            bool,  # optional; default false
               "route": {
                 "model_profile":    str,
@@ -274,6 +275,7 @@ def load_config(path: Path) -> tuple[UseCaseRegistry, RoutingTable]:
     registry = UseCaseRegistry()
     routes: dict[str, Route] = {}
     for entry in doc.get("use_cases", []):
+        dc_raw = entry.get("permitted_data_classes")
         uc = UseCase(
             use_case_id=entry["use_case_id"],
             owner=entry["owner"],
@@ -281,6 +283,7 @@ def load_config(path: Path) -> tuple[UseCaseRegistry, RoutingTable]:
             max_risk_tier=RiskTier(entry["max_risk_tier"]),
             max_authority=AuthorityOutcome(entry["max_authority"]),
             permitted_regions=frozenset(entry.get("permitted_regions", [])),
+            permitted_data_classes=frozenset(dc_raw) if dc_raw is not None else None,
             suspended=bool(entry.get("suspended", False)),
         )
         registry.register(uc)

@@ -119,6 +119,7 @@ def _registry_for(provenance: Provenance) -> UseCaseRegistry:
                 max_risk_tier=RiskTier.T4,
                 max_authority=AuthorityOutcome.A4,
                 permitted_regions=frozenset({provenance.region}),
+                permitted_data_classes=frozenset({provenance.data_class}),
             )
         ]
     )

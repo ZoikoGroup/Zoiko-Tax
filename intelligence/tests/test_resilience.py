@@ -136,6 +136,9 @@ def _use_cases(prov: Provenance = _GOVERNED_PROVENANCE) -> UseCaseRegistry:
                 max_risk_tier=RiskTier.T4,
                 max_authority=AuthorityOutcome.A4,
                 permitted_regions=frozenset({prov.region}),
+                # _GOVERNED_PROVENANCE carries data_class="INTERNAL"; must be
+                # in the allowlist for authorise_edge to pass the data-class check.
+                permitted_data_classes=frozenset({prov.data_class}),
             )
         ]
     )
@@ -1685,6 +1688,9 @@ def test_authorise_edge_refuses_authority_above_use_case_ceiling() -> None:
         max_risk_tier=RiskTier.T4,
         max_authority=AuthorityOutcome.A1,
         permitted_regions=frozenset({_GOVERNED_PROVENANCE.region}),
+        # prov_a2 carries data_class="INTERNAL"; authority check fires first
+        # (A2 > A1 ceiling), but the allowlist must be consistent.
+        permitted_data_classes=frozenset({_GOVERNED_PROVENANCE.data_class}),
     )
     reg = UseCaseRegistry([low_ceiling_uc])
     s = _snapshot(registry=reg)

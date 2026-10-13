@@ -257,6 +257,8 @@ class TestFakeRuntimeWithGateway:
                 max_risk_tier=RiskTier.T2,
                 max_authority=AuthorityOutcome.A1,
                 permitted_regions=frozenset({"euc1-dev-01"}),
+                # calls carry data_classes=["P0"]; must be in the allowlist.
+                permitted_data_classes=frozenset({"P0"}),
             )
         )
         routes = RoutingTable({"classification-review": _ROUTE})
