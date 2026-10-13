@@ -15,11 +15,14 @@
 # refusing it is the intent — the origin rule gives the readable message and
 # needs no network, this one is the cryptographic check.
 #
-# The attestation half needs a step release.yml does not have yet (buildx's
-# provenance is attached unsigned, and an unsigned attestation proves nothing
-# at admission). policy/README.md gives the step. Until it lands this policy
-# refuses every image, including correctly signed ones: fail closed, which is
-# the right state for a gate whose evidence does not yet exist.
+# buildx attaches provenance unsigned, and an unsigned attestation proves
+# nothing at admission, so release.yml's `attest the provenance` step signs
+# it separately with the same identity this policy checks (cosign attest
+# --type slsaprovenance, over the digest-pinned image). Until that step
+# lands for an image, or runs under a different identity, this policy
+# refuses it, including one correctly signed by `cosign sign` alone:
+# fail closed, which is the right state for a gate whose evidence is
+# missing or does not match.
 apiVersion: policies.kyverno.io/v1
 kind: ImageValidatingPolicy
 metadata:

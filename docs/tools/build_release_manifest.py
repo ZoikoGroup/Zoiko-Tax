@@ -24,8 +24,9 @@ Two modes:
             carrying a SHA-256 hash (QA-REQ-0113) over every other field.
             The defects field's blocking_count reuses
             docs/tools/check_defects.py's own blocking_defects(), judged as
-            of the manifest's own generated_at date, rather than
-            re-implementing the QA-SEV-1/QA-SEV-2 blocking rule here.
+            of the manifest's own generated_at -- a full UTC instant, not
+            just its date -- rather than re-implementing the
+            QA-SEV-1/QA-SEV-2 blocking rule here.
 
     verify  Recomputes that hash against a manifest file and reports
             whether it is still intact. This is the tamper-evidence proof:
