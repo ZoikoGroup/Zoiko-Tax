@@ -495,28 +495,80 @@ jobs:
       # trace that it ever ran. A typo in --env-var above, or a regression in
       # the skip script's variable scope (QA audit: this is exactly what was
       # checked for and found correct when these folders were added), would
-      # both go unnoticed without this. Checks one marker request per folder
-      # actually executed, rather than a request-count total that would need
-      # updating every time an unrelated folder's size changes.
+      # both go unnoticed without this. Reads the real collection off disk
+      # and requires every request under a folder named "06 ..." or "07 ..."
+      # to appear in newman's own executions -- not a hardcoded marker list,
+      # so a request added to either folder is covered automatically, with
+      # no second place to remember to update.
       - name: folders 06 and 07 actually ran, not silently skipped
         run: |
           python3 - <<'PY'
           import json
           import sys
 
+          collection = json.load(open("backend/postman/ZoikoTax.postman_collection.json", encoding="utf-8"))
+          expected = [
+              item["name"]
+              for folder in collection["item"]
+              if folder["name"][:2] in ("06", "07")
+              for item in folder["item"]
+          ]
+
           report = json.load(open("newman-report.json", encoding="utf-8"))
           executed = {e["item"]["name"] for e in report["run"]["executions"]}
-          required = [
-              "Provision an OPERATOR for determination",  # 06, first item
-              "Sign in as the OPERATOR",                  # 06, second item
-              "Idempotency · 1 · first commit with a fixed key",  # 07, first item
-          ]
-          missing = [name for name in required if name not in executed]
+
+          missing = [name for name in expected if name not in executed]
           if missing:
               print("::error::determination folders 06/07 were skipped -- missing executions: "
                     + ", ".join(missing))
               sys.exit(1)
-          print(f"folders 06/07 ran: {len(executed)} requests executed in total")
+          print(f"folders 06/07 ran: {len(expected)} of {len(expected)} expected requests executed")
+          PY
+
+      # Runs whenever newman itself failed (a real assertion failure) or the
+      # guard above did (a silent skip) -- the two ways this job goes red.
+      # The guard's own message already names what was skipped; this is for
+      # the other case, where something ran and answered wrong. Reads
+      # newman-report.json defensively: it may not exist if newman never
+      # got far enough to write one.
+      #
+      # request.url in newman's own JSON report has no "raw" field (verified
+      # against a real newman run, not assumed) -- only protocol/host/path,
+      # which this reassembles. The response body is response.stream, a
+      # serialized Node Buffer ({"type": "Buffer", "data": [byte, ...]}), not
+      # response.body -- also verified directly rather than guessed.
+      - name: what failed, if anything did
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import json
+
+          try:
+              report = json.load(open("newman-report.json", encoding="utf-8"))
+          except FileNotFoundError:
+              print("newman-report.json does not exist -- newman did not get far enough to write one.")
+              raise SystemExit
+
+          for e in report["run"]["executions"]:
+              failed = [a for a in (e.get("assertions") or []) if a.get("error")]
+              if not failed:
+                  continue
+              req = e.get("request") or {}
+              u = req.get("url") or {}
+              host = ".".join(u.get("host") or [])
+              path = "/".join(u.get("path") or [])
+              url = f"{u.get('protocol', '')}://{host}/{path}" if host else str(u)
+              resp = e.get("response") or {}
+              print(f"\n--- {e['item']['name']} ---")
+              print(f"{req.get('method', '?')} {url}")
+              print(f"response: {resp.get('code', '?')}")
+              for a in failed:
+                  print(f"  FAILED: {a.get('assertion', '?')}: {a['error'].get('message', '')}")
+              stream = resp.get("stream")
+              if isinstance(stream, dict) and "data" in stream:
+                  body = bytes(stream["data"]).decode("utf-8", errors="replace")
+                  if body:
+                      print(f"  body (first 800 chars): {body[:800]}")
           PY
 
       - name: logs on failure

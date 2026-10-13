@@ -3757,7 +3757,7 @@
                   "pm.test('listObligations returns a status the contract declares', function () {",
                   "  pm.expect(pm.response.code).to.be.oneOf([200]);",
                   "});",
-                  "pm.test('ZTAX-OBL-001 §4 — the commit assessed into the period's return', function () {",
+                  "pm.test('ZTAX-OBL-001 §4 — the commit assessed into the return for its period', function () {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.json().obligations.length).to.be.at.least(1);",
                   "});",
@@ -5484,7 +5484,7 @@
     },
     {
       "name": "07 · Determination conformance — needs content and an OPERATOR",
-      "description": "The ADR-0013 and ADR-0011 controls on `POST /v1/transactions:commit`, each asserted against the running endpoint.\n\nRequests 1 to 4 share one idempotency key, minted once per run into `reusedKey`, so a second run against the same cell exercises the same four outcomes rather than replaying the first run's.\n\nSkipped unless `runDetermination` is `\"true\"`, for the reason `06` gives.",
+      "description": "The ADR-0013 and ADR-0011 controls on `POST /v1/transactions:commit`, each asserted against the running endpoint.\n\nRequests 1 to 4 share one idempotency key, minted once per run into `reusedKey`, so a second run against the same cell exercises the same four outcomes rather than replaying the first run's.\n\nNone of these bodies name `accumulators`: `threshold.ecoLevyYtd` is bound to the cell by the active pack (content/packs/eu-vat/fiscal.json), and the contract itself says a bound accumulator supplied in the request is refused `400 INVALID_VALUE` (ZTAX-DET-REQ-0002) -- naming it here would make every one of requests 1-8 fail, or pass, for that reason instead of the one each is actually testing. Request 9 is the one request that deliberately does name it, to assert that refusal on purpose.\n\nSkipped unless `runDetermination` is `\"true\"`, for the reason `06` gives.",
       "item": [
         {
           "name": "Idempotency · 1 · first commit with a fixed key",
@@ -5506,7 +5506,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"0.00\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5562,7 +5562,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"0.00\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5618,7 +5618,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"99.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"0.00\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"99.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5646,7 +5646,7 @@
                 "exec": [
                   "pm.test('a reused key is refused, not replayed', function () {",
                   "  pm.response.to.have.status(409);",
-                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"IDEMPOTENCY_KEY_REUSE\"]);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql(\"IDEMPOTENCY_KEY_REUSE\");",
                   "});"
                 ]
               }
@@ -5673,7 +5673,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.0\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"0.00\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.0\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5701,7 +5701,7 @@
                 "exec": [
                   "pm.test('scale is part of the request', function () {",
                   "  pm.response.to.have.status(409);",
-                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"IDEMPOTENCY_KEY_REUSE\"]);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql(\"IDEMPOTENCY_KEY_REUSE\");",
                   "});"
                 ]
               }
@@ -5724,7 +5724,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"0.00\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0001/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5752,7 +5752,7 @@
                 "exec": [
                   "pm.test('a keyless commit is refused', function () {",
                   "  pm.response.to.have.status(400);",
-                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"IDEMPOTENCY_KEY_REQUIRED\"]);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql(\"IDEMPOTENCY_KEY_REQUIRED\");",
                   "});"
                 ]
               }
@@ -5779,7 +5779,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": 45.0, \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  },\n  \"accumulators\": { \"threshold.ecoLevyYtd\": { \"amount\": \"0.00\", \"currency\": \"EUR\" } }\n}",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": 45.0, \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5796,7 +5796,7 @@
                 "transactions:commit"
               ]
             },
-            "description": "**The request in this collection that matters most.**\n\n`\"amount\": 45.0` must be rejected, never coerced. A 2xx here is a Critical finding rather than a test failure: RFC 8785 serializes JSON numbers through IEEE 754 doubles (ADR-0011 §1.1), so an amount that is ever a JSON number has lost precision before canonicalization sees it — and the loss is invisible, because 45.0 survives and 0.1 does not.\n\nThe body is raw text rather than a structured one, because the whole point is to send a token a correct client cannot produce."
+            "description": "**The request in this collection that matters most.**\n\n`\"amount\": 45.0` must be rejected, never coerced. A 2xx here is a Critical finding rather than a test failure: RFC 8785 serializes JSON numbers through IEEE 754 doubles (ADR-0011 §1.1), so an amount that is ever a JSON number has lost precision before canonicalization sees it — and the loss is invisible, because 45.0 survives and 0.1 does not.\n\nThe body is raw text rather than a structured one, because the whole point is to send a token a correct client cannot produce. A JSON number where the contract names a string is a decode-time type mismatch (`gen.MoneyValue.Amount` is `string`), refused as `MALFORMED_REQUEST` before the request body is even validated as a determination."
           },
           "response": [],
           "event": [
@@ -5807,7 +5807,7 @@
                 "exec": [
                   "pm.test('a JSON number is never an amount', function () {",
                   "  pm.response.to.have.status(400);",
-                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"MALFORMED_REQUEST\", \"INVALID_VALUE\"]);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql(\"MALFORMED_REQUEST\");",
                   "});"
                 ]
               }
@@ -5834,7 +5834,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": null, \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  },\n  \"accumulators\": { \"threshold.ecoLevyYtd\": { \"amount\": \"0.00\", \"currency\": \"EUR\" } }\n}",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": null, \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5851,7 +5851,7 @@
                 "transactions:commit"
               ]
             },
-            "description": "ADR-0011 §2.1 P3 on the path where it costs the most. \"The amount was explicitly cleared\" and \"the integration did not send an amount\" are different events with different fiscal consequences."
+            "description": "ADR-0011 §2.1 P3 on the path where it costs the most. \"The amount was explicitly cleared\" and \"the integration did not send an amount\" are different events with different fiscal consequences. `null` decodes into `Amount string` as the zero value `\"\"` -- `encoding/json` accepts `null` for any type -- so the request reaches `parseDecimal` (determination.go), which refuses an empty string as `INVALID_VALUE`, not a decode-time `MALFORMED_REQUEST`."
           },
           "response": [],
           "event": [
@@ -5862,7 +5862,7 @@
                 "exec": [
                   "pm.test('null is refused rather than normalised', function () {",
                   "  pm.response.to.have.status(400);",
-                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"MALFORMED_REQUEST\", \"INVALID_VALUE\", \"MISSING_FIELD\"]);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql(\"INVALID_VALUE\");",
                   "});"
                 ]
               }
@@ -5889,7 +5889,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": \"45.00\", \"Currency\": \"USD\", \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  },\n  \"accumulators\": { \"threshold.ecoLevyYtd\": { \"amount\": \"0.00\", \"currency\": \"EUR\" } }\n}",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0002/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": { \"line.netAmount\": { \"amount\": \"45.00\", \"Currency\": \"USD\", \"currency\": \"EUR\" } },\n    \"quantities\": { \"line.quantity\": { \"value\": \"1\", \"unit\": \"EA\" } },\n    \"flags\": { \"line.reducedRateApplies\": false, \"line.exemptCertificateHeld\": false }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -5917,7 +5917,62 @@
                 "exec": [
                   "pm.test('an undeclared nested field is refused', function () {",
                   "  pm.response.to.have.status(400);",
-                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"UNKNOWN_FIELD\"]);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql(\"UNKNOWN_FIELD\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ZTAX-DET-REQ-0002 · a bound accumulator supplied is refused",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0003/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"0.00\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "ZTAX-DET-REQ-0002: the cell reads a bound accumulator from its own store under lock; a caller-supplied value for one is refused, not merged or preferred. This is the one request in the folder that deliberately names `threshold.ecoLevyYtd` -- every other request omits it for exactly this reason."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('a value supplied for a bound accumulator is refused', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql(\"INVALID_VALUE\");",
                   "});"
                 ]
               }
@@ -6597,6 +6652,11 @@
     {
       "key": "runId",
       "value": "",
+      "type": "string"
+    },
+    {
+      "key": "itemId",
+      "value": "00000000-0000-7000-8000-000000000000",
       "type": "string"
     },
     {

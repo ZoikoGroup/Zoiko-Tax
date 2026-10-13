@@ -318,7 +318,7 @@ const OPERATION_TESTS = {
     "});",
   ],
   listObligations: [
-    "pm.test('ZTAX-OBL-001 §4 — the commit assessed into the period\'s return', function () {",
+    "pm.test('ZTAX-OBL-001 §4 — the commit assessed into the return for its period', function () {",
     "  pm.response.to.have.status(200);",
     "  pm.expect(pm.response.json().obligations.length).to.be.at.least(1);",
     "});",
@@ -991,6 +991,11 @@ function variables(overlay, contractDigest, local) {
     { key: "period", value: "2000-01", type: "string" },
     { key: "requestId", value: "", type: "string" },
     { key: "runId", value: "", type: "string" },
+    // Well-formed and nothing's, the same pattern as `decisionId`: a fresh
+    // run's own reconciliation has no exception to resolve yet, so
+    // `resolveReconciliationItem` names an item that does not exist and the
+    // response is 404, exactly as its description says.
+    { key: "itemId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
     { key: "holdId", value: "", type: "string" },
     { key: "authorizationId", value: "", type: "string" },
     // Minted once per run by `07`, and reused by the requests that must share it.
@@ -1032,6 +1037,32 @@ function localBootstrap(composePath) {
   return local;
 }
 
+// A collection-level "function (){ ... }" script that fails to parse stays
+// quiet until newman actually runs that request -- a missing-paren or a
+// stray apostrophe inside a single-quoted test name shows up as a cryptic
+// "SyntaxError: missing ) after argument list" in CI, with no indication of
+// which request it came from. Compiling every event script here, right
+// after the collection is built, turns that into a generation-time failure
+// that names the request. `new Function` only compiles the body -- it is
+// never called, so this cannot have a side effect even if a script does.
+function checkScriptsParse(collection) {
+  const walk = (items, trail) => {
+    for (const it of items) {
+      const here = trail.concat(it.name);
+      for (const ev of it.event ?? []) {
+        const code = (ev.script?.exec ?? []).join("\n");
+        try {
+          new Function(code); // eslint-disable-line no-new-func -- parsed, never called
+        } catch (err) {
+          throw new Error(`${ev.listen} script for "${here.join(" / ")}" does not parse: ${err.message}`);
+        }
+      }
+      if (it.item) walk(it.item, here);
+    }
+  };
+  walk(collection.item, []);
+}
+
 function main(argv) {
   const check = argv.includes("--check");
   const [source, target] = argv.filter((a) => !a.startsWith("--"));
@@ -1047,7 +1078,9 @@ function main(argv) {
   };
 
   const local = localBootstrap(join(here, "..", "..", "docker-compose.yml"));
-  const rendered = JSON.stringify(build(doc, overlay, scripts, { path: source, local }), null, 2) + "\n";
+  const collection = build(doc, overlay, scripts, { path: source, local });
+  checkScriptsParse(collection);
+  const rendered = JSON.stringify(collection, null, 2) + "\n";
   const digest = createHash("sha256").update(rendered).digest("hex");
   const hashLine = `${digest}  ${basename(target)}\n`;
 
