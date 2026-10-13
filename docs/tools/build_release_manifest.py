@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Builds and verifies the ReleaseCertificationManifest — QA-REQ-0109 to
 0113 (0112 partly: a declared ``rollback_ref``, not yet a documented
-procedure).
+procedure), and gates on QA-REQ-0099/0100 via ``--require-releasable``.
 
     "Release certification MUST produce a ReleaseCertificationManifest."
     "ReleaseCertificationManifest MUST include traceability snapshot."
@@ -18,10 +18,15 @@ so a test never depends on wall-clock time.
 
 Two modes:
 
-    build   Reads docs/evidence/traceability_summary.json, docs/waivers.yaml
-            and docs/quarantine.yaml as they are -- none of the three is
-            re-derived here -- and writes one JSON manifest carrying a
-            SHA-256 hash (QA-REQ-0113) over every other field.
+    build   Reads docs/evidence/traceability_summary.json, docs/waivers.yaml,
+            docs/quarantine.yaml and docs/defects.yaml as they are -- none
+            of the four is re-derived here -- and writes one JSON manifest
+            carrying a SHA-256 hash (QA-REQ-0113) over every other field.
+            The defects field's blocking_count reuses
+            docs/tools/check_defects.py's own blocking_defects(), judged as
+            of the manifest's own generated_at -- a full UTC instant, not
+            just its date -- rather than re-implementing the
+            QA-SEV-1/QA-SEV-2 blocking rule here.
 
     verify  Recomputes that hash against a manifest file and reports
             whether it is still intact. This is the tamper-evidence proof:
@@ -46,15 +51,17 @@ from pathlib import Path
 import jsonschema
 import yaml
 
-SCHEMA_VERSION = "1.0.0"
+import check_defects
+
+SCHEMA_VERSION = "1.1.0"
 
 
 class ManifestSourceError(ValueError):
-    """A source register (docs/waivers.yaml or docs/quarantine.yaml) is not
-    shaped as assemble() requires: a mapping with a list under the expected
-    top-level key. An empty list is fine; a missing key, a non-mapping
-    document or a non-list value is not -- those are silently-wrong input,
-    not an empty register."""
+    """A source register (docs/waivers.yaml, docs/quarantine.yaml or
+    docs/defects.yaml) is not shaped as assemble() requires: a mapping with
+    a list under the expected top-level key. An empty list is fine; a
+    missing key, a non-mapping document or a non-list value is not --
+    those are silently-wrong input, not an empty register."""
 
 
 @dataclass
@@ -140,11 +147,19 @@ def _require_list(doc: object, key: str, path: Path) -> list:
 
 
 def assemble(root: Path, version: str, commit: str, generated_at: str, rollback_ref: str | None) -> dict:
-    """Reads the three existing registers as-is and assembles the manifest
+    """Reads the four existing registers as-is and assembles the manifest
     body, then seals it with manifest_hash. Raises FileNotFoundError if the
     traceability snapshot has never been generated, or ManifestSourceError
     if docs/waivers.yaml or docs/quarantine.yaml is not a mapping with a
-    list under its expected key."""
+    list under its expected key, or if docs/defects.yaml fails that same
+    shape check or check_defects.py's own gate (schema, duplicate IDs, the
+    two severity-specific waiver rules) -- a manifest is never built from
+    an invalid defects register, and blocking_defects() never sees a
+    malformed entry.
+
+    blocking_count is judged as of generated_at itself -- a full instant,
+    not just its date -- via check_defects.blocking_defects(). The
+    QA-SEV-1/QA-SEV-2 blocking rule itself lives there and only there."""
     summary_path = root / "docs" / "evidence" / "traceability_summary.json"
     if not summary_path.is_file():
         raise FileNotFoundError(
@@ -158,6 +173,24 @@ def assemble(root: Path, version: str, commit: str, generated_at: str, rollback_
     quarantine_path = root / "docs" / "quarantine.yaml"
     quarantine_list = _require_list(_read_yaml(quarantine_path), "quarantine", quarantine_path)
 
+    defects_path = root / "docs" / "defects.yaml"
+    defects_list = _require_list(_read_yaml(defects_path), "defects", defects_path)
+
+    defects_findings = check_defects.run(root)
+    if defects_findings.errors:
+        raise ManifestSourceError(
+            f"{defects_path} failed the defects gate:\n" + "\n".join(defects_findings.errors)
+        )
+
+    try:
+        as_of = dt.datetime.strptime(generated_at, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=dt.UTC)
+    except ValueError:
+        raise ManifestSourceError(
+            "--generated-at / generated_at must be RFC 3339 UTC to whole seconds, "
+            f"e.g. 2026-10-12T10:00:00Z; got {generated_at!r}"
+        ) from None
+    blocking = check_defects.blocking_defects(root, as_of)
+
     body = {
         "schema_version": SCHEMA_VERSION,
         "version": version,
@@ -166,6 +199,7 @@ def assemble(root: Path, version: str, commit: str, generated_at: str, rollback_
         "traceability": traceability,
         "waivers": {"list": waivers_list, "count": len(waivers_list)},
         "quarantine": {"entries": quarantine_list, "count": len(quarantine_list)},
+        "defects": {"list": defects_list, "count": len(defects_list), "blocking_count": len(blocking)},
         "rollback_ref": rollback_ref,
     }
     return {**body, "manifest_hash": compute_hash(body)}
@@ -188,6 +222,14 @@ def cmd_build(args: argparse.Namespace) -> int:
                   file=sys.stderr)
             return 1
         print("WARNING: QA-REQ-0112 open: no rollback_ref")
+
+    blocking_count = manifest["defects"]["blocking_count"]
+    if blocking_count > 0:
+        if args.require_releasable:
+            print(f"build: QA-REQ-0099/0100 unmet: {blocking_count} defect(s) are blocking, "
+                  "and --require-releasable was given", file=sys.stderr)
+            return 1
+        print(f"WARNING: {blocking_count} defect(s) are blocking (QA-REQ-0099/0100)")
 
     schema = load_schema(root)
     findings = Findings()
@@ -257,6 +299,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="path or URL to the rollback/suspension procedure (QA-REQ-0112)")
     build.add_argument("--require-rollback", action="store_true",
                         help="exit 1 instead of warning when rollback_ref is not given")
+    build.add_argument("--require-releasable", action="store_true",
+                        help="exit 1 and write no file when any defect is currently blocking (QA-REQ-0099/0100)")
     build.set_defaults(func=cmd_build)
 
     verify = sub.add_parser("verify", help="recompute and check a manifest's hash")

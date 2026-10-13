@@ -44,3 +44,4 @@ content/.keys/
 __pycache__/
 *.pyc
 docs/evidence/*.json
+docs/evidence/secret_scan_report.md

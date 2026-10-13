@@ -395,8 +395,44 @@ jobs:
   stack:
     name: the stack starts and answers
     runs-on: ubuntu-latest
+    env:
+      # Every `docker compose` call below (up, logs, down) picks up both
+      # files with no -f flag needed on any of them. docker-compose.yml
+      # alone is still the one-command local setup the README promises;
+      # docker-compose.content.yml only applies when named, which this job
+      # always does.
+      COMPOSE_FILE: docker-compose.yml:docker-compose.content.yml
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      # Materializes the CONTENT train bundle the `docker compose up` step
+      # below mounts: content/build (compiled, four-eyes approved, signed)
+      # and content/.keys/keyring.json (the public verifier
+      # docker-compose.content.yml points ZTAX_CONTENT_KEYRING at). The same
+      # target `make check` already runs and proves in the `backend` job --
+      # this job gets its own copy, since jobs do not share a filesystem.
+      - name: make the CONTENT train bundle the determination folders need
+        working-directory: backend
+        run: make content
+
+      # ztax-contentc's compile step makes content/build 0750 on purpose
+      # (ADR comment: "no reason to be world-traversable") -- right for a
+      # human running the binary directly, wrong for ztax-core's container,
+      # which runs as `nonroot` (backend/Dockerfile), a different uid than
+      # the one that just ran `make content` on this runner. Without the
+      # traversal bit, `nonroot` cannot even list the directory, let alone
+      # read a 0644 file inside it. `o+rX` adds it only where something is
+      # already a directory or already executable, so files stay plain data.
+      # content/.keys/keyring.json itself is already 0644 (ztax-contentc's
+      # own choice for public keys) and is mounted as a single file below,
+      # which needs no directory traversal into content/.keys at all.
+      - name: let the container's nonroot user traverse what make content built
+        run: chmod -R o+rX content/build
 
       # This also replaces the separate image-build matrix: compose builds
       # ztax-core, ztax-migrate and ztax-web from their own Dockerfiles, so a
@@ -408,6 +444,12 @@ jobs:
       - name: .env from the example
         run: cp .env.example .env
 
+      #
+      # The job's own COMPOSE_FILE (above) is what turns on the bundle
+      # `make content` just built: docker-compose.content.yml layers the
+      # ZTAX_CONTENT_*/ZTAX_EVIDENCE_DIR settings and their mounts onto
+      # ztax-core, so Postman folders 06/07 have content and somewhere to
+      # record decisions.
       - name: docker compose up
         run: docker compose up --build --detach --wait --wait-timeout 180
 
@@ -452,8 +494,96 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: ${{ env.NODE_VERSION }}
+      # --env-var turns on folders 06 and 07 (determination), which need the
+      # content bundle and OPERATOR session this job now provisions. It is a
+      # runtime override, not a collection edit: the collection's own default
+      # (runDetermination=false) is what a plain `newman run` still gets.
       - name: the Postman collection passes against the cell
-        run: npx --yes newman@6.2.2 run backend/postman/ZoikoTax.postman_collection.json
+        run: >
+          npx --yes newman@6.2.2 run backend/postman/ZoikoTax.postman_collection.json
+          --env-var runDetermination=true
+          --reporters cli,json --reporter-json-export newman-report.json
+
+      # pm.execution.skipRequest() drops a request from newman's own
+      # executions entirely -- a skipped folder 06/07 is a green run with no
+      # trace that it ever ran. A typo in --env-var above, or a regression in
+      # the skip script's variable scope (QA audit: this is exactly what was
+      # checked for and found correct when these folders were added), would
+      # both go unnoticed without this. Reads the real collection off disk
+      # and requires every request under a folder named "06 ..." or "07 ..."
+      # to appear in newman's own executions -- not a hardcoded marker list,
+      # so a request added to either folder is covered automatically, with
+      # no second place to remember to update.
+      - name: folders 06 and 07 actually ran, not silently skipped
+        run: |
+          python3 - <<'PY'
+          import json
+          import sys
+
+          collection = json.load(open("backend/postman/ZoikoTax.postman_collection.json", encoding="utf-8"))
+          expected = [
+              item["name"]
+              for folder in collection["item"]
+              if folder["name"][:2] in ("06", "07")
+              for item in folder["item"]
+          ]
+
+          report = json.load(open("newman-report.json", encoding="utf-8"))
+          executed = {e["item"]["name"] for e in report["run"]["executions"]}
+
+          missing = [name for name in expected if name not in executed]
+          if missing:
+              print("::error::determination folders 06/07 were skipped -- missing executions: "
+                    + ", ".join(missing))
+              sys.exit(1)
+          print(f"folders 06/07 ran: {len(expected)} of {len(expected)} expected requests executed")
+          PY
+
+      # Runs whenever newman itself failed (a real assertion failure) or the
+      # guard above did (a silent skip) -- the two ways this job goes red.
+      # The guard's own message already names what was skipped; this is for
+      # the other case, where something ran and answered wrong. Reads
+      # newman-report.json defensively: it may not exist if newman never
+      # got far enough to write one.
+      #
+      # request.url in newman's own JSON report has no "raw" field (verified
+      # against a real newman run, not assumed) -- only protocol/host/path,
+      # which this reassembles. The response body is response.stream, a
+      # serialized Node Buffer ({"type": "Buffer", "data": [byte, ...]}), not
+      # response.body -- also verified directly rather than guessed.
+      - name: what failed, if anything did
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import json
+
+          try:
+              report = json.load(open("newman-report.json", encoding="utf-8"))
+          except FileNotFoundError:
+              print("newman-report.json does not exist -- newman did not get far enough to write one.")
+              raise SystemExit
+
+          for e in report["run"]["executions"]:
+              failed = [a for a in (e.get("assertions") or []) if a.get("error")]
+              if not failed:
+                  continue
+              req = e.get("request") or {}
+              u = req.get("url") or {}
+              host = ".".join(u.get("host") or [])
+              path = "/".join(u.get("path") or [])
+              url = f"{u.get('protocol', '')}://{host}/{path}" if host else str(u)
+              resp = e.get("response") or {}
+              print(f"\n--- {e['item']['name']} ---")
+              print(f"{req.get('method', '?')} {url}")
+              print(f"response: {resp.get('code', '?')}")
+              for a in failed:
+                  print(f"  FAILED: {a.get('assertion', '?')}: {a['error'].get('message', '')}")
+              stream = resp.get("stream")
+              if isinstance(stream, dict) and "data" in stream:
+                  body = bytes(stream["data"]).decode("utf-8", errors="replace")
+                  if body:
+                      print(f"  body (first 800 chars): {body[:800]}")
+          PY
 
       - name: logs on failure
         if: failure()
@@ -512,6 +642,14 @@ jobs:
       - name: quarantine register (ADR-0018 control 6)
         run: python docs/tools/check_quarantine.py
 
+      # QA-REQ-0099/0100: a QA-SEV-1 defect always blocks; a QA-SEV-2 defect
+      # blocks unless it carries an unexpired waiver whose requirement_id is
+      # exactly ZTAX-QA-REQ-0100. This step only validates the register
+      # (schema, duplicate IDs, waiver cross-references); it does not judge
+      # --release here, since that is the manifest build's job below.
+      - name: defects register (QA-REQ-0099, 0100)
+        run: python docs/tools/check_defects.py
+
       # Requirement → test → evidence (#18). Runs each registered
       # verification_ref and uploads the result; non-blocking by design for individual
       # FAIL/ERROR counts, but a ratchet regression against docs/trace_baseline.json
@@ -528,6 +666,17 @@ jobs:
         run: python -m unittest docs.test_generate_traceability_report -v
       - name: generate traceability report
         run: python docs/generate_traceability_report.py
+
+      # QA-REQ-0109 to 0113: one ReleaseCertificationManifest, embedding the
+      # traceability snapshot just generated above plus the waivers,
+      # quarantine and defects registers, self-hashed for tamper evidence.
+      # Default --out (docs/evidence/release_manifest.json) rides the
+      # upload step below, which already uploads everything under
+      # docs/evidence/ -- no separate artifact needed.
+      - name: build the release certification manifest
+        run: python docs/tools/build_release_manifest.py build --version 0.0.0-ci --commit "$GITHUB_SHA"
+      - name: verify the release certification manifest (QA-REQ-0113)
+        run: python docs/tools/build_release_manifest.py verify docs/evidence/release_manifest.json
 
       - name: upload traceability evidence
         if: always()

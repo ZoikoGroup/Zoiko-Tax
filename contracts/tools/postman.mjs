@@ -54,6 +54,7 @@ const FOLDERS = [
         name: "GET /healthz — liveness",
         method: "GET",
         path: "/healthz",
+        headers: { Accept: "text/plain" },
         description:
           "Liveness: the process is running and can serve. It touches no dependency on purpose — a liveness probe that failed when the database was down would get the process killed, which does not fix a database and does lose the in-memory content bundle.",
         test: [
@@ -67,6 +68,7 @@ const FOLDERS = [
         name: "GET /readyz — readiness",
         method: "GET",
         path: "/readyz",
+        headers: { Accept: "text/plain" },
         description:
           "Readiness: this replica can take traffic right now. Unlike liveness it does check the cell store, because a replica that cannot reach it should leave the rotation rather than serve one 503 per caller.",
         test: [
@@ -139,7 +141,45 @@ const FOLDERS = [
   {
     name: "06 · Determination — needs content and an OPERATOR",
     description:
-      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously. Last, the subledger period `{{period}}` — `2000-01` by default, a month nothing posts into, so a run never closes one that matters — is hard-closed, a reopen is requested, and the requester's own approval is refused (ZTAX-FIN-REQ-0091). `runReconciliation` reconciles September and captures `runId`; the resolution of the example item answers `404` in a fresh run, since its id is the example's.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "Opens with two setup requests: `createUser` makes a fresh OPERATOR (ADMIN still holds the session from `02`), and signing in as it replaces the session for everything below, through `07` — `08 · Sign out` ends whichever session is active, so it does not need to know which.\n\nQuote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously. Last, the subledger period `{{period}}` — `2000-01` by default, a month nothing posts into, so a run never closes one that matters — is hard-closed, a reopen is requested, and the requester's own approval is refused (ZTAX-FIN-REQ-0091). `runReconciliation` reconciles September and captures `runId`; the resolution of the example item answers `404` in a fresh run, since its id is the example's.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role, which the two setup requests above provide. The request bodies are the worked pack's inputs.",
+    literal: [
+      {
+        name: "Provision an OPERATOR for determination",
+        method: "POST",
+        path: "/v1/admin/users",
+        body: {
+          email: "{{operatorEmail}}",
+          displayName: "Determination Operator",
+          roles: ["OPERATOR"],
+          password: "{{operatorPassword}}",
+        },
+        description:
+          "Still the ADMIN session from `02`. A password at creation makes the user `ACTIVE` immediately — no separate invite-acceptance step — so the next request can sign in as it straight away.\n\n`{{operatorEmail}}` is fresh every run (collection.pre.js), so this never collides with `04`'s own `createUser` or with a second run against the same cell.",
+        test: [
+          "pm.test('the OPERATOR is created', function () {",
+          "  pm.response.to.have.status(201);",
+          "});",
+        ],
+      },
+      {
+        name: "Sign in as the OPERATOR",
+        method: "POST",
+        path: "/v1/auth/sign-in",
+        noSession: true,
+        body: {
+          tenant: "{{tenantSlug}}",
+          email: "{{operatorEmail}}",
+          password: "{{operatorPassword}}",
+        },
+        description:
+          "Replaces the ADMIN session with the OPERATOR's. `noSession` clears the cookie jar first, so this arrives unauthenticated like any other sign-in and the response's cookie is the only session after it.",
+        test: [
+          "pm.test('the operator session opens', function () {",
+          "  pm.response.to.have.status(200);",
+          "});",
+        ],
+      },
+    ],
     operations: [
       "createQuote", "commitTransaction", "getDecision", "replayDecision", "listDecisionJournals",
       "getSubledgerBalances", "listObligations", "getObligation", "transitionObligation",
@@ -279,7 +319,7 @@ const OPERATION_TESTS = {
     "});",
   ],
   listObligations: [
-    "pm.test('ZTAX-OBL-001 §4 — the commit assessed into the period return', function () {",
+    "pm.test('ZTAX-OBL-001 §4 — the commit assessed into the return for its period', function () {",
     "  pm.response.to.have.status(200);",
     "  pm.expect(pm.response.json().obligations.length).to.be.at.least(1);",
     "});",
@@ -832,12 +872,7 @@ function build(doc, overlay, scripts, sourceName) {
   for (const folder of FOLDERS) {
     const children = [];
     for (const literal of folder.literal ?? []) {
-      children.push(
-        overlayRequest({
-          ...literal,
-          headers: { Accept: "text/plain" },
-        }),
-      );
+      children.push(overlayRequest(literal));
     }
     for (const id of folder.operations ?? []) {
       const found = byId.get(id);
@@ -945,6 +980,9 @@ function variables(overlay, contractDigest, local) {
     { key: "adminEmail", value: local.email, type: "string" },
     { key: "adminPassword", value: local.password, type: "string" },
     { key: "newPassword", value: "a considerably longer passphrase than that one", type: "string" },
+    // `06`'s own OPERATOR, created and signed in as only when runDetermination
+    // is "true". Not a secret the stack ever holds outside this run.
+    { key: "operatorPassword", value: "local-dev-only-operator-password", type: "string" },
     // `98 · Destructive` runs only when this is "true".
     { key: "runDestructive", value: "false", type: "string" },
     // `06` and `07`, the determination folders, run only when this is "true".
@@ -952,6 +990,7 @@ function variables(overlay, contractDigest, local) {
 
     // Set by the pre-request script and by the requests that create things.
     { key: "newUserEmail", value: "", type: "string" },
+    { key: "operatorEmail", value: "", type: "string" },
     { key: "userId", value: "", type: "string" },
     { key: "sessionId", value: "", type: "string" },
     // Query filters, empty so a request lists everything unless a run sets one.
@@ -975,8 +1014,10 @@ function variables(overlay, contractDigest, local) {
     { key: "period", value: "2000-01", type: "string" },
     { key: "requestId", value: "", type: "string" },
     { key: "runId", value: "", type: "string" },
-    // Well-formed and nothing's, like deliveryId: the example item is not in
-    // a fresh run, so its resolution answers 404 rather than a parse error.
+    // Well-formed and nothing's, the same pattern as `decisionId`: a fresh
+    // run's own reconciliation has no exception to resolve yet, so
+    // `resolveReconciliationItem` names an item that does not exist and the
+    // response is 404, exactly as its description says.
     { key: "itemId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
     { key: "holdId", value: "", type: "string" },
     { key: "authorizationId", value: "", type: "string" },
@@ -1027,6 +1068,32 @@ function localBootstrap(envPath) {
   return local;
 }
 
+// A collection-level "function (){ ... }" script that fails to parse stays
+// quiet until newman actually runs that request -- a missing-paren or a
+// stray apostrophe inside a single-quoted test name shows up as a cryptic
+// "SyntaxError: missing ) after argument list" in CI, with no indication of
+// which request it came from. Compiling every event script here, right
+// after the collection is built, turns that into a generation-time failure
+// that names the request. `new Function` only compiles the body -- it is
+// never called, so this cannot have a side effect even if a script does.
+function checkScriptsParse(collection) {
+  const walk = (items, trail) => {
+    for (const it of items) {
+      const here = trail.concat(it.name);
+      for (const ev of it.event ?? []) {
+        const code = (ev.script?.exec ?? []).join("\n");
+        try {
+          new Function(code); // eslint-disable-line no-new-func -- parsed, never called
+        } catch (err) {
+          throw new Error(`${ev.listen} script for "${here.join(" / ")}" does not parse: ${err.message}`);
+        }
+      }
+      if (it.item) walk(it.item, here);
+    }
+  };
+  walk(collection.item, []);
+}
+
 function main(argv) {
   const check = argv.includes("--check");
   const [source, target] = argv.filter((a) => !a.startsWith("--"));
@@ -1042,7 +1109,9 @@ function main(argv) {
   };
 
   const local = localBootstrap(join(here, "..", "..", ".env.example"));
-  const rendered = JSON.stringify(build(doc, overlay, scripts, { path: source, local }), null, 2) + "\n";
+  const collection = build(doc, overlay, scripts, { path: source, local });
+  checkScriptsParse(collection);
+  const rendered = JSON.stringify(collection, null, 2) + "\n";
   const digest = createHash("sha256").update(rendered).digest("hex");
   const hashLine = `${digest}  ${basename(target)}\n`;
 

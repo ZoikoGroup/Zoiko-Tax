@@ -3177,8 +3177,126 @@
     },
     {
       "name": "06 · Determination — needs content and an OPERATOR",
-      "description": "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously. Last, the subledger period `{{period}}` — `2000-01` by default, a month nothing posts into, so a run never closes one that matters — is hard-closed, a reopen is requested, and the requester's own approval is refused (ZTAX-FIN-REQ-0091). `runReconciliation` reconciles September and captures `runId`; the resolution of the example item answers `404` in a fresh run, since its id is the example's.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "description": "Opens with two setup requests: `createUser` makes a fresh OPERATOR (ADMIN still holds the session from `02`), and signing in as it replaces the session for everything below, through `07` — `08 · Sign out` ends whichever session is active, so it does not need to know which.\n\nQuote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously. Last, the subledger period `{{period}}` — `2000-01` by default, a month nothing posts into, so a run never closes one that matters — is hard-closed, a reopen is requested, and the requester's own approval is refused (ZTAX-FIN-REQ-0091). `runReconciliation` reconciles September and captures `runId`; the resolution of the example item answers `404` in a fresh run, since its id is the example's.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role, which the two setup requests above provide. The request bodies are the worked pack's inputs.",
       "item": [
+        {
+          "name": "Provision an OPERATOR for determination",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{operatorEmail}}\",\n  \"displayName\": \"Determination Operator\",\n  \"roles\": [\n    \"OPERATOR\"\n  ],\n  \"password\": \"{{operatorPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "users"
+              ]
+            },
+            "description": "Still the ADMIN session from `02`. A password at creation makes the user `ACTIVE` immediately — no separate invite-acceptance step — so the next request can sign in as it straight away.\n\n`{{operatorEmail}}` is fresh every run (collection.pre.js), so this never collides with `04`'s own `createUser` or with a second run against the same cell."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('the OPERATOR is created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in as the OPERATOR",
+          "protocolProfileBehavior": {
+            "disabledSystemHeaders": {}
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant\": \"{{tenantSlug}}\",\n  \"email\": \"{{operatorEmail}}\",\n  \"password\": \"{{operatorPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/sign-in",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "sign-in"
+              ]
+            },
+            "description": "Replaces the ADMIN session with the OPERATOR's. `noSession` clears the cookie jar first, so this arrives unauthenticated like any other sign-in and the response's cookie is the only session after it."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const jar = pm.cookies.jar();",
+                  "jar.clear(pm.collectionVariables.get('baseUrl'), function () {});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// This request must arrive with no session, so the cookie is cleared for",
+                  "// it and only it. Postman's jar is shared, so the next request signs in",
+                  "// again if it needs to.",
+                  "pm.test('the operator session opens', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
         {
           "name": "POST /v1/quotes — Quote a transaction without recording it",
           "request": {
@@ -3728,7 +3846,7 @@
                   "pm.test('listObligations returns a status the contract declares', function () {",
                   "  pm.expect(pm.response.code).to.be.oneOf([200]);",
                   "});",
-                  "pm.test('ZTAX-OBL-001 §4 — the commit assessed into the period return', function () {",
+                  "pm.test('ZTAX-OBL-001 §4 — the commit assessed into the return for its period', function () {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.json().obligations.length).to.be.at.least(1);",
                   "});",
@@ -5455,7 +5573,7 @@
     },
     {
       "name": "07 · Determination conformance — needs content and an OPERATOR",
-      "description": "The ADR-0013 and ADR-0011 controls on `POST /v1/transactions:commit`, each asserted against the running endpoint.\n\nRequests 1 to 4 share one idempotency key, minted once per run into `reusedKey`, so a second run against the same cell exercises the same four outcomes rather than replaying the first run's.\n\nSkipped unless `runDetermination` is `\"true\"`, for the reason `06` gives.",
+      "description": "The ADR-0013 and ADR-0011 controls on `POST /v1/transactions:commit`, each asserted against the running endpoint.\n\nRequests 1 to 4 share one idempotency key, minted once per run into `reusedKey`, so a second run against the same cell exercises the same four outcomes rather than replaying the first run's.\n\nNone of these bodies name `accumulators`: `threshold.ecoLevyYtd` is bound to the cell by the active pack (content/packs/eu-vat/fiscal.json), and the contract itself says a bound accumulator supplied in the request is refused `400 INVALID_VALUE` (ZTAX-DET-REQ-0002) -- naming it here would make every one of requests 1-8 fail, or pass, for that reason instead of the one each is actually testing. Request 9 is the one request that deliberately does name it, to assert that refusal on purpose.\n\nSkipped unless `runDetermination` is `\"true\"`, for the reason `06` gives.",
       "item": [
         {
           "name": "Idempotency · 1 · first commit with a fixed key",
@@ -5617,7 +5735,7 @@
                 "exec": [
                   "pm.test('a reused key is refused, not replayed', function () {",
                   "  pm.response.to.have.status(409);",
-                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"IDEMPOTENCY_KEY_REUSE\"]);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql(\"IDEMPOTENCY_KEY_REUSE\");",
                   "});"
                 ]
               }
@@ -5672,7 +5790,7 @@
                 "exec": [
                   "pm.test('scale is part of the request', function () {",
                   "  pm.response.to.have.status(409);",
-                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"IDEMPOTENCY_KEY_REUSE\"]);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql(\"IDEMPOTENCY_KEY_REUSE\");",
                   "});"
                 ]
               }
@@ -5723,7 +5841,7 @@
                 "exec": [
                   "pm.test('a keyless commit is refused', function () {",
                   "  pm.response.to.have.status(400);",
-                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"IDEMPOTENCY_KEY_REQUIRED\"]);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql(\"IDEMPOTENCY_KEY_REQUIRED\");",
                   "});"
                 ]
               }
@@ -5767,7 +5885,7 @@
                 "transactions:commit"
               ]
             },
-            "description": "**The request in this collection that matters most.**\n\n`\"amount\": 45.0` must be rejected, never coerced. A 2xx here is a Critical finding rather than a test failure: RFC 8785 serializes JSON numbers through IEEE 754 doubles (ADR-0011 §1.1), so an amount that is ever a JSON number has lost precision before canonicalization sees it — and the loss is invisible, because 45.0 survives and 0.1 does not.\n\nThe body is raw text rather than a structured one, because the whole point is to send a token a correct client cannot produce."
+            "description": "**The request in this collection that matters most.**\n\n`\"amount\": 45.0` must be rejected, never coerced. A 2xx here is a Critical finding rather than a test failure: RFC 8785 serializes JSON numbers through IEEE 754 doubles (ADR-0011 §1.1), so an amount that is ever a JSON number has lost precision before canonicalization sees it — and the loss is invisible, because 45.0 survives and 0.1 does not.\n\nThe body is raw text rather than a structured one, because the whole point is to send a token a correct client cannot produce. A JSON number where the contract names a string is a decode-time type mismatch (`gen.MoneyValue.Amount` is `string`), refused as `MALFORMED_REQUEST` before the request body is even validated as a determination."
           },
           "response": [],
           "event": [
@@ -5778,7 +5896,7 @@
                 "exec": [
                   "pm.test('a JSON number is never an amount', function () {",
                   "  pm.response.to.have.status(400);",
-                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"MALFORMED_REQUEST\", \"INVALID_VALUE\"]);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql(\"MALFORMED_REQUEST\");",
                   "});"
                 ]
               }
@@ -5822,7 +5940,7 @@
                 "transactions:commit"
               ]
             },
-            "description": "ADR-0011 §2.1 P3 on the path where it costs the most. \"The amount was explicitly cleared\" and \"the integration did not send an amount\" are different events with different fiscal consequences."
+            "description": "ADR-0011 §2.1 P3 on the path where it costs the most. \"The amount was explicitly cleared\" and \"the integration did not send an amount\" are different events with different fiscal consequences. `null` decodes into `Amount string` as the zero value `\"\"` -- `encoding/json` accepts `null` for any type -- so the request reaches `parseDecimal` (determination.go), which refuses an empty string as `INVALID_VALUE`, not a decode-time `MALFORMED_REQUEST`."
           },
           "response": [],
           "event": [
@@ -5833,7 +5951,7 @@
                 "exec": [
                   "pm.test('null is refused rather than normalised', function () {",
                   "  pm.response.to.have.status(400);",
-                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"MALFORMED_REQUEST\", \"INVALID_VALUE\", \"MISSING_FIELD\"]);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql(\"INVALID_VALUE\");",
                   "});"
                 ]
               }
@@ -5888,7 +6006,62 @@
                 "exec": [
                   "pm.test('an undeclared nested field is refused', function () {",
                   "  pm.response.to.have.status(400);",
-                  "  pm.expect(pm.response.json().ztx_reason_code).to.be.oneOf([\"UNKNOWN_FIELD\"]);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql(\"UNKNOWN_FIELD\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ZTAX-DET-REQ-0002 · a bound accumulator supplied is refused",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessKey\": \"INV-POSTMAN-0003/1\",\n  \"eventTime\": \"2026-09-24T18:00:00.000000Z\",\n  \"input\": {\n    \"money\": {\n      \"line.netAmount\": {\n        \"amount\": \"45.00\",\n        \"currency\": \"EUR\"\n      }\n    },\n    \"quantities\": {\n      \"line.quantity\": {\n        \"value\": \"1\",\n        \"unit\": \"EA\"\n      }\n    },\n    \"flags\": {\n      \"line.reducedRateApplies\": false,\n      \"line.exemptCertificateHeld\": false\n    }\n  },\n  \"accumulators\": {\n    \"threshold.ecoLevyYtd\": {\n      \"amount\": \"0.00\",\n      \"currency\": \"EUR\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/transactions:commit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "transactions:commit"
+              ]
+            },
+            "description": "ZTAX-DET-REQ-0002: the cell reads a bound accumulator from its own store under lock; a caller-supplied value for one is refused, not merged or preferred. This is the one request in the folder that deliberately names `threshold.ecoLevyYtd` -- every other request omits it for exactly this reason."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('a value supplied for a bound accumulator is refused', function () {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql(\"INVALID_VALUE\");",
                   "});"
                 ]
               }
@@ -6300,6 +6473,12 @@
           "// and reused, so the create and the requests that act on the created user agree.",
           "if (!pm.collectionVariables.get('newUserEmail')) {",
           "  pm.collectionVariables.set('newUserEmail', 'postman+' + now.getTime() + '@acme.example');",
+          "}",
+          "",
+          "// Same reasoning, for `06`'s own OPERATOR -- a distinct address so it never",
+          "// collides with the user `newUserEmail` names above.",
+          "if (!pm.collectionVariables.get('operatorEmail')) {",
+          "  pm.collectionVariables.set('operatorEmail', 'postman-operator+' + now.getTime() + '@acme.example');",
           "}"
         ]
       }
@@ -6445,6 +6624,11 @@
       "type": "string"
     },
     {
+      "key": "operatorPassword",
+      "value": "local-dev-only-operator-password",
+      "type": "string"
+    },
+    {
       "key": "runDestructive",
       "value": "false",
       "type": "string"
@@ -6456,6 +6640,11 @@
     },
     {
       "key": "newUserEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "operatorEmail",
       "value": "",
       "type": "string"
     },
