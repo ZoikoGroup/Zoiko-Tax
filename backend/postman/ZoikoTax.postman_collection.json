@@ -3088,8 +3088,126 @@
     },
     {
       "name": "06 · Determination — needs content and an OPERATOR",
-      "description": "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously. Last, the subledger period `{{period}}` — `2000-01` by default, a month nothing posts into, so a run never closes one that matters — is hard-closed, a reopen is requested, and the requester's own approval is refused (ZTAX-FIN-REQ-0091). `runReconciliation` reconciles September and captures `runId`; the resolution of the example item answers `404` in a fresh run, since its id is the example's.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "description": "Opens with two setup requests: `createUser` makes a fresh OPERATOR (ADMIN still holds the session from `02`), and signing in as it replaces the session for everything below, through `07` — `08 · Sign out` ends whichever session is active, so it does not need to know which.\n\nQuote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously. Last, the subledger period `{{period}}` — `2000-01` by default, a month nothing posts into, so a run never closes one that matters — is hard-closed, a reopen is requested, and the requester's own approval is refused (ZTAX-FIN-REQ-0091). `runReconciliation` reconciles September and captures `runId`; the resolution of the example item answers `404` in a fresh run, since its id is the example's.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role, which the two setup requests above provide. The request bodies are the worked pack's inputs.",
       "item": [
+        {
+          "name": "Provision an OPERATOR for determination",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{operatorEmail}}\",\n  \"displayName\": \"Determination Operator\",\n  \"roles\": [\n    \"OPERATOR\"\n  ],\n  \"password\": \"{{operatorPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "users"
+              ]
+            },
+            "description": "Still the ADMIN session from `02`. A password at creation makes the user `ACTIVE` immediately — no separate invite-acceptance step — so the next request can sign in as it straight away.\n\n`{{operatorEmail}}` is fresh every run (collection.pre.js), so this never collides with `04`'s own `createUser` or with a second run against the same cell."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('the OPERATOR is created', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in as the OPERATOR",
+          "protocolProfileBehavior": {
+            "disabledSystemHeaders": {}
+          },
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant\": \"{{tenantSlug}}\",\n  \"email\": \"{{operatorEmail}}\",\n  \"password\": \"{{operatorPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/sign-in",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "sign-in"
+              ]
+            },
+            "description": "Replaces the ADMIN session with the OPERATOR's. `noSession` clears the cookie jar first, so this arrives unauthenticated like any other sign-in and the response's cookie is the only session after it."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const jar = pm.cookies.jar();",
+                  "jar.clear(pm.collectionVariables.get('baseUrl'), function () {});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// This request must arrive with no session, so the cookie is cleared for",
+                  "// it and only it. Postman's jar is shared, so the next request signs in",
+                  "// again if it needs to.",
+                  "pm.test('the operator session opens', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
         {
           "name": "POST /v1/quotes — Quote a transaction without recording it",
           "request": {
@@ -6211,6 +6329,12 @@
           "// and reused, so the create and the requests that act on the created user agree.",
           "if (!pm.collectionVariables.get('newUserEmail')) {",
           "  pm.collectionVariables.set('newUserEmail', 'postman+' + now.getTime() + '@acme.example');",
+          "}",
+          "",
+          "// Same reasoning, for `06`'s own OPERATOR -- a distinct address so it never",
+          "// collides with the user `newUserEmail` names above.",
+          "if (!pm.collectionVariables.get('operatorEmail')) {",
+          "  pm.collectionVariables.set('operatorEmail', 'postman-operator+' + now.getTime() + '@acme.example');",
           "}"
         ]
       }
@@ -6356,6 +6480,11 @@
       "type": "string"
     },
     {
+      "key": "operatorPassword",
+      "value": "local-dev-only-operator-password",
+      "type": "string"
+    },
+    {
       "key": "runDestructive",
       "value": "false",
       "type": "string"
@@ -6367,6 +6496,11 @@
     },
     {
       "key": "newUserEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "operatorEmail",
       "value": "",
       "type": "string"
     },

@@ -22,3 +22,9 @@ pm.collectionVariables.set('eventTime', canonical(new Date(now.getTime() - 2000)
 if (!pm.collectionVariables.get('newUserEmail')) {
   pm.collectionVariables.set('newUserEmail', 'postman+' + now.getTime() + '@acme.example');
 }
+
+// Same reasoning, for `06`'s own OPERATOR -- a distinct address so it never
+// collides with the user `newUserEmail` names above.
+if (!pm.collectionVariables.get('operatorEmail')) {
+  pm.collectionVariables.set('operatorEmail', 'postman-operator+' + now.getTime() + '@acme.example');
+}

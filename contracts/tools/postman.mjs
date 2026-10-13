@@ -54,6 +54,7 @@ const FOLDERS = [
         name: "GET /healthz — liveness",
         method: "GET",
         path: "/healthz",
+        headers: { Accept: "text/plain" },
         description:
           "Liveness: the process is running and can serve. It touches no dependency on purpose — a liveness probe that failed when the database was down would get the process killed, which does not fix a database and does lose the in-memory content bundle.",
         test: [
@@ -67,6 +68,7 @@ const FOLDERS = [
         name: "GET /readyz — readiness",
         method: "GET",
         path: "/readyz",
+        headers: { Accept: "text/plain" },
         description:
           "Readiness: this replica can take traffic right now. Unlike liveness it does check the cell store, because a replica that cannot reach it should leave the rotation rather than serve one 503 per caller.",
         test: [
@@ -138,7 +140,45 @@ const FOLDERS = [
   {
     name: "06 · Determination — needs content and an OPERATOR",
     description:
-      "Quote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously. Last, the subledger period `{{period}}` — `2000-01` by default, a month nothing posts into, so a run never closes one that matters — is hard-closed, a reopen is requested, and the requester's own approval is refused (ZTAX-FIN-REQ-0091). `runReconciliation` reconciles September and captures `runId`; the resolution of the example item answers `404` in a fresh run, since its id is the example's.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role. The request bodies are the worked pack's inputs.",
+      "Opens with two setup requests: `createUser` makes a fresh OPERATOR (ADMIN still holds the session from `02`), and signing in as it replaces the session for everything below, through `07` — `08 · Sign out` ends whichever session is active, so it does not need to know which.\n\nQuote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously. Last, the subledger period `{{period}}` — `2000-01` by default, a month nothing posts into, so a run never closes one that matters — is hard-closed, a reopen is requested, and the requester's own approval is refused (ZTAX-FIN-REQ-0091). `runReconciliation` reconciles September and captures `runId`; the resolution of the example item answers `404` in a fresh run, since its id is the example's.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role, which the two setup requests above provide. The request bodies are the worked pack's inputs.",
+    literal: [
+      {
+        name: "Provision an OPERATOR for determination",
+        method: "POST",
+        path: "/v1/admin/users",
+        body: {
+          email: "{{operatorEmail}}",
+          displayName: "Determination Operator",
+          roles: ["OPERATOR"],
+          password: "{{operatorPassword}}",
+        },
+        description:
+          "Still the ADMIN session from `02`. A password at creation makes the user `ACTIVE` immediately — no separate invite-acceptance step — so the next request can sign in as it straight away.\n\n`{{operatorEmail}}` is fresh every run (collection.pre.js), so this never collides with `04`'s own `createUser` or with a second run against the same cell.",
+        test: [
+          "pm.test('the OPERATOR is created', function () {",
+          "  pm.response.to.have.status(201);",
+          "});",
+        ],
+      },
+      {
+        name: "Sign in as the OPERATOR",
+        method: "POST",
+        path: "/v1/auth/sign-in",
+        noSession: true,
+        body: {
+          tenant: "{{tenantSlug}}",
+          email: "{{operatorEmail}}",
+          password: "{{operatorPassword}}",
+        },
+        description:
+          "Replaces the ADMIN session with the OPERATOR's. `noSession` clears the cookie jar first, so this arrives unauthenticated like any other sign-in and the response's cookie is the only session after it.",
+        test: [
+          "pm.test('the operator session opens', function () {",
+          "  pm.response.to.have.status(200);",
+          "});",
+        ],
+      },
+    ],
     operations: [
       "createQuote", "commitTransaction", "getDecision", "replayDecision", "listDecisionJournals",
       "getSubledgerBalances", "listObligations", "getObligation", "transitionObligation",
@@ -809,12 +849,7 @@ function build(doc, overlay, scripts, sourceName) {
   for (const folder of FOLDERS) {
     const children = [];
     for (const literal of folder.literal ?? []) {
-      children.push(
-        overlayRequest({
-          ...literal,
-          headers: { Accept: "text/plain" },
-        }),
-      );
+      children.push(overlayRequest(literal));
     }
     for (const id of folder.operations ?? []) {
       const found = byId.get(id);
@@ -922,6 +957,9 @@ function variables(overlay, contractDigest, local) {
     { key: "adminEmail", value: local.email, type: "string" },
     { key: "adminPassword", value: local.password, type: "string" },
     { key: "newPassword", value: "a considerably longer passphrase than that one", type: "string" },
+    // `06`'s own OPERATOR, created and signed in as only when runDetermination
+    // is "true". Not a secret the stack ever holds outside this run.
+    { key: "operatorPassword", value: "local-dev-only-operator-password", type: "string" },
     // `98 · Destructive` runs only when this is "true".
     { key: "runDestructive", value: "false", type: "string" },
     // `06` and `07`, the determination folders, run only when this is "true".
@@ -929,6 +967,7 @@ function variables(overlay, contractDigest, local) {
 
     // Set by the pre-request script and by the requests that create things.
     { key: "newUserEmail", value: "", type: "string" },
+    { key: "operatorEmail", value: "", type: "string" },
     { key: "userId", value: "", type: "string" },
     { key: "sessionId", value: "", type: "string" },
     // Query filters, empty so a request lists everything unless a run sets one.
