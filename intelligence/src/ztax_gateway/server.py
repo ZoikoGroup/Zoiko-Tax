@@ -275,6 +275,7 @@ def load_config(path: Path) -> tuple[UseCaseRegistry, RoutingTable]:
     registry = UseCaseRegistry()
     routes: dict[str, Route] = {}
     for entry in doc.get("use_cases", []):
+        dc_raw = entry.get("permitted_data_classes")
         uc = UseCase(
             use_case_id=entry["use_case_id"],
             owner=entry["owner"],
@@ -282,7 +283,7 @@ def load_config(path: Path) -> tuple[UseCaseRegistry, RoutingTable]:
             max_risk_tier=RiskTier(entry["max_risk_tier"]),
             max_authority=AuthorityOutcome(entry["max_authority"]),
             permitted_regions=frozenset(entry.get("permitted_regions", [])),
-            permitted_data_classes=frozenset(entry.get("permitted_data_classes", [])),
+            permitted_data_classes=frozenset(dc_raw) if dc_raw is not None else None,
             suspended=bool(entry.get("suspended", False)),
         )
         registry.register(uc)

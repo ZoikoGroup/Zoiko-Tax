@@ -89,10 +89,12 @@ class UseCase:
     # not declared where it may run has not been through residency review.
     permitted_regions: frozenset[str] = field(default_factory=frozenset)
     # permitted_data_classes is the PRIV-001 allowlist (Ch.17 §17, ADR-0006
-    # §2.5). Deny by default — the same reasoning as permitted_regions: a use
-    # case that has not declared which data classes it may send to a model has
-    # not been through data-class review. An empty frozenset permits nothing.
-    permitted_data_classes: frozenset[str] = field(default_factory=frozenset)
+    # §2.5). None means the policy was not configured in the registry — the
+    # data-class check is skipped for that use case. An explicit frozenset
+    # enforces an allowlist: empty frozenset = deny all (deny by default when
+    # a policy is actively declared). None is the right default for use cases
+    # loaded from older registry files that predate the data-class field.
+    permitted_data_classes: frozenset[str] | None = None
     # suspended takes a use case out of service without removing its
     # registration, so the history of what it was remains readable.
     suspended: bool = False
@@ -143,7 +145,7 @@ class UseCaseRegistry:
                 f"registry: use case {use_case.use_case_id!r} declares A5 authority, "
                 "which ADR-0006 §2.5 refuses unconditionally"
             )
-        for cls in use_case.permitted_data_classes:
+        for cls in use_case.permitted_data_classes or ():
             if cls in NEVER_TO_A_MODEL:
                 raise ValueError(
                     f"registry: use case {use_case.use_case_id!r} permits data class {cls!r}, "
@@ -285,8 +287,18 @@ def authorise(registry: UseCaseRegistry, provenance: Provenance) -> UseCase:
     #    class that should never reach a model is refused even if it somehow
     #    appeared in permitted_data_classes (which register() prevents anyway).
     #    Mirrors the last loop in Go's Evaluate.
+    #    When permitted_data_classes is None the use case has no data-class
+    #    policy configured; the check is skipped entirely except for
+    #    NEVER_TO_A_MODEL, which is unconditional.
     for data_class in provenance.data_classes or (provenance.data_class,):
-        if data_class in NEVER_TO_A_MODEL or data_class not in use_case.permitted_data_classes:
+        if data_class in NEVER_TO_A_MODEL:
+            raise GovernanceRefusedError(
+                Refusal.DATA_CLASS_REFUSED,
+                f"privacy class {data_class!r} may never reach a model (PRIV-001 §4)",
+                context,
+            )
+        allowed = use_case.permitted_data_classes
+        if allowed is not None and data_class not in allowed:
             raise GovernanceRefusedError(
                 Refusal.DATA_CLASS_REFUSED,
                 f"privacy class {data_class!r} is not permitted for {use_case.use_case_id!r}",

@@ -1,4 +1,4 @@
-﻿"""Data-class allowlist enforcement in the Python Gateway.
+"""Data-class allowlist enforcement in the Python Gateway.
 
 Ch.17 §17 and ADR-0006 §2.5: the Gateway enforces a per-use-case
 data-class allowlist before any model call. The allowed set is deny by
@@ -374,8 +374,8 @@ def test_residency_refusal_takes_priority_over_data_class_refusal() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_permitted_data_classes_default_is_empty_frozenset() -> None:
-    """The default is deny-all (empty frozenset), not a wildcard."""
+def test_permitted_data_classes_default_is_none() -> None:
+    """The default is None (no policy configured), not deny-all or a wildcard."""
     uc = UseCase(
         use_case_id="default-test",
         owner="lane-l",
@@ -384,7 +384,7 @@ def test_permitted_data_classes_default_is_empty_frozenset() -> None:
         max_authority=AuthorityOutcome.A1,
         permitted_regions=frozenset({"local"}),
     )
-    assert uc.permitted_data_classes == frozenset()
+    assert uc.permitted_data_classes is None
 
 
 def test_permitted_data_classes_is_frozenset() -> None:
@@ -417,8 +417,8 @@ def test_load_config_reads_permitted_data_classes(tmp_path: pathlib.Path) -> Non
     assert uc.permitted_data_classes == frozenset({"P0", "P1"})
 
 
-def test_load_config_missing_key_means_deny_all(tmp_path: pathlib.Path) -> None:
-    """A JSON entry without permitted_data_classes defaults to frozenset() — deny all."""
+def test_load_config_missing_key_means_no_policy(tmp_path: pathlib.Path) -> None:
+    """A JSON entry without permitted_data_classes yields None (no policy configured)."""
     p = _tmp_registry(tmp_path, [
         {
             "use_case_id": "uc-b",
@@ -433,11 +433,11 @@ def test_load_config_missing_key_means_deny_all(tmp_path: pathlib.Path) -> None:
     reg, _ = load_config(p)
     uc = reg.get("uc-b")
     assert uc is not None
-    assert uc.permitted_data_classes == frozenset()
+    assert uc.permitted_data_classes is None
 
 
-def test_load_config_missing_key_authorise_refuses(tmp_path: pathlib.Path) -> None:
-    """A use case loaded without permitted_data_classes refuses every class via authorise()."""
+def test_load_config_missing_key_authorise_passes(tmp_path: pathlib.Path) -> None:
+    """A use case loaded without permitted_data_classes (None) skips the data-class check."""
     p = _tmp_registry(tmp_path, [
         {
             "use_case_id": "uc-c",
@@ -452,6 +452,38 @@ def test_load_config_missing_key_authorise_refuses(tmp_path: pathlib.Path) -> No
     reg, _ = load_config(p)
     prov = Provenance(
         use_case="uc-c",
+        model_profile="m",
+        provider_profile="p",
+        prompt_profile="pp",
+        region="eu-west-1",
+        data_class="P0",
+        risk_tier=RiskTier.T1,
+        authority_outcome=AuthorityOutcome.A1,
+        ai_train_version="v",
+        data_classes=("P0",),
+    )
+    # No data-class policy configured (key absent) → check is skipped → permitted.
+    result = authorise(reg, prov)
+    assert result.use_case_id == "uc-c"
+
+
+def test_load_config_explicit_empty_list_denies(tmp_path: pathlib.Path) -> None:
+    """An explicit empty permitted_data_classes list in the registry means deny all."""
+    p = _tmp_registry(tmp_path, [
+        {
+            "use_case_id": "uc-d",
+            "owner": "o",
+            "description": "d",
+            "max_risk_tier": "T2",
+            "max_authority": "A1",
+            "permitted_regions": ["eu-west-1"],
+            "permitted_data_classes": [],
+            "route": _ROUTE,
+        }
+    ])
+    reg, _ = load_config(p)
+    prov = Provenance(
+        use_case="uc-d",
         model_profile="m",
         provider_profile="p",
         prompt_profile="pp",

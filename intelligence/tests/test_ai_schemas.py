@@ -256,6 +256,7 @@ _USE_CASE = UseCase(
     max_risk_tier=RiskTier.T2,
     max_authority=AuthorityOutcome.A1,
     permitted_regions=frozenset({"eu-west-1", "eu-central-1"}),
+    permitted_data_classes=frozenset({"P0", "P1"}),
 )
 
 _PROMPT = PromptProfile(
