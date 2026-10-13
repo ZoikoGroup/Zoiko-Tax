@@ -166,3 +166,35 @@ func TestTelemetryConfiguration(t *testing.T) {
 		})
 	}
 }
+
+// TestBootstrapExtraRolesAreDevelopmentOnly: one person holding ADMIN and a
+// fiscal role is what the route table separates, and a laptop is the only
+// place it is tolerated.
+func TestBootstrapExtraRolesAreDevelopmentOnly(t *testing.T) {
+	t.Run("parsed in development", func(t *testing.T) {
+		withEnv(t, map[string]string{"ZTAX_BOOTSTRAP_ADMIN_EXTRA_ROLES": " ANALYST, AUDITOR ,"})
+		cfg, err := config.Load()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Join(cfg.BootstrapAdminExtraRoles, "|") != "ANALYST|AUDITOR" {
+			t.Fatalf("roles %q", cfg.BootstrapAdminExtraRoles)
+		}
+	})
+	t.Run("refused outside development", func(t *testing.T) {
+		withEnv(t, map[string]string{
+			"ZTAX_ENVIRONMENT": "staging", "ZTAX_SECURE_COOKIES": "true", "ZTAX_BOOTSTRAP_ADMIN_EXTRA_ROLES": "ANALYST",
+		})
+		if _, err := config.Load(); err == nil || !strings.Contains(err.Error(), "ZTAX_BOOTSTRAP_ADMIN_EXTRA_ROLES") {
+			t.Fatalf("granted a fiscal role to ADMIN outside development: %v", err)
+		}
+	})
+	for _, bad := range []string{"ADMIN", "analyst", "SUPERUSER"} {
+		t.Run("role "+bad, func(t *testing.T) {
+			withEnv(t, map[string]string{"ZTAX_BOOTSTRAP_ADMIN_EXTRA_ROLES": bad})
+			if _, err := config.Load(); err == nil || !strings.Contains(err.Error(), "ZTAX_BOOTSTRAP_ADMIN_EXTRA_ROLES") {
+				t.Fatalf("accepted role %q: %v", bad, err)
+			}
+		})
+	}
+}

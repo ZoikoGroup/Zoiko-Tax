@@ -11,6 +11,7 @@ import com.zoikotax.sdk.model.Capabilities;
 import com.zoikotax.sdk.model.ChangePasswordRequest;
 import com.zoikotax.sdk.model.CommitRequest;
 import com.zoikotax.sdk.model.CreateUserRequest;
+import com.zoikotax.sdk.model.Dashboard;
 import com.zoikotax.sdk.model.Decision;
 import com.zoikotax.sdk.model.Problem;
 import com.zoikotax.sdk.model.Quote;
@@ -231,6 +232,30 @@ public final class ZoikoTaxClient {
   @Nonnull
   public Result<AuditRecordList> listAudit(int limit) {
     return send("GET", "/v1/admin/audit" + limit(limit), null, AuditRecordList.class);
+  }
+
+  // --- dashboard ----------------------------------------------------------
+
+  /**
+   * The Tax Command Center for the current month in UTC.
+   *
+   * <p>Read-only aggregates computed from the record at request time. Needs
+   * {@code OPERATOR}, {@code ANALYST} or {@code AUDITOR}. Amounts are per
+   * currency, never summed across currencies, and stay strings; a trend
+   * point's {@code liabilityIndex} is a 0–100 scale for drawing, not an amount.
+   */
+  @Nonnull
+  public Result<Dashboard> getDashboard() {
+    return send("GET", "/v1/dashboard", null, Dashboard.class);
+  }
+
+  /**
+   * The Tax Command Center for one legal period, a month as {@code YYYY-MM}
+   * such as {@code 2026-09}.
+   */
+  @Nonnull
+  public Result<Dashboard> getDashboard(@Nonnull String period) {
+    return send("GET", "/v1/dashboard?period=" + encode(period), null, Dashboard.class);
   }
 
   // --- determination ------------------------------------------------------

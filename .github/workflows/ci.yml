@@ -364,7 +364,16 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: |
+            frontend/package-lock.json
+            sdk/typescript/package-lock.json
+
+      # The client calls the cell through the generated SDK (ADR-0019 C4),
+      # linked as file:../sdk/typescript. Its dist/ is not committed, so it is
+      # built before the app resolves it.
+      - name: build the TypeScript SDK
+        working-directory: sdk/typescript
+        run: npm ci && npm run build
 
       # ci, not install: the lockfile is the dependency decision, and a job that
       # silently resolves a different graph is not testing what ships.
@@ -430,6 +439,11 @@ jobs:
       # change that breaks an image fails here. A matrix that built the same
       # images and then threw them away was three more runners asserting less —
       # it proved they compile, this proves they run.
+      # The stack reads its credentials and ports from .env, which is never
+      # committed; CI runs on the committed placeholders.
+      - name: .env from the example
+        run: cp .env.example .env
+
       #
       # The job's own COMPOSE_FILE (above) is what turns on the bundle
       # `make content` just built: docker-compose.content.yml layers the

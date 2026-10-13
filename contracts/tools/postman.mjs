@@ -99,7 +99,7 @@ const FOLDERS = [
   {
     name: "04 · Administration",
     description:
-      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked.",
+      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
     operations: [
       "listUsers",
       "createUser",
@@ -135,6 +135,7 @@ const FOLDERS = [
       "getAuthorization",
       "checkAuthorization",
       "revokeAuthorization",
+      "getDashboard",
     ],
   },
   {
@@ -354,6 +355,14 @@ const OPERATION_TESTS = {
     "});",
     "// The original is superseded now; a refund is made against the current version.",
     "pm.collectionVariables.set('decisionId', pm.response.json().id);",
+  ],
+  listSeals: [
+    "// A seal made by an earlier run makes this run's sealPeriod a 409, which",
+    "// captures nothing; the latest seal stands in, so the reads after it",
+    "// still have one to read and verify.",
+    "if (pm.response.code === 200 && pm.response.json().seals.length > 0) {",
+    "  pm.collectionVariables.set('sealId', pm.response.json().seals[0].id);",
+    "}",
   ],
   sealPeriod: [
     "pm.test('ADR-0011 §2.4 — sealed, or refused for a reason the cell states', function () {",
@@ -578,6 +587,20 @@ const OPERATION_TESTS = {
     "} else {",
     "  console.info('no revocable session other than this one; revokeSession will 404');",
     "}",
+  ],
+  getDashboard: [
+    "pm.test('the dashboard names its period and never sums across currencies', function () {",
+    "  pm.response.to.have.status(200);",
+    "  const d = pm.response.json();",
+    "  pm.expect(d.period).to.match(/^[0-9]{4}-(0[1-9]|1[0-2])$/);",
+    "  const seen = d.determinations.tax.map(function (m) { return m.currency; });",
+    "  pm.expect(seen.length).to.eql(new Set(seen).size);",
+    "});",
+    "pm.test('the trend is eight periods, oldest first, each indexed 0 to 100', function () {",
+    "  const pts = pm.response.json().trend.points;",
+    "  pm.expect(pts).to.have.lengthOf(8);",
+    "  pts.forEach(function (p) { pm.expect(p.liabilityIndex).to.be.within(0, 100); });",
+    "});",
   ],
   listAudit: [
     "pm.test('the audit trail reads most recent first', function () {",
@@ -930,9 +953,9 @@ function build(doc, overlay, scripts, sourceName) {
         "",
         "Bring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.",
         "",
-        "Folder `90` is the one worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.",
+        "Folders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.",
         "",
-        "Folders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. Paths still to be built are listed in `pendingPaths`, so a 404 there reports as *not implemented yet* rather than as a wall of red.",
+        "Folders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
       ].join("\n"),
       schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     },
@@ -950,7 +973,7 @@ function variables(overlay, contractDigest, local) {
     { key: "baseUrl", value: "http://localhost:8080", type: "string" },
 
     // The local stack's bootstrap tenant and administrator, read from
-    // docker-compose.yml rather than copied from it. A copy drifted once: the
+    // .env.example (the stack's own source for them) rather than copied. A copy drifted once: the
     // collection carried a password the stack never set, so a plain `newman run`
     // failed at sign-in and every request after it was a 401.
     { key: "tenantSlug", value: local.tenant, type: "string" },
@@ -1017,21 +1040,29 @@ function uuidFrom(name) {
 }
 
 /**
- * The bootstrap tenant and administrator the local stack creates. A missing
- * value is an error rather than a default, because a default is how the
- * collection came to carry a password the stack does not use.
+ * The bootstrap tenant and administrator the local stack creates, read from
+ * the committed .env.example that docker-compose.yml takes them from (via
+ * .env). Never from .env itself: that file is a developer's own and is not in
+ * the tree, so a collection generated from it would differ by machine and fail
+ * its own check in CI.
+ *
+ * A missing value is an error rather than a default, because a default is how
+ * the collection came to carry a password the stack does not use.
  */
-function localBootstrap(composePath) {
-  const compose = parseDocument(readFileSync(composePath, "utf8")).toJS();
-  const env = compose?.services?.["ztax-core"]?.environment ?? {};
+function localBootstrap(envPath) {
+  const env = {};
+  for (const line of readFileSync(envPath, "utf8").split(/\r?\n/)) {
+    const m = /^([A-Z][A-Z0-9_]*)=(.*)$/.exec(line);
+    if (m) env[m[1]] = m[2];
+  }
   const local = {
     tenant: env.ZTAX_BOOTSTRAP_TENANT,
     email: env.ZTAX_BOOTSTRAP_ADMIN_EMAIL,
-    password: env.ZTAX_LOCAL_SECRET_BOOTSTRAP_ADMIN,
+    password: env.ZTAX_BOOTSTRAP_ADMIN_PASSWORD,
   };
   for (const [name, value] of Object.entries(local)) {
     if (typeof value !== "string" || value === "") {
-      throw new Error(`${composePath}: ztax-core sets no bootstrap ${name}, and the collection cannot sign in without it.`);
+      throw new Error(`${envPath}: sets no bootstrap ${name}, and the collection cannot sign in without it.`);
     }
   }
   return local;
@@ -1077,7 +1108,7 @@ function main(argv) {
     test: readFileSync(join(here, "..", "postman", "scripts", "collection.test.js"), "utf8").replace(/\n$/, "").split("\n"),
   };
 
-  const local = localBootstrap(join(here, "..", "..", "docker-compose.yml"));
+  const local = localBootstrap(join(here, "..", "..", ".env.example"));
   const collection = build(doc, overlay, scripts, { path: source, local });
   checkScriptsParse(collection);
   const rendered = JSON.stringify(collection, null, 2) + "\n";

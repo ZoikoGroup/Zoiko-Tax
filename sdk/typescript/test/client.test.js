@@ -149,6 +149,77 @@ test("a limit becomes a query parameter and an absent one does not", async () =>
   assert.ok(calls[1].url.endsWith("/v1/admin/users"));
 });
 
+test("fetch is not called as a method of the client, as a browser requires", async () => {
+  // A browser's fetch throws "Illegal invocation" when `this` is not the
+  // window; this stand-in does the same for any `this` but globalThis or
+  // undefined, so the default and a supplied fetch are both held to it.
+  const original = globalThis.fetch;
+  const strict = function (url) {
+    if (this !== undefined && this !== globalThis) {
+      throw new TypeError("Illegal invocation");
+    }
+    return Promise.resolve(json(200, { url }));
+  };
+  globalThis.fetch = strict;
+  try {
+    const byDefault = await new ZoikoTaxClient({ baseUrl: "/api" }).getCapabilities();
+    const supplied = await new ZoikoTaxClient({ baseUrl: "/api", fetch: strict }).getCapabilities();
+    assert.equal(byDefault.ok, true, byDefault.ok ? "" : byDefault.error.message);
+    assert.equal(supplied.ok, true, supplied.ok ? "" : supplied.error.message);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
+test("the fiscal surface is reachable: paths, query strings and idempotency keys", async () => {
+  const { fetch, calls } = stub(json(200, {}));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+
+  await client.listObligations({ status: "OVERDUE", limit: 10 });
+  await client.getSubledgerPeriod("2026-09");
+  await client.approvePeriodReopen("2026-09", "r/1");
+  await client.correctDocument("d1", "key-1", { type: "VOID", reason: "CORRECTION_PRICING_ERROR" });
+  await client.refundTransaction("key-2", { decisionId: "x", amount: { amount: "1.00", currency: "EUR" } });
+  await client.resolveReconciliationItem("run", "item", { reason: "r", action: "WAIT", rootCause: "TIMING", evidence: ["e"] });
+
+  assert.equal(calls[0].url, "/api/v1/obligations?status=OVERDUE&limit=10");
+  assert.equal(calls[1].url, "/api/v1/subledger/periods/2026-09");
+  assert.equal(calls[2].url, "/api/v1/subledger/periods/2026-09/reopen-requests/r%2F1/approval");
+  assert.equal(calls[3].url, "/api/v1/documents/d1/corrections");
+  assert.equal(calls[3].init.headers["Idempotency-Key"], "key-1");
+  assert.equal(calls[4].init.headers["Idempotency-Key"], "key-2");
+  assert.equal(calls[5].url, "/api/v1/reconciliations/run/items/item/resolution");
+  assert.equal(calls[5].init.method, "POST");
+
+  for (const name of [
+    "adjustTransaction", "getRefund", "reportRefund", "submitBatch", "getJob", "listDecisionJournals",
+    "getDecisionInclusion", "getSubledgerBalances", "transitionSubledgerPeriod", "requestPeriodReopen",
+    "getObligation", "transitionObligation", "issueDocument", "getDocument", "getDocumentLineage",
+    "runReconciliation", "getReconciliation", "listSeals", "sealPeriod", "getSeal", "verifySeal",
+    "listRetentionPolicies", "recordRetentionPolicy", "listLegalHolds", "placeLegalHold", "getLegalHold",
+    "changeLegalHoldScope", "releaseLegalHold", "getDecisionRetention", "getLegalMatrix", "listAuthorizations",
+    "grantAuthorization", "getAuthorization", "revokeAuthorization", "checkAuthorization", "proposeClassification",
+  ]) {
+    assert.equal(typeof client[name], "function", name);
+  }
+});
+
+test("the dashboard is read relative to a same-origin prefix, with its period", async () => {
+  const dashboard = { period: "2026-09", determinations: { tax: [{ amount: "882.00", currency: "EUR" }] } };
+  const { fetch, calls } = stub(json(200, dashboard));
+  // A browser client on the web tier's origin, which proxies /api to the cell.
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+
+  const result = await client.getDashboard({ period: "2026-09" });
+  await client.getDashboard();
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.determinations.tax[0].amount, "882.00");
+  assert.equal(calls[0].url, "/api/v1/dashboard?period=2026-09");
+  assert.equal(calls[0].init.method, "GET");
+  assert.equal(calls[1].url, "/api/v1/dashboard");
+});
+
 test("a request body is sent as JSON with the right content type", async () => {
   const { fetch, calls } = stub(json(200, { tenant: {}, user: {}, expiresAt: "" }));
   const client = new ZoikoTaxClient({ baseUrl: "https://eu-west-1.zoikotax.com", fetch });

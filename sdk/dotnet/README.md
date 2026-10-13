@@ -45,6 +45,7 @@ Every method is `async`, takes a `CancellationToken` last, and returns a `Result
 | `ListUsersAsync` · `CreateUserAsync` · `SetUserStatusAsync` · `GrantRoleAsync` · `RevokeRoleAsync` | `/v1/admin/users/…` |
 | `ListSessionsAsync` · `RevokeSessionAsync` | `/v1/admin/sessions/…` |
 | `ListAuditAsync` | `GET /v1/admin/audit` |
+| `GetDashboardAsync` | `GET /v1/dashboard` |
 
 ## Three things this SDK deliberately does not do
 

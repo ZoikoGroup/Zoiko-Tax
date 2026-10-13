@@ -267,6 +267,84 @@ func (e CustomerAuthorizationStatus) Valid() bool {
 	}
 }
 
+// Defines values for DashboardActionKind.
+const (
+	DashboardActionKindDECISIONREVIEW      DashboardActionKind = "DECISION_REVIEW"
+	DashboardActionKindOBLIGATIONATTENTION DashboardActionKind = "OBLIGATION_ATTENTION"
+	DashboardActionKindOBLIGATIONDUE       DashboardActionKind = "OBLIGATION_DUE"
+	DashboardActionKindOBLIGATIONOVERDUE   DashboardActionKind = "OBLIGATION_OVERDUE"
+	DashboardActionKindRECONCILIATIONBREAK DashboardActionKind = "RECONCILIATION_BREAK"
+	DashboardActionKindREFUNDFAILED        DashboardActionKind = "REFUND_FAILED"
+	DashboardActionKindREFUNDUNCERTAIN     DashboardActionKind = "REFUND_UNCERTAIN"
+	DashboardActionKindWEBHOOKDEAD         DashboardActionKind = "WEBHOOK_DEAD"
+)
+
+// Valid indicates whether the value is a known member of the DashboardActionKind enum.
+func (e DashboardActionKind) Valid() bool {
+	switch e {
+	case DashboardActionKindDECISIONREVIEW:
+		return true
+	case DashboardActionKindOBLIGATIONATTENTION:
+		return true
+	case DashboardActionKindOBLIGATIONDUE:
+		return true
+	case DashboardActionKindOBLIGATIONOVERDUE:
+		return true
+	case DashboardActionKindRECONCILIATIONBREAK:
+		return true
+	case DashboardActionKindREFUNDFAILED:
+		return true
+	case DashboardActionKindREFUNDUNCERTAIN:
+		return true
+	case DashboardActionKindWEBHOOKDEAD:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DashboardPriority.
+const (
+	DashboardPriorityP0 DashboardPriority = "P0"
+	DashboardPriorityP1 DashboardPriority = "P1"
+	DashboardPriorityP2 DashboardPriority = "P2"
+)
+
+// Valid indicates whether the value is a known member of the DashboardPriority enum.
+func (e DashboardPriority) Valid() bool {
+	switch e {
+	case DashboardPriorityP0:
+		return true
+	case DashboardPriorityP1:
+		return true
+	case DashboardPriorityP2:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DashboardReadiness.
+const (
+	DashboardReadinessATRISK  DashboardReadiness = "AT_RISK"
+	DashboardReadinessBLOCKED DashboardReadiness = "BLOCKED"
+	DashboardReadinessREADY   DashboardReadiness = "READY"
+)
+
+// Valid indicates whether the value is a known member of the DashboardReadiness enum.
+func (e DashboardReadiness) Valid() bool {
+	switch e {
+	case DashboardReadinessATRISK:
+		return true
+	case DashboardReadinessBLOCKED:
+		return true
+	case DashboardReadinessREADY:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DeliveryStatus.
 const (
 	DeliveryStatusDEAD      DeliveryStatus = "DEAD"
@@ -1986,6 +2064,188 @@ type CustomerAuthorization struct {
 
 // CustomerAuthorizationStatus defines model for CustomerAuthorization.Status.
 type CustomerAuthorizationStatus string
+
+// Dashboard The Tax Command Center for one legal period of the tenant's default legal entity.
+type Dashboard struct {
+	// Actions What needs a person, most urgent first. At most 25.
+	Actions []DashboardAction `json:"actions"`
+
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf Timestamp `json:"asOf"`
+
+	// Determinations Decisions recorded in the period and the one before it, and the tax
+	// their journals credited to `TAX_COLLECTED_LIABILITY`, per currency.
+	Determinations DashboardDeterminations `json:"determinations"`
+
+	// Evidence Seal coverage of the tenant's decisions: how many are recorded, and
+	// how many fall inside a period seal and can therefore prove their
+	// inclusion (ADR-0011 §2.4). Replay is not counted: its verdict is
+	// computed on request and never stored.
+	Evidence DashboardEvidence `json:"evidence"`
+
+	// Jurisdictions Every authority the LegalAuthorization matrix names, resolved through
+	// the gate for `FILE` in the period against the customer's
+	// authorizations. The counts are of authorities.
+	Jurisdictions DashboardJurisdictions `json:"jurisdictions"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// Liability `TAX_COLLECTED_LIABILITY` for the period, per currency, credits
+	// and debits apart. Empty when nothing posted.
+	Liability []ControlBalance `json:"liability"`
+
+	// Obligations Current obligations not yet filed whose due date falls within
+	// `windowDays` of today in their own legal calendar, overdue ones
+	// included, and the assessed amounts of all of them per currency.
+	Obligations DashboardObligations `json:"obligations"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod `json:"period"`
+
+	// Reconciliation Items of the latest run of each legal period. `matched` counts
+	// matched, explained and resolved items; `breaks` exceptions nobody has
+	// resolved; `open` items still pending.
+	Reconciliation DashboardReconciliation `json:"reconciliation"`
+
+	// Trend The eight periods ending with the reported one, oldest first:
+	// decisions recorded, and tax credited to `TAX_COLLECTED_LIABILITY` in
+	// `currency` — the currency most journals posted in over those periods.
+	// `currency` and each point's `liability` are absent when nothing
+	// posted.
+	Trend DashboardTrend `json:"trend"`
+}
+
+// DashboardAction One thing that needs a person. `subjectId` names the obligation,
+// reconciliation item or refund it concerns, so a client can open it;
+// it is absent for an action that aggregates many records.
+type DashboardAction struct {
+	Context string `json:"context"`
+
+	// Due A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	Due *CivilDate `json:"due,omitempty"`
+
+	// Exposure An amount and its currency, never one without the other.
+	Exposure *MoneyValue         `json:"exposure,omitempty"`
+	Kind     DashboardActionKind `json:"kind"`
+
+	// Priority `P0` now, `P1` this week, `P2` this month.
+	Priority  DashboardPriority `json:"priority"`
+	SubjectID *string           `json:"subjectId,omitempty"`
+	Title     string            `json:"title"`
+}
+
+// DashboardActionKind defines model for DashboardActionKind.
+type DashboardActionKind string
+
+// DashboardAuthority defines model for DashboardAuthority.
+type DashboardAuthority struct {
+	// Authority An authority within a country, as the matrix names it.
+	Authority AuthorityCode `json:"authority"`
+
+	// Country ISO 3166-1 alpha-2.
+	Country CountryCode `json:"country"`
+
+	// Readiness Whether filing with an authority could proceed now: `READY` when the
+	// gate allows it, `AT_RISK` when only a customer authorization or
+	// credential stands in the way, `BLOCKED` otherwise.
+	Readiness DashboardReadiness `json:"readiness"`
+
+	// Reason The gate's reason when filing is not allowed; absent when it is.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// DashboardDeterminations Decisions recorded in the period and the one before it, and the tax
+// their journals credited to `TAX_COLLECTED_LIABILITY`, per currency.
+type DashboardDeterminations struct {
+	Decisions         int32 `json:"decisions"`
+	PreviousDecisions int32 `json:"previousDecisions"`
+
+	// PreviousPeriod A subledger legal period, a month.
+	PreviousPeriod LegalPeriod  `json:"previousPeriod"`
+	PreviousTax    []MoneyValue `json:"previousTax"`
+
+	// ReviewRequired Decisions in the period whose outcome needs a person — REVIEW_REQUIRED, AMBIGUOUS, CONFLICTED or UNSUPPORTED.
+	ReviewRequired int32        `json:"reviewRequired"`
+	Tax            []MoneyValue `json:"tax"`
+}
+
+// DashboardEvidence Seal coverage of the tenant's decisions: how many are recorded, and
+// how many fall inside a period seal and can therefore prove their
+// inclusion (ADR-0011 §2.4). Replay is not counted: its verdict is
+// computed on request and never stored.
+type DashboardEvidence struct {
+	Decisions int32 `json:"decisions"`
+	Sealed    int32 `json:"sealed"`
+	Seals     int32 `json:"seals"`
+}
+
+// DashboardJurisdictions Every authority the LegalAuthorization matrix names, resolved through
+// the gate for `FILE` in the period against the customer's
+// authorizations. The counts are of authorities.
+type DashboardJurisdictions struct {
+	AtRisk      int32                `json:"atRisk"`
+	Authorities []DashboardAuthority `json:"authorities"`
+	Blocked     int32                `json:"blocked"`
+	Ready       int32                `json:"ready"`
+}
+
+// DashboardObligations Current obligations not yet filed whose due date falls within
+// `windowDays` of today in their own legal calendar, overdue ones
+// included, and the assessed amounts of all of them per currency.
+type DashboardObligations struct {
+	Amounts    []MoneyValue `json:"amounts"`
+	Due        int32        `json:"due"`
+	Overdue    int32        `json:"overdue"`
+	WindowDays int32        `json:"windowDays"`
+}
+
+// DashboardPriority `P0` now, `P1` this week, `P2` this month.
+type DashboardPriority string
+
+// DashboardReadiness Whether filing with an authority could proceed now: `READY` when the
+// gate allows it, `AT_RISK` when only a customer authorization or
+// credential stands in the way, `BLOCKED` otherwise.
+type DashboardReadiness string
+
+// DashboardReconciliation Items of the latest run of each legal period. `matched` counts
+// matched, explained and resolved items; `breaks` exceptions nobody has
+// resolved; `open` items still pending.
+type DashboardReconciliation struct {
+	Breaks  int32 `json:"breaks"`
+	Matched int32 `json:"matched"`
+	Open    int32 `json:"open"`
+	Runs    int32 `json:"runs"`
+}
+
+// DashboardTrend The eight periods ending with the reported one, oldest first:
+// decisions recorded, and tax credited to `TAX_COLLECTED_LIABILITY` in
+// `currency` — the currency most journals posted in over those periods.
+// `currency` and each point's `liability` are absent when nothing
+// posted.
+type DashboardTrend struct {
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency *CurrencyCode         `json:"currency,omitempty"`
+	Points   []DashboardTrendPoint `json:"points"`
+}
+
+// DashboardTrendPoint defines model for DashboardTrendPoint.
+type DashboardTrendPoint struct {
+	Decisions int32 `json:"decisions"`
+
+	// Liability An amount and its currency, never one without the other.
+	Liability *MoneyValue `json:"liability,omitempty"`
+
+	// LiabilityIndex The point's liability as a share of the largest in the trend, 0–100, for drawing. Not an amount.
+	LiabilityIndex int32 `json:"liabilityIndex"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod `json:"period"`
+}
 
 // Decimal A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
 // digits, and an optional fraction. No exponent, no leading `+`, no
@@ -4019,6 +4279,12 @@ type SubmitBatchParams struct {
 	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
 	// a key used for a commit can never match an adjust.
 	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
+// GetDashboardParams defines parameters for GetDashboard.
+type GetDashboardParams struct {
+	// Period The legal period to report, a month. Defaults to the current month in UTC.
+	Period *LegalPeriod `form:"period,omitempty" json:"period,omitempty"`
 }
 
 // IssueDocumentParams defines parameters for IssueDocument.

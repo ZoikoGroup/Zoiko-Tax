@@ -7,10 +7,10 @@
 const contentType = pm.response.headers.get('Content-Type') || '';
 const path = '/' + pm.request.url.getPath().replace(/^\/+/, '');
 
-// Endpoints the contract does not carry yet. The collection includes requests
-// for them so the intent is recorded and so W2 lane K has something to run
-// against; until they exist they 404, and eighteen red rows would hide the
-// rows that matter.
+// Endpoints specified and not built yet, from the overlay's pendingPaths. A
+// request for one records the intent; until it exists it 404s, and a wall of
+// red rows would hide the rows that matter. Empty today — every path the
+// contract declares is routed, so a 404 anywhere is a real failure.
 let pending = [];
 try {
   pending = JSON.parse(pm.collectionVariables.get('pendingPaths') || '[]');
@@ -20,7 +20,7 @@ try {
 const notImplemented = pm.response.code === 404 && pending.indexOf(path) !== -1;
 
 if (notImplemented) {
-  pm.test('not implemented yet (W2 lane K) — assertions skipped', function () {
+  pm.test('not implemented yet — assertions skipped', function () {
     pm.expect(true).to.be.true;
   });
 } else {

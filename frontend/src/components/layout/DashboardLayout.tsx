@@ -1,23 +1,16 @@
-import type { ReactNode } from 'react';
-import { Sidebar } from './Sidebar';
-import { Header } from './Header';
+import type { ReactNode } from 'react'
 
-export const DashboardLayout = ({ children }: { children: ReactNode }) => {
-  return (
-    <div className="ztax-layout">
-      {/* Left Sidebar */}
-      <Sidebar />
+import { Header, type HeaderProps } from './Header'
+import { Sidebar, type SidebarProps } from './Sidebar'
 
-      {/* Main Content Area */}
-      <div className="ztax-main-container">
-        {/* Top Header */}
-        <Header />
+export type DashboardLayoutProps = HeaderProps & SidebarProps & { readonly children: ReactNode }
 
-        {/* Page Content Viewport */}
-        <main className="ztax-dashboard-viewport">
-          {children}
-        </main>
-      </div>
+export const DashboardLayout = ({ children, view, onNavigate, ...header }: DashboardLayoutProps) => (
+  <div className="ztax-layout">
+    <Sidebar view={view} onNavigate={onNavigate} />
+    <div className="ztax-main-container">
+      <Header {...header} />
+      <main className="ztax-dashboard-viewport">{children}</main>
     </div>
-  );
-};
+  </div>
+)

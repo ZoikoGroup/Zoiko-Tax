@@ -47,6 +47,7 @@ from zoikotax.schema import (
     ChangePasswordRequest,
     CommitRequest,
     CreateUserRequest,
+    Dashboard,
     Decision,
     Problem,
     Quote,
@@ -71,6 +72,7 @@ __all__ = [
     "ChangePasswordRequest",
     "CommitRequest",
     "CreateUserRequest",
+    "Dashboard",
     "Decision",
     "Err",
     "HttpRequest",
@@ -404,6 +406,23 @@ class ZoikoTaxClient:
     def list_audit(self, *, limit: int | None = None) -> Result[ListAuditResponse]:
         """Read the tenant's audit trail, most recent first."""
         return self._send("GET", "/v1/admin/audit" + _query(limit=limit))
+
+    # --- dashboard ----------------------------------------------------------
+
+    def get_dashboard(self, period: str | None = None) -> Result[Dashboard]:
+        """The Tax Command Center for one legal period.
+
+        Read-only aggregates computed from the record at request time. Needs
+        ``OPERATOR``, ``ANALYST`` or ``AUDITOR``.
+
+        :param period: The legal period to report, a month as ``YYYY-MM``.
+            Unset means the server reports the current month in UTC.
+
+        Amounts are per currency and never summed across currencies, and stay
+        strings. A trend point's `liabilityIndex` is a 0–100 scale for
+        drawing, not an amount.
+        """
+        return self._send("GET", "/v1/dashboard" + _query(period=period))
 
     # --- determination ------------------------------------------------------
 

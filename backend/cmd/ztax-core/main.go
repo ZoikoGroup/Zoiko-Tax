@@ -34,6 +34,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/legal"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/clock"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/config"
@@ -160,6 +161,10 @@ func run() error {
 		return err
 	}
 	router.Legal = app.NewLegalService(matrix, store.Authorizations(), store.LegalEntities(), store.Audit(), store, clk, ids)
+	// The dashboard reads what was recorded; like retention it needs no
+	// content, so a cell without a bundle reports zeros rather than 503.
+	router.Dashboard = app.NewDashboardService(store.Dashboard(), store.LegalEntities(), store.Obligations(),
+		store.Authorizations(), matrix, clk)
 	models, closeModels, err := wireModelGateway(cfg, clk, ids, log)
 	if err != nil {
 		return err
@@ -288,11 +293,11 @@ func bootstrap(ctx context.Context, cfg config.Config, admin *app.AdminService, 
 	if err != nil {
 		// Already provisioned is the steady state after the first start, not a
 		// failure. Anything else is.
-		if errs.IsCategory(err, errs.CategoryConflict) {
-			log.Info("bootstrap tenant already present", "tenant", cfg.BootstrapTenant)
-			return nil
+		if !errs.IsCategory(err, errs.CategoryConflict) {
+			return fmt.Errorf("bootstrap tenant %q: %w", cfg.BootstrapTenant, err)
 		}
-		return fmt.Errorf("bootstrap tenant %q: %w", cfg.BootstrapTenant, err)
+		log.Info("bootstrap tenant already present", "tenant", cfg.BootstrapTenant)
+		return bootstrapRoles(ctx, cfg, admin, log)
 	}
 	// The password is not logged. The identifiers are, so an operator can find
 	// what was created.
@@ -305,6 +310,27 @@ func bootstrap(ctx context.Context, cfg config.Config, admin *app.AdminService, 
 		// retention (ADR-0015 §2.2).
 		"admin_email", privacy.Email(user.Email),
 	)
+	return bootstrapRoles(ctx, cfg, admin, log)
+}
+
+// bootstrapRoles grants ZTAX_BOOTSTRAP_ADMIN_EXTRA_ROLES, which config.Load
+// admits in development only. It runs whether or not the tenant was just
+// provisioned, so a role added to an existing local stack still arrives.
+func bootstrapRoles(ctx context.Context, cfg config.Config, admin *app.AdminService, log *slog.Logger) error {
+	if len(cfg.BootstrapAdminExtraRoles) == 0 {
+		return nil
+	}
+	roles := make([]security.Role, len(cfg.BootstrapAdminExtraRoles))
+	for i, r := range cfg.BootstrapAdminExtraRoles {
+		roles[i] = security.Role(r)
+	}
+	granted, err := admin.GrantBootstrapRoles(ctx, cfg.BootstrapTenant, cfg.BootstrapAdminEmail, roles)
+	if err != nil {
+		return fmt.Errorf("bootstrap roles: %w", err)
+	}
+	if len(granted) > 0 {
+		log.Warn("bootstrap administrator granted fiscal roles; development only", "tenant", cfg.BootstrapTenant, "roles", granted)
+	}
 	return nil
 }
 

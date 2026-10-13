@@ -3,8 +3,9 @@
 # by docs/tools/check_secrets_manifest.py.
 #
 # This config EXTENDS the default gitleaks ruleset — it does not replace it.
-# The allowlist below covers three known, deliberately-fake dev/CI placeholders
-# already in the repo. Each entry is path-scoped, so a new secret-shaped string
+# The allowlist below covers the known, deliberately-fake dev/CI placeholders
+# in the repo; .env.example holds the local stack's, moved there from
+# docker-compose.yml. Each entry is path-scoped, so a new secret-shaped string
 # in any other file is still caught. Adding a 4th placeholder requires a
 # deliberate edit to this file.
 
@@ -16,6 +17,7 @@ description = "Known fake dev/CI credentials — path-scoped only"
 # docs/tools/tests/test_check_secrets_manifest.py intentionally contains fake secret-shaped strings as planted test fixtures.
 paths = [
     '''docker-compose\.yml''',
+    '''^\.env\.example$''',
     '''backend/\.env\.local\.example''',
     '''\.github/workflows/ci\.yml''',
     '''docs/tools/tests/test_check_secrets_manifest\.py'''

@@ -14,6 +14,9 @@ import subprocess
 # docs/evidence/secret_scan_report.md for the evaluation.
 SANCTIONED_FILES = [
     "docker-compose.yml",
+    # The local stack's placeholders, which docker-compose.yml now reads via
+    # .env instead of carrying inline. Same values, same sanction.
+    ".env.example",
     "backend/.env.local.example",
     ".github/workflows/ci.yml",
 ]

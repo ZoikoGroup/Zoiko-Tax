@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"time"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
@@ -538,6 +540,75 @@ func (s *AdminService) ProvisionTenant(ctx context.Context, in ProvisionTenantIn
 		return identity.Tenant{}, identity.User{}, err
 	}
 	return tenant, admin, nil
+}
+
+// GrantBootstrapRoles gives the bootstrap administrator further roles, for
+// local development only: the configuration that names them is refused
+// outside development. ADMIN reads no fiscal figure on its own, so a local
+// stack with one user needs another role to see the dashboard it serves.
+//
+// It runs on every start, because bootstrap provisioning is a no-op once the
+// tenant exists and a role added to the configuration later must still
+// reach it. A role the administrator already holds is skipped, so restarts
+// write nothing and the audit trail records each grant once.
+func (s *AdminService) GrantBootstrapRoles(ctx context.Context, slug, email string, roles []security.Role) ([]security.Role, error) {
+	for _, r := range roles {
+		if r == security.RoleAdmin || !r.Valid() {
+			return nil, errs.Invalid("roles", errs.ReasonInvalidValue, fmt.Sprintf("%q is not a role bootstrap may add.", r))
+		}
+	}
+	tenant, err := s.tenants.BySlug(ctx, slug)
+	if err != nil {
+		return nil, err
+	}
+	admin, err := s.users.ByEmail(ctx, tenant.ID, email)
+	if err != nil {
+		return nil, err
+	}
+	var missing []security.Role
+	for _, r := range roles {
+		if !slices.Contains(admin.Roles, r) && !slices.Contains(missing, r) {
+			missing = append(missing, r)
+		}
+	}
+	if len(missing) == 0 {
+		return nil, nil
+	}
+	now := s.clock.Now()
+	tx, txCtx, err := s.tx.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	txCtx = security.Into(txCtx, security.System(tenant.ID))
+	for _, r := range missing {
+		if err := s.users.GrantRole(txCtx, admin.ID, r, admin.ID, now); err != nil {
+			return nil, err
+		}
+		auditID, err := idgen.AuditID(s.ids)
+		if err != nil {
+			return nil, errs.Wrap(err, errs.CategoryInternal, errs.ReasonInternal, "The role could not be recorded.")
+		}
+		detail, err := canonical.Encode(canonical.Object(
+			canonical.F("role", canonical.String(string(r))),
+			canonical.F("source", canonical.String("bootstrap")),
+		))
+		if err != nil {
+			return nil, errs.Wrap(err, errs.CategoryInternal, errs.ReasonInternal, "The role could not be recorded.")
+		}
+		// actor is nil, as at provisioning: configuration granted it, not a
+		// user.
+		if err := s.audit.Append(txCtx, port.AuditRecord{
+			ID: auditID, TenantID: tenant.ID, Action: "ROLE_GRANTED",
+			SubjectType: "user", SubjectID: admin.ID.String(), Detail: detail, RecordedAt: now,
+		}); err != nil {
+			return nil, err
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return missing, nil
 }
 
 func (s *AdminService) append(ctx context.Context, sc security.Context, action, subjectType, subjectID string, now time.Time, detail ...canonical.Field) error {

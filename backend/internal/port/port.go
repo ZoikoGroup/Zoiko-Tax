@@ -726,3 +726,85 @@ type AuthorizationRepository interface {
 	// List returns the tenant's authorizations, newest first.
 	List(ctx context.Context) ([]legal.Authorization, error)
 }
+
+// ---------------------------------------------------------------------------
+// the Tax Command Center
+// ---------------------------------------------------------------------------
+
+// DashboardRepository reads the aggregates the Tax Command Center reports.
+// Every method reads the tenant from the security context, writes nothing,
+// and sums rows another repository returns one by one: the dashboard is
+// never a second source of any figure.
+type DashboardRepository interface {
+	// Decisions counts the decisions recorded in [from, to), per UTC month
+	// keyed YYYY-MM, and those among them whose outcome needs a person.
+	Decisions(ctx context.Context, from, to time.Time) (map[string]DecisionCount, error)
+	// Postings sums what a legal entity posted to one control account in the
+	// legal periods [fromPeriod, toPeriod], per period, side and currency.
+	Postings(ctx context.Context, legalEntityID id.LegalEntityID, account subledger.Account, fromPeriod, toPeriod string) ([]Posting, error)
+	// Reconciliation counts the items of the latest run of each of a legal
+	// entity's periods, and returns up to limit of their unresolved
+	// exceptions.
+	Reconciliation(ctx context.Context, legalEntityID id.LegalEntityID, limit int) (ReconciliationSummary, []ReconciliationException, error)
+	// SealCoverage counts the tenant's decisions, those recorded inside a
+	// period seal, and the seals.
+	SealCoverage(ctx context.Context) (SealCoverage, error)
+	// RefundsAwaiting returns up to limit refunds whose latest status is
+	// UNCERTAIN, or FAILED at or after since, oldest request first. A failure
+	// is final, so it needs a person only until somebody has had the chance
+	// to look; an uncertain refund needs one until it resolves.
+	RefundsAwaiting(ctx context.Context, since time.Time, limit int) ([]RefundAwaiting, error)
+	// DeadDeliveries counts webhook deliveries dead-lettered among those
+	// created at or after since.
+	DeadDeliveries(ctx context.Context, since time.Time) (int, error)
+}
+
+// DecisionCount is one month's decisions.
+type DecisionCount struct {
+	Recorded       int
+	ReviewRequired int
+}
+
+// Posting is the sum of one side of one account, in one currency and period.
+type Posting struct {
+	Period string
+	Side   subledger.Side
+	Amount fiscal.Money
+	// Lines is how many journal lines the sum is over.
+	Lines int
+}
+
+// ReconciliationSummary counts items of the latest runs.
+type ReconciliationSummary struct {
+	Runs    int
+	Matched int
+	Breaks  int
+	Open    int
+}
+
+// ReconciliationException is an unresolved break in a latest run.
+type ReconciliationException struct {
+	ItemID   string
+	Period   string
+	Stage    string
+	Status   string
+	MatchKey string
+	// Variance is absent when the item carries no amount.
+	Variance *fiscal.Money
+}
+
+// SealCoverage is how much of the record a seal vouches for.
+type SealCoverage struct {
+	Decisions int
+	Sealed    int
+	Seals     int
+}
+
+// RefundAwaiting is a refund that needs a person.
+type RefundAwaiting struct {
+	RefundID         string
+	Status           string
+	Amount           fiscal.Money
+	PaymentReference string
+	RequestedAt      time.Time
+}

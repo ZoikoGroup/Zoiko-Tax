@@ -26,6 +26,10 @@ import com.sun.net.httpserver.HttpServer;
 import com.zoikotax.sdk.model.Capabilities;
 import com.zoikotax.sdk.model.CommitRequest;
 import com.zoikotax.sdk.model.CreateUserRequest;
+import com.zoikotax.sdk.model.Dashboard;
+import com.zoikotax.sdk.model.DashboardAction;
+import com.zoikotax.sdk.model.DashboardActionKind;
+import com.zoikotax.sdk.model.DashboardPriority;
 import com.zoikotax.sdk.model.DeterminationInput;
 import com.zoikotax.sdk.model.MoneyValue;
 import com.zoikotax.sdk.model.QuoteRequest;
@@ -314,6 +318,55 @@ class ZoikoTaxClientTest {
         describe(stub.calls.get(2)));
     // Only a commit carries a key; a quote records nothing to be idempotent about.
     assertNull(stub.calls.get(0).header("Idempotency-Key"));
+  }
+
+  /** A minimal Dashboard: every required member, and the optional ones a caller is most likely to read. */
+  static final String DASHBOARD =
+      "{\"asOf\":\"2026-10-09T10:32:00.000000Z\",\"period\":\"2026-09\","
+          + "\"legalEntityId\":\"01920a4c-0000-7000-8000-00000000e001\","
+          + "\"determinations\":{\"decisions\":42,\"tax\":[{\"amount\":\"882.00\",\"currency\":\"EUR\"}],"
+          + "\"previousPeriod\":\"2026-08\",\"previousDecisions\":37,\"previousTax\":[],\"reviewRequired\":1},"
+          + "\"liability\":[],\"obligations\":{\"windowDays\":30,\"due\":2,\"overdue\":1,\"amounts\":[]},"
+          + "\"reconciliation\":{\"runs\":1,\"matched\":10,\"breaks\":1,\"open\":0},"
+          + "\"evidence\":{\"decisions\":42,\"sealed\":40,\"seals\":1},"
+          + "\"jurisdictions\":{\"ready\":1,\"atRisk\":0,\"blocked\":0,\"authorities\":[]},"
+          + "\"actions\":[{\"kind\":\"OBLIGATION_OVERDUE\",\"priority\":\"P0\",\"title\":\"Return overdue\","
+          + "\"context\":\"DE VAT 2026-08\",\"exposure\":{\"amount\":\"777.00\",\"currency\":\"EUR\"}}],"
+          + "\"trend\":{\"currency\":\"EUR\",\"points\":[{\"period\":\"2026-09\",\"decisions\":42,"
+          + "\"liability\":{\"amount\":\"882.00\",\"currency\":\"EUR\"},\"liabilityIndex\":100}]}}";
+
+  @Test
+  void aPeriodBecomesAQueryParameterAndAnAbsentOneDoesNot() {
+    Stub stub = new Stub(Transport.Response.of(200, Map.of("Content-Type", "application/json"), DASHBOARD));
+    ZoikoTaxClient client = client(stub);
+
+    client.getDashboard("2026-09");
+    client.getDashboard();
+
+    assertEquals("GET " + BASE + "/v1/dashboard?period=2026-09", describe(stub.calls.get(0)));
+    assertEquals("GET " + BASE + "/v1/dashboard", describe(stub.calls.get(1)));
+    assertNull(stub.calls.get(0).body());
+  }
+
+  @Test
+  void theDashboardDecodesIntoGeneratedModels() {
+    ZoikoTaxClient client =
+        client(new Stub(Transport.Response.of(200, Map.of("Content-Type", "application/json"), DASHBOARD)));
+
+    Dashboard dashboard = client.getDashboard("2026-09").unwrap();
+
+    assertEquals("2026-09", dashboard.getPeriod());
+    assertEquals("2026-10-09T10:32:00.000000Z", dashboard.getAsOf());
+    assertEquals(42, dashboard.getDeterminations().getDecisions());
+    // An amount stays a string, with its scale intact.
+    assertEquals("882.00", dashboard.getDeterminations().getTax().get(0).getAmount());
+    DashboardAction action = dashboard.getActions().get(0);
+    assertEquals(DashboardActionKind.OBLIGATION_OVERDUE, action.getKind());
+    assertEquals(DashboardPriority.P0, action.getPriority());
+    assertEquals("777.00", action.getExposure().getAmount());
+    assertNull(action.getSubjectId());
+    assertEquals(100, dashboard.getTrend().getPoints().get(0).getLiabilityIndex());
+    assertEquals(1, dashboard.getReconciliation().getBreaks());
   }
 
   private static String describe(Transport.Request request) {

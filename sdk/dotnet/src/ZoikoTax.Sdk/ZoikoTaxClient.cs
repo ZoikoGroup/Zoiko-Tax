@@ -263,6 +263,21 @@ public sealed class ZoikoTaxClient : IDisposable
     public Task<Result<AuditRecordList>> ListAuditAsync(int? limit = null, CancellationToken cancellationToken = default)
         => SendAsync<AuditRecordList>(HttpMethod.Get, "/v1/admin/audit" + Query(limit), null, cancellationToken);
 
+    // --- dashboard ----------------------------------------------------------
+
+    /// <summary>The Tax Command Center for one legal period.</summary>
+    /// <remarks>
+    /// Read-only aggregates computed from the record at request time. Needs
+    /// <c>OPERATOR</c>, <c>ANALYST</c> or <c>AUDITOR</c>. Amounts are per
+    /// currency, never summed across currencies, and stay strings; a trend
+    /// point's <see cref="DashboardTrendPoint.LiabilityIndex"/> is a 0–100
+    /// scale for drawing, not an amount.
+    /// </remarks>
+    /// <param name="period">The legal period to report, a month as <c>YYYY-MM</c>. Omitted, the server reports the current month in UTC.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    public Task<Result<Dashboard>> GetDashboardAsync(string? period = null, CancellationToken cancellationToken = default)
+        => SendAsync<Dashboard>(HttpMethod.Get, "/v1/dashboard" + PeriodQuery(period), null, cancellationToken);
+
     // --- determination ------------------------------------------------------
 
     /// <summary>Quote a transaction without recording it.</summary>
@@ -482,6 +497,9 @@ public sealed class ZoikoTaxClient : IDisposable
 
     private static string Query(int? limit)
         => limit is int value ? "?limit=" + value.ToString(CultureInfo.InvariantCulture) : "";
+
+    private static string PeriodQuery(string? period)
+        => period is null ? "" : "?period=" + Uri.EscapeDataString(period);
 
     private static (string Name, string Value)[] ValidateHeaders(ZoikoTaxClientOptions options)
     {

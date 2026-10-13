@@ -188,9 +188,10 @@ docker-release: ## Build with SBOM and provenance attached (W1 lane B)
 	@echo "      conversion and signing are lane B work, not done here."
 
 .PHONY: up
-up: ## Start the local cell — postgres + ztax-core + ztax-web
+up: ## Start the local cell — postgres + ztax-core + ztax-web (settings in ../.env)
+	@test -f ../.env || { cp ../.env.example ../.env && echo "created ../.env from ../.env.example"; }
 	docker compose -f ../docker-compose.yml up --build -d
-	@echo "ztax-core on http://localhost:8080/healthz, ztax-web on http://localhost:3000"
+	@echo "ztax-core on http://localhost:$${CORE_PORT:-8080}/healthz, ztax-web on http://localhost:$${WEB_PORT:-3000} (ports as set in ../.env)"
 
 .PHONY: down
 down: ## Stop the local cell, keeping the database volume

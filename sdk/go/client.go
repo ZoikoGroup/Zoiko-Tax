@@ -39,6 +39,14 @@ type ListOptions struct {
 	Limit Limit
 }
 
+// DashboardOptions selects what GetDashboard reports.
+type DashboardOptions struct {
+	// Period is the legal period to report, a month in the form YYYY-MM, such
+	// as "2026-09". Empty means unset: no period parameter is sent and the
+	// server reports the current month in UTC.
+	Period LegalPeriod
+}
+
 // Option configures a Client.
 type Option func(*Client)
 
@@ -257,6 +265,23 @@ func (c *Client) ListAudit(ctx context.Context, opts ListOptions) (*AuditList, e
 	return &out, nil
 }
 
+// --- dashboard ---------------------------------------------------------------
+
+// GetDashboard reads the Tax Command Center for one legal period: read-only
+// aggregates computed from the record at request time. It needs OPERATOR,
+// ANALYST or AUDITOR.
+//
+// Amounts are per currency, never summed across currencies, and are strings
+// like every other fiscal amount. Trend points' LiabilityIndex is a 0–100
+// scale for drawing, not an amount.
+func (c *Client) GetDashboard(ctx context.Context, opts DashboardOptions) (*Dashboard, error) {
+	var out Dashboard
+	if err := c.send(ctx, http.MethodGet, "/v1/dashboard", opts.query(), nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 // --- determination -----------------------------------------------------------
 
 // CreateQuote quotes a transaction without recording it.
@@ -332,6 +357,13 @@ func (o ListOptions) query() url.Values {
 		return nil
 	}
 	return url.Values{"limit": {strconv.FormatInt(int64(o.Limit), 10)}}
+}
+
+func (o DashboardOptions) query() url.Values {
+	if o.Period == "" {
+		return nil
+	}
+	return url.Values{"period": {o.Period}}
 }
 
 // send performs one request, once. out is nil for an operation whose success

@@ -4104,6 +4104,401 @@ namespace ZoikoTax.Sdk
 
     }
 
+    /// <summary>
+    /// The Tax Command Center for one legal period of the tenant's default legal entity.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Dashboard
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("asOf")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string AsOf { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("period")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-(0[1-9]|1[0-2])$")]
+        public string Period { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("legalEntityId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid LegalEntityId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("determinations")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public DashboardDeterminations Determinations { get; set; } = new DashboardDeterminations();
+
+        /// <summary>
+        /// `TAX_COLLECTED_LIABILITY` for the period, per currency, credits
+        /// <br/>and debits apart. Empty when nothing posted.
+        /// <br/>
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("liability")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<ControlBalance> Liability { get; set; } = new System.Collections.ObjectModel.Collection<ControlBalance>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("obligations")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public DashboardObligations Obligations { get; set; } = new DashboardObligations();
+
+        [System.Text.Json.Serialization.JsonPropertyName("reconciliation")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public DashboardReconciliation Reconciliation { get; set; } = new DashboardReconciliation();
+
+        [System.Text.Json.Serialization.JsonPropertyName("evidence")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public DashboardEvidence Evidence { get; set; } = new DashboardEvidence();
+
+        [System.Text.Json.Serialization.JsonPropertyName("jurisdictions")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public DashboardJurisdictions Jurisdictions { get; set; } = new DashboardJurisdictions();
+
+        /// <summary>
+        /// What needs a person, most urgent first. At most 25.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("actions")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<DashboardAction> Actions { get; set; } = new System.Collections.ObjectModel.Collection<DashboardAction>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("trend")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public DashboardTrend Trend { get; set; } = new DashboardTrend();
+
+    }
+
+    /// <summary>
+    /// Decisions recorded in the period and the one before it, and the tax
+    /// <br/>their journals credited to `TAX_COLLECTED_LIABILITY`, per currency.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DashboardDeterminations
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("decisions")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Decisions { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("tax")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<MoneyValue> Tax { get; set; } = new System.Collections.ObjectModel.Collection<MoneyValue>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("previousPeriod")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-(0[1-9]|1[0-2])$")]
+        public string PreviousPeriod { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("previousDecisions")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int PreviousDecisions { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("previousTax")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<MoneyValue> PreviousTax { get; set; } = new System.Collections.ObjectModel.Collection<MoneyValue>();
+
+        /// <summary>
+        /// Decisions in the period whose outcome needs a person — REVIEW_REQUIRED, AMBIGUOUS, CONFLICTED or UNSUPPORTED.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("reviewRequired")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int ReviewRequired { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// Current obligations not yet filed whose due date falls within
+    /// <br/>`windowDays` of today in their own legal calendar, overdue ones
+    /// <br/>included, and the assessed amounts of all of them per currency.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DashboardObligations
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("windowDays")]
+        [System.ComponentModel.DataAnnotations.Range(1, int.MaxValue)]
+        public int WindowDays { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("due")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Due { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("overdue")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Overdue { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("amounts")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<MoneyValue> Amounts { get; set; } = new System.Collections.ObjectModel.Collection<MoneyValue>();
+
+    }
+
+    /// <summary>
+    /// Items of the latest run of each legal period. `matched` counts
+    /// <br/>matched, explained and resolved items; `breaks` exceptions nobody has
+    /// <br/>resolved; `open` items still pending.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DashboardReconciliation
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("runs")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Runs { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("matched")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Matched { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("breaks")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Breaks { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("open")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Open { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// Seal coverage of the tenant's decisions: how many are recorded, and
+    /// <br/>how many fall inside a period seal and can therefore prove their
+    /// <br/>inclusion (ADR-0011 §2.4). Replay is not counted: its verdict is
+    /// <br/>computed on request and never stored.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DashboardEvidence
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("decisions")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Decisions { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("sealed")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Sealed { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("seals")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Seals { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// Whether filing with an authority could proceed now: `READY` when the
+    /// <br/>gate allows it, `AT_RISK` when only a customer authorization or
+    /// <br/>credential stands in the way, `BLOCKED` otherwise.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum DashboardReadiness
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"READY")]
+        READY = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AT_RISK")]
+        AT_RISK = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"BLOCKED")]
+        BLOCKED = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DashboardAuthority
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("country")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z]{2}$")]
+        public string Country { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("authority")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(128, MinimumLength = 1)]
+        public string Authority { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("readiness")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<DashboardReadiness>))]
+        public DashboardReadiness Readiness { get; set; } = default!;
+
+        /// <summary>
+        /// The gate's reason when filing is not allowed; absent when it is.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// Every authority the LegalAuthorization matrix names, resolved through
+    /// <br/>the gate for `FILE` in the period against the customer's
+    /// <br/>authorizations. The counts are of authorities.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DashboardJurisdictions
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("ready")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Ready { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("atRisk")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int AtRisk { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("blocked")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Blocked { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("authorities")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<DashboardAuthority> Authorities { get; set; } = new System.Collections.ObjectModel.Collection<DashboardAuthority>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum DashboardActionKind
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"OBLIGATION_OVERDUE")]
+        OBLIGATION_OVERDUE = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"OBLIGATION_ATTENTION")]
+        OBLIGATION_ATTENTION = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"OBLIGATION_DUE")]
+        OBLIGATION_DUE = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RECONCILIATION_BREAK")]
+        RECONCILIATION_BREAK = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REFUND_UNCERTAIN")]
+        REFUND_UNCERTAIN = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REFUND_FAILED")]
+        REFUND_FAILED = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"DECISION_REVIEW")]
+        DECISION_REVIEW = 6,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"WEBHOOK_DEAD")]
+        WEBHOOK_DEAD = 7,
+
+    }
+
+    /// <summary>
+    /// `P0` now, `P1` this week, `P2` this month.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum DashboardPriority
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"P0")]
+        P0 = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"P1")]
+        P1 = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"P2")]
+        P2 = 2,
+
+    }
+
+    /// <summary>
+    /// One thing that needs a person. `subjectId` names the obligation,
+    /// <br/>reconciliation item or refund it concerns, so a client can open it;
+    /// <br/>it is absent for an action that aggregates many records.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DashboardAction
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("kind")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<DashboardActionKind>))]
+        public DashboardActionKind Kind { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("priority")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<DashboardPriority>))]
+        public DashboardPriority Priority { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("title")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Title { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("context")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Context { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("exposure")]
+        public MoneyValue? Exposure { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("due")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")]
+        public string? Due { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("subjectId")]
+        public System.Guid? SubjectId { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DashboardTrendPoint
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("period")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-(0[1-9]|1[0-2])$")]
+        public string Period { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("decisions")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Decisions { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("liability")]
+        public MoneyValue? Liability { get; set; } = default!;
+
+        /// <summary>
+        /// The point's liability as a share of the largest in the trend, 0–100, for drawing. Not an amount.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("liabilityIndex")]
+        [System.ComponentModel.DataAnnotations.Range(0, 100)]
+        public int LiabilityIndex { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// The eight periods ending with the reported one, oldest first:
+    /// <br/>decisions recorded, and tax credited to `TAX_COLLECTED_LIABILITY` in
+    /// <br/>`currency` — the currency most journals posted in over those periods.
+    /// <br/>`currency` and each point's `liability` are absent when nothing
+    /// <br/>posted.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DashboardTrend
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z]{3}$")]
+        public string? Currency { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("points")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<DashboardTrendPoint> Points { get; set; } = new System.Collections.ObjectModel.Collection<DashboardTrendPoint>();
+
+    }
+
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public enum JournalLineSide
     {
