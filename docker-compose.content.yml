@@ -1,0 +1,41 @@
+# Turns on the CONTENT train bundle for the local stack's ztax-core, on top
+# of docker-compose.yml.
+#
+# Deliberately a separate file rather than more lines in docker-compose.yml:
+# a compose stack that refused to start until somebody had run
+# `make -C backend content` would break the one-command setup in the
+# README, for the same reason backend/.env.local.example leaves its own
+# ZTAX_CONTENT_DIR/ZTAX_CONTENT_KEYRING pair commented out. Nothing here
+# applies unless this file is explicitly added to the command line.
+#
+# Locally:
+#   make -C backend content
+#   docker compose -f docker-compose.yml -f docker-compose.content.yml up --build
+#
+# CI's `stack` job sets COMPOSE_FILE to both files for every `docker
+# compose` call, after running that same target.
+
+services:
+  ztax-core:
+    environment:
+      # The CONTENT train bundle (ADR-0005 §2.6) and where decisions are
+      # recorded (ADR-0011 §2.8). Evidence must land under /tmp -- the one
+      # writable path the base file's read_only container has (its own
+      # tmpfs: [/tmp]).
+      ZTAX_CONTENT_DIR: /etc/ztax/content
+      ZTAX_CONTENT_KEYRING: /etc/ztax/content-keyring/keyring.json
+      ZTAX_EVIDENCE_DIR: /tmp/evidence
+    volumes:
+      # Populated by `make -C backend content`; an empty directory otherwise,
+      # which Compose creates on the host without complaint.
+      - ./content/build:/etc/ztax/content:ro
+      # Only the public keyring crosses into the container -- never
+      # content/.keys itself, which also holds signing.pem/author.pem/
+      # approver.pem (the PRIVATE keys ztax-contentc writes 0600; this
+      # service only ever verifies, never signs). Mounted as a sibling of
+      # /etc/ztax/content, not nested inside it, so the content loader's own
+      # directory walk never sees it. If content/.keys/keyring.json does not
+      # exist yet, Compose creates an empty directory at that host path;
+      # run `make -C backend content` before the first `docker compose up`
+      # with this file added, or remove the stray directory it leaves behind.
+      - ./content/.keys/keyring.json:/etc/ztax/content-keyring/keyring.json:ro
