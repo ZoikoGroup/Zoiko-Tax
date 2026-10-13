@@ -77,6 +77,8 @@ def _make_use_case(
         max_risk_tier=RiskTier.T2,
         max_authority=max_authority,
         permitted_regions=frozenset({_REGION}),
+        # g21_prov carries data_class="INTERNAL"; advance() calls authorise().
+        permitted_data_classes=frozenset({"INTERNAL"}),
         suspended=suspended,
     )
 

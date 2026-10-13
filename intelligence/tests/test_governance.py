@@ -27,6 +27,9 @@ BASE_USE_CASE = UseCase(
     max_risk_tier=RiskTier.T2,
     max_authority=AuthorityOutcome.A3,
     permitted_regions=frozenset({"eu-west-1"}),
+    # Required so authorise() passes the data-class check for BASE_PROVENANCE
+    # which carries data_class="CUSTOMER_CONFIDENTIAL".
+    permitted_data_classes=frozenset({"CUSTOMER_CONFIDENTIAL"}),
 )
 
 BASE_PROVENANCE = Provenance(

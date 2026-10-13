@@ -66,6 +66,8 @@ def registry() -> tuple[UseCaseRegistry, RoutingTable]:
                 max_risk_tier=RiskTier.T2,
                 max_authority=AuthorityOutcome.A1,
                 permitted_regions=frozenset({REGION}),
+                # calls carry data_classes=["P0"]; must be in the allowlist.
+                permitted_data_classes=frozenset({"P0"}),
             )
         ]
     )

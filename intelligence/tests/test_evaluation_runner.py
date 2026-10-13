@@ -77,6 +77,7 @@ BASE_USE_CASE = UseCase(
     max_risk_tier=RiskTier.T2,
     max_authority=AuthorityOutcome.A2,
     permitted_regions=frozenset({"eu-west-1"}),
+    permitted_data_classes=frozenset({"INTERNAL"}),
 )
 
 BASE_PROVENANCE = Provenance(

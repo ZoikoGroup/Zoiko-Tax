@@ -128,6 +128,7 @@ class Gateway:
             risk_tier=g.risk_tier,
             authority_outcome=g.authority_outcome,
             ai_train_version=self._train,
+            data_classes=g.data_classes,
         )
 
         def work(_: UseCase) -> Reply:
@@ -255,7 +256,7 @@ def load_config(path: Path) -> tuple[UseCaseRegistry, RoutingTable]:
               "max_risk_tier":        str,   # T0-T4
               "max_authority":        str,   # A0-A4
               "permitted_regions":    [str], # optional; empty = no region allowed
-              "permitted_data_classes": [str], # optional; informational only
+              "permitted_data_classes": [str], # optional; absent = deny all
               "suspended":            bool,  # optional; default false
               "route": {
                 "model_profile":    str,
@@ -281,6 +282,7 @@ def load_config(path: Path) -> tuple[UseCaseRegistry, RoutingTable]:
             max_risk_tier=RiskTier(entry["max_risk_tier"]),
             max_authority=AuthorityOutcome(entry["max_authority"]),
             permitted_regions=frozenset(entry.get("permitted_regions", [])),
+            permitted_data_classes=frozenset(entry.get("permitted_data_classes", [])),
             suspended=bool(entry.get("suspended", False)),
         )
         registry.register(uc)

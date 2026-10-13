@@ -44,6 +44,7 @@ def _registry(suspended: bool = False) -> UseCaseRegistry:
             max_risk_tier=RiskTier.T2,
             max_authority=AuthorityOutcome.A2,
             permitted_regions=frozenset({REGION}),
+            permitted_data_classes=frozenset({"SKU"}),
             suspended=suspended,
         )
     )

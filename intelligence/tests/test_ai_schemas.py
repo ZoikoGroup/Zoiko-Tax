@@ -48,11 +48,10 @@ _REPO = Path(__file__).resolve().parents[2]
 _SCHEMAS = _REPO / "contracts" / "schemas" / "ai"
 _PRIVACY_VOCABULARY = _REPO / "contracts" / "privacy" / "vocabulary.json"
 
-# Refusal codes the Go policy gate raises and the Python Gateway does not yet.
-# Listed explicitly so that a code appearing on one side only is a decision
-# somebody wrote down, not drift: AI_DATA_CLASS_REFUSED needs a data-class
-# allowlist on UseCase, which the Python registry does not carry yet.
-_GO_ONLY_REFUSALS = frozenset({"AI_DATA_CLASS_REFUSED"})
+# Refusal codes that appear in the schema but are not yet raised by Python.
+# AI_DATA_CLASS_REFUSED is now raised by the Python Gateway, so this set is
+# empty: both sides raise exactly the codes in the schema.
+_GO_ONLY_REFUSALS: frozenset[str] = frozenset()
 
 _ALL_SCHEMAS = (
     "common",
@@ -362,11 +361,28 @@ def test_registry_object_conforms(validator: _Validator, schema: str, obj: objec
     ],
 )
 def test_schema_requires_exactly_the_python_fields(schema: str, cls: Any) -> None:
-    # Required is the Python field set, so a field added to a dataclass without
-    # a schema change -- or the reverse -- fails here rather than at the
-    # boundary. Optional schema fields are the AIGOV-001 remainder.
+    # The schema's ``required`` list and the Python dataclass field set must be
+    # identical, so a field added to one side without updating the other fails
+    # here rather than at the cross-boundary wire.
+    #
+    # Named exceptions: Python fields that are deliberately optional in the
+    # schema (not in ``required``) but present on the Python dataclass with a
+    # default. Each entry is (schema_name, field_name).
+    _optional_in_schema: frozenset[tuple[str, str]] = frozenset({
+        # permitted_data_classes was added to UseCase with a default of
+        # frozenset() so JSON registries that pre-date the allowlist load
+        # without change. The ai-use-case schema lists it as an optional
+        # property (not in "required") because it was introduced after the
+        # AIGOV-001 mandatory set was frozen.
+        ("ai-use-case", "permitted_data_classes"),
+    })
     python_fields = {f.name for f in dataclasses.fields(cls)}
-    assert set(_load(schema)["required"]) == python_fields
+    schema_required = set(_load(schema)["required"])
+    excepted = {f for (s, f) in _optional_in_schema if s == schema}
+    assert schema_required == python_fields - excepted, (
+        f"{schema!r}: schema required={sorted(schema_required)} "
+        f"!= python fields - exceptions={sorted(python_fields - excepted)}"
+    )
 
 
 def test_manifest_schema_is_the_as_dict_shape() -> None:

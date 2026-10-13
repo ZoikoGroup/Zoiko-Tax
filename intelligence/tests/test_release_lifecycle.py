@@ -55,6 +55,7 @@ def registry() -> UseCaseRegistry:
             max_risk_tier=RiskTier.T2,
             max_authority=AuthorityOutcome.A3,
             permitted_regions=frozenset({_REGION}),
+            permitted_data_classes=frozenset({"INTERNAL"}),
         )
     )
     return reg
