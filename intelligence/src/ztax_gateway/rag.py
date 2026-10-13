@@ -1,6 +1,6 @@
 """Provenance RAG -- Knowledge-Base over the ZoikoTax specification documents.
 
-Chapter 17 ss9 and ss10 of the ZoikoTax Master Specification.
+Master Specification Ch.17 §9/§10.
 
 Every AI output that references a tax rule, a determination algorithm, or a
 jurisdiction requirement must be traceable to a specific chunk of an official
@@ -19,8 +19,9 @@ spec document.  This module provides that traceability by:
    fiscal, tax_decision or subledger packages (ADR-0006 s2.6; the CI grep
    enforces this).
 
-4. **Valid-time filtering** (Chapter 17 ss9/ss10) -- :meth:`KnowledgeBase.search`
-   applies a temporal filter based on the ``mode`` parameter:
+4. **Valid-time filtering** (Master Specification Ch.17 §9/§10) --
+   :meth:`KnowledgeBase.search` applies a temporal filter based on the ``mode``
+   parameter:
 
    * ``TemporalMode.CURRENT`` (default) -- returns chunks that are IN_FORCE
      right now: ``effective_from <= _utcnow() < effective_to``.  Open bounds
@@ -32,11 +33,26 @@ spec document.  This module provides that traceability by:
    (those whose ``effective_to`` has passed) tagged with
    ``TemporalStatus.SUPERSEDED``.  NOT_YET_EFFECTIVE chunks are never returned.
 
+5. **Index lifecycle** (Master Specification Ch.17 §9/§10) -- the index is
+   read-only after :meth:`KnowledgeBase.build` *except* for lifecycle
+   operations, which only ever **remove** content:
+
+   * :meth:`KnowledgeBase.retire` -- soft-removes a source so it never appears
+     in any search (including ``historical_context=True``).  Chunk content is
+     retained for audit purposes.
+   * :meth:`KnowledgeBase.purge` -- physically deletes a source's chunk text
+     from the index and from every in-memory structure.  Only an immutable
+     :class:`Tombstone` remains.
+   * :meth:`KnowledgeBase.tombstones` -- returns an append-only audit trail
+     of every retire and purge operation in operation order.
+
 Design rules
 ------------
 * **Immutable index** -- once :meth:`KnowledgeBase.build` returns, the index is
-  read-only.  Attempting to ingest a document twice is a programming error, not
-  a runtime condition.
+  read-only except for lifecycle operations that only ever remove content.
+  Attempting to ingest a document twice is a programming error, not a runtime
+  condition.  Attempting to re-ingest a retired or purged source is also an
+  error (a withdrawn source needs a new index generation).
 * **Chunk granularity** -- documents are split at Markdown heading boundaries
   (``#``, ``##``, ``###``).  Each heading + its body is one chunk, one
   ``SourceChunk``, one ``Citation``.
@@ -57,6 +73,7 @@ Design rules
 from __future__ import annotations
 
 import enum
+import hashlib
 import re
 import sqlite3
 from dataclasses import dataclass, field
@@ -76,9 +93,12 @@ __all__: list[str] = [
     "Chunk",
     "KnowledgeBase",
     "KnowledgeBaseError",
+    "LifecycleAction",
+    "LifecycleReason",
     "SearchResult",
     "TemporalMode",
     "TemporalStatus",
+    "Tombstone",
 ]
 
 # ---------------------------------------------------------------------------
@@ -115,6 +135,42 @@ def _utcnow() -> datetime:
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
+
+
+class LifecycleAction(enum.StrEnum):
+    """The action recorded in a lifecycle :class:`Tombstone` (Master Specification Ch.17 §9/§10).
+
+    ``RETIRE``
+        Soft-remove: the source is hidden from every search but its chunk text
+        is retained for audit.
+
+    ``PURGE``
+        Hard-remove: chunk text is physically deleted.  Only the tombstone
+        remains.
+    """
+
+    RETIRE = "RETIRE"
+    PURGE = "PURGE"
+
+
+class LifecycleReason(enum.StrEnum):
+    """The business reason that drove a lifecycle operation (Master Specification Ch.17 §9/§10).
+
+    ``LICENCE_WITHDRAWN``
+        The content licence has been revoked or has expired.
+
+    ``PRIVACY_DELETION``
+        A data-subject deletion request (e.g. GDPR right-to-erasure) requires
+        the content to be removed.
+
+    ``PACK_WITHDRAWN``
+        The document pack or product that contained this source has been
+        decommissioned.
+    """
+
+    LICENCE_WITHDRAWN = "LICENCE_WITHDRAWN"
+    PRIVACY_DELETION = "PRIVACY_DELETION"
+    PACK_WITHDRAWN = "PACK_WITHDRAWN"
 
 
 class TemporalMode(enum.Enum):
@@ -156,6 +212,41 @@ class TemporalStatus(enum.Enum):
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class Tombstone:
+    """Immutable audit record created by :meth:`KnowledgeBase.retire` or
+    :meth:`KnowledgeBase.purge` (Master Specification Ch.17 §9/§10).
+
+    ``source_id``
+        The posix-path identifier of the retired or purged source.
+
+    ``action``
+        :attr:`LifecycleAction.RETIRE` or :attr:`LifecycleAction.PURGE`.
+
+    ``reason``
+        The business reason for the lifecycle operation.
+
+    ``at``
+        Timezone-aware UTC datetime at which the operation was recorded.
+
+    ``content_sha256``
+        Deterministic SHA-256 over the source's chunk ``content_hash`` values
+        concatenated in chunk-id order (the order they were inserted).  Allows
+        an auditor to verify which version of the content was removed.
+
+    ``chunk_count``
+        Number of chunks that were present in the source at the time of the
+        operation.
+    """
+
+    source_id: str
+    action: LifecycleAction
+    reason: LifecycleReason
+    at: datetime
+    content_sha256: str
+    chunk_count: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -321,6 +412,10 @@ class KnowledgeBase:
     _chunks: dict[int, Chunk] = field(default_factory=dict, init=False, repr=False)
     _built: bool = field(default=False, init=False, repr=False)
     _ingested: set[str] = field(default_factory=set, init=False, repr=False)
+    # Lifecycle state (Master Specification Ch.17 §9/§10)
+    _retired: set[str] = field(default_factory=set, init=False, repr=False)
+    _purged: set[str] = field(default_factory=set, init=False, repr=False)
+    _tombstones: list[Tombstone] = field(default_factory=list, init=False, repr=False)
 
     def __post_init__(self) -> None:
         self._conn.execute(
@@ -424,6 +519,15 @@ class KnowledgeBase:
 
         for path in paths:
             sid = path.as_posix()
+            # Lifecycle gate: retired or purged sources cannot be re-ingested
+            # (a withdrawn source needs a new index generation).
+            # Must be checked before the duplicate-ingest guard because a retired
+            # source is still in _ingested.
+            if sid in self._retired or sid in self._purged:
+                raise KnowledgeBaseError(
+                    f"rag: {path.name!r} has been retired or purged and cannot be re-ingested"
+                    " -- a withdrawn source needs a new index generation"
+                )
             if sid in self._ingested:
                 raise KnowledgeBaseError(
                     f"rag: {path.name!r} has already been ingested -- duplicate ingestion is a bug"
@@ -496,6 +600,163 @@ class KnowledgeBase:
             rows,
         )
         self._conn.commit()
+
+    # ------------------------------------------------------------------
+    # Lifecycle operations (Master Specification Ch.17 §9/§10)
+    # ------------------------------------------------------------------
+
+    def _source_chunk_ids(self, source_id: str) -> list[int]:
+        """Return chunk IDs for *source_id* in insertion order."""
+        return [cid for cid, chunk in self._chunks.items() if chunk.source_id == source_id]
+
+    def _content_sha256(self, source_id: str) -> tuple[str, int]:
+        """Compute (content_sha256, chunk_count) for *source_id*.
+
+        The SHA-256 is over the chunk ``content_hash`` values concatenated in
+        chunk-id order, so the same source content always produces the same
+        digest and an auditor can verify which version was removed.
+        """
+        chunk_ids = self._source_chunk_ids(source_id)
+        raw = b"".join(
+            self._citations[cid].chunks[0].content_hash.encode()
+            for cid in chunk_ids
+            if cid in self._citations
+        )
+        return hashlib.sha256(raw).hexdigest(), len(chunk_ids)
+
+    def retire(
+        self,
+        source_id: str,
+        *,
+        reason: LifecycleReason,
+        at: datetime | None = None,
+    ) -> Tombstone:
+        """Soft-remove *source_id* from the index.
+
+        After this call the source never appears in any search, including
+        ``historical_context=True``.  Chunk content is kept for audit.
+
+        Args:
+            source_id: The posix-path identifier previously passed to
+                :meth:`build`.
+            reason:    The business reason for the retirement.
+            at:        Timezone-aware UTC datetime of the operation.  Defaults
+                       to ``_utcnow()``.
+
+        Returns:
+            The immutable :class:`Tombstone` that was appended to the audit
+            trail.
+
+        Raises:
+            KnowledgeBaseError: if *source_id* is unknown, already retired,
+                already purged, or *at* is naive.
+        """
+        if source_id in self._purged:
+            raise KnowledgeBaseError(
+                f"rag: retire: {source_id!r} has already been purged"
+            )
+        if source_id in self._retired:
+            raise KnowledgeBaseError(
+                f"rag: retire: {source_id!r} has already been retired"
+            )
+        if source_id not in self._ingested and source_id not in self._retired:
+            raise KnowledgeBaseError(
+                f"rag: retire: {source_id!r} is not in the index"
+            )
+        if at is None:
+            at = _utcnow()
+        _require_utc(at, "at")
+        sha, count = self._content_sha256(source_id)
+        tombstone = Tombstone(
+            source_id=source_id,
+            action=LifecycleAction.RETIRE,
+            reason=reason,
+            at=at,
+            content_sha256=sha,
+            chunk_count=count,
+        )
+        self._retired.add(source_id)
+        self._tombstones.append(tombstone)
+        return tombstone
+
+    def purge(
+        self,
+        source_id: str,
+        *,
+        reason: LifecycleReason,
+        at: datetime | None = None,
+    ) -> Tombstone:
+        """Hard-remove *source_id* from the index.
+
+        Physically deletes the source's chunk text from the SQLite FTS5 table
+        and from every in-memory structure so that no search or attribute can
+        return it.  Only the :class:`Tombstone` remains.
+
+        A purge following a :meth:`retire` is allowed (a second tombstone is
+        appended).
+
+        Args:
+            source_id: The posix-path identifier previously passed to
+                :meth:`build`.
+            reason:    The business reason for the purge.
+            at:        Timezone-aware UTC datetime of the operation.  Defaults
+                       to ``_utcnow()``.
+
+        Returns:
+            The immutable :class:`Tombstone` that was appended to the audit
+            trail.
+
+        Raises:
+            KnowledgeBaseError: if *source_id* is unknown, already purged, or
+                *at* is naive.
+        """
+        if source_id in self._purged:
+            raise KnowledgeBaseError(
+                f"rag: purge: {source_id!r} has already been purged"
+            )
+        if source_id not in self._ingested and source_id not in self._retired:
+            raise KnowledgeBaseError(
+                f"rag: purge: {source_id!r} is not in the index"
+            )
+        if at is None:
+            at = _utcnow()
+        _require_utc(at, "at")
+        sha, count = self._content_sha256(source_id)
+        tombstone = Tombstone(
+            source_id=source_id,
+            action=LifecycleAction.PURGE,
+            reason=reason,
+            at=at,
+            content_sha256=sha,
+            chunk_count=count,
+        )
+        # --- Physical deletion ---
+        # 1. Remove from FTS5 table.
+        self._conn.execute(
+            "DELETE FROM chunks WHERE source_id = ?", (source_id,)
+        )
+        self._conn.commit()
+        # 2. Remove from in-memory dicts.
+        chunk_ids = self._source_chunk_ids(source_id)
+        for cid in chunk_ids:
+            self._chunks.pop(cid, None)
+            self._citations.pop(cid, None)
+        # 3. Remove from the ingested set so document_count/source_ids exclude
+        #    this source; add to _purged so re-ingestion is blocked.
+        self._ingested.discard(source_id)
+        self._purged.add(source_id)
+        # 4. Also remove from retired if a retire preceded this purge.
+        self._retired.discard(source_id)
+        self._tombstones.append(tombstone)
+        return tombstone
+
+    def tombstones(self) -> tuple[Tombstone, ...]:
+        """Return an append-only audit trail of every lifecycle operation.
+
+        Tombstones are returned in operation order (retire before purge if both
+        were called on the same source).
+        """
+        return tuple(self._tombstones)
 
     # ------------------------------------------------------------------
     # Searching
@@ -596,7 +857,14 @@ class KnowledgeBase:
 
         results: list[SearchResult] = []
         for chunk_id, rank in rows:
+            # chunk_id might have been purged (removed from _chunks); skip.
+            if chunk_id not in self._chunks:
+                continue
             chunk = self._chunks[chunk_id]
+            # Retired sources are excluded from every search mode, including
+            # historical_context=True (Master Specification Ch.17 §9/§10).
+            if chunk.source_id in self._retired:
+                continue
             status = _temporal_status(chunk, ref)
             if status is TemporalStatus.NOT_YET_EFFECTIVE:
                 continue
@@ -616,16 +884,20 @@ class KnowledgeBase:
 
     @property
     def document_count(self) -> int:
-        """Number of unique documents ingested."""
+        """Number of unique documents ingested (excludes purged sources)."""
         return len(self._ingested)
 
     @property
     def chunk_count(self) -> int:
-        """Total number of indexed chunks."""
+        """Total number of indexed chunks (excludes purged sources)."""
         return len(self._chunks)
 
     def source_ids(self) -> frozenset[str]:
-        """Return the set of source identifiers (file paths) that have been ingested."""
+        """Return the set of source identifiers (file paths) that have been ingested.
+
+        Purged sources are excluded.  Retired sources are still present (their
+        chunk text is retained for audit).
+        """
         return frozenset(self._ingested)
 
 
