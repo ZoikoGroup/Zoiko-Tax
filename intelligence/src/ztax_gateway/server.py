@@ -28,7 +28,7 @@ import sys
 from concurrent import futures
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, NoReturn
+from typing import Any, Final, NoReturn
 
 import grpc
 
@@ -68,6 +68,9 @@ REASON_KEY = "ztax-reason"
 # ReasonGatewayUnavailable).
 REASON_NOT_CONFIGURED = "AI_GATEWAY_NOT_CONFIGURED"
 REASON_UNAVAILABLE = "AI_GATEWAY_UNAVAILABLE"
+
+# PRIV-001 valid privacy class labels (P0 through P7).
+_VALID_DATA_CLASSES: Final[frozenset[str]] = frozenset(f"P{i}" for i in range(8))
 
 
 @dataclass(frozen=True)
@@ -410,7 +413,7 @@ def load_config(path: Path) -> tuple[UseCaseRegistry, RoutingTable]:
               "max_risk_tier":        str,   # T0-T4
               "max_authority":        str,   # A0-A4
               "permitted_regions":    [str], # optional; empty = no region allowed
-              "permitted_data_classes": [str], # optional; absent = deny all
+              "permitted_data_classes": [str], # required; missing = ValueError
               "suspended":            bool,  # optional; default false
               "route": {
                 "model_profile":    str,
@@ -429,15 +432,35 @@ def load_config(path: Path) -> tuple[UseCaseRegistry, RoutingTable]:
     registry = UseCaseRegistry()
     routes: dict[str, Route] = {}
     for entry in doc.get("use_cases", []):
-        dc_raw = entry.get("permitted_data_classes")
+        uc_id = entry["use_case_id"]
+        if "permitted_data_classes" not in entry:
+            raise ValueError(
+                f"load_config: use case {uc_id!r} is missing 'permitted_data_classes'"
+            )
+        dc_raw = entry["permitted_data_classes"]
+        if not isinstance(dc_raw, list):
+            raise ValueError(
+                f"load_config: use case {uc_id!r} 'permitted_data_classes' "
+                "must be a JSON array"
+            )
+        for label in dc_raw:
+            if not isinstance(label, str):
+                raise ValueError(
+                    f"load_config: use case {uc_id!r} data class {label!r} is not a string"
+                )
+            if label not in _VALID_DATA_CLASSES:
+                raise ValueError(
+                    f"load_config: use case {uc_id!r} data class {label!r} "
+                    f"is not a valid PRIV-001 label (expected one of {sorted(_VALID_DATA_CLASSES)})"
+                )
         uc = UseCase(
-            use_case_id=entry["use_case_id"],
+            use_case_id=uc_id,
             owner=entry["owner"],
             description=entry["description"],
             max_risk_tier=RiskTier(entry["max_risk_tier"]),
             max_authority=AuthorityOutcome(entry["max_authority"]),
             permitted_regions=frozenset(entry.get("permitted_regions", [])),
-            permitted_data_classes=frozenset(dc_raw) if dc_raw is not None else None,
+            permitted_data_classes=frozenset(dc_raw),
             suspended=bool(entry.get("suspended", False)),
         )
         registry.register(uc)

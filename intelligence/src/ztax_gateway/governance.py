@@ -89,11 +89,10 @@ class UseCase:
     # not declared where it may run has not been through residency review.
     permitted_regions: frozenset[str] = field(default_factory=frozenset)
     # permitted_data_classes is the PRIV-001 allowlist (Ch.17 §17, ADR-0006
-    # §2.5). None means the policy was not configured in the registry — the
-    # data-class check is skipped for that use case. An explicit frozenset
-    # enforces an allowlist: empty frozenset = deny all (deny by default when
-    # a policy is actively declared). None is the right default for use cases
-    # loaded from older registry files that predate the data-class field.
+    # §2.5). None means not configured and is REFUSED; empty frozenset means
+    # deny all (explicit); only a non-empty set permits those classes.
+    # Fail-closed: the Go e2e fixture now declares this field (PR #46),
+    # so absence is no longer tolerated.
     permitted_data_classes: frozenset[str] | None = None
     # suspended takes a use case out of service without removing its
     # registration, so the history of what it was remains readable.
@@ -287,9 +286,10 @@ def authorise(registry: UseCaseRegistry, provenance: Provenance) -> UseCase:
     #    class that should never reach a model is refused even if it somehow
     #    appeared in permitted_data_classes (which register() prevents anyway).
     #    Mirrors the last loop in Go's Evaluate.
-    #    When permitted_data_classes is None the use case has no data-class
-    #    policy configured; the check is skipped entirely except for
-    #    NEVER_TO_A_MODEL, which is unconditional.
+    #    When permitted_data_classes is None the use case has not declared a
+    #    data-class policy; every class is refused (deny-all).
+    #    A missing field no longer skips the check.
+    allowed = use_case.permitted_data_classes
     for data_class in provenance.data_classes or (provenance.data_class,):
         if data_class in NEVER_TO_A_MODEL:
             raise GovernanceRefusedError(
@@ -297,8 +297,13 @@ def authorise(registry: UseCaseRegistry, provenance: Provenance) -> UseCase:
                 f"privacy class {data_class!r} may never reach a model (PRIV-001 §4)",
                 context,
             )
-        allowed = use_case.permitted_data_classes
-        if allowed is not None and data_class not in allowed:
+        if allowed is None:
+            raise GovernanceRefusedError(
+                Refusal.DATA_CLASS_REFUSED,
+                f"no data-class policy declared for {use_case.use_case_id!r}",
+                context,
+            )
+        if data_class not in allowed:
             raise GovernanceRefusedError(
                 Refusal.DATA_CLASS_REFUSED,
                 f"privacy class {data_class!r} is not permitted for {use_case.use_case_id!r}",

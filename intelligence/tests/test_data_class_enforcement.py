@@ -6,7 +6,7 @@ default — an empty frozenset permits nothing. The check mirrors Go's
 Evaluate loop (governance.go).
 
 Four test groups:
-  1. load_config round-trips and missing-key deny behaviour.
+  1. load_config round-trips, missing-key rejection and label validation.
   2. Shipped config/registry.dev.json: exact Go call scenarios.
   3. Real gRPC channel: data-class refusal and permission over the wire.
   4. Precedence: earlier steps always beat the data-class check.
@@ -258,6 +258,16 @@ def test_empty_permitted_data_classes_detail_names_use_case() -> None:
     assert _BASE_USE_CASE.use_case_id in exc.value.detail
 
 
+def test_authorise_none_permitted_data_classes_refuses() -> None:
+    """A use case whose permitted_data_classes is None (missing field) refuses every class."""
+    uc = replace(_BASE_USE_CASE, permitted_data_classes=None)
+    prov = _BASE_PROVENANCE
+    with pytest.raises(GovernanceRefusedError) as exc:
+        authorise(UseCaseRegistry([uc]), prov)
+    assert exc.value.refusal is Refusal.DATA_CLASS_REFUSED
+    assert exc.value.detail == "no data-class policy declared for 'data-class-test'"
+
+
 # ---------------------------------------------------------------------------
 # Allowlist enforcement
 # ---------------------------------------------------------------------------
@@ -375,7 +385,7 @@ def test_residency_refusal_takes_priority_over_data_class_refusal() -> None:
 
 
 def test_permitted_data_classes_default_is_none() -> None:
-    """The default is None (no policy configured), not deny-all or a wildcard."""
+    """The default is None (deny-all); a use case that omits the field cannot process any class."""
     uc = UseCase(
         use_case_id="default-test",
         owner="lane-l",
@@ -417,8 +427,8 @@ def test_load_config_reads_permitted_data_classes(tmp_path: pathlib.Path) -> Non
     assert uc.permitted_data_classes == frozenset({"P0", "P1"})
 
 
-def test_load_config_missing_key_means_no_policy(tmp_path: pathlib.Path) -> None:
-    """A JSON entry without permitted_data_classes yields None (no policy configured)."""
+def test_load_config_missing_key_raises(tmp_path: pathlib.Path) -> None:
+    """A JSON entry without permitted_data_classes raises ValueError."""
     p = _tmp_registry(tmp_path, [
         {
             "use_case_id": "uc-b",
@@ -430,41 +440,80 @@ def test_load_config_missing_key_means_no_policy(tmp_path: pathlib.Path) -> None
             "route": _ROUTE,
         }
     ])
-    reg, _ = load_config(p)
-    uc = reg.get("uc-b")
-    assert uc is not None
-    assert uc.permitted_data_classes is None
+    with pytest.raises(ValueError, match=r"use case 'uc-b' is missing"):
+        load_config(p)
 
 
-def test_load_config_missing_key_authorise_passes(tmp_path: pathlib.Path) -> None:
-    """A use case loaded without permitted_data_classes (None) skips the data-class check."""
+def test_load_config_wrong_type_raises(tmp_path: pathlib.Path) -> None:
+    """A bare string instead of a list for permitted_data_classes raises ValueError."""
     p = _tmp_registry(tmp_path, [
         {
-            "use_case_id": "uc-c",
+            "use_case_id": "uc-str",
             "owner": "o",
             "description": "d",
-            "max_risk_tier": "T2",
+            "max_risk_tier": "T1",
             "max_authority": "A1",
             "permitted_regions": ["eu-west-1"],
+            "permitted_data_classes": "P0",
             "route": _ROUTE,
         }
     ])
-    reg, _ = load_config(p)
-    prov = Provenance(
-        use_case="uc-c",
-        model_profile="m",
-        provider_profile="p",
-        prompt_profile="pp",
-        region="eu-west-1",
-        data_class="P0",
-        risk_tier=RiskTier.T1,
-        authority_outcome=AuthorityOutcome.A1,
-        ai_train_version="v",
-        data_classes=("P0",),
-    )
-    # No data-class policy configured (key absent) → check is skipped → permitted.
-    result = authorise(reg, prov)
-    assert result.use_case_id == "uc-c"
+    with pytest.raises(ValueError, match="must be a JSON array"):
+        load_config(p)
+
+
+def test_load_config_unknown_label_raises(tmp_path: pathlib.Path) -> None:
+    """A data class label not in P0-P7 raises ValueError at config load."""
+    p = _tmp_registry(tmp_path, [
+        {
+            "use_case_id": "uc-unknown",
+            "owner": "o",
+            "description": "d",
+            "max_risk_tier": "T1",
+            "max_authority": "A1",
+            "permitted_regions": ["eu-west-1"],
+            "permitted_data_classes": ["P0", "P8"],
+            "route": _ROUTE,
+        }
+    ])
+    with pytest.raises(ValueError, match="P8"):
+        load_config(p)
+
+
+def test_load_config_non_string_label_raises(tmp_path: pathlib.Path) -> None:
+    """A non-string entry in permitted_data_classes raises ValueError."""
+    p = _tmp_registry(tmp_path, [
+        {
+            "use_case_id": "uc-nonstr",
+            "owner": "o",
+            "description": "d",
+            "max_risk_tier": "T1",
+            "max_authority": "A1",
+            "permitted_regions": ["eu-west-1"],
+            "permitted_data_classes": ["P0", 1],
+            "route": _ROUTE,
+        }
+    ])
+    with pytest.raises(ValueError, match="is not a string"):
+        load_config(p)
+
+
+def test_load_config_lowercase_label_raises(tmp_path: pathlib.Path) -> None:
+    """Lowercase 'p0' is not a valid PRIV-001 label; load_config rejects it."""
+    p = _tmp_registry(tmp_path, [
+        {
+            "use_case_id": "uc-lower",
+            "owner": "o",
+            "description": "d",
+            "max_risk_tier": "T1",
+            "max_authority": "A1",
+            "permitted_regions": ["eu-west-1"],
+            "permitted_data_classes": ["p0"],
+            "route": _ROUTE,
+        }
+    ])
+    with pytest.raises(ValueError, match="p0"):
+        load_config(p)
 
 
 def test_load_config_explicit_empty_list_denies(tmp_path: pathlib.Path) -> None:

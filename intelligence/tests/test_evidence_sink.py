@@ -69,6 +69,7 @@ def _make_registry(use_case_id: str = _USE_CASE) -> UseCaseRegistry:
             max_risk_tier=RiskTier.T2,
             max_authority=AuthorityOutcome.A2,
             permitted_regions=frozenset([_REGION]),
+            permitted_data_classes=frozenset({"P0", "P1"}),
         )
     )
     return reg
