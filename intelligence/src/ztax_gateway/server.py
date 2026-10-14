@@ -32,8 +32,16 @@ from typing import Any, NoReturn
 
 import grpc
 
+from .evidence_sink import EvidenceSink, LoggingEvidenceSink
 from .fake_runtime import FakeRuntime
 from .governance import GovernanceRefusedError, Refusal, UseCase, UseCaseRegistry
+from .invocation_evidence import (
+    GuardrailResult,
+    InvocationEvidenceBuilder,
+    InvocationEvidenceRecord,
+    InvocationOutcome,
+    UsageMetrics,
+)
 from .provenance import AuthorityOutcome, Provenance, RiskTier
 from .runtime import (
     ModelRuntime,
@@ -85,6 +93,8 @@ class Gateway:
         runtime: ModelRuntime,
         region: str,
         ai_train_version: str,
+        *,
+        evidence_sink: EvidenceSink | None = None,
     ) -> None:
         if not region or not ai_train_version:
             raise ValueError("gateway: a Gateway names its region and its AI train version")
@@ -93,6 +103,9 @@ class Gateway:
         self._runtime = runtime
         self._region = region
         self._train = ai_train_version
+        # Ch.17 §21: default to the structured-log sink; callers may inject
+        # InMemoryEvidenceSink in tests for direct record assertions.
+        self._evidence_sink: EvidenceSink = evidence_sink or LoggingEvidenceSink()
 
     def invoke(self, data: bytes) -> bytes:
         try:
@@ -103,15 +116,6 @@ class Gateway:
             ) from exc
 
         g = call.governance
-        if g.region != self._region:
-            # ADR-0006 §2.8: residency is per cell. A call from another cell's
-            # region has reached the wrong Gateway, whatever the use case
-            # permits.
-            raise GatewayError(
-                grpc.StatusCode.PERMISSION_DENIED,
-                Refusal.RESIDENCY_REFUSED.value,
-                f"this Gateway serves {self._region!r}; the call is from {g.region!r}",
-            )
         route: Route | None
         try:
             route = self._routes.route(g.use_case)
@@ -131,33 +135,85 @@ class Gateway:
             data_classes=g.data_classes,
         )
 
+        if g.region != self._region:
+            # ADR-0006 §2.8: residency is per cell. A call from another cell's
+            # region has reached the wrong Gateway, whatever the use case
+            # permits.
+            self._seal_block(
+                provenance,
+                call.input,
+                refusal_code=Refusal.RESIDENCY_REFUSED.value,
+            )
+            raise GatewayError(
+                grpc.StatusCode.PERMISSION_DENIED,
+                Refusal.RESIDENCY_REFUSED.value,
+                f"this Gateway serves {self._region!r}; the call is from {g.region!r}",
+            )
+
         def work(_: UseCase) -> Reply:
             if route is None:
                 raise UnroutedUseCaseError(f"use case {g.use_case!r} has no route")
             return self._run(route, call)
 
+        # Ch.17 §21: produce exactly one tamper-evident evidence record per
+        # invocation, written to the sink *before* the reply bytes are returned.
         try:
             reply = guarded(self._registry, provenance, work)
         except GovernanceRefusedError as refusal:
-            raise GatewayError(
+            # Governance refused: seal a BLOCK record so the refusal is
+            # auditable, then re-raise as a GatewayError for the transport.
+            caller_err = GatewayError(
                 _REFUSAL_STATUS[refusal.refusal], refusal.refusal.value, refusal.detail
-            ) from refusal
+            )
+            self._seal_block(
+                provenance,
+                call.input,
+                refusal_code=refusal.refusal.value,
+                original_error=caller_err,
+            )
+            raise caller_err from refusal
         except RuntimeNotConfiguredError as exc:
-            raise GatewayError(
+            # Gap 1: the cell has no approved runtime — write a BLOCK record
+            # with a FAIL guardrail so the call is auditable, then surface
+            # the original UNIMPLEMENTED / AI_GATEWAY_NOT_CONFIGURED error.
+            caller_err = GatewayError(
                 grpc.StatusCode.UNIMPLEMENTED, REASON_NOT_CONFIGURED, str(exc)
-            ) from exc
+            )
+            self._seal_block(
+                provenance,
+                call.input,
+                refusal_code=REASON_NOT_CONFIGURED,
+                original_error=caller_err,
+            )
+            raise caller_err from exc
         except UnroutedUseCaseError as exc:
-            # A deployment defect: the registry permits what routing cannot
-            # serve. Reported as not configured, because to the caller that
-            # is what it is.
+            # Gap 2: a deployment defect — the registry permits what routing
+            # cannot serve.  The provenance already carries "unrouted"
+            # placeholders so the record can be built; write it before raising.
             log.error(
                 "gateway: registered use case without a route", extra={"use_case": g.use_case}
             )
-            raise GatewayError(
+            caller_err = GatewayError(
                 grpc.StatusCode.UNIMPLEMENTED, REASON_NOT_CONFIGURED, str(exc)
-            ) from exc
+            )
+            self._seal_block(
+                provenance,
+                call.input,
+                refusal_code=REASON_NOT_CONFIGURED,
+                original_error=caller_err,
+            )
+            raise caller_err from exc
         except RuntimeUnavailableError as exc:
+            self._seal_block(
+                provenance,
+                call.input,
+                refusal_code=REASON_UNAVAILABLE,
+            )
             raise GatewayError(grpc.StatusCode.UNAVAILABLE, REASON_UNAVAILABLE, str(exc)) from exc
+
+        # Successful invocation: seal a PROPOSE record (the authority-derived
+        # default) and write it to the sink before encode_reply is called.
+        self._seal_success(provenance, call.input, reply)
         return encode_reply(reply)
 
     def _run(self, route: Route, call: Call) -> Reply:
@@ -174,6 +230,104 @@ class Gateway:
             proposed_code=result.proposed_code,
             confidence=result.confidence,
         )
+
+    # ------------------------------------------------------------------
+    # Evidence helpers (Ch.17 §21)
+    # ------------------------------------------------------------------
+
+    def _seal_success(self, provenance: Provenance, input_bytes: bytes, reply: Reply) -> None:
+        """Build and write a successful-invocation evidence record.
+
+        The outcome is derived from the authority outcome so that the
+        evidence vocabulary (PROPOSE / PRIORITIZE / REVIEW / …) matches
+        what the governed context declared.
+        """
+        outcome = InvocationOutcome.from_authority_outcome(provenance.authority_outcome)
+        builder = InvocationEvidenceBuilder(
+            provenance=provenance,
+            invocation_outcome=outcome,
+            registry=self._registry,
+        )
+        builder.set_input(input_bytes)
+        # Serialise the reply to bytes for the output hash; this is the same
+        # canonical form the Go caller will receive, so the hash is verifiable.
+        reply_bytes = encode_reply(reply)
+        builder.set_output(reply_bytes)
+        builder.add_guardrail(GuardrailResult("governance.authority", "PASS"))
+        builder.set_usage(UsageMetrics())  # provider telemetry not yet available
+        record = builder.build()
+        self._write_sink(record)
+
+    def _seal_block(
+        self,
+        provenance: Provenance,
+        input_bytes: bytes,
+        *,
+        refusal_code: str,
+        original_error: GatewayError | None = None,
+    ) -> None:
+        """Build and write a BLOCK evidence record for a governance refusal.
+
+        A BLOCK record has no output hash (rule 5: a blocked invocation
+        produced no output).  The builder skips the governance gate for BLOCK
+        records because the refusal is exactly what we are recording.
+
+        Parameters
+        ----------
+        original_error:
+            When set, a sink failure must NOT replace the caller's error; the
+            original GatewayError is re-raised instead (Gap 4).  Pass None
+            only for paths (residency, RuntimeUnavailable) that already own
+            the final error at the call site.
+        """
+        builder = InvocationEvidenceBuilder(
+            provenance=provenance,
+            invocation_outcome=InvocationOutcome.BLOCK,
+            registry=self._registry,
+        )
+        builder.set_input(input_bytes)
+        builder.add_guardrail(GuardrailResult("governance.authority", refusal_code))
+        record = builder.build()
+        self._write_sink_block(record, original_error=original_error)
+
+    def _write_sink_block(
+        self,
+        record: InvocationEvidenceRecord,
+        *,
+        original_error: GatewayError | None,
+    ) -> None:
+        """Write a BLOCK record to the sink.
+
+        Gap 4: if the sink raises while recording a refusal or a runtime
+        failure, the caller's error must not be replaced.  Log the sink
+        failure and re-raise *original_error* when one is provided; otherwise
+        fall through to the UNAVAILABLE path (residency / runtime-failure own
+        their error at the call site and set original_error=None).
+        """
+        try:
+            self._evidence_sink.write(record)
+        except Exception:
+            log.exception("gateway: evidence sink write failed (BLOCK record)")
+            if original_error is not None:
+                raise original_error from None
+            # residency / runtime-failure paths: the caller raises after us,
+            # so simply return; the outer except will raise the right error.
+
+    def _write_sink(self, record: InvocationEvidenceRecord) -> None:
+        """Write a PERMIT record to the sink.
+
+        Ch.17 §21 fail-closed: if the sink raises on a *permitted* call, do
+        not return the reply.  Log the failure and surface it through the
+        existing runtime-failure error path with no new reason code
+        (StatusCode.UNAVAILABLE, REASON_UNAVAILABLE).
+        """
+        try:
+            self._evidence_sink.write(record)
+        except Exception as exc:
+            log.exception("gateway: evidence sink write failed")
+            raise GatewayError(
+                grpc.StatusCode.UNAVAILABLE, REASON_UNAVAILABLE, str(exc)
+            ) from exc
 
 
 def _abort(context: grpc.ServicerContext, err: GatewayError) -> NoReturn:
