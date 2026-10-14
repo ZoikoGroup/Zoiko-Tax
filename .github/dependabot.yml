@@ -1,0 +1,238 @@
+# Dependency update PRs — report/PR-only, same spirit as dependency-scan.yml's
+# "a finding never fails the job": this file never blocks a merge by itself.
+# It only opens pull requests for a human to review and merge; nothing here
+# runs in CI and nothing here is a gate.
+#
+# One entry per ecosystem/directory actually found in the repo (confirmed by
+# `git ls-files`, not assumed):
+#   gomod      backend/go.mod, backend/tools/fiscalfloat/go.mod, sdk/go/go.mod
+#   npm        contracts/package.json, frontend/package.json, sdk/typescript/package.json
+#   pip        intelligence/pyproject.toml, sdk/python/pyproject.toml,
+#              docs/tools/requirements.txt, infra/tools/requirements.txt
+#   maven      sdk/java/pom.xml
+#   nuget      sdk/dotnet/src/ZoikoTax.Sdk, sdk/dotnet/tests/ZoikoTax.Sdk.Tests
+#   docker     backend/Dockerfile, frontend/Dockerfile, intelligence/Dockerfile
+#   docker-compose  docker-compose.yml, docker-compose.content.yml
+#   github-actions  .github/workflows/*.yml
+#
+# Deliberately excluded: the vendored Dockerfiles and requirements.txt under
+# backend/vendor/ (golang-migrate, OpenTelemetry) are upstream third-party
+# source, not a ZoikoTax dependency to open a PR against.
+#
+# No per-entry review-request list: GitHub auto-requests review from whoever
+# .github/CODEOWNERS names for the changed path on every PR, Dependabot's
+# included, so naming anyone again here would just duplicate CODEOWNERS (and
+# drift from it the first time CODEOWNERS changes). Labels are omitted too:
+# no .github/labels.yml or similar exists in this repo, and no label name used
+# here is confirmed to exist, so none is applied.
+version: 2
+
+updates:
+  # --- Go modules -----------------------------------------------------------
+  # backend/vendor/ is committed, so Go update PRs will also touch vendored
+  # files.
+  - package-ecosystem: "gomod"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "gomod"
+    directory: "/backend/tools/fiscalfloat"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # sdk/go/go.mod has no go.sum. Whether Dependabot can resolve updates
+  # without a lockfile is unverified; check the first Dependabot run here
+  # before relying on it. Included anyway since the manifest itself exists.
+  - package-ecosystem: "gomod"
+    directory: "/sdk/go"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # --- npm -------------------------------------------------------------------
+  - package-ecosystem: "npm"
+    directory: "/contracts"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/sdk/typescript"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # --- pip ---------------------------------------------------------------
+  # intelligence/pyproject.toml has no lockfile in the repo (confirmed by
+  # git ls-files intelligence/ — no poetry.lock/requirements*.txt there).
+  # UNVERIFIED: whether Dependabot's pip ecosystem can still propose accurate
+  # updates against an unlocked pyproject.toml; included anyway since the
+  # manifest exists.
+  - package-ecosystem: "pip"
+    directory: "/intelligence"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "pip"
+    directory: "/sdk/python"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "pip"
+    directory: "/docs/tools"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "pip"
+    directory: "/infra/tools"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # --- Maven -------------------------------------------------------------
+  - package-ecosystem: "maven"
+    directory: "/sdk/java"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # --- NuGet ---------------------------------------------------------------
+  # Directories confirmed by `git ls-files | grep -E "\.csproj$|packages\.lock\.json$"`:
+  # each has its own .csproj and packages.lock.json.
+  - package-ecosystem: "nuget"
+    directory: "/sdk/dotnet/src/ZoikoTax.Sdk"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "nuget"
+    directory: "/sdk/dotnet/tests/ZoikoTax.Sdk.Tests"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # --- Docker base images --------------------------------------------------
+  # The Dockerfiles take their images from ARG defaults (FROM
+  # ${BUILDER_IMAGE}); Dependabot may not be able to update these, in which
+  # case image-scan.yml is the control.
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: "docker"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: "docker"
+    directory: "/intelligence"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+
+  # --- docker-compose -------------------------------------------------------
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+
+  # --- GitHub Actions --------------------------------------------------------
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
