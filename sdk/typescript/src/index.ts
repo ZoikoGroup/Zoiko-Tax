@@ -548,6 +548,200 @@ export class ZoikoTaxClient {
     return this.#send<S<"AuthorizationCheck">>("POST", `/v1/legal/authorization-checks`, body, signal);
   }
 
+  // --- compliance ------------------------------------------------------------
+  /** List compliance packages, in queue order. `GET /v1/compliance/packages`. */
+  listCompliancePackages(params: { status?: string; limit?: number } = {}, signal?: AbortSignal): Promise<Result<S<"CompliancePackageList">>> {
+    return this.#send<S<"CompliancePackageList">>("GET", `/v1/compliance/packages${query(params)}`, undefined, signal);
+  }
+
+  /** Create compliance package; `200` returns the one already made. `POST /v1/compliance/packages`. */
+  createCompliancePackage(body: S<"CreateCompliancePackageRequest">, signal?: AbortSignal): Promise<Result<S<"CompliancePackage">>> {
+    return this.#send<S<"CompliancePackage">>("POST", `/v1/compliance/packages`, body, signal);
+  }
+
+  /** Get compliance package. `GET /v1/compliance/packages/{packageId}`. */
+  getCompliancePackage(packageId: string, signal?: AbortSignal): Promise<Result<S<"CompliancePackage">>> {
+    return this.#send<S<"CompliancePackage">>("GET", `/v1/compliance/packages/${encodeURIComponent(packageId)}`, undefined, signal);
+  }
+
+  /** Prepare compliance package. `POST /v1/compliance/packages/{packageId}/preparation`. */
+  prepareCompliancePackage(packageId: string, body: S<"PreparationRequest">, signal?: AbortSignal): Promise<Result<S<"CompliancePackage">>> {
+    return this.#send<S<"CompliancePackage">>("POST", `/v1/compliance/packages/${encodeURIComponent(packageId)}/preparation`, body, signal);
+  }
+
+  /** Review compliance package. `POST /v1/compliance/packages/{packageId}/review`. */
+  reviewCompliancePackage(packageId: string, body: S<"ComplianceReviewRequest">, signal?: AbortSignal): Promise<Result<S<"CompliancePackage">>> {
+    return this.#send<S<"CompliancePackage">>("POST", `/v1/compliance/packages/${encodeURIComponent(packageId)}/review`, body, signal);
+  }
+
+  /** Approve compliance package. `POST /v1/compliance/packages/{packageId}/approval`. */
+  approveCompliancePackage(packageId: string, body: S<"ComplianceApprovalRequest">, signal?: AbortSignal): Promise<Result<S<"CompliancePackage">>> {
+    return this.#send<S<"CompliancePackage">>("POST", `/v1/compliance/packages/${encodeURIComponent(packageId)}/approval`, body, signal);
+  }
+
+  /** Submit compliance package. `POST /v1/compliance/packages/{packageId}/submission`. */
+  submitCompliancePackage(packageId: string, body: S<"ComplianceSubmissionRequest">, signal?: AbortSignal): Promise<Result<S<"CompliancePackage">>> {
+    return this.#send<S<"CompliancePackage">>("POST", `/v1/compliance/packages/${encodeURIComponent(packageId)}/submission`, body, signal);
+  }
+
+  /** Acknowledge compliance package. `POST /v1/compliance/packages/{packageId}/acknowledgement`. */
+  acknowledgeCompliancePackage(packageId: string, body: S<"ComplianceAcknowledgementRequest">, signal?: AbortSignal): Promise<Result<S<"CompliancePackage">>> {
+    return this.#send<S<"CompliancePackage">>("POST", `/v1/compliance/packages/${encodeURIComponent(packageId)}/acknowledgement`, body, signal);
+  }
+
+  /** Resolve compliance package. `POST /v1/compliance/packages/{packageId}/resolution`. */
+  resolveCompliancePackage(packageId: string, body: S<"ComplianceResolutionRequest">, signal?: AbortSignal): Promise<Result<S<"CompliancePackage">>> {
+    return this.#send<S<"CompliancePackage">>("POST", `/v1/compliance/packages/${encodeURIComponent(packageId)}/resolution`, body, signal);
+  }
+
+  /** Cancel compliance package. `POST /v1/compliance/packages/{packageId}/cancellation`. */
+  cancelCompliancePackage(packageId: string, body: S<"ComplianceCancellationRequest">, signal?: AbortSignal): Promise<Result<S<"CompliancePackage">>> {
+    return this.#send<S<"CompliancePackage">>("POST", `/v1/compliance/packages/${encodeURIComponent(packageId)}/cancellation`, body, signal);
+  }
+
+  // --- remittance ------------------------------------------------------------
+  /** List payee versions. `GET /v1/remittances/beneficiaries`. */
+  listBeneficiaries(signal?: AbortSignal): Promise<Result<S<"BeneficiaryList">>> {
+    return this.#send<S<"BeneficiaryList">>("GET", `/v1/remittances/beneficiaries`, undefined, signal);
+  }
+
+  /** Record a payee version. `POST /v1/remittances/beneficiaries`. */
+  createBeneficiary(body: S<"BeneficiaryRequest">, signal?: AbortSignal): Promise<Result<S<"Beneficiary">>> {
+    return this.#send<S<"Beneficiary">>("POST", `/v1/remittances/beneficiaries`, body, signal);
+  }
+
+  /** Verify a payee version. `POST /v1/remittances/beneficiaries/{beneficiaryId}/verification`. */
+  verifyBeneficiary(beneficiaryId: string, body: S<"BeneficiaryVerificationRequest">, signal?: AbortSignal): Promise<Result<S<"Beneficiary">>> {
+    return this.#send<S<"Beneficiary">>("POST", `/v1/remittances/beneficiaries/${encodeURIComponent(beneficiaryId)}/verification`, body, signal);
+  }
+
+  /** Suspend a payee version. `POST /v1/remittances/beneficiaries/{beneficiaryId}/suspension`. */
+  suspendBeneficiary(beneficiaryId: string, body: S<"BeneficiarySuspensionRequest">, signal?: AbortSignal): Promise<Result<S<"Beneficiary">>> {
+    return this.#send<S<"Beneficiary">>("POST", `/v1/remittances/beneficiaries/${encodeURIComponent(beneficiaryId)}/suspension`, body, signal);
+  }
+
+  /** List payments, overdue first. `GET /v1/remittances`. */
+  listRemittances(params: { status?: string; limit?: number } = {}, signal?: AbortSignal): Promise<Result<S<"RemittanceList">>> {
+    return this.#send<S<"RemittanceList">>("GET", `/v1/remittances${query(params)}`, undefined, signal);
+  }
+
+  /** Make a payment instruction; `200` returns the live one already made. `POST /v1/remittances`. */
+  createRemittance(body: S<"RemittanceRequest">, signal?: AbortSignal): Promise<Result<S<"Remittance">>> {
+    return this.#send<S<"Remittance">>("POST", `/v1/remittances`, body, signal);
+  }
+
+  /** Get payment. `GET /v1/remittances/{remittanceId}`. */
+  getRemittance(remittanceId: string, signal?: AbortSignal): Promise<Result<S<"Remittance">>> {
+    return this.#send<S<"Remittance">>("GET", `/v1/remittances/${encodeURIComponent(remittanceId)}`, undefined, signal);
+  }
+
+  /** Approve payment. `POST /v1/remittances/{remittanceId}/approval`. */
+  approveRemittance(remittanceId: string, body: S<"RemittanceApprovalRequest">, signal?: AbortSignal): Promise<Result<S<"Remittance">>> {
+    return this.#send<S<"Remittance">>("POST", `/v1/remittances/${encodeURIComponent(remittanceId)}/approval`, body, signal);
+  }
+
+  /** Submit payment. `POST /v1/remittances/{remittanceId}/submission`. */
+  submitRemittance(remittanceId: string, body: S<"RemittanceSubmissionRequest">, signal?: AbortSignal): Promise<Result<S<"Remittance">>> {
+    return this.#send<S<"Remittance">>("POST", `/v1/remittances/${encodeURIComponent(remittanceId)}/submission`, body, signal);
+  }
+
+  /** Record provider status. `POST /v1/remittances/{remittanceId}/provider-status`. */
+  recordRemittanceStatus(remittanceId: string, body: S<"RemittanceStatusRequest">, signal?: AbortSignal): Promise<Result<S<"Remittance">>> {
+    return this.#send<S<"Remittance">>("POST", `/v1/remittances/${encodeURIComponent(remittanceId)}/provider-status`, body, signal);
+  }
+
+  /** Resolve uncertain payment. `POST /v1/remittances/{remittanceId}/resolution`. */
+  resolveRemittance(remittanceId: string, body: S<"RemittanceResolutionRequest">, signal?: AbortSignal): Promise<Result<S<"Remittance">>> {
+    return this.#send<S<"Remittance">>("POST", `/v1/remittances/${encodeURIComponent(remittanceId)}/resolution`, body, signal);
+  }
+
+  /** Record returned payment. `POST /v1/remittances/{remittanceId}/return`. */
+  returnRemittance(remittanceId: string, body: S<"RemittanceReturnRequest">, signal?: AbortSignal): Promise<Result<S<"Remittance">>> {
+    return this.#send<S<"Remittance">>("POST", `/v1/remittances/${encodeURIComponent(remittanceId)}/return`, body, signal);
+  }
+
+  /** Cancel payment. `POST /v1/remittances/{remittanceId}/cancellation`. */
+  cancelRemittance(remittanceId: string, body: S<"RemittanceCancellationRequest">, signal?: AbortSignal): Promise<Result<S<"Remittance">>> {
+    return this.#send<S<"Remittance">>("POST", `/v1/remittances/${encodeURIComponent(remittanceId)}/cancellation`, body, signal);
+  }
+
+  // --- shadow ----------------------------------------------------------------
+  /** List comparator profiles. `GET /v1/shadow/comparators`. */
+  listComparators(signal?: AbortSignal): Promise<Result<S<"ComparatorList">>> {
+    return this.#send<S<"ComparatorList">>("GET", `/v1/shadow/comparators`, undefined, signal);
+  }
+
+  /** Record a comparator profile. `POST /v1/shadow/comparators`. */
+  createComparator(body: S<"ComparatorRequest">, signal?: AbortSignal): Promise<Result<S<"Comparator">>> {
+    return this.#send<S<"Comparator">>("POST", `/v1/shadow/comparators`, body, signal);
+  }
+
+  /** List shadow runs, newest first, as summaries. `GET /v1/shadow/runs`. */
+  listShadowRuns(params: { limit?: number } = {}, signal?: AbortSignal): Promise<Result<S<"ShadowRunList">>> {
+    return this.#send<S<"ShadowRunList">>("GET", `/v1/shadow/runs${query(params)}`, undefined, signal);
+  }
+
+  /** Compare a comparator's results with ZoikoTax's decisions. `POST /v1/shadow/runs`. */
+  executeShadowRun(body: S<"ShadowRunRequest">, signal?: AbortSignal): Promise<Result<S<"ShadowRun">>> {
+    return this.#send<S<"ShadowRun">>("POST", `/v1/shadow/runs`, body, signal);
+  }
+
+  /** Get shadow run, with its cases. `GET /v1/shadow/runs/{shadowRunId}`. */
+  getShadowRun(shadowRunId: string, signal?: AbortSignal): Promise<Result<S<"ShadowRun">>> {
+    return this.#send<S<"ShadowRun">>("GET", `/v1/shadow/runs/${encodeURIComponent(shadowRunId)}`, undefined, signal);
+  }
+
+  /** Move a discrepancy's investigation. `POST /v1/shadow/discrepancies/{discrepancyId}/transitions`. */
+  moveDiscrepancy(discrepancyId: string, body: S<"DiscrepancyTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"Discrepancy">>> {
+    return this.#send<S<"Discrepancy">>("POST", `/v1/shadow/discrepancies/${encodeURIComponent(discrepancyId)}/transitions`, body, signal);
+  }
+
+  // --- migration -------------------------------------------------------------
+  /** List migration programs. `GET /v1/migrations/programs`. */
+  listMigrationPrograms(signal?: AbortSignal): Promise<Result<S<"MigrationProgramList">>> {
+    return this.#send<S<"MigrationProgramList">>("GET", `/v1/migrations/programs`, undefined, signal);
+  }
+
+  /** Create a migration program. `POST /v1/migrations/programs`. */
+  createMigrationProgram(body: S<"MigrationProgramRequest">, signal?: AbortSignal): Promise<Result<S<"MigrationProgram">>> {
+    return this.#send<S<"MigrationProgram">>("POST", `/v1/migrations/programs`, body, signal);
+  }
+
+  /** Get a program with its evidence and readiness. `GET /v1/migrations/programs/{migrationProgramId}`. */
+  getMigrationProgram(migrationProgramId: string, signal?: AbortSignal): Promise<Result<S<"MigrationProgramDetail">>> {
+    return this.#send<S<"MigrationProgramDetail">>("GET", `/v1/migrations/programs/${encodeURIComponent(migrationProgramId)}`, undefined, signal);
+  }
+
+  /** Register a source snapshot. `POST /v1/migrations/programs/{migrationProgramId}/snapshots`. */
+  registerMigrationSnapshot(migrationProgramId: string, body: S<"MigrationSnapshotRequest">, signal?: AbortSignal): Promise<Result<S<"MigrationSnapshot">>> {
+    return this.#send<S<"MigrationSnapshot">>("POST", `/v1/migrations/programs/${encodeURIComponent(migrationProgramId)}/snapshots`, body, signal);
+  }
+
+  /** Record the next mapping version. `POST /v1/migrations/programs/{migrationProgramId}/mappings`. */
+  createMigrationMapping(migrationProgramId: string, body: S<"MigrationMappingRequest">, signal?: AbortSignal): Promise<Result<S<"MigrationMapping">>> {
+    return this.#send<S<"MigrationMapping">>("POST", `/v1/migrations/programs/${encodeURIComponent(migrationProgramId)}/mappings`, body, signal);
+  }
+
+  /** Convert a snapshot under a mapping. `POST /v1/migrations/programs/{migrationProgramId}/runs`. */
+  executeMigrationRun(migrationProgramId: string, body: S<"MigrationRunRequest">, signal?: AbortSignal): Promise<Result<S<"MigrationRun">>> {
+    return this.#send<S<"MigrationRun">>("POST", `/v1/migrations/programs/${encodeURIComponent(migrationProgramId)}/runs`, body, signal);
+  }
+
+  /** Move the cutover. `POST /v1/migrations/programs/{migrationProgramId}/cutover`. */
+  moveMigrationCutover(migrationProgramId: string, body: S<"CutoverRequest">, signal?: AbortSignal): Promise<Result<S<"MigrationProgramDetail">>> {
+    return this.#send<S<"MigrationProgramDetail">>("POST", `/v1/migrations/programs/${encodeURIComponent(migrationProgramId)}/cutover`, body, signal);
+  }
+
+  /** Get a run with its records. `GET /v1/migrations/runs/{migrationRunId}`. */
+  getMigrationRun(migrationRunId: string, signal?: AbortSignal): Promise<Result<S<"MigrationRun">>> {
+    return this.#send<S<"MigrationRun">>("GET", `/v1/migrations/runs/${encodeURIComponent(migrationRunId)}`, undefined, signal);
+  }
+
+  /** Decide an exception. `POST /v1/migrations/exceptions/{migrationExceptionId}/decision`. */
+  decideMigrationException(migrationExceptionId: string, body: S<"ExceptionDecisionRequest">, signal?: AbortSignal): Promise<Result<S<"MigrationException">>> {
+    return this.#send<S<"MigrationException">>("POST", `/v1/migrations/exceptions/${encodeURIComponent(migrationExceptionId)}/decision`, body, signal);
+  }
+
   // --- classification --------------------------------------------------------
   /** Propose classification. `POST /v1/classifications:propose`. */
   proposeClassification(body: S<"ClassificationProposalRequest">, signal?: AbortSignal): Promise<Result<S<"ClassificationProposal">>> {

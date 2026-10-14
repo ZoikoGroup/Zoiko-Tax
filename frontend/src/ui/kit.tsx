@@ -213,6 +213,14 @@ const TONE: Record<string, 'ok' | 'warn' | 'bad' | 'neutral'> = {
   UNMATCHED: 'bad', DUPLICATE: 'bad', PARTIAL: 'warn', AMENDMENT_REQUIRED: 'warn', DATA_REQUIRED: 'warn',
   REVIEW_REQUIRED: 'warn', AMBIGUOUS: 'warn', VOIDED: 'warn', PARTIALLY_CREDITED: 'warn', FULLY_CREDITED: 'warn',
   BUNDLE_UNAVAILABLE: 'warn', SUSPENDED: 'warn', CLOSED: 'neutral', REOPENED: 'warn', AMENDMENT_ACTIVE: 'warn',
+  IN_REVIEW: 'neutral', APPROVED: 'ok', TRANSMITTING: 'neutral', UNCERTAIN_SUBMISSION: 'bad', CANCELLED: 'neutral',
+  APPROVAL_REQUIRED: 'warn', SUBMITTED: 'neutral', ACCEPTED_BY_PROVIDER: 'neutral', PROCESSING: 'neutral',
+  UNCERTAIN_PAYMENT: 'bad', SETTLED: 'ok', RETURNED: 'warn', UNVERIFIED: 'warn', CHANGE_PENDING: 'warn', VERIFIED: 'ok',
+  SUPERSEDED: 'neutral', NEW: 'warn', TRIAGED: 'neutral', ANALYSIS: 'neutral', ZOIKO_DEFECT_CONFIRMED: 'bad',
+  ACCEPTED_RISK: 'warn', LEGAL_AMBIGUITY: 'warn', ACCEPTED_RESIDUAL: 'warn', PLANNED: 'neutral', PRECHECK: 'neutral',
+  FREEZE_ACTIVE: 'warn', FINAL_DELTA: 'neutral', RECONCILING: 'neutral', READY_TO_SWITCH: 'ok', ROUTING_SWITCH: 'warn',
+  VALIDATING_LIVE: 'warn', CUTOVER_COMPLETE: 'ok', ABORTED: 'neutral', ROLLBACK_ACTIVE: 'bad', ROLLED_BACK: 'warn',
+  FAILED_MANUAL_RECOVERY: 'bad',
 }
 
 /** A status as a coloured tag. */

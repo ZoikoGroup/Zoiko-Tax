@@ -10,13 +10,18 @@ import type { View } from './components/layout/Sidebar'
 import { recentPeriods } from './dashboard/format'
 import { ActionCenterPage } from './pages/ActionCenterPage'
 import { ClientDashboard } from './pages/ClientDashboard'
+import { CompliancePage } from './pages/CompliancePage'
 import { ContentPage } from './pages/ContentPage'
 import { DeterminePage } from './pages/DeterminePage'
 import { DocumentsPage } from './pages/DocumentsPage'
 import { EvidencePage } from './pages/EvidencePage'
 import { IntelligencePage } from './pages/IntelligencePage'
+import { MigrationPage } from './pages/MigrationPage'
 import { ObligationsPage } from './pages/ObligationsPage'
 import { ReconcilePage } from './pages/ReconcilePage'
+import { RemittancePage } from './pages/RemittancePage'
+import { ReportsPage } from './pages/ReportsPage'
+import { ShadowPage } from './pages/ShadowPage'
 import { CellHealth } from './platform/CellHealth'
 import { ztax } from './platform/client'
 
@@ -105,8 +110,18 @@ export function App() {
             return <DeterminePage {...page} />
           case 'obligations':
             return <ObligationsPage {...page} />
+          case 'compliance':
+            return <CompliancePage {...page} />
           case 'reconcile':
             return <ReconcilePage {...page} />
+          case 'remittance':
+            return <RemittancePage {...page} />
+          case 'shadow':
+            return <ShadowPage {...page} />
+          case 'migration':
+            return <MigrationPage {...page} />
+          case 'reports':
+            return <ReportsPage />
           case 'documents':
             return <DocumentsPage {...page} />
           case 'evidence':

@@ -99,7 +99,7 @@ const FOLDERS = [
   {
     name: "04 · Administration",
     description:
-      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
+      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked. Then payee master data: `createBeneficiary` records an authority's payee details and captures `beneficiaryId`; the same administrator verifying them is refused with `MAKER_CHECKER` (ZTAX-REM-REQ-0014), and the version is suspended. Then a migration: `createMigrationProgram` creates a program for 2025 and captures `migrationProgramId`; a snapshot of two historical results is registered, a mapping that names only one of their legacy codes is recorded, and `executeMigrationRun` converts the snapshot AS_KNOWN — one record converts, the other raises an `UNMAPPED_CODE` exception, captured into `migrationExceptionId`, and the monetary reconciliation does not pass. The exception is accepted as a known residual and the cutover moves to `PRECHECK`.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
     operations: [
       "listUsers",
       "createUser",
@@ -135,13 +135,26 @@ const FOLDERS = [
       "getAuthorization",
       "checkAuthorization",
       "revokeAuthorization",
+      "listBeneficiaries",
+      "createBeneficiary",
+      "verifyBeneficiary",
+      "suspendBeneficiary",
+      "listMigrationPrograms",
+      "createMigrationProgram",
+      "registerMigrationSnapshot",
+      "createMigrationMapping",
+      "executeMigrationRun",
+      "getMigrationProgram",
+      "getMigrationRun",
+      "decideMigrationException",
+      "moveMigrationCutover",
       "getDashboard",
     ],
   },
   {
     name: "06 · Determination — needs content and an OPERATOR",
     description:
-      "Opens with two setup requests: `createUser` makes a fresh OPERATOR (ADMIN still holds the session from `02`), and signing in as it replaces the session for everything below, through `07` — `08 · Sign out` ends whichever session is active, so it does not need to know which.\n\nQuote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`; `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously. Last, the subledger period `{{period}}` — `2000-01` by default, a month nothing posts into, so a run never closes one that matters — is hard-closed, a reopen is requested, and the requester's own approval is refused (ZTAX-FIN-REQ-0091). `runReconciliation` reconciles September and captures `runId`; the resolution of the example item answers `404` in a fresh run, since its id is the example's.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role, which the two setup requests above provide. The request bodies are the worked pack's inputs.",
+      "Opens with two setup requests: `createUser` makes a fresh OPERATOR (ADMIN still holds the session from `02`), and signing in as it replaces the session for everything below, through `07` — `08 · Sign out` ends whichever session is active, so it does not need to know which.\n\nQuote, commit, read and replay one line against the cell's active pack. `commitTransaction` captures the decision into `decisionId`, and the replay after it must say `MATCH` — the W2 exit gate in four requests. `listObligations` captures the period's return into `obligationId`, and `transitionObligation` marks it `READY`. `createCompliancePackage` instantiates the return's compliance package and captures `packageId`, and `prepareCompliancePackage` prepares version 1; the same OPERATOR reviewing it is refused with `SEGREGATION_OF_DUTIES` (ZTAX-COMP-REQ-0041), so approval, submission, acknowledgement and resolution answer `409`, and the package is cancelled. `createRemittance` is refused with `PAYMENT_BLOCKED` — the return was never accepted by an authority, so nothing is payable (ZTAX-REM-REQ-0005) — and the payment reads and actions answer `404` for the example payment. `createComparator` records an incumbent engine and captures `comparatorId`; `executeShadowRun` compares its example result with the folder's committed decision and captures `shadowRunId` and, when the run found a material difference, `discrepancyId`, which `moveDiscrepancy` triages. `adjustTransaction` then corrects the decision under the bundle that made it (ZTAX-DET-REQ-0030), which moves the return back to `OPEN`, and becomes `decisionId`. Before the adjustment, `issueDocument` invoices the committed decision and captures `documentId`, and `correctDocument` voids it, which `getDocumentLineage` shows as a chain of two. `refundTransaction` refunds that correction's VAT and captures `refundId`; `reportRefund` reports the provider paid it, which posts the `REFUND` journal (ZTAX-FIN-REQ-0059). `submitBatch` queues two more lines as one job and captures `jobId`; `getJob` reads its progress, which a worker advances asynchronously. Last, the subledger period `{{period}}` — `2000-01` by default, a month nothing posts into, so a run never closes one that matters — is hard-closed, a reopen is requested, and the requester's own approval is refused (ZTAX-FIN-REQ-0091). `runReconciliation` reconciles September and captures `runId`; the resolution of the example item answers `404` in a fresh run, since its id is the example's.\n\nSkipped unless `runDetermination` is `\"true\"`, because it needs two things the local stack does not give the bootstrap administrator: a content bundle (`ZTAX_CONTENT_DIR`, see `make content`) and the `OPERATOR` role, which the two setup requests above provide. The request bodies are the worked pack's inputs.",
     literal: [
       {
         name: "Provision an OPERATOR for determination",
@@ -183,6 +196,12 @@ const FOLDERS = [
     operations: [
       "createQuote", "commitTransaction", "getDecision", "replayDecision", "listDecisionJournals",
       "getSubledgerBalances", "listObligations", "getObligation", "transitionObligation",
+      "createCompliancePackage", "getCompliancePackage", "listCompliancePackages", "prepareCompliancePackage",
+      "reviewCompliancePackage", "approveCompliancePackage", "submitCompliancePackage",
+      "acknowledgeCompliancePackage", "resolveCompliancePackage", "cancelCompliancePackage",
+      "listRemittances", "createRemittance", "getRemittance", "approveRemittance", "submitRemittance",
+      "recordRemittanceStatus", "resolveRemittance", "returnRemittance", "cancelRemittance",
+      "createComparator", "listComparators", "executeShadowRun", "listShadowRuns", "getShadowRun", "moveDiscrepancy",
       "issueDocument", "getDocument", "correctDocument", "getDocumentLineage",
       "adjustTransaction", "refundTransaction", "getRefund", "reportRefund", "proposeClassification",
       "submitBatch", "getJob", "getDecisionInclusion",
@@ -236,6 +255,20 @@ const VALUE_VARIABLES = {
   "01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01": "{{obligationId}}",
   // The refund examples' id: the refund the folder just requested.
   "01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f": "{{refundId}}",
+  // The shadow examples' ids: the comparator and run folder 06 just made.
+  "01920b40-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{comparatorId}}",
+  "01920b50-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{shadowRunId}}",
+  "01920b60-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{discrepancyId}}",
+  // The migration examples' ids: what folder 04 just made.
+  "01920b70-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{migrationProgramId}}",
+  "01920b71-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{migrationSnapshotId}}",
+  "01920b72-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{migrationMappingId}}",
+  "01920b73-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{migrationRunId}}",
+  "01920b74-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{migrationExceptionId}}",
+  // The beneficiary examples' id: the payee version folder 04 just recorded.
+  "01920b20-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{beneficiaryId}}",
+  // The compliance package examples' id: the package folder 06 just made.
+  "01920b10-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{packageId}}",
   // The seal examples' id: the seal folder 04 just made.
   "01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{sealId}}",
   // The document examples' id: the invoice the folder just issued.
@@ -339,6 +372,111 @@ const OPERATION_TESTS = {
     "  pm.expect(pm.response.json().status).to.eql('READY');",
     "  pm.expect(pm.response.json().supersedes).to.eql(pm.collectionVariables.get('obligationId'));",
     "});",
+  ],
+  createCompliancePackage: [
+    "pm.test('ZTAX-COMP-REQ-0004 — one package per obligation: created, or the one already made', function () {",
+    "  pm.expect([200, 201]).to.include(pm.response.code);",
+    "  pm.expect(pm.response.json().history[0].kind).to.eql('CREATED');",
+    "});",
+    "pm.collectionVariables.set('packageId', pm.response.json().id);",
+    "pm.collectionVariables.set('packageFresh', pm.response.code === 201 ? 'true' : 'false');",
+  ],
+  prepareCompliancePackage: [
+    "if (pm.collectionVariables.get('packageFresh') === 'true') {",
+    "  pm.test('ZTAX-COMP-REQ-0035 — a preparation is an immutable version with its payload hash', function () {",
+    "    pm.response.to.have.status(200);",
+    "    const p = pm.response.json();",
+    "    pm.expect(p.status).to.eql('IN_REVIEW');",
+    "    pm.expect(p.history[p.history.length - 1].payloadHash).to.match(/^zt1:[0-9a-f]{64}$/);",
+    "  });",
+    "}",
+  ],
+  reviewCompliancePackage: [
+    "if (pm.collectionVariables.get('packageFresh') === 'true') {",
+    "  pm.test('ZTAX-COMP-REQ-0041 — the preparer cannot review their own version', function () {",
+    "    pm.response.to.have.status(403);",
+    "    pm.expect(pm.response.json().ztx_reason_code).to.eql('SEGREGATION_OF_DUTIES');",
+    "  });",
+    "}",
+  ],
+  submitCompliancePackage: [
+    "pm.test('ZTAX-COMP-REQ-0044 — nothing unapproved is submitted', function () {",
+    "  pm.response.to.have.status(409);",
+    "});",
+  ],
+  cancelCompliancePackage: [
+    "if (pm.collectionVariables.get('packageFresh') === 'true') {",
+    "  pm.test('a package not yet submitted is cancelled with its reason, and kept', function () {",
+    "    pm.response.to.have.status(200);",
+    "    pm.expect(pm.response.json().status).to.eql('CANCELLED');",
+    "  });",
+    "}",
+  ],
+  createBeneficiary: [
+    "pm.test('ZTAX-REM-REQ-0012 — a payee version is recorded unverified', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().state).to.eql('UNVERIFIED');",
+    "});",
+    "pm.collectionVariables.set('beneficiaryId', pm.response.json().id);",
+  ],
+  verifyBeneficiary: [
+    "pm.test('ZTAX-REM-REQ-0014 — the author of payee details cannot verify them', function () {",
+    "  pm.response.to.have.status(403);",
+    "  pm.expect(pm.response.json().ztx_reason_code).to.eql('MAKER_CHECKER');",
+    "});",
+  ],
+  createRemittance: [
+    "pm.test('ZTAX-REM-REQ-0005 — only an accepted return is paid', function () {",
+    "  pm.response.to.have.status(409);",
+    "  pm.expect(pm.response.json().ztx_reason_code).to.eql('PAYMENT_BLOCKED');",
+    "});",
+  ],
+  createComparator: [
+    "pm.test('ZTAX-SHD-001 §1 — a commercial engine supports a match claim, never verified correctness', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().claim).to.eql('MATCHES_COMPARATOR');",
+    "  pm.expect(pm.response.json().version).to.eql('UNKNOWN');",
+    "});",
+    "pm.collectionVariables.set('comparatorId', pm.response.json().id);",
+  ],
+  executeShadowRun: [
+    "pm.test('ZTAX-SHD-001 §6 — a run records its input hash and its metrics', function () {",
+    "  pm.response.to.have.status(201);",
+    "  const r = pm.response.json();",
+    "  pm.expect(r.inputHash).to.match(/^zt1:[0-9a-f]{64}$/);",
+    "  pm.expect(r.metrics.cases).to.be.at.least(1);",
+    "  pm.expect(r.cutoverBlockers).to.be.an('array').that.is.not.empty;",
+    "});",
+    "pm.collectionVariables.set('shadowRunId', pm.response.json().id);",
+    "const d = pm.response.json().discrepancies || [];",
+    "if (d.length > 0) { pm.collectionVariables.set('discrepancyId', d[0].id); }",
+  ],
+  createMigrationProgram: [
+    "pm.response.to.have.status(201);",
+    "pm.collectionVariables.set('migrationProgramId', pm.response.json().id);",
+  ],
+  registerMigrationSnapshot: [
+    "pm.test('ZTAX-MIG-001 §7 — a snapshot is hashed and counted as received', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().hash).to.match(/^zt1:[0-9a-f]{64}$/);",
+    "  pm.expect(pm.response.json().recordCount).to.eql(2);",
+    "});",
+    "pm.collectionVariables.set('migrationSnapshotId', pm.response.json().id);",
+  ],
+  createMigrationMapping: [
+    "pm.response.to.have.status(201);",
+    "pm.collectionVariables.set('migrationMappingId', pm.response.json().id);",
+  ],
+  executeMigrationRun: [
+    "pm.test('ZTAX-MIG-001 §15, §16 — an unmapped code is an exception, and the totals do not reconcile', function () {",
+    "  pm.response.to.have.status(201);",
+    "  const r = pm.response.json();",
+    "  pm.expect(r.reconciliation.convertedCount).to.eql(1);",
+    "  pm.expect(r.reconciliation.passed).to.eql(false);",
+    "  pm.expect(r.exceptions[0].kind).to.eql('UNMAPPED_CODE');",
+    "});",
+    "pm.collectionVariables.set('migrationRunId', pm.response.json().id);",
+    "pm.collectionVariables.set('migrationExceptionId', pm.response.json().exceptions[0].id);",
   ],
   proposeClassification: [
     "pm.test('ADR-0006 — advisory, or not available here; never authoritative', function () {",
@@ -713,6 +851,30 @@ const ACCEPTED_OUTCOMES = {
   // The administration folder commits nothing, so {{decisionId}} names no
   // decision there.
   getDecisionRetention: ["404"],
+  // Folder 06 runs as one OPERATOR, so the package it prepares cannot be
+  // reviewed by the same person (ZTAX-COMP-REQ-0041), and everything after
+  // review is refused as out of order. Later runs find the package their
+  // first run cancelled.
+  prepareCompliancePackage: ["409"],
+  reviewCompliancePackage: ["403", "409"],
+  approveCompliancePackage: ["409"],
+  submitCompliancePackage: ["409"],
+  acknowledgeCompliancePackage: ["409"],
+  resolveCompliancePackage: ["409"],
+  cancelCompliancePackage: ["409"],
+  // The administrator who records a payee version cannot verify it
+  // (ZTAX-REM-REQ-0014). Folder 06's return is never accepted by an
+  // authority, so there is nothing to pay, and no payment to act on.
+  verifyBeneficiary: ["403"],
+  createRemittance: ["409"],
+  getRemittance: ["404"],
+  approveRemittance: ["404"],
+  submitRemittance: ["404"],
+  recordRemittanceStatus: ["404"],
+  resolveRemittance: ["404"],
+  returnRemittance: ["404"],
+  cancelRemittance: ["404"],
+  moveDiscrepancy: ["404"],
 };
 
 /** The statuses an operation declares, for the generated status assertion. */
@@ -1007,6 +1169,21 @@ function variables(overlay, contractDigest, local) {
     { key: "decisionId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
     { key: "obligationId", value: "", type: "string" },
     { key: "refundId", value: "", type: "string" },
+    { key: "packageId", value: "", type: "string" },
+    { key: "beneficiaryId", value: "", type: "string" },
+    { key: "comparatorId", value: "", type: "string" },
+    { key: "migrationProgramId", value: "", type: "string" },
+    { key: "migrationSnapshotId", value: "", type: "string" },
+    { key: "migrationMappingId", value: "", type: "string" },
+    { key: "migrationRunId", value: "", type: "string" },
+    { key: "migrationExceptionId", value: "", type: "string" },
+    { key: "shadowRunId", value: "", type: "string" },
+    // A run with no material difference opens no discrepancy; the move then
+    // names one that does not exist, and answers 404.
+    { key: "discrepancyId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
+    // No folder makes a payment, so the payment reads and actions name one
+    // that does not exist, and answer 404.
+    { key: "remittanceId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
     { key: "webhookId", value: "", type: "string" },
     { key: "jobId", value: "", type: "string" },
     { key: "sealId", value: "", type: "string" },
