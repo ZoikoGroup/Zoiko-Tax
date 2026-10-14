@@ -114,6 +114,7 @@ from .evaluation_runner import (
     RulesetRunReport,
     RunReport,
 )
+from .evidence_sink import EvidenceSink, InMemoryEvidenceSink, LoggingEvidenceSink
 from .explanation import (
     CitationBundle,
     CitationResolutionError,
@@ -314,6 +315,7 @@ __all__ = [
     "EvaluationVerdict",
     "Evaluator",
     "EvidencePanel",
+    "EvidenceSink",
     "ExplanationError",
     "ExplanationResult",
     "ExplanationSegment",
@@ -330,6 +332,7 @@ __all__ = [
     "GoldSetStore",
     "GovernanceRefusedError",
     "GuardrailResult",
+    "InMemoryEvidenceSink",
     "InvocationEvidenceBuilder",
     "InvocationEvidenceError",
     "InvocationEvidenceRecord",
@@ -339,6 +342,7 @@ __all__ = [
     "LifecycleError",
     "LifecycleRecord",
     "LifecycleState",
+    "LoggingEvidenceSink",
     "ManifestLifecycle",
     "ManifestRegistry",
     "ManifestRegistryError",
