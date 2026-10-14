@@ -59,7 +59,7 @@ func startPythonGateway(t *testing.T, runtime string) (addr string) {
 	registry := fmt.Sprintf(
 		`{"use_cases":[{"use_case_id":"classification-review","owner":"lane-l",`+
 			`"description":"Propose an ontology mapping for review","max_risk_tier":"T2","max_authority":"A1",`+
-			`"permitted_regions":["euc1-dev-01"],"route":{"model_profile":%q,"provider_profile":%q,`+
+			`"permitted_regions":["euc1-dev-01"],"permitted_data_classes":["P0","P1"],"route":{"model_profile":%q,"provider_profile":%q,`+
 			`"prompt_profile":%q}}]}`,
 		testRouteModelProfile, testRouteProviderProfile, testRoutePromptProfile,
 	)
