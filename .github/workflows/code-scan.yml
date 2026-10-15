@@ -1,0 +1,271 @@
+# SAST + IaC scanning, report-only — closes the other half of the gap
+# ZTAX-SEC-REQ-0097 names (docs/requirements.yaml): "SAST/SCA/secret/IaC
+# scanning MUST run in CI for applicable components." dependency-scan.yml
+# already covers SCA (OSV-Scanner, govulncheck); secret-scan.yml and
+# ci.yml's `register` job cover secret scanning. Neither SAST (static
+# analysis of source for insecure patterns) nor IaC (misconfiguration
+# scanning of Terraform/OpenTofu, Kubernetes, Dockerfiles, compose files)
+# had any CI coverage anywhere in this repo before this workflow — confirmed
+# by grep across every .github/workflows/*.yml file, not assumed.
+#
+# REPORT-ONLY, deliberately, same discipline as dependency-scan.yml and
+# image-scan.yml: a finding never fails this workflow. Making it blocking is
+# a threshold decision (which severities, which rule packs) for a code owner
+# to make deliberately, not something this workflow decides by default --
+# and ZTAX-SEC-REQ-0097 is itself still PROPOSED with no verification_ref,
+# so there is no agreed bar yet to gate on. Once there is one, an exception
+# to it needs a registered waiver -- owner, scope, rationale, risk,
+# compensating control, expiry and approver -- in docs/waivers.yaml.
+#
+# Deliberately NOT part of ci.yml's "all gates green" aggregate (needs:
+# [backend, crosscheck, contracts, sdk-python, sdk-go, sdk-java, sdk-dotnet,
+# frontend, stack, register] in ci.yml -- this workflow is untouched by that
+# list, and ci.yml itself is not edited here) and NOT uploaded to GitHub's
+# code scanning / Security tab (that needs GitHub Advanced Security on a
+# private repo; results are kept as plain workflow artifacts instead, same
+# as image-scan.yml's SARIF/JSON evidence).
+name: code-scan (SAST + IaC, report-only)
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'intelligence/**'
+      - 'frontend/**'
+      - 'sdk/**'
+      - 'infra/**'
+      - '**/Dockerfile'
+      - 'docker-compose*.yml'
+      - '.github/workflows/code-scan.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'intelligence/**'
+      - 'frontend/**'
+      - 'sdk/**'
+      - 'infra/**'
+      - '**/Dockerfile'
+      - 'docker-compose*.yml'
+      - '.github/workflows/code-scan.yml'
+  schedule:
+    # 43 past 03:00 UTC on Mondays -- off-peak, not the top of the hour, and
+    # a different slot from dependency-scan.yml/image-scan.yml's daily
+    # 02:17 UTC so the three report-only scans don't all queue at once.
+    - cron: "43 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: code-scan-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  sast:
+    # Go, Python and TypeScript sources only -- backend/ + sdk/go (Go),
+    # intelligence/ + sdk/python (Python), frontend/ + sdk/typescript
+    # (TypeScript). sdk/java and sdk/dotnet are out of scope: no Java/.NET
+    # Semgrep registry pack was asked for, and none is installed below.
+    name: SAST (Semgrep OSS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.12"
+
+      # Pinned so a scanner upgrade is a reviewed diff, the same discipline
+      # as dependency-scan.yml's OSV_SCANNER_VERSION / GOVULNCHECK_VERSION.
+      # 1.178.0 confirmed to exist via `pip index versions semgrep` and via
+      # PyPI's own release JSON (pypi.org/pypi/semgrep/1.178.0/json),
+      # uploaded 2026-09-23 -- more than two weeks before this workflow was
+      # written (2026-10-15), not the latest (1.181.0, uploaded 2026-10-02).
+      - name: install semgrep
+        run: python -m pip install semgrep==1.178.0
+
+      - name: mkdir for evidence
+        run: mkdir -p semgrep-evidence
+
+      # Registry packs (p/golang, p/python, p/typescript, p/security-audit)
+      # are fetched from the Semgrep registry at run time -- they are NOT
+      # pinned to a version, unlike every other tool in this file. That is
+      # acceptable only because this job is report-only: a rule-pack update
+      # changing what is flagged cannot fail a build it does not gate.
+      #
+      # --error is never passed: semgrep's own documented exit-code
+      # contract is that `semgrep scan` exits 0 when findings exist UNLESS
+      # --error is passed, in which case it exits 1. Leaving it unset is the
+      # report-only choice; a genuine crash (bad rule pack, parse failure
+      # for the whole run) still fails this step on its own, same as every
+      # other scanner in this repo's report-only workflows.
+      # --metrics=off: the estate's own scan must not send usage data to a
+      # third party. --disable-version-check: skip the outbound check
+      # against semgrep's update server, for the same reason.
+      - name: semgrep scan (Go, Python, TypeScript, security-audit)
+        run: |
+          semgrep scan \
+            --config p/golang \
+            --config p/python \
+            --config p/typescript \
+            --config p/security-audit \
+            --metrics=off \
+            --disable-version-check \
+            --json \
+            --output semgrep-evidence/semgrep-results.json \
+            --exclude vendor \
+            --exclude node_modules \
+            backend intelligence frontend sdk/go sdk/python sdk/typescript
+
+      - name: job summary -- finding counts by severity
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from collections import Counter
+
+          evidence_path = "semgrep-evidence/semgrep-results.json"
+          summary_path = os.environ["GITHUB_STEP_SUMMARY"]
+
+          with open(summary_path, "a", encoding="utf-8") as out:
+              out.write("## Semgrep SAST scan\n\n")
+
+              if not os.path.isfile(evidence_path):
+                  out.write(
+                      "No evidence file was produced (the scan likely failed "
+                      "before writing output -- see the previous step's log).\n"
+                  )
+                  raise SystemExit(0)
+
+              with open(evidence_path, encoding="utf-8") as f:
+                  data = json.load(f)
+
+              results = data.get("results", [])
+              counts = Counter(r.get("extra", {}).get("severity", "UNKNOWN") for r in results)
+
+              out.write(f"### Findings ({len(results)})\n\n")
+              if counts:
+                  out.write("| Severity | Count |\n|---|---|\n")
+                  known_order = ["ERROR", "WARNING", "INFO", "UNKNOWN"]
+                  remaining = sorted(k for k in counts if k not in known_order)
+                  for sev in known_order + remaining:
+                      if sev in counts:
+                          out.write(f"| {sev} | {counts[sev]} |\n")
+              else:
+                  out.write("No findings.\n")
+
+              scan_errors = data.get("errors", [])
+              if scan_errors:
+                  out.write(f"\n{len(scan_errors)} scan error(s) reported by semgrep itself "
+                            "(e.g. unparsed files) -- see the evidence JSON.\n")
+          PY
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always() && hashFiles('semgrep-evidence/*') != ''
+        with:
+          name: semgrep-evidence
+          path: semgrep-evidence/
+          if-no-files-found: warn
+          retention-days: 30
+
+  iac:
+    # infra/ (OpenTofu, Kubernetes manifests, kustomize), every Dockerfile,
+    # and every docker-compose*.yml -- trivy's config scanner auto-detects
+    # and categorises all of these from a single directory scan, so the
+    # whole repo (scan-ref ".") is scanned rather than enumerating each path
+    # by hand; skip-dirs keeps vendor/ and node_modules/ out exactly as it
+    # does for Go/npm dependency trees.
+    name: IaC (Trivy config)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: mkdir for evidence
+        run: mkdir -p trivy-config-evidence
+
+      # Same pinned commit as image-scan.yml (ci/dependency-hygiene) --
+      # aquasecurity/trivy-action v0.36.0, confirmed via the GitHub API
+      # (releases/latest -> tag_name v0.36.0; git/refs/tags and git/tags for
+      # that tag's target commit, not the tag object's own sha).
+      - name: Trivy config scan (JSON, for the summary)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # avoids anonymous trivy-db pull rate limits only; not a privileged credential
+        with:
+          scan-type: config
+          scan-ref: .
+          skip-dirs: vendor,node_modules
+          format: json
+          output: trivy-config-evidence/trivy-config.json
+          exit-code: "0" # report-only: never fail the job on a finding
+
+      - name: Trivy config scan (table, for the evidence)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          scan-type: config
+          scan-ref: .
+          skip-dirs: vendor,node_modules
+          format: table
+          output: trivy-config-evidence/trivy-config.txt
+          exit-code: "0"
+
+      - name: job summary -- misconfigurations by severity
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from collections import Counter
+
+          evidence_path = "trivy-config-evidence/trivy-config.json"
+          summary_path = os.environ["GITHUB_STEP_SUMMARY"]
+
+          with open(summary_path, "a", encoding="utf-8") as out:
+              out.write("## Trivy config (IaC) scan\n\n")
+
+              if not os.path.isfile(evidence_path):
+                  out.write(
+                      "No evidence file was produced (the scan likely failed "
+                      "before writing output -- see the previous step's log).\n"
+                  )
+                  raise SystemExit(0)
+
+              with open(evidence_path, encoding="utf-8") as f:
+                  data = json.load(f)
+
+              results = data.get("Results", []) or []
+              counts = Counter()
+              for result in results:
+                  for mc in result.get("Misconfigurations", []) or []:
+                      counts[mc.get("Severity", "UNKNOWN")] += 1
+
+              out.write("### Misconfigurations by severity\n\n")
+              if counts:
+                  out.write("| Severity | Count |\n|---|---|\n")
+                  known_order = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"]
+                  remaining = sorted(k for k in counts if k not in known_order)
+                  for sev in known_order + remaining:
+                      if sev in counts:
+                          out.write(f"| {sev} | {counts[sev]} |\n")
+              else:
+                  out.write("No misconfigurations found.\n")
+          PY
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always() && hashFiles('trivy-config-evidence/*') != ''
+        with:
+          name: trivy-config-evidence
+          path: trivy-config-evidence/
+          if-no-files-found: warn
+          retention-days: 30
