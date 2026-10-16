@@ -3,12 +3,15 @@
 Phase 1 (read-only research, this branch's earlier report) found both
 languages refuse the same inputs but sometimes disagree on WHICH reason
 code, and that no test proved either fact. This file and
-backend/internal/domain/ai/governance_parity_test.go read the one shared
-fixture (contracts/privacy/data-class-parity-cases.json) so the two suites
-can never silently drift apart from each other -- same pattern as
+backend/internal/adapter/gateway/data_class_parity_test.go read the one
+shared fixture (contracts/privacy/data-class-parity-cases.json) so the two
+suites can never silently drift apart from each other -- same pattern as
 test_ai_schemas.py / schema_vocabulary_test.go reading
 contracts/schemas/ai/*.schema.json, and test_data_class_enforcement.py /
-load_test.go reading intelligence/config/registry.dev.json.
+load_test.go reading intelligence/config/registry.dev.json. The Go test
+lives in package gateway, not package ai: backend/.golangci.yml's
+domain-is-pure rule denies importing "os" under internal/domain/, with no
+test-file exemption, and this fixture-reading test needs it.
 """
 
 from __future__ import annotations
@@ -127,7 +130,7 @@ def test_data_class_parity_case_names_match_go() -> None:
     """The cross-language guard: this file hard-codes the exact case-name
     list Phase 1's fixture defines, so a case renamed, added or removed on
     the Go side without a matching edit here (or vice versa) fails loudly.
-    backend/internal/domain/ai/governance_parity_test.go carries the
+    backend/internal/adapter/gateway/data_class_parity_test.go carries the
     identical literal list for the same reason."""
     want = [
         "request_empty_list",

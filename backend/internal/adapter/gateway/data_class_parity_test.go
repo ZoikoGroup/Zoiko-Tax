@@ -1,4 +1,4 @@
-package ai
+package gateway
 
 import (
 	"encoding/json"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
 )
@@ -21,6 +22,15 @@ import (
 // pattern as schema_vocabulary_test.go / test_ai_schemas.py reading
 // contracts/schemas/ai/*.schema.json, and load_test.go / test_data_class_enforcement.py
 // reading intelligence/config/registry.dev.json.
+//
+// Lives in package gateway, not package ai: backend/.golangci.yml's
+// domain-is-pure rule (files "**/internal/domain/**", no test-file
+// exemption) denies "os" under internal/domain/, and this test needs
+// os.ReadFile for the fixture -- the same reason schema_vocabulary_test.go
+// already lives here rather than in internal/domain/ai. The relative path
+// below is unchanged from the domain/ai version: internal/adapter/gateway/
+// and internal/domain/ai/ are both four path segments below the repo root,
+// so "../../../../" reaches the same place from either.
 const parityFixturePath = "../../../../contracts/privacy/data-class-parity-cases.json"
 
 type parityCase struct {
@@ -79,12 +89,12 @@ var parityTestTenant = id.NewTenantID(uuid.MustParse("22222222-2222-7222-8222-22
 // unknown/lowercase/whitespace labels).
 func evaluateParityCase(t *testing.T, c parityCase) string {
 	t.Helper()
-	policy, err := NewPolicy([]UseCasePolicy{
+	policy, err := ai.NewPolicy([]ai.UseCasePolicy{
 		{
 			UseCase:              "parity-test",
 			Owner:                "lane-l",
-			MaxAuthority:         AuthorityOutcomeA1,
-			MaxRiskTier:          RiskTierT2,
+			MaxAuthority:         ai.AuthorityOutcomeA1,
+			MaxRiskTier:          ai.RiskTierT2,
 			PermittedRegions:     []string{"eu-west-1"},
 			PermittedDataClasses: classesOrNil(c.PermittedDataClasses),
 		},
@@ -93,16 +103,16 @@ func evaluateParityCase(t *testing.T, c parityCase) string {
 		t.Fatalf("%s: NewPolicy: %v", c.Name, err)
 	}
 
-	ctx := GovernanceContext{
+	ctx := ai.GovernanceContext{
 		Tenant:           parityTestTenant,
 		UseCase:          "parity-test",
-		AuthorityOutcome: AuthorityOutcomeA1,
-		RiskTier:         RiskTierT2,
+		AuthorityOutcome: ai.AuthorityOutcomeA1,
+		RiskTier:         ai.RiskTierT2,
 		Region:           "eu-west-1",
 		DataClasses:      classesOrNil(c.RequestDataClasses),
 	}
 
-	d := Evaluate(policy, ctx)
+	d := ai.Evaluate(policy, ctx)
 	if d.Allowed {
 		return ""
 	}
