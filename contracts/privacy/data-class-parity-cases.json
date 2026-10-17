@@ -98,7 +98,7 @@
       "expect_go_reason": null,
       "expect_python_reason": null,
       "known_divergence": false,
-      "note": "Duplicate entries are inert on both sides -- each loop just checks the same permitted class twice and allows the call."
+      "note": "True for the bare policy functions (ai.Evaluate / authorise called directly): each loop just checks the same permitted class twice and allows the call. Not reachable on a real call: Go's local pre-check (ai.Evaluate within Client.invoke) has no duplicate check and lets it through to the wire, but Python's wire decode rejects it (wire.py's uniqueItems check, mirroring gateway-call.schema.json's data_classes uniqueItems: true), so a real caller sending this is refused, not allowed."
     },
     {
       "name": "permitted_empty_list",
