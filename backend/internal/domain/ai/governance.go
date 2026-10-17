@@ -122,7 +122,7 @@ var (
 		"The AI use case is not approved to process data in this region.")
 
 	// ReasonDataClassRefused is a privacy class the use case may not send to a
-	// model. Go-only for now: the Python UseCase has no data-class allowlist.
+	// model. The Python Gateway enforces its own data-class allowlist independently (governance.py, authorise).
 	ReasonDataClassRefused = errs.Register("AI_DATA_CLASS_REFUSED", errs.CategoryPolicy,
 		"lane-l",
 		"The AI request would send a class of data the use case is not approved to send to a model.")

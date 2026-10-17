@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "AIUseCase",
   "description": "A registered AI use case (ZTAX-AIGOV-001 §3; ADR-0006 §2.5). Registration is the whole control: the Gateway refuses an unregistered use case, so a new AI capability cannot ship by deploying code that calls the Gateway, only by a reviewed registry change on the AI train with a named owner.",
-  "$comment": "Required fields are exactly ztax_gateway.governance.UseCase, which the Python schema test serializes and validates. The optional fields are the remainder of the AIGOV-001 §3 inventory. permitted_data_classes is enforced by the Go policy gate (ai.UseCasePolicy) and, when absent, means no data class is permitted.",
+  "$comment": "Required fields are exactly ztax_gateway.governance.UseCase, which the Python schema test serializes and validates. The optional fields are the remainder of the AIGOV-001 §3 inventory. permitted_data_classes is enforced by both the Go policy gate (ai.UseCasePolicy) and the Python Gateway (ztax_gateway.governance.UseCase); when it is absent, no data class is permitted on either side, each enforcing that independently.",
   "type": "object",
   "additionalProperties": false,
   "required": [
