@@ -316,3 +316,78 @@ def test_decode_call_rejects_identifier_over_128_chars() -> None:
     bad_region = {**_CALL, "governance": {**_CALL["governance"], "region": too_long}}
     with pytest.raises(WireError, match=r"governance\.region.*128"):
         decode_call(json.dumps(bad_region).encode("utf-8"))
+
+
+# ---------------------------------------------------------------------------
+# Wire-path behaviour for data_classes -- the real decode step every call
+# over the real boundary goes through before authorise() ever runs. These
+# pin that decode_call rejects the same malformed/duplicate shapes
+# contracts/privacy/data-class-parity-cases.json's known_divergence cases
+# only disagree on when the two policy functions (ai.Evaluate / authorise)
+# are called directly, bypassing this decode step entirely.
+# ---------------------------------------------------------------------------
+
+
+def test_decode_call_rejects_empty_data_classes() -> None:
+    bad = {**_CALL, "governance": {**_CALL["governance"], "data_classes": []}}
+    with pytest.raises(WireError, match="must name at least one class"):
+        decode_call(json.dumps(bad).encode("utf-8"))
+
+
+def test_decode_call_rejects_missing_data_classes_key() -> None:
+    governance = {k: v for k, v in _CALL["governance"].items() if k != "data_classes"}
+    bad = {**_CALL, "governance": governance}
+    with pytest.raises(WireError, match=r"governance lacks.*data_classes"):
+        decode_call(json.dumps(bad).encode("utf-8"))
+
+
+def test_decode_call_rejects_unknown_label() -> None:
+    bad = {**_CALL, "governance": {**_CALL["governance"], "data_classes": ["P9"]}}
+    with pytest.raises(WireError, match=r"'P9' is not a PRIV-001 class"):
+        decode_call(json.dumps(bad).encode("utf-8"))
+
+
+def test_decode_call_rejects_lowercase_label() -> None:
+    bad = {**_CALL, "governance": {**_CALL["governance"], "data_classes": ["p0"]}}
+    with pytest.raises(WireError, match=r"'p0' is not a PRIV-001 class"):
+        decode_call(json.dumps(bad).encode("utf-8"))
+
+
+def test_decode_call_rejects_whitespace_label() -> None:
+    bad = {**_CALL, "governance": {**_CALL["governance"], "data_classes": [" P0"]}}
+    with pytest.raises(WireError, match=r"' P0' is not a PRIV-001 class"):
+        decode_call(json.dumps(bad).encode("utf-8"))
+
+
+def test_decode_call_rejects_mixed_valid_and_unknown() -> None:
+    bad = {**_CALL, "governance": {**_CALL["governance"], "data_classes": ["P0", "P9"]}}
+    with pytest.raises(WireError, match=r"'P9' is not a PRIV-001 class"):
+        decode_call(json.dumps(bad).encode("utf-8"))
+
+
+def test_decode_call_rejects_duplicate_labels() -> None:
+    """The case contracts/privacy/data-class-parity-cases.json's
+    request_duplicates row says is not reachable on a real call: unlike
+    ai.Evaluate's/authorise()'s own loops, which treat a duplicate as inert,
+    the wire decoder enforces gateway-call.schema.json's uniqueItems: true."""
+    bad = {**_CALL, "governance": {**_CALL["governance"], "data_classes": ["P0", "P0"]}}
+    with pytest.raises(WireError, match="repeats a class"):
+        decode_call(json.dumps(bad).encode("utf-8"))
+
+
+def test_decode_call_rejects_non_string_element_other_than_a_dict() -> None:
+    """test_decode_call_rejects_dict_inside_data_classes above already pins
+    the dict case; this pins a second non-string shape (a bool). An int or
+    float cannot be used here: decode_call's json.loads call refuses every
+    JSON number in the whole document (wire.py's parse_float/parse_int/
+    parse_constant hooks), before the data_classes element loop ever runs,
+    so a number raises a different, document-level WireError first."""
+    bad = {**_CALL, "governance": {**_CALL["governance"], "data_classes": [True]}}
+    with pytest.raises(WireError, match="is not a string"):
+        decode_call(json.dumps(bad).encode("utf-8"))
+
+
+def test_decode_call_accepts_valid_data_classes() -> None:
+    ok = {**_CALL, "governance": {**_CALL["governance"], "data_classes": ["P1", "P0"]}}
+    call = decode_call(json.dumps(ok).encode("utf-8"))
+    assert call.governance.data_classes == ("P1", "P0")
