@@ -1169,3 +1169,104 @@ class TestP7TenantIsolation:
         with pytest.raises(AISecurityError) as exc_info:
             TenantContext(tenant_id="", region=_region)
         assert exc_info.value.refusal == AISecurityRefusal.TENANT_CONTEXT_INVALID
+
+
+# ---------------------------------------------------------------------------
+# P8 - Wire-level malformed data-class labels are rejected before governance
+# ADR-0006 §2.2; wire.py _PRIVACY_CLASSES validation
+# Library-level evidence over existing controls; no live model.
+# ---------------------------------------------------------------------------
+
+_malformed_data_class_cases: list[tuple[str, list[str]]] = [
+    ("out-of-range label P9", ["P9"]),
+    ("lowercase label p0", ["p0"]),
+    ("label with leading space ' P0'", [" P0"]),
+    ("empty list", []),
+]
+
+
+def _make_call_bytes_raw(
+    data_classes_value: Any,
+    *,
+    omit_data_classes: bool = False,
+) -> bytes:
+    """Like _make_call_bytes but lets us inject arbitrary data_classes values
+    (or omit the key entirely) so the wire decoder rejects them before
+    governance fires."""
+    gov: dict[str, Any] = {
+        "tenant_id": _tenant,
+        "use_case": _use_case,
+        "authority_outcome": "A1",
+        "risk_tier": "T1",
+        "region": _region,
+    }
+    if not omit_data_classes:
+        gov["data_classes"] = data_classes_value
+    doc: dict[str, Any] = {
+        "kind": "CLASSIFICATION_PROPOSAL",
+        "governance": gov,
+        "subject_ref": "sku:TEST",
+        "input_b64": base64.b64encode(b"{}").decode(),
+    }
+    return json.dumps(doc).encode()
+
+
+class TestP8WireMalformedDataClass:
+    """ADR-0006 §2.2: malformed data-class labels are rejected at the wire
+    layer, before governance or the runtime are ever consulted.
+
+    wire.py validates every element of governance.data_classes against
+    _PRIVACY_CLASSES (P0-P7).  Invalid labels, an empty list, or a missing
+    key all raise WireError, which Gateway.invoke converts to
+    GatewayError(INVALID_ARGUMENT, AI_MALFORMED_CONTEXT).
+
+    These tests cover the wire path only and do NOT duplicate the
+    authorise() data-class matrix already in test_data_class_parity.py.
+
+    Library-level evidence over existing controls; no live model.
+    """
+
+    @pytest.mark.parametrize(
+        "description,bad_classes",
+        _malformed_data_class_cases,
+        ids=[d for d, _ in _malformed_data_class_cases],
+    )
+    def test_malformed_data_class_label_refused_at_wire(
+        self, description: str, bad_classes: list[str]
+    ) -> None:
+        """Malformed data-class label is refused with INVALID_ARGUMENT /
+        AI_MALFORMED_CONTEXT; the runtime receives zero calls."""
+        import grpc
+
+        recorder = _RecordingRuntime()
+        sink = InMemoryEvidenceSink()
+        gw = _make_gateway(runtime=recorder, sink=sink)
+        data = _make_call_bytes_raw(bad_classes)
+        with pytest.raises(GatewayError) as exc_info:
+            gw.invoke(data)
+        err = exc_info.value
+        assert err.reason == "AI_MALFORMED_CONTEXT", (
+            f"{description}: expected AI_MALFORMED_CONTEXT, got {err.reason!r}"
+        )
+        assert err.code == grpc.StatusCode.INVALID_ARGUMENT, (
+            f"{description}: expected INVALID_ARGUMENT, got {err.code!r}"
+        )
+        assert recorder.seen == [], (
+            f"{description}: runtime must not be invoked for wire-rejected calls"
+        )
+
+    def test_missing_data_classes_key_refused_at_wire(self) -> None:
+        """A call without the data_classes key is refused with INVALID_ARGUMENT /
+        AI_MALFORMED_CONTEXT; the runtime receives zero calls."""
+        import grpc
+
+        recorder = _RecordingRuntime()
+        sink = InMemoryEvidenceSink()
+        gw = _make_gateway(runtime=recorder, sink=sink)
+        data = _make_call_bytes_raw(None, omit_data_classes=True)
+        with pytest.raises(GatewayError) as exc_info:
+            gw.invoke(data)
+        err = exc_info.value
+        assert err.reason == "AI_MALFORMED_CONTEXT"
+        assert err.code == grpc.StatusCode.INVALID_ARGUMENT
+        assert recorder.seen == [], "runtime must not be invoked when data_classes key is absent"
