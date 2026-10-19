@@ -268,9 +268,10 @@ func (p *parser) program() (*Program, error) {
 		t := p.peek()
 		switch {
 		case t.kind == tokenEOF:
-			if len(prog.Rules) == 0 {
-				return nil, errorf(t.pos, "bundle %q declares no rules", prog.BundleID)
-			}
+			// A bundle with no rules is legitimate when its pack carries a
+			// taxation profile, which the DSL cannot see. That a bundle has
+			// something to evaluate is checked where both are known: the
+			// manifest (rule.Load, bundle.EncodeManifest).
 			return prog, nil
 
 		case t.kind == tokenIdent && t.text == "policy":

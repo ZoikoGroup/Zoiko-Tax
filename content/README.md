@@ -116,6 +116,34 @@ Three things the surface deliberately does not have:
 
 **No unused bindings.** The executor walks every node, so an unreferenced binding costs latency and appears in the evidence trace as a step that contributed to nothing. It is also what a misspelled reference looks like from the compiler's side.
 
+## Location-aware content (`taxation.json`)
+
+A pack may carry a `taxation.json` beside its `.ztax` source. `ztax-contentc compile` reads it, compiles it the way a cell will (`internal/domain/taxation`), and writes it into the manifest's `taxation` section, so it is approved, sealed and verified with the rest. A pack with a taxation profile may declare no rules at all; a bundle with neither is refused.
+
+| Section | What it declares |
+|---|---|
+| `jurisdictions` | The jurisdiction graph (JUR-001 §2): countries and subdivisions, each with its ISO code, its own timezone and an effective period. |
+| `situs` | Situs rules by service and customer role (JUR-001 §4), and how an `UNDETERMINED` customer is treated. |
+| `responsibility` | Named five-role assignments: incidence, collection, reporting, remittance, economic bearer. |
+| `regimes` | One per country: the service families it has content for, the subdivision level a place of supply must reach (`requiresLevel`), inclusive-price extraction, and subdivisions outside its territory (`excludedSubdivisions`). |
+| `components` | Each tax, fee or contribution: jurisdiction, authority, services, an applicability table (customer role × domestic/cross-border → `CUSTOMER_CHARGE`, `PROVIDER_COST` or `REVERSE_CHARGE`), base, rounding, exempting certificate types, and effective-dated rate versions, each with its source and citation. A zero rate must say why (`ZERO_RATED`, `EXEMPT`, `OUT_OF_SCOPE`). |
+
+Dates are calendar dates in the jurisdiction's own timezone: a rate "from 1 September" starts at midnight there, not at UTC midnight.
+
+Nothing about a place is assumed. A country without a regime, a service a regime does not list, a combination no component's applicability table matches, a date before a component's first version, and a subdivision a regime excludes are all `UNSUPPORTED`.
+
+### The packs
+
+| Pack | What | Status |
+|---|---|---|
+| `global-telecom` | Standard VAT/GST on telecommunications by place of supply: the EU-27, UK, Norway, Switzerland, Canada by province (GST/HST, BC PST, MB RST, SK PST, QC QST), Australia, New Zealand, Singapore, Japan, South Africa, UAE and Saudi Arabia. B2B cross-border supplies are reverse-charged where the regime does so; Japan, South Africa, UAE and Saudi Arabia cover domestic supplies only. Equipment sales are domestic only. | RESEARCH: every rate cites the authority's publication; none is reviewed |
+| `training-telecom` | The playbook's training fixtures in fictional territories (XT, XQ, XV, XW): the §7 mixed bundle, §9 tax on tax and inclusive pricing, §8A place of supply, §29 exemptions, and a rate change at local midnight. | Training only — never a customer pack |
+| `eu-vat` | The rule-graph worked pack. | Shape test |
+
+`make content` builds `global-telecom` into `build/global-telecom/`; `make content CONTENT_PACK_NAME=training-telecom` builds another into its own directory. A cell runs the one its `ZTAX_CONTENT_DIR` names. `make content-all` and `make content-verify-all` do all three.
+
+The global pack is generated for uniformity and then reviewed as JSON; the JSON is the artifact. Before it leaves RESEARCH a qualified content reviewer confirms each rate against its citation, content-legal confirms the reuse terms of each cited publication, and independent golden cases are registered.
+
 ## What this pack is not
 
 `packs/eu-vat` names no real jurisdiction, no real rate and no real threshold. It is a shape test that exercises every construct the IR offers, and it is the "worked pack" the [specification register](../docs/specs/README.md) asks for — a specification nobody has authored content against is a specification with untested assumptions.

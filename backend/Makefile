@@ -63,12 +63,26 @@ golden-register-w2: ## Re-baseline the determination and classification corpora.
 # is gitignored. A production pack is signed by the KMS and the private key
 # never leaves it (ADR-0017 2.6), so this target is not the path that does it.
 
-CONTENT_DIR     ?= ../content
-CONTENT_PACK    ?= $(CONTENT_DIR)/packs/eu-vat/eu-vat.ztax
-CONTENT_BUILD   ?= $(CONTENT_DIR)/build
-CONTENT_KEYS    ?= $(CONTENT_DIR)/.keys
-CONTENT_KEY_ID  ?= content-dev-2026
-CONTENT_BUNDLE      ?= eu-vat-worked-2026.09
+#
+# CONTENT_PACK_NAME picks the pack a cell runs, one per cell (the loader
+# refuses a directory holding two). Each pack builds into its own directory
+# under content/build, so switching packs never leaves a second bundle where a
+# cell would find it:
+#
+#   global-telecom    location-aware taxes by country and province (RESEARCH)
+#   training-telecom  the playbook's training fixtures (fictional territories)
+#   eu-vat            the rule-graph worked pack the Postman run is written for
+
+CONTENT_DIR       ?= ../content
+CONTENT_PACK_NAME ?= global-telecom
+CONTENT_PACKS     := global-telecom training-telecom eu-vat
+CONTENT_PACK      ?= $(CONTENT_DIR)/packs/$(CONTENT_PACK_NAME)/$(CONTENT_PACK_NAME).ztax
+CONTENT_BUILD     ?= $(CONTENT_DIR)/build/$(CONTENT_PACK_NAME)
+CONTENT_KEYS      ?= $(CONTENT_DIR)/.keys
+CONTENT_KEY_ID    ?= content-dev-2026
+# The bundle identity is the source's own `bundle` line, so it cannot drift
+# from the pack it names.
+CONTENT_BUNDLE      ?= $(shell sed -n 's/^bundle "\(.*\)"/\1/p' $(CONTENT_PACK))
 CONTENT_AUTHOR_ID   ?= content-author-dev-2026
 CONTENT_APPROVER_ID ?= content-approver-dev-2026
 CONTENT_AUTHOR      ?= analyst:dev-author
@@ -109,6 +123,14 @@ content: content-keys ## Compile (pack + rights gates), approve four-eyes, seal 
 .PHONY: content-verify
 content-verify: ## Verify the sealed bundle the way a production cell loads it (four-eyes included)
 	$(CONTENTC) verify -dir $(CONTENT_BUILD) -keyring $(CONTENT_KEYS)/keyring.json -environment production
+
+.PHONY: content-all
+content-all: ## Compile, approve and seal every pack, each into content/build/<pack>
+	@for p in $(CONTENT_PACKS); do $(MAKE) --no-print-directory content CONTENT_PACK_NAME=$$p || exit 1; done
+
+.PHONY: content-verify-all
+content-verify-all: ## Verify every sealed pack the way a production cell loads it
+	@for p in $(CONTENT_PACKS); do $(MAKE) --no-print-directory content-verify CONTENT_PACK_NAME=$$p || exit 1; done
 
 # --- contracts (SCHEMA train) -----------------------------------------------
 
@@ -206,7 +228,7 @@ logs: ## Follow ztax-core logs
 	docker compose -f ../docker-compose.yml logs -f ztax-core
 
 .PHONY: check
-check: fmt-check vet fiscalfloat lint test golden-crosscheck vendor-verify content content-verify contract-check api-gen-check ## Everything that gates a commit
+check: fmt-check vet fiscalfloat lint test golden-crosscheck vendor-verify content-all content-verify-all contract-check api-gen-check ## Everything that gates a commit
 
 .PHONY: clean
 clean: ## Remove build output
