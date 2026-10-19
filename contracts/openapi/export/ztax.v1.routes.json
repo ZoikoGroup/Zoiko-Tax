@@ -159,6 +159,12 @@
     },
     {
       "method": "GET",
+      "path": "/v1/coverage",
+      "operationId": "getCoverage",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/dashboard",
       "operationId": "getDashboard",
       "public": false

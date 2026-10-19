@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:fa92847bc20e61b201a34acb98cd338caacd85811f1bbd2497fa4203ea6856ad`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:9aab139045cb19fece0a8909a61887f0dc0cc77addb5e809fda01010cecfdb8d`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -4333,6 +4333,89 @@
           ]
         },
         {
+          "name": "GET /v1/coverage — Report what the active content determines by location",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/coverage?at={{at}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "coverage"
+              ],
+              "query": [
+                {
+                  "key": "at",
+                  "value": "{{at}}",
+                  "description": "The instant to report rates at. Defaults to now."
+                }
+              ]
+            },
+            "description": "Report what the active content determines by location\n\nAny authenticated role. The countries the active pack covers, the\nservices in each, whether inclusive prices can be extracted, and\nevery component in force at `at` — rate, jurisdiction, authority,\ntreatments and source citation. A country that is not listed is\n`UNSUPPORTED` on a determination; nothing about it is assumed.\n\n`503 NO_CONTENT_BUNDLE` when the cell has no bundle, or a bundle with\nno taxation profile."
+          },
+          "response": [
+            {
+              "name": "200 · One regime of the training pack",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/coverage",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "coverage"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"bundle\": {\n    \"bundleId\": \"training-telecom-2026.10\",\n    \"digest\": \"zt1:5b0c4e7f0d2a1c3b5e7f9a1c3e5b7d9f1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b\",\n    \"irVersion\": 1\n  },\n  \"profileVersion\": \"2026.10.1\",\n  \"graphVersion\": \"training-2026.10\",\n  \"at\": \"2026-10-15T12:00:00.000000Z\",\n  \"regimes\": [\n    {\n      \"id\": \"regime:xt-training\",\n      \"country\": \"XT\",\n      \"name\": \"XT training regime (playbook section 7)\",\n      \"services\": [\n        \"MOBILE_VOICE\",\n        \"MOBILE_DATA\",\n        \"EQUIPMENT_SALE\"\n      ],\n      \"inclusivePricing\": true,\n      \"components\": [\n        {\n          \"id\": \"xt.voice-tax\",\n          \"jurisdiction\": \"jurisdiction:xt\",\n          \"authority\": \"authority:xt-revenue\",\n          \"taxType\": \"TELECOM_TAX\",\n          \"name\": \"XT voice tax\",\n          \"services\": [\n            \"MOBILE_VOICE\"\n          ],\n          \"treatments\": [\n            \"CUSTOMER_CHARGE\"\n          ],\n          \"rateKind\": \"AD_VALOREM\",\n          \"rate\": \"0.08\",\n          \"from\": \"2026-01-01\",\n          \"source\": \"SRC-ZOIKO-TRAINING-0001\",\n          \"citation\": \"Training rule: 8% of the voice base.\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getCoverage returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "// A pack with location-aware content answers 200; the worked rule pack has",
+                  "// no taxation profile and answers 503, which is the correct refusal.",
+                  "pm.test('coverage is reported, or refused for a pack without location-aware content', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 503]);",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "  pm.test('every component in force names its source', function () {",
+                  "    pm.response.json().regimes.forEach(function (r) {",
+                  "      r.components.forEach(function (c) { pm.expect(c.source).to.be.a('string').and.not.empty; });",
+                  "    });",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "POST /v1/quotes — Quote a transaction without recording it",
           "request": {
             "method": "POST",
@@ -4365,7 +4448,7 @@
                 "quotes"
               ]
             },
-            "description": "Quote a transaction without recording it\n\n`OPERATOR` or `ANALYST`. Evaluates the input against the cell's active\ncontent bundle by exactly the path a commit takes, then discards it:\nno decision, no evidence, no idempotency record.\n\n**A quote is an estimate; only a commit is a decision** (ADR-0004\n§2.7). Every quote is `authoritative: false`, whatever the\ndeployment's authorization level, and must not be filed or invoiced\nfrom.\n\nThe input is named the way content reads it. Which values a line\ncarries, and what they are called, is decided by the active pack, not\nby this contract — the worked pack reads `line.netAmount`,\n`line.quantity` and two flags, and a read set holding\n`threshold.ecoLevyYtd`. A value the pack reads and the request omits is\na `400`; so is an accumulator the pack does not read."
+            "description": "Quote a transaction without recording it\n\n`OPERATOR` or `ANALYST`. Evaluates the input against the cell's active\ncontent bundle by exactly the path a commit takes, then discards it:\nno decision, no evidence, no idempotency record.\n\n**A quote is an estimate; only a commit is a decision** (ADR-0004\n§2.7). Every quote is `authoritative: false`, whatever the\ndeployment's authorization level, and must not be filed or invoiced\nfrom.\n\nThe input is named the way content reads it. Which values a line\ncarries, and what they are called, is decided by the active pack, not\nby this contract — the worked pack reads `line.netAmount`,\n`line.quantity` and two flags, and a read set holding\n`threshold.ecoLevyYtd`. A value the pack reads and the request omits is\na `400`; so is an accumulator the pack does not read.\n\n**Location-aware determination.** Against a pack with a taxation\nprofile, send `document` instead of `input`. The cell resolves where\neach line was supplied from the evidence (JUR-001), selects the\ncomponents in force there at `eventTime` for the line's service,\ncustomer role and supply, and evaluates them (DET-001). Every line ends\nin an explicit state: a missing location, an uncovered country, an\nunmapped SKU or an unverifiable certificate is a recorded\n`REVIEW_REQUIRED` or `UNSUPPORTED`, never a zero tax. Coverage is\nreported by `GET /v1/coverage`."
           },
           "response": [
             {
@@ -4456,7 +4539,7 @@
                 "transactions:commit"
               ]
             },
-            "description": "Commit a transaction and record its decision\n\n`OPERATOR` only. Evaluates the input against the active content bundle\nand records the result as an immutable decision, with the two evidence\nobjects that let it replay exactly (ADR-0011 §2.8).\n\n**`Idempotency-Key` is mandatory** (ADR-0013 §2.1). A retry with the\nsame key and the same body returns the original response verbatim,\nwith `Idempotent-Replay: true`, and records nothing new. The same key\nwith a different body is `409 IDEMPOTENCY_KEY_REUSE`; a key whose first\nrequest is still running is `409 REQUEST_IN_PROGRESS` with\n`Retry-After`. Neither executes. Bodies are compared in canonical form,\nso member order and whitespace do not matter and a decimal's scale\ndoes — `\"45.00\"` and `\"45.0\"` are different requests.\n\nA validation failure is recorded against the key and replayed on\nretry, because the same request fails the same way. A transient\nfailure (`503`) is not: the key is released and a retry is a genuine\nnew attempt.\n\n`supersedes` corrects an earlier decision for the same `businessKey`.\nIt must name the current version; a decision is never edited, and a\ncorrection is a new decision linked to the old (ADR-0003).\n\nWhen the active content binds its accumulators to the cell (a\nbundle fiscal profile), the cell reads them under lock before\nevaluating, records this decision's contribution, and posts the\ndecision to the Tax Control Subledger, all in this request's\ntransaction. A request that supplies a value for a bound accumulator\nis refused with `400 INVALID_VALUE`: the store is the source\n(ZTAX-DET-REQ-0002). `accumulators` remains for content that reads a\nvalue the cell does not hold.\n\nBefore A4 every decision is `ADVISORY` and `authoritative: false`."
+            "description": "Commit a transaction and record its decision\n\n`OPERATOR` only. Evaluates the input against the active content bundle\nand records the result as an immutable decision, with the two evidence\nobjects that let it replay exactly (ADR-0011 §2.8).\n\n**`Idempotency-Key` is mandatory** (ADR-0013 §2.1). A retry with the\nsame key and the same body returns the original response verbatim,\nwith `Idempotent-Replay: true`, and records nothing new. The same key\nwith a different body is `409 IDEMPOTENCY_KEY_REUSE`; a key whose first\nrequest is still running is `409 REQUEST_IN_PROGRESS` with\n`Retry-After`. Neither executes. Bodies are compared in canonical form,\nso member order and whitespace do not matter and a decimal's scale\ndoes — `\"45.00\"` and `\"45.0\"` are different requests.\n\nA validation failure is recorded against the key and replayed on\nretry, because the same request fails the same way. A transient\nfailure (`503`) is not: the key is released and a retry is a genuine\nnew attempt.\n\n`supersedes` corrects an earlier decision for the same `businessKey`.\nIt must name the current version; a decision is never edited, and a\ncorrection is a new decision linked to the old (ADR-0003).\n\nWhen the active content binds its accumulators to the cell (a\nbundle fiscal profile), the cell reads them under lock before\nevaluating, records this decision's contribution, and posts the\ndecision to the Tax Control Subledger, all in this request's\ntransaction. A request that supplies a value for a bound accumulator\nis refused with `400 INVALID_VALUE`: the store is the source\n(ZTAX-DET-REQ-0002). `accumulators` remains for content that reads a\nvalue the cell does not hold.\n\nBefore A4 every decision is `ADVISORY` and `authoritative: false`.\n\nA `document` commit records the document, every line's situs decision\nand components, and the totals in the envelope and result, so a replay\nreproduces it exactly under the content that made it. A decision whose\ndocument is not `RESOLVED` is recorded and emits nothing: it posts no\njournal and assesses no obligation."
           },
           "response": [
             {
@@ -9921,7 +10004,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:fa92847bc20e61b201a34acb98cd338caacd85811f1bbd2497fa4203ea6856ad",
+      "value": "sha256:9aab139045cb19fece0a8909a61887f0dc0cc77addb5e809fda01010cecfdb8d",
       "type": "string"
     }
   ]

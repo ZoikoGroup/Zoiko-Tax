@@ -314,6 +314,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Report what the active content determines by location
+         * @description Any authenticated role. The countries the active pack covers, the
+         *     services in each, whether inclusive prices can be extracted, and
+         *     every component in force at `at` — rate, jurisdiction, authority,
+         *     treatments and source citation. A country that is not listed is
+         *     `UNSUPPORTED` on a determination; nothing about it is assumed.
+         *
+         *     `503 NO_CONTENT_BUNDLE` when the cell has no bundle, or a bundle with
+         *     no taxation profile.
+         */
+        get: operations["getCoverage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/quotes": {
         parameters: {
             query?: never;
@@ -340,6 +367,16 @@ export interface paths {
          *     `line.quantity` and two flags, and a read set holding
          *     `threshold.ecoLevyYtd`. A value the pack reads and the request omits is
          *     a `400`; so is an accumulator the pack does not read.
+         *
+         *     **Location-aware determination.** Against a pack with a taxation
+         *     profile, send `document` instead of `input`. The cell resolves where
+         *     each line was supplied from the evidence (JUR-001), selects the
+         *     components in force there at `eventTime` for the line's service,
+         *     customer role and supply, and evaluates them (DET-001). Every line ends
+         *     in an explicit state: a missing location, an uncovered country, an
+         *     unmapped SKU or an unverifiable certificate is a recorded
+         *     `REVIEW_REQUIRED` or `UNSUPPORTED`, never a zero tax. Coverage is
+         *     reported by `GET /v1/coverage`.
          */
         post: operations["createQuote"];
         delete?: never;
@@ -391,6 +428,12 @@ export interface paths {
          *     value the cell does not hold.
          *
          *     Before A4 every decision is `ADVISORY` and `authoritative: false`.
+         *
+         *     A `document` commit records the document, every line's situs decision
+         *     and components, and the totals in the envelope and result, so a replay
+         *     reproduces it exactly under the content that made it. A decision whose
+         *     document is not `RESOLVED` is recorded and emits nothing: it posts no
+         *     journal and assesses no obligation.
          */
         post: operations["commitTransaction"];
         delete?: never;
@@ -3101,18 +3144,30 @@ export interface components {
         ReadSet: {
             [key: string]: components["schemas"]["MoneyValue"];
         };
-        /** QuoteRequest */
+        /**
+         * QuoteRequest
+         * @description Exactly one of `input` (named values for a rule-graph pack) and
+         *     `document` (a telecom document for a pack with location-aware
+         *     content) is required. `eventTime` is the tax point.
+         */
         QuoteRequest: {
             eventTime: components["schemas"]["Timestamp"];
-            input: components["schemas"]["DeterminationInput"];
+            input?: components["schemas"]["DeterminationInput"];
+            document?: components["schemas"]["TaxDocument"];
             accumulators?: components["schemas"]["ReadSet"];
         };
-        /** CommitRequest */
+        /**
+         * CommitRequest
+         * @description Exactly one of `input` and `document` is required, as for a quote.
+         *     `eventTime` is the tax point: every effective date and legal period is
+         *     resolved at it, in the authority's own calendar.
+         */
         CommitRequest: {
             businessKey: components["schemas"]["BusinessKey"];
             supersedes?: components["schemas"]["DecisionId"];
             eventTime: components["schemas"]["Timestamp"];
-            input: components["schemas"]["DeterminationInput"];
+            input?: components["schemas"]["DeterminationInput"];
+            document?: components["schemas"]["TaxDocument"];
             accumulators?: components["schemas"]["ReadSet"];
         };
         /**
@@ -3163,6 +3218,7 @@ export interface components {
             quotedAt: components["schemas"]["Timestamp"];
             bundle: components["schemas"]["BundleRef"];
             emitted: components["schemas"]["Emitted"];
+            document?: components["schemas"]["DocumentDetermination"];
         };
         /**
          * DecisionDigests
@@ -3192,6 +3248,374 @@ export interface components {
             bundle: components["schemas"]["BundleRef"];
             digests: components["schemas"]["DecisionDigests"];
             emitted: components["schemas"]["Emitted"];
+            document?: components["schemas"]["DocumentDetermination"];
+        };
+        /**
+         * JurisdictionId
+         * @description A jurisdiction's content identifier (ADR-0012 §2.4), such as
+         *     `jurisdiction:ca-qc`. Classified as location evidence: on a consumer
+         *     document, the deepest jurisdiction is where the customer is.
+         * @example jurisdiction:ca-qc
+         */
+        JurisdictionId: string;
+        /**
+         * LocationCode
+         * @description An ISO 3166-1 alpha-2 country code (`DE`) or ISO 3166-2 subdivision code (`CA-QC`).
+         * @example DE
+         */
+        LocationCode: string;
+        /**
+         * TaxDocumentType
+         * @description An `INVOICE` carries non-negative amounts; a `CREDIT_NOTE` carries non-positive ones.
+         * @example INVOICE
+         * @enum {string}
+         */
+        TaxDocumentType: "INVOICE" | "CREDIT_NOTE";
+        /**
+         * PriceMode
+         * @description `EXCLUSIVE`: amounts are net and customer charges are added.
+         *     `INCLUSIVE`: amounts include the customer-charged taxes, which are
+         *     extracted (DET-001 §7) — never computed on the gross and added.
+         * @example EXCLUSIVE
+         * @enum {string}
+         */
+        PriceMode: "EXCLUSIVE" | "INCLUSIVE";
+        /**
+         * ServiceFamily
+         * @description A ZTAX-CLS-001 ontology family. A tenant's SKU is mapped to one before
+         *     determination; a line without one is held as `CLASSIFICATION_REQUIRED`
+         *     rather than guessed at.
+         * @example MOBILE_VOICE
+         * @enum {string}
+         */
+        ServiceFamily: "MOBILE_VOICE" | "FIXED_VOICE" | "MESSAGING" | "MOBILE_DATA" | "FIXED_BROADBAND" | "VOIP" | "SIP_TRUNKING" | "UCAAS" | "CCAAS" | "CPAAS" | "IOT_CONNECTIVITY" | "SUBSCRIPTION_IDENTITY" | "SATELLITE_CONNECTIVITY" | "ROAMING_RETAIL" | "ROAMING_WHOLESALE" | "INTERCONNECT" | "WHOLESALE_ACCESS" | "EQUIPMENT_SALE" | "EQUIPMENT_RENTAL" | "INSTALLATION_ACTIVATION" | "PROFESSIONAL_SERVICES" | "CONTENT_MEDIA" | "SOFTWARE" | "OTHER_NON_TELECOM";
+        /**
+         * SitusEvidenceType
+         * @description The JUR-001 §3.2 evidence vocabulary a caller may supply directly.
+         *     Seller and customer establishment and VAT identification arrive on the
+         *     parties instead, so one fact cannot arrive twice and disagree.
+         * @example SERVICE_ADDRESS
+         * @enum {string}
+         */
+        SitusEvidenceType: "PRIMARY_PLACE_OF_USE" | "SERVICE_ADDRESS" | "BILLING_ADDRESS" | "FIXED_LINE_LOCATION" | "NETWORK_LOCATION" | "SIM_COUNTRY" | "IP_GEOLOCATION" | "BANK_LOCATION" | "CUSTOMER_DECLARATION";
+        /**
+         * SitusEvidenceSource
+         * @example SELLER_RECORDED
+         * @enum {string}
+         */
+        SitusEvidenceSource: "CUSTOMER_ASSERTED" | "SELLER_RECORDED" | "NETWORK_DERIVED" | "THIRD_PARTY_VERIFIED" | "AUTHORITY_VERIFIED";
+        /**
+         * VatValidation
+         * @description `VALIDATED` establishes a business customer where the pack recognises
+         *     it. `UNVALIDATED` and `VALIDATION_UNAVAILABLE` are different facts and
+         *     a pack may treat them differently (JUR-001 §7.3).
+         * @example VALIDATED
+         * @enum {string}
+         */
+        VatValidation: "VALIDATED" | "UNVALIDATED" | "VALIDATION_UNAVAILABLE";
+        /**
+         * CertificateVerification
+         * @description Only `VERIFIED` exempts. `UNAVAILABLE` holds the line for review; a
+         *     verification is never assumed to have succeeded.
+         * @example VERIFIED
+         * @enum {string}
+         */
+        CertificateVerification: "VERIFIED" | "UNVERIFIED" | "UNAVAILABLE";
+        /**
+         * PartyReference
+         * @description A party's reference in the caller's systems. Not interpreted; a certificate's holder must equal the customer's.
+         * @example C1
+         */
+        PartyReference: string;
+        /**
+         * ContentLabel
+         * @description An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+         * @example xt.voice-tax
+         */
+        ContentLabel: string;
+        /**
+         * ContentText
+         * @description Text from the active content, such as a source citation. Not interpreted.
+         * @example Training rule: 8% of the voice base.
+         */
+        ContentText: string;
+        /**
+         * Place
+         * @description A location named by its jurisdiction — exactly one of a jurisdiction
+         *     identifier and an ISO code. There is no street address: resolution
+         *     never geocodes (JUR-001 §8.2), so an address is mapped to a
+         *     jurisdiction by the system that records it.
+         */
+        Place: {
+            jurisdiction?: components["schemas"]["JurisdictionId"];
+            subdivision?: components["schemas"]["LocationCode"];
+            country?: components["schemas"]["LocationCode"];
+        };
+        /**
+         * VatIdentification
+         * @description The customer's VAT registration country and validation status. The number itself is not needed and not retained.
+         */
+        VatIdentification: {
+            country: components["schemas"]["LocationCode"];
+            validation: components["schemas"]["VatValidation"];
+        };
+        /** TaxParty */
+        TaxParty: {
+            id: components["schemas"]["PartyReference"];
+            establishment?: components["schemas"]["Place"];
+            vat?: components["schemas"]["VatIdentification"];
+        };
+        /**
+         * SitusEvidenceItem
+         * @description One typed, attributed signal about where the supply took place (JUR-001 §3.1).
+         */
+        SitusEvidenceItem: {
+            type: components["schemas"]["SitusEvidenceType"];
+            source: components["schemas"]["SitusEvidenceSource"];
+            collectedAt?: components["schemas"]["Timestamp"];
+            place: components["schemas"]["Place"];
+        };
+        /**
+         * ExemptionCertificate
+         * @description A certificate is scoped: by issuing jurisdiction, holder, tax types,
+         *     components and validity. One that does not apply on any of those is
+         *     refused visibly in the trace, never silently ignored.
+         */
+        ExemptionCertificate: {
+            id: components["schemas"]["PartyReference"];
+            type: components["schemas"]["ContentLabel"];
+            holder: components["schemas"]["PartyReference"];
+            jurisdiction: components["schemas"]["JurisdictionId"];
+            taxTypes?: components["schemas"]["ContentLabel"][];
+            components?: components["schemas"]["ContentLabel"][];
+            validFrom: components["schemas"]["CivilDate"];
+            validTo?: components["schemas"]["CivilDate"];
+            verification: components["schemas"]["CertificateVerification"];
+        };
+        /**
+         * TaxLinePart
+         * @description One component of an approved bundle decomposition.
+         */
+        TaxLinePart: {
+            key: components["schemas"]["ContentLabel"];
+            service?: components["schemas"]["ServiceFamily"];
+            amount: components["schemas"]["Decimal"];
+            quantity?: components["schemas"]["QuantityValue"];
+        };
+        /**
+         * TaxLine
+         * @description One rated line, in the document currency. A bundle line carries
+         *     `parts` instead of its own `service` and `quantity`, and the parts
+         *     must sum to `amount` exactly.
+         */
+        TaxLine: {
+            key: components["schemas"]["ContentLabel"];
+            sku?: components["schemas"]["ContentLabel"];
+            service?: components["schemas"]["ServiceFamily"];
+            amount: components["schemas"]["Decimal"];
+            quantity?: components["schemas"]["QuantityValue"];
+            evidence?: components["schemas"]["SitusEvidenceItem"][];
+            parts?: components["schemas"]["TaxLinePart"][];
+        };
+        /**
+         * TaxDocument
+         * @description A telecom document for location-aware determination: rated commercial
+         *     facts, the parties, and the evidence of where the supply took place.
+         *     It carries no tax; what is owed is the output. The tax point is the
+         *     request's `eventTime`.
+         */
+        TaxDocument: {
+            type: components["schemas"]["TaxDocumentType"];
+            currency: components["schemas"]["CurrencyCode"];
+            priceMode: components["schemas"]["PriceMode"];
+            seller: components["schemas"]["TaxParty"];
+            customer: components["schemas"]["TaxParty"];
+            evidence?: components["schemas"]["SitusEvidenceItem"][];
+            certificates?: components["schemas"]["ExemptionCertificate"][];
+            lines: components["schemas"]["TaxLine"][];
+        };
+        /**
+         * DeterminationState
+         * @description `RESOLVED` is the only state that carries amounts. Every other state
+         *     is recorded with its evidence and reason and is never a zero tax.
+         * @example RESOLVED
+         * @enum {string}
+         */
+        DeterminationState: "RESOLVED" | "REVIEW_REQUIRED" | "UNSUPPORTED" | "AMBIGUOUS" | "CONFLICTED";
+        /**
+         * Treatment
+         * @description `CUSTOMER_CHARGE` is on the invoice. `PROVIDER_COST` is borne by the
+         *     seller and never on it. `REVERSE_CHARGE` is self-assessed by the
+         *     customer: disclosed, neither charged nor remitted by the seller.
+         *     `EXEMPT` is a customer charge a verified certificate suppressed.
+         * @example CUSTOMER_CHARGE
+         * @enum {string}
+         */
+        Treatment: "CUSTOMER_CHARGE" | "PROVIDER_COST" | "REVERSE_CHARGE" | "EXEMPT";
+        /**
+         * ResponsibleParty
+         * @example SELLER
+         * @enum {string}
+         */
+        ResponsibleParty: "SELLER" | "BUYER" | "NONE";
+        /**
+         * ResponsibilityAssignment
+         * @description The five roles, each answered separately (ZTAX-OBL-REQ-0002 to -0006).
+         */
+        ResponsibilityAssignment: {
+            id: components["schemas"]["ContentLabel"];
+            incidence: components["schemas"]["ResponsibleParty"];
+            collection: components["schemas"]["ResponsibleParty"];
+            reporting: components["schemas"]["ResponsibleParty"];
+            remittance: components["schemas"]["ResponsibleParty"];
+            economicBearer: components["schemas"]["ResponsibleParty"];
+        };
+        /**
+         * ExemptionApplied
+         * @description A charge a certificate suppressed, and the assessment it would have been.
+         */
+        ExemptionApplied: {
+            certificate: components["schemas"]["PartyReference"];
+            type: components["schemas"]["ContentLabel"];
+            assessed?: components["schemas"]["Decimal"];
+        };
+        /**
+         * TaxComponentResult
+         * @description One charge on one line: its legal base, rate version, jurisdiction,
+         *     authority, five roles, recoverability, rounding result and source.
+         *     `charged` is what the customer pays for it.
+         */
+        TaxComponentResult: {
+            id: components["schemas"]["ContentLabel"];
+            version: components["schemas"]["CivilDate"];
+            regime: components["schemas"]["ContentLabel"];
+            jurisdiction: components["schemas"]["JurisdictionId"];
+            authority: components["schemas"]["ContentLabel"];
+            taxType: components["schemas"]["ContentLabel"];
+            name: components["schemas"]["ContentText"];
+            treatment: components["schemas"]["Treatment"];
+            inclusive: boolean;
+            rateKind: components["schemas"]["ContentLabel"];
+            rate: components["schemas"]["Decimal"];
+            unit?: components["schemas"]["UnitCode"];
+            base?: components["schemas"]["Decimal"];
+            raw: components["schemas"]["Decimal"];
+            amount: components["schemas"]["Decimal"];
+            charged: components["schemas"]["Decimal"];
+            legalReason?: components["schemas"]["ContentLabel"];
+            responsibility: components["schemas"]["ResponsibilityAssignment"];
+            exemption?: components["schemas"]["ExemptionApplied"];
+            source: components["schemas"]["ContentLabel"];
+            citation: components["schemas"]["ContentText"];
+        };
+        /**
+         * DeterminationItem
+         * @description One line, or one part of a bundle line (`key` is `<line>/<part>`):
+         *     its state, the situs decision that placed it, and its components.
+         */
+        DeterminationItem: {
+            key: components["schemas"]["ContentLabel"];
+            line: components["schemas"]["ContentLabel"];
+            part?: components["schemas"]["ContentLabel"];
+            sku?: components["schemas"]["ContentLabel"];
+            service?: components["schemas"]["ServiceFamily"];
+            amount: components["schemas"]["Decimal"];
+            state: components["schemas"]["DeterminationState"];
+            reasonCode?: components["schemas"]["ReasonCode"];
+            situsOutcome?: components["schemas"]["ContentLabel"];
+            situsRule?: components["schemas"]["ContentLabel"];
+            applicable?: components["schemas"]["JurisdictionId"][];
+            placeOfSupply?: components["schemas"]["JurisdictionId"];
+            customerRole?: components["schemas"]["ContentLabel"];
+            supply?: components["schemas"]["ContentLabel"];
+            regime?: components["schemas"]["ContentLabel"];
+            neededEvidence?: components["schemas"]["ContentLabel"][];
+            net?: components["schemas"]["Decimal"];
+            components?: components["schemas"]["TaxComponentResult"][];
+        };
+        /**
+         * DocumentTotals
+         * @description The figures that must stay apart (playbook §7): what the customer is
+         *     charged, what the provider bears, and what the customer self-assesses.
+         */
+        DocumentTotals: {
+            net: components["schemas"]["Decimal"];
+            customerTax: components["schemas"]["Decimal"];
+            customerTotal: components["schemas"]["Decimal"];
+            providerAccrual: components["schemas"]["Decimal"];
+            reverseCharge: components["schemas"]["Decimal"];
+        };
+        /**
+         * DeterminationStep
+         * @description One step of the deterministic trace — selection, situs, exemption and DET-001 evaluation steps.
+         */
+        DeterminationStep: {
+            item?: components["schemas"]["ContentLabel"];
+            component?: components["schemas"]["ContentLabel"];
+            step: components["schemas"]["ContentLabel"];
+            detail: string;
+        };
+        /**
+         * DocumentDetermination
+         * @description A document's location-aware determination. `totals` is present only
+         *     when `state` is `RESOLVED`: an unresolved document has no totals
+         *     rather than zero ones.
+         */
+        DocumentDetermination: {
+            state: components["schemas"]["DeterminationState"];
+            reasonCode: components["schemas"]["ReasonCode"];
+            currency: components["schemas"]["CurrencyCode"];
+            priceMode: components["schemas"]["PriceMode"];
+            profileVersion: components["schemas"]["ContentLabel"];
+            graphVersion: components["schemas"]["ContentLabel"];
+            totals?: components["schemas"]["DocumentTotals"];
+            items: components["schemas"]["DeterminationItem"][];
+            trace: components["schemas"]["DeterminationStep"][];
+        };
+        /**
+         * CoverageComponent
+         * @description One component in force at the coverage instant.
+         */
+        CoverageComponent: {
+            id: components["schemas"]["ContentLabel"];
+            jurisdiction: components["schemas"]["JurisdictionId"];
+            authority: components["schemas"]["ContentLabel"];
+            taxType: components["schemas"]["ContentLabel"];
+            name: components["schemas"]["ContentText"];
+            services?: components["schemas"]["ServiceFamily"][];
+            treatments: components["schemas"]["Treatment"][];
+            rateKind: components["schemas"]["ContentLabel"];
+            rate: components["schemas"]["Decimal"];
+            currency?: components["schemas"]["CurrencyCode"];
+            unit?: components["schemas"]["UnitCode"];
+            legalReason?: components["schemas"]["ContentLabel"];
+            from: components["schemas"]["CivilDate"];
+            to?: components["schemas"]["CivilDate"];
+            source: components["schemas"]["ContentLabel"];
+            citation: components["schemas"]["ContentText"];
+        };
+        /** CoverageRegime */
+        CoverageRegime: {
+            id: components["schemas"]["ContentLabel"];
+            country: components["schemas"]["LocationCode"];
+            name: components["schemas"]["ContentText"];
+            services: components["schemas"]["ServiceFamily"][];
+            requiresLevel?: components["schemas"]["ContentLabel"];
+            inclusivePricing: boolean;
+            components: components["schemas"]["CoverageComponent"][];
+        };
+        /**
+         * Coverage
+         * @description What the active content determines by location, at an instant: the
+         *     countries covered, the services in each, and every component in force
+         *     with its rate and source. A country absent here is `UNSUPPORTED`.
+         */
+        Coverage: {
+            bundle: components["schemas"]["BundleRef"];
+            profileVersion: components["schemas"]["ContentLabel"];
+            graphVersion: components["schemas"]["ContentLabel"];
+            at: components["schemas"]["Timestamp"];
+            regimes: components["schemas"]["CoverageRegime"][];
         };
         /**
          * LegalEntityId
@@ -6207,6 +6631,37 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getCoverage: {
+        parameters: {
+            query?: {
+                /**
+                 * @description The instant to report rates at. Defaults to now.
+                 * @example 2026-10-15T12:00:00.000000Z
+                 */
+                at?: components["schemas"]["Timestamp"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The coverage. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Coverage"];
+                };
+            };
+            400: components["responses"]["Validation"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             500: components["responses"]["Internal"];

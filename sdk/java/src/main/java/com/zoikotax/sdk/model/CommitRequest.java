@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.zoikotax.sdk.model.DeterminationInput;
 import com.zoikotax.sdk.model.MoneyValue;
+import com.zoikotax.sdk.model.TaxDocument;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -31,13 +32,14 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 
 /**
- * CommitRequest
+ * Exactly one of &#x60;input&#x60; and &#x60;document&#x60; is required, as for a quote. &#x60;eventTime&#x60; is the tax point: every effective date and legal period is resolved at it, in the authority&#39;s own calendar. 
  */
 @JsonPropertyOrder({
   CommitRequest.JSON_PROPERTY_BUSINESS_KEY,
   CommitRequest.JSON_PROPERTY_SUPERSEDES,
   CommitRequest.JSON_PROPERTY_EVENT_TIME,
   CommitRequest.JSON_PROPERTY_INPUT,
+  CommitRequest.JSON_PROPERTY_DOCUMENT,
   CommitRequest.JSON_PROPERTY_ACCUMULATORS
 })
 @jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen", comments = "Generator version: 7.25.0")
@@ -55,8 +57,12 @@ public class CommitRequest {
   private String eventTime;
 
   public static final String JSON_PROPERTY_INPUT = "input";
-  @jakarta.annotation.Nonnull
+  @jakarta.annotation.Nullable
   private DeterminationInput input;
+
+  public static final String JSON_PROPERTY_DOCUMENT = "document";
+  @jakarta.annotation.Nullable
+  private TaxDocument document;
 
   public static final String JSON_PROPERTY_ACCUMULATORS = "accumulators";
   @jakarta.annotation.Nullable
@@ -137,7 +143,7 @@ public class CommitRequest {
   }
 
 
-  public CommitRequest input(@jakarta.annotation.Nonnull DeterminationInput input) {
+  public CommitRequest input(@jakarta.annotation.Nullable DeterminationInput input) {
     this.input = input;
     return this;
   }
@@ -146,18 +152,42 @@ public class CommitRequest {
    * Get input
    * @return input
    */
-  @jakarta.annotation.Nonnull
-  @JsonProperty(value = JSON_PROPERTY_INPUT, required = true)
-  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  @jakarta.annotation.Nullable
+  @JsonProperty(value = JSON_PROPERTY_INPUT, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
   public DeterminationInput getInput() {
     return input;
   }
 
 
-  @JsonProperty(value = JSON_PROPERTY_INPUT, required = true)
-  @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setInput(@jakarta.annotation.Nonnull DeterminationInput input) {
+  @JsonProperty(value = JSON_PROPERTY_INPUT, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public void setInput(@jakarta.annotation.Nullable DeterminationInput input) {
     this.input = input;
+  }
+
+
+  public CommitRequest document(@jakarta.annotation.Nullable TaxDocument document) {
+    this.document = document;
+    return this;
+  }
+
+  /**
+   * Get document
+   * @return document
+   */
+  @jakarta.annotation.Nullable
+  @JsonProperty(value = JSON_PROPERTY_DOCUMENT, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public TaxDocument getDocument() {
+    return document;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_DOCUMENT, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public void setDocument(@jakarta.annotation.Nullable TaxDocument document) {
+    this.document = document;
   }
 
 
@@ -209,12 +239,13 @@ public class CommitRequest {
         Objects.equals(this.supersedes, commitRequest.supersedes) &&
         Objects.equals(this.eventTime, commitRequest.eventTime) &&
         Objects.equals(this.input, commitRequest.input) &&
+        Objects.equals(this.document, commitRequest.document) &&
         Objects.equals(this.accumulators, commitRequest.accumulators);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(businessKey, supersedes, eventTime, input, accumulators);
+    return Objects.hash(businessKey, supersedes, eventTime, input, document, accumulators);
   }
 
   @Override
@@ -225,6 +256,7 @@ public class CommitRequest {
     sb.append("    supersedes: ").append(toIndentedString(supersedes)).append("\n");
     sb.append("    eventTime: ").append(toIndentedString(eventTime)).append("\n");
     sb.append("    input: ").append(toIndentedString(input)).append("\n");
+    sb.append("    document: ").append(toIndentedString(document)).append("\n");
     sb.append("    accumulators: ").append(toIndentedString(accumulators)).append("\n");
     sb.append("}");
     return sb.toString();

@@ -691,6 +691,67 @@ paths:
         "500": { $ref: "#/components/responses/Internal" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
+  /v1/coverage:
+    get:
+      operationId: getCoverage
+      tags: [determination]
+      summary: Report what the active content determines by location
+      description: |
+        Any authenticated role. The countries the active pack covers, the
+        services in each, whether inclusive prices can be extracted, and
+        every component in force at `at` — rate, jurisdiction, authority,
+        treatments and source citation. A country that is not listed is
+        `UNSUPPORTED` on a determination; nothing about it is assumed.
+
+        `503 NO_CONTENT_BUNDLE` when the cell has no bundle, or a bundle with
+        no taxation profile.
+      parameters:
+        - name: at
+          in: query
+          required: false
+          description: The instant to report rates at. Defaults to now.
+          schema: { $ref: "#/components/schemas/Timestamp" }
+          example: "2026-10-15T12:00:00.000000Z"
+      responses:
+        "200":
+          description: The coverage.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Coverage"
+              examples:
+                training:
+                  summary: One regime of the training pack
+                  value:
+                    bundle: { bundleId: training-telecom-2026.10, digest: "zt1:5b0c4e7f0d2a1c3b5e7f9a1c3e5b7d9f1a3c5e7b9d1f3a5c7e9b1d3f5a7c9e1b", irVersion: 1 }
+                    profileVersion: "2026.10.1"
+                    graphVersion: training-2026.10
+                    at: "2026-10-15T12:00:00.000000Z"
+                    regimes:
+                      - id: "regime:xt-training"
+                        country: XT
+                        name: XT training regime (playbook section 7)
+                        services: [MOBILE_VOICE, MOBILE_DATA, EQUIPMENT_SALE]
+                        inclusivePricing: true
+                        components:
+                          - id: xt.voice-tax
+                            jurisdiction: "jurisdiction:xt"
+                            authority: "authority:xt-revenue"
+                            taxType: TELECOM_TAX
+                            name: XT voice tax
+                            services: [MOBILE_VOICE]
+                            treatments: [CUSTOMER_CHARGE]
+                            rateKind: AD_VALOREM
+                            rate: "0.08"
+                            from: "2026-01-01"
+                            source: SRC-ZOIKO-TRAINING-0001
+                            citation: "Training rule: 8% of the voice base."
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
   /v1/quotes:
     post:
       operationId: createQuote
@@ -712,6 +773,16 @@ paths:
         `line.quantity` and two flags, and a read set holding
         `threshold.ecoLevyYtd`. A value the pack reads and the request omits is
         a `400`; so is an accumulator the pack does not read.
+
+        **Location-aware determination.** Against a pack with a taxation
+        profile, send `document` instead of `input`. The cell resolves where
+        each line was supplied from the evidence (JUR-001), selects the
+        components in force there at `eventTime` for the line's service,
+        customer role and supply, and evaluates them (DET-001). Every line ends
+        in an explicit state: a missing location, an uncovered country, an
+        unmapped SKU or an unverifiable certificate is a recorded
+        `REVIEW_REQUIRED` or `UNSUPPORTED`, never a zero tax. Coverage is
+        reported by `GET /v1/coverage`.
       requestBody:
         required: true
         content:
@@ -733,6 +804,26 @@ paths:
                       line.exemptCertificateHeld: false
                   accumulators:
                     threshold.ecoLevyYtd: { amount: "9999.99", currency: EUR }
+              mixedBundle:
+                summary: Playbook §7's mixed bundle against the training pack
+                value:
+                  eventTime: "2026-10-15T12:00:00.000000Z"
+                  document:
+                    type: INVOICE
+                    currency: USD
+                    priceMode: EXCLUSIVE
+                    seller: { id: TELCO-A, establishment: { country: XT } }
+                    customer: { id: C1 }
+                    evidence:
+                      - { type: SERVICE_ADDRESS, source: SELLER_RECORDED, place: { country: XT } }
+                    lines:
+                      - key: L1
+                        sku: BUNDLE-1
+                        amount: "100.00"
+                        parts:
+                          - { key: voice, service: MOBILE_VOICE, amount: "40.00", quantity: { value: "1", unit: LINE } }
+                          - { key: data, service: MOBILE_DATA, amount: "50.00" }
+                          - { key: device, service: EQUIPMENT_SALE, amount: "10.00" }
       responses:
         "200":
           description: The estimate.
@@ -799,6 +890,12 @@ paths:
         value the cell does not hold.
 
         Before A4 every decision is `ADVISORY` and `authoritative: false`.
+
+        A `document` commit records the document, every line's situs decision
+        and components, and the totals in the envelope and result, so a replay
+        reproduces it exactly under the content that made it. A decision whose
+        document is not `RESOLVED` is recorded and emits nothing: it posts no
+        journal and assesses no obligation.
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
@@ -821,6 +918,22 @@ paths:
                     flags:
                       line.reducedRateApplies: false
                       line.exemptCertificateHeld: false
+              crossBorderBusiness:
+                summary: A business customer established abroad, against a pack with location-aware content
+                value:
+                  businessKey: INV-0002/1
+                  eventTime: "2026-10-15T12:00:00.000000Z"
+                  document:
+                    type: INVOICE
+                    currency: EUR
+                    priceMode: EXCLUSIVE
+                    seller: { id: TELCO-DE, establishment: { country: DE } }
+                    customer:
+                      id: ACME-FR
+                      establishment: { country: FR }
+                      vat: { country: FR, validation: VALIDATED }
+                    lines:
+                      - { key: L1, sku: SIP-100, service: SIP_TRUNKING, amount: "250.00" }
       responses:
         "201":
           description: |
@@ -7459,23 +7572,33 @@ components:
     QuoteRequest:
       type: object
       title: QuoteRequest
+      description: |
+        Exactly one of `input` (named values for a rule-graph pack) and
+        `document` (a telecom document for a pack with location-aware
+        content) is required. `eventTime` is the tax point.
       additionalProperties: false
-      required: [eventTime, input]
+      required: [eventTime]
       properties:
         eventTime: { $ref: "#/components/schemas/Timestamp" }
         input: { $ref: "#/components/schemas/DeterminationInput" }
+        document: { $ref: "#/components/schemas/TaxDocument" }
         accumulators: { $ref: "#/components/schemas/ReadSet" }
 
     CommitRequest:
       type: object
       title: CommitRequest
+      description: |
+        Exactly one of `input` and `document` is required, as for a quote.
+        `eventTime` is the tax point: every effective date and legal period is
+        resolved at it, in the authority's own calendar.
       additionalProperties: false
-      required: [businessKey, eventTime, input]
+      required: [businessKey, eventTime]
       properties:
         businessKey: { $ref: "#/components/schemas/BusinessKey" }
         supersedes: { $ref: "#/components/schemas/DecisionId" }
         eventTime: { $ref: "#/components/schemas/Timestamp" }
         input: { $ref: "#/components/schemas/DeterminationInput" }
+        document: { $ref: "#/components/schemas/TaxDocument" }
         accumulators: { $ref: "#/components/schemas/ReadSet" }
 
     ResultValue:
@@ -7542,6 +7665,7 @@ components:
         quotedAt: { $ref: "#/components/schemas/Timestamp" }
         bundle: { $ref: "#/components/schemas/BundleRef" }
         emitted: { $ref: "#/components/schemas/Emitted" }
+        document: { $ref: "#/components/schemas/DocumentDetermination" }
 
     DecisionDigests:
       type: object
@@ -7578,6 +7702,499 @@ components:
         bundle: { $ref: "#/components/schemas/BundleRef" }
         digests: { $ref: "#/components/schemas/DecisionDigests" }
         emitted: { $ref: "#/components/schemas/Emitted" }
+        document: { $ref: "#/components/schemas/DocumentDetermination" }
+
+    # --- location-aware determination (ZTAX-DET-001 §2, ZTAX-JUR-001) -------
+
+    JurisdictionId:
+      x-ztax-privacy: { class: P4, purposes: [PURP-TAX-CALC, PURP-SITUS, PURP-EVID], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE, evidencePolicy: RAW_REQUIRED }
+      type: string
+      title: JurisdictionId
+      description: |
+        A jurisdiction's content identifier (ADR-0012 §2.4), such as
+        `jurisdiction:ca-qc`. Classified as location evidence: on a consumer
+        document, the deepest jurisdiction is where the customer is.
+      pattern: "^jurisdiction:[a-z0-9/-]+$"
+      maxLength: 128
+      example: "jurisdiction:ca-qc"
+
+    LocationCode:
+      x-ztax-privacy: { class: P4, purposes: [PURP-TAX-CALC, PURP-SITUS, PURP-EVID], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE, evidencePolicy: RAW_REQUIRED }
+      type: string
+      title: LocationCode
+      description: An ISO 3166-1 alpha-2 country code (`DE`) or ISO 3166-2 subdivision code (`CA-QC`).
+      pattern: "^[A-Z]{2}(-[A-Z0-9]{1,3})?$"
+      example: "DE"
+
+    TaxDocumentType:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: TaxDocumentType
+      description: An `INVOICE` carries non-negative amounts; a `CREDIT_NOTE` carries non-positive ones.
+      enum: [INVOICE, CREDIT_NOTE]
+      example: INVOICE
+
+    PriceMode:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: PriceMode
+      description: |
+        `EXCLUSIVE`: amounts are net and customer charges are added.
+        `INCLUSIVE`: amounts include the customer-charged taxes, which are
+        extracted (DET-001 §7) — never computed on the gross and added.
+      enum: [EXCLUSIVE, INCLUSIVE]
+      example: EXCLUSIVE
+
+    ServiceFamily:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: ServiceFamily
+      description: |
+        A ZTAX-CLS-001 ontology family. A tenant's SKU is mapped to one before
+        determination; a line without one is held as `CLASSIFICATION_REQUIRED`
+        rather than guessed at.
+      enum: [MOBILE_VOICE, FIXED_VOICE, MESSAGING, MOBILE_DATA, FIXED_BROADBAND, VOIP, SIP_TRUNKING, UCAAS, CCAAS, CPAAS,
+        IOT_CONNECTIVITY, SUBSCRIPTION_IDENTITY, SATELLITE_CONNECTIVITY, ROAMING_RETAIL, ROAMING_WHOLESALE, INTERCONNECT,
+        WHOLESALE_ACCESS, EQUIPMENT_SALE, EQUIPMENT_RENTAL, INSTALLATION_ACTIVATION, PROFESSIONAL_SERVICES, CONTENT_MEDIA,
+        SOFTWARE, OTHER_NON_TELECOM]
+      example: MOBILE_VOICE
+
+    SitusEvidenceType:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SitusEvidenceType
+      description: |
+        The JUR-001 §3.2 evidence vocabulary a caller may supply directly.
+        Seller and customer establishment and VAT identification arrive on the
+        parties instead, so one fact cannot arrive twice and disagree.
+      enum: [PRIMARY_PLACE_OF_USE, SERVICE_ADDRESS, BILLING_ADDRESS, FIXED_LINE_LOCATION, NETWORK_LOCATION, SIM_COUNTRY,
+        IP_GEOLOCATION, BANK_LOCATION, CUSTOMER_DECLARATION]
+      example: SERVICE_ADDRESS
+
+    SitusEvidenceSource:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SitusEvidenceSource
+      enum: [CUSTOMER_ASSERTED, SELLER_RECORDED, NETWORK_DERIVED, THIRD_PARTY_VERIFIED, AUTHORITY_VERIFIED]
+      example: SELLER_RECORDED
+
+    VatValidation:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: VatValidation
+      description: |
+        `VALIDATED` establishes a business customer where the pack recognises
+        it. `UNVALIDATED` and `VALIDATION_UNAVAILABLE` are different facts and
+        a pack may treat them differently (JUR-001 §7.3).
+      enum: [VALIDATED, UNVALIDATED, VALIDATION_UNAVAILABLE]
+      example: VALIDATED
+
+    CertificateVerification:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: CertificateVerification
+      description: |
+        Only `VERIFIED` exempts. `UNAVAILABLE` holds the line for review; a
+        verification is never assumed to have succeeded.
+      enum: [VERIFIED, UNVERIFIED, UNAVAILABLE]
+      example: VERIFIED
+
+    PartyReference:
+      x-ztax-privacy: { class: P2, purposes: [PURP-TAX-CALC, PURP-EVID], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: PartyReference
+      description: A party's reference in the caller's systems. Not interpreted; a certificate's holder must equal the customer's.
+      minLength: 1
+      maxLength: 128
+      example: C1
+
+    ContentLabel:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: ContentLabel
+      description: An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+      maxLength: 256
+      example: xt.voice-tax
+
+    ContentText:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: ContentText
+      description: Text from the active content, such as a source citation. Not interpreted.
+      maxLength: 4096
+      example: "Training rule: 8% of the voice base."
+
+    Place:
+      type: object
+      title: Place
+      description: |
+        A location named by its jurisdiction — exactly one of a jurisdiction
+        identifier and an ISO code. There is no street address: resolution
+        never geocodes (JUR-001 §8.2), so an address is mapped to a
+        jurisdiction by the system that records it.
+      additionalProperties: false
+      properties:
+        jurisdiction: { $ref: "#/components/schemas/JurisdictionId" }
+        subdivision: { $ref: "#/components/schemas/LocationCode" }
+        country: { $ref: "#/components/schemas/LocationCode" }
+
+    VatIdentification:
+      type: object
+      title: VatIdentification
+      description: The customer's VAT registration country and validation status. The number itself is not needed and not retained.
+      additionalProperties: false
+      required: [country, validation]
+      properties:
+        country: { $ref: "#/components/schemas/LocationCode" }
+        validation: { $ref: "#/components/schemas/VatValidation" }
+
+    TaxParty:
+      type: object
+      title: TaxParty
+      additionalProperties: false
+      required: [id]
+      properties:
+        id: { $ref: "#/components/schemas/PartyReference" }
+        establishment: { $ref: "#/components/schemas/Place" }
+        vat: { $ref: "#/components/schemas/VatIdentification" }
+
+    SitusEvidenceItem:
+      type: object
+      title: SitusEvidenceItem
+      description: One typed, attributed signal about where the supply took place (JUR-001 §3.1).
+      additionalProperties: false
+      required: [type, source, place]
+      properties:
+        type: { $ref: "#/components/schemas/SitusEvidenceType" }
+        source: { $ref: "#/components/schemas/SitusEvidenceSource" }
+        collectedAt: { $ref: "#/components/schemas/Timestamp" }
+        place: { $ref: "#/components/schemas/Place" }
+
+    ExemptionCertificate:
+      type: object
+      title: ExemptionCertificate
+      description: |
+        A certificate is scoped: by issuing jurisdiction, holder, tax types,
+        components and validity. One that does not apply on any of those is
+        refused visibly in the trace, never silently ignored.
+      additionalProperties: false
+      required: [id, type, holder, jurisdiction, validFrom, verification]
+      properties:
+        id: { $ref: "#/components/schemas/PartyReference" }
+        type: { $ref: "#/components/schemas/ContentLabel" }
+        holder: { $ref: "#/components/schemas/PartyReference" }
+        jurisdiction: { $ref: "#/components/schemas/JurisdictionId" }
+        taxTypes:
+          type: array
+          items: { $ref: "#/components/schemas/ContentLabel" }
+        components:
+          type: array
+          items: { $ref: "#/components/schemas/ContentLabel" }
+        validFrom: { $ref: "#/components/schemas/CivilDate" }
+        validTo: { $ref: "#/components/schemas/CivilDate" }
+        verification: { $ref: "#/components/schemas/CertificateVerification" }
+
+    TaxLinePart:
+      type: object
+      title: TaxLinePart
+      description: One component of an approved bundle decomposition.
+      additionalProperties: false
+      required: [key, amount]
+      properties:
+        key: { $ref: "#/components/schemas/ContentLabel" }
+        service: { $ref: "#/components/schemas/ServiceFamily" }
+        amount: { $ref: "#/components/schemas/Decimal" }
+        quantity: { $ref: "#/components/schemas/QuantityValue" }
+
+    TaxLine:
+      type: object
+      title: TaxLine
+      description: |
+        One rated line, in the document currency. A bundle line carries
+        `parts` instead of its own `service` and `quantity`, and the parts
+        must sum to `amount` exactly.
+      additionalProperties: false
+      required: [key, amount]
+      properties:
+        key: { $ref: "#/components/schemas/ContentLabel" }
+        sku: { $ref: "#/components/schemas/ContentLabel" }
+        service: { $ref: "#/components/schemas/ServiceFamily" }
+        amount: { $ref: "#/components/schemas/Decimal" }
+        quantity: { $ref: "#/components/schemas/QuantityValue" }
+        evidence:
+          type: array
+          items: { $ref: "#/components/schemas/SitusEvidenceItem" }
+        parts:
+          type: array
+          items: { $ref: "#/components/schemas/TaxLinePart" }
+
+    TaxDocument:
+      type: object
+      title: TaxDocument
+      description: |
+        A telecom document for location-aware determination: rated commercial
+        facts, the parties, and the evidence of where the supply took place.
+        It carries no tax; what is owed is the output. The tax point is the
+        request's `eventTime`.
+      additionalProperties: false
+      required: [type, currency, priceMode, seller, customer, lines]
+      properties:
+        type: { $ref: "#/components/schemas/TaxDocumentType" }
+        currency: { $ref: "#/components/schemas/CurrencyCode" }
+        priceMode: { $ref: "#/components/schemas/PriceMode" }
+        seller: { $ref: "#/components/schemas/TaxParty" }
+        customer: { $ref: "#/components/schemas/TaxParty" }
+        evidence:
+          type: array
+          items: { $ref: "#/components/schemas/SitusEvidenceItem" }
+        certificates:
+          type: array
+          items: { $ref: "#/components/schemas/ExemptionCertificate" }
+        lines:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/TaxLine" }
+
+    DeterminationState:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: DeterminationState
+      description: |
+        `RESOLVED` is the only state that carries amounts. Every other state
+        is recorded with its evidence and reason and is never a zero tax.
+      enum: [RESOLVED, REVIEW_REQUIRED, UNSUPPORTED, AMBIGUOUS, CONFLICTED]
+      example: RESOLVED
+
+    Treatment:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: Treatment
+      description: |
+        `CUSTOMER_CHARGE` is on the invoice. `PROVIDER_COST` is borne by the
+        seller and never on it. `REVERSE_CHARGE` is self-assessed by the
+        customer: disclosed, neither charged nor remitted by the seller.
+        `EXEMPT` is a customer charge a verified certificate suppressed.
+      enum: [CUSTOMER_CHARGE, PROVIDER_COST, REVERSE_CHARGE, EXEMPT]
+      example: CUSTOMER_CHARGE
+
+    ResponsibleParty:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: ResponsibleParty
+      enum: [SELLER, BUYER, NONE]
+      example: SELLER
+
+    ResponsibilityAssignment:
+      type: object
+      title: ResponsibilityAssignment
+      description: The five roles, each answered separately (ZTAX-OBL-REQ-0002 to -0006).
+      additionalProperties: false
+      required: [id, incidence, collection, reporting, remittance, economicBearer]
+      properties:
+        id: { $ref: "#/components/schemas/ContentLabel" }
+        incidence: { $ref: "#/components/schemas/ResponsibleParty" }
+        collection: { $ref: "#/components/schemas/ResponsibleParty" }
+        reporting: { $ref: "#/components/schemas/ResponsibleParty" }
+        remittance: { $ref: "#/components/schemas/ResponsibleParty" }
+        economicBearer: { $ref: "#/components/schemas/ResponsibleParty" }
+
+    ExemptionApplied:
+      type: object
+      title: ExemptionApplied
+      description: A charge a certificate suppressed, and the assessment it would have been.
+      additionalProperties: false
+      required: [certificate, type]
+      properties:
+        certificate: { $ref: "#/components/schemas/PartyReference" }
+        type: { $ref: "#/components/schemas/ContentLabel" }
+        assessed: { $ref: "#/components/schemas/Decimal" }
+
+    TaxComponentResult:
+      type: object
+      title: TaxComponentResult
+      description: |
+        One charge on one line: its legal base, rate version, jurisdiction,
+        authority, five roles, recoverability, rounding result and source.
+        `charged` is what the customer pays for it.
+      additionalProperties: false
+      required: [id, version, regime, jurisdiction, authority, taxType, name, treatment, inclusive, rateKind, rate, raw, amount, charged, responsibility, source, citation]
+      properties:
+        id: { $ref: "#/components/schemas/ContentLabel" }
+        version: { $ref: "#/components/schemas/CivilDate" }
+        regime: { $ref: "#/components/schemas/ContentLabel" }
+        jurisdiction: { $ref: "#/components/schemas/JurisdictionId" }
+        authority: { $ref: "#/components/schemas/ContentLabel" }
+        taxType: { $ref: "#/components/schemas/ContentLabel" }
+        name: { $ref: "#/components/schemas/ContentText" }
+        treatment: { $ref: "#/components/schemas/Treatment" }
+        inclusive:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+        rateKind: { $ref: "#/components/schemas/ContentLabel" }
+        rate: { $ref: "#/components/schemas/Decimal" }
+        unit: { $ref: "#/components/schemas/UnitCode" }
+        base: { $ref: "#/components/schemas/Decimal" }
+        raw: { $ref: "#/components/schemas/Decimal" }
+        amount: { $ref: "#/components/schemas/Decimal" }
+        charged: { $ref: "#/components/schemas/Decimal" }
+        legalReason: { $ref: "#/components/schemas/ContentLabel" }
+        responsibility: { $ref: "#/components/schemas/ResponsibilityAssignment" }
+        exemption: { $ref: "#/components/schemas/ExemptionApplied" }
+        source: { $ref: "#/components/schemas/ContentLabel" }
+        citation: { $ref: "#/components/schemas/ContentText" }
+
+    DeterminationItem:
+      type: object
+      title: DeterminationItem
+      description: |
+        One line, or one part of a bundle line (`key` is `<line>/<part>`):
+        its state, the situs decision that placed it, and its components.
+      additionalProperties: false
+      required: [key, line, amount, state]
+      properties:
+        key: { $ref: "#/components/schemas/ContentLabel" }
+        line: { $ref: "#/components/schemas/ContentLabel" }
+        part: { $ref: "#/components/schemas/ContentLabel" }
+        sku: { $ref: "#/components/schemas/ContentLabel" }
+        service: { $ref: "#/components/schemas/ServiceFamily" }
+        amount: { $ref: "#/components/schemas/Decimal" }
+        state: { $ref: "#/components/schemas/DeterminationState" }
+        reasonCode: { $ref: "#/components/schemas/ReasonCode" }
+        situsOutcome: { $ref: "#/components/schemas/ContentLabel" }
+        situsRule: { $ref: "#/components/schemas/ContentLabel" }
+        applicable:
+          type: array
+          items: { $ref: "#/components/schemas/JurisdictionId" }
+        placeOfSupply: { $ref: "#/components/schemas/JurisdictionId" }
+        customerRole: { $ref: "#/components/schemas/ContentLabel" }
+        supply: { $ref: "#/components/schemas/ContentLabel" }
+        regime: { $ref: "#/components/schemas/ContentLabel" }
+        neededEvidence:
+          type: array
+          items: { $ref: "#/components/schemas/ContentLabel" }
+        net: { $ref: "#/components/schemas/Decimal" }
+        components:
+          type: array
+          items: { $ref: "#/components/schemas/TaxComponentResult" }
+
+    DocumentTotals:
+      type: object
+      title: DocumentTotals
+      description: |
+        The figures that must stay apart (playbook §7): what the customer is
+        charged, what the provider bears, and what the customer self-assesses.
+      additionalProperties: false
+      required: [net, customerTax, customerTotal, providerAccrual, reverseCharge]
+      properties:
+        net: { $ref: "#/components/schemas/Decimal" }
+        customerTax: { $ref: "#/components/schemas/Decimal" }
+        customerTotal: { $ref: "#/components/schemas/Decimal" }
+        providerAccrual: { $ref: "#/components/schemas/Decimal" }
+        reverseCharge: { $ref: "#/components/schemas/Decimal" }
+
+    DeterminationStep:
+      type: object
+      title: DeterminationStep
+      description: One step of the deterministic trace — selection, situs, exemption and DET-001 evaluation steps.
+      additionalProperties: false
+      required: [step, detail]
+      properties:
+        item: { $ref: "#/components/schemas/ContentLabel" }
+        component: { $ref: "#/components/schemas/ContentLabel" }
+        step: { $ref: "#/components/schemas/ContentLabel" }
+        detail:
+          x-ztax-privacy: { class: P5, purposes: [PURP-TAX-CALC, PURP-EVID], retention: RET-FISCAL, redaction: REDACT, aiAllowed: NONE, evidencePolicy: RAW_REQUIRED }
+          type: string
+
+    DocumentDetermination:
+      type: object
+      title: DocumentDetermination
+      description: |
+        A document's location-aware determination. `totals` is present only
+        when `state` is `RESOLVED`: an unresolved document has no totals
+        rather than zero ones.
+      additionalProperties: false
+      required: [state, reasonCode, currency, priceMode, profileVersion, graphVersion, items, trace]
+      properties:
+        state: { $ref: "#/components/schemas/DeterminationState" }
+        reasonCode: { $ref: "#/components/schemas/ReasonCode" }
+        currency: { $ref: "#/components/schemas/CurrencyCode" }
+        priceMode: { $ref: "#/components/schemas/PriceMode" }
+        profileVersion: { $ref: "#/components/schemas/ContentLabel" }
+        graphVersion: { $ref: "#/components/schemas/ContentLabel" }
+        totals: { $ref: "#/components/schemas/DocumentTotals" }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/DeterminationItem" }
+        trace:
+          type: array
+          items: { $ref: "#/components/schemas/DeterminationStep" }
+
+    CoverageComponent:
+      type: object
+      title: CoverageComponent
+      description: One component in force at the coverage instant.
+      additionalProperties: false
+      required: [id, jurisdiction, authority, taxType, name, treatments, rateKind, rate, from, source, citation]
+      properties:
+        id: { $ref: "#/components/schemas/ContentLabel" }
+        jurisdiction: { $ref: "#/components/schemas/JurisdictionId" }
+        authority: { $ref: "#/components/schemas/ContentLabel" }
+        taxType: { $ref: "#/components/schemas/ContentLabel" }
+        name: { $ref: "#/components/schemas/ContentText" }
+        services:
+          type: array
+          items: { $ref: "#/components/schemas/ServiceFamily" }
+        treatments:
+          type: array
+          items: { $ref: "#/components/schemas/Treatment" }
+        rateKind: { $ref: "#/components/schemas/ContentLabel" }
+        rate: { $ref: "#/components/schemas/Decimal" }
+        currency: { $ref: "#/components/schemas/CurrencyCode" }
+        unit: { $ref: "#/components/schemas/UnitCode" }
+        legalReason: { $ref: "#/components/schemas/ContentLabel" }
+        from: { $ref: "#/components/schemas/CivilDate" }
+        to: { $ref: "#/components/schemas/CivilDate" }
+        source: { $ref: "#/components/schemas/ContentLabel" }
+        citation: { $ref: "#/components/schemas/ContentText" }
+
+    CoverageRegime:
+      type: object
+      title: CoverageRegime
+      additionalProperties: false
+      required: [id, country, name, services, inclusivePricing, components]
+      properties:
+        id: { $ref: "#/components/schemas/ContentLabel" }
+        country: { $ref: "#/components/schemas/LocationCode" }
+        name: { $ref: "#/components/schemas/ContentText" }
+        services:
+          type: array
+          items: { $ref: "#/components/schemas/ServiceFamily" }
+        requiresLevel: { $ref: "#/components/schemas/ContentLabel" }
+        inclusivePricing:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+        components:
+          type: array
+          items: { $ref: "#/components/schemas/CoverageComponent" }
+
+    Coverage:
+      type: object
+      title: Coverage
+      description: |
+        What the active content determines by location, at an instant: the
+        countries covered, the services in each, and every component in force
+        with its rate and source. A country absent here is `UNSUPPORTED`.
+      additionalProperties: false
+      required: [bundle, profileVersion, graphVersion, at, regimes]
+      properties:
+        bundle: { $ref: "#/components/schemas/BundleRef" }
+        profileVersion: { $ref: "#/components/schemas/ContentLabel" }
+        graphVersion: { $ref: "#/components/schemas/ContentLabel" }
+        at: { $ref: "#/components/schemas/Timestamp" }
+        regimes:
+          type: array
+          items: { $ref: "#/components/schemas/CoverageRegime" }
 
     LegalEntityId:
       x-ztax-privacy: { class: P0 }

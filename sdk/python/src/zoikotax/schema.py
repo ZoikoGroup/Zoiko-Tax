@@ -400,20 +400,6 @@ in the decision's envelope either way (ZTAX-DET-REQ-0034).
 """
 
 
-class QuoteRequest(TypedDict):
-    eventTime: Timestamp
-    input: DeterminationInput
-    accumulators: NotRequired[ReadSet]
-
-
-class CommitRequest(TypedDict):
-    businessKey: BusinessKey
-    supersedes: NotRequired[DecisionId]
-    eventTime: Timestamp
-    input: DeterminationInput
-    accumulators: NotRequired[ReadSet]
-
-
 class ResultValue(TypedDict):
     """
     One emitted value. `type` says which other members are present:
@@ -450,18 +436,6 @@ class BundleRef(TypedDict):
     irVersion: int
 
 
-class Quote(TypedDict):
-    authoritative: bool
-    """
-    Always `false`. A quote is an estimate at every authorization level (ADR-0004 §2.7).
-    """
-    outcome: Outcome
-    reasonCode: ReasonCode
-    quotedAt: Timestamp
-    bundle: BundleRef
-    emitted: Emitted
-
-
 class DecisionDigests(TypedDict):
     """
     The digests a decision names (ADR-0011 §2.8). `envelope` and `result`
@@ -475,25 +449,227 @@ class DecisionDigests(TypedDict):
     result: Digest
 
 
-class Decision(TypedDict):
+JurisdictionId: TypeAlias = str
+"""
+A jurisdiction's content identifier (ADR-0012 §2.4), such as
+`jurisdiction:ca-qc`. Classified as location evidence: on a consumer
+document, the deepest jurisdiction is where the customer is.
+
+"""
+
+
+LocationCode: TypeAlias = str
+"""
+An ISO 3166-1 alpha-2 country code (`DE`) or ISO 3166-2 subdivision code (`CA-QC`).
+"""
+
+
+TaxDocumentType: TypeAlias = Literal['INVOICE', 'CREDIT_NOTE']
+"""
+An `INVOICE` carries non-negative amounts; a `CREDIT_NOTE` carries non-positive ones.
+"""
+
+
+PriceMode: TypeAlias = Literal['EXCLUSIVE', 'INCLUSIVE']
+"""
+`EXCLUSIVE`: amounts are net and customer charges are added.
+`INCLUSIVE`: amounts include the customer-charged taxes, which are
+extracted (DET-001 §7) — never computed on the gross and added.
+
+"""
+
+
+ServiceFamily: TypeAlias = Literal['MOBILE_VOICE', 'FIXED_VOICE', 'MESSAGING', 'MOBILE_DATA', 'FIXED_BROADBAND', 'VOIP', 'SIP_TRUNKING', 'UCAAS', 'CCAAS', 'CPAAS', 'IOT_CONNECTIVITY', 'SUBSCRIPTION_IDENTITY', 'SATELLITE_CONNECTIVITY', 'ROAMING_RETAIL', 'ROAMING_WHOLESALE', 'INTERCONNECT', 'WHOLESALE_ACCESS', 'EQUIPMENT_SALE', 'EQUIPMENT_RENTAL', 'INSTALLATION_ACTIVATION', 'PROFESSIONAL_SERVICES', 'CONTENT_MEDIA', 'SOFTWARE', 'OTHER_NON_TELECOM']
+"""
+A ZTAX-CLS-001 ontology family. A tenant's SKU is mapped to one before
+determination; a line without one is held as `CLASSIFICATION_REQUIRED`
+rather than guessed at.
+
+"""
+
+
+SitusEvidenceType: TypeAlias = Literal['PRIMARY_PLACE_OF_USE', 'SERVICE_ADDRESS', 'BILLING_ADDRESS', 'FIXED_LINE_LOCATION', 'NETWORK_LOCATION', 'SIM_COUNTRY', 'IP_GEOLOCATION', 'BANK_LOCATION', 'CUSTOMER_DECLARATION']
+"""
+The JUR-001 §3.2 evidence vocabulary a caller may supply directly.
+Seller and customer establishment and VAT identification arrive on the
+parties instead, so one fact cannot arrive twice and disagree.
+
+"""
+
+
+SitusEvidenceSource: TypeAlias = Literal['CUSTOMER_ASSERTED', 'SELLER_RECORDED', 'NETWORK_DERIVED', 'THIRD_PARTY_VERIFIED', 'AUTHORITY_VERIFIED']
+
+
+VatValidation: TypeAlias = Literal['VALIDATED', 'UNVALIDATED', 'VALIDATION_UNAVAILABLE']
+"""
+`VALIDATED` establishes a business customer where the pack recognises
+it. `UNVALIDATED` and `VALIDATION_UNAVAILABLE` are different facts and
+a pack may treat them differently (JUR-001 §7.3).
+
+"""
+
+
+CertificateVerification: TypeAlias = Literal['VERIFIED', 'UNVERIFIED', 'UNAVAILABLE']
+"""
+Only `VERIFIED` exempts. `UNAVAILABLE` holds the line for review; a
+verification is never assumed to have succeeded.
+
+"""
+
+
+PartyReference: TypeAlias = str
+"""
+A party's reference in the caller's systems. Not interpreted; a certificate's holder must equal the customer's.
+"""
+
+
+ContentLabel: TypeAlias = str
+"""
+An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+"""
+
+
+ContentText: TypeAlias = str
+"""
+Text from the active content, such as a source citation. Not interpreted.
+"""
+
+
+class Place(TypedDict):
     """
-    One recorded decision. Immutable; a correction is a new decision whose `supersedes` names this one.
+    A location named by its jurisdiction — exactly one of a jurisdiction
+    identifier and an ISO code. There is no street address: resolution
+    never geocodes (JUR-001 §8.2), so an address is mapped to a
+    jurisdiction by the system that records it.
+
     """
 
-    id: DecisionId
-    businessKey: BusinessKey
-    supersedes: NotRequired[DecisionId]
-    authoritative: bool
+    jurisdiction: NotRequired[JurisdictionId]
+    subdivision: NotRequired[LocationCode]
+    country: NotRequired[LocationCode]
+
+
+class VatIdentification(TypedDict):
     """
-    Whether this decision may be filed. `false` for every decision before A4.
+    The customer's VAT registration country and validation status. The number itself is not needed and not retained.
     """
-    outcome: Outcome
-    reasonCode: ReasonCode
-    eventTime: Timestamp
-    recordedAt: Timestamp
-    bundle: BundleRef
-    digests: DecisionDigests
-    emitted: Emitted
+
+    country: LocationCode
+    validation: VatValidation
+
+
+class TaxParty(TypedDict):
+    id: PartyReference
+    establishment: NotRequired[Place]
+    vat: NotRequired[VatIdentification]
+
+
+class SitusEvidenceItem(TypedDict):
+    """
+    One typed, attributed signal about where the supply took place (JUR-001 §3.1).
+    """
+
+    type: SitusEvidenceType
+    source: SitusEvidenceSource
+    collectedAt: NotRequired[Timestamp]
+    place: Place
+
+
+class TaxLinePart(TypedDict):
+    """
+    One component of an approved bundle decomposition.
+    """
+
+    key: ContentLabel
+    service: NotRequired[ServiceFamily]
+    amount: Decimal
+    quantity: NotRequired[QuantityValue]
+
+
+class TaxLine(TypedDict):
+    """
+    One rated line, in the document currency. A bundle line carries
+    `parts` instead of its own `service` and `quantity`, and the parts
+    must sum to `amount` exactly.
+
+    """
+
+    key: ContentLabel
+    sku: NotRequired[ContentLabel]
+    service: NotRequired[ServiceFamily]
+    amount: Decimal
+    quantity: NotRequired[QuantityValue]
+    evidence: NotRequired[list[SitusEvidenceItem]]
+    parts: NotRequired[list[TaxLinePart]]
+
+
+DeterminationState: TypeAlias = Literal['RESOLVED', 'REVIEW_REQUIRED', 'UNSUPPORTED', 'AMBIGUOUS', 'CONFLICTED']
+"""
+`RESOLVED` is the only state that carries amounts. Every other state
+is recorded with its evidence and reason and is never a zero tax.
+
+"""
+
+
+Treatment: TypeAlias = Literal['CUSTOMER_CHARGE', 'PROVIDER_COST', 'REVERSE_CHARGE', 'EXEMPT']
+"""
+`CUSTOMER_CHARGE` is on the invoice. `PROVIDER_COST` is borne by the
+seller and never on it. `REVERSE_CHARGE` is self-assessed by the
+customer: disclosed, neither charged nor remitted by the seller.
+`EXEMPT` is a customer charge a verified certificate suppressed.
+
+"""
+
+
+ResponsibleParty: TypeAlias = Literal['SELLER', 'BUYER', 'NONE']
+
+
+class ResponsibilityAssignment(TypedDict):
+    """
+    The five roles, each answered separately (ZTAX-OBL-REQ-0002 to -0006).
+    """
+
+    id: ContentLabel
+    incidence: ResponsibleParty
+    collection: ResponsibleParty
+    reporting: ResponsibleParty
+    remittance: ResponsibleParty
+    economicBearer: ResponsibleParty
+
+
+class ExemptionApplied(TypedDict):
+    """
+    A charge a certificate suppressed, and the assessment it would have been.
+    """
+
+    certificate: PartyReference
+    type: ContentLabel
+    assessed: NotRequired[Decimal]
+
+
+class DocumentTotals(TypedDict):
+    """
+    The figures that must stay apart (playbook §7): what the customer is
+    charged, what the provider bears, and what the customer self-assesses.
+
+    """
+
+    net: Decimal
+    customerTax: Decimal
+    customerTotal: Decimal
+    providerAccrual: Decimal
+    reverseCharge: Decimal
+
+
+class DeterminationStep(TypedDict):
+    """
+    One step of the deterministic trace — selection, situs, exemption and DET-001 evaluation steps.
+    """
+
+    item: NotRequired[ContentLabel]
+    component: NotRequired[ContentLabel]
+    step: ContentLabel
+    detail: str
 
 
 LegalEntityId: TypeAlias = str
@@ -896,14 +1072,6 @@ JobId: TypeAlias = str
 """
 An asynchronous job. A UUIDv7 in lowercase canonical form.
 """
-
-
-class BatchRequest(TypedDict):
-    operation: Literal['COMMIT']
-    """
-    What each item does. `COMMIT` commits it, or corrects with it when it names `supersedes`.
-    """
-    items: list[CommitRequest]
 
 
 class JobItem(TypedDict):
@@ -2785,6 +2953,169 @@ class Capabilities(TypedDict):
     content: NotRequired[ContentCapability]
 
 
+class ExemptionCertificate(TypedDict):
+    """
+    A certificate is scoped: by issuing jurisdiction, holder, tax types,
+    components and validity. One that does not apply on any of those is
+    refused visibly in the trace, never silently ignored.
+
+    """
+
+    id: PartyReference
+    type: ContentLabel
+    holder: PartyReference
+    jurisdiction: JurisdictionId
+    taxTypes: NotRequired[list[ContentLabel]]
+    components: NotRequired[list[ContentLabel]]
+    validFrom: CivilDate
+    validTo: NotRequired[CivilDate]
+    verification: CertificateVerification
+
+
+class TaxDocument(TypedDict):
+    """
+    A telecom document for location-aware determination: rated commercial
+    facts, the parties, and the evidence of where the supply took place.
+    It carries no tax; what is owed is the output. The tax point is the
+    request's `eventTime`.
+
+    """
+
+    type: TaxDocumentType
+    currency: CurrencyCode
+    priceMode: PriceMode
+    seller: TaxParty
+    customer: TaxParty
+    evidence: NotRequired[list[SitusEvidenceItem]]
+    certificates: NotRequired[list[ExemptionCertificate]]
+    lines: list[TaxLine]
+
+
+class TaxComponentResult(TypedDict):
+    """
+    One charge on one line: its legal base, rate version, jurisdiction,
+    authority, five roles, recoverability, rounding result and source.
+    `charged` is what the customer pays for it.
+
+    """
+
+    id: ContentLabel
+    version: CivilDate
+    regime: ContentLabel
+    jurisdiction: JurisdictionId
+    authority: ContentLabel
+    taxType: ContentLabel
+    name: ContentText
+    treatment: Treatment
+    inclusive: bool
+    rateKind: ContentLabel
+    rate: Decimal
+    unit: NotRequired[UnitCode]
+    base: NotRequired[Decimal]
+    raw: Decimal
+    amount: Decimal
+    charged: Decimal
+    legalReason: NotRequired[ContentLabel]
+    responsibility: ResponsibilityAssignment
+    exemption: NotRequired[ExemptionApplied]
+    source: ContentLabel
+    citation: ContentText
+
+
+class DeterminationItem(TypedDict):
+    """
+    One line, or one part of a bundle line (`key` is `<line>/<part>`):
+    its state, the situs decision that placed it, and its components.
+
+    """
+
+    key: ContentLabel
+    line: ContentLabel
+    part: NotRequired[ContentLabel]
+    sku: NotRequired[ContentLabel]
+    service: NotRequired[ServiceFamily]
+    amount: Decimal
+    state: DeterminationState
+    reasonCode: NotRequired[ReasonCode]
+    situsOutcome: NotRequired[ContentLabel]
+    situsRule: NotRequired[ContentLabel]
+    applicable: NotRequired[list[JurisdictionId]]
+    placeOfSupply: NotRequired[JurisdictionId]
+    customerRole: NotRequired[ContentLabel]
+    supply: NotRequired[ContentLabel]
+    regime: NotRequired[ContentLabel]
+    neededEvidence: NotRequired[list[ContentLabel]]
+    net: NotRequired[Decimal]
+    components: NotRequired[list[TaxComponentResult]]
+
+
+class DocumentDetermination(TypedDict):
+    """
+    A document's location-aware determination. `totals` is present only
+    when `state` is `RESOLVED`: an unresolved document has no totals
+    rather than zero ones.
+
+    """
+
+    state: DeterminationState
+    reasonCode: ReasonCode
+    currency: CurrencyCode
+    priceMode: PriceMode
+    profileVersion: ContentLabel
+    graphVersion: ContentLabel
+    totals: NotRequired[DocumentTotals]
+    items: list[DeterminationItem]
+    trace: list[DeterminationStep]
+
+
+CoverageComponent = TypedDict(
+    'CoverageComponent',
+    {
+        'id': ContentLabel,
+        'jurisdiction': JurisdictionId,
+        'authority': ContentLabel,
+        'taxType': ContentLabel,
+        'name': ContentText,
+        'services': NotRequired[list[ServiceFamily]],
+        'treatments': list[Treatment],
+        'rateKind': ContentLabel,
+        'rate': Decimal,
+        'currency': NotRequired[CurrencyCode],
+        'unit': NotRequired[UnitCode],
+        'legalReason': NotRequired[ContentLabel],
+        'from': CivilDate,
+        'to': NotRequired[CivilDate],
+        'source': ContentLabel,
+        'citation': ContentText,
+    },
+)
+
+
+class CoverageRegime(TypedDict):
+    id: ContentLabel
+    country: LocationCode
+    name: ContentText
+    services: list[ServiceFamily]
+    requiresLevel: NotRequired[ContentLabel]
+    inclusivePricing: bool
+    components: list[CoverageComponent]
+
+
+class Coverage(TypedDict):
+    """
+    What the active content determines by location, at an instant: the
+    countries covered, the services in each, and every component in force
+    with its rate and source. A country absent here is `UNSUPPORTED`.
+
+    """
+
+    bundle: BundleRef
+    profileVersion: ContentLabel
+    graphVersion: ContentLabel
+    at: Timestamp
+    regimes: list[CoverageRegime]
+
+
 class PeriodEvent(TypedDict):
     seq: int
     state: PeriodState
@@ -2860,3 +3191,76 @@ class Dashboard(TypedDict):
     What needs a person, most urgent first. At most 25.
     """
     trend: DashboardTrend
+
+
+class QuoteRequest(TypedDict):
+    """
+    Exactly one of `input` (named values for a rule-graph pack) and
+    `document` (a telecom document for a pack with location-aware
+    content) is required. `eventTime` is the tax point.
+
+    """
+
+    eventTime: Timestamp
+    input: NotRequired[DeterminationInput]
+    document: NotRequired[TaxDocument]
+    accumulators: NotRequired[ReadSet]
+
+
+class CommitRequest(TypedDict):
+    """
+    Exactly one of `input` and `document` is required, as for a quote.
+    `eventTime` is the tax point: every effective date and legal period is
+    resolved at it, in the authority's own calendar.
+
+    """
+
+    businessKey: BusinessKey
+    supersedes: NotRequired[DecisionId]
+    eventTime: Timestamp
+    input: NotRequired[DeterminationInput]
+    document: NotRequired[TaxDocument]
+    accumulators: NotRequired[ReadSet]
+
+
+class Quote(TypedDict):
+    authoritative: bool
+    """
+    Always `false`. A quote is an estimate at every authorization level (ADR-0004 §2.7).
+    """
+    outcome: Outcome
+    reasonCode: ReasonCode
+    quotedAt: Timestamp
+    bundle: BundleRef
+    emitted: Emitted
+    document: NotRequired[DocumentDetermination]
+
+
+class Decision(TypedDict):
+    """
+    One recorded decision. Immutable; a correction is a new decision whose `supersedes` names this one.
+    """
+
+    id: DecisionId
+    businessKey: BusinessKey
+    supersedes: NotRequired[DecisionId]
+    authoritative: bool
+    """
+    Whether this decision may be filed. `false` for every decision before A4.
+    """
+    outcome: Outcome
+    reasonCode: ReasonCode
+    eventTime: Timestamp
+    recordedAt: Timestamp
+    bundle: BundleRef
+    digests: DecisionDigests
+    emitted: Emitted
+    document: NotRequired[DocumentDetermination]
+
+
+class BatchRequest(TypedDict):
+    operation: Literal['COMMIT']
+    """
+    What each item does. `COMMIT` commits it, or corrects with it when it names `supersedes`.
+    """
+    items: list[CommitRequest]

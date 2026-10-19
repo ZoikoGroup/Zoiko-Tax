@@ -213,6 +213,27 @@ func (e BeneficiaryState) Valid() bool {
 	}
 }
 
+// Defines values for CertificateVerification.
+const (
+	CertificateVerificationUNAVAILABLE CertificateVerification = "UNAVAILABLE"
+	CertificateVerificationUNVERIFIED  CertificateVerification = "UNVERIFIED"
+	CertificateVerificationVERIFIED    CertificateVerification = "VERIFIED"
+)
+
+// Valid indicates whether the value is a known member of the CertificateVerification enum.
+func (e CertificateVerification) Valid() bool {
+	switch e {
+	case CertificateVerificationUNAVAILABLE:
+		return true
+	case CertificateVerificationUNVERIFIED:
+		return true
+	case CertificateVerificationVERIFIED:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ClassificationProposalAuthoritative.
 const (
 	ClassificationProposalAuthoritativeFalse ClassificationProposalAuthoritative = false
@@ -777,6 +798,33 @@ func (e DeliveryStatus) Valid() bool {
 	case DeliveryStatusDELIVERED:
 		return true
 	case DeliveryStatusPENDING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DeterminationState.
+const (
+	DeterminationStateAMBIGUOUS      DeterminationState = "AMBIGUOUS"
+	DeterminationStateCONFLICTED     DeterminationState = "CONFLICTED"
+	DeterminationStateRESOLVED       DeterminationState = "RESOLVED"
+	DeterminationStateREVIEWREQUIRED DeterminationState = "REVIEW_REQUIRED"
+	DeterminationStateUNSUPPORTED    DeterminationState = "UNSUPPORTED"
+)
+
+// Valid indicates whether the value is a known member of the DeterminationState enum.
+func (e DeterminationState) Valid() bool {
+	switch e {
+	case DeterminationStateAMBIGUOUS:
+		return true
+	case DeterminationStateCONFLICTED:
+		return true
+	case DeterminationStateRESOLVED:
+		return true
+	case DeterminationStateREVIEWREQUIRED:
+		return true
+	case DeterminationStateUNSUPPORTED:
 		return true
 	default:
 		return false
@@ -1779,6 +1827,24 @@ func (e PeriodTransitionRequestTo) Valid() bool {
 	}
 }
 
+// Defines values for PriceMode.
+const (
+	PriceModeEXCLUSIVE PriceMode = "EXCLUSIVE"
+	PriceModeINCLUSIVE PriceMode = "INCLUSIVE"
+)
+
+// Valid indicates whether the value is a known member of the PriceMode enum.
+func (e PriceMode) Valid() bool {
+	switch e {
+	case PriceModeEXCLUSIVE:
+		return true
+	case PriceModeINCLUSIVE:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProviderReportedStatus.
 const (
 	ProviderReportedStatusACCEPTEDBYPROVIDER ProviderReportedStatus = "ACCEPTED_BY_PROVIDER"
@@ -2211,6 +2277,27 @@ func (e ResolutionRequestAction) Valid() bool {
 	}
 }
 
+// Defines values for ResponsibleParty.
+const (
+	ResponsiblePartyBUYER  ResponsibleParty = "BUYER"
+	ResponsiblePartyNONE   ResponsibleParty = "NONE"
+	ResponsiblePartySELLER ResponsibleParty = "SELLER"
+)
+
+// Valid indicates whether the value is a known member of the ResponsibleParty enum.
+func (e ResponsibleParty) Valid() bool {
+	switch e {
+	case ResponsiblePartyBUYER:
+		return true
+	case ResponsiblePartyNONE:
+		return true
+	case ResponsiblePartySELLER:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RetentionRecordClass.
 const (
 	RetentionRecordClassDECISION RetentionRecordClass = "DECISION"
@@ -2397,6 +2484,90 @@ func (e SealVerificationVerdict) Valid() bool {
 	case SealVerificationVerdictSIGNATUREINVALID:
 		return true
 	case SealVerificationVerdictVALID:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ServiceFamily.
+const (
+	ServiceFamilyCCAAS                  ServiceFamily = "CCAAS"
+	ServiceFamilyCONTENTMEDIA           ServiceFamily = "CONTENT_MEDIA"
+	ServiceFamilyCPAAS                  ServiceFamily = "CPAAS"
+	ServiceFamilyEQUIPMENTRENTAL        ServiceFamily = "EQUIPMENT_RENTAL"
+	ServiceFamilyEQUIPMENTSALE          ServiceFamily = "EQUIPMENT_SALE"
+	ServiceFamilyFIXEDBROADBAND         ServiceFamily = "FIXED_BROADBAND"
+	ServiceFamilyFIXEDVOICE             ServiceFamily = "FIXED_VOICE"
+	ServiceFamilyINSTALLATIONACTIVATION ServiceFamily = "INSTALLATION_ACTIVATION"
+	ServiceFamilyINTERCONNECT           ServiceFamily = "INTERCONNECT"
+	ServiceFamilyIOTCONNECTIVITY        ServiceFamily = "IOT_CONNECTIVITY"
+	ServiceFamilyMESSAGING              ServiceFamily = "MESSAGING"
+	ServiceFamilyMOBILEDATA             ServiceFamily = "MOBILE_DATA"
+	ServiceFamilyMOBILEVOICE            ServiceFamily = "MOBILE_VOICE"
+	ServiceFamilyOTHERNONTELECOM        ServiceFamily = "OTHER_NON_TELECOM"
+	ServiceFamilyPROFESSIONALSERVICES   ServiceFamily = "PROFESSIONAL_SERVICES"
+	ServiceFamilyROAMINGRETAIL          ServiceFamily = "ROAMING_RETAIL"
+	ServiceFamilyROAMINGWHOLESALE       ServiceFamily = "ROAMING_WHOLESALE"
+	ServiceFamilySATELLITECONNECTIVITY  ServiceFamily = "SATELLITE_CONNECTIVITY"
+	ServiceFamilySIPTRUNKING            ServiceFamily = "SIP_TRUNKING"
+	ServiceFamilySOFTWARE               ServiceFamily = "SOFTWARE"
+	ServiceFamilySUBSCRIPTIONIDENTITY   ServiceFamily = "SUBSCRIPTION_IDENTITY"
+	ServiceFamilyUCAAS                  ServiceFamily = "UCAAS"
+	ServiceFamilyVOIP                   ServiceFamily = "VOIP"
+	ServiceFamilyWHOLESALEACCESS        ServiceFamily = "WHOLESALE_ACCESS"
+)
+
+// Valid indicates whether the value is a known member of the ServiceFamily enum.
+func (e ServiceFamily) Valid() bool {
+	switch e {
+	case ServiceFamilyCCAAS:
+		return true
+	case ServiceFamilyCONTENTMEDIA:
+		return true
+	case ServiceFamilyCPAAS:
+		return true
+	case ServiceFamilyEQUIPMENTRENTAL:
+		return true
+	case ServiceFamilyEQUIPMENTSALE:
+		return true
+	case ServiceFamilyFIXEDBROADBAND:
+		return true
+	case ServiceFamilyFIXEDVOICE:
+		return true
+	case ServiceFamilyINSTALLATIONACTIVATION:
+		return true
+	case ServiceFamilyINTERCONNECT:
+		return true
+	case ServiceFamilyIOTCONNECTIVITY:
+		return true
+	case ServiceFamilyMESSAGING:
+		return true
+	case ServiceFamilyMOBILEDATA:
+		return true
+	case ServiceFamilyMOBILEVOICE:
+		return true
+	case ServiceFamilyOTHERNONTELECOM:
+		return true
+	case ServiceFamilyPROFESSIONALSERVICES:
+		return true
+	case ServiceFamilyROAMINGRETAIL:
+		return true
+	case ServiceFamilyROAMINGWHOLESALE:
+		return true
+	case ServiceFamilySATELLITECONNECTIVITY:
+		return true
+	case ServiceFamilySIPTRUNKING:
+		return true
+	case ServiceFamilySOFTWARE:
+		return true
+	case ServiceFamilySUBSCRIPTIONIDENTITY:
+		return true
+	case ServiceFamilyUCAAS:
+		return true
+	case ServiceFamilyVOIP:
+		return true
+	case ServiceFamilyWHOLESALEACCESS:
 		return true
 	default:
 		return false
@@ -2649,6 +2820,90 @@ func (e ShadowVariance) Valid() bool {
 	}
 }
 
+// Defines values for SitusEvidenceSource.
+const (
+	SitusEvidenceSourceAUTHORITYVERIFIED  SitusEvidenceSource = "AUTHORITY_VERIFIED"
+	SitusEvidenceSourceCUSTOMERASSERTED   SitusEvidenceSource = "CUSTOMER_ASSERTED"
+	SitusEvidenceSourceNETWORKDERIVED     SitusEvidenceSource = "NETWORK_DERIVED"
+	SitusEvidenceSourceSELLERRECORDED     SitusEvidenceSource = "SELLER_RECORDED"
+	SitusEvidenceSourceTHIRDPARTYVERIFIED SitusEvidenceSource = "THIRD_PARTY_VERIFIED"
+)
+
+// Valid indicates whether the value is a known member of the SitusEvidenceSource enum.
+func (e SitusEvidenceSource) Valid() bool {
+	switch e {
+	case SitusEvidenceSourceAUTHORITYVERIFIED:
+		return true
+	case SitusEvidenceSourceCUSTOMERASSERTED:
+		return true
+	case SitusEvidenceSourceNETWORKDERIVED:
+		return true
+	case SitusEvidenceSourceSELLERRECORDED:
+		return true
+	case SitusEvidenceSourceTHIRDPARTYVERIFIED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SitusEvidenceType.
+const (
+	SitusEvidenceTypeBANKLOCATION        SitusEvidenceType = "BANK_LOCATION"
+	SitusEvidenceTypeBILLINGADDRESS      SitusEvidenceType = "BILLING_ADDRESS"
+	SitusEvidenceTypeCUSTOMERDECLARATION SitusEvidenceType = "CUSTOMER_DECLARATION"
+	SitusEvidenceTypeFIXEDLINELOCATION   SitusEvidenceType = "FIXED_LINE_LOCATION"
+	SitusEvidenceTypeIPGEOLOCATION       SitusEvidenceType = "IP_GEOLOCATION"
+	SitusEvidenceTypeNETWORKLOCATION     SitusEvidenceType = "NETWORK_LOCATION"
+	SitusEvidenceTypePRIMARYPLACEOFUSE   SitusEvidenceType = "PRIMARY_PLACE_OF_USE"
+	SitusEvidenceTypeSERVICEADDRESS      SitusEvidenceType = "SERVICE_ADDRESS"
+	SitusEvidenceTypeSIMCOUNTRY          SitusEvidenceType = "SIM_COUNTRY"
+)
+
+// Valid indicates whether the value is a known member of the SitusEvidenceType enum.
+func (e SitusEvidenceType) Valid() bool {
+	switch e {
+	case SitusEvidenceTypeBANKLOCATION:
+		return true
+	case SitusEvidenceTypeBILLINGADDRESS:
+		return true
+	case SitusEvidenceTypeCUSTOMERDECLARATION:
+		return true
+	case SitusEvidenceTypeFIXEDLINELOCATION:
+		return true
+	case SitusEvidenceTypeIPGEOLOCATION:
+		return true
+	case SitusEvidenceTypeNETWORKLOCATION:
+		return true
+	case SitusEvidenceTypePRIMARYPLACEOFUSE:
+		return true
+	case SitusEvidenceTypeSERVICEADDRESS:
+		return true
+	case SitusEvidenceTypeSIMCOUNTRY:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TaxDocumentType.
+const (
+	TaxDocumentTypeCREDITNOTE TaxDocumentType = "CREDIT_NOTE"
+	TaxDocumentTypeINVOICE    TaxDocumentType = "INVOICE"
+)
+
+// Valid indicates whether the value is a known member of the TaxDocumentType enum.
+func (e TaxDocumentType) Valid() bool {
+	switch e {
+	case TaxDocumentTypeCREDITNOTE:
+		return true
+	case TaxDocumentTypeINVOICE:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for TenantStatus.
 const (
 	TenantStatusACTIVE    TenantStatus = "ACTIVE"
@@ -2664,6 +2919,30 @@ func (e TenantStatus) Valid() bool {
 	case TenantStatusCLOSED:
 		return true
 	case TenantStatusSUSPENDED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Treatment.
+const (
+	TreatmentCUSTOMERCHARGE Treatment = "CUSTOMER_CHARGE"
+	TreatmentEXEMPT         Treatment = "EXEMPT"
+	TreatmentPROVIDERCOST   Treatment = "PROVIDER_COST"
+	TreatmentREVERSECHARGE  Treatment = "REVERSE_CHARGE"
+)
+
+// Valid indicates whether the value is a known member of the Treatment enum.
+func (e Treatment) Valid() bool {
+	switch e {
+	case TreatmentCUSTOMERCHARGE:
+		return true
+	case TreatmentEXEMPT:
+		return true
+	case TreatmentPROVIDERCOST:
+		return true
+	case TreatmentREVERSECHARGE:
 		return true
 	default:
 		return false
@@ -2715,6 +2994,27 @@ func (e ValueType) Valid() bool {
 	case ValueTypeREASONCODE:
 		return true
 	case ValueTypeSTRING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VatValidation.
+const (
+	VatValidationUNVALIDATED           VatValidation = "UNVALIDATED"
+	VatValidationVALIDATED             VatValidation = "VALIDATED"
+	VatValidationVALIDATIONUNAVAILABLE VatValidation = "VALIDATION_UNAVAILABLE"
+)
+
+// Valid indicates whether the value is a known member of the VatValidation enum.
+func (e VatValidation) Valid() bool {
+	switch e {
+	case VatValidationUNVALIDATED:
+		return true
+	case VatValidationVALIDATED:
+		return true
+	case VatValidationVALIDATIONUNAVAILABLE:
 		return true
 	default:
 		return false
@@ -3076,6 +3376,10 @@ type Capabilities struct {
 // CaseRef The business key a comparator result is for.
 type CaseRef = string
 
+// CertificateVerification Only `VERIFIED` exempts. `UNAVAILABLE` holds the line for review; a
+// verification is never assumed to have succeeded.
+type CertificateVerification string
+
 // ChangePasswordRequest defines model for ChangePasswordRequest.
 type ChangePasswordRequest struct {
 	CurrentPassword string `json:"currentPassword"`
@@ -3135,7 +3439,9 @@ type CodeMapping struct {
 	Slot ZoikoSlot `json:"slot"`
 }
 
-// CommitRequest defines model for CommitRequest.
+// CommitRequest Exactly one of `input` and `document` is required, as for a quote.
+// `eventTime` is the tax point: every effective date and legal period is
+// resolved at it, in the authority's own calendar.
 type CommitRequest struct {
 	// Accumulators The accumulator values the evaluation reads — exactly the ones the
 	// active bundle declares, no more and no fewer. They are supplied by the
@@ -3149,6 +3455,12 @@ type CommitRequest struct {
 	// interprets.
 	BusinessKey BusinessKey `json:"businessKey"`
 
+	// Document A telecom document for location-aware determination: rated commercial
+	// facts, the parties, and the evidence of where the supply took place.
+	// It carries no tax; what is owed is the output. The tax point is the
+	// request's `eventTime`.
+	Document *TaxDocument `json:"document,omitempty"`
+
 	// EventTime RFC 3339 UTC with exactly six fractional digits and a literal `Z`
 	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
 	// encodings of one instant must not produce two digests.
@@ -3159,7 +3471,7 @@ type CommitRequest struct {
 	// because which values a transaction carries is decided by content, and
 	// a transaction shape fixed here would be tax logic in the API
 	// (ZTAX-DET-001 §0.2). At least one value is required.
-	Input DeterminationInput `json:"input"`
+	Input *DeterminationInput `json:"input,omitempty"`
 
 	// Supersedes A decision identifier: a UUIDv7 in lowercase canonical form
 	// (ADR-0012 §2.1). Sortable by creation, never recycled.
@@ -3523,6 +3835,12 @@ type ContentCapability struct {
 	NodeCount int32 `json:"nodeCount"`
 }
 
+// ContentLabel An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+type ContentLabel = string
+
+// ContentText Text from the active content, such as a source citation. Not interpreted.
+type ContentText = string
+
 // ControlAccount A Tax Control Subledger control account (ZTAX-FIN-001 §9). Never a customer GL account.
 type ControlAccount string
 
@@ -3610,6 +3928,105 @@ type CorrectionRequestType string
 
 // CountryCode ISO 3166-1 alpha-2.
 type CountryCode = string
+
+// Coverage What the active content determines by location, at an instant: the
+// countries covered, the services in each, and every component in force
+// with its rate and source. A country absent here is `UNSUPPORTED`.
+type Coverage struct {
+	// At RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	At Timestamp `json:"at"`
+
+	// Bundle The content bundle an evaluation ran against.
+	Bundle BundleRef `json:"bundle"`
+
+	// GraphVersion An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	GraphVersion ContentLabel `json:"graphVersion"`
+
+	// ProfileVersion An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	ProfileVersion ContentLabel     `json:"profileVersion"`
+	Regimes        []CoverageRegime `json:"regimes"`
+}
+
+// CoverageComponent One component in force at the coverage instant.
+type CoverageComponent struct {
+	// Authority An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Authority ContentLabel `json:"authority"`
+
+	// Citation Text from the active content, such as a source citation. Not interpreted.
+	Citation ContentText `json:"citation"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency *CurrencyCode `json:"currency,omitempty"`
+
+	// From A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	From CivilDate `json:"from"`
+
+	// ID An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	ID ContentLabel `json:"id"`
+
+	// Jurisdiction A jurisdiction's content identifier (ADR-0012 §2.4), such as
+	// `jurisdiction:ca-qc`. Classified as location evidence: on a consumer
+	// document, the deepest jurisdiction is where the customer is.
+	Jurisdiction JurisdictionID `json:"jurisdiction"`
+
+	// LegalReason An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	LegalReason *ContentLabel `json:"legalReason,omitempty"`
+
+	// Name Text from the active content, such as a source citation. Not interpreted.
+	Name ContentText `json:"name"`
+
+	// Rate A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Rate Decimal `json:"rate"`
+
+	// RateKind An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	RateKind ContentLabel    `json:"rateKind"`
+	Services []ServiceFamily `json:"services,omitempty"`
+
+	// Source An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Source ContentLabel `json:"source"`
+
+	// TaxType An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	TaxType ContentLabel `json:"taxType"`
+
+	// To A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	To         *CivilDate  `json:"to,omitempty"`
+	Treatments []Treatment `json:"treatments"`
+
+	// Unit A unit of measure, as the content pack names it.
+	Unit *UnitCode `json:"unit,omitempty"`
+}
+
+// CoverageRegime defines model for CoverageRegime.
+type CoverageRegime struct {
+	Components []CoverageComponent `json:"components"`
+
+	// Country An ISO 3166-1 alpha-2 country code (`DE`) or ISO 3166-2 subdivision code (`CA-QC`).
+	Country LocationCode `json:"country"`
+
+	// ID An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	ID               ContentLabel `json:"id"`
+	InclusivePricing bool         `json:"inclusivePricing"`
+
+	// Name Text from the active content, such as a source citation. Not interpreted.
+	Name ContentText `json:"name"`
+
+	// RequiresLevel An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	RequiresLevel *ContentLabel   `json:"requiresLevel,omitempty"`
+	Services      []ServiceFamily `json:"services"`
+}
 
 // CreateCompliancePackageRequest defines model for CreateCompliancePackageRequest.
 type CreateCompliancePackageRequest struct {
@@ -3956,6 +4373,11 @@ type Decision struct {
 	// envelope, which is what a search by input matches.
 	Digests DecisionDigests `json:"digests"`
 
+	// Document A document's location-aware determination. `totals` is present only
+	// when `state` is `RESOLVED`: an unresolved document has no totals
+	// rather than zero ones.
+	Document *DocumentDetermination `json:"document,omitempty"`
+
 	// Emitted What the content emitted, by result slot. The slots are the pack's.
 	Emitted Emitted `json:"emitted"`
 
@@ -4045,6 +4467,102 @@ type DeterminationInput struct {
 	Strings map[string]string `json:"strings,omitempty"`
 }
 
+// DeterminationItem One line, or one part of a bundle line (`key` is `<line>/<part>`):
+// its state, the situs decision that placed it, and its components.
+type DeterminationItem struct {
+	// Amount A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Amount     Decimal              `json:"amount"`
+	Applicable []JurisdictionID     `json:"applicable,omitempty"`
+	Components []TaxComponentResult `json:"components,omitempty"`
+
+	// CustomerRole An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	CustomerRole *ContentLabel `json:"customerRole,omitempty"`
+
+	// Key An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Key ContentLabel `json:"key"`
+
+	// Line An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Line           ContentLabel   `json:"line"`
+	NeededEvidence []ContentLabel `json:"neededEvidence,omitempty"`
+
+	// Net A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Net *Decimal `json:"net,omitempty"`
+
+	// Part An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Part *ContentLabel `json:"part,omitempty"`
+
+	// PlaceOfSupply A jurisdiction's content identifier (ADR-0012 §2.4), such as
+	// `jurisdiction:ca-qc`. Classified as location evidence: on a consumer
+	// document, the deepest jurisdiction is where the customer is.
+	PlaceOfSupply *JurisdictionID `json:"placeOfSupply,omitempty"`
+
+	// ReasonCode A registered code from a closed vocabulary (ADR-0016 §2.4). Codes are
+	// never renumbered, never reused and never redefined; a retired code stops
+	// being emitted and keeps its meaning so historical evidence still
+	// resolves.
+	//
+	// This is the field to branch on. The set this deployment can emit is
+	// reported by `GET /v1/capabilities`; the enum is deliberately not closed
+	// here, because the register grows by addition and a client that rejects
+	// an unrecognised code would break on an additive change (ADR-0010 §2.6).
+	ReasonCode *ReasonCode `json:"reasonCode,omitempty"`
+
+	// Regime An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Regime *ContentLabel `json:"regime,omitempty"`
+
+	// Service A ZTAX-CLS-001 ontology family. A tenant's SKU is mapped to one before
+	// determination; a line without one is held as `CLASSIFICATION_REQUIRED`
+	// rather than guessed at.
+	Service *ServiceFamily `json:"service,omitempty"`
+
+	// SitusOutcome An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	SitusOutcome *ContentLabel `json:"situsOutcome,omitempty"`
+
+	// SitusRule An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	SitusRule *ContentLabel `json:"situsRule,omitempty"`
+
+	// Sku An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Sku *ContentLabel `json:"sku,omitempty"`
+
+	// State `RESOLVED` is the only state that carries amounts. Every other state
+	// is recorded with its evidence and reason and is never a zero tax.
+	State DeterminationState `json:"state"`
+
+	// Supply An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Supply *ContentLabel `json:"supply,omitempty"`
+}
+
+// DeterminationState `RESOLVED` is the only state that carries amounts. Every other state
+// is recorded with its evidence and reason and is never a zero tax.
+type DeterminationState string
+
+// DeterminationStep One step of the deterministic trace — selection, situs, exemption and DET-001 evaluation steps.
+type DeterminationStep struct {
+	// Component An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Component *ContentLabel `json:"component,omitempty"`
+	Detail    string        `json:"detail"`
+
+	// Item An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Item *ContentLabel `json:"item,omitempty"`
+
+	// Step An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Step ContentLabel `json:"step"`
+}
+
 // Digest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
 // carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
 // not decoration — a future `zt2:` digest of the same document is a
@@ -4109,6 +4627,46 @@ type DiscrepancyTransitionRequest struct {
 
 	// To Where a discrepancy's investigation is (ZTAX-SHD-001 §15).
 	To DiscrepancyState `json:"to"`
+}
+
+// DocumentDetermination A document's location-aware determination. `totals` is present only
+// when `state` is `RESOLVED`: an unresolved document has no totals
+// rather than zero ones.
+type DocumentDetermination struct {
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// GraphVersion An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	GraphVersion ContentLabel        `json:"graphVersion"`
+	Items        []DeterminationItem `json:"items"`
+
+	// PriceMode `EXCLUSIVE`: amounts are net and customer charges are added.
+	// `INCLUSIVE`: amounts include the customer-charged taxes, which are
+	// extracted (DET-001 §7) — never computed on the gross and added.
+	PriceMode PriceMode `json:"priceMode"`
+
+	// ProfileVersion An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	ProfileVersion ContentLabel `json:"profileVersion"`
+
+	// ReasonCode A registered code from a closed vocabulary (ADR-0016 §2.4). Codes are
+	// never renumbered, never reused and never redefined; a retired code stops
+	// being emitted and keeps its meaning so historical evidence still
+	// resolves.
+	//
+	// This is the field to branch on. The set this deployment can emit is
+	// reported by `GET /v1/capabilities`; the enum is deliberately not closed
+	// here, because the register grows by addition and a client that rejects
+	// an unrecognised code would break on an additive change (ADR-0010 §2.6).
+	ReasonCode ReasonCode `json:"reasonCode"`
+
+	// State `RESOLVED` is the only state that carries amounts. Every other state
+	// is recorded with its evidence and reason and is never a zero tax.
+	State DeterminationState `json:"state"`
+
+	// Totals The figures that must stay apart (playbook §7): what the customer is
+	// charged, what the provider bears, and what the customer self-assesses.
+	Totals *DocumentTotals     `json:"totals,omitempty"`
+	Trace  []DeterminationStep `json:"trace"`
 }
 
 // DocumentID A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
@@ -4251,6 +4809,60 @@ type DocumentTax struct {
 	DecisionID DecisionID `json:"decisionId"`
 }
 
+// DocumentTotals The figures that must stay apart (playbook §7): what the customer is
+// charged, what the provider bears, and what the customer self-assesses.
+type DocumentTotals struct {
+	// CustomerTax A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	CustomerTax Decimal `json:"customerTax"`
+
+	// CustomerTotal A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	CustomerTotal Decimal `json:"customerTotal"`
+
+	// Net A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Net Decimal `json:"net"`
+
+	// ProviderAccrual A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	ProviderAccrual Decimal `json:"providerAccrual"`
+
+	// ReverseCharge A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	ReverseCharge Decimal `json:"reverseCharge"`
+}
+
 // EffectiveObligationStatus A stored status, or `OVERDUE` derived as of today for an unfiled obligation past its due date.
 type EffectiveObligationStatus string
 
@@ -4270,6 +4882,61 @@ type ExceptionDecisionRequest struct {
 
 	// Note Free text from a person.
 	Note MigrationText `json:"note"`
+}
+
+// ExemptionApplied A charge a certificate suppressed, and the assessment it would have been.
+type ExemptionApplied struct {
+	// Assessed A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Assessed *Decimal `json:"assessed,omitempty"`
+
+	// Certificate A party's reference in the caller's systems. Not interpreted; a certificate's holder must equal the customer's.
+	Certificate PartyReference `json:"certificate"`
+
+	// Type An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Type ContentLabel `json:"type"`
+}
+
+// ExemptionCertificate A certificate is scoped: by issuing jurisdiction, holder, tax types,
+// components and validity. One that does not apply on any of those is
+// refused visibly in the trace, never silently ignored.
+type ExemptionCertificate struct {
+	Components []ContentLabel `json:"components,omitempty"`
+
+	// Holder A party's reference in the caller's systems. Not interpreted; a certificate's holder must equal the customer's.
+	Holder PartyReference `json:"holder"`
+
+	// ID A party's reference in the caller's systems. Not interpreted; a certificate's holder must equal the customer's.
+	ID PartyReference `json:"id"`
+
+	// Jurisdiction A jurisdiction's content identifier (ADR-0012 §2.4), such as
+	// `jurisdiction:ca-qc`. Classified as location evidence: on a consumer
+	// document, the deepest jurisdiction is where the customer is.
+	Jurisdiction JurisdictionID `json:"jurisdiction"`
+	TaxTypes     []ContentLabel `json:"taxTypes,omitempty"`
+
+	// Type An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Type ContentLabel `json:"type"`
+
+	// ValidFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	ValidFrom CivilDate `json:"validFrom"`
+
+	// ValidTo A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	ValidTo *CivilDate `json:"validTo,omitempty"`
+
+	// Verification Only `VERIFIED` exempts. `UNAVAILABLE` holds the line for review; a
+	// verification is never assumed to have succeeded.
+	Verification CertificateVerification `json:"verification"`
 }
 
 // ExternalReference Another system's identifier for the document (ZTAX-DOM-REQ-0003). Never a key, never parsed, never assumed unique.
@@ -4539,6 +5206,11 @@ type JournalList struct {
 	Journals []Journal `json:"journals"`
 }
 
+// JurisdictionID A jurisdiction's content identifier (ADR-0012 §2.4), such as
+// `jurisdiction:ca-qc`. Classified as location evidence: on a consumer
+// document, the deepest jurisdiction is where the customer is.
+type JurisdictionID = string
+
 // LegacyCode A source system's own tax code.
 type LegacyCode = string
 
@@ -4715,6 +5387,9 @@ type LegalRule struct {
 
 // LegalStatus defines model for LegalStatus.
 type LegalStatus string
+
+// LocationCode An ISO 3166-1 alpha-2 country code (`DE`) or ISO 3166-2 subdivision code (`CA-QC`).
+type LocationCode = string
 
 // MigratedComponent defines model for MigratedComponent.
 type MigratedComponent struct {
@@ -5179,6 +5854,9 @@ type ObligationTransitionRequestTo string
 // about coverage that is recorded against the transaction.
 type Outcome string
 
+// PartyReference A party's reference in the caller's systems. Not interpreted; a certificate's holder must equal the customer's.
+type PartyReference = string
+
 // PaymentEvidence The kind of proof a provider status carries (ZTAX-REM-001 §18).
 type PaymentEvidence string
 
@@ -5256,6 +5934,23 @@ type PeriodTransitionRequest struct {
 // PeriodTransitionRequestTo defines model for PeriodTransitionRequest.To.
 type PeriodTransitionRequestTo string
 
+// Place A location named by its jurisdiction — exactly one of a jurisdiction
+// identifier and an ISO code. There is no street address: resolution
+// never geocodes (JUR-001 §8.2), so an address is mapped to a
+// jurisdiction by the system that records it.
+type Place struct {
+	// Country An ISO 3166-1 alpha-2 country code (`DE`) or ISO 3166-2 subdivision code (`CA-QC`).
+	Country *LocationCode `json:"country,omitempty"`
+
+	// Jurisdiction A jurisdiction's content identifier (ADR-0012 §2.4), such as
+	// `jurisdiction:ca-qc`. Classified as location evidence: on a consumer
+	// document, the deepest jurisdiction is where the customer is.
+	Jurisdiction *JurisdictionID `json:"jurisdiction,omitempty"`
+
+	// Subdivision An ISO 3166-1 alpha-2 country code (`DE`) or ISO 3166-2 subdivision code (`CA-QC`).
+	Subdivision *LocationCode `json:"subdivision,omitempty"`
+}
+
 // PolicyVersionRef defines model for PolicyVersionRef.
 type PolicyVersionRef struct {
 	// ID A retention policy's stable name; its versions share it.
@@ -5268,6 +5963,11 @@ type PreparationRequest struct {
 	// Note Free text from the person recording a step.
 	Note *ComplianceNote `json:"note,omitempty"`
 }
+
+// PriceMode `EXCLUSIVE`: amounts are net and customer charges are added.
+// `INCLUSIVE`: amounts include the customer-charged taxes, which are
+// extracted (DET-001 §7) — never computed on the gross and added.
+type PriceMode string
 
 // Problem RFC 9457 Problem Details, with the `ztx_` extensions from ADR-0016 §2.5.
 // The extensions carry identifiers rather than data: an error that needs
@@ -5350,6 +6050,11 @@ type Quote struct {
 	// Bundle The content bundle an evaluation ran against.
 	Bundle BundleRef `json:"bundle"`
 
+	// Document A document's location-aware determination. `totals` is present only
+	// when `state` is `RESOLVED`: an unresolved document has no totals
+	// rather than zero ones.
+	Document *DocumentDetermination `json:"document,omitempty"`
+
 	// Emitted What the content emitted, by result slot. The slots are the pack's.
 	Emitted Emitted `json:"emitted"`
 
@@ -5377,13 +6082,21 @@ type Quote struct {
 	ReasonCode ReasonCode `json:"reasonCode"`
 }
 
-// QuoteRequest defines model for QuoteRequest.
+// QuoteRequest Exactly one of `input` (named values for a rule-graph pack) and
+// `document` (a telecom document for a pack with location-aware
+// content) is required. `eventTime` is the tax point.
 type QuoteRequest struct {
 	// Accumulators The accumulator values the evaluation reads — exactly the ones the
 	// active bundle declares, no more and no fewer. They are supplied by the
 	// caller until the accumulator store of ADR-0004 lands, and are recorded
 	// in the decision's envelope either way (ZTAX-DET-REQ-0034).
 	Accumulators *ReadSet `json:"accumulators,omitempty"`
+
+	// Document A telecom document for location-aware determination: rated commercial
+	// facts, the parties, and the evidence of where the supply took place.
+	// It carries no tax; what is owed is the output. The tax point is the
+	// request's `eventTime`.
+	Document *TaxDocument `json:"document,omitempty"`
 
 	// EventTime RFC 3339 UTC with exactly six fractional digits and a literal `Z`
 	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
@@ -5395,7 +6108,7 @@ type QuoteRequest struct {
 	// because which values a transaction carries is decided by content, and
 	// a transaction shape fixed here would be tax logic in the API
 	// (ZTAX-DET-001 §0.2). At least one value is required.
-	Input DeterminationInput `json:"input"`
+	Input *DeterminationInput `json:"input,omitempty"`
 }
 
 // RateBasis What a rate applies to (ADR-0002). A rate without a basis is not a rate.
@@ -5902,6 +6615,21 @@ type ResolutionRequest struct {
 // ResolutionRequestAction defines model for ResolutionRequest.Action.
 type ResolutionRequestAction string
 
+// ResponsibilityAssignment The five roles, each answered separately (ZTAX-OBL-REQ-0002 to -0006).
+type ResponsibilityAssignment struct {
+	Collection     ResponsibleParty `json:"collection"`
+	EconomicBearer ResponsibleParty `json:"economicBearer"`
+
+	// ID An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	ID         ContentLabel     `json:"id"`
+	Incidence  ResponsibleParty `json:"incidence"`
+	Remittance ResponsibleParty `json:"remittance"`
+	Reporting  ResponsibleParty `json:"reporting"`
+}
+
+// ResponsibleParty defines model for ResponsibleParty.
+type ResponsibleParty string
+
 // ResultValue One emitted value. `type` says which other members are present:
 // `amount` and `currency` for `MONEY`; `value` and `basis` for `RATE`;
 // `value` and `unit` for `QUANTITY`; `flag` for `BOOL`; `text` for
@@ -6206,6 +6934,11 @@ type SealVerificationVerdict string
 
 // SecureReference A vault or token reference to an account held at a regulated institution — never an account number.
 type SecureReference = string
+
+// ServiceFamily A ZTAX-CLS-001 ontology family. A tenant's SKU is mapped to one before
+// determination; a line without one is held as `CLASSIFICATION_REQUIRED`
+// rather than guessed at.
+type ServiceFamily string
 
 // ServiceState defines model for ServiceState.
 type ServiceState string
@@ -6562,6 +7295,34 @@ type SignInRequest struct {
 	Tenant string `json:"tenant"`
 }
 
+// SitusEvidenceItem One typed, attributed signal about where the supply took place (JUR-001 §3.1).
+type SitusEvidenceItem struct {
+	// CollectedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CollectedAt *Timestamp `json:"collectedAt,omitempty"`
+
+	// Place A location named by its jurisdiction — exactly one of a jurisdiction
+	// identifier and an ISO code. There is no street address: resolution
+	// never geocodes (JUR-001 §8.2), so an address is mapped to a
+	// jurisdiction by the system that records it.
+	Place  Place               `json:"place"`
+	Source SitusEvidenceSource `json:"source"`
+
+	// Type The JUR-001 §3.2 evidence vocabulary a caller may supply directly.
+	// Seller and customer establishment and VAT identification arrive on the
+	// parties instead, so one fact cannot arrive twice and disagree.
+	Type SitusEvidenceType `json:"type"`
+}
+
+// SitusEvidenceSource defines model for SitusEvidenceSource.
+type SitusEvidenceSource string
+
+// SitusEvidenceType The JUR-001 §3.2 evidence vocabulary a caller may supply directly.
+// Seller and customer establishment and VAT identification arrive on the
+// parties instead, so one fact cannot arrive twice and disagree.
+type SitusEvidenceType string
+
 // SourceComponent defines model for SourceComponent.
 type SourceComponent struct {
 	// Amount A value exactly as the source gave it; validated by the conversion, not by the API, so that a bad value becomes an exception rather than a refusal.
@@ -6601,6 +7362,206 @@ type SubledgerPeriod struct {
 	// Period A subledger legal period, a month.
 	Period LegalPeriod `json:"period"`
 	State  PeriodState `json:"state"`
+}
+
+// TaxComponentResult One charge on one line: its legal base, rate version, jurisdiction,
+// authority, five roles, recoverability, rounding result and source.
+// `charged` is what the customer pays for it.
+type TaxComponentResult struct {
+	// Amount A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Amount Decimal `json:"amount"`
+
+	// Authority An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Authority ContentLabel `json:"authority"`
+
+	// Base A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Base *Decimal `json:"base,omitempty"`
+
+	// Charged A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Charged Decimal `json:"charged"`
+
+	// Citation Text from the active content, such as a source citation. Not interpreted.
+	Citation ContentText `json:"citation"`
+
+	// Exemption A charge a certificate suppressed, and the assessment it would have been.
+	Exemption *ExemptionApplied `json:"exemption,omitempty"`
+
+	// ID An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	ID        ContentLabel `json:"id"`
+	Inclusive bool         `json:"inclusive"`
+
+	// Jurisdiction A jurisdiction's content identifier (ADR-0012 §2.4), such as
+	// `jurisdiction:ca-qc`. Classified as location evidence: on a consumer
+	// document, the deepest jurisdiction is where the customer is.
+	Jurisdiction JurisdictionID `json:"jurisdiction"`
+
+	// LegalReason An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	LegalReason *ContentLabel `json:"legalReason,omitempty"`
+
+	// Name Text from the active content, such as a source citation. Not interpreted.
+	Name ContentText `json:"name"`
+
+	// Rate A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Rate Decimal `json:"rate"`
+
+	// RateKind An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	RateKind ContentLabel `json:"rateKind"`
+
+	// Raw A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Raw Decimal `json:"raw"`
+
+	// Regime An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Regime ContentLabel `json:"regime"`
+
+	// Responsibility The five roles, each answered separately (ZTAX-OBL-REQ-0002 to -0006).
+	Responsibility ResponsibilityAssignment `json:"responsibility"`
+
+	// Source An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Source ContentLabel `json:"source"`
+
+	// TaxType An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	TaxType ContentLabel `json:"taxType"`
+
+	// Treatment `CUSTOMER_CHARGE` is on the invoice. `PROVIDER_COST` is borne by the
+	// seller and never on it. `REVERSE_CHARGE` is self-assessed by the
+	// customer: disclosed, neither charged nor remitted by the seller.
+	// `EXEMPT` is a customer charge a verified certificate suppressed.
+	Treatment Treatment `json:"treatment"`
+
+	// Unit A unit of measure, as the content pack names it.
+	Unit *UnitCode `json:"unit,omitempty"`
+
+	// Version A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	Version CivilDate `json:"version"`
+}
+
+// TaxDocument A telecom document for location-aware determination: rated commercial
+// facts, the parties, and the evidence of where the supply took place.
+// It carries no tax; what is owed is the output. The tax point is the
+// request's `eventTime`.
+type TaxDocument struct {
+	Certificates []ExemptionCertificate `json:"certificates,omitempty"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode        `json:"currency"`
+	Customer TaxParty            `json:"customer"`
+	Evidence []SitusEvidenceItem `json:"evidence,omitempty"`
+	Lines    []TaxLine           `json:"lines"`
+
+	// PriceMode `EXCLUSIVE`: amounts are net and customer charges are added.
+	// `INCLUSIVE`: amounts include the customer-charged taxes, which are
+	// extracted (DET-001 §7) — never computed on the gross and added.
+	PriceMode PriceMode `json:"priceMode"`
+	Seller    TaxParty  `json:"seller"`
+
+	// Type An `INVOICE` carries non-negative amounts; a `CREDIT_NOTE` carries non-positive ones.
+	Type TaxDocumentType `json:"type"`
+}
+
+// TaxDocumentType An `INVOICE` carries non-negative amounts; a `CREDIT_NOTE` carries non-positive ones.
+type TaxDocumentType string
+
+// TaxLine One rated line, in the document currency. A bundle line carries
+// `parts` instead of its own `service` and `quantity`, and the parts
+// must sum to `amount` exactly.
+type TaxLine struct {
+	// Amount A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Amount   Decimal             `json:"amount"`
+	Evidence []SitusEvidenceItem `json:"evidence,omitempty"`
+
+	// Key An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Key      ContentLabel   `json:"key"`
+	Parts    []TaxLinePart  `json:"parts,omitempty"`
+	Quantity *QuantityValue `json:"quantity,omitempty"`
+
+	// Service A ZTAX-CLS-001 ontology family. A tenant's SKU is mapped to one before
+	// determination; a line without one is held as `CLASSIFICATION_REQUIRED`
+	// rather than guessed at.
+	Service *ServiceFamily `json:"service,omitempty"`
+
+	// Sku An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Sku *ContentLabel `json:"sku,omitempty"`
+}
+
+// TaxLinePart One component of an approved bundle decomposition.
+type TaxLinePart struct {
+	// Amount A decimal in canonical string form (ADR-0010 §2.9): an optional minus,
+	// digits, and an optional fraction. No exponent, no leading `+`, no
+	// leading zeros. **Scale is significant**: `"1.50"` and `"1.5"` are
+	// different assertions and digest differently.
+	//
+	// Classified as fiscal personal data because on a consumer transaction
+	// it is: logs carry it redacted, and it is kept for the fiscal record
+	// period as evidence.
+	Amount Decimal `json:"amount"`
+
+	// Key An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Key      ContentLabel   `json:"key"`
+	Quantity *QuantityValue `json:"quantity,omitempty"`
+
+	// Service A ZTAX-CLS-001 ontology family. A tenant's SKU is mapped to one before
+	// determination; a line without one is held as `CLASSIFICATION_REQUIRED`
+	// rather than guessed at.
+	Service *ServiceFamily `json:"service,omitempty"`
+}
+
+// TaxParty defines model for TaxParty.
+type TaxParty struct {
+	// Establishment A location named by its jurisdiction — exactly one of a jurisdiction
+	// identifier and an ISO code. There is no street address: resolution
+	// never geocodes (JUR-001 §8.2), so an address is mapped to a
+	// jurisdiction by the system that records it.
+	Establishment *Place `json:"establishment,omitempty"`
+
+	// ID A party's reference in the caller's systems. Not interpreted; a certificate's holder must equal the customer's.
+	ID PartyReference `json:"id"`
+
+	// Vat The customer's VAT registration country and validation status. The number itself is not needed and not retained.
+	Vat *VatIdentification `json:"vat,omitempty"`
 }
 
 // Tenant defines model for Tenant.
@@ -6644,6 +7605,12 @@ type Trains struct {
 	Schema    string `json:"schema"`
 }
 
+// Treatment `CUSTOMER_CHARGE` is on the invoice. `PROVIDER_COST` is borne by the
+// seller and never on it. `REVERSE_CHARGE` is self-assessed by the
+// customer: disclosed, neither charged nor remitted by the seller.
+// `EXEMPT` is a customer charge a verified certificate suppressed.
+type Treatment string
+
 // UnitCode A unit of measure, as the content pack names it.
 type UnitCode = string
 
@@ -6681,6 +7648,22 @@ type UserStatus string
 
 // ValueType The type of an emitted value. It says which of a value's other members are present.
 type ValueType string
+
+// VatIdentification The customer's VAT registration country and validation status. The number itself is not needed and not retained.
+type VatIdentification struct {
+	// Country An ISO 3166-1 alpha-2 country code (`DE`) or ISO 3166-2 subdivision code (`CA-QC`).
+	Country LocationCode `json:"country"`
+
+	// Validation `VALIDATED` establishes a business customer where the pack recognises
+	// it. `UNVALIDATED` and `VALIDATION_UNAVAILABLE` are different facts and
+	// a pack may treat them differently (JUR-001 §7.3).
+	Validation VatValidation `json:"validation"`
+}
+
+// VatValidation `VALIDATED` establishes a business customer where the pack recognises
+// it. `UNVALIDATED` and `VALIDATION_UNAVAILABLE` are different facts and
+// a pack may treat them differently (JUR-001 §7.3).
+type VatValidation string
 
 // Webhook defines model for Webhook.
 type Webhook struct {
@@ -6932,6 +7915,12 @@ type ListCompliancePackagesParams struct {
 	// Limit Maximum number of items to return. The server caps this independently,
 	// so a larger value is not an error and does not return more.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetCoverageParams defines parameters for GetCoverage.
+type GetCoverageParams struct {
+	// At The instant to report rates at. Defaults to now.
+	At *Timestamp `form:"at,omitempty" json:"at,omitempty"`
 }
 
 // GetDashboardParams defines parameters for GetDashboard.

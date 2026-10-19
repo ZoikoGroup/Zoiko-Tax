@@ -194,6 +194,7 @@ const FOLDERS = [
       },
     ],
     operations: [
+      "getCoverage",
       "createQuote", "commitTransaction", "getDecision", "replayDecision", "listDecisionJournals",
       "getSubledgerBalances", "listObligations", "getObligation", "transitionObligation",
       "createCompliancePackage", "getCompliancePackage", "listCompliancePackages", "prepareCompliancePackage",
@@ -320,6 +321,20 @@ const OPERATION_TESTS = {
     "  const header = pm.response.headers.get('Set-Cookie') || '';",
     "  pm.expect(header.toLowerCase()).to.include('httponly');",
     "});",
+  ],
+  getCoverage: [
+    "// A pack with location-aware content answers 200; the worked rule pack has",
+    "// no taxation profile and answers 503, which is the correct refusal.",
+    "pm.test('coverage is reported, or refused for a pack without location-aware content', function () {",
+    "  pm.expect(pm.response.code).to.be.oneOf([200, 503]);",
+    "});",
+    "if (pm.response.code === 200) {",
+    "  pm.test('every component in force names its source', function () {",
+    "    pm.response.json().regimes.forEach(function (r) {",
+    "      r.components.forEach(function (c) { pm.expect(c.source).to.be.a('string').and.not.empty; });",
+    "    });",
+    "  });",
+    "}",
   ],
   createQuote: [
     "pm.test('ADR-0004 §2.7 — a quote is never authoritative', function () {",

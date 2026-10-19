@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.zoikotax.sdk.model.BundleRef;
 import com.zoikotax.sdk.model.DecisionDigests;
+import com.zoikotax.sdk.model.DocumentDetermination;
 import com.zoikotax.sdk.model.Outcome;
 import com.zoikotax.sdk.model.ResultValue;
 import java.util.Arrays;
@@ -46,7 +47,8 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
   Decision.JSON_PROPERTY_RECORDED_AT,
   Decision.JSON_PROPERTY_BUNDLE,
   Decision.JSON_PROPERTY_DIGESTS,
-  Decision.JSON_PROPERTY_EMITTED
+  Decision.JSON_PROPERTY_EMITTED,
+  Decision.JSON_PROPERTY_DOCUMENT
 })
 @jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen", comments = "Generator version: 7.25.0")
 public class Decision {
@@ -93,6 +95,10 @@ public class Decision {
   public static final String JSON_PROPERTY_EMITTED = "emitted";
   @jakarta.annotation.Nonnull
   private Map<String, ResultValue> emitted;
+
+  public static final String JSON_PROPERTY_DOCUMENT = "document";
+  @jakarta.annotation.Nullable
+  private DocumentDetermination document;
 
   public Decision() { 
   }
@@ -369,6 +375,30 @@ public class Decision {
   }
 
 
+  public Decision document(@jakarta.annotation.Nullable DocumentDetermination document) {
+    this.document = document;
+    return this;
+  }
+
+  /**
+   * Get document
+   * @return document
+   */
+  @jakarta.annotation.Nullable
+  @JsonProperty(value = JSON_PROPERTY_DOCUMENT, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public DocumentDetermination getDocument() {
+    return document;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_DOCUMENT, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public void setDocument(@jakarta.annotation.Nullable DocumentDetermination document) {
+    this.document = document;
+  }
+
+
   /**
    * Return true if this Decision object is equal to o.
    */
@@ -391,12 +421,13 @@ public class Decision {
         Objects.equals(this.recordedAt, decision.recordedAt) &&
         Objects.equals(this.bundle, decision.bundle) &&
         Objects.equals(this.digests, decision.digests) &&
-        Objects.equals(this.emitted, decision.emitted);
+        Objects.equals(this.emitted, decision.emitted) &&
+        Objects.equals(this.document, decision.document);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, businessKey, supersedes, authoritative, outcome, reasonCode, eventTime, recordedAt, bundle, digests, emitted);
+    return Objects.hash(id, businessKey, supersedes, authoritative, outcome, reasonCode, eventTime, recordedAt, bundle, digests, emitted, document);
   }
 
   @Override
@@ -414,6 +445,7 @@ public class Decision {
     sb.append("    bundle: ").append(toIndentedString(bundle)).append("\n");
     sb.append("    digests: ").append(toIndentedString(digests)).append("\n");
     sb.append("    emitted: ").append(toIndentedString(emitted)).append("\n");
+    sb.append("    document: ").append(toIndentedString(document)).append("\n");
     sb.append("}");
     return sb.toString();
   }
