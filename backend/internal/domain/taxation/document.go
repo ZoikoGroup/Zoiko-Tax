@@ -450,7 +450,7 @@ func certificateArray(cs []Certificate) canonical.Value {
 func lineArray(ls []Line) canonical.Value {
 	out := make([]canonical.Value, len(ls))
 	for i, l := range ls {
-		var parts canonical.Value = canonical.Absent()
+		parts := canonical.Absent()
 		if len(l.Parts) > 0 {
 			ps := make([]canonical.Value, len(l.Parts))
 			for j, p := range l.Parts {
@@ -603,11 +603,7 @@ func (w documentWire) decode() (Document, error) {
 		return Document{}, err
 	}
 	for _, c := range w.Certificates {
-		d.Certificates = append(d.Certificates, Certificate{
-			ID: c.ID, Type: c.Type, Holder: c.Holder, Jurisdiction: c.Jurisdiction,
-			TaxTypes: c.TaxTypes, Components: c.Components,
-			ValidFrom: c.ValidFrom, ValidTo: c.ValidTo, Verification: c.Verification,
-		})
+		d.Certificates = append(d.Certificates, Certificate(c))
 	}
 	for _, lw := range w.Lines {
 		l := Line{Key: lw.Key, SKU: lw.SKU, Service: lw.Service}
@@ -648,7 +644,7 @@ func (w partyWire) decode() Party {
 }
 
 func (w placeWire) decode() Place {
-	return Place{Jurisdiction: w.Jurisdiction, Subdivision: w.Subdivision, Country: w.Country}
+	return Place(w)
 }
 
 func decodeEvidence(ws []evidenceWire) ([]Evidence, error) {

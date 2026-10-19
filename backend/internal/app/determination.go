@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"sort"
@@ -267,7 +268,8 @@ func (s *DeterminationService) envelopeFor(b *rule.Bundle, eventTime time.Time, 
 		if err := req.document.Validate(); err != nil {
 			// The document's own message names the field; Validate on the
 			// envelope below would bury it under "cannot be recorded".
-			if fe, ok := err.(*taxation.FieldError); ok {
+			var fe *taxation.FieldError
+			if errors.As(err, &fe) {
 				return nil, evidence.Envelope{}, nil, errs.Invalid(fe.Field, errs.ReasonInvalidValue, "The document's "+fe.Field+" "+fe.Detail+".")
 			}
 			return nil, evidence.Envelope{}, nil, errs.Invalid("document", errs.ReasonInvalidValue, err.Error())

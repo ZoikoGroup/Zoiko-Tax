@@ -1,6 +1,7 @@
 package taxation
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -52,7 +53,6 @@ type selection struct {
 	apply     ApplyDecl
 	treatment string
 	exemption *Exemption
-	planID    string
 }
 
 type run struct {
@@ -135,7 +135,8 @@ func (e *Engine) Determine(doc Document, taxPoint time.Time) (Result, error) {
 
 // invalid maps a document shape error to the validation problem it is.
 func invalid(err error) error {
-	if fe, ok := err.(*FieldError); ok {
+	var fe *FieldError
+	if errors.As(err, &fe) {
 		return errs.Invalid(fe.Field, errs.ReasonInvalidValue, "The document's "+fe.Field+" "+fe.Detail+".")
 	}
 	return errs.Invalid("document", errs.ReasonInvalidValue, err.Error())
