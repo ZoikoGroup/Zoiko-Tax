@@ -13,6 +13,7 @@ import (
 
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
 )
 
 // The route profile and AI train version this file's temp registry declares
@@ -136,6 +137,22 @@ func TestCrossLanguageBoundary(t *testing.T) {
 	away.Governance.Region = "use1-prod-01"
 	if _, err := g.Invoke(ctx(t), away); errs.ReasonOf(err) != ai.ReasonResidencyRefused {
 		t.Fatalf("another region: %v", err)
+	}
+
+	// A duplicate data class is the one case where Go's own local pre-check
+	// (ai.Evaluate, which this raw transport bypasses by design -- see the
+	// package comment) would not have caught anything either: neither
+	// Evaluate nor authorise() rejects a duplicate on its own. Only the real
+	// wire decoder does (gateway-call.schema.json's data_classes
+	// uniqueItems: true, enforced by ztax_gateway.wire.decode_call), so this
+	// is the one refusal in this test that is proven only by actually
+	// crossing the boundary, not by either side's policy function in
+	// isolation. See contracts/privacy/data-class-parity-cases.json's
+	// request_duplicates note.
+	dup := testCall()
+	dup.Governance.DataClasses = []privacy.Class{"P0", "P0"}
+	if _, err := g.Invoke(ctx(t), dup); errs.ReasonOf(err) != ai.ReasonMalformedContext {
+		t.Fatalf("duplicate data classes: %v; want AI_MALFORMED_CONTEXT from the wire decoder", err)
 	}
 }
 

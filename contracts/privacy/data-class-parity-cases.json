@@ -1,0 +1,131 @@
+{
+  "$comment": "Go<->Python data-class-check parity cases (Phase 1 report, this branch). Each case feeds the SAME permitted_data_classes / request_data_classes pair into Go's Evaluate (backend/internal/domain/ai/governance.go) and Python's authorise() (intelligence/src/ztax_gateway/governance.py), read by backend/internal/domain/ai/governance_parity_test.go and intelligence/tests/test_data_class_parity.py respectively -- the same 'one JSON file, two native readers' pattern as intelligence/config/registry.dev.json (read by backend/internal/adapter/gateway/load_test.go and intelligence/tests/test_data_class_enforcement.py) and contracts/schemas/ai/*.schema.json (read by schema_vocabulary_test.go and test_ai_schemas.py). null in permitted_data_classes or request_data_classes means the field is absent/None, matching each language's own missing-field semantics -- it is not a third value meaning something else. expect_go_reason/expect_python_reason are AI_* reason-code strings, or null for 'allowed, no refusal'. known_divergence=true means the two reasons are expected to differ and that difference is accepted, not a bug to fix; every such case carries a non-empty note explaining why.",
+  "cases": [
+    {
+      "name": "request_empty_list",
+      "permitted_data_classes": ["P0", "P1"],
+      "request_data_classes": [],
+      "expect_go_reason": "AI_MALFORMED_CONTEXT",
+      "expect_python_reason": "AI_DATA_CLASS_REFUSED",
+      "known_divergence": true,
+      "note": "Go: GovernanceContext.validate() requires len(DataClasses) > 0 and refuses an empty slice as malformed input (governance.go:307-309), before Evaluate's substantive checks run at all. Python has no such check in Provenance.validate(); authorise()'s loop reads 'provenance.data_classes or (provenance.data_class,)' (governance.py:293), so an empty data_classes tuple silently falls back to the scalar data_class field instead of being treated as 'no classes given'. This fixture sets Python's data_class to '' for this case, which is not in NEVER_TO_A_MODEL and not in the permitted set, so Python still refuses -- via the ordinary allowlist-miss path, not a 'no classes declared' path. Go: MALFORMED_CONTEXT is a validation refusal (ADR-0016 CategoryValidation); Python raises DATA_CLASS_REFUSED. Tracked, not fixed -- decision pending."
+    },
+    {
+      "name": "request_null_missing",
+      "permitted_data_classes": ["P0", "P1"],
+      "request_data_classes": null,
+      "expect_go_reason": "AI_MALFORMED_CONTEXT",
+      "expect_python_reason": "AI_DATA_CLASS_REFUSED",
+      "known_divergence": true,
+      "note": "Same mechanics as request_empty_list: Go's nil slice and empty slice behave identically (len() is 0 either way), so this case and request_empty_list produce the same Go outcome by construction, not by coincidence. Python's data_classes field has no None/absent state distinct from the empty tuple default, so this case is built identically to request_empty_list on the Python side too (data_classes=(), data_class=''). Both list-shapes (null and []) are included per the task's 'must include BOTH list sides' instruction even though they converge. Go: MALFORMED_CONTEXT is a validation refusal (ADR-0016 CategoryValidation); Python raises DATA_CLASS_REFUSED. Tracked, not fixed -- decision pending."
+    },
+    {
+      "name": "request_unknown_label",
+      "permitted_data_classes": ["P0", "P1"],
+      "request_data_classes": ["P9"],
+      "expect_go_reason": "AI_MALFORMED_CONTEXT",
+      "expect_python_reason": "AI_DATA_CLASS_REFUSED",
+      "known_divergence": true,
+      "note": "Go: GovernanceContext.validate() checks every DataClasses element against privacy.Class.Valid() (governance.go:310-313, exact membership in P0-P7); 'P9' fails it, so the call never reaches Evaluate's data-class loop. Python has no label-format/vocabulary check anywhere in authorise()'s call-time path (that check exists only at registry-load time in server.py's load_config, which validates the REGISTRY's permitted_data_classes, never the REQUEST's data_classes); 'P9' is just compared by exact string membership against the allowlist and refused as an ordinary miss. Go: MALFORMED_CONTEXT is a validation refusal (ADR-0016 CategoryValidation); Python raises DATA_CLASS_REFUSED. Tracked, not fixed -- decision pending."
+    },
+    {
+      "name": "request_lowercase_label",
+      "permitted_data_classes": ["P0", "P1"],
+      "request_data_classes": ["p0"],
+      "expect_go_reason": "AI_MALFORMED_CONTEXT",
+      "expect_python_reason": "AI_DATA_CLASS_REFUSED",
+      "known_divergence": true,
+      "note": "Same mechanism as request_unknown_label: Go's Valid() is case-sensitive membership in {P0..P7}, so 'p0' fails validate() the same way 'P9' does. Python's comparison is also case-sensitive string equality against the allowlist, with no normalization anywhere, so 'p0' != 'P0' and it is refused as an ordinary allowlist miss, not as a distinct format error. Go: MALFORMED_CONTEXT is a validation refusal (ADR-0016 CategoryValidation); Python raises DATA_CLASS_REFUSED. Tracked, not fixed -- decision pending."
+    },
+    {
+      "name": "request_whitespace_label",
+      "permitted_data_classes": ["P0", "P1"],
+      "request_data_classes": [" P0"],
+      "expect_go_reason": "AI_MALFORMED_CONTEXT",
+      "expect_python_reason": "AI_DATA_CLASS_REFUSED",
+      "known_divergence": true,
+      "note": "Same mechanism again: ' P0' (leading space) is not an exact element of Go's Classes set, so validate() refuses it as malformed. Python's exact string comparison also treats ' P0' != 'P0', with no trimming anywhere in the call-time path, so it is refused as an ordinary allowlist miss. Go: MALFORMED_CONTEXT is a validation refusal (ADR-0016 CategoryValidation); Python raises DATA_CLASS_REFUSED. Tracked, not fixed -- decision pending."
+    },
+    {
+      "name": "request_mixed_valid_and_unknown",
+      "permitted_data_classes": ["P0", "P1"],
+      "request_data_classes": ["P0", "P9"],
+      "expect_go_reason": "AI_MALFORMED_CONTEXT",
+      "expect_python_reason": "AI_DATA_CLASS_REFUSED",
+      "known_divergence": true,
+      "note": "Go: validate()'s validity loop runs over every element regardless of order and regardless of whether an earlier element was fine; it finds 'P9' invalid and refuses the whole context before Evaluate's data-class loop starts, so 'P0' being valid and permitted does not matter. Python's single loop processes in order: 'P0' passes (permitted), then 'P9' fails the allowlist check and is refused there. Go: MALFORMED_CONTEXT is a validation refusal (ADR-0016 CategoryValidation); Python raises DATA_CLASS_REFUSED. Tracked, not fixed -- decision pending."
+    },
+    {
+      "name": "request_p7_alone",
+      "permitted_data_classes": ["P0", "P1"],
+      "request_data_classes": ["P7"],
+      "expect_go_reason": "AI_DATA_CLASS_REFUSED",
+      "expect_python_reason": "AI_DATA_CLASS_REFUSED",
+      "known_divergence": false,
+      "note": "Both sides refuse P7 unconditionally via their own never-to-a-model set (Go: neverToAModel, governance.go:68-72,416-420; Python: NEVER_TO_A_MODEL, governance.py:294-299), independent of the allowlist. Same reason code on both sides."
+    },
+    {
+      "name": "request_p7_with_allowed_class",
+      "permitted_data_classes": ["P0", "P1"],
+      "request_data_classes": ["P0", "P7"],
+      "expect_go_reason": "AI_DATA_CLASS_REFUSED",
+      "expect_python_reason": "AI_DATA_CLASS_REFUSED",
+      "known_divergence": false,
+      "note": "P0 alone would be permitted on both sides, but both loops check every class in the request, not only the first/highest, so P7's presence refuses the whole call on both sides with the same reason code."
+    },
+    {
+      "name": "request_valid_not_permitted",
+      "permitted_data_classes": ["P0", "P1"],
+      "request_data_classes": ["P5"],
+      "expect_go_reason": "AI_DATA_CLASS_REFUSED",
+      "expect_python_reason": "AI_DATA_CLASS_REFUSED",
+      "known_divergence": false,
+      "note": "P5 is a real, valid label on both sides but is not in this use case's allowlist. Ordinary allowlist-miss refusal, same code on both sides."
+    },
+    {
+      "name": "request_valid_permitted",
+      "permitted_data_classes": ["P0", "P1"],
+      "request_data_classes": ["P1"],
+      "expect_go_reason": null,
+      "expect_python_reason": null,
+      "known_divergence": false,
+      "note": "P1 is permitted; both sides allow the call (null = no refusal)."
+    },
+    {
+      "name": "request_duplicates",
+      "permitted_data_classes": ["P0", "P1"],
+      "request_data_classes": ["P0", "P0"],
+      "expect_go_reason": null,
+      "expect_python_reason": null,
+      "known_divergence": false,
+      "note": "True for the bare policy functions (ai.Evaluate / authorise called directly): each loop just checks the same permitted class twice and allows the call. Not reachable on a real call: Go's local pre-check (ai.Evaluate within Client.invoke) has no duplicate check and lets it through to the wire, but Python's wire decode rejects it (wire.py's uniqueItems check, mirroring gateway-call.schema.json's data_classes uniqueItems: true), so a real caller sending this is refused, not allowed."
+    },
+    {
+      "name": "permitted_empty_list",
+      "permitted_data_classes": [],
+      "request_data_classes": ["P0"],
+      "expect_go_reason": "AI_DATA_CLASS_REFUSED",
+      "expect_python_reason": "AI_DATA_CLASS_REFUSED",
+      "known_divergence": false,
+      "note": "An explicitly empty allowlist is valid to register on both sides (Go's UseCasePolicy.validate loop over PermittedDataClasses is a no-op on an empty slice, governance.go:237-244; Python's register() loop is the same, governance.py:148) and denies every class at evaluation time. Same reason code on both sides, though Python's detail message differs from the null/missing case below ('is not permitted for' vs 'no data-class policy declared for') -- this fixture tracks only the reason code, not the message."
+    },
+    {
+      "name": "permitted_null_missing",
+      "permitted_data_classes": null,
+      "request_data_classes": ["P0"],
+      "expect_go_reason": "AI_DATA_CLASS_REFUSED",
+      "expect_python_reason": "AI_DATA_CLASS_REFUSED",
+      "known_divergence": false,
+      "note": "Go has no nil-vs-empty distinction for a slice (len(nil) == len([]T{}) == 0), so a use case with no PermittedDataClasses field set behaves exactly like permitted_empty_list. Python's permitted_data_classes is explicitly Optional and None IS a distinct state from frozenset() (UseCase.permitted_data_classes, governance.py:91-97) -- authorise() raises a different detail message for None ('no data-class policy declared for ...', governance.py:300-305) than for an explicit empty set, but the reason CODE is the same DATA_CLASS_REFUSED either way since commit 465c029 made the None case fail-closed. Same reason code on both sides; the message differs and this fixture does not track messages."
+    },
+    {
+      "name": "order_p7_and_unknown_together",
+      "permitted_data_classes": ["P0", "P1"],
+      "request_data_classes": ["P7", "P9"],
+      "expect_go_reason": "AI_MALFORMED_CONTEXT",
+      "expect_python_reason": "AI_DATA_CLASS_REFUSED",
+      "known_divergence": true,
+      "note": "Order does not matter on the Go side: validate()'s validity check is a wholly separate, earlier phase from Evaluate's never-to-a-model/allowlist checks, so 'P9' is found invalid and the whole context is refused as malformed regardless of where 'P7' sits in the list. Order DOES matter for which specific Python message fires (not for the code): with ['P7','P9'] in this order, Python's single loop hits 'P7' first and raises DATA_CLASS_REFUSED for 'may never reach a model' without ever examining 'P9'; the reverse order ['P9','P7'] would instead raise DATA_CLASS_REFUSED for 'P9 is not permitted' on the first iteration. Either way Python's reason CODE is DATA_CLASS_REFUSED, never MALFORMED_CONTEXT, because Python has no separate validation phase for data-class format at all. Go: MALFORMED_CONTEXT is a validation refusal (ADR-0016 CategoryValidation); Python raises DATA_CLASS_REFUSED. Tracked, not fixed -- decision pending."
+    }
+  ]
+}

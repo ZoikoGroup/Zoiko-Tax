@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "GovernanceRefusal",
   "description": "The closed vocabulary of AI governance refusal reason codes (ADR-0006 §2.5, ADR-0016 §2.4). These strings appear in logs, metrics, evidence and responses on both sides of the boundary and mean the same thing in all of them.",
-  "$comment": "Go: ai.RefusalCodes (tested equal). Python: ztax_gateway.governance.Refusal (tested to be a subset; AI_DATA_CLASS_REFUSED is enforced by the Go pre-check and is not yet raised by the Python Gateway, whose UseCase has no data-class allowlist).",
+  "$comment": "Go: ai.RefusalCodes (tested equal). Python: ztax_gateway.governance.Refusal (tested equal too). Both sides raise AI_DATA_CLASS_REFUSED for an ordinary policy refusal (a class outside the allowlist, or P7). When the two policy functions are called directly, bypassing wire decode, the reason code for a malformed label (empty, unknown, wrong case) can differ between them -- see contracts/privacy/data-class-parity-cases.json.",
   "enum": [
     "AI_MALFORMED_CONTEXT",
     "AI_KILL_SWITCH_ENGAGED",
