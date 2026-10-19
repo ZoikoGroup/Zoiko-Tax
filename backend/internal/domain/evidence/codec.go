@@ -9,6 +9,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/fiscal"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/taxation"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 )
 
@@ -66,6 +67,14 @@ func DecodeEnvelope(data []byte) (Envelope, error) {
 	if err != nil {
 		return Envelope{}, fmt.Errorf("evidence: envelope accumulators: %w", err)
 	}
+	var document *taxation.Document
+	if len(w.Document) > 0 {
+		d, err := taxation.DecodeDocument(w.Document)
+		if err != nil {
+			return Envelope{}, fmt.Errorf("evidence: envelope document: %w", err)
+		}
+		document = &d
+	}
 
 	e := Envelope{
 		DecisionTime: decisionTime,
@@ -80,6 +89,7 @@ func DecodeEnvelope(data []byte) (Envelope, error) {
 		},
 		Input:        input,
 		Accumulators: accumulators,
+		Document:     document,
 	}
 
 	again, err := EncodeEnvelope(e)
@@ -122,6 +132,13 @@ func DecodeResult(data []byte) (Result, error) {
 		}
 		r.Emitted[slot] = decoded
 	}
+	if len(w.Document) > 0 {
+		d, err := taxation.DecodeResult(w.Document)
+		if err != nil {
+			return Result{}, fmt.Errorf("evidence: result document: %w", err)
+		}
+		r.Document = &d
+	}
 	for _, s := range w.Trace {
 		args := make([]rule.NodeID, 0, len(s.Args))
 		for _, a := range s.Args {
@@ -157,6 +174,7 @@ type resultWire struct {
 	Reason         string               `json:"reason"`
 	Emitted        map[string]valueWire `json:"emitted"`
 	Trace          []traceWire          `json:"trace"`
+	Document       json.RawMessage      `json:"document"`
 }
 
 // valueWire is every member a typed value can carry. Which ones are present is
@@ -232,6 +250,7 @@ type envelopeWire struct {
 	CanonProfile string               `json:"canonProfile"`
 	Trains       trainsWire           `json:"trains"`
 	Input        inputWire            `json:"input"`
+	Document     json.RawMessage      `json:"document"`
 	Accumulators map[string]moneyWire `json:"accumulators"`
 }
 

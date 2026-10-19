@@ -15,6 +15,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/idempotency"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/taxation"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/clock"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/idgen"
@@ -85,9 +86,14 @@ type DetermineInput struct {
 	// Supersedes names the decision this one corrects, if any. It must be the
 	// current version of the same business key (ZTAX-DET-REQ-0032).
 	Supersedes *id.DecisionID
-	// EventTime is when the taxable thing happened.
+	// EventTime is when the taxable thing happened. For a document it is the
+	// tax point every effective date and legal period is resolved at.
 	EventTime time.Time
 	Input     evidence.Input
+	// Document is a telecom document for location-aware determination
+	// against the bundle's taxation profile. Exactly one of Input and
+	// Document is set.
+	Document *taxation.Document
 	// Accumulators is the read set: a value for exactly the accumulators the
 	// active bundle reads, no more and no fewer.
 	//
@@ -140,7 +146,7 @@ func (s *DeterminationService) determineWith(ctx context.Context, sc security.Co
 	if strings.TrimSpace(in.BusinessKey) == "" {
 		return evidence.Decision{}, errs.Invalid("businessKey", errs.ReasonMissingField, "A business key is required.")
 	}
-	b, env, envBytes, err := s.envelopeFor(bundle, in.EventTime, in.Input, in.Accumulators)
+	b, env, envBytes, err := s.envelopeFor(bundle, in.EventTime, request{in.Input, in.Document}, in.Accumulators)
 	if err != nil {
 		return evidence.Decision{}, err
 	}
@@ -209,9 +215,16 @@ func (s *DeterminationService) active() (*rule.Bundle, error) {
 	return b, nil
 }
 
+// request is what a determination is asked: named inputs for the rule
+// graph, or a document for the taxation profile. Exactly one is set.
+type request struct {
+	input    evidence.Input
+	document *taxation.Document
+}
+
 // envelope builds the envelope a determination at eventTime would record,
 // against the active bundle, and encodes it.
-func (s *DeterminationService) envelope(eventTime time.Time, input evidence.Input, accumulators map[string]fiscal.Money) (*rule.Bundle, evidence.Envelope, []byte, error) {
+func (s *DeterminationService) envelope(eventTime time.Time, req request, accumulators map[string]fiscal.Money) (*rule.Bundle, evidence.Envelope, []byte, error) {
 	b, err := s.active()
 	if err != nil {
 		if eventTime.IsZero() {
@@ -219,17 +232,21 @@ func (s *DeterminationService) envelope(eventTime time.Time, input evidence.Inpu
 		}
 		return nil, evidence.Envelope{}, nil, err
 	}
-	return s.envelopeFor(b, eventTime, input, accumulators)
+	return s.envelopeFor(b, eventTime, req, accumulators)
 }
 
 // envelopeFor builds and encodes the envelope against a given bundle.
-func (s *DeterminationService) envelopeFor(b *rule.Bundle, eventTime time.Time, input evidence.Input, accumulators map[string]fiscal.Money) (*rule.Bundle, evidence.Envelope, []byte, error) {
+func (s *DeterminationService) envelopeFor(b *rule.Bundle, eventTime time.Time, req request, accumulators map[string]fiscal.Money) (*rule.Bundle, evidence.Envelope, []byte, error) {
 	if eventTime.IsZero() {
 		return nil, evidence.Envelope{}, nil, errs.Invalid("eventTime", errs.ReasonMissingField, "An event time is required.")
+	}
+	if err := shapeFor(b, req); err != nil {
+		return nil, evidence.Envelope{}, nil, err
 	}
 	if err := matchReadSet(b.AccumulatorKeys(), accumulators); err != nil {
 		return nil, evidence.Envelope{}, nil, err
 	}
+	input := req.input
 
 	// Both instants at canon/v1's precision before anything uses them, so the
 	// evaluation sees exactly the instants the envelope will record and a
@@ -244,6 +261,17 @@ func (s *DeterminationService) envelopeFor(b *rule.Bundle, eventTime time.Time, 
 		Trains:       s.trains,
 		Input:        input,
 		Accumulators: accumulators,
+		Document:     req.document,
+	}
+	if req.document != nil {
+		if err := req.document.Validate(); err != nil {
+			// The document's own message names the field; Validate on the
+			// envelope below would bury it under "cannot be recorded".
+			if fe, ok := err.(*taxation.FieldError); ok {
+				return nil, evidence.Envelope{}, nil, errs.Invalid(fe.Field, errs.ReasonInvalidValue, "The document's "+fe.Field+" "+fe.Detail+".")
+			}
+			return nil, evidence.Envelope{}, nil, errs.Invalid("document", errs.ReasonInvalidValue, err.Error())
+		}
 	}
 	if err := env.Validate(); err != nil {
 		return nil, evidence.Envelope{}, nil, errs.Wrap(err, errs.CategoryValidation, errs.ReasonInvalidValue,
@@ -256,6 +284,25 @@ func (s *DeterminationService) envelopeFor(b *rule.Bundle, eventTime time.Time, 
 	return b, env, envBytes, nil
 }
 
+// shapeFor refuses a request the bundle cannot determine: a document
+// against content with no taxation profile, or named inputs against content
+// with no rule graph. Either would evaluate against nothing and record a
+// result that looked like a decision.
+func shapeFor(b *rule.Bundle, req request) error {
+	switch {
+	case req.document != nil && len(req.input.Money)+len(req.input.Rates)+len(req.input.Quantities)+len(req.input.Flags)+len(req.input.Strings) > 0:
+		return errs.Invalid("input", errs.ReasonInvalidValue,
+			"A determination carries named inputs or a document, not both.")
+	case req.document != nil && b.Taxation() == nil:
+		return errs.Invalid("document", errs.ReasonInvalidValue,
+			"The active content bundle "+b.ID()+" has no taxation profile and cannot determine a document. Send named inputs, or activate a pack with location-aware content.")
+	case req.document == nil && !b.HasRules():
+		return errs.Invalid("input", errs.ReasonInvalidValue,
+			"The active content bundle "+b.ID()+" determines documents by location and has no rule graph for named inputs. Send a document.")
+	}
+	return nil
+}
+
 // ---------------------------------------------------------------------------
 // quote — ADR-0004 §2.7
 // ---------------------------------------------------------------------------
@@ -264,6 +311,7 @@ func (s *DeterminationService) envelopeFor(b *rule.Bundle, eventTime time.Time, 
 type QuoteInput struct {
 	EventTime    time.Time
 	Input        evidence.Input
+	Document     *taxation.Document
 	Accumulators map[string]fiscal.Money
 }
 
@@ -297,7 +345,7 @@ func (s *DeterminationService) Quote(ctx context.Context, in QuoteInput) (Quote,
 			return Quote{}, err
 		}
 	}
-	b, env, envBytes, err := s.envelope(in.EventTime, in.Input, reads)
+	b, env, envBytes, err := s.envelope(in.EventTime, request{in.Input, in.Document}, reads)
 	if err != nil {
 		return Quote{}, err
 	}
@@ -481,11 +529,19 @@ func commitCanonical(in DetermineInput) canonical.Value {
 	if in.Supersedes != nil {
 		supersedes = canonical.String(in.Supersedes.String())
 	}
+	// A document request records the document and no input member; a
+	// named-input request records exactly what it always did, so every
+	// idempotency digest taken before documents existed still matches.
+	input, document := in.Input.Canonical(), canonical.Absent()
+	if in.Document != nil {
+		input, document = canonical.Absent(), in.Document.Canonical()
+	}
 	return canonical.Object(
 		canonical.F("businessKey", canonical.String(in.BusinessKey)),
 		canonical.F("supersedes", supersedes),
 		canonical.F("eventTime", canonical.Time(in.EventTime.UTC().Truncate(time.Microsecond))),
-		canonical.F("input", in.Input.Canonical()),
+		canonical.F("input", input),
+		canonical.F("document", document),
 		canonical.F("accumulators", evidence.ReadSetCanonical(in.Accumulators)),
 	)
 }
@@ -608,6 +664,9 @@ func (s *DeterminationService) Replay(ctx context.Context, decisionID id.Decisio
 // a replay exercises exactly the code production ran (ADR-0003 §3.3) rather
 // than a parallel implementation that could agree with itself.
 func evaluate(b *rule.Bundle, env evidence.Envelope, envDigest canonical.Digest) (evidence.Result, []byte, error) {
+	if env.Document != nil {
+		return evaluateDocument(b, env, envDigest)
+	}
 	res, err := rule.Evaluate(b, env.Frame())
 	if err != nil {
 		if errs.CategoryOf(err) != errs.CategoryInternal {
@@ -626,6 +685,38 @@ func evaluate(b *rule.Bundle, env evidence.Envelope, envDigest canonical.Digest)
 		Reason:         reason,
 		Emitted:        res.Emitted,
 		Trace:          res.Trace,
+	}
+	encoded, err := result.Encode()
+	if err != nil {
+		return evidence.Result{}, nil, internal(err, "The determination result could not be encoded.")
+	}
+	return result, encoded, nil
+}
+
+// evaluateDocument is the location-aware path: the bundle's taxation engine
+// determines the envelope's document at its event time. It is part of the
+// one evaluation path, so a replay of a document decision runs exactly this.
+func evaluateDocument(b *rule.Bundle, env evidence.Envelope, envDigest canonical.Digest) (evidence.Result, []byte, error) {
+	engine := b.Taxation()
+	if engine == nil {
+		return evidence.Result{}, nil, errs.Invalid("document", errs.ReasonInvalidValue,
+			"The content bundle "+b.ID()+" has no taxation profile and cannot determine a document.")
+	}
+	res, err := engine.Determine(*env.Document, env.EventTime)
+	if err != nil {
+		return evidence.Result{}, nil, err
+	}
+	outcome, reason := evidence.ConcludeDocument(res)
+	emitted := make(map[string]rule.Value, len(res.Emitted))
+	for slot, m := range res.Emitted {
+		emitted[slot] = rule.Value{Type: rule.TypeMoney, Money: m}
+	}
+	result := evidence.Result{
+		EnvelopeDigest: envDigest,
+		Outcome:        outcome,
+		Reason:         reason,
+		Emitted:        emitted,
+		Document:       &res,
 	}
 	encoded, err := result.Encode()
 	if err != nil {

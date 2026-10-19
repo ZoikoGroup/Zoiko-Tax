@@ -193,6 +193,9 @@ func (rt *Router) routes() []struct {
 		// Discovery. Unauthenticated because a client needs to know whether a
 		// cell can serve it before it has a session.
 		{Route{"GET", "/v1/capabilities", true, nil}, rt.handleCapabilities},
+		// What the active content determines by location. Any authenticated
+		// role: coverage is a fact about the cell, not about a tenant's data.
+		{Route{"GET", "/v1/coverage", false, nil}, rt.handleCoverage},
 
 		// Authentication. Sign-in is necessarily unauthenticated; the rest
 		// require a session but no particular role.

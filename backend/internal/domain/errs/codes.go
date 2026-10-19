@@ -278,6 +278,70 @@ var (
 		"lane-g",
 		"No active rule covers this transaction shape. Recorded as a decision; not authoritative.")
 
+	// ---- location-aware determination (ZTAX-DET-001 §2, JUR-001 §9) ------
+	//
+	// Why a line of a document ended in a state other than RESOLVED. Each is
+	// recorded against the line with its evidence; none is an error, and
+	// none may ever be presented as a zero tax.
+
+	// ReasonSitusEvidenceInsufficient is a place of supply the evidence does
+	// not establish (JUR-001 §9.2). The decision names the evidence that
+	// would have.
+	ReasonSitusEvidenceInsufficient = Register("SITUS_EVIDENCE_INSUFFICIENT", CategoryUnsupported,
+		"lane-g",
+		"The supplied evidence does not establish where the supply took place. The decision lists the evidence types that would; no tax is determined until it is supplied.")
+
+	// ReasonSitusDatasetDefect is overlapping boundaries in a pinned dataset
+	// (JUR-001 §9.4): our data is wrong, not the input thin.
+	ReasonSitusDatasetDefect = Register("SITUS_DATASET_DEFECT", CategoryUnsupported,
+		"lane-g",
+		"The jurisdiction dataset places this location in two jurisdictions at one level. An incident is raised; the decision is not authoritative.")
+
+	// ReasonJurisdictionLevelRequired is a place of supply resolved only to
+	// the country in a country whose subdivisions levy their own tax. A
+	// country-level answer there would silently omit the subdivision's tax.
+	ReasonJurisdictionLevelRequired = Register("JURISDICTION_LEVEL_REQUIRED", CategoryUnsupported,
+		"lane-g",
+		"The place of supply resolved only to the country, and this country's content needs the province or state. Supply the subdivision.")
+
+	// ReasonServiceNotCovered is a service family the regime declares no
+	// content for.
+	ReasonServiceNotCovered = Register("SERVICE_NOT_COVERED", CategoryUnsupported,
+		"lane-g",
+		"The active content covers the place of supply but not this service in it. Recorded as a decision; no tax is assumed.")
+
+	// ReasonNoApplicableContent is a covered service for which no component
+	// matched the customer role and supply. A legally zero charge is declared
+	// as one in content; the absence of any is never read as zero.
+	ReasonNoApplicableContent = Register("NO_APPLICABLE_CONTENT", CategoryUnsupported,
+		"lane-g",
+		"No tax component in the active content applies to this line's service, customer role and supply. The line is not treated as untaxed.")
+
+	// ReasonClassificationRequired is a line that arrived without an
+	// ontology family: an unmapped SKU (ZTAX-CLS-REQ-0080).
+	ReasonClassificationRequired = Register("CLASSIFICATION_REQUIRED", CategoryUnsupported,
+		"lane-g",
+		"The line carries no service classification. Map the SKU to an ontology family before tax can be determined.")
+
+	// ReasonQuantityRequired is a per-unit charge on a line that carries no
+	// quantity in the unit the charge is levied per.
+	ReasonQuantityRequired = Register("QUANTITY_REQUIRED", CategoryUnsupported,
+		"lane-g",
+		"A per-unit charge applies and the line carries no quantity in its unit. Units are never inferred from price.")
+
+	// ReasonExemptionUnverified is a certificate that would exempt a charge
+	// and whose verification could not be completed. A verification is
+	// never assumed to have succeeded.
+	ReasonExemptionUnverified = Register("EXEMPTION_VERIFICATION_UNAVAILABLE", CategoryUnsupported,
+		"lane-g",
+		"An exemption certificate applies and its verification was unavailable. Held for review; the charge is neither applied nor suppressed.")
+
+	// ReasonInclusivePricingUnsupported is an inclusive-price document whose
+	// content declares no extraction, or whose regimes extract differently.
+	ReasonInclusivePricingUnsupported = Register("INCLUSIVE_PRICING_UNSUPPORTED", CategoryUnsupported,
+		"lane-g",
+		"The content does not declare how tax is extracted from an inclusive price for this document. Send net amounts, or extend the content.")
+
 	// ---- fiscal document correction reasons (ZTAX-FIN-REQ-0008) ----------
 	//
 	// Why a document was voided, credited or rebilled. Like the determination

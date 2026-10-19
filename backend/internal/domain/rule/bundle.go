@@ -8,6 +8,7 @@ import (
 
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/content"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/fiscal"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/taxation"
 )
 
 // Bundle is a compiled, verified, immutable content bundle.
@@ -35,7 +36,20 @@ type Bundle struct {
 	stringConsts   map[string]string
 
 	fiscal *content.FiscalProfile
+
+	// taxation is the compiled location-aware content, or nil for a bundle
+	// whose determinations are the rule graph's alone.
+	taxation *taxation.Engine
 }
+
+// Taxation returns the bundle's location-aware engine, or nil for a bundle
+// without a taxation profile. The engine is immutable, like the bundle.
+func (b *Bundle) Taxation() *taxation.Engine { return b.taxation }
+
+// HasRules reports whether the bundle carries a rule graph to evaluate
+// named inputs against. A taxation-only bundle does not, and a request
+// shaped for one is refused rather than evaluated against nothing.
+func (b *Bundle) HasRules() bool { return len(b.nodes) > 0 }
 
 // Fiscal returns the bundle's fiscal profile, or nil for a bundle with none.
 // The value is a copy; a bundle is immutable once loaded.
@@ -108,6 +122,11 @@ type Manifest struct {
 	// Subledger. Optional, and absent from the canonical bytes when nil, for
 	// the reason Pack is.
 	Fiscal *content.FiscalProfile `json:"fiscal,omitempty"`
+	// Taxation is the location-aware content: the jurisdiction graph, situs
+	// rules, regimes and effective-dated components a document is determined
+	// against (internal/domain/taxation). Optional, and absent from the
+	// canonical bytes when nil, for the reason Pack is.
+	Taxation *taxation.Profile `json:"taxation,omitempty"`
 }
 
 // Constant is one entry in the pool.
@@ -143,8 +162,8 @@ func Load(m Manifest) (*Bundle, error) {
 		return nil, fmt.Errorf("rule: bundle requires IR version %d, this runtime supports %d to %d",
 			m.IRVersion, MinSupportedIRVersion, IRVersion)
 	}
-	if len(m.Nodes) == 0 {
-		return nil, fmt.Errorf("rule: bundle %s has no nodes", m.BundleID)
+	if len(m.Nodes) == 0 && m.Taxation == nil {
+		return nil, fmt.Errorf("rule: bundle %s has no nodes and no taxation profile", m.BundleID)
 	}
 
 	b := &Bundle{
@@ -198,6 +217,14 @@ func Load(m Manifest) (*Bundle, error) {
 		return nil, err
 	}
 	b.order = order
+	if m.Taxation != nil {
+		// Compiled here, with the graph, so a bundle whose taxation content
+		// is incoherent is refused whole and the cell keeps the bundle it had
+		// (ADR-0005 §2.6).
+		if b.taxation, err = taxation.Compile(*m.Taxation); err != nil {
+			return nil, fmt.Errorf("rule: bundle %s: %w", m.BundleID, err)
+		}
+	}
 	if m.Fiscal != nil {
 		if err := b.checkFiscal(*m.Fiscal); err != nil {
 			return nil, err
@@ -229,6 +256,13 @@ func (b *Bundle) checkFiscal(f content.FiscalProfile) error {
 			if n.Type == TypeMoney {
 				emits[n.Emit] = true
 			}
+		}
+	}
+	if b.taxation != nil {
+		// A taxation decision emits each component's slot and the three
+		// aggregates, all money in the document currency.
+		for _, s := range b.taxation.Slots() {
+			emits[s] = true
 		}
 	}
 	for _, a := range f.Accumulators {

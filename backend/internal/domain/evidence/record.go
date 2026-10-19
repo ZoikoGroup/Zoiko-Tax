@@ -69,7 +69,7 @@ func NewRecord(d Decision) (Record, error) {
 	if err != nil {
 		return Record{}, err
 	}
-	input, err := canonical.Encode(d.Envelope.Input.Canonical())
+	input, err := canonical.Encode(d.Envelope.RequestCanonical())
 	if err != nil {
 		return Record{}, err
 	}
