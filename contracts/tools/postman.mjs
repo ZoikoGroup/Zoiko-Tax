@@ -857,6 +857,9 @@ const ACCEPTED_OUTCOMES = {
   getSeal: ["404", "503"],
   verifySeal: ["404", "503"],
   getDecisionInclusion: ["404", "503"],
+  // The worked pack CI mounts has no taxation profile, so coverage is
+  // refused with 503 NO_CONTENT_BUNDLE.
+  getCoverage: ["503"],
   // {{period}} is closed by the first run; later runs find it closed.
   transitionSubledgerPeriod: ["409"],
   requestPeriodReopen: ["409"],

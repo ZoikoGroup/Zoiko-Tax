@@ -4396,7 +4396,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('getCoverage returns a status the contract declares', function () {",
-                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 503]);",
                   "});",
                   "// A pack with location-aware content answers 200; the worked rule pack has",
                   "// no taxation profile and answers 503, which is the correct refusal.",
