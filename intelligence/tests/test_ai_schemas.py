@@ -38,7 +38,13 @@ from ztax_gateway.production_registries import (
     AgentProfile,
     DatasetProfile,
     EvaluationProfile,
+    Modality,
+    ModelHosting,
+    ModelProfile,
+    ModelProfileError,
     PromptProfile,
+    ProviderProfile,
+    ProviderProfileError,
     build_manifest,
 )
 from ztax_gateway.provenance import AuthorityOutcome, RiskTier
@@ -313,6 +319,45 @@ _EVALUATION = EvaluationProfile(
     max_calibration_error=0.05,
 )
 
+_PROVIDER = ProviderProfile(
+    provider_profile_id="provider:eu-hosted",
+    owner="lane-l",
+    version="1.0.0",
+    legal_entity="Example Hosting B.V.",
+    dpa_ref="dpa:2026-001",
+    security_assurance=("ISO27001",),
+    permitted_regions=frozenset({"eu-west-1"}),
+    subprocessors=(),
+    retention_days=0,
+    zero_data_retention=True,
+    trains_on_customer_data=False,
+    deprecation_notice_days=90,
+    outage_terms_ref="sla:2026-001",
+    audit_assurance_ref="soc2:2026",
+    api_hosts=("inference.eu.example.net",),
+    suspended=False,
+)
+
+_MODEL = ModelProfile(
+    model_profile_id="model:classifier",
+    owner="lane-l",
+    version="1.0.0",
+    provider_profile_id="provider:eu-hosted",
+    model_id="classifier",
+    model_version="2026-09-01",
+    hosting=ModelHosting.PRIVATE_CLOUD,
+    context_window_tokens=128_000,
+    max_output_tokens=4096,
+    modalities=(Modality.TEXT,),
+    tool_capable=False,
+    permitted_regions=frozenset({"eu-west-1"}),
+    permitted_data_classes=frozenset({"P0", "P1"}),
+    terms_ref="contract:2026-001",
+    known_limitations=("no tabular reasoning",),
+    deprecation_date=None,
+    suspended=False,
+)
+
 _MANIFEST = build_manifest(
     ai_use_case_id="classification-review",
     release_version="1.0.0",
@@ -343,6 +388,8 @@ _MANIFEST = build_manifest(
         ("tool-profile", _TOOL),
         ("dataset-profile", _DATASET),
         ("evaluation-profile", _EVALUATION),
+        ("model-profile", _MODEL),
+        ("provider-profile", _PROVIDER),
         ("ai-release-manifest", _MANIFEST),
     ],
 )
@@ -359,6 +406,8 @@ def test_registry_object_conforms(validator: _Validator, schema: str, obj: objec
         ("tool-profile", ToolProfile),
         ("dataset-profile", DatasetProfile),
         ("evaluation-profile", EvaluationProfile),
+        ("model-profile", ModelProfile),
+        ("provider-profile", ProviderProfile),
     ],
 )
 def test_schema_requires_exactly_the_python_fields(schema: str, cls: Any) -> None:
@@ -409,6 +458,27 @@ def test_manifest_as_dict_conforms(validator: _Validator) -> None:
         ("evaluation-profile", _EVALUATION, "min_accuracy", 1.5),
         ("agent-profile", _AGENT, "max_steps", 0),
         ("agent-profile", _AGENT, "undeclared", True),
+        # ModelProfile/ProviderProfile constraints added in Phase 2b to match
+        # the schema exactly (identifier maxLength, version pattern,
+        # stringList uniqueItems, api_hosts pattern/uniqueItems).
+        ("model-profile", _MODEL, "model_profile_id", "x" * 129),
+        ("model-profile", _MODEL, "provider_profile_id", "x" * 129),
+        ("model-profile", _MODEL, "version", "v1"),
+        ("model-profile", _MODEL, "known_limitations", ["a", "a"]),
+        ("model-profile", _MODEL, "known_limitations", [""]),
+        ("model-profile", _MODEL, "permitted_data_classes", ["P0", "SECRET"]),
+        ("provider-profile", _PROVIDER, "provider_profile_id", "x" * 129),
+        ("provider-profile", _PROVIDER, "version", "v1"),
+        ("provider-profile", _PROVIDER, "security_assurance", ["a", "a"]),
+        ("provider-profile", _PROVIDER, "security_assurance", [""]),
+        ("provider-profile", _PROVIDER, "subprocessors", ["a", "a"]),
+        (
+            "provider-profile",
+            _PROVIDER,
+            "api_hosts",
+            ["inference.eu.example.net", "inference.eu.example.net"],
+        ),
+        ("provider-profile", _PROVIDER, "api_hosts", ["not a hostname!"]),
     ],
 )
 def test_schema_refuses(
@@ -419,51 +489,122 @@ def test_schema_refuses(
     assert validator.validate(schema, doc) != []
 
 
+@pytest.mark.parametrize(
+    ("cls", "base", "field", "bad", "error_cls"),
+    [
+        # The Python-side half of the schema-refusal cases just above: the
+        # same bad value must make the dataclass itself raise, not just the
+        # JSON-schema validator.
+        (ModelProfile, _MODEL, "model_profile_id", "x" * 129, ModelProfileError),
+        (ModelProfile, _MODEL, "provider_profile_id", "x" * 129, ModelProfileError),
+        (ModelProfile, _MODEL, "version", "v1", ModelProfileError),
+        (ModelProfile, _MODEL, "known_limitations", ("a", "a"), ModelProfileError),
+        (ModelProfile, _MODEL, "known_limitations", ("a", ""), ModelProfileError),
+        (
+            ProviderProfile,
+            _PROVIDER,
+            "provider_profile_id",
+            "x" * 129,
+            ProviderProfileError,
+        ),
+        (ProviderProfile, _PROVIDER, "version", "v1", ProviderProfileError),
+        (
+            ProviderProfile,
+            _PROVIDER,
+            "security_assurance",
+            ("a", "a"),
+            ProviderProfileError,
+        ),
+        (ProviderProfile, _PROVIDER, "security_assurance", ("a", ""), ProviderProfileError),
+        (ProviderProfile, _PROVIDER, "subprocessors", ("a", "a"), ProviderProfileError),
+        (
+            ProviderProfile,
+            _PROVIDER,
+            "api_hosts",
+            ("inference.eu.example.net", "inference.eu.example.net"),
+            ProviderProfileError,
+        ),
+        (ProviderProfile, _PROVIDER, "api_hosts", ("not a hostname!",), ProviderProfileError),
+    ],
+)
+def test_tightened_constraint_refused_on_python_side(
+    cls: Any, base: Any, field: str, bad: object, error_cls: type[Exception]
+) -> None:
+    with pytest.raises(error_cls):
+        cls(**{**dataclasses.asdict(base), field: bad})
+
+
+def test_empty_regions_and_data_classes_accepted_on_both_sides(
+    validator: _Validator,
+) -> None:
+    # Constraint relaxed in Phase 2b: common.schema.json's regions/
+    # privacyClasses/stringList definitions have no minItems, so empty must
+    # be accepted on both sides.
+    mp = ModelProfile(
+        **{
+            **dataclasses.asdict(_MODEL),
+            "permitted_regions": frozenset(),
+            "permitted_data_classes": frozenset(),
+            "known_limitations": (),
+        }
+    )
+    doc = mp.as_dict()
+    assert doc["permitted_regions"] == []
+    assert doc["permitted_data_classes"] == []
+    assert doc["known_limitations"] == []
+    assert validator.validate("model-profile", doc) == []
+
+    pp = ProviderProfile(
+        **{
+            **dataclasses.asdict(_PROVIDER),
+            "permitted_regions": frozenset(),
+            "security_assurance": (),
+            "subprocessors": (),
+        }
+    )
+    pdoc = pp.as_dict()
+    assert pdoc["permitted_regions"] == []
+    assert pdoc["security_assurance"] == []
+    assert pdoc["subprocessors"] == []
+    assert validator.validate("provider-profile", pdoc) == []
+
+
 def test_model_and_provider_profiles_validate(validator: _Validator) -> None:
-    # No Python registry for these yet; this pins the schemas themselves to a
-    # representative object so a schema edit that makes them unsatisfiable fails.
-    model: dict[str, object] = {
-        "model_profile_id": "model:classifier",
-        "owner": "lane-l",
-        "version": "1.0.0",
-        "provider_profile_id": "provider:eu-hosted",
-        "model_id": "classifier",
-        "model_version": "2026-09-01",
-        "hosting": "PRIVATE_CLOUD",
-        "context_window_tokens": 128_000,
-        "max_output_tokens": 4096,
-        "modalities": ["TEXT"],
-        "tool_capable": False,
-        "permitted_regions": ["eu-west-1"],
-        "permitted_data_classes": ["P0", "P1"],
-        "terms_ref": "contract:2026-001",
-        "known_limitations": ["no tabular reasoning"],
-        "deprecation_date": None,
-        "suspended": False,
-    }
+    # ModelProfile/ProviderProfile now have real registry objects (_MODEL,
+    # _PROVIDER above); as_dict() is their log-safe projection, which for
+    # these two types is already the full schema-required shape (every
+    # schema-required field is on as_dict(), unlike AIReleaseManifest's
+    # as_dict() which happens to coincide with its own schema for the same
+    # reason -- see test_manifest_as_dict_conforms).
+    model = _MODEL.as_dict()
     assert validator.validate("model-profile", model) == []
     assert validator.validate("model-profile", {**model, "model_version": "latest"}) != []
 
-    provider: dict[str, object] = {
-        "provider_profile_id": "provider:eu-hosted",
-        "owner": "lane-l",
-        "version": "1.0.0",
-        "legal_entity": "Example Hosting B.V.",
-        "dpa_ref": "dpa:2026-001",
-        "security_assurance": ["ISO27001"],
-        "permitted_regions": ["eu-west-1"],
-        "subprocessors": [],
-        "retention_days": 0,
-        "zero_data_retention": True,
-        "trains_on_customer_data": False,
-        "deprecation_notice_days": 90,
-        "outage_terms_ref": "sla:2026-001",
-        "audit_assurance_ref": "soc2:2026",
-        "api_hosts": ["inference.eu.example.net"],
-        "suspended": False,
-    }
+    provider = _PROVIDER.as_dict()
     assert validator.validate("provider-profile", provider) == []
     assert validator.validate("provider-profile", {**provider, "api_hosts": []}) != []
+
+
+@pytest.mark.parametrize("alias", ["latest", "default", "stable", "preview"])
+def test_model_version_alias_refused_on_both_sides(
+    validator: _Validator, alias: str
+) -> None:
+    # Two-sided proof: the Python class raises, and the JSON-schema validator
+    # independently refuses the same bad value -- neither side can drift to
+    # accepting a floating alias without this test catching it.
+    with pytest.raises(ModelProfileError):
+        ModelProfile(**{**dataclasses.asdict(_MODEL), "model_version": alias})
+    doc = _MODEL.as_dict()
+    doc["model_version"] = alias
+    assert validator.validate("model-profile", doc) != []
+
+
+def test_provider_empty_api_hosts_refused_on_both_sides(validator: _Validator) -> None:
+    with pytest.raises(ProviderProfileError):
+        ProviderProfile(**{**dataclasses.asdict(_PROVIDER), "api_hosts": ()})
+    doc = _PROVIDER.as_dict()
+    doc["api_hosts"] = []
+    assert validator.validate("provider-profile", doc) != []
 
 
 def test_authority_and_risk_vocabularies_match() -> None:

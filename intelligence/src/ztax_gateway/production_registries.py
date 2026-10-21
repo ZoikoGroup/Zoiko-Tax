@@ -26,12 +26,25 @@ The module has five public building blocks, listed in dependency order:
    classifier or agent must meet before it can be included in an
    AIReleaseManifest.
 
-5. **AIReleaseManifest** (§14.1) -- the immutable, cryptographically hashed
+5. **ProviderProfile** (§7) -- a model provider that has passed due
+   diligence: legal entity, DPA, security and audit assurance, and the exact
+   set of hosts the Gateway may reach for it.
+
+6. **ModelProfile** (§7) -- an approved model, pinned to an exact version.
+   model_version rejects floating aliases such as "latest" for the same
+   reason AIReleaseManifest.resolved_model_id does (AIGOV-001 §12).
+
+7. **AIReleaseManifest** (§14.1) -- the immutable, cryptographically hashed
    deployment bundle.  manifest_hash is a SHA-256 of the canonical field
    representation, making tampering detectable.
 
-6. **ManifestRegistry** -- the runtime gatekeeper tracking ACTIVE / REVOKED
+8. **ManifestRegistry** -- the runtime gatekeeper tracking ACTIVE / REVOKED
    / SUPERSEDED manifests.
+
+ProviderProfile and ModelProfile are value objects only, matching
+AgentProfile/DatasetProfile/EvaluationProfile -- there is no registry class
+for them here. The one profile type that does have a registry
+(PromptProfileRegistry) lives in production_gates.py, not in this module.
 
 Design rules
 ------------
@@ -47,6 +60,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -70,8 +84,14 @@ __all__: list[str] = [
     "ManifestRegistry",
     "ManifestRegistryError",
     "ManifestStatus",
+    "Modality",
+    "ModelHosting",
+    "ModelProfile",
+    "ModelProfileError",
     "PromptProfile",
     "PromptProfileError",
+    "ProviderProfile",
+    "ProviderProfileError",
     "build_manifest",
 ]
 
@@ -81,6 +101,56 @@ __all__: list[str] = [
 # ---------------------------------------------------------------------------
 
 _HASH_ALGORITHM: Final[str] = "sha256"
+
+# Floating provider aliases that must never govern material behaviour
+# (AIGOV-001 §12): a silent backend revision behind one of these names is
+# treated as an undeclared model change. Exact list from
+# contracts/schemas/ai/model-profile.schema.json's model_version "not".
+_MODEL_VERSION_ALIASES: Final[frozenset[str]] = frozenset(
+    {"latest", "default", "stable", "preview"}
+)
+
+# The PRIV-001 §4 privacy-class vocabulary. Mirrors wire.py's _PRIVACY_CLASSES
+# and contracts/privacy/vocabulary.json -- defined here rather than imported
+# from wire.py to avoid coupling this module to the wire layer; the two lists
+# must stay identical by construction (same range(8) formula), not by import.
+_PRIVACY_CLASSES: Final[frozenset[str]] = frozenset(f"P{i}" for i in range(8))
+
+# Exact copies of the patterns and limits in contracts/schemas/ai -- kept here
+# so ModelProfile/ProviderProfile neither accept nor reject anything the
+# schema wouldn't, on either side.
+_IDENTIFIER_MAX_LENGTH: Final[int] = 128  # common.schema.json:10 ("identifier")
+_SEMVER_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$"  # common.schema.json:20 ("version")
+)
+_HOSTNAME_PATTERN: Final[re.Pattern[str]] = re.compile(
+    r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$"
+    # provider-profile.schema.json:48 ("api_hosts" items)
+)
+
+
+def _check_string_list(
+    items: tuple[str, ...],
+    *,
+    field_name: str,
+    profile_id: str,
+    label: str,
+    error_cls: type[Exception],
+) -> None:
+    """Enforce common.schema.json's ``stringList`` shape: every item is a
+    non-empty string, and there are no duplicates. Minimum length is
+    deliberately not enforced here -- stringList itself has no ``minItems``,
+    so an empty list is valid.
+    """
+    if any(not item for item in items):
+        raise error_cls(
+            f"{label}: {profile_id!r} {field_name} must not contain an empty string"
+        )
+    if len(items) != len(set(items)):
+        raise error_cls(
+            f"{label}: {profile_id!r} {field_name} must not contain duplicates, "
+            f"got {items!r}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -114,6 +184,22 @@ class DatasetProfileError(Exception):
 
 class EvaluationProfileError(Exception):
     """Raised when an EvaluationProfile cannot be constructed or used."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+class ProviderProfileError(Exception):
+    """Raised when a ProviderProfile cannot be constructed or used."""
+
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+class ModelProfileError(Exception):
+    """Raised when a ModelProfile cannot be constructed or used."""
 
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
@@ -166,6 +252,30 @@ class ManifestStatus(StrEnum):
     ACTIVE = "ACTIVE"
     REVOKED = "REVOKED"
     SUPERSEDED = "SUPERSEDED"
+
+
+class ModelHosting(StrEnum):
+    """Where a ModelProfile's model runs (Chapter 17 §7).
+
+    PROVIDER_HOSTED -- the provider's own multi-tenant infrastructure.
+    PRIVATE_CLOUD   -- a dedicated, single-tenant cloud deployment.
+    SELF_HOSTED     -- weights deployed on infrastructure Zoiko or the
+                       customer controls directly.
+    """
+
+    PROVIDER_HOSTED = "PROVIDER_HOSTED"
+    PRIVATE_CLOUD = "PRIVATE_CLOUD"
+    SELF_HOSTED = "SELF_HOSTED"
+
+
+class Modality(StrEnum):
+    """An input/output modality a ModelProfile supports (Chapter 17 §7)."""
+
+    TEXT = "TEXT"
+    IMAGE = "IMAGE"
+    AUDIO = "AUDIO"
+    DOCUMENT = "DOCUMENT"
+    EMBEDDING = "EMBEDDING"
 
 
 # ---------------------------------------------------------------------------
@@ -485,6 +595,370 @@ class EvaluationProfile:
             "min_f1": self.min_f1,
             "max_calibration_error": self.max_calibration_error,
             "adversarial_suite_required": self.adversarial_suite_required,
+        }
+
+
+# ---------------------------------------------------------------------------
+# Provider Profile  (§7)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderProfile:
+    """A model provider that has passed due diligence (Chapter 17 §7).
+
+    Attributes
+    ----------
+    provider_profile_id:
+        Stable, opaque identifier.
+    owner:
+        The team or individual accountable for this provider relationship --
+        NOT the same thing as ``ProviderRecord.owner_id`` in resilience.py,
+        which is the customer/tenant identifier for a private (§25)
+        deployment. This ``owner`` is always a Zoiko team; a private
+        deployment's ``ProviderRecord.owner_id`` names whose deployment it is.
+    version:
+        Semantic version string.
+    legal_entity:
+        The provider's contracting legal entity.
+    dpa_ref:
+        Reference to the signed data processing agreement.
+    security_assurance:
+        Tuple of security assurance credentials (e.g. "ISO27001"). May be
+        empty; items, if any, must be non-empty and unique.
+    permitted_regions:
+        Regions this provider is approved to serve. May be empty -- empty
+        means no region is permitted, the correct default for a provider
+        that has not been through residency review (common.schema.json's
+        "regions" definition).
+    subprocessors:
+        Tuple of named subprocessors this provider discloses. May be empty;
+        items, if any, must be non-empty and unique.
+    retention_days:
+        How long the provider retains prompts and outputs.
+    zero_data_retention:
+        True when the provider contractually guarantees no retention.
+    trains_on_customer_data:
+        True if the provider may train on customer/licensed content.
+        AIGOV-001 §7 defaults this OFF; a provider with this True requires
+        an explicit, reviewed exception.
+    deprecation_notice_days:
+        Contractual notice period before the provider may deprecate a model.
+    outage_terms_ref:
+        Reference to the provider's outage/SLA terms.
+    audit_assurance_ref:
+        Reference to the provider's audit assurance report (e.g. SOC2).
+    api_hosts:
+        The complete set of hosts the Gateway may reach for this provider.
+        Must be non-empty, lower-case DNS host names, with no duplicates: a
+        provider profile with no declared host grants no egress.
+    suspended:
+        When True this provider may not be used in production.
+    """
+
+    provider_profile_id: str
+    owner: str
+    version: str
+    legal_entity: str
+    dpa_ref: str
+    security_assurance: tuple[str, ...]
+    permitted_regions: frozenset[str]
+    subprocessors: tuple[str, ...]
+    retention_days: int
+    zero_data_retention: bool
+    trains_on_customer_data: bool
+    deprecation_notice_days: int
+    outage_terms_ref: str
+    audit_assurance_ref: str
+    api_hosts: tuple[str, ...]
+    suspended: bool
+
+    def __post_init__(self) -> None:
+        if not self.provider_profile_id:
+            raise ProviderProfileError(
+                "provider-profile: provider_profile_id must not be empty"
+            )
+        if len(self.provider_profile_id) > _IDENTIFIER_MAX_LENGTH:
+            raise ProviderProfileError(
+                f"provider-profile: provider_profile_id {self.provider_profile_id!r} "
+                f"exceeds the maximum length of {_IDENTIFIER_MAX_LENGTH}"
+            )
+        if not self.owner:
+            raise ProviderProfileError(
+                f"provider-profile: {self.provider_profile_id!r} has no owner"
+            )
+        if not self.version:
+            raise ProviderProfileError(
+                f"provider-profile: {self.provider_profile_id!r} has no version"
+            )
+        if not _SEMVER_PATTERN.match(self.version):
+            raise ProviderProfileError(
+                f"provider-profile: {self.provider_profile_id!r} version "
+                f"{self.version!r} is not a semantic version"
+            )
+        if not self.legal_entity:
+            raise ProviderProfileError(
+                f"provider-profile: {self.provider_profile_id!r} has no legal_entity"
+            )
+        if not self.dpa_ref:
+            raise ProviderProfileError(
+                f"provider-profile: {self.provider_profile_id!r} has no dpa_ref"
+            )
+        _check_string_list(
+            self.security_assurance,
+            field_name="security_assurance",
+            profile_id=self.provider_profile_id,
+            label="provider-profile",
+            error_cls=ProviderProfileError,
+        )
+        _check_string_list(
+            self.subprocessors,
+            field_name="subprocessors",
+            profile_id=self.provider_profile_id,
+            label="provider-profile",
+            error_cls=ProviderProfileError,
+        )
+        if self.retention_days < 0:
+            raise ProviderProfileError(
+                f"provider-profile: {self.provider_profile_id!r} retention_days "
+                f"must be >= 0, got {self.retention_days!r}"
+            )
+        if self.deprecation_notice_days < 0:
+            raise ProviderProfileError(
+                f"provider-profile: {self.provider_profile_id!r} "
+                f"deprecation_notice_days must be >= 0, got "
+                f"{self.deprecation_notice_days!r}"
+            )
+        if not self.outage_terms_ref:
+            raise ProviderProfileError(
+                f"provider-profile: {self.provider_profile_id!r} has no outage_terms_ref"
+            )
+        if not self.audit_assurance_ref:
+            raise ProviderProfileError(
+                f"provider-profile: {self.provider_profile_id!r} has no audit_assurance_ref"
+            )
+        if not self.api_hosts:
+            raise ProviderProfileError(
+                f"provider-profile: {self.provider_profile_id!r} has no api_hosts; "
+                "a provider profile with no declared host grants no egress"
+            )
+        if len(self.api_hosts) != len(set(self.api_hosts)):
+            raise ProviderProfileError(
+                f"provider-profile: {self.provider_profile_id!r} api_hosts must not "
+                f"contain duplicates, got {self.api_hosts!r}"
+            )
+        bad_hosts = [h for h in self.api_hosts if not _HOSTNAME_PATTERN.match(h)]
+        if bad_hosts:
+            raise ProviderProfileError(
+                f"provider-profile: {self.provider_profile_id!r} api_hosts contains "
+                f"non-hostname value(s): {bad_hosts!r}"
+            )
+
+    def as_dict(self) -> dict[str, object]:
+        """Return a log-safe representation."""
+        return {
+            "provider_profile_id": self.provider_profile_id,
+            "owner": self.owner,
+            "version": self.version,
+            "legal_entity": self.legal_entity,
+            "dpa_ref": self.dpa_ref,
+            "security_assurance": list(self.security_assurance),
+            "permitted_regions": sorted(self.permitted_regions),
+            "subprocessors": list(self.subprocessors),
+            "retention_days": self.retention_days,
+            "zero_data_retention": self.zero_data_retention,
+            "trains_on_customer_data": self.trains_on_customer_data,
+            "deprecation_notice_days": self.deprecation_notice_days,
+            "outage_terms_ref": self.outage_terms_ref,
+            "audit_assurance_ref": self.audit_assurance_ref,
+            "api_hosts": list(self.api_hosts),
+            "suspended": self.suspended,
+        }
+
+
+# ---------------------------------------------------------------------------
+# Model Profile  (§7)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class ModelProfile:
+    """An approved model, pinned to an exact version (Chapter 17 §7).
+
+    Attributes
+    ----------
+    model_profile_id:
+        Stable, opaque identifier.
+    owner:
+        Team or individual responsible.
+    version:
+        Semantic version string of this profile entry.
+    provider_profile_id:
+        The ProviderProfile this model is served by.
+    model_id:
+        The provider's own name for the model.
+    model_version:
+        The exact provider model version. Floating aliases ("latest",
+        "default", "stable", "preview") are refused: AIGOV-001 §12 prohibits
+        provider aliases governing material behaviour, and a silent backend
+        revision is treated as a model change.
+    hosting:
+        Where the model runs.
+    context_window_tokens:
+        Maximum input context size, in tokens.
+    max_output_tokens:
+        Maximum output size, in tokens.
+    modalities:
+        The input/output modalities this model supports. Must be non-empty
+        and contain no duplicates.
+    tool_capable:
+        True if the model supports tool/function calling.
+    permitted_regions:
+        Regions this model may be invoked from. May be empty -- empty means
+        no region is permitted, the correct default for a model that has
+        not been through residency review (common.schema.json's "regions"
+        definition).
+    permitted_data_classes:
+        The PRIV-001 classes this model may receive. May be empty -- deny by
+        default, so a model with no declared class may receive nothing.
+        Any classes that ARE declared must be drawn from the P0-P7
+        vocabulary (same vocabulary as wire.py's _PRIVACY_CLASSES and
+        contracts/privacy/vocabulary.json).
+    terms_ref:
+        Reference to the contractual terms governing this model's use.
+    known_limitations:
+        Tuple of known limitations reviewers should account for. May be
+        empty; items, if any, must be non-empty and unique.
+    deprecation_date:
+        ISO-8601 date string, or None if not yet scheduled for deprecation.
+    suspended:
+        When True this model may not be used in production.
+    """
+
+    model_profile_id: str
+    owner: str
+    version: str
+    provider_profile_id: str
+    model_id: str
+    model_version: str
+    hosting: ModelHosting
+    context_window_tokens: int
+    max_output_tokens: int
+    modalities: tuple[Modality, ...]
+    tool_capable: bool
+    permitted_regions: frozenset[str]
+    permitted_data_classes: frozenset[str]
+    terms_ref: str
+    known_limitations: tuple[str, ...]
+    deprecation_date: str | None
+    suspended: bool
+
+    def __post_init__(self) -> None:
+        if not self.model_profile_id:
+            raise ModelProfileError("model-profile: model_profile_id must not be empty")
+        if len(self.model_profile_id) > _IDENTIFIER_MAX_LENGTH:
+            raise ModelProfileError(
+                f"model-profile: model_profile_id {self.model_profile_id!r} "
+                f"exceeds the maximum length of {_IDENTIFIER_MAX_LENGTH}"
+            )
+        if not self.owner:
+            raise ModelProfileError(
+                f"model-profile: {self.model_profile_id!r} has no owner"
+            )
+        if not self.version:
+            raise ModelProfileError(
+                f"model-profile: {self.model_profile_id!r} has no version"
+            )
+        if not _SEMVER_PATTERN.match(self.version):
+            raise ModelProfileError(
+                f"model-profile: {self.model_profile_id!r} version {self.version!r} "
+                "is not a semantic version"
+            )
+        if not self.provider_profile_id:
+            raise ModelProfileError(
+                f"model-profile: {self.model_profile_id!r} has no provider_profile_id"
+            )
+        if len(self.provider_profile_id) > _IDENTIFIER_MAX_LENGTH:
+            raise ModelProfileError(
+                f"model-profile: provider_profile_id {self.provider_profile_id!r} "
+                f"exceeds the maximum length of {_IDENTIFIER_MAX_LENGTH}"
+            )
+        if not self.model_id:
+            raise ModelProfileError(
+                f"model-profile: {self.model_profile_id!r} has no model_id"
+            )
+        if not self.model_version:
+            raise ModelProfileError(
+                f"model-profile: {self.model_profile_id!r} has no model_version"
+            )
+        if self.model_version in _MODEL_VERSION_ALIASES:
+            raise ModelProfileError(
+                f"model-profile: {self.model_profile_id!r} declares model_version "
+                f"{self.model_version!r}, which is a floating alias (AIGOV-001 §12); "
+                "pin an exact provider version instead"
+            )
+        if self.context_window_tokens < 1:
+            raise ModelProfileError(
+                f"model-profile: {self.model_profile_id!r} context_window_tokens "
+                f"must be >= 1, got {self.context_window_tokens!r}"
+            )
+        if self.max_output_tokens < 1:
+            raise ModelProfileError(
+                f"model-profile: {self.model_profile_id!r} max_output_tokens "
+                f"must be >= 1, got {self.max_output_tokens!r}"
+            )
+        if not self.modalities:
+            raise ModelProfileError(
+                f"model-profile: {self.model_profile_id!r} has no modalities"
+            )
+        if len(self.modalities) != len(set(self.modalities)):
+            raise ModelProfileError(
+                f"model-profile: {self.model_profile_id!r} modalities must not "
+                f"contain duplicates, got {self.modalities!r}"
+            )
+        # permitted_regions and permitted_data_classes may be empty: both
+        # common.schema.json's "regions" and "privacyClasses" definitions
+        # document empty as the correct default (nothing permitted), not an
+        # error -- see those $defs for the rationale.
+        unknown_classes = self.permitted_data_classes - _PRIVACY_CLASSES
+        if unknown_classes:
+            raise ModelProfileError(
+                f"model-profile: {self.model_profile_id!r} declares unknown "
+                f"privacy class(es) {sorted(unknown_classes)!r}; must be drawn "
+                f"from {sorted(_PRIVACY_CLASSES)!r}"
+            )
+        if not self.terms_ref:
+            raise ModelProfileError(
+                f"model-profile: {self.model_profile_id!r} has no terms_ref"
+            )
+        _check_string_list(
+            self.known_limitations,
+            field_name="known_limitations",
+            profile_id=self.model_profile_id,
+            label="model-profile",
+            error_cls=ModelProfileError,
+        )
+
+    def as_dict(self) -> dict[str, object]:
+        """Return a log-safe representation."""
+        return {
+            "model_profile_id": self.model_profile_id,
+            "owner": self.owner,
+            "version": self.version,
+            "provider_profile_id": self.provider_profile_id,
+            "model_id": self.model_id,
+            "model_version": self.model_version,
+            "hosting": self.hosting.value,
+            "context_window_tokens": self.context_window_tokens,
+            "max_output_tokens": self.max_output_tokens,
+            "modalities": [m.value for m in self.modalities],
+            "tool_capable": self.tool_capable,
+            "permitted_regions": sorted(self.permitted_regions),
+            "permitted_data_classes": sorted(self.permitted_data_classes),
+            "terms_ref": self.terms_ref,
+            "known_limitations": list(self.known_limitations),
+            "deprecation_date": self.deprecation_date,
+            "suspended": self.suspended,
         }
 
 
