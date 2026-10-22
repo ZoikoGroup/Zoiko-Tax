@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.zoikotax.sdk.model.BundleRef;
+import com.zoikotax.sdk.model.DocumentDetermination;
 import com.zoikotax.sdk.model.Outcome;
 import com.zoikotax.sdk.model.ResultValue;
 import java.util.Arrays;
@@ -39,7 +40,8 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
   Quote.JSON_PROPERTY_REASON_CODE,
   Quote.JSON_PROPERTY_QUOTED_AT,
   Quote.JSON_PROPERTY_BUNDLE,
-  Quote.JSON_PROPERTY_EMITTED
+  Quote.JSON_PROPERTY_EMITTED,
+  Quote.JSON_PROPERTY_DOCUMENT
 })
 @jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen", comments = "Generator version: 7.25.0")
 public class Quote {
@@ -66,6 +68,10 @@ public class Quote {
   public static final String JSON_PROPERTY_EMITTED = "emitted";
   @jakarta.annotation.Nonnull
   private Map<String, ResultValue> emitted;
+
+  public static final String JSON_PROPERTY_DOCUMENT = "document";
+  @jakarta.annotation.Nullable
+  private DocumentDetermination document;
 
   public Quote() { 
   }
@@ -222,6 +228,30 @@ public class Quote {
   }
 
 
+  public Quote document(@jakarta.annotation.Nullable DocumentDetermination document) {
+    this.document = document;
+    return this;
+  }
+
+  /**
+   * Get document
+   * @return document
+   */
+  @jakarta.annotation.Nullable
+  @JsonProperty(value = JSON_PROPERTY_DOCUMENT, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public DocumentDetermination getDocument() {
+    return document;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_DOCUMENT, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public void setDocument(@jakarta.annotation.Nullable DocumentDetermination document) {
+    this.document = document;
+  }
+
+
   /**
    * Return true if this Quote object is equal to o.
    */
@@ -239,12 +269,13 @@ public class Quote {
         Objects.equals(this.reasonCode, quote.reasonCode) &&
         Objects.equals(this.quotedAt, quote.quotedAt) &&
         Objects.equals(this.bundle, quote.bundle) &&
-        Objects.equals(this.emitted, quote.emitted);
+        Objects.equals(this.emitted, quote.emitted) &&
+        Objects.equals(this.document, quote.document);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(authoritative, outcome, reasonCode, quotedAt, bundle, emitted);
+    return Objects.hash(authoritative, outcome, reasonCode, quotedAt, bundle, emitted, document);
   }
 
   @Override
@@ -257,6 +288,7 @@ public class Quote {
     sb.append("    quotedAt: ").append(toIndentedString(quotedAt)).append("\n");
     sb.append("    bundle: ").append(toIndentedString(bundle)).append("\n");
     sb.append("    emitted: ").append(toIndentedString(emitted)).append("\n");
+    sb.append("    document: ").append(toIndentedString(document)).append("\n");
     sb.append("}");
     return sb.toString();
   }

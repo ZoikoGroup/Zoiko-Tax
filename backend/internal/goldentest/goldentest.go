@@ -167,6 +167,18 @@ func digest(tb testing.TB, path string) string {
 	return hex.EncodeToString(sum[:])
 }
 
+// ReadFile returns a file's bytes, for a runner whose fixture is a shipped
+// content file rather than a registered set — a taxation profile under
+// content/packs, decoded by the production decoder.
+func ReadFile(tb testing.TB, path string) []byte {
+	tb.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		tb.Fatalf("read %s: %v", path, err)
+	}
+	return data
+}
+
 func read(tb testing.TB, path string, into any) {
 	tb.Helper()
 	data, err := os.ReadFile(path)

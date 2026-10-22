@@ -1,0 +1,20 @@
+# ZoikoTax content — global telecom pack (location-aware)
+#
+# The taxes, fees and contributions on telecommunication services and
+# equipment by where the supply takes place: the 27 EU Member States, the
+# United Kingdom, Norway, Switzerland, Canada by province, Australia, New
+# Zealand, Singapore, Japan, South Africa, the United Arab Emirates and Saudi
+# Arabia. A place of supply anywhere else is UNSUPPORTED, recorded as such,
+# and never taxed at zero.
+#
+# Status RESEARCH (ZTAX-CONT-001 release states, playbook §13). Every rate
+# cites the authority's own publication, and none has yet been through the
+# qualified interpretation, independent review and golden-case approval a
+# PRODUCTION pack requires. Until it has, every decision it supports is
+# ADVISORY and must not be invoiced or filed from.
+#
+# The pack has no rules: everything it determines is location-aware content
+# in taxation.json beside this file, compiled into the same signed manifest.
+
+bundle "global-telecom-2026.10"
+ir 1

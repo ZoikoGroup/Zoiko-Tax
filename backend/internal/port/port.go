@@ -19,6 +19,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/accumulator"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/batch"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/compliance"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/document"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/fiscal"
@@ -26,13 +27,16 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/idempotency"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/identity"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/legal"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/migration"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/obligation"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/outbox"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/reconciliation"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/remittance"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/retention"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/settlement"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/shadow"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/subledger"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/webhook"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
@@ -725,6 +729,117 @@ type AuthorizationRepository interface {
 	Authorization(ctx context.Context, authorizationID id.AuthorizationID) (legal.Authorization, error)
 	// List returns the tenant's authorizations, newest first.
 	List(ctx context.Context) ([]legal.Authorization, error)
+}
+
+// ComplianceRepository stores compliance packages and their step history
+// (ZTAX-COMP-001 §4). A package is immutable; its state is its steps.
+type ComplianceRepository interface {
+	// Lock serializes writes to one obligation's package for the rest of the
+	// transaction.
+	Lock(ctx context.Context, obligationKey string) error
+	// Create records a package and its CREATED step. A second package for the
+	// same obligation is a CONFLICT.
+	Create(ctx context.Context, p compliance.Package, created compliance.Step) error
+	// AppendStep records the next step of a package.
+	AppendStep(ctx context.Context, packageID id.CompliancePackageID, s compliance.Step) error
+	// Package returns one, folded from its steps.
+	Package(ctx context.Context, packageID id.CompliancePackageID) (compliance.Package, error)
+	// ByObligation returns the package for an obligation's business key.
+	ByObligation(ctx context.Context, obligationKey string) (compliance.Package, error)
+	// List returns the tenant's packages, by statutory due date.
+	List(ctx context.Context, limit int) ([]compliance.Package, error)
+}
+
+// RemittanceRepository stores payee versions and payment instructions with
+// their histories (ZTAX-REM-001 §4). Nothing it stores is a balance.
+type RemittanceRepository interface {
+	// Lock serializes the tenant's writes to one key — an obligation's
+	// payments, or the beneficiary master — for the rest of the transaction.
+	Lock(ctx context.Context, key string) error
+
+	// CreateBeneficiary records a payee version and its CREATED event.
+	CreateBeneficiary(ctx context.Context, b remittance.Beneficiary, created remittance.BeneficiaryEvent) error
+	// AppendBeneficiaryEvent records the next event of a payee version.
+	AppendBeneficiaryEvent(ctx context.Context, beneficiaryID id.BeneficiaryID, e remittance.BeneficiaryEvent) error
+	// Beneficiary returns one payee version, folded.
+	Beneficiary(ctx context.Context, beneficiaryID id.BeneficiaryID) (remittance.Beneficiary, error)
+	// Beneficiaries returns the tenant's payee versions, newest first.
+	Beneficiaries(ctx context.Context) ([]remittance.Beneficiary, error)
+
+	// Create records an instruction and its CREATED step.
+	Create(ctx context.Context, r remittance.Remittance, created remittance.Step) error
+	// AppendStep records the next step of an instruction.
+	AppendStep(ctx context.Context, remittanceID id.RemittanceID, s remittance.Step) error
+	// Remittance returns one instruction, folded.
+	Remittance(ctx context.Context, remittanceID id.RemittanceID) (remittance.Remittance, error)
+	// ByObligation returns an obligation's instructions, oldest first.
+	ByObligation(ctx context.Context, obligationKey string) ([]remittance.Remittance, error)
+	// List returns the tenant's instructions, by payment due date.
+	List(ctx context.Context, limit int) ([]remittance.Remittance, error)
+}
+
+// ShadowRepository stores comparator profiles, executed comparison runs
+// with their cases, and discrepancy investigations (ZTAX-SHD-001 §5). It
+// never writes a fiscal record.
+type ShadowRepository interface {
+	// Lock serializes the tenant's writes to one key for the transaction.
+	Lock(ctx context.Context, key string) error
+
+	CreateComparator(ctx context.Context, c shadow.Comparator) error
+	Comparator(ctx context.Context, comparatorID id.ComparatorID) (shadow.Comparator, error)
+	Comparators(ctx context.Context) ([]shadow.Comparator, error)
+
+	// CreateRun records an executed run, its cases, and a NEW discrepancy
+	// for each material case, in one act.
+	CreateRun(ctx context.Context, r shadow.Run, discrepancies []shadow.Discrepancy) error
+	// Run returns one run with its cases.
+	Run(ctx context.Context, runID id.ShadowRunID) (shadow.Run, error)
+	// Runs returns the tenant's runs, newest first, without their cases.
+	Runs(ctx context.Context, limit int) ([]shadow.Run, error)
+
+	// Discrepancies returns a run's discrepancies, or every open one of the
+	// tenant when runID is zero.
+	Discrepancies(ctx context.Context, runID id.ShadowRunID) ([]shadow.Discrepancy, error)
+	Discrepancy(ctx context.Context, discrepancyID id.DiscrepancyID) (shadow.Discrepancy, error)
+	AppendDiscrepancyEvent(ctx context.Context, discrepancyID id.DiscrepancyID, e shadow.Event) error
+}
+
+// MigrationRepository stores migration programs, immutable source
+// snapshots, mapping versions, runs with their converted records and
+// exceptions, and cutover history (ZTAX-MIG-001 §5).
+type MigrationRepository interface {
+	Lock(ctx context.Context, key string) error
+
+	CreateProgram(ctx context.Context, p migration.Program) error
+	Program(ctx context.Context, programID id.MigrationProgramID) (migration.Program, error)
+	Programs(ctx context.Context) ([]migration.Program, error)
+
+	CreateSnapshot(ctx context.Context, s migration.Snapshot) error
+	// Snapshot returns one snapshot with its records.
+	Snapshot(ctx context.Context, snapshotID id.MigrationSnapshotID) (migration.Snapshot, error)
+	// Snapshots returns a program's snapshots, newest first, without records.
+	Snapshots(ctx context.Context, programID id.MigrationProgramID) ([]migration.Snapshot, error)
+
+	CreateMapping(ctx context.Context, m migration.Mapping) error
+	Mapping(ctx context.Context, mappingID id.MigrationMappingID) (migration.Mapping, error)
+	// Mappings returns a program's mapping versions, newest first.
+	Mappings(ctx context.Context, programID id.MigrationProgramID) ([]migration.Mapping, error)
+
+	// CreateRun records a run, its converted records and its exceptions.
+	CreateRun(ctx context.Context, r migration.Run) error
+	// Run returns one run with its records and exceptions.
+	Run(ctx context.Context, runID id.MigrationRunID) (migration.Run, error)
+	// Runs returns a program's runs, newest first, with exceptions but
+	// without records.
+	Runs(ctx context.Context, programID id.MigrationProgramID) ([]migration.Run, error)
+
+	// Exception returns one exception with its decision, and its run.
+	Exception(ctx context.Context, exceptionID id.MigrationExceptionID) (migration.Exception, id.MigrationRunID, error)
+	// DecideException records an exception's one decision.
+	DecideException(ctx context.Context, e migration.Exception) error
+
+	CutoverEvents(ctx context.Context, programID id.MigrationProgramID) ([]migration.CutoverEvent, error)
+	AppendCutoverEvent(ctx context.Context, programID id.MigrationProgramID, e migration.CutoverEvent) error
 }
 
 // ---------------------------------------------------------------------------

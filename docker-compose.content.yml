@@ -26,9 +26,11 @@ services:
       ZTAX_CONTENT_KEYRING: /etc/ztax/content-keyring/keyring.json
       ZTAX_EVIDENCE_DIR: /tmp/evidence
     volumes:
-      # Populated by `make -C backend content`; an empty directory otherwise,
-      # which Compose creates on the host without complaint.
-      - ./content/build:/etc/ztax/content:ro
+      # Populated by `make -C backend content`, which builds each pack into
+      # content/build/<pack>; ZTAX_CONTENT_PACK picks which one this cell
+      # runs (global-telecom by default). An empty directory otherwise, which
+      # Compose creates on the host without complaint.
+      - ./content/build/${ZTAX_CONTENT_PACK:-global-telecom}:/etc/ztax/content:ro
       # Only the public keyring crosses into the container -- never
       # content/.keys itself, which also holds signing.pem/author.pem/
       # approver.pem (the PRIVATE keys ztax-contentc writes 0600; this

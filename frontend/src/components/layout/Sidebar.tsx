@@ -24,6 +24,11 @@ export type View =
   | 'actions'
   | 'determine'
   | 'obligations'
+  | 'compliance'
+  | 'remittance'
+  | 'shadow'
+  | 'migration'
+  | 'reports'
   | 'reconcile'
   | 'documents'
   | 'evidence'
@@ -47,16 +52,16 @@ const NAV_GROUPS: readonly { title: string; items: readonly NavItem[] }[] = [
       { id: 'action-center', label: 'Action Center', icon: <IconActivity />, view: 'actions' },
       { id: 'determine', label: 'Determine', icon: <IconCompass />, view: 'determine' },
       { id: 'obligations', label: 'Obligations', icon: <IconFileText />, view: 'obligations' },
-      { id: 'compliance', label: 'Compliance', icon: <IconShield /> },
+      { id: 'compliance', label: 'Compliance', icon: <IconShield />, view: 'compliance' },
       { id: 'reconcile', label: 'Reconcile', icon: <IconRotateCw />, view: 'reconcile' },
     ],
   },
   {
     title: 'SETTLE & PROVE',
     items: [
-      { id: 'remittance', label: 'Remittance', icon: <IconCreditCard /> },
+      { id: 'remittance', label: 'Remittance', icon: <IconCreditCard />, view: 'remittance' },
       { id: 'e-invoicing', label: 'E-Invoicing / CTC', icon: <IconFileCheck />, view: 'documents' },
-      { id: 'shadow-assurance', label: 'Shadow Assurance', icon: <IconEye /> },
+      { id: 'shadow-assurance', label: 'Shadow Assurance', icon: <IconEye />, view: 'shadow' },
       { id: 'evidence', label: 'Evidence', icon: <IconArchive />, view: 'evidence' },
     ],
   },
@@ -65,13 +70,13 @@ const NAV_GROUPS: readonly { title: string; items: readonly NavItem[] }[] = [
     items: [
       { id: 'intelligence', label: 'Intelligence', icon: <IconSettings />, view: 'intelligence' },
       { id: 'content', label: 'Content', icon: <IconDatabase />, view: 'content' },
-      { id: 'reports', label: 'Reports', icon: <IconBarChart /> },
+      { id: 'reports', label: 'Reports', icon: <IconBarChart />, view: 'reports' },
     ],
   },
   {
     title: 'PLATFORM',
     items: [
-      { id: 'migration', label: 'Migration', icon: <IconGitFork /> },
+      { id: 'migration', label: 'Migration', icon: <IconGitFork />, view: 'migration' },
       { id: 'administration', label: 'Administration', icon: <IconSliders />, view: 'admin' },
     ],
   },

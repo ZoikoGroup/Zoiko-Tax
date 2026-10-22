@@ -1,0 +1,12 @@
+{
+  "bundleId": "training-telecom-2026.10",
+  "packId": "ZTAX-CP-TRAINING-TELECOM",
+  "version": "0.1.0",
+  "level": "GLOBAL",
+  "status": "RESEARCH",
+  "capabilities": ["DETERMINE", "JURISDICTION", "OBLIGATIONS"],
+  "deploymentModes": ["P0_ZOIKO_ONLY"],
+  "sources": [
+    { "sourceId": "SRC-ZOIKO-TRAINING-0001" }
+  ]
+}

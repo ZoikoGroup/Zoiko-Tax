@@ -201,7 +201,8 @@ func toDecision(rec evidence.Record, result evidence.Result) gen.Decision {
 		Digests: gen.DecisionDigests{
 			Input: rec.InputDigest.String(), Envelope: rec.EnvelopeDigest.String(), Result: rec.ResultDigest.String(),
 		},
-		Emitted: toEmitted(result.Emitted),
+		Emitted:  toEmitted(result.Emitted),
+		Document: toDocumentDetermination(result.Document),
 	}
 	if rec.Supersedes != nil {
 		s := rec.Supersedes.String()
@@ -240,7 +241,7 @@ func (rt *Router) handleQuote(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, r, rt.log, err)
 		return
 	}
-	input, err := determinationInput(req.Input)
+	input, document, err := determinationRequest(req.Input, req.Document)
 	if err != nil {
 		writeProblem(w, r, rt.log, err)
 		return
@@ -252,7 +253,7 @@ func (rt *Router) handleQuote(w http.ResponseWriter, r *http.Request) {
 	}
 
 	q, err := rt.Determination.Quote(r.Context(), app.QuoteInput{
-		EventTime: eventTime, Input: input, Accumulators: accumulators,
+		EventTime: eventTime, Input: input, Document: document, Accumulators: accumulators,
 	})
 	if err != nil {
 		writeProblem(w, r, rt.log, err)
@@ -267,6 +268,7 @@ func (rt *Router) handleQuote(w http.ResponseWriter, r *http.Request) {
 		QuotedAt:      canonical.FormatTime(q.QuotedAt),
 		Bundle:        gen.BundleRef{BundleID: q.BundleID, Digest: q.BundleDigest, IrVersion: saturate32(q.IRVersion)},
 		Emitted:       toEmitted(q.Result.Emitted),
+		Document:      toDocumentDetermination(q.Result.Document),
 	})
 }
 
@@ -354,7 +356,7 @@ func commitInput(req gen.CommitRequest) (app.DetermineInput, error) {
 		return app.DetermineInput{}, errs.Invalid("businessKey", errs.ReasonMissingField,
 			"A business key of at most 255 characters is required.")
 	}
-	input, err := determinationInput(req.Input)
+	input, document, err := determinationRequest(req.Input, req.Document)
 	if err != nil {
 		return app.DetermineInput{}, err
 	}
@@ -363,7 +365,7 @@ func commitInput(req gen.CommitRequest) (app.DetermineInput, error) {
 		return app.DetermineInput{}, err
 	}
 	in := app.DetermineInput{
-		BusinessKey: req.BusinessKey, EventTime: eventTime, Input: input, Accumulators: accumulators,
+		BusinessKey: req.BusinessKey, EventTime: eventTime, Input: input, Document: document, Accumulators: accumulators,
 	}
 	if req.Supersedes != nil {
 		prior, err := id.ParseDecisionID(*req.Supersedes)

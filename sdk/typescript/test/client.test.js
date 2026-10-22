@@ -199,6 +199,15 @@ test("the fiscal surface is reachable: paths, query strings and idempotency keys
     "listRetentionPolicies", "recordRetentionPolicy", "listLegalHolds", "placeLegalHold", "getLegalHold",
     "changeLegalHoldScope", "releaseLegalHold", "getDecisionRetention", "getLegalMatrix", "listAuthorizations",
     "grantAuthorization", "getAuthorization", "revokeAuthorization", "checkAuthorization", "proposeClassification",
+    "listCompliancePackages", "createCompliancePackage", "getCompliancePackage", "prepareCompliancePackage",
+    "reviewCompliancePackage", "approveCompliancePackage", "submitCompliancePackage", "acknowledgeCompliancePackage",
+    "resolveCompliancePackage", "cancelCompliancePackage",
+    "listBeneficiaries", "createBeneficiary", "verifyBeneficiary", "suspendBeneficiary", "listRemittances",
+    "createRemittance", "getRemittance", "approveRemittance", "submitRemittance", "recordRemittanceStatus",
+    "resolveRemittance", "returnRemittance", "cancelRemittance",
+    "listComparators", "createComparator", "listShadowRuns", "executeShadowRun", "getShadowRun", "moveDiscrepancy",
+    "listMigrationPrograms", "createMigrationProgram", "getMigrationProgram", "registerMigrationSnapshot",
+    "createMigrationMapping", "executeMigrationRun", "moveMigrationCutover", "getMigrationRun", "decideMigrationException",
   ]) {
     assert.equal(typeof client[name], "function", name);
   }

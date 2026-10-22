@@ -442,3 +442,128 @@ func (s *DeterminationService) views(ctx context.Context, rows []obligation.Obli
 	}
 	return out, nil
 }
+
+// ---------------------------------------------------------------------------
+// Obligations moved by the filing and payment boundaries
+// ---------------------------------------------------------------------------
+
+// filingStatuses are the obligation statuses a filing moves through. The
+// path an acknowledgement takes is found among them only, so a filing never
+// opens, suspends, pays or closes an obligation.
+var filingStatuses = map[obligation.Status]bool{
+	obligation.StatusReady: true, obligation.StatusFiled: true, obligation.StatusAccepted: true,
+	obligation.StatusRejected: true, obligation.StatusUncertain: true,
+}
+
+// paymentStatuses are the statuses a payment moves through: an accepted
+// return becomes payment-due, and settlement pays it. Filing is not paying,
+// and paying never files (ZTAX-COMP-REQ-0116).
+var paymentStatuses = map[obligation.Status]bool{
+	obligation.StatusAccepted: true, obligation.StatusPaymentDue: true, obligation.StatusPaid: true,
+}
+
+// obligationPath is the shortest run of permitted transitions from one
+// status to another through the allowed ones, excluding from; nil when there
+// is none.
+func obligationPath(from, to obligation.Status, allowed map[obligation.Status]bool) []obligation.Status {
+	if from == to {
+		return []obligation.Status{}
+	}
+	order := []obligation.Status{obligation.StatusReady, obligation.StatusFiled, obligation.StatusUncertain,
+		obligation.StatusAccepted, obligation.StatusRejected, obligation.StatusPaymentDue, obligation.StatusPaid}
+	prev := map[obligation.Status]obligation.Status{from: from}
+	queue := []obligation.Status{from}
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		for _, next := range order {
+			if _, seen := prev[next]; seen || !allowed[next] || !obligation.CanTransition(cur, next) {
+				continue
+			}
+			prev[next] = cur
+			if next == to {
+				var path []obligation.Status
+				for s := to; s != from; s = prev[s] {
+					path = append([]obligation.Status{s}, path...)
+				}
+				return path
+			}
+			queue = append(queue, next)
+		}
+	}
+	return nil
+}
+
+// advanceFiling moves an obligation to the status a filing's evidence
+// establishes, inside the caller's transaction. It is the authority boundary
+// manualTargets leaves out: a submission files, the authority accepts or
+// rejects. Each step is its own row, so FILED is on record before ACCEPTED.
+//
+// A receipt for an obligation that is UNCERTAIN leaves it UNCERTAIN: receipt
+// is not acceptance, and the obligation's state machine leaves UNCERTAIN only
+// for an outcome.
+func (s *DeterminationService) advanceFiling(ctx context.Context, obligationKey string, to obligation.Status, by id.UserID) error {
+	return s.advance(ctx, obligationKey, to, by, filingStatuses, func(cur obligation.Status) bool {
+		return cur == obligation.StatusUncertain && to == obligation.StatusFiled
+	})
+}
+
+// advancePayment moves an obligation to the status a payment establishes:
+// PAYMENT_DUE when a payment requirement is made, PAID on settlement
+// evidence.
+func (s *DeterminationService) advancePayment(ctx context.Context, obligationKey string, to obligation.Status, by id.UserID) error {
+	return s.advance(ctx, obligationKey, to, by, paymentStatuses, nil)
+}
+
+// advance walks an obligation to a status through the allowed ones, one row
+// per step, inside the caller's transaction. stay reports a current status
+// the move leaves where it is.
+func (s *DeterminationService) advance(ctx context.Context, obligationKey string, to obligation.Status, by id.UserID,
+	allowed map[obligation.Status]bool, stay func(obligation.Status) bool) error {
+	if err := s.obligationsWired(); err != nil {
+		return err
+	}
+	if err := s.fiscal.Obligations.Lock(ctx, obligationKey); err != nil {
+		return err
+	}
+	cur, err := s.fiscal.Obligations.Current(ctx, obligationKey)
+	if err != nil {
+		return err
+	}
+	if stay != nil && stay(cur.Status) {
+		return nil
+	}
+	if !allowed[cur.Status] {
+		return errs.New(errs.CategoryConflict, errs.ReasonStateTransitionInvalid,
+			fmt.Sprintf("The obligation is %s; this outcome does not move an obligation in that state.", cur.Status))
+	}
+	path := obligationPath(cur.Status, to, allowed)
+	if path == nil {
+		return errs.New(errs.CategoryConflict, errs.ReasonStateTransitionInvalid,
+			fmt.Sprintf("An obligation that is %s cannot be moved to %s by this outcome.", cur.Status, to))
+	}
+	sums, err := s.fiscal.Obligations.Assessed(ctx, []string{obligationKey})
+	if err != nil {
+		return err
+	}
+	at := s.clock.Now().UTC().Truncate(time.Microsecond)
+	for _, step := range path {
+		oid, err := idgen.ObligationID(s.ids)
+		if err != nil {
+			return internal(err, "The obligation could not be moved.")
+		}
+		next, err := cur.Transition(step, at, oid)
+		if err != nil {
+			return err
+		}
+		if total, ok := sums[obligationKey]; ok {
+			next.Assessed = &total
+		}
+		next.RecordedBy = by
+		if err := s.appendObligation(ctx, next, &cur); err != nil {
+			return err
+		}
+		cur = next
+	}
+	return nil
+}

@@ -325,3 +325,120 @@ func AuthorizationID(g Generator) (id.AuthorizationID, error) {
 	}
 	return id.NewAuthorizationID(u), nil
 }
+
+// ComparatorID returns a fresh ComparatorID.
+func ComparatorID(g Generator) (id.ComparatorID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.ComparatorID{}, err
+	}
+	return id.NewComparatorID(u), nil
+}
+
+// ShadowRunID returns a fresh ShadowRunID.
+func ShadowRunID(g Generator) (id.ShadowRunID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.ShadowRunID{}, err
+	}
+	return id.NewShadowRunID(u), nil
+}
+
+// DiscrepancyID returns a fresh DiscrepancyID.
+func DiscrepancyID(g Generator) (id.DiscrepancyID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.DiscrepancyID{}, err
+	}
+	return id.NewDiscrepancyID(u), nil
+}
+
+// MigrationProgramID returns a fresh MigrationProgramID.
+func MigrationProgramID(g Generator) (id.MigrationProgramID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.MigrationProgramID{}, err
+	}
+	return id.NewMigrationProgramID(u), nil
+}
+
+// MigrationSnapshotID returns a fresh MigrationSnapshotID.
+func MigrationSnapshotID(g Generator) (id.MigrationSnapshotID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.MigrationSnapshotID{}, err
+	}
+	return id.NewMigrationSnapshotID(u), nil
+}
+
+// MigrationMappingID returns a fresh MigrationMappingID.
+func MigrationMappingID(g Generator) (id.MigrationMappingID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.MigrationMappingID{}, err
+	}
+	return id.NewMigrationMappingID(u), nil
+}
+
+// MigrationRunID returns a fresh MigrationRunID.
+func MigrationRunID(g Generator) (id.MigrationRunID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.MigrationRunID{}, err
+	}
+	return id.NewMigrationRunID(u), nil
+}
+
+// MigrationExceptionID returns a fresh MigrationExceptionID.
+func MigrationExceptionID(g Generator) (id.MigrationExceptionID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.MigrationExceptionID{}, err
+	}
+	return id.NewMigrationExceptionID(u), nil
+}
+
+// MigratedRecordID returns a fresh MigratedRecordID.
+func MigratedRecordID(g Generator) (id.MigratedRecordID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.MigratedRecordID{}, err
+	}
+	return id.NewMigratedRecordID(u), nil
+}
+
+// BeneficiaryID returns a fresh BeneficiaryID.
+func BeneficiaryID(g Generator) (id.BeneficiaryID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.BeneficiaryID{}, err
+	}
+	return id.NewBeneficiaryID(u), nil
+}
+
+// RemittanceID returns a fresh RemittanceID.
+func RemittanceID(g Generator) (id.RemittanceID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.RemittanceID{}, err
+	}
+	return id.NewRemittanceID(u), nil
+}
+
+// CompliancePackageID returns a fresh CompliancePackageID.
+func CompliancePackageID(g Generator) (id.CompliancePackageID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.CompliancePackageID{}, err
+	}
+	return id.NewCompliancePackageID(u), nil
+}
+
+// SubmissionAttemptID returns a fresh SubmissionAttemptID.
+func SubmissionAttemptID(g Generator) (id.SubmissionAttemptID, error) {
+	u, err := g.NewUUID()
+	if err != nil {
+		return id.SubmissionAttemptID{}, err
+	}
+	return id.NewSubmissionAttemptID(u), nil
+}

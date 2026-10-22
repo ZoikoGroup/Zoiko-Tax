@@ -140,6 +140,42 @@ type (
 	// AuthorizationID identifies one customer authorization: a power of
 	// attorney, a filing mandate, a portal delegation.
 	AuthorizationID struct{ base }
+
+	// CompliancePackageID identifies one obligation's compliance package.
+	CompliancePackageID struct{ base }
+
+	// BeneficiaryID identifies one version of an authority's payee details.
+	BeneficiaryID struct{ base }
+
+	// RemittanceID identifies one immutable payment instruction.
+	RemittanceID struct{ base }
+
+	// ComparatorID identifies one comparator profile.
+	ComparatorID struct{ base }
+
+	// ShadowRunID identifies one shadow comparison run.
+	ShadowRunID struct{ base }
+
+	// DiscrepancyID identifies one shadow discrepancy case.
+	DiscrepancyID struct{ base }
+
+	// MigrationProgramID identifies one migration program.
+	MigrationProgramID struct{ base }
+
+	// MigrationSnapshotID identifies one immutable source snapshot.
+	MigrationSnapshotID struct{ base }
+
+	// MigrationMappingID identifies one version of a migration code mapping.
+	MigrationMappingID struct{ base }
+
+	// MigrationRunID identifies one migration run.
+	MigrationRunID struct{ base }
+
+	// MigrationExceptionID identifies one migration exception.
+	MigrationExceptionID struct{ base }
+
+	// MigratedRecordID identifies one record carried into ZoikoTax by a migration.
+	MigratedRecordID struct{ base }
 )
 
 // The constructors. Each takes a uuid.UUID that idgen produced, or that the
@@ -182,9 +218,6 @@ func NewRequestID(u uuid.UUID) RequestID { return RequestID{base{u}} }
 
 // NewAuditID wraps a raw UUID as a AuditID.
 func NewAuditID(u uuid.UUID) AuditID { return AuditID{base{u}} }
-
-// NewSubmissionAttemptID wraps a raw UUID as a SubmissionAttemptID.
-func NewSubmissionAttemptID(u uuid.UUID) SubmissionAttemptID { return SubmissionAttemptID{base{u}} }
 
 // NewSealID wraps a raw UUID as a SealID.
 func NewSealID(u uuid.UUID) SealID { return SealID{base{u}} }
@@ -238,6 +271,45 @@ func NewLegalHoldID(u uuid.UUID) LegalHoldID { return LegalHoldID{base{u}} }
 
 // NewAuthorizationID wraps a raw UUID as an AuthorizationID.
 func NewAuthorizationID(u uuid.UUID) AuthorizationID { return AuthorizationID{base{u}} }
+
+// NewCompliancePackageID wraps a raw UUID as a CompliancePackageID.
+func NewCompliancePackageID(u uuid.UUID) CompliancePackageID { return CompliancePackageID{base{u}} }
+
+// NewBeneficiaryID wraps a raw UUID as a BeneficiaryID.
+func NewBeneficiaryID(u uuid.UUID) BeneficiaryID { return BeneficiaryID{base{u}} }
+
+// NewRemittanceID wraps a raw UUID as a RemittanceID.
+func NewRemittanceID(u uuid.UUID) RemittanceID { return RemittanceID{base{u}} }
+
+// NewComparatorID wraps a raw UUID as a ComparatorID.
+func NewComparatorID(u uuid.UUID) ComparatorID { return ComparatorID{base{u}} }
+
+// NewShadowRunID wraps a raw UUID as a ShadowRunID.
+func NewShadowRunID(u uuid.UUID) ShadowRunID { return ShadowRunID{base{u}} }
+
+// NewDiscrepancyID wraps a raw UUID as a DiscrepancyID.
+func NewDiscrepancyID(u uuid.UUID) DiscrepancyID { return DiscrepancyID{base{u}} }
+
+// NewMigrationProgramID wraps a raw UUID as a MigrationProgramID.
+func NewMigrationProgramID(u uuid.UUID) MigrationProgramID { return MigrationProgramID{base{u}} }
+
+// NewMigrationSnapshotID wraps a raw UUID as a MigrationSnapshotID.
+func NewMigrationSnapshotID(u uuid.UUID) MigrationSnapshotID { return MigrationSnapshotID{base{u}} }
+
+// NewMigrationMappingID wraps a raw UUID as a MigrationMappingID.
+func NewMigrationMappingID(u uuid.UUID) MigrationMappingID { return MigrationMappingID{base{u}} }
+
+// NewMigrationRunID wraps a raw UUID as a MigrationRunID.
+func NewMigrationRunID(u uuid.UUID) MigrationRunID { return MigrationRunID{base{u}} }
+
+// NewMigrationExceptionID wraps a raw UUID as a MigrationExceptionID.
+func NewMigrationExceptionID(u uuid.UUID) MigrationExceptionID { return MigrationExceptionID{base{u}} }
+
+// NewMigratedRecordID wraps a raw UUID as a MigratedRecordID.
+func NewMigratedRecordID(u uuid.UUID) MigratedRecordID { return MigratedRecordID{base{u}} }
+
+// NewSubmissionAttemptID wraps a raw UUID as a SubmissionAttemptID.
+func NewSubmissionAttemptID(u uuid.UUID) SubmissionAttemptID { return SubmissionAttemptID{base{u}} }
 
 // parse is the shared text ingress. Identifiers arrive from a URL path, a
 // cookie lookup or a database column, and all three can carry something that is
@@ -455,4 +527,121 @@ func ParseAuthorizationID(s string) (AuthorizationID, error) {
 		return AuthorizationID{}, err
 	}
 	return NewAuthorizationID(u), nil
+}
+
+// ParseComparatorID reads a ComparatorID from its canonical string form.
+func ParseComparatorID(s string) (ComparatorID, error) {
+	u, err := parse("comparator id", s)
+	if err != nil {
+		return ComparatorID{}, err
+	}
+	return NewComparatorID(u), nil
+}
+
+// ParseShadowRunID reads a ShadowRunID from its canonical string form.
+func ParseShadowRunID(s string) (ShadowRunID, error) {
+	u, err := parse("shadow run id", s)
+	if err != nil {
+		return ShadowRunID{}, err
+	}
+	return NewShadowRunID(u), nil
+}
+
+// ParseDiscrepancyID reads a DiscrepancyID from its canonical string form.
+func ParseDiscrepancyID(s string) (DiscrepancyID, error) {
+	u, err := parse("discrepancy id", s)
+	if err != nil {
+		return DiscrepancyID{}, err
+	}
+	return NewDiscrepancyID(u), nil
+}
+
+// ParseMigrationProgramID reads a MigrationProgramID from its canonical string form.
+func ParseMigrationProgramID(s string) (MigrationProgramID, error) {
+	u, err := parse("migration program id", s)
+	if err != nil {
+		return MigrationProgramID{}, err
+	}
+	return NewMigrationProgramID(u), nil
+}
+
+// ParseMigrationSnapshotID reads a MigrationSnapshotID from its canonical string form.
+func ParseMigrationSnapshotID(s string) (MigrationSnapshotID, error) {
+	u, err := parse("migration snapshot id", s)
+	if err != nil {
+		return MigrationSnapshotID{}, err
+	}
+	return NewMigrationSnapshotID(u), nil
+}
+
+// ParseMigrationMappingID reads a MigrationMappingID from its canonical string form.
+func ParseMigrationMappingID(s string) (MigrationMappingID, error) {
+	u, err := parse("migration mapping id", s)
+	if err != nil {
+		return MigrationMappingID{}, err
+	}
+	return NewMigrationMappingID(u), nil
+}
+
+// ParseMigrationRunID reads a MigrationRunID from its canonical string form.
+func ParseMigrationRunID(s string) (MigrationRunID, error) {
+	u, err := parse("migration run id", s)
+	if err != nil {
+		return MigrationRunID{}, err
+	}
+	return NewMigrationRunID(u), nil
+}
+
+// ParseMigrationExceptionID reads a MigrationExceptionID from its canonical string form.
+func ParseMigrationExceptionID(s string) (MigrationExceptionID, error) {
+	u, err := parse("migration exception id", s)
+	if err != nil {
+		return MigrationExceptionID{}, err
+	}
+	return NewMigrationExceptionID(u), nil
+}
+
+// ParseMigratedRecordID reads a MigratedRecordID from its canonical string form.
+func ParseMigratedRecordID(s string) (MigratedRecordID, error) {
+	u, err := parse("migrated record id", s)
+	if err != nil {
+		return MigratedRecordID{}, err
+	}
+	return NewMigratedRecordID(u), nil
+}
+
+// ParseBeneficiaryID reads a BeneficiaryID from its canonical string form.
+func ParseBeneficiaryID(s string) (BeneficiaryID, error) {
+	u, err := parse("beneficiary id", s)
+	if err != nil {
+		return BeneficiaryID{}, err
+	}
+	return NewBeneficiaryID(u), nil
+}
+
+// ParseRemittanceID reads a RemittanceID from its canonical string form.
+func ParseRemittanceID(s string) (RemittanceID, error) {
+	u, err := parse("remittance id", s)
+	if err != nil {
+		return RemittanceID{}, err
+	}
+	return NewRemittanceID(u), nil
+}
+
+// ParseCompliancePackageID reads a CompliancePackageID from its canonical string form.
+func ParseCompliancePackageID(s string) (CompliancePackageID, error) {
+	u, err := parse("compliance package id", s)
+	if err != nil {
+		return CompliancePackageID{}, err
+	}
+	return NewCompliancePackageID(u), nil
+}
+
+// ParseSubmissionAttemptID reads a SubmissionAttemptID from its canonical string form.
+func ParseSubmissionAttemptID(s string) (SubmissionAttemptID, error) {
+	u, err := parse("submission attempt id", s)
+	if err != nil {
+		return SubmissionAttemptID{}, err
+	}
+	return NewSubmissionAttemptID(u), nil
 }

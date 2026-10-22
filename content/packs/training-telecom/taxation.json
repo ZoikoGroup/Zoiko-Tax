@@ -1,0 +1,240 @@
+{
+  "version": "2026.10.1",
+  "graphVersion": "training-2026.10",
+  "jurisdictions": [
+    { "id": "jurisdiction:xt", "level": "COUNTRY", "name": "Training Territory XT", "country": "XT", "timezone": "UTC", "effectiveFrom": "2000-01-01" },
+    { "id": "jurisdiction:xq", "level": "COUNTRY", "name": "Training Federation XQ", "country": "XQ", "timezone": "UTC", "effectiveFrom": "2000-01-01" },
+    { "id": "jurisdiction:xq-st", "parent": "jurisdiction:xq", "level": "STATE", "name": "Training State XQ-ST", "country": "XQ", "code": "XQ-ST", "timezone": "UTC", "effectiveFrom": "2000-01-01" },
+    { "id": "jurisdiction:xv", "level": "COUNTRY", "name": "Training VAT Union XV", "country": "XV", "timezone": "Pacific/Auckland", "effectiveFrom": "2000-01-01" },
+    { "id": "jurisdiction:xw", "level": "COUNTRY", "name": "Training VAT Union XW", "country": "XW", "timezone": "UTC", "effectiveFrom": "2000-01-01" }
+  ],
+  "situs": {
+    "undeterminedAs": "B2C",
+    "rules": [
+      {
+        "id": "training-consumer",
+        "role": "B2C",
+        "mode": "PRECEDENCE",
+        "order": ["PRIMARY_PLACE_OF_USE", "FIXED_LINE_LOCATION", "SERVICE_ADDRESS", "SIM_COUNTRY", "BILLING_ADDRESS", "IP_GEOLOCATION"],
+        "minimumReliability": "SUPPORTING",
+        "reliability": {
+          "PRIMARY_PLACE_OF_USE": "STRONG",
+          "FIXED_LINE_LOCATION": "STRONG",
+          "SERVICE_ADDRESS": "STRONG",
+          "SIM_COUNTRY": "SUPPORTING",
+          "BILLING_ADDRESS": "SUPPORTING",
+          "IP_GEOLOCATION": "WEAK"
+        },
+        "roaming": "HOME"
+      },
+      {
+        "id": "training-business",
+        "role": "B2B",
+        "mode": "PRECEDENCE",
+        "order": ["CUSTOMER_ESTABLISHMENT", "VAT_IDENTIFICATION", "BILLING_ADDRESS"],
+        "minimumReliability": "SUPPORTING",
+        "reliability": {
+          "CUSTOMER_ESTABLISHMENT": "STRONG",
+          "VAT_IDENTIFICATION": "SUPPORTING",
+          "BILLING_ADDRESS": "SUPPORTING"
+        }
+      }
+    ]
+  },
+  "responsibility": [
+    { "id": "seller-collects", "incidence": "SELLER", "collection": "SELLER", "reporting": "SELLER", "remittance": "SELLER", "economicBearer": "BUYER" },
+    { "id": "subscriber-fee", "incidence": "BUYER", "collection": "SELLER", "reporting": "SELLER", "remittance": "SELLER", "economicBearer": "BUYER" },
+    { "id": "provider-borne", "incidence": "SELLER", "collection": "NONE", "reporting": "SELLER", "remittance": "SELLER", "economicBearer": "SELLER" },
+    { "id": "reverse-charge", "incidence": "BUYER", "collection": "NONE", "reporting": "BUYER", "remittance": "BUYER", "economicBearer": "BUYER" }
+  ],
+  "regimes": [
+    {
+      "id": "regime:xt-training",
+      "country": "XT",
+      "name": "XT training regime (playbook section 7)",
+      "services": ["MOBILE_VOICE", "MOBILE_DATA", "EQUIPMENT_SALE"],
+      "extraction": { "mode": "HALF_UP", "scale": 2, "basis": "LINE" },
+      "source": "SRC-ZOIKO-TRAINING-0001",
+      "citation": "TRAINING FIXTURE ONLY. ZTAX-ENG-RESET-001 section 7: fictional regime, rates, allocations and recovery restrictions. Not any country's tax law."
+    },
+    {
+      "id": "regime:xq-training",
+      "country": "XQ",
+      "name": "XQ training regime (playbook section 9: tax on tax, inclusive pricing)",
+      "services": ["FIXED_BROADBAND"],
+      "requiresLevel": "STATE",
+      "extraction": { "mode": "HALF_UP", "scale": 2, "basis": "LINE" },
+      "source": "SRC-ZOIKO-TRAINING-0001",
+      "citation": "TRAINING FIXTURE ONLY. ZTAX-ENG-RESET-001 section 9: tax on tax and a state that levies its own tax."
+    },
+    {
+      "id": "regime:xv-training",
+      "country": "XV",
+      "name": "XV training VAT (playbook section 8A: place of supply)",
+      "services": ["MOBILE_VOICE", "MOBILE_DATA"],
+      "extraction": { "mode": "HALF_UP", "scale": 2, "basis": "LINE" },
+      "source": "SRC-ZOIKO-TRAINING-0001",
+      "citation": "TRAINING FIXTURE ONLY. ZTAX-ENG-RESET-001 section 8A: business/consumer status and establishment decide place of supply and who accounts for tax."
+    },
+    {
+      "id": "regime:xw-training",
+      "country": "XW",
+      "name": "XW training VAT (cross-border counterpart of XV)",
+      "services": ["MOBILE_VOICE", "MOBILE_DATA"],
+      "source": "SRC-ZOIKO-TRAINING-0001",
+      "citation": "TRAINING FIXTURE ONLY. A second fictional VAT territory, so a supply can cross a border."
+    }
+  ],
+  "components": [
+    {
+      "id": "xt.voice-tax",
+      "regime": "regime:xt-training",
+      "jurisdiction": "jurisdiction:xt",
+      "authority": "authority:xt-revenue",
+      "taxType": "TELECOM_TAX",
+      "name": "XT voice tax",
+      "emit": "XT_VOICE_TAX",
+      "services": ["MOBILE_VOICE"],
+      "applies": [{ "supply": "ANY", "treatment": "CUSTOMER_CHARGE", "responsibility": "seller-collects" }],
+      "base": { "kind": "LINE_NET" },
+      "rounding": { "mode": "HALF_UP", "scale": 2, "basis": "LINE" },
+      "exemptBy": ["RESALE"],
+      "versions": [
+        { "from": "2026-01-01", "kind": "AD_VALOREM", "rate": "0.08", "source": "SRC-ZOIKO-TRAINING-0001", "citation": "Training rule: 8% of the voice base." }
+      ]
+    },
+    {
+      "id": "xt.data-tax",
+      "regime": "regime:xt-training",
+      "jurisdiction": "jurisdiction:xt",
+      "authority": "authority:xt-revenue",
+      "taxType": "TELECOM_TAX",
+      "name": "XT data tax",
+      "emit": "XT_DATA_TAX",
+      "services": ["MOBILE_DATA"],
+      "applies": [{ "supply": "ANY", "treatment": "CUSTOMER_CHARGE", "responsibility": "seller-collects" }],
+      "base": { "kind": "LINE_NET" },
+      "rounding": { "mode": "HALF_UP", "scale": 2, "basis": "LINE" },
+      "versions": [
+        { "from": "2026-01-01", "kind": "AD_VALOREM", "rate": "0", "legalReason": "ZERO_RATED", "source": "SRC-ZOIKO-TRAINING-0001", "citation": "Training rule: data is legally zero-rated. Zero with a rule and a reason; not unsupported." }
+      ]
+    },
+    {
+      "id": "xt.device-tax",
+      "regime": "regime:xt-training",
+      "jurisdiction": "jurisdiction:xt",
+      "authority": "authority:xt-revenue",
+      "taxType": "SALES_TAX",
+      "name": "XT device tax",
+      "emit": "XT_DEVICE_TAX",
+      "services": ["EQUIPMENT_SALE"],
+      "applies": [{ "supply": "ANY", "treatment": "CUSTOMER_CHARGE", "responsibility": "seller-collects" }],
+      "base": { "kind": "LINE_NET" },
+      "rounding": { "mode": "HALF_UP", "scale": 2, "basis": "LINE" },
+      "versions": [
+        { "from": "2026-01-01", "kind": "AD_VALOREM", "rate": "0.05", "source": "SRC-ZOIKO-TRAINING-0001", "citation": "Training rule: 5% of the device base." }
+      ]
+    },
+    {
+      "id": "xt.emergency-charge",
+      "regime": "regime:xt-training",
+      "jurisdiction": "jurisdiction:xt",
+      "authority": "authority:xt-emergency-board",
+      "taxType": "EMERGENCY_SURCHARGE",
+      "name": "XT emergency services charge",
+      "emit": "XT_EMERGENCY_CHARGE",
+      "services": ["MOBILE_VOICE"],
+      "applies": [{ "supply": "ANY", "treatment": "CUSTOMER_CHARGE", "responsibility": "subscriber-fee" }],
+      "base": { "kind": "QUANTITY" },
+      "rounding": { "mode": "HALF_UP", "scale": 2, "basis": "LINE" },
+      "versions": [
+        { "from": "2026-01-01", "kind": "SPECIFIC", "amount": "0.75", "currency": "USD", "unit": "LINE", "source": "SRC-ZOIKO-TRAINING-0001", "citation": "Training rule: 0.75 per eligible active line. Unit and count retained; never inferred from price." }
+      ]
+    },
+    {
+      "id": "xt.sector-contribution",
+      "regime": "regime:xt-training",
+      "jurisdiction": "jurisdiction:xt",
+      "authority": "authority:xt-regulator",
+      "taxType": "SECTOR_CONTRIBUTION",
+      "name": "XT sector contribution",
+      "emit": "XT_SECTOR_CONTRIBUTION",
+      "services": ["MOBILE_VOICE"],
+      "applies": [{ "supply": "ANY", "treatment": "PROVIDER_COST", "responsibility": "provider-borne" }],
+      "base": { "kind": "LINE_NET" },
+      "rounding": { "mode": "HALF_UP", "scale": 2, "basis": "LINE" },
+      "versions": [
+        { "from": "2026-01-01", "kind": "AD_VALOREM", "rate": "0.02", "source": "SRC-ZOIKO-TRAINING-0001", "citation": "Training rule: 2% of voice regulatory revenue, borne by the provider; no customer recovery." }
+      ]
+    },
+    {
+      "id": "xq.national-tax",
+      "regime": "regime:xq-training",
+      "jurisdiction": "jurisdiction:xq",
+      "authority": "authority:xq-revenue",
+      "taxType": "SERVICES_TAX",
+      "name": "XQ national services tax (A)",
+      "emit": "XQ_NATIONAL_TAX",
+      "applies": [{ "supply": "ANY", "treatment": "CUSTOMER_CHARGE", "responsibility": "seller-collects" }],
+      "base": { "kind": "LINE_NET" },
+      "rounding": { "mode": "HALF_UP", "scale": 2, "basis": "LINE" },
+      "versions": [
+        { "from": "2026-01-01", "kind": "AD_VALOREM", "rate": "0.10", "source": "SRC-ZOIKO-TRAINING-0001", "citation": "Training rule A: 10% of the net." }
+      ]
+    },
+    {
+      "id": "xq-st.state-levy",
+      "regime": "regime:xq-training",
+      "jurisdiction": "jurisdiction:xq-st",
+      "authority": "authority:xq-st-revenue",
+      "taxType": "STATE_LEVY",
+      "name": "XQ-ST state levy on net plus A (B)",
+      "emit": "XQ_ST_STATE_LEVY",
+      "applies": [{ "supply": "ANY", "treatment": "CUSTOMER_CHARGE", "responsibility": "seller-collects" }],
+      "base": { "kind": "NET_PLUS_COMPONENTS", "components": ["xq.national-tax"] },
+      "rounding": { "mode": "HALF_UP", "scale": 2, "basis": "LINE" },
+      "versions": [
+        { "from": "2026-01-01", "kind": "AD_VALOREM", "rate": "0.05", "source": "SRC-ZOIKO-TRAINING-0001", "citation": "Training rule B: 5% of net plus A. The dependency graph records why B includes A." }
+      ]
+    },
+    {
+      "id": "xv.vat",
+      "regime": "regime:xv-training",
+      "jurisdiction": "jurisdiction:xv",
+      "authority": "authority:xv-revenue",
+      "taxType": "VAT",
+      "name": "XV value added tax",
+      "emit": "XV_VAT",
+      "applies": [
+        { "roles": ["B2C", "UNDETERMINED"], "supply": "ANY", "treatment": "CUSTOMER_CHARGE", "responsibility": "seller-collects" },
+        { "roles": ["B2B"], "supply": "DOMESTIC", "treatment": "CUSTOMER_CHARGE", "responsibility": "seller-collects" },
+        { "roles": ["B2B"], "supply": "CROSS_BORDER", "treatment": "REVERSE_CHARGE", "responsibility": "reverse-charge" }
+      ],
+      "base": { "kind": "LINE_NET" },
+      "rounding": { "mode": "HALF_UP", "scale": 2, "basis": "LINE" },
+      "versions": [
+        { "from": "2026-01-01", "to": "2027-01-01", "kind": "AD_VALOREM", "rate": "0.20", "source": "SRC-ZOIKO-TRAINING-0001", "citation": "Training rule: 20% until 31 December 2026." },
+        { "from": "2027-01-01", "kind": "AD_VALOREM", "rate": "0.22", "source": "SRC-ZOIKO-TRAINING-0001", "citation": "Training rule: 22% from 1 January 2027, midnight in XV's own timezone." }
+      ]
+    },
+    {
+      "id": "xw.vat",
+      "regime": "regime:xw-training",
+      "jurisdiction": "jurisdiction:xw",
+      "authority": "authority:xw-revenue",
+      "taxType": "VAT",
+      "name": "XW value added tax",
+      "emit": "XW_VAT",
+      "applies": [
+        { "roles": ["B2C", "UNDETERMINED"], "supply": "ANY", "treatment": "CUSTOMER_CHARGE", "responsibility": "seller-collects" },
+        { "roles": ["B2B"], "supply": "DOMESTIC", "treatment": "CUSTOMER_CHARGE", "responsibility": "seller-collects" },
+        { "roles": ["B2B"], "supply": "CROSS_BORDER", "treatment": "REVERSE_CHARGE", "responsibility": "reverse-charge" }
+      ],
+      "base": { "kind": "LINE_NET" },
+      "rounding": { "mode": "HALF_UP", "scale": 2, "basis": "LINE" },
+      "versions": [
+        { "from": "2026-01-01", "kind": "AD_VALOREM", "rate": "0.25", "source": "SRC-ZOIKO-TRAINING-0001", "citation": "Training rule: 25%." }
+      ]
+    }
+  ]
+}

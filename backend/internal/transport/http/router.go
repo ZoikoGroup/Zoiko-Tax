@@ -116,6 +116,25 @@ type Router struct {
 	// and the gate that resolves the two.
 	Legal *app.LegalService
 
+	// Compliance serves compliance packages: preparation, review, approval,
+	// submission and the authority's answer. Nil when determination is not
+	// wired, since packages execute the obligations commits assess.
+	Compliance *app.ComplianceService
+
+	// Remittance serves payee master data and payment instructions. Nil
+	// when determination is not wired, since payments pay the obligations
+	// commits assess.
+	Remittance *app.RemittanceService
+
+	// Shadow serves shadow assurance: comparator profiles, comparison runs
+	// and their discrepancies. Nil when the cell has no evidence store to
+	// read committed results from.
+	Shadow *app.ShadowService
+
+	// Migration serves migration programs: snapshots, mappings, AS_KNOWN
+	// runs, exceptions and the cutover state machine.
+	Migration *app.MigrationService
+
 	// Dashboard serves the Tax Command Center. It reads what was recorded
 	// and needs no content, so it is served wherever the store is.
 	Dashboard *app.DashboardService
@@ -174,6 +193,9 @@ func (rt *Router) routes() []struct {
 		// Discovery. Unauthenticated because a client needs to know whether a
 		// cell can serve it before it has a session.
 		{Route{"GET", "/v1/capabilities", true, nil}, rt.handleCapabilities},
+		// What the active content determines by location. Any authenticated
+		// role: coverage is a fact about the cell, not about a tenant's data.
+		{Route{"GET", "/v1/coverage", false, nil}, rt.handleCoverage},
 
 		// Authentication. Sign-in is necessarily unauthenticated; the rest
 		// require a session but no particular role.
@@ -263,6 +285,54 @@ func (rt *Router) routes() []struct {
 		{Route{"GET", "/v1/obligations", false, []security.Role{operator, analyst, auditor}}, rt.handleListObligations},
 		{Route{"GET", "/v1/obligations/{obligationId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetObligation},
 		{Route{"POST", "/v1/obligations/{obligationId}/transitions", false, []security.Role{operator}}, rt.handleTransitionObligation},
+		// Compliance: the preparer, reviewer and approver are compared as
+		// people in the service, so a reviewer may be an analyst
+		// (ZTAX-COMP-REQ-0040, -0041).
+		{Route{"GET", "/v1/compliance/packages", false, []security.Role{operator, analyst, auditor}}, rt.handleListCompliancePackages},
+		{Route{"POST", "/v1/compliance/packages", false, []security.Role{operator}}, rt.handleCreateCompliancePackage},
+		{Route{"GET", "/v1/compliance/packages/{packageId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetCompliancePackage},
+		{Route{"POST", "/v1/compliance/packages/{packageId}/preparation", false, []security.Role{operator}}, rt.handlePrepareCompliancePackage},
+		{Route{"POST", "/v1/compliance/packages/{packageId}/review", false, []security.Role{operator, analyst}}, rt.handleReviewCompliancePackage},
+		{Route{"POST", "/v1/compliance/packages/{packageId}/approval", false, []security.Role{operator, analyst}}, rt.handleApproveCompliancePackage},
+		{Route{"POST", "/v1/compliance/packages/{packageId}/submission", false, []security.Role{operator}}, rt.handleSubmitCompliancePackage},
+		{Route{"POST", "/v1/compliance/packages/{packageId}/acknowledgement", false, []security.Role{operator}}, rt.handleAcknowledgeCompliancePackage},
+		{Route{"POST", "/v1/compliance/packages/{packageId}/resolution", false, []security.Role{operator}}, rt.handleResolveCompliancePackage},
+		{Route{"POST", "/v1/compliance/packages/{packageId}/cancellation", false, []security.Role{operator}}, rt.handleCancelCompliancePackage},
+		// Remittance: maker and checker are compared as people in the service;
+		// payee details are kept by an administrator or operator and
+		// verified by someone else (ZTAX-REM-REQ-0014, -0024).
+		{Route{"GET", "/v1/remittances/beneficiaries", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListBeneficiaries},
+		{Route{"POST", "/v1/remittances/beneficiaries", false, []security.Role{admin, operator}}, rt.handleCreateBeneficiary},
+		{Route{"POST", "/v1/remittances/beneficiaries/{beneficiaryId}/verification", false, []security.Role{admin, operator, analyst}}, rt.handleVerifyBeneficiary},
+		{Route{"POST", "/v1/remittances/beneficiaries/{beneficiaryId}/suspension", false, []security.Role{admin, operator, analyst}}, rt.handleSuspendBeneficiary},
+		{Route{"GET", "/v1/remittances", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListRemittances},
+		{Route{"POST", "/v1/remittances", false, []security.Role{operator}}, rt.handleCreateRemittance},
+		{Route{"GET", "/v1/remittances/{remittanceId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetRemittance},
+		{Route{"POST", "/v1/remittances/{remittanceId}/approval", false, []security.Role{operator, analyst}}, rt.handleApproveRemittance},
+		{Route{"POST", "/v1/remittances/{remittanceId}/submission", false, []security.Role{operator}}, rt.handleSubmitRemittance},
+		{Route{"POST", "/v1/remittances/{remittanceId}/provider-status", false, []security.Role{operator}}, rt.handleRecordRemittanceStatus},
+		{Route{"POST", "/v1/remittances/{remittanceId}/resolution", false, []security.Role{operator}}, rt.handleResolveRemittance},
+		{Route{"POST", "/v1/remittances/{remittanceId}/return", false, []security.Role{operator}}, rt.handleReturnRemittance},
+		{Route{"POST", "/v1/remittances/{remittanceId}/cancellation", false, []security.Role{operator}}, rt.handleCancelRemittance},
+		// Shadow: non-impact reads of committed decisions, compared with
+		// another engine's results (ZTAX-SHD-001).
+		{Route{"GET", "/v1/shadow/comparators", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListComparators},
+		{Route{"POST", "/v1/shadow/comparators", false, []security.Role{admin, operator, analyst}}, rt.handleCreateComparator},
+		{Route{"GET", "/v1/shadow/runs", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListShadowRuns},
+		{Route{"POST", "/v1/shadow/runs", false, []security.Role{admin, operator, analyst}}, rt.handleExecuteShadowRun},
+		{Route{"GET", "/v1/shadow/runs/{shadowRunId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetShadowRun},
+		{Route{"POST", "/v1/shadow/discrepancies/{discrepancyId}/transitions", false, []security.Role{admin, operator, analyst}}, rt.handleMoveDiscrepancy},
+		// Migration (ZTAX-MIG-001): the switch is made by someone other than
+		// the program's creator; the service compares the people.
+		{Route{"GET", "/v1/migrations/programs", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListMigrationPrograms},
+		{Route{"POST", "/v1/migrations/programs", false, []security.Role{admin, operator}}, rt.handleCreateMigrationProgram},
+		{Route{"GET", "/v1/migrations/programs/{migrationProgramId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetMigrationProgram},
+		{Route{"POST", "/v1/migrations/programs/{migrationProgramId}/snapshots", false, []security.Role{admin, operator}}, rt.handleRegisterMigrationSnapshot},
+		{Route{"POST", "/v1/migrations/programs/{migrationProgramId}/mappings", false, []security.Role{admin, operator}}, rt.handleCreateMigrationMapping},
+		{Route{"POST", "/v1/migrations/programs/{migrationProgramId}/runs", false, []security.Role{admin, operator}}, rt.handleExecuteMigrationRun},
+		{Route{"POST", "/v1/migrations/programs/{migrationProgramId}/cutover", false, []security.Role{admin, operator}}, rt.handleMoveMigrationCutover},
+		{Route{"GET", "/v1/migrations/runs/{migrationRunId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetMigrationRun},
+		{Route{"POST", "/v1/migrations/exceptions/{migrationExceptionId}/decision", false, []security.Role{admin, operator, analyst}}, rt.handleDecideMigrationException},
 
 		// The Tax Command Center: read-only aggregates. ADMIN is not on it,
 		// for the reason it is on no fiscal read above.

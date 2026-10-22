@@ -80,6 +80,7 @@ type fiscalCell struct {
 	svc    *app.DeterminationService
 	event  time.Time
 	clock  *settableClock
+	files  *adapterevidence.FileStore
 }
 
 func openFiscalCell(t *testing.T) *fiscalCell {
@@ -130,7 +131,7 @@ func openFiscalCell(t *testing.T) *fiscalCell {
 		[]security.Role{security.RoleOperator}, time.Now())
 	return &fiscalCell{
 		store: store, ctx: security.Into(ctx, operator), tenant: tenant, svc: svc,
-		event: time.Date(2026, 9, 24, 18, 0, 0, 0, time.UTC), clock: clk,
+		event: time.Date(2026, 9, 24, 18, 0, 0, 0, time.UTC), clock: clk, files: files,
 	}
 }
 

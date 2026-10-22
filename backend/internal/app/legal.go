@@ -213,6 +213,13 @@ func (s *LegalService) Gate(ctx context.Context, act legal.Action) (legal.Resolu
 	if _, err := requireRoleOrSystem(ctx, security.RoleAdmin, security.RoleOperator, security.RoleAnalyst); err != nil {
 		return legal.Resolution{}, time.Time{}, err
 	}
+	return s.resolve(ctx, act)
+}
+
+// resolve is the gate without the caller's role check, for services that
+// gate an action of their own: the caller's right to that action is the
+// calling service's to check.
+func (s *LegalService) resolve(ctx context.Context, act legal.Action) (legal.Resolution, time.Time, error) {
 	if act.LegalEntity.IsZero() {
 		le, err := s.entities.Default(ctx)
 		if err != nil {
