@@ -5,6 +5,7 @@ import (
 
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/taxation"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 )
 
@@ -26,6 +27,13 @@ type Result struct {
 	Emitted map[string]rule.Value
 	// Trace is every node visited, in evaluation order (ADR-0005 §2.7).
 	Trace []rule.TraceStep
+
+	// Document is a location-aware determination's full result: its lines'
+	// states, situs decisions, components, totals and trace. Emitted carries
+	// its slot totals too, so a commit's fiscal effects read one map
+	// whichever path decided. Absent when nil, so every result recorded
+	// before documents existed keeps its bytes.
+	Document *taxation.Result
 }
 
 // Validate refuses a result that could not be meaningfully stored.
@@ -37,10 +45,14 @@ func (r Result) Validate() error {
 		return fmt.Errorf("evidence: result outcome %q is not a recorded outcome", r.Outcome)
 	case r.Reason == "":
 		return fmt.Errorf("evidence: result outcome %s carries no reason", r.Outcome)
-	case len(r.Trace) == 0:
+	case r.Document == nil && len(r.Trace) == 0:
 		// Every evaluation visits at least one node. An empty trace is a
 		// result nobody can explain, which UX-05 and the replay both need.
 		return fmt.Errorf("evidence: result carries no execution trace")
+	case r.Document != nil && (len(r.Trace) > 0 || len(r.Document.Trace) == 0):
+		// A document's trace is its own: selection steps and DET-001's
+		// evaluation steps, which are not rule-graph nodes.
+		return fmt.Errorf("evidence: a document result carries its trace in the document, and only there")
 	}
 	return nil
 }
@@ -58,12 +70,17 @@ func (r Result) Canonical() (canonical.Value, error) {
 		}
 		emitted = append(emitted, canonical.F(slot, cv))
 	}
+	document := canonical.Absent()
+	if r.Document != nil {
+		document = r.Document.Canonical()
+	}
 	return canonical.Object(
 		canonical.F("envelopeDigest", canonical.String(r.EnvelopeDigest.String())),
 		canonical.F("outcome", canonical.String(string(r.Outcome))),
 		canonical.F("reason", canonical.String(string(r.Reason))),
 		canonical.F("emitted", canonical.Object(emitted...)),
 		canonical.F("trace", CanonicalTrace(r.Trace)),
+		canonical.F("document", document),
 	), nil
 }
 

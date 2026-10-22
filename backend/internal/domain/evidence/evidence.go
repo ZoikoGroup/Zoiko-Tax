@@ -33,6 +33,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/fiscal"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/taxation"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 )
 
@@ -126,6 +127,13 @@ type Envelope struct {
 	// An empty read set is recorded as an empty object rather than omitted:
 	// "this decision read no accumulators" is a fact about it.
 	Accumulators map[string]fiscal.Money
+
+	// Document is the canonical input of a location-aware determination: a
+	// telecom document determined against the bundle's taxation profile.
+	// Exactly one of Input and Document carries the request. Absent from the
+	// canonical bytes when nil, so every envelope recorded before documents
+	// existed keeps its bytes and its digest.
+	Document *taxation.Document
 }
 
 // Validate refuses an envelope that cannot support a replay.
@@ -154,7 +162,14 @@ func (e Envelope) Validate() error {
 	case !e.Trains.Complete():
 		return fmt.Errorf("evidence: envelope does not name all seven release trains")
 	}
-	if err := e.Input.Validate(); err != nil {
+	if e.Document != nil {
+		if len(e.Input.Money)+len(e.Input.Rates)+len(e.Input.Quantities)+len(e.Input.Flags)+len(e.Input.Strings) > 0 {
+			return fmt.Errorf("evidence: envelope carries both named inputs and a document")
+		}
+		if err := e.Document.Validate(); err != nil {
+			return fmt.Errorf("evidence: envelope document: %w", err)
+		}
+	} else if err := e.Input.Validate(); err != nil {
 		return err
 	}
 	for name := range e.Accumulators {
@@ -167,6 +182,10 @@ func (e Envelope) Validate() error {
 
 // Canonical renders the envelope for digesting.
 func (e Envelope) Canonical() canonical.Value {
+	input, document := e.Input.Canonical(), canonical.Absent()
+	if e.Document != nil {
+		input, document = canonical.Absent(), e.Document.Canonical()
+	}
 	return canonical.Object(
 		canonical.F("decisionTime", canonical.Time(e.DecisionTime)),
 		canonical.F("eventTime", canonical.Time(e.EventTime)),
@@ -175,9 +194,19 @@ func (e Envelope) Canonical() canonical.Value {
 		canonical.F("irVersion", canonical.Integer(int64(e.IRVersion))),
 		canonical.F("canonProfile", canonical.String(e.CanonProfile)),
 		canonical.F("trains", e.Trains.Canonical()),
-		canonical.F("input", e.Input.Canonical()),
+		canonical.F("input", input),
+		canonical.F("document", document),
 		canonical.F("accumulators", moneySection(e.Accumulators, true)),
 	)
+}
+
+// RequestCanonical is the canonical request alone — the named inputs, or the
+// document — which the input digest covers and the jsonb query copy holds.
+func (e Envelope) RequestCanonical() canonical.Value {
+	if e.Document != nil {
+		return e.Document.Canonical()
+	}
+	return e.Input.Canonical()
 }
 
 // Digest returns the envelope's own digest, which is what a replay is verified
@@ -193,7 +222,7 @@ func (e Envelope) Digest() (canonical.Digest, error) {
 // record keys on this rather than on the envelope, because two retries of one
 // request carry the same input at different decision times.
 func (e Envelope) InputDigest() (canonical.Digest, error) {
-	return canonical.Sum(e.Input.Canonical())
+	return canonical.Sum(e.RequestCanonical())
 }
 
 // Frame is the evaluation frame the envelope describes. Determination and
@@ -251,6 +280,24 @@ func Conclude(r rule.Result) (Outcome, errs.ReasonCode) {
 		return OutcomeReviewRequired, r.Reason
 	}
 	return OutcomeUnsupported, r.Reason
+}
+
+// ConcludeDocument maps a location-aware determination to an outcome, under
+// the same rule Conclude follows: a resolved document is ADVISORY, never
+// AUTHORITATIVE, and every other state is the outcome of the same name with
+// the reason the engine recorded.
+func ConcludeDocument(r taxation.Result) (Outcome, errs.ReasonCode) {
+	switch r.State {
+	case taxation.StateResolved:
+		return OutcomeAdvisory, errs.ReasonNotAuthoritative
+	case taxation.StateAmbiguous:
+		return OutcomeAmbiguous, errs.ReasonCode(r.Reason)
+	case taxation.StateConflicted:
+		return OutcomeConflicted, errs.ReasonCode(r.Reason)
+	case taxation.StateReviewRequired:
+		return OutcomeReviewRequired, errs.ReasonCode(r.Reason)
+	}
+	return OutcomeUnsupported, errs.ReasonCode(r.Reason)
 }
 
 // CanonicalTrace renders the trace for digesting and for storage.

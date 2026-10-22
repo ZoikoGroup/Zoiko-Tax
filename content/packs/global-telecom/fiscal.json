@@ -1,0 +1,13 @@
+{
+  "posting": {
+    "profile": "tcsl-global-telecom",
+    "version": "2026.10.1",
+    "type": "INVOICE",
+    "lines": [
+      { "account": "TAX_RECEIVABLE_CONTROL", "side": "DEBIT", "emitted": "CUSTOMER_TAX" },
+      { "account": "TAX_COLLECTED_LIABILITY", "side": "CREDIT", "emitted": "CUSTOMER_TAX" },
+      { "account": "CUSTOMER_GL_BRIDGE", "side": "DEBIT", "emitted": "PROVIDER_ACCRUAL" },
+      { "account": "TAX_ACCRUED_LIABILITY", "side": "CREDIT", "emitted": "PROVIDER_ACCRUAL" }
+    ]
+  }
+}

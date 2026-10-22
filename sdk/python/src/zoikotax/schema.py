@@ -400,20 +400,6 @@ in the decision's envelope either way (ZTAX-DET-REQ-0034).
 """
 
 
-class QuoteRequest(TypedDict):
-    eventTime: Timestamp
-    input: DeterminationInput
-    accumulators: NotRequired[ReadSet]
-
-
-class CommitRequest(TypedDict):
-    businessKey: BusinessKey
-    supersedes: NotRequired[DecisionId]
-    eventTime: Timestamp
-    input: DeterminationInput
-    accumulators: NotRequired[ReadSet]
-
-
 class ResultValue(TypedDict):
     """
     One emitted value. `type` says which other members are present:
@@ -450,18 +436,6 @@ class BundleRef(TypedDict):
     irVersion: int
 
 
-class Quote(TypedDict):
-    authoritative: bool
-    """
-    Always `false`. A quote is an estimate at every authorization level (ADR-0004 §2.7).
-    """
-    outcome: Outcome
-    reasonCode: ReasonCode
-    quotedAt: Timestamp
-    bundle: BundleRef
-    emitted: Emitted
-
-
 class DecisionDigests(TypedDict):
     """
     The digests a decision names (ADR-0011 §2.8). `envelope` and `result`
@@ -475,25 +449,227 @@ class DecisionDigests(TypedDict):
     result: Digest
 
 
-class Decision(TypedDict):
+JurisdictionId: TypeAlias = str
+"""
+A jurisdiction's content identifier (ADR-0012 §2.4), such as
+`jurisdiction:ca-qc`. Classified as location evidence: on a consumer
+document, the deepest jurisdiction is where the customer is.
+
+"""
+
+
+LocationCode: TypeAlias = str
+"""
+An ISO 3166-1 alpha-2 country code (`DE`) or ISO 3166-2 subdivision code (`CA-QC`).
+"""
+
+
+TaxDocumentType: TypeAlias = Literal['INVOICE', 'CREDIT_NOTE']
+"""
+An `INVOICE` carries non-negative amounts; a `CREDIT_NOTE` carries non-positive ones.
+"""
+
+
+PriceMode: TypeAlias = Literal['EXCLUSIVE', 'INCLUSIVE']
+"""
+`EXCLUSIVE`: amounts are net and customer charges are added.
+`INCLUSIVE`: amounts include the customer-charged taxes, which are
+extracted (DET-001 §7) — never computed on the gross and added.
+
+"""
+
+
+ServiceFamily: TypeAlias = Literal['MOBILE_VOICE', 'FIXED_VOICE', 'MESSAGING', 'MOBILE_DATA', 'FIXED_BROADBAND', 'VOIP', 'SIP_TRUNKING', 'UCAAS', 'CCAAS', 'CPAAS', 'IOT_CONNECTIVITY', 'SUBSCRIPTION_IDENTITY', 'SATELLITE_CONNECTIVITY', 'ROAMING_RETAIL', 'ROAMING_WHOLESALE', 'INTERCONNECT', 'WHOLESALE_ACCESS', 'EQUIPMENT_SALE', 'EQUIPMENT_RENTAL', 'INSTALLATION_ACTIVATION', 'PROFESSIONAL_SERVICES', 'CONTENT_MEDIA', 'SOFTWARE', 'OTHER_NON_TELECOM']
+"""
+A ZTAX-CLS-001 ontology family. A tenant's SKU is mapped to one before
+determination; a line without one is held as `CLASSIFICATION_REQUIRED`
+rather than guessed at.
+
+"""
+
+
+SitusEvidenceType: TypeAlias = Literal['PRIMARY_PLACE_OF_USE', 'SERVICE_ADDRESS', 'BILLING_ADDRESS', 'FIXED_LINE_LOCATION', 'NETWORK_LOCATION', 'SIM_COUNTRY', 'IP_GEOLOCATION', 'BANK_LOCATION', 'CUSTOMER_DECLARATION']
+"""
+The JUR-001 §3.2 evidence vocabulary a caller may supply directly.
+Seller and customer establishment and VAT identification arrive on the
+parties instead, so one fact cannot arrive twice and disagree.
+
+"""
+
+
+SitusEvidenceSource: TypeAlias = Literal['CUSTOMER_ASSERTED', 'SELLER_RECORDED', 'NETWORK_DERIVED', 'THIRD_PARTY_VERIFIED', 'AUTHORITY_VERIFIED']
+
+
+VatValidation: TypeAlias = Literal['VALIDATED', 'UNVALIDATED', 'VALIDATION_UNAVAILABLE']
+"""
+`VALIDATED` establishes a business customer where the pack recognises
+it. `UNVALIDATED` and `VALIDATION_UNAVAILABLE` are different facts and
+a pack may treat them differently (JUR-001 §7.3).
+
+"""
+
+
+CertificateVerification: TypeAlias = Literal['VERIFIED', 'UNVERIFIED', 'UNAVAILABLE']
+"""
+Only `VERIFIED` exempts. `UNAVAILABLE` holds the line for review; a
+verification is never assumed to have succeeded.
+
+"""
+
+
+PartyReference: TypeAlias = str
+"""
+A party's reference in the caller's systems. Not interpreted; a certificate's holder must equal the customer's.
+"""
+
+
+ContentLabel: TypeAlias = str
+"""
+An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+"""
+
+
+ContentText: TypeAlias = str
+"""
+Text from the active content, such as a source citation. Not interpreted.
+"""
+
+
+class Place(TypedDict):
     """
-    One recorded decision. Immutable; a correction is a new decision whose `supersedes` names this one.
+    A location named by its jurisdiction — exactly one of a jurisdiction
+    identifier and an ISO code. There is no street address: resolution
+    never geocodes (JUR-001 §8.2), so an address is mapped to a
+    jurisdiction by the system that records it.
+
     """
 
-    id: DecisionId
-    businessKey: BusinessKey
-    supersedes: NotRequired[DecisionId]
-    authoritative: bool
+    jurisdiction: NotRequired[JurisdictionId]
+    subdivision: NotRequired[LocationCode]
+    country: NotRequired[LocationCode]
+
+
+class VatIdentification(TypedDict):
     """
-    Whether this decision may be filed. `false` for every decision before A4.
+    The customer's VAT registration country and validation status. The number itself is not needed and not retained.
     """
-    outcome: Outcome
-    reasonCode: ReasonCode
-    eventTime: Timestamp
-    recordedAt: Timestamp
-    bundle: BundleRef
-    digests: DecisionDigests
-    emitted: Emitted
+
+    country: LocationCode
+    validation: VatValidation
+
+
+class TaxParty(TypedDict):
+    id: PartyReference
+    establishment: NotRequired[Place]
+    vat: NotRequired[VatIdentification]
+
+
+class SitusEvidenceItem(TypedDict):
+    """
+    One typed, attributed signal about where the supply took place (JUR-001 §3.1).
+    """
+
+    type: SitusEvidenceType
+    source: SitusEvidenceSource
+    collectedAt: NotRequired[Timestamp]
+    place: Place
+
+
+class TaxLinePart(TypedDict):
+    """
+    One component of an approved bundle decomposition.
+    """
+
+    key: ContentLabel
+    service: NotRequired[ServiceFamily]
+    amount: Decimal
+    quantity: NotRequired[QuantityValue]
+
+
+class TaxLine(TypedDict):
+    """
+    One rated line, in the document currency. A bundle line carries
+    `parts` instead of its own `service` and `quantity`, and the parts
+    must sum to `amount` exactly.
+
+    """
+
+    key: ContentLabel
+    sku: NotRequired[ContentLabel]
+    service: NotRequired[ServiceFamily]
+    amount: Decimal
+    quantity: NotRequired[QuantityValue]
+    evidence: NotRequired[list[SitusEvidenceItem]]
+    parts: NotRequired[list[TaxLinePart]]
+
+
+DeterminationState: TypeAlias = Literal['RESOLVED', 'REVIEW_REQUIRED', 'UNSUPPORTED', 'AMBIGUOUS', 'CONFLICTED']
+"""
+`RESOLVED` is the only state that carries amounts. Every other state
+is recorded with its evidence and reason and is never a zero tax.
+
+"""
+
+
+Treatment: TypeAlias = Literal['CUSTOMER_CHARGE', 'PROVIDER_COST', 'REVERSE_CHARGE', 'EXEMPT']
+"""
+`CUSTOMER_CHARGE` is on the invoice. `PROVIDER_COST` is borne by the
+seller and never on it. `REVERSE_CHARGE` is self-assessed by the
+customer: disclosed, neither charged nor remitted by the seller.
+`EXEMPT` is a customer charge a verified certificate suppressed.
+
+"""
+
+
+ResponsibleParty: TypeAlias = Literal['SELLER', 'BUYER', 'NONE']
+
+
+class ResponsibilityAssignment(TypedDict):
+    """
+    The five roles, each answered separately (ZTAX-OBL-REQ-0002 to -0006).
+    """
+
+    id: ContentLabel
+    incidence: ResponsibleParty
+    collection: ResponsibleParty
+    reporting: ResponsibleParty
+    remittance: ResponsibleParty
+    economicBearer: ResponsibleParty
+
+
+class ExemptionApplied(TypedDict):
+    """
+    A charge a certificate suppressed, and the assessment it would have been.
+    """
+
+    certificate: PartyReference
+    type: ContentLabel
+    assessed: NotRequired[Decimal]
+
+
+class DocumentTotals(TypedDict):
+    """
+    The figures that must stay apart (playbook §7): what the customer is
+    charged, what the provider bears, and what the customer self-assesses.
+
+    """
+
+    net: Decimal
+    customerTax: Decimal
+    customerTotal: Decimal
+    providerAccrual: Decimal
+    reverseCharge: Decimal
+
+
+class DeterminationStep(TypedDict):
+    """
+    One step of the deterministic trace — selection, situs, exemption and DET-001 evaluation steps.
+    """
+
+    item: NotRequired[ContentLabel]
+    component: NotRequired[ContentLabel]
+    step: ContentLabel
+    detail: str
 
 
 LegalEntityId: TypeAlias = str
@@ -896,14 +1072,6 @@ JobId: TypeAlias = str
 """
 An asynchronous job. A UUIDv7 in lowercase canonical form.
 """
-
-
-class BatchRequest(TypedDict):
-    operation: Literal['COMMIT']
-    """
-    What each item does. `COMMIT` commits it, or corrects with it when it names `supersedes`.
-    """
-    items: list[CommitRequest]
 
 
 class JobItem(TypedDict):
@@ -1727,6 +1895,959 @@ class DashboardTrend(TypedDict):
     points: list[DashboardTrendPoint]
 
 
+CompliancePackageId: TypeAlias = str
+
+
+ComplianceMode: TypeAlias = Literal['SOFTWARE_ONLY', 'ASSISTED', 'MANAGED_PREP', 'MANAGED_FILE', 'FULL_MANAGED_COMPLIANCE', 'PARTNER_LED']
+"""
+Who does the work (ZTAX-COMP-001 §3), set per package.
+"""
+
+
+ComplianceChannel: TypeAlias = Literal['DIRECT_API', 'EFILE_NETWORK', 'FILE_TRANSFER', 'WEB_PORTAL_RPA', 'MANUAL_PORTAL', 'LOCAL_PARTNER', 'PAPER']
+"""
+How the filing reaches the authority (ZTAX-COMP-001 §13).
+"""
+
+
+ComplianceStatus: TypeAlias = Literal['READY', 'IN_REVIEW', 'APPROVED', 'TRANSMITTING', 'UNCERTAIN_SUBMISSION', 'FILED', 'ACCEPTED', 'REJECTED', 'CANCELLED']
+"""
+Where the filing is (ZTAX-COMP-001 §14). TRANSMITTING is not FILED, and UNCERTAIN_SUBMISSION leaves only through a recorded resolution.
+"""
+
+
+ComplianceReviewDecision: TypeAlias = Literal['ACCEPT', 'REJECT', 'RETURN_FOR_CHANGE', 'ESCALATE']
+"""
+A reviewer's verdict on one preparation version.
+"""
+
+
+ComplianceAcknowledgement: TypeAlias = Literal['RECEIVED', 'ACCEPTED', 'ACCEPTED_WITH_WARNINGS', 'REJECTED_VALIDATION', 'REJECTED_AUTHORIZATION', 'REJECTED_DUPLICATE', 'PENDING_AUTHORITY', 'UNKNOWN']
+"""
+What the authority or network answered (ZTAX-COMP-001 §16).
+"""
+
+
+ComplianceResolution: TypeAlias = Literal['CONFIRMED_FILED', 'CONFIRMED_NOT_FILED', 'DUPLICATE_DETECTED', 'MANUAL_INVESTIGATION']
+"""
+How an uncertain submission was settled (ZTAX-COMP-001 §15).
+"""
+
+
+CompliancePriority: TypeAlias = Literal['P0', 'P1', 'P2', 'P3', 'P4', 'P5']
+"""
+Queue priority (ZTAX-COMP-001 §22) — P0 legal deadline imminent, P1 material blocker, P2 required review, P3 normal execution, P4 follow-up, P5 done.
+"""
+
+
+ComplianceStepKind: TypeAlias = Literal['CREATED', 'PREPARED', 'REVIEWED', 'APPROVED', 'SUBMISSION_STARTED', 'ACKNOWLEDGED', 'UNCERTAIN_RESOLVED', 'CANCELLED']
+"""
+What a step records.
+"""
+
+
+ComplianceNote: TypeAlias = str
+"""
+Free text from the person recording a step.
+"""
+
+
+ComplianceEvidence: TypeAlias = str
+"""
+The authority's response as received, or the operator's account of what the authority answered.
+"""
+
+
+AuthorityReference: TypeAlias = str
+"""
+The authority's own receipt or reference for a submission.
+"""
+
+
+class ComplianceStep(TypedDict):
+    seq: int
+    kind: ComplianceStepKind
+    status: ComplianceStatus
+    version: NotRequired[int]
+    """
+    The preparation version the step acted on.
+    """
+    payloadHash: NotRequired[Digest]
+    controlTotal: NotRequired[Decimal]
+    currency: NotRequired[CurrencyCode]
+    review: NotRequired[ComplianceReviewDecision]
+    submissionId: NotRequired[str]
+    """
+    The submission attempt the step started or answered.
+    """
+    channel: NotRequired[ComplianceChannel]
+    acknowledgement: NotRequired[ComplianceAcknowledgement]
+    resolution: NotRequired[ComplianceResolution]
+    authorityReference: NotRequired[AuthorityReference]
+    evidence: NotRequired[ComplianceEvidence]
+    note: NotRequired[ComplianceNote]
+    recordedAt: Timestamp
+    recordedBy: str
+
+
+class ComplianceReadiness(TypedDict):
+    dimension: Literal['DATA_READY', 'WORKPAPER_READY', 'REVIEW_READY', 'REPRESENTATION_READY']
+    ready: bool
+    detail: str
+
+
+class ComplianceGate(TypedDict):
+    allowed: bool
+    reason: NotRequired[str]
+    """
+    Why the gate blocks; absent when it allows.
+    """
+    detail: NotRequired[str]
+
+
+class Overdue(TypedDict):
+    statutory: bool
+    """
+    The authority's deadline has passed unfiled.
+    """
+    internal: bool
+    """
+    One of our own targets has passed.
+    """
+
+
+class CompliancePackage(TypedDict):
+    id: CompliancePackageId
+    obligationId: ObligationId
+    obligationStatus: ObligationStatus
+    responsibilityDecisionId: NotRequired[str]
+    """
+    The ResponsibilityDecision the obligation names, when it names one.
+    """
+    legalEntityId: LegalEntityId
+    obligationType: str
+    jurisdiction: str
+    periodStart: CivilDate
+    periodEnd: CivilDate
+    mode: ComplianceMode
+    channel: ComplianceChannel
+    filingCountry: CountryCode
+    filingAuthority: AuthorityCode
+    statutoryDue: Timestamp
+    timezone: str
+    """
+    The authority's IANA timezone the deadline is in.
+    """
+    prepareDue: NotRequired[Timestamp]
+    reviewDue: NotRequired[Timestamp]
+    submitTarget: NotRequired[Timestamp]
+    status: ComplianceStatus
+    priority: CompliancePriority
+    overdue: Overdue
+    ready: bool
+    """
+    Every readiness dimension passes. Unknown is not ready.
+    """
+    readiness: list[ComplianceReadiness]
+    gate: ComplianceGate
+    createdAt: Timestamp
+    createdBy: str
+    history: list[ComplianceStep]
+
+
+class CompliancePackageList(TypedDict):
+    packages: list[CompliancePackage]
+
+
+class CreateCompliancePackageRequest(TypedDict):
+    obligationId: ObligationId
+    mode: ComplianceMode
+    channel: ComplianceChannel
+    filingCountry: CountryCode
+    filingAuthority: AuthorityCode
+    prepareDue: NotRequired[Timestamp]
+    reviewDue: NotRequired[Timestamp]
+    submitTarget: NotRequired[Timestamp]
+
+
+class PreparationRequest(TypedDict):
+    note: NotRequired[ComplianceNote]
+
+
+class ComplianceReviewRequest(TypedDict):
+    version: int
+    decision: ComplianceReviewDecision
+    note: NotRequired[ComplianceNote]
+
+
+class ComplianceApprovalRequest(TypedDict):
+    version: int
+    payloadHash: Digest
+    note: NotRequired[ComplianceNote]
+
+
+class ComplianceSubmissionRequest(TypedDict):
+    note: NotRequired[ComplianceNote]
+
+
+class ComplianceAcknowledgementRequest(TypedDict):
+    acknowledgement: ComplianceAcknowledgement
+    authorityReference: NotRequired[AuthorityReference]
+    evidence: ComplianceEvidence
+    note: NotRequired[ComplianceNote]
+
+
+class ComplianceResolutionRequest(TypedDict):
+    resolution: ComplianceResolution
+    authorityReference: NotRequired[AuthorityReference]
+    evidence: ComplianceEvidence
+
+
+class ComplianceCancellationRequest(TypedDict):
+    reason: ComplianceNote
+
+
+BeneficiaryId: TypeAlias = str
+
+
+RemittanceId: TypeAlias = str
+
+
+PaymentRail: TypeAlias = Literal['ACH', 'WIRE', 'SEPA', 'RTGS', 'LOCAL_TRANSFER', 'PORTAL', 'DIRECT_DEBIT', 'OTHER']
+"""
+How money reaches the payee (ZTAX-REM-001 §7).
+"""
+
+
+BeneficiaryState: TypeAlias = Literal['UNVERIFIED', 'CHANGE_PENDING', 'VERIFIED', 'SUSPENDED', 'SUPERSEDED']
+"""
+Where a payee version stands. Only VERIFIED is paid.
+"""
+
+
+BeneficiaryEventKind: TypeAlias = Literal['CREATED', 'VERIFIED', 'SUSPENDED', 'SUPERSEDED']
+"""
+What happened to a payee version.
+"""
+
+
+RemittanceMode: TypeAlias = Literal['CUSTOMER_EXECUTES', 'BANK_API_INITIATION', 'TREASURY_PLATFORM', 'DIRECT_DEBIT_AUTHORITY', 'LOCAL_PARTNER', 'MANAGED_ORCHESTRATION', 'OFFLINE_MANUAL']
+"""
+Who executes the payment (ZTAX-REM-001 §3). None takes custody of funds.
+"""
+
+
+RemittanceStatus: TypeAlias = Literal['APPROVAL_REQUIRED', 'APPROVED', 'SUBMITTED', 'ACCEPTED_BY_PROVIDER', 'PROCESSING', 'UNCERTAIN_PAYMENT', 'SETTLED', 'REJECTED', 'RETURNED', 'CANCELLED']
+"""
+Where a payment is (ZTAX-REM-001 §10). Submitted is not accepted, and accepted is not settled.
+"""
+
+
+PaymentEvidence: TypeAlias = Literal['PROVIDER_ACCEPTANCE', 'PROCESSING_REFERENCE', 'ACCOUNT_DEBIT', 'BENEFICIARY_CREDIT', 'AUTHORITY_RECEIPT', 'BANK_STATEMENT', 'PROVIDER_SETTLED', 'MANUAL_EVIDENCE', 'NONE']
+"""
+The kind of proof a provider status carries (ZTAX-REM-001 §18).
+"""
+
+
+PaymentResolution: TypeAlias = Literal['CONFIRMED_SETTLED', 'CONFIRMED_NOT_SENT', 'CONFIRMED_REJECTED', 'RETURNED', 'DUPLICATE_SUSPECTED', 'MANUAL_INVESTIGATION']
+"""
+How an uncertain payment was settled (ZTAX-REM-001 §19).
+"""
+
+
+RemittanceStepKind: TypeAlias = Literal['CREATED', 'APPROVED', 'SUBMITTED', 'PROVIDER_STATUS', 'UNCERTAIN_RESOLVED', 'RETURNED', 'CANCELLED']
+"""
+What a payment step records.
+"""
+
+
+ProviderReportedStatus: TypeAlias = Literal['ACCEPTED_BY_PROVIDER', 'PROCESSING', 'SETTLED', 'REJECTED', 'UNCERTAIN_PAYMENT']
+"""
+A status a provider reports.
+"""
+
+
+SecureReference: TypeAlias = str
+"""
+A vault or token reference to an account held at a regulated institution — never an account number.
+"""
+
+
+PaymentNote: TypeAlias = str
+"""
+Free text from the person recording a step.
+"""
+
+
+PaymentRaw: TypeAlias = str
+"""
+A provider's or authority's response as received, or the operator's account of it.
+"""
+
+
+ProviderReference: TypeAlias = str
+"""
+The provider's, bank's or authority's own reference.
+"""
+
+
+class BeneficiaryEvent(TypedDict):
+    seq: int
+    kind: BeneficiaryEventKind
+    evidence: NotRequired[str]
+    recordedAt: Timestamp
+    recordedBy: str
+
+
+class Beneficiary(TypedDict):
+    id: BeneficiaryId
+    supersedes: NotRequired[BeneficiaryId]
+    country: CountryCode
+    authority: AuthorityCode
+    legalName: str
+    rail: PaymentRail
+    accountRef: SecureReference
+    referenceRule: NotRequired[str]
+    """
+    The authority's payment-reference format, as a regular expression.
+    """
+    currencies: list[CurrencyCode]
+    source: str
+    """
+    The official instruction the details were taken from.
+    """
+    state: BeneficiaryState
+    createdAt: Timestamp
+    createdBy: str
+    history: list[BeneficiaryEvent]
+
+
+class BeneficiaryList(TypedDict):
+    beneficiaries: list[Beneficiary]
+
+
+class BeneficiaryRequest(TypedDict):
+    supersedes: NotRequired[BeneficiaryId]
+    country: CountryCode
+    authority: AuthorityCode
+    legalName: str
+    rail: PaymentRail
+    accountRef: SecureReference
+    referenceRule: NotRequired[str]
+    currencies: list[CurrencyCode]
+    source: str
+
+
+class BeneficiaryVerificationRequest(TypedDict):
+    evidence: PaymentNote
+
+
+class BeneficiarySuspensionRequest(TypedDict):
+    reason: PaymentNote
+
+
+class RemittanceStep(TypedDict):
+    seq: int
+    kind: RemittanceStepKind
+    status: RemittanceStatus
+    instructionHash: NotRequired[Digest]
+    submissionId: NotRequired[str]
+    evidence: NotRequired[PaymentEvidence]
+    resolution: NotRequired[PaymentResolution]
+    providerReference: NotRequired[ProviderReference]
+    raw: NotRequired[PaymentRaw]
+    note: NotRequired[PaymentNote]
+    recordedAt: Timestamp
+    recordedBy: str
+
+
+class RemittanceReadiness(TypedDict):
+    dimension: Literal['LIABILITY_READY', 'BENEFICIARY_READY', 'FUNDING_READY', 'REFERENCE_READY', 'AUTHORIZATION_READY', 'DEADLINE_READY']
+    ready: bool
+    detail: str
+
+
+class Remittance(TypedDict):
+    id: RemittanceId
+    obligationId: ObligationId
+    obligationStatus: ObligationStatus
+    legalEntityId: LegalEntityId
+    authority: str
+    periodStart: CivilDate
+    periodEnd: CivilDate
+    paymentDue: Timestamp
+    timezone: str
+    amount: Decimal
+    currency: CurrencyCode
+    beneficiary: Beneficiary
+    fundingRef: SecureReference
+    paymentReference: str
+    executionDate: CivilDate
+    mode: RemittanceMode
+    fundsPosture: Literal['NO_CUSTODY']
+    """
+    ZoikoTax instructs the customer's own provider and never holds the funds.
+    """
+    supersedes: NotRequired[RemittanceId]
+    instructionHash: Digest
+    status: RemittanceStatus
+    overdue: bool
+    """
+    The payment due date has passed unpaid.
+    """
+    ready: bool
+    """
+    Every readiness dimension passes. Unknown is not ready.
+    """
+    readiness: list[RemittanceReadiness]
+    createdAt: Timestamp
+    createdBy: str
+    history: list[RemittanceStep]
+
+
+class RemittanceList(TypedDict):
+    remittances: list[Remittance]
+
+
+class RemittanceRequest(TypedDict):
+    obligationId: ObligationId
+    beneficiaryId: BeneficiaryId
+    fundingRef: SecureReference
+    paymentReference: str
+    executionDate: CivilDate
+    mode: RemittanceMode
+
+
+class RemittanceApprovalRequest(TypedDict):
+    instructionHash: Digest
+    note: NotRequired[PaymentNote]
+
+
+class RemittanceSubmissionRequest(TypedDict):
+    note: NotRequired[PaymentNote]
+
+
+class RemittanceStatusRequest(TypedDict):
+    status: ProviderReportedStatus
+    evidence: PaymentEvidence
+    providerReference: NotRequired[ProviderReference]
+    raw: PaymentRaw
+    note: NotRequired[PaymentNote]
+
+
+class RemittanceResolutionRequest(TypedDict):
+    resolution: PaymentResolution
+    evidence: PaymentEvidence
+    providerReference: NotRequired[ProviderReference]
+    raw: PaymentRaw
+
+
+class RemittanceReturnRequest(TypedDict):
+    providerReference: NotRequired[ProviderReference]
+    raw: PaymentRaw
+
+
+class RemittanceCancellationRequest(TypedDict):
+    reason: PaymentNote
+
+
+ComparatorId: TypeAlias = str
+
+
+ShadowRunId: TypeAlias = str
+
+
+DiscrepancyId: TypeAlias = str
+
+
+ComparatorType: TypeAlias = Literal['COMMERCIAL_TAX_ENGINE', 'CUSTOMER_LEGACY_ENGINE', 'HISTORICAL_BILLED_RESULT', 'AUTHORITY_CALCULATOR', 'QUALIFIED_REFERENCE_IMPLEMENTATION', 'GOLDEN_VECTOR', 'FILING_RESULT', 'MANUAL_TAX_REVIEW', 'PRIOR_ZOIKO_RELEASE']
+"""
+What kind of engine or evidence a comparator is (ZTAX-SHD-001 §3).
+"""
+
+
+ShadowClaim: TypeAlias = Literal['MATCHES_COMPARATOR', 'VERIFIED_CORRECT', 'NO_REGRESSION']
+"""
+The strongest statement a match against the comparator supports.
+"""
+
+
+ShadowMode: TypeAlias = Literal['DUAL_DETERMINATION', 'HISTORICAL_REPLAY', 'LIVE_SHADOW', 'RELEASE_DIFFERENTIAL']
+"""
+What a run compares (ZTAX-SHD-001 §2).
+"""
+
+
+ShadowVariance: TypeAlias = Literal['EXACT_MATCH', 'EQUIVALENT_MATCH', 'MONETARY_VARIANCE', 'CATEGORY_VARIANCE', 'POPULATION_VARIANCE', 'UNCOMPARABLE']
+"""
+A case's or component's comparison state (ZTAX-SHD-001 §11).
+"""
+
+
+ShadowComponentState: TypeAlias = Literal['EXACT_MATCH', 'EQUIVALENT_MATCH', 'MONETARY_VARIANCE', 'CATEGORY_VARIANCE']
+"""
+A component's comparison state.
+"""
+
+
+ShadowPairing: TypeAlias = Literal['EXACT_ID', 'UNPAIRED_COMPARATOR', 'UNPAIRED_ZOIKO']
+"""
+How a case was paired (ZTAX-SHD-001 §8).
+"""
+
+
+ShadowSeverity: TypeAlias = Literal['SHD-SEV-1', 'SHD-SEV-2', 'SHD-SEV-3', 'SHD-SEV-4']
+"""
+A discrepancy's materiality (ZTAX-SHD-001 §16).
+"""
+
+
+ShadowRootCause: TypeAlias = Literal['SOURCE_DATA', 'CATALOG_MAPPING', 'ONTOLOGY', 'JURISDICTION_SITUS', 'TAXABILITY', 'REGULATORY_REVENUE', 'EXEMPTION', 'RESPONSIBILITY', 'RATE_RULE', 'EFFECTIVE_DATE', 'ROUNDING_PRECISION', 'BUNDLE_ALLOCATION', 'CUSTOMER_CONFIGURATION', 'COMPARATOR_LIMITATION', 'ZOIKO_DEFECT', 'CONTENT_COVERAGE_GAP', 'LEGAL_AMBIGUITY', 'TIMING_STATE', 'MIGRATION_TRANSFORM', 'UNKNOWN']
+"""
+Why a discrepancy happened (ZTAX-SHD-001 §14).
+"""
+
+
+DiscrepancyState: TypeAlias = Literal['NEW', 'TRIAGED', 'DATA_REQUIRED', 'ANALYSIS', 'SME_REVIEW', 'COMPARATOR_QUERY', 'ZOIKO_DEFECT_CONFIRMED', 'COMPARATOR_ISSUE_CONFIRMED', 'EXPECTED_DIFFERENCE_APPROVED', 'LEGAL_AMBIGUITY', 'FIX_PENDING', 'RETEST_REQUIRED', 'RESOLVED', 'ACCEPTED_RISK', 'CLOSED']
+"""
+Where a discrepancy's investigation is (ZTAX-SHD-001 §15).
+"""
+
+
+ShadowText: TypeAlias = str
+"""
+Free text from a person.
+"""
+
+
+ComparatorCode: TypeAlias = str
+"""
+A comparator's own tax or component code.
+"""
+
+
+ZoikoSlot: TypeAlias = str
+"""
+A ZoikoTax emitted slot, or UNMAPPED_EXTERNAL_CODE.
+"""
+
+
+CaseRef: TypeAlias = str
+"""
+The business key a comparator result is for.
+"""
+
+
+class Comparator(TypedDict):
+    id: ComparatorId
+    name: str
+    type: ComparatorType
+    provider: str
+    version: str
+    """
+    The engine or content version, or UNKNOWN.
+    """
+    environment: NotRequired[str]
+    limitations: NotRequired[ShadowText]
+    claim: ShadowClaim
+    createdAt: Timestamp
+    createdBy: str
+
+
+class ComparatorList(TypedDict):
+    comparators: list[Comparator]
+
+
+class ComparatorRequest(TypedDict):
+    name: str
+    type: ComparatorType
+    provider: str
+    version: NotRequired[str]
+    environment: NotRequired[str]
+    limitations: NotRequired[ShadowText]
+
+
+class ComponentMapping(TypedDict):
+    externalCode: ComparatorCode
+    slot: ZoikoSlot
+
+
+class Component(TypedDict):
+    code: ComparatorCode
+    amount: Decimal
+
+
+class ShadowObservation(TypedDict):
+    caseRef: CaseRef
+    total: Decimal
+    components: list[Component]
+
+
+class ShadowRunRequest(TypedDict):
+    comparatorId: ComparatorId
+    mode: ShadowMode
+    windowFrom: Timestamp
+    windowTo: Timestamp
+    currency: CurrencyCode
+    componentMap: list[ComponentMapping]
+    tolerance: Decimal
+    materiality: Decimal
+    observations: list[ShadowObservation]
+
+
+class ShadowComponent(TypedDict):
+    externalCode: NotRequired[ComparatorCode]
+    slot: ZoikoSlot
+    comparator: NotRequired[Decimal]
+    zoiko: NotRequired[Decimal]
+    state: ShadowComponentState
+
+
+class ShadowCase(TypedDict):
+    seq: int
+    caseRef: CaseRef
+    decisionId: NotRequired[str]
+    pairing: ShadowPairing
+    state: ShadowVariance
+    comparatorTotal: NotRequired[Decimal]
+    zoikoTotal: NotRequired[Decimal]
+    variance: NotRequired[Decimal]
+    material: bool
+    components: list[ShadowComponent]
+
+
+class ShadowMetrics(TypedDict):
+    cases: int
+    paired: int
+    exact: int
+    equivalent: int
+    differing: int
+    """
+    Cases whose amounts differ beyond tolerance (MONETARY_VARIANCE).
+    """
+    category: int
+    population: int
+    uncomparable: int
+    material: int
+    comparedValue: Decimal
+    absoluteVariance: Decimal
+
+
+class DiscrepancyEvent(TypedDict):
+    seq: int
+    state: DiscrepancyState
+    severity: NotRequired[ShadowSeverity]
+    rootCause: NotRequired[ShadowRootCause]
+    note: ShadowText
+    recordedAt: Timestamp
+    recordedBy: str
+
+
+class Discrepancy(TypedDict):
+    id: DiscrepancyId
+    runId: ShadowRunId
+    caseSeq: int
+    state: DiscrepancyState
+    severity: ShadowSeverity
+    rootCause: ShadowRootCause
+    history: list[DiscrepancyEvent]
+
+
+class DiscrepancyTransitionRequest(TypedDict):
+    to: DiscrepancyState
+    severity: NotRequired[ShadowSeverity]
+    rootCause: NotRequired[ShadowRootCause]
+    note: ShadowText
+
+
+class ShadowRun(TypedDict):
+    id: ShadowRunId
+    comparator: Comparator
+    mode: ShadowMode
+    windowFrom: Timestamp
+    windowTo: Timestamp
+    currency: CurrencyCode
+    componentMap: list[ComponentMapping]
+    tolerance: Decimal
+    materiality: Decimal
+    inputHash: Digest
+    metrics: ShadowMetrics
+    cutoverBlockers: list[str]
+    cases: NotRequired[list[ShadowCase]]
+    """
+    Absent on a run listed as a summary.
+    """
+    discrepancies: list[Discrepancy]
+    createdAt: Timestamp
+    createdBy: str
+
+
+class ShadowRunList(TypedDict):
+    runs: list[ShadowRun]
+
+
+MigrationProgramId: TypeAlias = str
+
+
+MigrationSnapshotId: TypeAlias = str
+
+
+MigrationMappingId: TypeAlias = str
+
+
+MigrationRunId: TypeAlias = str
+
+
+MigrationExceptionId: TypeAlias = str
+
+
+MigrationType: TypeAlias = Literal['GREENFIELD_ONBOARD', 'CONFIGURATION_MIGRATION', 'HISTORICAL_DECISION_MIGRATION', 'FULL_LEDGER_MIGRATION', 'INCUMBENT_ENGINE_REPLACEMENT', 'BSS_ERP_TRANSFORMATION', 'COUNTRY_PACK_EXPANSION', 'MERGER_ACQUISITION', 'DATA_CENTER_REGION_MOVE', 'EXIT_EXPORT']
+"""
+What kind of migration a program is (ZTAX-MIG-001 §3).
+"""
+
+
+ExtractionMethod: TypeAlias = Literal['API', 'DB_EXPORT', 'OBJECT_EXPORT', 'FILE', 'PROVIDER_EXPORT', 'CONTROLLED_MANUAL']
+"""
+How a snapshot was extracted (ZTAX-MIG-001 §7).
+"""
+
+
+MigrationExceptionKind: TypeAlias = Literal['UNMAPPED_CODE', 'DUPLICATE_SOURCE', 'PRECISION_LOSS', 'DATE_CONFLICT', 'CURRENCY_CONFLICT', 'CONTROL_TOTAL_MISMATCH', 'MISSING_SOURCE', 'INVALID_RELATION']
+"""
+What a conversion could not carry (ZTAX-MIG-001 §15).
+"""
+
+
+MigrationSeverity: TypeAlias = Literal['HIGH', 'MEDIUM', 'LOW']
+"""
+An exception's weight. An open HIGH blocks cutover.
+"""
+
+
+MigrationDisposition: TypeAlias = Literal['OPEN', 'RESOLVED', 'ACCEPTED_RESIDUAL']
+"""
+What was decided about an exception.
+"""
+
+
+MigrationDecision: TypeAlias = Literal['RESOLVED', 'ACCEPTED_RESIDUAL']
+"""
+A decision on an exception.
+"""
+
+
+CutoverState: TypeAlias = Literal['PLANNED', 'PRECHECK', 'FREEZE_ACTIVE', 'FINAL_DELTA', 'RECONCILING', 'READY_TO_SWITCH', 'ROUTING_SWITCH', 'VALIDATING_LIVE', 'CUTOVER_COMPLETE', 'ABORTED', 'ROLLBACK_ACTIVE', 'ROLLED_BACK', 'FAILED_MANUAL_RECOVERY']
+"""
+Where a cutover is (ZTAX-MIG-001 §26).
+"""
+
+
+MigrationText: TypeAlias = str
+"""
+Free text from a person.
+"""
+
+
+LegacyCode: TypeAlias = str
+"""
+A source system's own tax code.
+"""
+
+
+SourceValue: TypeAlias = str
+"""
+A value exactly as the source gave it; validated by the conversion, not by the API, so that a bad value becomes an exception rather than a refusal.
+"""
+
+
+class SourceComponent(TypedDict):
+    code: LegacyCode
+    amount: SourceValue
+
+
+class MigrationSourceRecord(TypedDict):
+    sourceId: SourceValue
+    documentDate: SourceValue
+    currency: SourceValue
+    total: SourceValue
+    components: list[SourceComponent]
+
+
+class ControlTotal(TypedDict):
+    currency: CurrencyCode
+    total: Decimal
+
+
+class MigrationProgram(TypedDict):
+    id: MigrationProgramId
+    name: str
+    type: MigrationType
+    legalEntityId: LegalEntityId
+    periodFrom: CivilDate
+    periodTo: CivilDate
+    scale: int
+    createdAt: Timestamp
+    createdBy: str
+
+
+class MigrationProgramList(TypedDict):
+    programs: list[MigrationProgram]
+
+
+class MigrationProgramRequest(TypedDict):
+    name: str
+    type: MigrationType
+    legalEntityId: NotRequired[LegalEntityId]
+    periodFrom: CivilDate
+    periodTo: CivilDate
+    scale: int
+
+
+class MigrationSnapshot(TypedDict):
+    id: MigrationSnapshotId
+    programId: MigrationProgramId
+    sourceSystem: str
+    sourceVersion: NotRequired[str]
+    method: ExtractionMethod
+    watermark: NotRequired[str]
+    recordCount: int
+    controlTotals: list[ControlTotal]
+    hash: Digest
+    createdAt: Timestamp
+    createdBy: str
+
+
+class MigrationSnapshotRequest(TypedDict):
+    sourceSystem: str
+    sourceVersion: NotRequired[str]
+    method: ExtractionMethod
+    watermark: NotRequired[str]
+    controlTotals: NotRequired[list[ControlTotal]]
+    records: list[MigrationSourceRecord]
+
+
+class CodeMapping(TypedDict):
+    legacyCode: LegacyCode
+    slot: ZoikoSlot
+
+
+class MigrationMapping(TypedDict):
+    id: MigrationMappingId
+    programId: MigrationProgramId
+    version: int
+    codes: list[CodeMapping]
+    createdAt: Timestamp
+    createdBy: str
+
+
+class MigrationMappingRequest(TypedDict):
+    codes: list[CodeMapping]
+
+
+class MigrationCurrencyTotal(TypedDict):
+    currency: CurrencyCode
+    declared: NotRequired[Decimal]
+    source: Decimal
+    converted: Decimal
+    matches: bool
+
+
+class MigrationReconciliation(TypedDict):
+    sourceCount: int
+    convertedCount: int
+    exceptedCount: int
+    crosswalkComplete: bool
+    passed: bool
+    totals: list[MigrationCurrencyTotal]
+
+
+class MigrationException(TypedDict):
+    id: MigrationExceptionId
+    seq: int
+    kind: MigrationExceptionKind
+    severity: MigrationSeverity
+    sourceId: NotRequired[str]
+    detail: str
+    disposition: MigrationDisposition
+    note: NotRequired[MigrationText]
+    decidedAt: NotRequired[Timestamp]
+    decidedBy: NotRequired[str]
+
+
+class MigratedComponent(TypedDict):
+    slot: ZoikoSlot
+    amount: Decimal
+
+
+class MigratedRecord(TypedDict):
+    seq: int
+    sourceId: str
+    canonicalId: str
+    documentDate: CivilDate
+    currency: CurrencyCode
+    total: Decimal
+    components: list[MigratedComponent]
+
+
+class MigrationRun(TypedDict):
+    id: MigrationRunId
+    programId: MigrationProgramId
+    snapshotId: MigrationSnapshotId
+    mappingId: MigrationMappingId
+    mode: Literal['AS_KNOWN']
+    reconciliation: MigrationReconciliation
+    exceptions: list[MigrationException]
+    records: NotRequired[list[MigratedRecord]]
+    """
+    Absent on a run listed with its program.
+    """
+    createdAt: Timestamp
+    createdBy: str
+
+
+class MigrationRunRequest(TypedDict):
+    snapshotId: MigrationSnapshotId
+    mappingId: MigrationMappingId
+
+
+class CutoverEvent(TypedDict):
+    seq: int
+    state: CutoverState
+    note: MigrationText
+    recordedAt: Timestamp
+    recordedBy: str
+
+
+class MigrationReadiness(TypedDict):
+    hasRun: bool
+    reconciled: bool
+    openHigh: int
+    openOther: int
+    residuals: int
+    blockers: list[str]
+
+
+class MigrationProgramDetail(TypedDict):
+    program: MigrationProgram
+    snapshots: list[MigrationSnapshot]
+    mappings: list[MigrationMapping]
+    runs: list[MigrationRun]
+    cutover: list[CutoverEvent]
+    cutoverState: CutoverState
+    readiness: MigrationReadiness
+
+
+class ExceptionDecisionRequest(TypedDict):
+    disposition: MigrationDecision
+    note: MigrationText
+
+
+class CutoverRequest(TypedDict):
+    to: CutoverState
+    note: MigrationText
+
+
 class V1AdminUsersGetResponse(TypedDict):
     users: list[User]
 
@@ -1832,6 +2953,169 @@ class Capabilities(TypedDict):
     content: NotRequired[ContentCapability]
 
 
+class ExemptionCertificate(TypedDict):
+    """
+    A certificate is scoped: by issuing jurisdiction, holder, tax types,
+    components and validity. One that does not apply on any of those is
+    refused visibly in the trace, never silently ignored.
+
+    """
+
+    id: PartyReference
+    type: ContentLabel
+    holder: PartyReference
+    jurisdiction: JurisdictionId
+    taxTypes: NotRequired[list[ContentLabel]]
+    components: NotRequired[list[ContentLabel]]
+    validFrom: CivilDate
+    validTo: NotRequired[CivilDate]
+    verification: CertificateVerification
+
+
+class TaxDocument(TypedDict):
+    """
+    A telecom document for location-aware determination: rated commercial
+    facts, the parties, and the evidence of where the supply took place.
+    It carries no tax; what is owed is the output. The tax point is the
+    request's `eventTime`.
+
+    """
+
+    type: TaxDocumentType
+    currency: CurrencyCode
+    priceMode: PriceMode
+    seller: TaxParty
+    customer: TaxParty
+    evidence: NotRequired[list[SitusEvidenceItem]]
+    certificates: NotRequired[list[ExemptionCertificate]]
+    lines: list[TaxLine]
+
+
+class TaxComponentResult(TypedDict):
+    """
+    One charge on one line: its legal base, rate version, jurisdiction,
+    authority, five roles, recoverability, rounding result and source.
+    `charged` is what the customer pays for it.
+
+    """
+
+    id: ContentLabel
+    version: CivilDate
+    regime: ContentLabel
+    jurisdiction: JurisdictionId
+    authority: ContentLabel
+    taxType: ContentLabel
+    name: ContentText
+    treatment: Treatment
+    inclusive: bool
+    rateKind: ContentLabel
+    rate: Decimal
+    unit: NotRequired[UnitCode]
+    base: NotRequired[Decimal]
+    raw: Decimal
+    amount: Decimal
+    charged: Decimal
+    legalReason: NotRequired[ContentLabel]
+    responsibility: ResponsibilityAssignment
+    exemption: NotRequired[ExemptionApplied]
+    source: ContentLabel
+    citation: ContentText
+
+
+class DeterminationItem(TypedDict):
+    """
+    One line, or one part of a bundle line (`key` is `<line>/<part>`):
+    its state, the situs decision that placed it, and its components.
+
+    """
+
+    key: ContentLabel
+    line: ContentLabel
+    part: NotRequired[ContentLabel]
+    sku: NotRequired[ContentLabel]
+    service: NotRequired[ServiceFamily]
+    amount: Decimal
+    state: DeterminationState
+    reasonCode: NotRequired[ReasonCode]
+    situsOutcome: NotRequired[ContentLabel]
+    situsRule: NotRequired[ContentLabel]
+    applicable: NotRequired[list[JurisdictionId]]
+    placeOfSupply: NotRequired[JurisdictionId]
+    customerRole: NotRequired[ContentLabel]
+    supply: NotRequired[ContentLabel]
+    regime: NotRequired[ContentLabel]
+    neededEvidence: NotRequired[list[ContentLabel]]
+    net: NotRequired[Decimal]
+    components: NotRequired[list[TaxComponentResult]]
+
+
+class DocumentDetermination(TypedDict):
+    """
+    A document's location-aware determination. `totals` is present only
+    when `state` is `RESOLVED`: an unresolved document has no totals
+    rather than zero ones.
+
+    """
+
+    state: DeterminationState
+    reasonCode: ReasonCode
+    currency: CurrencyCode
+    priceMode: PriceMode
+    profileVersion: ContentLabel
+    graphVersion: ContentLabel
+    totals: NotRequired[DocumentTotals]
+    items: list[DeterminationItem]
+    trace: list[DeterminationStep]
+
+
+CoverageComponent = TypedDict(
+    'CoverageComponent',
+    {
+        'id': ContentLabel,
+        'jurisdiction': JurisdictionId,
+        'authority': ContentLabel,
+        'taxType': ContentLabel,
+        'name': ContentText,
+        'services': NotRequired[list[ServiceFamily]],
+        'treatments': list[Treatment],
+        'rateKind': ContentLabel,
+        'rate': Decimal,
+        'currency': NotRequired[CurrencyCode],
+        'unit': NotRequired[UnitCode],
+        'legalReason': NotRequired[ContentLabel],
+        'from': CivilDate,
+        'to': NotRequired[CivilDate],
+        'source': ContentLabel,
+        'citation': ContentText,
+    },
+)
+
+
+class CoverageRegime(TypedDict):
+    id: ContentLabel
+    country: LocationCode
+    name: ContentText
+    services: list[ServiceFamily]
+    requiresLevel: NotRequired[ContentLabel]
+    inclusivePricing: bool
+    components: list[CoverageComponent]
+
+
+class Coverage(TypedDict):
+    """
+    What the active content determines by location, at an instant: the
+    countries covered, the services in each, and every component in force
+    with its rate and source. A country absent here is `UNSUPPORTED`.
+
+    """
+
+    bundle: BundleRef
+    profileVersion: ContentLabel
+    graphVersion: ContentLabel
+    at: Timestamp
+    regimes: list[CoverageRegime]
+
+
 class PeriodEvent(TypedDict):
     seq: int
     state: PeriodState
@@ -1907,3 +3191,76 @@ class Dashboard(TypedDict):
     What needs a person, most urgent first. At most 25.
     """
     trend: DashboardTrend
+
+
+class QuoteRequest(TypedDict):
+    """
+    Exactly one of `input` (named values for a rule-graph pack) and
+    `document` (a telecom document for a pack with location-aware
+    content) is required. `eventTime` is the tax point.
+
+    """
+
+    eventTime: Timestamp
+    input: NotRequired[DeterminationInput]
+    document: NotRequired[TaxDocument]
+    accumulators: NotRequired[ReadSet]
+
+
+class CommitRequest(TypedDict):
+    """
+    Exactly one of `input` and `document` is required, as for a quote.
+    `eventTime` is the tax point: every effective date and legal period is
+    resolved at it, in the authority's own calendar.
+
+    """
+
+    businessKey: BusinessKey
+    supersedes: NotRequired[DecisionId]
+    eventTime: Timestamp
+    input: NotRequired[DeterminationInput]
+    document: NotRequired[TaxDocument]
+    accumulators: NotRequired[ReadSet]
+
+
+class Quote(TypedDict):
+    authoritative: bool
+    """
+    Always `false`. A quote is an estimate at every authorization level (ADR-0004 §2.7).
+    """
+    outcome: Outcome
+    reasonCode: ReasonCode
+    quotedAt: Timestamp
+    bundle: BundleRef
+    emitted: Emitted
+    document: NotRequired[DocumentDetermination]
+
+
+class Decision(TypedDict):
+    """
+    One recorded decision. Immutable; a correction is a new decision whose `supersedes` names this one.
+    """
+
+    id: DecisionId
+    businessKey: BusinessKey
+    supersedes: NotRequired[DecisionId]
+    authoritative: bool
+    """
+    Whether this decision may be filed. `false` for every decision before A4.
+    """
+    outcome: Outcome
+    reasonCode: ReasonCode
+    eventTime: Timestamp
+    recordedAt: Timestamp
+    bundle: BundleRef
+    digests: DecisionDigests
+    emitted: Emitted
+    document: NotRequired[DocumentDetermination]
+
+
+class BatchRequest(TypedDict):
+    operation: Literal['COMMIT']
+    """
+    What each item does. `COMMIT` commits it, or corrects with it when it names `supersedes`.
+    """
+    items: list[CommitRequest]

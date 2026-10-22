@@ -201,20 +201,20 @@ jobs:
       # own loading path (ADR-0005 §2.6). Two things this asserts that the unit
       # tests cannot: the committed source still compiles under this build of
       # the compiler, and the artifact it produces is one a cell will accept.
-      - name: compile and seal the worked pack (ADR-0005 §2.1)
-        run: make content
+      - name: compile and seal every pack (ADR-0005 §2.1)
+        run: make content-all
 
-      - name: the sealed bundle loads the way a cell loads it (ADR-0005 §2.6)
-        run: make content-verify
+      - name: the sealed bundles load the way a cell loads them (ADR-0005 §2.6)
+        run: make content-verify-all
 
       # C3 at the compiler. The bundle digest is what every replay names, so a
       # compilation that is not byte-reproducible makes a replay depend on which
       # machine built the pack.
-      - name: the compiled bundle is byte-reproducible (ADR-0001 §3.3)
+      - name: the compiled bundles are byte-reproducible (ADR-0001 §3.3)
         run: |
-          sha256sum ../content/build/*.manifest.json > /tmp/first.sha256
+          sha256sum ../content/build/*/*.manifest.json > /tmp/first.sha256
           rm -rf ../content/build
-          make content
+          make content-all
           sha256sum -c /tmp/first.sha256
 
   crosscheck:
@@ -402,6 +402,9 @@ jobs:
       # docker-compose.content.yml only applies when named, which this job
       # always does.
       COMPOSE_FILE: docker-compose.yml:docker-compose.content.yml
+      # The pack docker-compose.content.yml mounts: the worked pack, whose
+      # named inputs the Postman determination folder sends.
+      ZTAX_CONTENT_PACK: eu-vat
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -416,9 +419,12 @@ jobs:
       # docker-compose.content.yml points ZTAX_CONTENT_KEYRING at). The same
       # target `make check` already runs and proves in the `backend` job --
       # this job gets its own copy, since jobs do not share a filesystem.
+      # The Postman determination folder sends the worked pack's named
+      # inputs, so the stack runs that pack (ZTAX_CONTENT_PACK below selects
+      # the build directory docker-compose.content.yml mounts).
       - name: make the CONTENT train bundle the determination folders need
         working-directory: backend
-        run: make content
+        run: make content CONTENT_PACK_NAME=eu-vat
 
       # ztax-contentc's compile step makes content/build 0750 on purpose
       # (ADR comment: "no reason to be world-traversable") -- right for a

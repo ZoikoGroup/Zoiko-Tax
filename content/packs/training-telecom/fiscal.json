@@ -1,0 +1,71 @@
+{
+  "obligations": [
+    {
+      "id": "xt-telecom-return",
+      "version": "2026.10.1",
+      "type": "TELECOM_TAX_RETURN",
+      "authority": "authority:xt-revenue",
+      "jurisdiction": "jurisdiction:xt",
+      "duty": "TRANSACTION_MONETARY",
+      "currency": "USD",
+      "assesses": ["XT_VOICE_TAX", "XT_DATA_TAX", "XT_DEVICE_TAX"],
+      "period": { "kind": "MONTH", "timezone": "UTC" },
+      "due": { "offsetMonths": 1, "dayOfMonth": 20 },
+      "source": "SRC-ZOIKO-TRAINING-0001",
+      "citation": "TRAINING FIXTURE. A monthly return of XT telecom and device taxes, due on the 20th of the following month. Zero-rated data is reported on it at zero."
+    },
+    {
+      "id": "xt-emergency-remittance",
+      "version": "2026.10.1",
+      "type": "EMERGENCY_CHARGE_REMITTANCE",
+      "authority": "authority:xt-emergency-board",
+      "jurisdiction": "jurisdiction:xt",
+      "duty": "TRANSACTION_MONETARY",
+      "currency": "USD",
+      "assesses": ["XT_EMERGENCY_CHARGE"],
+      "period": { "kind": "MONTH", "timezone": "UTC" },
+      "due": { "offsetMonths": 1, "dayOfMonth": 15 },
+      "source": "SRC-ZOIKO-TRAINING-0001",
+      "citation": "TRAINING FIXTURE. Per-line emergency charges remitted monthly to a different authority from the telecom tax."
+    },
+    {
+      "id": "xt-sector-contribution",
+      "version": "2026.10.1",
+      "type": "SECTOR_CONTRIBUTION_RETURN",
+      "authority": "authority:xt-regulator",
+      "jurisdiction": "jurisdiction:xt",
+      "duty": "TRANSACTION_MONETARY",
+      "currency": "USD",
+      "assesses": ["XT_SECTOR_CONTRIBUTION"],
+      "period": { "kind": "YEAR", "timezone": "UTC", "yearStartMonth": 1 },
+      "due": { "offsetMonths": 3, "dayOfMonth": 31 },
+      "source": "SRC-ZOIKO-TRAINING-0001",
+      "citation": "TRAINING FIXTURE (playbook section 8B). An annual contribution return on voice regulatory revenue, borne by the provider and never copied into the customer surcharge."
+    },
+    {
+      "id": "xv-vat-return",
+      "version": "2026.10.1",
+      "type": "VAT_RETURN",
+      "authority": "authority:xv-revenue",
+      "jurisdiction": "jurisdiction:xv",
+      "duty": "TRANSACTION_MONETARY",
+      "currency": "EUR",
+      "assesses": ["XV_VAT"],
+      "period": { "kind": "QUARTER", "timezone": "Pacific/Auckland", "yearStartMonth": 1 },
+      "due": { "offsetMonths": 1, "dayOfMonth": 28 },
+      "source": "SRC-ZOIKO-TRAINING-0001",
+      "citation": "TRAINING FIXTURE. A quarterly XV VAT return in XV's own calendar."
+    }
+  ],
+  "posting": {
+    "profile": "tcsl-training-telecom",
+    "version": "2026.10.1",
+    "type": "INVOICE",
+    "lines": [
+      { "account": "TAX_RECEIVABLE_CONTROL", "side": "DEBIT", "emitted": "CUSTOMER_TAX" },
+      { "account": "TAX_COLLECTED_LIABILITY", "side": "CREDIT", "emitted": "CUSTOMER_TAX" },
+      { "account": "CUSTOMER_GL_BRIDGE", "side": "DEBIT", "emitted": "PROVIDER_ACCRUAL" },
+      { "account": "TAX_ACCRUED_LIABILITY", "side": "CREDIT", "emitted": "PROVIDER_ACCRUAL" }
+    ]
+  }
+}

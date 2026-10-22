@@ -1,0 +1,16 @@
+# ZoikoTax content — telecom training pack
+#
+# TRAINING FIXTURE ONLY (ZTAX-ENG-RESET-001 §2, §7). The territories XT, XQ,
+# XV and XW are drawn from ISO 3166's user-assigned range so they can never
+# collide with a real country, and every rate here is invented to exercise the
+# machinery: a mixed bundle, a zero-rated component, a per-line charge, a
+# provider-borne contribution, tax on tax, inclusive extraction, place of
+# supply and a rate change at local midnight. Such fixtures are prohibited
+# from customer production packs.
+#
+# The pack has no rules. Everything it determines is location-aware content
+# in taxation.json beside this file, which ztax-contentc compiles into the
+# same signed manifest.
+
+bundle "training-telecom-2026.10"
+ir 1

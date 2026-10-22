@@ -105,8 +105,8 @@ func canonicalManifest(m rule.Manifest) (canonical.Value, error) {
 	if m.BundleID == "" {
 		return canonical.Value{}, fmt.Errorf("bundle: manifest names no bundle id")
 	}
-	if len(m.Nodes) == 0 {
-		return canonical.Value{}, fmt.Errorf("bundle: manifest %s has no nodes", m.BundleID)
+	if len(m.Nodes) == 0 && m.Taxation == nil {
+		return canonical.Value{}, fmt.Errorf("bundle: manifest %s has no nodes and no taxation profile", m.BundleID)
 	}
 
 	constants := append([]rule.Constant(nil), m.Constants...)
@@ -164,6 +164,14 @@ func canonicalManifest(m rule.Manifest) (canonical.Value, error) {
 		return canonical.Value{}, fmt.Errorf("bundle: manifest %s: %w", m.BundleID, err)
 	}
 
+	// Absent when nil, the additive rule canonicalPack and canonicalFiscal
+	// follow: every manifest written before taxation profiles existed keeps
+	// its bytes and its digest.
+	taxationProfile := canonical.Absent()
+	if m.Taxation != nil {
+		taxationProfile = m.Taxation.Canonical()
+	}
+
 	return canonical.Object(
 		canonical.F("bundleId", canonical.String(m.BundleID)),
 		canonical.F("irVersion", canonical.Integer(int64(m.IRVersion))),
@@ -172,6 +180,7 @@ func canonicalManifest(m rule.Manifest) (canonical.Value, error) {
 		canonical.F("roots", canonicalNodeIDs(roots)),
 		canonical.F("pack", pack),
 		canonical.F("fiscal", fiscalProfile),
+		canonical.F("taxation", taxationProfile),
 	), nil
 }
 

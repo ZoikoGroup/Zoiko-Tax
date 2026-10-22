@@ -26,18 +26,18 @@ Generated from [`register.yaml`](register.yaml) and [`requirements.yaml`](requir
 | `ZTAX-NFR-001` | Non-Functional Requirements, Capacity, Availability & Resilience | S | F0-F1 | — | PROPOSED | Chief Architect | — | — |
 | `ZTAX-QA-001` | Verification, Golden Testing & Certification Standard | S | F1 | — | PROPOSED | Head of Quality Engineering | — | 120 PROPOSED |
 | `ZTAX-AI-001` | ZoikoTax Intelligence Fabric Architecture | L | F1 | — | PROPOSED | Head of AI | — | 19 PROPOSED |
-| `ZTAX-COMP-001` | Global Compliance Operations | S | F2 | — | PROPOSED | Head of Global Compliance | — | — |
-| `ZTAX-REM-001` | Remittance & Funds Control | S | F2 | — | PROPOSED | GC + Head of Compliance | — | — |
+| `ZTAX-COMP-001` | Global Compliance Operations | S | F2 | — | PROPOSED | Head of Global Compliance | — | 131 PROPOSED |
+| `ZTAX-REM-001` | Remittance & Funds Control | S | F2 | — | PROPOSED | GC + Head of Compliance | — | 126 PROPOSED |
 | `ZTAX-CTC-001` | Global E-Invoicing & Continuous Transaction Controls | S | F2 | — | PROPOSED | Head of Global Compliance | — | — |
-| `ZTAX-SHD-001` | Shadow Assurance | S | F2 | — | PROPOSED | Head of Product | — | — |
-| `ZTAX-MIG-001` | Migration, Historical Conversion & Customer Onboarding | S | F2 | — | PROPOSED | Head of Delivery | — | — |
+| `ZTAX-SHD-001` | Shadow Assurance | S | F2 | — | PROPOSED | Head of Product | — | 116 PROPOSED |
+| `ZTAX-MIG-001` | Migration, Historical Conversion & Customer Onboarding | S | F2 | — | PROPOSED | Head of Delivery | — | 118 PROPOSED |
 | `ZTAX-UX-001` | Application, Portal, Roles & Workflow Architecture | L | F2 | — | PROPOSED | Head of Design / Product | — | — |
 | `ZTAX-DEVOPS-001` | Platform Engineering, DevSecOps, Release & Operations | L | F2 | — | PROPOSED | Head of Platform/SRE | — | — |
 | `ZTAX-COM-001` | Commercial Entitlements, Licensing & Usage Enforcement | S | F2 | — | PROPOSED | CPO + Commercial | — | — |
 
 ## Summary
 
-30 documents: 15 DRAFT, 2 EFFECTIVE, 12 PROPOSED, 1 SUPERSEDED. 1517 registered requirements.
+30 documents: 15 DRAFT, 2 EFFECTIVE, 12 PROPOSED, 1 SUPERSEDED. 2008 registered requirements.
 
 ## Open gaps
 

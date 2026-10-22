@@ -314,6 +314,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Report what the active content determines by location
+         * @description Any authenticated role. The countries the active pack covers, the
+         *     services in each, whether inclusive prices can be extracted, and
+         *     every component in force at `at` — rate, jurisdiction, authority,
+         *     treatments and source citation. A country that is not listed is
+         *     `UNSUPPORTED` on a determination; nothing about it is assumed.
+         *
+         *     `503 NO_CONTENT_BUNDLE` when the cell has no bundle, or a bundle with
+         *     no taxation profile.
+         */
+        get: operations["getCoverage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/quotes": {
         parameters: {
             query?: never;
@@ -340,6 +367,16 @@ export interface paths {
          *     `line.quantity` and two flags, and a read set holding
          *     `threshold.ecoLevyYtd`. A value the pack reads and the request omits is
          *     a `400`; so is an accumulator the pack does not read.
+         *
+         *     **Location-aware determination.** Against a pack with a taxation
+         *     profile, send `document` instead of `input`. The cell resolves where
+         *     each line was supplied from the evidence (JUR-001), selects the
+         *     components in force there at `eventTime` for the line's service,
+         *     customer role and supply, and evaluates them (DET-001). Every line ends
+         *     in an explicit state: a missing location, an uncovered country, an
+         *     unmapped SKU or an unverifiable certificate is a recorded
+         *     `REVIEW_REQUIRED` or `UNSUPPORTED`, never a zero tax. Coverage is
+         *     reported by `GET /v1/coverage`.
          */
         post: operations["createQuote"];
         delete?: never;
@@ -391,6 +428,12 @@ export interface paths {
          *     value the cell does not hold.
          *
          *     Before A4 every decision is `ADVISORY` and `authoritative: false`.
+         *
+         *     A `document` commit records the document, every line's situs decision
+         *     and components, and the totals in the envelope and result, so a replay
+         *     reproduces it exactly under the content that made it. A decision whose
+         *     document is not `RESOLVED` is recorded and emits nothing: it posts no
+         *     journal and assesses no obligation.
          */
         post: operations["commitTransaction"];
         delete?: never;
@@ -1742,6 +1785,851 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/compliance/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The compliance queue
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. Every compliance package, in
+         *     queue order: priority first, then the statutory deadline. Priority
+         *     combines the time left before the authority's deadline with what the
+         *     package is waiting on, not arrival order (ZTAX-COMP-REQ-0091).
+         *     Statutory and internal-target breaches are reported separately
+         *     (ZTAX-COMP-REQ-0017).
+         */
+        get: operations["listCompliancePackages"];
+        put?: never;
+        /**
+         * Instantiate the compliance package for an obligation
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Instantiates the executable package for one obligation: its operating
+         *     mode, submission channel, the authority it is filed with, and our internal
+         *     targets. The package references the obligation and never alters its period,
+         *     authority or responsible party (ZTAX-COMP-REQ-0001 to -0003).
+         *
+         *     Idempotent for the obligation: asking again returns the package already
+         *     made, with `200` rather than `201` (ZTAX-COMP-REQ-0004). The statutory
+         *     deadline is the obligation's legal due date, the end of that day in the
+         *     authority's calendar; internal targets may only be earlier
+         *     (ZTAX-COMP-REQ-0008, -0009, -0011).
+         */
+        post: operations["createCompliancePackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/compliance/packages/{packageId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One compliance package, its readiness and its history
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. Readiness fails closed: the
+         *     package is `ready` only when every dimension passes
+         *     (ZTAX-COMP-REQ-0025). `gate` is the legal gate's answer for filing
+         *     this package now.
+         */
+        get: operations["getCompliancePackage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/compliance/packages/{packageId}/preparation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Prepare a new version
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Records a new immutable preparation version of the obligation as it stands:
+         *     its assessment is the control total, and the payload hash covers what the
+         *     package files for and that figure (ZTAX-COMP-REQ-0035, -0036, -0039). A new
+         *     version supersedes the one under review and invalidates any approval of it
+         *     (ZTAX-COMP-REQ-0045). The obligation must be `READY`, or `REJECTED` and being
+         *     remediated.
+         */
+        post: operations["prepareCompliancePackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/compliance/packages/{packageId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review the current version
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records a reviewer's decision on the version named. The reviewer is never
+         *     the version's preparer: `403 SEGREGATION_OF_DUTIES` (ZTAX-COMP-REQ-0040,
+         *     -0041). A version that is no longer current is `409 PREPARATION_VERSION_STALE`.
+         *     `REJECT` and `RETURN_FOR_CHANGE` return the package to `READY`; anything but
+         *     `ACCEPT` gives a reason.
+         */
+        post: operations["reviewCompliancePackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/compliance/packages/{packageId}/approval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve the exact version to submit
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Pins the exact version and payload hash that may be submitted
+         *     (ZTAX-COMP-REQ-0044). Needs an accepting review of that version and an
+         *     approver who did not prepare it.
+         */
+        post: operations["approveCompliancePackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/compliance/packages/{packageId}/submission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a submission attempt
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Starts an attempt with the approved payload, under its own identifier and
+         *     carrying the approved hash (ZTAX-COMP-REQ-0050, -0051). Pre-submission
+         *     validation refuses with `FILING_BLOCKED` when the obligation's figure has
+         *     changed since preparation or the legal gate does not allow filing with the
+         *     authority now (ZTAX-COMP-REQ-0046 to -0049).
+         *
+         *     The package becomes `TRANSMITTING`, which is not `FILED`: only the
+         *     authority's acknowledgement files it (ZTAX-COMP-REQ-0055, -0058). An
+         *     `UNCERTAIN_SUBMISSION` package cannot be submitted again until it is
+         *     resolved (ZTAX-COMP-REQ-0060).
+         */
+        post: operations["submitCompliancePackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/compliance/packages/{packageId}/acknowledgement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the authority's answer
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Records what the authority or network answered to the latest attempt, and
+         *     moves the obligation to what that answer establishes. A claim of receipt or
+         *     acceptance carries the authority's reference (ZTAX-COMP-REQ-0056); every
+         *     answer carries the raw response as received (ZTAX-COMP-REQ-0063). `UNKNOWN`
+         *     is `UNCERTAIN_SUBMISSION`, never a failure.
+         */
+        post: operations["acknowledgeCompliancePackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/compliance/packages/{packageId}/resolution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve an uncertain submission
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Settles an `UNCERTAIN_SUBMISSION` with what was established at the
+         *     authority (ZTAX-COMP-001 §15). `CONFIRMED_NOT_FILED` reopens the way to
+         *     another attempt; `MANUAL_INVESTIGATION` records the work and leaves it
+         *     uncertain. The uncertain attempt stays in the history with its payload
+         *     identity (ZTAX-COMP-REQ-0061).
+         */
+        post: operations["resolveCompliancePackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/compliance/packages/{packageId}/cancellation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a package not yet submitted
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Closes a package that has not been submitted, with its reason. A
+         *     submitted filing is not cancelled; it is amended through the authority.
+         */
+        post: operations["cancelCompliancePackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/remittances/beneficiaries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Payee versions
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *     Every version of every authority's payee details, newest first, with its verification history.
+         */
+        get: operations["listBeneficiaries"];
+        put?: never;
+        /**
+         * Record a payee version
+         * @description `ADMIN` or `OPERATOR`, signed in as themselves.
+         *
+         *     Records an authority's payee details as a new, unverified version. The
+         *     account is named by a vault or token reference, never by its number
+         *     (ZTAX-REM-REQ-0011). A version that supersedes another is `CHANGE_PENDING`
+         *     until someone other than its author verifies it, and the version it
+         *     replaces stays payable until then (ZTAX-REM-REQ-0012, -0014).
+         */
+        post: operations["createBeneficiary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/remittances/beneficiaries/{beneficiaryId}/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify a payee version
+         * @description `ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records an independent verification against the authority's official
+         *     source. The person who entered the details cannot verify them:
+         *     `403 MAKER_CHECKER` (ZTAX-REM-REQ-0014). Verifying a replacement
+         *     supersedes the version it replaces in the same act.
+         */
+        post: operations["verifyBeneficiary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/remittances/beneficiaries/{beneficiaryId}/suspension": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suspend a payee version
+         * @description `ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Stops every payment to the version, with its reason. Suspension is final for the version; a corrected payee is a new version.
+         */
+        post: operations["suspendBeneficiary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/remittances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The payment queue
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Every payment instruction, overdue first, then by payment due date.
+         */
+        get: operations["listRemittances"];
+        put?: never;
+        /**
+         * Make the payment instruction for an accepted obligation
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Makes the immutable payment instruction for the liability of an obligation
+         *     the authority accepted, and records the obligation as `PAYMENT_DUE`
+         *     (ZTAX-REM-REQ-0005, -0006). Every field the payment executes on is hashed
+         *     into `instructionHash` (ZTAX-REM-REQ-0036).
+         *
+         *     Idempotent for the obligation: while a live instruction exists, asking again
+         *     returns it with `200`. A new instruction is made only after the last was
+         *     cancelled, rejected or returned, and it is linked to it
+         *     (ZTAX-REM-REQ-0007, -0008, -0061). ZoikoTax never holds the funds; the
+         *     funding account is the customer's own, by reference
+         *     (ZTAX-REM-REQ-0001, -0009).
+         */
+        post: operations["createRemittance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/remittances/{remittanceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One payment, its readiness and its history
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Readiness fails closed: the payment is `ready` only when every dimension passes (ZTAX-REM-REQ-0023).
+         */
+        get: operations["getRemittance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/remittances/{remittanceId}/approval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve the exact instruction
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Binds the exact instruction hash (ZTAX-REM-REQ-0026). The approver did not
+         *     make the instruction and did not enter the payee version it pays:
+         *     `403 MAKER_CHECKER` (ZTAX-REM-REQ-0024, -0031). A payee version that is not
+         *     verified is `403 PAYMENT_BLOCKED` (ZTAX-REM-REQ-0015).
+         */
+        post: operations["approveRemittance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/remittances/{remittanceId}/submission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the instruction's submission
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Records the approved instruction leaving for the customer's provider, after
+         *     revalidating it: the payee version is still payable, and the obligation
+         *     still owes exactly the instructed amount (ZTAX-REM-REQ-0018 to -0022). The
+         *     payment is `SUBMITTED`, which is not accepted and not settled
+         *     (ZTAX-REM-REQ-0037).
+         */
+        post: operations["submitRemittance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/remittances/{remittanceId}/provider-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record what the provider reported
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     `SETTLED` needs settlement evidence and its reference; provider acceptance,
+         *     a processing reference or a payer debit are not settlement
+         *     (ZTAX-REM-REQ-0043, -0044, -0075). Settlement records the obligation as
+         *     `PAID`. An answer nobody can read is `UNCERTAIN_PAYMENT`, never a failure
+         *     (ZTAX-REM-REQ-0040).
+         */
+        post: operations["recordRemittanceStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/remittances/{remittanceId}/resolution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve an uncertain payment
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Settles an `UNCERTAIN_PAYMENT` with what was established at the bank, the
+         *     provider or the authority (ZTAX-REM-001 §19). `CONFIRMED_NOT_SENT` sends the
+         *     payment back for a new approval; a second payment is never made on the old
+         *     one.
+         */
+        post: operations["resolveRemittance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/remittances/{remittanceId}/return": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a returned payment
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Records value returned after settlement. The settled step stays; the return
+         *     is a step after it (ZTAX-REM-REQ-0041). Repayment is a new instruction,
+         *     linked to this one.
+         */
+        post: operations["returnRemittance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/remittances/{remittanceId}/cancellation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel an instruction not yet sent
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Withdraws an instruction that has not left for the provider, with its reason. A sent payment is recalled through its provider.
+         */
+        post: operations["cancelRemittance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shadow/comparators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Comparator profiles
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Every comparator profile, with the strongest claim a match against it supports (ZTAX-SHD-001 §3).
+         */
+        get: operations["listComparators"];
+        put?: never;
+        /**
+         * Record a comparator profile
+         * @description `ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records what a comparator is, so its results are weighed for what they are.
+         *     Matching a commercial engine, a legacy engine or a billed history is
+         *     `MATCHES_COMPARATOR`, never verified correctness; only an independent oracle
+         *     supports `VERIFIED_CORRECT` (ZTAX-SHD-001 §1). A version the engine does not
+         *     expose is recorded as `UNKNOWN`, and reported.
+         */
+        post: operations["createComparator"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shadow/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Shadow runs
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The tenant's runs, newest first, with their metrics and cutover blockers but without their cases.
+         */
+        get: operations["listShadowRuns"];
+        put?: never;
+        /**
+         * Compare a comparator's results with ZoikoTax's decisions
+         * @description `ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Imports up to 1000 comparator results and pairs each, by business key, with
+         *     the current ZoikoTax decision for it; decisions in the window with no
+         *     result are reported unpaired. Each pair is compared component by component
+         *     through `componentMap`: a comparator code with no mapping stays
+         *     `UNMAPPED_EXTERNAL_CODE`, and a matching total does not hide a component
+         *     difference (ZTAX-SHD-001 §10). Tolerance classifies a difference as
+         *     equivalent; it never changes an amount (§12). A discrepancy is opened for
+         *     every material case.
+         *
+         *     Non-impact: the run reads committed decisions and writes nothing but
+         *     itself (ZTAX-SHD-REQ-0001).
+         */
+        post: operations["executeShadowRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shadow/runs/{shadowRunId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One run, its cases and its discrepancies
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Every case with its component comparison, every discrepancy with its history, and what blocks cutover on this evidence. An empty blocker list is not an approval: cutover is a governed decision made elsewhere (ZTAX-SHD-001 §25).
+         */
+        get: operations["getShadowRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/shadow/discrepancies/{discrepancyId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move a discrepancy's investigation
+         * @description `ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records the next step of an investigation (ZTAX-SHD-001 §15). Every move
+         *     says why; triage assigns a severity and a root-cause candidate. Accepted
+         *     risk is never a match, and an unresolved `SHD-SEV-1` blocks cutover.
+         */
+        post: operations["moveDiscrepancy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/migrations/programs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Migration programs
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The tenant's migration programs, newest first.
+         */
+        get: operations["listMigrationPrograms"];
+        put?: never;
+        /**
+         * Create a migration program
+         * @description `ADMIN` or `OPERATOR`, signed in as themselves.
+         *
+         *     A program migrates one bounded population: a legal entity and a period
+         *     (ZTAX-MIG-001 §5). `scale` is how many decimal places migrated amounts may
+         *     carry; it is declared, because currency precision is content, and a source
+         *     amount finer than it is a `PRECISION_LOSS` exception rather than a rounding.
+         */
+        post: operations["createMigrationProgram"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/migrations/programs/{migrationProgramId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One program, its evidence and its cutover readiness
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Snapshots, mapping versions, runs with their reconciliation and exceptions, the cutover history, and what blocks the switch. No aggregate percentage is reported as completeness (ZTAX-MIG-001 §16).
+         */
+        get: operations["getMigrationProgram"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/migrations/programs/{migrationProgramId}/snapshots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register an immutable source snapshot
+         * @description `ADMIN` or `OPERATOR`, signed in as themselves.
+         *
+         *     Records up to 5000 historical tax results as the source held them, with the
+         *     source's own declared control totals. The snapshot is hashed and never
+         *     edited: preserve before transform (ZTAX-MIG-001 §1, §7).
+         */
+        post: operations["registerMigrationSnapshot"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/migrations/programs/{migrationProgramId}/mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the next mapping version
+         * @description `ADMIN` or `OPERATOR`, signed in as themselves.
+         *
+         *     Maps legacy tax codes to ZoikoTax slots. A legacy code stays an external code; the mapping is versioned, and a code it does not name is an `UNMAPPED_CODE` exception, never a default (ZTAX-MIG-001 §10, §15).
+         */
+        post: operations["createMigrationMapping"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/migrations/programs/{migrationProgramId}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Convert a snapshot under a mapping version
+         * @description `ADMIN` or `OPERATOR`, signed in as themselves.
+         *
+         *     Converts AS_KNOWN: the amounts the source recorded are carried as recorded,
+         *     never recalculated under current content (the historical rule,
+         *     ZTAX-MIG-001 §1). Each converted record gets a canonical identity and keeps
+         *     its source identifier (the crosswalk, §9). Records it cannot carry are
+         *     exceptions; counts, monetary totals by currency and the crosswalk are
+         *     reconciled separately (§16). Converted history is stored apart from
+         *     ZoikoTax decisions.
+         */
+        post: operations["executeMigrationRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/migrations/programs/{migrationProgramId}/cutover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move the cutover
+         * @description `ADMIN` or `OPERATOR`, signed in as themselves.
+         *
+         *     Moves the program's cutover through ZTAX-MIG-001 §26. `READY_TO_SWITCH` and
+         *     `ROUTING_SWITCH` need the latest run reconciled with no open high-severity
+         *     exception, whatever share of records converted; the switch is made by
+         *     someone other than the program's creator. Abort is before the switch,
+         *     rollback after it; neither deletes evidence (§27).
+         */
+        post: operations["moveMigrationCutover"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/migrations/runs/{migrationRunId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One run, its converted records and its exceptions
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The run's reconciliation, every converted record with its crosswalk, and every exception with its disposition.
+         */
+        get: operations["getMigrationRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/migrations/exceptions/{migrationExceptionId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve an exception or accept it as a residual
+         * @description `ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records the one decision on an exception: `RESOLVED`, or `ACCEPTED_RESIDUAL` — a known migration residual, accepted with its reason and never counted as converted (ZTAX-MIG-001 §15).
+         */
+        post: operations["decideMigrationException"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2256,18 +3144,30 @@ export interface components {
         ReadSet: {
             [key: string]: components["schemas"]["MoneyValue"];
         };
-        /** QuoteRequest */
+        /**
+         * QuoteRequest
+         * @description Exactly one of `input` (named values for a rule-graph pack) and
+         *     `document` (a telecom document for a pack with location-aware
+         *     content) is required. `eventTime` is the tax point.
+         */
         QuoteRequest: {
             eventTime: components["schemas"]["Timestamp"];
-            input: components["schemas"]["DeterminationInput"];
+            input?: components["schemas"]["DeterminationInput"];
+            document?: components["schemas"]["TaxDocument"];
             accumulators?: components["schemas"]["ReadSet"];
         };
-        /** CommitRequest */
+        /**
+         * CommitRequest
+         * @description Exactly one of `input` and `document` is required, as for a quote.
+         *     `eventTime` is the tax point: every effective date and legal period is
+         *     resolved at it, in the authority's own calendar.
+         */
         CommitRequest: {
             businessKey: components["schemas"]["BusinessKey"];
             supersedes?: components["schemas"]["DecisionId"];
             eventTime: components["schemas"]["Timestamp"];
-            input: components["schemas"]["DeterminationInput"];
+            input?: components["schemas"]["DeterminationInput"];
+            document?: components["schemas"]["TaxDocument"];
             accumulators?: components["schemas"]["ReadSet"];
         };
         /**
@@ -2318,6 +3218,7 @@ export interface components {
             quotedAt: components["schemas"]["Timestamp"];
             bundle: components["schemas"]["BundleRef"];
             emitted: components["schemas"]["Emitted"];
+            document?: components["schemas"]["DocumentDetermination"];
         };
         /**
          * DecisionDigests
@@ -2347,6 +3248,374 @@ export interface components {
             bundle: components["schemas"]["BundleRef"];
             digests: components["schemas"]["DecisionDigests"];
             emitted: components["schemas"]["Emitted"];
+            document?: components["schemas"]["DocumentDetermination"];
+        };
+        /**
+         * JurisdictionId
+         * @description A jurisdiction's content identifier (ADR-0012 §2.4), such as
+         *     `jurisdiction:ca-qc`. Classified as location evidence: on a consumer
+         *     document, the deepest jurisdiction is where the customer is.
+         * @example jurisdiction:ca-qc
+         */
+        JurisdictionId: string;
+        /**
+         * LocationCode
+         * @description An ISO 3166-1 alpha-2 country code (`DE`) or ISO 3166-2 subdivision code (`CA-QC`).
+         * @example DE
+         */
+        LocationCode: string;
+        /**
+         * TaxDocumentType
+         * @description An `INVOICE` carries non-negative amounts; a `CREDIT_NOTE` carries non-positive ones.
+         * @example INVOICE
+         * @enum {string}
+         */
+        TaxDocumentType: "INVOICE" | "CREDIT_NOTE";
+        /**
+         * PriceMode
+         * @description `EXCLUSIVE`: amounts are net and customer charges are added.
+         *     `INCLUSIVE`: amounts include the customer-charged taxes, which are
+         *     extracted (DET-001 §7) — never computed on the gross and added.
+         * @example EXCLUSIVE
+         * @enum {string}
+         */
+        PriceMode: "EXCLUSIVE" | "INCLUSIVE";
+        /**
+         * ServiceFamily
+         * @description A ZTAX-CLS-001 ontology family. A tenant's SKU is mapped to one before
+         *     determination; a line without one is held as `CLASSIFICATION_REQUIRED`
+         *     rather than guessed at.
+         * @example MOBILE_VOICE
+         * @enum {string}
+         */
+        ServiceFamily: "MOBILE_VOICE" | "FIXED_VOICE" | "MESSAGING" | "MOBILE_DATA" | "FIXED_BROADBAND" | "VOIP" | "SIP_TRUNKING" | "UCAAS" | "CCAAS" | "CPAAS" | "IOT_CONNECTIVITY" | "SUBSCRIPTION_IDENTITY" | "SATELLITE_CONNECTIVITY" | "ROAMING_RETAIL" | "ROAMING_WHOLESALE" | "INTERCONNECT" | "WHOLESALE_ACCESS" | "EQUIPMENT_SALE" | "EQUIPMENT_RENTAL" | "INSTALLATION_ACTIVATION" | "PROFESSIONAL_SERVICES" | "CONTENT_MEDIA" | "SOFTWARE" | "OTHER_NON_TELECOM";
+        /**
+         * SitusEvidenceType
+         * @description The JUR-001 §3.2 evidence vocabulary a caller may supply directly.
+         *     Seller and customer establishment and VAT identification arrive on the
+         *     parties instead, so one fact cannot arrive twice and disagree.
+         * @example SERVICE_ADDRESS
+         * @enum {string}
+         */
+        SitusEvidenceType: "PRIMARY_PLACE_OF_USE" | "SERVICE_ADDRESS" | "BILLING_ADDRESS" | "FIXED_LINE_LOCATION" | "NETWORK_LOCATION" | "SIM_COUNTRY" | "IP_GEOLOCATION" | "BANK_LOCATION" | "CUSTOMER_DECLARATION";
+        /**
+         * SitusEvidenceSource
+         * @example SELLER_RECORDED
+         * @enum {string}
+         */
+        SitusEvidenceSource: "CUSTOMER_ASSERTED" | "SELLER_RECORDED" | "NETWORK_DERIVED" | "THIRD_PARTY_VERIFIED" | "AUTHORITY_VERIFIED";
+        /**
+         * VatValidation
+         * @description `VALIDATED` establishes a business customer where the pack recognises
+         *     it. `UNVALIDATED` and `VALIDATION_UNAVAILABLE` are different facts and
+         *     a pack may treat them differently (JUR-001 §7.3).
+         * @example VALIDATED
+         * @enum {string}
+         */
+        VatValidation: "VALIDATED" | "UNVALIDATED" | "VALIDATION_UNAVAILABLE";
+        /**
+         * CertificateVerification
+         * @description Only `VERIFIED` exempts. `UNAVAILABLE` holds the line for review; a
+         *     verification is never assumed to have succeeded.
+         * @example VERIFIED
+         * @enum {string}
+         */
+        CertificateVerification: "VERIFIED" | "UNVERIFIED" | "UNAVAILABLE";
+        /**
+         * PartyReference
+         * @description A party's reference in the caller's systems. Not interpreted; a certificate's holder must equal the customer's.
+         * @example C1
+         */
+        PartyReference: string;
+        /**
+         * ContentLabel
+         * @description An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+         * @example xt.voice-tax
+         */
+        ContentLabel: string;
+        /**
+         * ContentText
+         * @description Text from the active content, such as a source citation. Not interpreted.
+         * @example Training rule: 8% of the voice base.
+         */
+        ContentText: string;
+        /**
+         * Place
+         * @description A location named by its jurisdiction — exactly one of a jurisdiction
+         *     identifier and an ISO code. There is no street address: resolution
+         *     never geocodes (JUR-001 §8.2), so an address is mapped to a
+         *     jurisdiction by the system that records it.
+         */
+        Place: {
+            jurisdiction?: components["schemas"]["JurisdictionId"];
+            subdivision?: components["schemas"]["LocationCode"];
+            country?: components["schemas"]["LocationCode"];
+        };
+        /**
+         * VatIdentification
+         * @description The customer's VAT registration country and validation status. The number itself is not needed and not retained.
+         */
+        VatIdentification: {
+            country: components["schemas"]["LocationCode"];
+            validation: components["schemas"]["VatValidation"];
+        };
+        /** TaxParty */
+        TaxParty: {
+            id: components["schemas"]["PartyReference"];
+            establishment?: components["schemas"]["Place"];
+            vat?: components["schemas"]["VatIdentification"];
+        };
+        /**
+         * SitusEvidenceItem
+         * @description One typed, attributed signal about where the supply took place (JUR-001 §3.1).
+         */
+        SitusEvidenceItem: {
+            type: components["schemas"]["SitusEvidenceType"];
+            source: components["schemas"]["SitusEvidenceSource"];
+            collectedAt?: components["schemas"]["Timestamp"];
+            place: components["schemas"]["Place"];
+        };
+        /**
+         * ExemptionCertificate
+         * @description A certificate is scoped: by issuing jurisdiction, holder, tax types,
+         *     components and validity. One that does not apply on any of those is
+         *     refused visibly in the trace, never silently ignored.
+         */
+        ExemptionCertificate: {
+            id: components["schemas"]["PartyReference"];
+            type: components["schemas"]["ContentLabel"];
+            holder: components["schemas"]["PartyReference"];
+            jurisdiction: components["schemas"]["JurisdictionId"];
+            taxTypes?: components["schemas"]["ContentLabel"][];
+            components?: components["schemas"]["ContentLabel"][];
+            validFrom: components["schemas"]["CivilDate"];
+            validTo?: components["schemas"]["CivilDate"];
+            verification: components["schemas"]["CertificateVerification"];
+        };
+        /**
+         * TaxLinePart
+         * @description One component of an approved bundle decomposition.
+         */
+        TaxLinePart: {
+            key: components["schemas"]["ContentLabel"];
+            service?: components["schemas"]["ServiceFamily"];
+            amount: components["schemas"]["Decimal"];
+            quantity?: components["schemas"]["QuantityValue"];
+        };
+        /**
+         * TaxLine
+         * @description One rated line, in the document currency. A bundle line carries
+         *     `parts` instead of its own `service` and `quantity`, and the parts
+         *     must sum to `amount` exactly.
+         */
+        TaxLine: {
+            key: components["schemas"]["ContentLabel"];
+            sku?: components["schemas"]["ContentLabel"];
+            service?: components["schemas"]["ServiceFamily"];
+            amount: components["schemas"]["Decimal"];
+            quantity?: components["schemas"]["QuantityValue"];
+            evidence?: components["schemas"]["SitusEvidenceItem"][];
+            parts?: components["schemas"]["TaxLinePart"][];
+        };
+        /**
+         * TaxDocument
+         * @description A telecom document for location-aware determination: rated commercial
+         *     facts, the parties, and the evidence of where the supply took place.
+         *     It carries no tax; what is owed is the output. The tax point is the
+         *     request's `eventTime`.
+         */
+        TaxDocument: {
+            type: components["schemas"]["TaxDocumentType"];
+            currency: components["schemas"]["CurrencyCode"];
+            priceMode: components["schemas"]["PriceMode"];
+            seller: components["schemas"]["TaxParty"];
+            customer: components["schemas"]["TaxParty"];
+            evidence?: components["schemas"]["SitusEvidenceItem"][];
+            certificates?: components["schemas"]["ExemptionCertificate"][];
+            lines: components["schemas"]["TaxLine"][];
+        };
+        /**
+         * DeterminationState
+         * @description `RESOLVED` is the only state that carries amounts. Every other state
+         *     is recorded with its evidence and reason and is never a zero tax.
+         * @example RESOLVED
+         * @enum {string}
+         */
+        DeterminationState: "RESOLVED" | "REVIEW_REQUIRED" | "UNSUPPORTED" | "AMBIGUOUS" | "CONFLICTED";
+        /**
+         * Treatment
+         * @description `CUSTOMER_CHARGE` is on the invoice. `PROVIDER_COST` is borne by the
+         *     seller and never on it. `REVERSE_CHARGE` is self-assessed by the
+         *     customer: disclosed, neither charged nor remitted by the seller.
+         *     `EXEMPT` is a customer charge a verified certificate suppressed.
+         * @example CUSTOMER_CHARGE
+         * @enum {string}
+         */
+        Treatment: "CUSTOMER_CHARGE" | "PROVIDER_COST" | "REVERSE_CHARGE" | "EXEMPT";
+        /**
+         * ResponsibleParty
+         * @example SELLER
+         * @enum {string}
+         */
+        ResponsibleParty: "SELLER" | "BUYER" | "NONE";
+        /**
+         * ResponsibilityAssignment
+         * @description The five roles, each answered separately (ZTAX-OBL-REQ-0002 to -0006).
+         */
+        ResponsibilityAssignment: {
+            id: components["schemas"]["ContentLabel"];
+            incidence: components["schemas"]["ResponsibleParty"];
+            collection: components["schemas"]["ResponsibleParty"];
+            reporting: components["schemas"]["ResponsibleParty"];
+            remittance: components["schemas"]["ResponsibleParty"];
+            economicBearer: components["schemas"]["ResponsibleParty"];
+        };
+        /**
+         * ExemptionApplied
+         * @description A charge a certificate suppressed, and the assessment it would have been.
+         */
+        ExemptionApplied: {
+            certificate: components["schemas"]["PartyReference"];
+            type: components["schemas"]["ContentLabel"];
+            assessed?: components["schemas"]["Decimal"];
+        };
+        /**
+         * TaxComponentResult
+         * @description One charge on one line: its legal base, rate version, jurisdiction,
+         *     authority, five roles, recoverability, rounding result and source.
+         *     `charged` is what the customer pays for it.
+         */
+        TaxComponentResult: {
+            id: components["schemas"]["ContentLabel"];
+            version: components["schemas"]["CivilDate"];
+            regime: components["schemas"]["ContentLabel"];
+            jurisdiction: components["schemas"]["JurisdictionId"];
+            authority: components["schemas"]["ContentLabel"];
+            taxType: components["schemas"]["ContentLabel"];
+            name: components["schemas"]["ContentText"];
+            treatment: components["schemas"]["Treatment"];
+            inclusive: boolean;
+            rateKind: components["schemas"]["ContentLabel"];
+            rate: components["schemas"]["Decimal"];
+            unit?: components["schemas"]["UnitCode"];
+            base?: components["schemas"]["Decimal"];
+            raw: components["schemas"]["Decimal"];
+            amount: components["schemas"]["Decimal"];
+            charged: components["schemas"]["Decimal"];
+            legalReason?: components["schemas"]["ContentLabel"];
+            responsibility: components["schemas"]["ResponsibilityAssignment"];
+            exemption?: components["schemas"]["ExemptionApplied"];
+            source: components["schemas"]["ContentLabel"];
+            citation: components["schemas"]["ContentText"];
+        };
+        /**
+         * DeterminationItem
+         * @description One line, or one part of a bundle line (`key` is `<line>/<part>`):
+         *     its state, the situs decision that placed it, and its components.
+         */
+        DeterminationItem: {
+            key: components["schemas"]["ContentLabel"];
+            line: components["schemas"]["ContentLabel"];
+            part?: components["schemas"]["ContentLabel"];
+            sku?: components["schemas"]["ContentLabel"];
+            service?: components["schemas"]["ServiceFamily"];
+            amount: components["schemas"]["Decimal"];
+            state: components["schemas"]["DeterminationState"];
+            reasonCode?: components["schemas"]["ReasonCode"];
+            situsOutcome?: components["schemas"]["ContentLabel"];
+            situsRule?: components["schemas"]["ContentLabel"];
+            applicable?: components["schemas"]["JurisdictionId"][];
+            placeOfSupply?: components["schemas"]["JurisdictionId"];
+            customerRole?: components["schemas"]["ContentLabel"];
+            supply?: components["schemas"]["ContentLabel"];
+            regime?: components["schemas"]["ContentLabel"];
+            neededEvidence?: components["schemas"]["ContentLabel"][];
+            net?: components["schemas"]["Decimal"];
+            components?: components["schemas"]["TaxComponentResult"][];
+        };
+        /**
+         * DocumentTotals
+         * @description The figures that must stay apart (playbook §7): what the customer is
+         *     charged, what the provider bears, and what the customer self-assesses.
+         */
+        DocumentTotals: {
+            net: components["schemas"]["Decimal"];
+            customerTax: components["schemas"]["Decimal"];
+            customerTotal: components["schemas"]["Decimal"];
+            providerAccrual: components["schemas"]["Decimal"];
+            reverseCharge: components["schemas"]["Decimal"];
+        };
+        /**
+         * DeterminationStep
+         * @description One step of the deterministic trace — selection, situs, exemption and DET-001 evaluation steps.
+         */
+        DeterminationStep: {
+            item?: components["schemas"]["ContentLabel"];
+            component?: components["schemas"]["ContentLabel"];
+            step: components["schemas"]["ContentLabel"];
+            detail: string;
+        };
+        /**
+         * DocumentDetermination
+         * @description A document's location-aware determination. `totals` is present only
+         *     when `state` is `RESOLVED`: an unresolved document has no totals
+         *     rather than zero ones.
+         */
+        DocumentDetermination: {
+            state: components["schemas"]["DeterminationState"];
+            reasonCode: components["schemas"]["ReasonCode"];
+            currency: components["schemas"]["CurrencyCode"];
+            priceMode: components["schemas"]["PriceMode"];
+            profileVersion: components["schemas"]["ContentLabel"];
+            graphVersion: components["schemas"]["ContentLabel"];
+            totals?: components["schemas"]["DocumentTotals"];
+            items: components["schemas"]["DeterminationItem"][];
+            trace: components["schemas"]["DeterminationStep"][];
+        };
+        /**
+         * CoverageComponent
+         * @description One component in force at the coverage instant.
+         */
+        CoverageComponent: {
+            id: components["schemas"]["ContentLabel"];
+            jurisdiction: components["schemas"]["JurisdictionId"];
+            authority: components["schemas"]["ContentLabel"];
+            taxType: components["schemas"]["ContentLabel"];
+            name: components["schemas"]["ContentText"];
+            services?: components["schemas"]["ServiceFamily"][];
+            treatments: components["schemas"]["Treatment"][];
+            rateKind: components["schemas"]["ContentLabel"];
+            rate: components["schemas"]["Decimal"];
+            currency?: components["schemas"]["CurrencyCode"];
+            unit?: components["schemas"]["UnitCode"];
+            legalReason?: components["schemas"]["ContentLabel"];
+            from: components["schemas"]["CivilDate"];
+            to?: components["schemas"]["CivilDate"];
+            source: components["schemas"]["ContentLabel"];
+            citation: components["schemas"]["ContentText"];
+        };
+        /** CoverageRegime */
+        CoverageRegime: {
+            id: components["schemas"]["ContentLabel"];
+            country: components["schemas"]["LocationCode"];
+            name: components["schemas"]["ContentText"];
+            services: components["schemas"]["ServiceFamily"][];
+            requiresLevel?: components["schemas"]["ContentLabel"];
+            inclusivePricing: boolean;
+            components: components["schemas"]["CoverageComponent"][];
+        };
+        /**
+         * Coverage
+         * @description What the active content determines by location, at an instant: the
+         *     countries covered, the services in each, and every component in force
+         *     with its rate and source. A country absent here is `UNSUPPORTED`.
+         */
+        Coverage: {
+            bundle: components["schemas"]["BundleRef"];
+            profileVersion: components["schemas"]["ContentLabel"];
+            graphVersion: components["schemas"]["ContentLabel"];
+            at: components["schemas"]["Timestamp"];
+            regimes: components["schemas"]["CoverageRegime"][];
         };
         /**
          * LegalEntityId
@@ -3711,6 +4980,1005 @@ export interface components {
             currency?: components["schemas"]["CurrencyCode"];
             points: components["schemas"]["DashboardTrendPoint"][];
         };
+        /**
+         * CompliancePackageId
+         * Format: uuid
+         * @example 01920b10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        CompliancePackageId: string;
+        /**
+         * ComplianceMode
+         * @description Who does the work (ZTAX-COMP-001 §3), set per package.
+         * @enum {string}
+         */
+        ComplianceMode: "SOFTWARE_ONLY" | "ASSISTED" | "MANAGED_PREP" | "MANAGED_FILE" | "FULL_MANAGED_COMPLIANCE" | "PARTNER_LED";
+        /**
+         * ComplianceChannel
+         * @description How the filing reaches the authority (ZTAX-COMP-001 §13).
+         * @enum {string}
+         */
+        ComplianceChannel: "DIRECT_API" | "EFILE_NETWORK" | "FILE_TRANSFER" | "WEB_PORTAL_RPA" | "MANUAL_PORTAL" | "LOCAL_PARTNER" | "PAPER";
+        /**
+         * ComplianceStatus
+         * @description Where the filing is (ZTAX-COMP-001 §14). TRANSMITTING is not FILED, and UNCERTAIN_SUBMISSION leaves only through a recorded resolution.
+         * @enum {string}
+         */
+        ComplianceStatus: "READY" | "IN_REVIEW" | "APPROVED" | "TRANSMITTING" | "UNCERTAIN_SUBMISSION" | "FILED" | "ACCEPTED" | "REJECTED" | "CANCELLED";
+        /**
+         * ComplianceReviewDecision
+         * @description A reviewer's verdict on one preparation version.
+         * @enum {string}
+         */
+        ComplianceReviewDecision: "ACCEPT" | "REJECT" | "RETURN_FOR_CHANGE" | "ESCALATE";
+        /**
+         * ComplianceAcknowledgement
+         * @description What the authority or network answered (ZTAX-COMP-001 §16).
+         * @enum {string}
+         */
+        ComplianceAcknowledgement: "RECEIVED" | "ACCEPTED" | "ACCEPTED_WITH_WARNINGS" | "REJECTED_VALIDATION" | "REJECTED_AUTHORIZATION" | "REJECTED_DUPLICATE" | "PENDING_AUTHORITY" | "UNKNOWN";
+        /**
+         * ComplianceResolution
+         * @description How an uncertain submission was settled (ZTAX-COMP-001 §15).
+         * @enum {string}
+         */
+        ComplianceResolution: "CONFIRMED_FILED" | "CONFIRMED_NOT_FILED" | "DUPLICATE_DETECTED" | "MANUAL_INVESTIGATION";
+        /**
+         * CompliancePriority
+         * @description Queue priority (ZTAX-COMP-001 §22) — P0 legal deadline imminent, P1 material blocker, P2 required review, P3 normal execution, P4 follow-up, P5 done.
+         * @enum {string}
+         */
+        CompliancePriority: "P0" | "P1" | "P2" | "P3" | "P4" | "P5";
+        /**
+         * ComplianceStepKind
+         * @description What a step records.
+         * @enum {string}
+         */
+        ComplianceStepKind: "CREATED" | "PREPARED" | "REVIEWED" | "APPROVED" | "SUBMISSION_STARTED" | "ACKNOWLEDGED" | "UNCERTAIN_RESOLVED" | "CANCELLED";
+        /**
+         * ComplianceNote
+         * @description Free text from the person recording a step.
+         */
+        ComplianceNote: string;
+        /**
+         * ComplianceEvidence
+         * @description The authority's response as received, or the operator's account of what the authority answered.
+         */
+        ComplianceEvidence: string;
+        /**
+         * AuthorityReference
+         * @description The authority's own receipt or reference for a submission.
+         */
+        AuthorityReference: string;
+        /** ComplianceStep */
+        ComplianceStep: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["ComplianceStepKind"];
+            status: components["schemas"]["ComplianceStatus"];
+            /**
+             * Format: int32
+             * @description The preparation version the step acted on.
+             */
+            version?: number;
+            payloadHash?: components["schemas"]["Digest"];
+            controlTotal?: components["schemas"]["Decimal"];
+            currency?: components["schemas"]["CurrencyCode"];
+            review?: components["schemas"]["ComplianceReviewDecision"];
+            /**
+             * Format: uuid
+             * @description The submission attempt the step started or answered.
+             */
+            submissionId?: string;
+            channel?: components["schemas"]["ComplianceChannel"];
+            acknowledgement?: components["schemas"]["ComplianceAcknowledgement"];
+            resolution?: components["schemas"]["ComplianceResolution"];
+            authorityReference?: components["schemas"]["AuthorityReference"];
+            evidence?: components["schemas"]["ComplianceEvidence"];
+            note?: components["schemas"]["ComplianceNote"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /** ComplianceReadiness */
+        ComplianceReadiness: {
+            /** @enum {string} */
+            dimension: "DATA_READY" | "WORKPAPER_READY" | "REVIEW_READY" | "REPRESENTATION_READY";
+            ready: boolean;
+            detail: string;
+        };
+        /** ComplianceGate */
+        ComplianceGate: {
+            allowed: boolean;
+            /** @description Why the gate blocks; absent when it allows. */
+            reason?: string;
+            detail?: string;
+        };
+        /** CompliancePackage */
+        CompliancePackage: {
+            id: components["schemas"]["CompliancePackageId"];
+            obligationId: components["schemas"]["ObligationId"];
+            obligationStatus: components["schemas"]["ObligationStatus"];
+            /**
+             * Format: uuid
+             * @description The ResponsibilityDecision the obligation names, when it names one.
+             */
+            responsibilityDecisionId?: string;
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            obligationType: string;
+            jurisdiction: string;
+            periodStart: components["schemas"]["CivilDate"];
+            periodEnd: components["schemas"]["CivilDate"];
+            mode: components["schemas"]["ComplianceMode"];
+            channel: components["schemas"]["ComplianceChannel"];
+            filingCountry: components["schemas"]["CountryCode"];
+            filingAuthority: components["schemas"]["AuthorityCode"];
+            statutoryDue: components["schemas"]["Timestamp"];
+            /** @description The authority's IANA timezone the deadline is in. */
+            timezone: string;
+            prepareDue?: components["schemas"]["Timestamp"];
+            reviewDue?: components["schemas"]["Timestamp"];
+            submitTarget?: components["schemas"]["Timestamp"];
+            status: components["schemas"]["ComplianceStatus"];
+            priority: components["schemas"]["CompliancePriority"];
+            overdue: {
+                /** @description The authority's deadline has passed unfiled. */
+                statutory: boolean;
+                /** @description One of our own targets has passed. */
+                internal: boolean;
+            };
+            /** @description Every readiness dimension passes. Unknown is not ready. */
+            ready: boolean;
+            readiness: components["schemas"]["ComplianceReadiness"][];
+            gate: components["schemas"]["ComplianceGate"];
+            createdAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            createdBy: string;
+            history: components["schemas"]["ComplianceStep"][];
+        };
+        /** CompliancePackageList */
+        CompliancePackageList: {
+            packages: components["schemas"]["CompliancePackage"][];
+        };
+        /** CreateCompliancePackageRequest */
+        CreateCompliancePackageRequest: {
+            obligationId: components["schemas"]["ObligationId"];
+            mode: components["schemas"]["ComplianceMode"];
+            channel: components["schemas"]["ComplianceChannel"];
+            filingCountry: components["schemas"]["CountryCode"];
+            filingAuthority: components["schemas"]["AuthorityCode"];
+            prepareDue?: components["schemas"]["Timestamp"];
+            reviewDue?: components["schemas"]["Timestamp"];
+            submitTarget?: components["schemas"]["Timestamp"];
+        };
+        /** PreparationRequest */
+        PreparationRequest: {
+            note?: components["schemas"]["ComplianceNote"];
+        };
+        /** ComplianceReviewRequest */
+        ComplianceReviewRequest: {
+            /** Format: int32 */
+            version: number;
+            decision: components["schemas"]["ComplianceReviewDecision"];
+            note?: components["schemas"]["ComplianceNote"];
+        };
+        /** ComplianceApprovalRequest */
+        ComplianceApprovalRequest: {
+            /** Format: int32 */
+            version: number;
+            payloadHash: components["schemas"]["Digest"];
+            note?: components["schemas"]["ComplianceNote"];
+        };
+        /** ComplianceSubmissionRequest */
+        ComplianceSubmissionRequest: {
+            note?: components["schemas"]["ComplianceNote"];
+        };
+        /** ComplianceAcknowledgementRequest */
+        ComplianceAcknowledgementRequest: {
+            acknowledgement: components["schemas"]["ComplianceAcknowledgement"];
+            authorityReference?: components["schemas"]["AuthorityReference"];
+            evidence: components["schemas"]["ComplianceEvidence"];
+            note?: components["schemas"]["ComplianceNote"];
+        };
+        /** ComplianceResolutionRequest */
+        ComplianceResolutionRequest: {
+            resolution: components["schemas"]["ComplianceResolution"];
+            authorityReference?: components["schemas"]["AuthorityReference"];
+            evidence: components["schemas"]["ComplianceEvidence"];
+        };
+        /** ComplianceCancellationRequest */
+        ComplianceCancellationRequest: {
+            reason: components["schemas"]["ComplianceNote"];
+        };
+        /**
+         * BeneficiaryId
+         * Format: uuid
+         * @example 01920b20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        BeneficiaryId: string;
+        /**
+         * RemittanceId
+         * Format: uuid
+         * @example 01920b30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        RemittanceId: string;
+        /**
+         * PaymentRail
+         * @description How money reaches the payee (ZTAX-REM-001 §7).
+         * @enum {string}
+         */
+        PaymentRail: "ACH" | "WIRE" | "SEPA" | "RTGS" | "LOCAL_TRANSFER" | "PORTAL" | "DIRECT_DEBIT" | "OTHER";
+        /**
+         * BeneficiaryState
+         * @description Where a payee version stands. Only VERIFIED is paid.
+         * @enum {string}
+         */
+        BeneficiaryState: "UNVERIFIED" | "CHANGE_PENDING" | "VERIFIED" | "SUSPENDED" | "SUPERSEDED";
+        /**
+         * BeneficiaryEventKind
+         * @description What happened to a payee version.
+         * @enum {string}
+         */
+        BeneficiaryEventKind: "CREATED" | "VERIFIED" | "SUSPENDED" | "SUPERSEDED";
+        /**
+         * RemittanceMode
+         * @description Who executes the payment (ZTAX-REM-001 §3). None takes custody of funds.
+         * @enum {string}
+         */
+        RemittanceMode: "CUSTOMER_EXECUTES" | "BANK_API_INITIATION" | "TREASURY_PLATFORM" | "DIRECT_DEBIT_AUTHORITY" | "LOCAL_PARTNER" | "MANAGED_ORCHESTRATION" | "OFFLINE_MANUAL";
+        /**
+         * RemittanceStatus
+         * @description Where a payment is (ZTAX-REM-001 §10). Submitted is not accepted, and accepted is not settled.
+         * @enum {string}
+         */
+        RemittanceStatus: "APPROVAL_REQUIRED" | "APPROVED" | "SUBMITTED" | "ACCEPTED_BY_PROVIDER" | "PROCESSING" | "UNCERTAIN_PAYMENT" | "SETTLED" | "REJECTED" | "RETURNED" | "CANCELLED";
+        /**
+         * PaymentEvidence
+         * @description The kind of proof a provider status carries (ZTAX-REM-001 §18).
+         * @enum {string}
+         */
+        PaymentEvidence: "PROVIDER_ACCEPTANCE" | "PROCESSING_REFERENCE" | "ACCOUNT_DEBIT" | "BENEFICIARY_CREDIT" | "AUTHORITY_RECEIPT" | "BANK_STATEMENT" | "PROVIDER_SETTLED" | "MANUAL_EVIDENCE" | "NONE";
+        /**
+         * PaymentResolution
+         * @description How an uncertain payment was settled (ZTAX-REM-001 §19).
+         * @enum {string}
+         */
+        PaymentResolution: "CONFIRMED_SETTLED" | "CONFIRMED_NOT_SENT" | "CONFIRMED_REJECTED" | "RETURNED" | "DUPLICATE_SUSPECTED" | "MANUAL_INVESTIGATION";
+        /**
+         * RemittanceStepKind
+         * @description What a payment step records.
+         * @enum {string}
+         */
+        RemittanceStepKind: "CREATED" | "APPROVED" | "SUBMITTED" | "PROVIDER_STATUS" | "UNCERTAIN_RESOLVED" | "RETURNED" | "CANCELLED";
+        /**
+         * ProviderReportedStatus
+         * @description A status a provider reports.
+         * @enum {string}
+         */
+        ProviderReportedStatus: "ACCEPTED_BY_PROVIDER" | "PROCESSING" | "SETTLED" | "REJECTED" | "UNCERTAIN_PAYMENT";
+        /**
+         * SecureReference
+         * @description A vault or token reference to an account held at a regulated institution — never an account number.
+         */
+        SecureReference: string;
+        /**
+         * PaymentNote
+         * @description Free text from the person recording a step.
+         */
+        PaymentNote: string;
+        /**
+         * PaymentRaw
+         * @description A provider's or authority's response as received, or the operator's account of it.
+         */
+        PaymentRaw: string;
+        /**
+         * ProviderReference
+         * @description The provider's, bank's or authority's own reference.
+         */
+        ProviderReference: string;
+        /** BeneficiaryEvent */
+        BeneficiaryEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["BeneficiaryEventKind"];
+            evidence?: string;
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /** Beneficiary */
+        Beneficiary: {
+            id: components["schemas"]["BeneficiaryId"];
+            supersedes?: components["schemas"]["BeneficiaryId"];
+            country: components["schemas"]["CountryCode"];
+            authority: components["schemas"]["AuthorityCode"];
+            legalName: string;
+            rail: components["schemas"]["PaymentRail"];
+            accountRef: components["schemas"]["SecureReference"];
+            /** @description The authority's payment-reference format, as a regular expression. */
+            referenceRule?: string;
+            currencies: components["schemas"]["CurrencyCode"][];
+            /** @description The official instruction the details were taken from. */
+            source: string;
+            state: components["schemas"]["BeneficiaryState"];
+            createdAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            createdBy: string;
+            history: components["schemas"]["BeneficiaryEvent"][];
+        };
+        /** BeneficiaryList */
+        BeneficiaryList: {
+            beneficiaries: components["schemas"]["Beneficiary"][];
+        };
+        /** BeneficiaryRequest */
+        BeneficiaryRequest: {
+            supersedes?: components["schemas"]["BeneficiaryId"];
+            country: components["schemas"]["CountryCode"];
+            authority: components["schemas"]["AuthorityCode"];
+            legalName: string;
+            rail: components["schemas"]["PaymentRail"];
+            accountRef: components["schemas"]["SecureReference"];
+            referenceRule?: string;
+            currencies: components["schemas"]["CurrencyCode"][];
+            source: string;
+        };
+        /** BeneficiaryVerificationRequest */
+        BeneficiaryVerificationRequest: {
+            evidence: components["schemas"]["PaymentNote"];
+        };
+        /** BeneficiarySuspensionRequest */
+        BeneficiarySuspensionRequest: {
+            reason: components["schemas"]["PaymentNote"];
+        };
+        /** RemittanceStep */
+        RemittanceStep: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["RemittanceStepKind"];
+            status: components["schemas"]["RemittanceStatus"];
+            instructionHash?: components["schemas"]["Digest"];
+            /** Format: uuid */
+            submissionId?: string;
+            evidence?: components["schemas"]["PaymentEvidence"];
+            resolution?: components["schemas"]["PaymentResolution"];
+            providerReference?: components["schemas"]["ProviderReference"];
+            raw?: components["schemas"]["PaymentRaw"];
+            note?: components["schemas"]["PaymentNote"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /** RemittanceReadiness */
+        RemittanceReadiness: {
+            /** @enum {string} */
+            dimension: "LIABILITY_READY" | "BENEFICIARY_READY" | "FUNDING_READY" | "REFERENCE_READY" | "AUTHORIZATION_READY" | "DEADLINE_READY";
+            ready: boolean;
+            detail: string;
+        };
+        /** Remittance */
+        Remittance: {
+            id: components["schemas"]["RemittanceId"];
+            obligationId: components["schemas"]["ObligationId"];
+            obligationStatus: components["schemas"]["ObligationStatus"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            authority: string;
+            periodStart: components["schemas"]["CivilDate"];
+            periodEnd: components["schemas"]["CivilDate"];
+            paymentDue: components["schemas"]["Timestamp"];
+            timezone: string;
+            amount: components["schemas"]["Decimal"];
+            currency: components["schemas"]["CurrencyCode"];
+            beneficiary: components["schemas"]["Beneficiary"];
+            fundingRef: components["schemas"]["SecureReference"];
+            paymentReference: string;
+            executionDate: components["schemas"]["CivilDate"];
+            mode: components["schemas"]["RemittanceMode"];
+            /**
+             * @description ZoikoTax instructs the customer's own provider and never holds the funds.
+             * @enum {string}
+             */
+            fundsPosture: "NO_CUSTODY";
+            supersedes?: components["schemas"]["RemittanceId"];
+            instructionHash: components["schemas"]["Digest"];
+            status: components["schemas"]["RemittanceStatus"];
+            /** @description The payment due date has passed unpaid. */
+            overdue: boolean;
+            /** @description Every readiness dimension passes. Unknown is not ready. */
+            ready: boolean;
+            readiness: components["schemas"]["RemittanceReadiness"][];
+            createdAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            createdBy: string;
+            history: components["schemas"]["RemittanceStep"][];
+        };
+        /** RemittanceList */
+        RemittanceList: {
+            remittances: components["schemas"]["Remittance"][];
+        };
+        /** RemittanceRequest */
+        RemittanceRequest: {
+            obligationId: components["schemas"]["ObligationId"];
+            beneficiaryId: components["schemas"]["BeneficiaryId"];
+            fundingRef: components["schemas"]["SecureReference"];
+            paymentReference: string;
+            executionDate: components["schemas"]["CivilDate"];
+            mode: components["schemas"]["RemittanceMode"];
+        };
+        /** RemittanceApprovalRequest */
+        RemittanceApprovalRequest: {
+            instructionHash: components["schemas"]["Digest"];
+            note?: components["schemas"]["PaymentNote"];
+        };
+        /** RemittanceSubmissionRequest */
+        RemittanceSubmissionRequest: {
+            note?: components["schemas"]["PaymentNote"];
+        };
+        /** RemittanceStatusRequest */
+        RemittanceStatusRequest: {
+            status: components["schemas"]["ProviderReportedStatus"];
+            evidence: components["schemas"]["PaymentEvidence"];
+            providerReference?: components["schemas"]["ProviderReference"];
+            raw: components["schemas"]["PaymentRaw"];
+            note?: components["schemas"]["PaymentNote"];
+        };
+        /** RemittanceResolutionRequest */
+        RemittanceResolutionRequest: {
+            resolution: components["schemas"]["PaymentResolution"];
+            evidence: components["schemas"]["PaymentEvidence"];
+            providerReference?: components["schemas"]["ProviderReference"];
+            raw: components["schemas"]["PaymentRaw"];
+        };
+        /** RemittanceReturnRequest */
+        RemittanceReturnRequest: {
+            providerReference?: components["schemas"]["ProviderReference"];
+            raw: components["schemas"]["PaymentRaw"];
+        };
+        /** RemittanceCancellationRequest */
+        RemittanceCancellationRequest: {
+            reason: components["schemas"]["PaymentNote"];
+        };
+        /**
+         * ComparatorId
+         * Format: uuid
+         * @example 01920b40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ComparatorId: string;
+        /**
+         * ShadowRunId
+         * Format: uuid
+         * @example 01920b50-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ShadowRunId: string;
+        /**
+         * DiscrepancyId
+         * Format: uuid
+         * @example 01920b60-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        DiscrepancyId: string;
+        /**
+         * ComparatorType
+         * @description What kind of engine or evidence a comparator is (ZTAX-SHD-001 §3).
+         * @enum {string}
+         */
+        ComparatorType: "COMMERCIAL_TAX_ENGINE" | "CUSTOMER_LEGACY_ENGINE" | "HISTORICAL_BILLED_RESULT" | "AUTHORITY_CALCULATOR" | "QUALIFIED_REFERENCE_IMPLEMENTATION" | "GOLDEN_VECTOR" | "FILING_RESULT" | "MANUAL_TAX_REVIEW" | "PRIOR_ZOIKO_RELEASE";
+        /**
+         * ShadowClaim
+         * @description The strongest statement a match against the comparator supports.
+         * @enum {string}
+         */
+        ShadowClaim: "MATCHES_COMPARATOR" | "VERIFIED_CORRECT" | "NO_REGRESSION";
+        /**
+         * ShadowMode
+         * @description What a run compares (ZTAX-SHD-001 §2).
+         * @enum {string}
+         */
+        ShadowMode: "DUAL_DETERMINATION" | "HISTORICAL_REPLAY" | "LIVE_SHADOW" | "RELEASE_DIFFERENTIAL";
+        /**
+         * ShadowVariance
+         * @description A case's or component's comparison state (ZTAX-SHD-001 §11).
+         * @enum {string}
+         */
+        ShadowVariance: "EXACT_MATCH" | "EQUIVALENT_MATCH" | "MONETARY_VARIANCE" | "CATEGORY_VARIANCE" | "POPULATION_VARIANCE" | "UNCOMPARABLE";
+        /**
+         * ShadowComponentState
+         * @description A component's comparison state.
+         * @enum {string}
+         */
+        ShadowComponentState: "EXACT_MATCH" | "EQUIVALENT_MATCH" | "MONETARY_VARIANCE" | "CATEGORY_VARIANCE";
+        /**
+         * ShadowPairing
+         * @description How a case was paired (ZTAX-SHD-001 §8).
+         * @enum {string}
+         */
+        ShadowPairing: "EXACT_ID" | "UNPAIRED_COMPARATOR" | "UNPAIRED_ZOIKO";
+        /**
+         * ShadowSeverity
+         * @description A discrepancy's materiality (ZTAX-SHD-001 §16).
+         * @enum {string}
+         */
+        ShadowSeverity: "SHD-SEV-1" | "SHD-SEV-2" | "SHD-SEV-3" | "SHD-SEV-4";
+        /**
+         * ShadowRootCause
+         * @description Why a discrepancy happened (ZTAX-SHD-001 §14).
+         * @enum {string}
+         */
+        ShadowRootCause: "SOURCE_DATA" | "CATALOG_MAPPING" | "ONTOLOGY" | "JURISDICTION_SITUS" | "TAXABILITY" | "REGULATORY_REVENUE" | "EXEMPTION" | "RESPONSIBILITY" | "RATE_RULE" | "EFFECTIVE_DATE" | "ROUNDING_PRECISION" | "BUNDLE_ALLOCATION" | "CUSTOMER_CONFIGURATION" | "COMPARATOR_LIMITATION" | "ZOIKO_DEFECT" | "CONTENT_COVERAGE_GAP" | "LEGAL_AMBIGUITY" | "TIMING_STATE" | "MIGRATION_TRANSFORM" | "UNKNOWN";
+        /**
+         * DiscrepancyState
+         * @description Where a discrepancy's investigation is (ZTAX-SHD-001 §15).
+         * @enum {string}
+         */
+        DiscrepancyState: "NEW" | "TRIAGED" | "DATA_REQUIRED" | "ANALYSIS" | "SME_REVIEW" | "COMPARATOR_QUERY" | "ZOIKO_DEFECT_CONFIRMED" | "COMPARATOR_ISSUE_CONFIRMED" | "EXPECTED_DIFFERENCE_APPROVED" | "LEGAL_AMBIGUITY" | "FIX_PENDING" | "RETEST_REQUIRED" | "RESOLVED" | "ACCEPTED_RISK" | "CLOSED";
+        /**
+         * ShadowText
+         * @description Free text from a person.
+         */
+        ShadowText: string;
+        /**
+         * ComparatorCode
+         * @description A comparator's own tax or component code.
+         */
+        ComparatorCode: string;
+        /**
+         * ZoikoSlot
+         * @description A ZoikoTax emitted slot, or UNMAPPED_EXTERNAL_CODE.
+         */
+        ZoikoSlot: string;
+        /**
+         * CaseRef
+         * @description The business key a comparator result is for.
+         */
+        CaseRef: string;
+        /** Comparator */
+        Comparator: {
+            id: components["schemas"]["ComparatorId"];
+            name: string;
+            type: components["schemas"]["ComparatorType"];
+            provider: string;
+            /** @description The engine or content version, or UNKNOWN. */
+            version: string;
+            environment?: string;
+            limitations?: components["schemas"]["ShadowText"];
+            claim: components["schemas"]["ShadowClaim"];
+            createdAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            createdBy: string;
+        };
+        /** ComparatorList */
+        ComparatorList: {
+            comparators: components["schemas"]["Comparator"][];
+        };
+        /** ComparatorRequest */
+        ComparatorRequest: {
+            name: string;
+            type: components["schemas"]["ComparatorType"];
+            provider: string;
+            version?: string;
+            environment?: string;
+            limitations?: components["schemas"]["ShadowText"];
+        };
+        /** ComponentMapping */
+        ComponentMapping: {
+            externalCode: components["schemas"]["ComparatorCode"];
+            slot: components["schemas"]["ZoikoSlot"];
+        };
+        /** ShadowObservation */
+        ShadowObservation: {
+            caseRef: components["schemas"]["CaseRef"];
+            total: components["schemas"]["Decimal"];
+            components: {
+                code: components["schemas"]["ComparatorCode"];
+                amount: components["schemas"]["Decimal"];
+            }[];
+        };
+        /** ShadowRunRequest */
+        ShadowRunRequest: {
+            comparatorId: components["schemas"]["ComparatorId"];
+            mode: components["schemas"]["ShadowMode"];
+            windowFrom: components["schemas"]["Timestamp"];
+            windowTo: components["schemas"]["Timestamp"];
+            currency: components["schemas"]["CurrencyCode"];
+            componentMap: components["schemas"]["ComponentMapping"][];
+            tolerance: components["schemas"]["Decimal"];
+            materiality: components["schemas"]["Decimal"];
+            observations: components["schemas"]["ShadowObservation"][];
+        };
+        /** ShadowComponent */
+        ShadowComponent: {
+            externalCode?: components["schemas"]["ComparatorCode"];
+            slot: components["schemas"]["ZoikoSlot"];
+            comparator?: components["schemas"]["Decimal"];
+            zoiko?: components["schemas"]["Decimal"];
+            state: components["schemas"]["ShadowComponentState"];
+        };
+        /** ShadowCase */
+        ShadowCase: {
+            /** Format: int32 */
+            seq: number;
+            caseRef: components["schemas"]["CaseRef"];
+            /** Format: uuid */
+            decisionId?: string;
+            pairing: components["schemas"]["ShadowPairing"];
+            state: components["schemas"]["ShadowVariance"];
+            comparatorTotal?: components["schemas"]["Decimal"];
+            zoikoTotal?: components["schemas"]["Decimal"];
+            variance?: components["schemas"]["Decimal"];
+            material: boolean;
+            components: components["schemas"]["ShadowComponent"][];
+        };
+        /** ShadowMetrics */
+        ShadowMetrics: {
+            /** Format: int32 */
+            cases: number;
+            /** Format: int32 */
+            paired: number;
+            /** Format: int32 */
+            exact: number;
+            /** Format: int32 */
+            equivalent: number;
+            /**
+             * Format: int32
+             * @description Cases whose amounts differ beyond tolerance (MONETARY_VARIANCE).
+             */
+            differing: number;
+            /** Format: int32 */
+            category: number;
+            /** Format: int32 */
+            population: number;
+            /** Format: int32 */
+            uncomparable: number;
+            /** Format: int32 */
+            material: number;
+            comparedValue: components["schemas"]["Decimal"];
+            absoluteVariance: components["schemas"]["Decimal"];
+        };
+        /** DiscrepancyEvent */
+        DiscrepancyEvent: {
+            /** Format: int32 */
+            seq: number;
+            state: components["schemas"]["DiscrepancyState"];
+            severity?: components["schemas"]["ShadowSeverity"];
+            rootCause?: components["schemas"]["ShadowRootCause"];
+            note: components["schemas"]["ShadowText"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /** Discrepancy */
+        Discrepancy: {
+            id: components["schemas"]["DiscrepancyId"];
+            runId: components["schemas"]["ShadowRunId"];
+            /** Format: int32 */
+            caseSeq: number;
+            state: components["schemas"]["DiscrepancyState"];
+            severity: components["schemas"]["ShadowSeverity"];
+            rootCause: components["schemas"]["ShadowRootCause"];
+            history: components["schemas"]["DiscrepancyEvent"][];
+        };
+        /** DiscrepancyTransitionRequest */
+        DiscrepancyTransitionRequest: {
+            to: components["schemas"]["DiscrepancyState"];
+            severity?: components["schemas"]["ShadowSeverity"];
+            rootCause?: components["schemas"]["ShadowRootCause"];
+            note: components["schemas"]["ShadowText"];
+        };
+        /** ShadowRun */
+        ShadowRun: {
+            id: components["schemas"]["ShadowRunId"];
+            comparator: components["schemas"]["Comparator"];
+            mode: components["schemas"]["ShadowMode"];
+            windowFrom: components["schemas"]["Timestamp"];
+            windowTo: components["schemas"]["Timestamp"];
+            currency: components["schemas"]["CurrencyCode"];
+            componentMap: components["schemas"]["ComponentMapping"][];
+            tolerance: components["schemas"]["Decimal"];
+            materiality: components["schemas"]["Decimal"];
+            inputHash: components["schemas"]["Digest"];
+            metrics: components["schemas"]["ShadowMetrics"];
+            cutoverBlockers: string[];
+            /** @description Absent on a run listed as a summary. */
+            cases?: components["schemas"]["ShadowCase"][];
+            discrepancies: components["schemas"]["Discrepancy"][];
+            createdAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            createdBy: string;
+        };
+        /** ShadowRunList */
+        ShadowRunList: {
+            runs: components["schemas"]["ShadowRun"][];
+        };
+        /**
+         * MigrationProgramId
+         * Format: uuid
+         * @example 01920b70-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        MigrationProgramId: string;
+        /**
+         * MigrationSnapshotId
+         * Format: uuid
+         * @example 01920b71-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        MigrationSnapshotId: string;
+        /**
+         * MigrationMappingId
+         * Format: uuid
+         * @example 01920b72-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        MigrationMappingId: string;
+        /**
+         * MigrationRunId
+         * Format: uuid
+         * @example 01920b73-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        MigrationRunId: string;
+        /**
+         * MigrationExceptionId
+         * Format: uuid
+         * @example 01920b74-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        MigrationExceptionId: string;
+        /**
+         * MigrationType
+         * @description What kind of migration a program is (ZTAX-MIG-001 §3).
+         * @enum {string}
+         */
+        MigrationType: "GREENFIELD_ONBOARD" | "CONFIGURATION_MIGRATION" | "HISTORICAL_DECISION_MIGRATION" | "FULL_LEDGER_MIGRATION" | "INCUMBENT_ENGINE_REPLACEMENT" | "BSS_ERP_TRANSFORMATION" | "COUNTRY_PACK_EXPANSION" | "MERGER_ACQUISITION" | "DATA_CENTER_REGION_MOVE" | "EXIT_EXPORT";
+        /**
+         * ExtractionMethod
+         * @description How a snapshot was extracted (ZTAX-MIG-001 §7).
+         * @enum {string}
+         */
+        ExtractionMethod: "API" | "DB_EXPORT" | "OBJECT_EXPORT" | "FILE" | "PROVIDER_EXPORT" | "CONTROLLED_MANUAL";
+        /**
+         * MigrationExceptionKind
+         * @description What a conversion could not carry (ZTAX-MIG-001 §15).
+         * @enum {string}
+         */
+        MigrationExceptionKind: "UNMAPPED_CODE" | "DUPLICATE_SOURCE" | "PRECISION_LOSS" | "DATE_CONFLICT" | "CURRENCY_CONFLICT" | "CONTROL_TOTAL_MISMATCH" | "MISSING_SOURCE" | "INVALID_RELATION";
+        /**
+         * MigrationSeverity
+         * @description An exception's weight. An open HIGH blocks cutover.
+         * @enum {string}
+         */
+        MigrationSeverity: "HIGH" | "MEDIUM" | "LOW";
+        /**
+         * MigrationDisposition
+         * @description What was decided about an exception.
+         * @enum {string}
+         */
+        MigrationDisposition: "OPEN" | "RESOLVED" | "ACCEPTED_RESIDUAL";
+        /**
+         * MigrationDecision
+         * @description A decision on an exception.
+         * @enum {string}
+         */
+        MigrationDecision: "RESOLVED" | "ACCEPTED_RESIDUAL";
+        /**
+         * CutoverState
+         * @description Where a cutover is (ZTAX-MIG-001 §26).
+         * @enum {string}
+         */
+        CutoverState: "PLANNED" | "PRECHECK" | "FREEZE_ACTIVE" | "FINAL_DELTA" | "RECONCILING" | "READY_TO_SWITCH" | "ROUTING_SWITCH" | "VALIDATING_LIVE" | "CUTOVER_COMPLETE" | "ABORTED" | "ROLLBACK_ACTIVE" | "ROLLED_BACK" | "FAILED_MANUAL_RECOVERY";
+        /**
+         * MigrationText
+         * @description Free text from a person.
+         */
+        MigrationText: string;
+        /**
+         * LegacyCode
+         * @description A source system's own tax code.
+         */
+        LegacyCode: string;
+        /**
+         * SourceValue
+         * @description A value exactly as the source gave it; validated by the conversion, not by the API, so that a bad value becomes an exception rather than a refusal.
+         */
+        SourceValue: string;
+        /** SourceComponent */
+        SourceComponent: {
+            code: components["schemas"]["LegacyCode"];
+            amount: components["schemas"]["SourceValue"];
+        };
+        /** MigrationSourceRecord */
+        MigrationSourceRecord: {
+            sourceId: components["schemas"]["SourceValue"];
+            documentDate: components["schemas"]["SourceValue"];
+            currency: components["schemas"]["SourceValue"];
+            total: components["schemas"]["SourceValue"];
+            components: components["schemas"]["SourceComponent"][];
+        };
+        /** ControlTotal */
+        ControlTotal: {
+            currency: components["schemas"]["CurrencyCode"];
+            total: components["schemas"]["Decimal"];
+        };
+        /** MigrationProgram */
+        MigrationProgram: {
+            id: components["schemas"]["MigrationProgramId"];
+            name: string;
+            type: components["schemas"]["MigrationType"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            periodFrom: components["schemas"]["CivilDate"];
+            periodTo: components["schemas"]["CivilDate"];
+            /** Format: int32 */
+            scale: number;
+            createdAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            createdBy: string;
+        };
+        /** MigrationProgramList */
+        MigrationProgramList: {
+            programs: components["schemas"]["MigrationProgram"][];
+        };
+        /** MigrationProgramRequest */
+        MigrationProgramRequest: {
+            name: string;
+            type: components["schemas"]["MigrationType"];
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            periodFrom: components["schemas"]["CivilDate"];
+            periodTo: components["schemas"]["CivilDate"];
+            /** Format: int32 */
+            scale: number;
+        };
+        /** MigrationSnapshot */
+        MigrationSnapshot: {
+            id: components["schemas"]["MigrationSnapshotId"];
+            programId: components["schemas"]["MigrationProgramId"];
+            sourceSystem: string;
+            sourceVersion?: string;
+            method: components["schemas"]["ExtractionMethod"];
+            watermark?: string;
+            /** Format: int32 */
+            recordCount: number;
+            controlTotals: components["schemas"]["ControlTotal"][];
+            hash: components["schemas"]["Digest"];
+            createdAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            createdBy: string;
+        };
+        /** MigrationSnapshotRequest */
+        MigrationSnapshotRequest: {
+            sourceSystem: string;
+            sourceVersion?: string;
+            method: components["schemas"]["ExtractionMethod"];
+            watermark?: string;
+            controlTotals?: components["schemas"]["ControlTotal"][];
+            records: components["schemas"]["MigrationSourceRecord"][];
+        };
+        /** CodeMapping */
+        CodeMapping: {
+            legacyCode: components["schemas"]["LegacyCode"];
+            slot: components["schemas"]["ZoikoSlot"];
+        };
+        /** MigrationMapping */
+        MigrationMapping: {
+            id: components["schemas"]["MigrationMappingId"];
+            programId: components["schemas"]["MigrationProgramId"];
+            /** Format: int32 */
+            version: number;
+            codes: components["schemas"]["CodeMapping"][];
+            createdAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            createdBy: string;
+        };
+        /** MigrationMappingRequest */
+        MigrationMappingRequest: {
+            codes: components["schemas"]["CodeMapping"][];
+        };
+        /** MigrationCurrencyTotal */
+        MigrationCurrencyTotal: {
+            currency: components["schemas"]["CurrencyCode"];
+            declared?: components["schemas"]["Decimal"];
+            source: components["schemas"]["Decimal"];
+            converted: components["schemas"]["Decimal"];
+            matches: boolean;
+        };
+        /** MigrationReconciliation */
+        MigrationReconciliation: {
+            /** Format: int32 */
+            sourceCount: number;
+            /** Format: int32 */
+            convertedCount: number;
+            /** Format: int32 */
+            exceptedCount: number;
+            crosswalkComplete: boolean;
+            passed: boolean;
+            totals: components["schemas"]["MigrationCurrencyTotal"][];
+        };
+        /** MigrationException */
+        MigrationException: {
+            id: components["schemas"]["MigrationExceptionId"];
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["MigrationExceptionKind"];
+            severity: components["schemas"]["MigrationSeverity"];
+            sourceId?: string;
+            detail: string;
+            disposition: components["schemas"]["MigrationDisposition"];
+            note?: components["schemas"]["MigrationText"];
+            decidedAt?: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            decidedBy?: string;
+        };
+        /** MigratedComponent */
+        MigratedComponent: {
+            slot: components["schemas"]["ZoikoSlot"];
+            amount: components["schemas"]["Decimal"];
+        };
+        /** MigratedRecord */
+        MigratedRecord: {
+            /** Format: int32 */
+            seq: number;
+            sourceId: string;
+            /** Format: uuid */
+            canonicalId: string;
+            documentDate: components["schemas"]["CivilDate"];
+            currency: components["schemas"]["CurrencyCode"];
+            total: components["schemas"]["Decimal"];
+            components: components["schemas"]["MigratedComponent"][];
+        };
+        /** MigrationRun */
+        MigrationRun: {
+            id: components["schemas"]["MigrationRunId"];
+            programId: components["schemas"]["MigrationProgramId"];
+            snapshotId: components["schemas"]["MigrationSnapshotId"];
+            mappingId: components["schemas"]["MigrationMappingId"];
+            /** @enum {string} */
+            mode: "AS_KNOWN";
+            reconciliation: components["schemas"]["MigrationReconciliation"];
+            exceptions: components["schemas"]["MigrationException"][];
+            /** @description Absent on a run listed with its program. */
+            records?: components["schemas"]["MigratedRecord"][];
+            createdAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            createdBy: string;
+        };
+        /** MigrationRunRequest */
+        MigrationRunRequest: {
+            snapshotId: components["schemas"]["MigrationSnapshotId"];
+            mappingId: components["schemas"]["MigrationMappingId"];
+        };
+        /** CutoverEvent */
+        CutoverEvent: {
+            /** Format: int32 */
+            seq: number;
+            state: components["schemas"]["CutoverState"];
+            note: components["schemas"]["MigrationText"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /** MigrationReadiness */
+        MigrationReadiness: {
+            hasRun: boolean;
+            reconciled: boolean;
+            /** Format: int32 */
+            openHigh: number;
+            /** Format: int32 */
+            openOther: number;
+            /** Format: int32 */
+            residuals: number;
+            blockers: string[];
+        };
+        /** MigrationProgramDetail */
+        MigrationProgramDetail: {
+            program: components["schemas"]["MigrationProgram"];
+            snapshots: components["schemas"]["MigrationSnapshot"][];
+            mappings: components["schemas"]["MigrationMapping"][];
+            runs: components["schemas"]["MigrationRun"][];
+            cutover: components["schemas"]["CutoverEvent"][];
+            cutoverState: components["schemas"]["CutoverState"];
+            readiness: components["schemas"]["MigrationReadiness"];
+        };
+        /** ExceptionDecisionRequest */
+        ExceptionDecisionRequest: {
+            disposition: components["schemas"]["MigrationDecision"];
+            note: components["schemas"]["MigrationText"];
+        };
+        /** CutoverRequest */
+        CutoverRequest: {
+            to: components["schemas"]["CutoverState"];
+            note: components["schemas"]["MigrationText"];
+        };
     };
     responses: {
         /**
@@ -3835,6 +6103,46 @@ export interface components {
          * @example 01920ad0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
          */
         AuthorizationId: components["schemas"]["AuthorizationId"];
+        /**
+         * @description The compliance package identifier.
+         * @example 01920b10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        CompliancePackageId: components["schemas"]["CompliancePackageId"];
+        /**
+         * @description The payee version identifier.
+         * @example 01920b20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        BeneficiaryId: components["schemas"]["BeneficiaryId"];
+        /**
+         * @description The payment instruction identifier.
+         * @example 01920b30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        RemittanceId: components["schemas"]["RemittanceId"];
+        /**
+         * @description The shadow run identifier.
+         * @example 01920b50-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ShadowRunId: components["schemas"]["ShadowRunId"];
+        /**
+         * @description The discrepancy identifier.
+         * @example 01920b60-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        DiscrepancyId: components["schemas"]["DiscrepancyId"];
+        /**
+         * @description The migration program identifier.
+         * @example 01920b70-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        MigrationProgramId: components["schemas"]["MigrationProgramId"];
+        /**
+         * @description The migration run identifier.
+         * @example 01920b73-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        MigrationRunId: components["schemas"]["MigrationRunId"];
+        /**
+         * @description The migration exception identifier.
+         * @example 01920b74-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        MigrationExceptionId: components["schemas"]["MigrationExceptionId"];
         /**
          * @description The obligation row identifier.
          * @example 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
@@ -4323,6 +6631,37 @@ export interface operations {
                     };
                 };
             };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getCoverage: {
+        parameters: {
+            query?: {
+                /**
+                 * @description The instant to report rates at. Defaults to now.
+                 * @example 2026-10-15T12:00:00.000000Z
+                 */
+                at?: components["schemas"]["Timestamp"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The coverage. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Coverage"];
+                };
+            };
+            400: components["responses"]["Validation"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             500: components["responses"]["Internal"];
@@ -6205,6 +8544,1328 @@ export interface operations {
             400: components["responses"]["Validation"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listCompliancePackages: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only packages in this status.
+                 * @example IN_REVIEW
+                 */
+                status?: components["schemas"]["ComplianceStatus"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The packages, in queue order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompliancePackageList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createCompliancePackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCompliancePackageRequest"];
+            };
+        };
+        responses: {
+            /** @description The package already made for this obligation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompliancePackage"];
+                };
+            };
+            /** @description The package, created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompliancePackage"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getCompliancePackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The compliance package identifier.
+                 * @example 01920b10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                packageId: components["parameters"]["CompliancePackageId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The package. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompliancePackage"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    prepareCompliancePackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The compliance package identifier.
+                 * @example 01920b10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                packageId: components["parameters"]["CompliancePackageId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreparationRequest"];
+            };
+        };
+        responses: {
+            /** @description The package as it stands now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompliancePackage"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    reviewCompliancePackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The compliance package identifier.
+                 * @example 01920b10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                packageId: components["parameters"]["CompliancePackageId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComplianceReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description The package as it stands now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompliancePackage"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    approveCompliancePackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The compliance package identifier.
+                 * @example 01920b10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                packageId: components["parameters"]["CompliancePackageId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComplianceApprovalRequest"];
+            };
+        };
+        responses: {
+            /** @description The package as it stands now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompliancePackage"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    submitCompliancePackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The compliance package identifier.
+                 * @example 01920b10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                packageId: components["parameters"]["CompliancePackageId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComplianceSubmissionRequest"];
+            };
+        };
+        responses: {
+            /** @description The package as it stands now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompliancePackage"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    acknowledgeCompliancePackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The compliance package identifier.
+                 * @example 01920b10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                packageId: components["parameters"]["CompliancePackageId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComplianceAcknowledgementRequest"];
+            };
+        };
+        responses: {
+            /** @description The package as it stands now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompliancePackage"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    resolveCompliancePackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The compliance package identifier.
+                 * @example 01920b10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                packageId: components["parameters"]["CompliancePackageId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComplianceResolutionRequest"];
+            };
+        };
+        responses: {
+            /** @description The package as it stands now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompliancePackage"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    cancelCompliancePackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The compliance package identifier.
+                 * @example 01920b10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                packageId: components["parameters"]["CompliancePackageId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComplianceCancellationRequest"];
+            };
+        };
+        responses: {
+            /** @description The package as it stands now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompliancePackage"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listBeneficiaries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The payee versions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BeneficiaryList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createBeneficiary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BeneficiaryRequest"];
+            };
+        };
+        responses: {
+            /** @description The payee version, unverified. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Beneficiary"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    verifyBeneficiary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The payee version identifier.
+                 * @example 01920b20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                beneficiaryId: components["parameters"]["BeneficiaryId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BeneficiaryVerificationRequest"];
+            };
+        };
+        responses: {
+            /** @description The payee version, verified. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Beneficiary"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    suspendBeneficiary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The payee version identifier.
+                 * @example 01920b20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                beneficiaryId: components["parameters"]["BeneficiaryId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BeneficiarySuspensionRequest"];
+            };
+        };
+        responses: {
+            /** @description The payee version, suspended. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Beneficiary"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listRemittances: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only payments in this status.
+                 * @example APPROVAL_REQUIRED
+                 */
+                status?: components["schemas"]["RemittanceStatus"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The payments. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RemittanceList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createRemittance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemittanceRequest"];
+            };
+        };
+        responses: {
+            /** @description The live instruction already made for this obligation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Remittance"];
+                };
+            };
+            /** @description The instruction, created. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Remittance"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getRemittance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The payment instruction identifier.
+                 * @example 01920b30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                remittanceId: components["parameters"]["RemittanceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The payment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Remittance"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    approveRemittance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The payment instruction identifier.
+                 * @example 01920b30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                remittanceId: components["parameters"]["RemittanceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemittanceApprovalRequest"];
+            };
+        };
+        responses: {
+            /** @description The payment as it stands now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Remittance"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    submitRemittance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The payment instruction identifier.
+                 * @example 01920b30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                remittanceId: components["parameters"]["RemittanceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemittanceSubmissionRequest"];
+            };
+        };
+        responses: {
+            /** @description The payment as it stands now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Remittance"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordRemittanceStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The payment instruction identifier.
+                 * @example 01920b30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                remittanceId: components["parameters"]["RemittanceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemittanceStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description The payment as it stands now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Remittance"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    resolveRemittance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The payment instruction identifier.
+                 * @example 01920b30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                remittanceId: components["parameters"]["RemittanceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemittanceResolutionRequest"];
+            };
+        };
+        responses: {
+            /** @description The payment as it stands now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Remittance"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    returnRemittance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The payment instruction identifier.
+                 * @example 01920b30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                remittanceId: components["parameters"]["RemittanceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemittanceReturnRequest"];
+            };
+        };
+        responses: {
+            /** @description The payment as it stands now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Remittance"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    cancelRemittance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The payment instruction identifier.
+                 * @example 01920b30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                remittanceId: components["parameters"]["RemittanceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemittanceCancellationRequest"];
+            };
+        };
+        responses: {
+            /** @description The payment as it stands now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Remittance"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listComparators: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The profiles. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ComparatorList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createComparator: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ComparatorRequest"];
+            };
+        };
+        responses: {
+            /** @description The profile. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Comparator"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listShadowRuns: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The runs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShadowRunList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    executeShadowRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShadowRunRequest"];
+            };
+        };
+        responses: {
+            /** @description The executed run. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShadowRun"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getShadowRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The shadow run identifier.
+                 * @example 01920b50-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                shadowRunId: components["parameters"]["ShadowRunId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The run. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShadowRun"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    moveDiscrepancy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The discrepancy identifier.
+                 * @example 01920b60-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                discrepancyId: components["parameters"]["DiscrepancyId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DiscrepancyTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description The discrepancy. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Discrepancy"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listMigrationPrograms: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The programs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationProgramList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createMigrationProgram: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationProgramRequest"];
+            };
+        };
+        responses: {
+            /** @description The program. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationProgram"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getMigrationProgram: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The migration program identifier.
+                 * @example 01920b70-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                migrationProgramId: components["parameters"]["MigrationProgramId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The program. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationProgramDetail"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    registerMigrationSnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The migration program identifier.
+                 * @example 01920b70-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                migrationProgramId: components["parameters"]["MigrationProgramId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationSnapshotRequest"];
+            };
+        };
+        responses: {
+            /** @description The snapshot. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationSnapshot"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createMigrationMapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The migration program identifier.
+                 * @example 01920b70-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                migrationProgramId: components["parameters"]["MigrationProgramId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationMappingRequest"];
+            };
+        };
+        responses: {
+            /** @description The mapping version. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationMapping"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    executeMigrationRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The migration program identifier.
+                 * @example 01920b70-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                migrationProgramId: components["parameters"]["MigrationProgramId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MigrationRunRequest"];
+            };
+        };
+        responses: {
+            /** @description The run. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationRun"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    moveMigrationCutover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The migration program identifier.
+                 * @example 01920b70-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                migrationProgramId: components["parameters"]["MigrationProgramId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CutoverRequest"];
+            };
+        };
+        responses: {
+            /** @description The program after the move. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationProgramDetail"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getMigrationRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The migration run identifier.
+                 * @example 01920b73-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                migrationRunId: components["parameters"]["MigrationRunId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The run. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationRun"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    decideMigrationException: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The migration exception identifier.
+                 * @example 01920b74-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                migrationExceptionId: components["parameters"]["MigrationExceptionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExceptionDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description The exception. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MigrationException"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };

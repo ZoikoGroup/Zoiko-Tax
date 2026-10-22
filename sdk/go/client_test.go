@@ -564,11 +564,11 @@ func TestEveryOperationSendsItsMethodAndPath(t *testing.T) {
 			return err
 		}},
 		{"CreateQuote", "POST", "/v1/quotes", `{"input":{"money":{"line.netAmount":{"amount":"100.00","currency":"EUR"}}},"eventTime":"2026-09-24T18:00:00.000000Z"}`, func(c *zoikotax.Client) error {
-			_, err := c.CreateQuote(ctx, zoikotax.QuoteRequest{EventTime: eventTime, Input: input})
+			_, err := c.CreateQuote(ctx, zoikotax.QuoteRequest{EventTime: eventTime, Input: &input})
 			return err
 		}},
 		{"CommitTransaction", "POST", "/v1/transactions:commit", `{"businessKey":"INV-0001/1","input":{"money":{"line.netAmount":{"amount":"100.00","currency":"EUR"}}},"eventTime":"2026-09-24T18:00:00.000000Z"}`, func(c *zoikotax.Client) error {
-			_, err := c.CommitTransaction(ctx, "5f0c2a1e-commit-INV-0001-1", zoikotax.CommitRequest{BusinessKey: "INV-0001/1", EventTime: eventTime, Input: input})
+			_, err := c.CommitTransaction(ctx, "5f0c2a1e-commit-INV-0001-1", zoikotax.CommitRequest{BusinessKey: "INV-0001/1", EventTime: eventTime, Input: &input})
 			return err
 		}},
 		{"GetDecision", "GET", "/v1/decisions/" + decision, "", func(c *zoikotax.Client) error {
@@ -616,7 +616,7 @@ func TestACommitSendsTheCallersIdempotencyKey(t *testing.T) {
 		// Not UTC and whole seconds: what goes on the wire is still the
 		// contract's form, six fractional digits and a literal Z.
 		EventTime: time.Date(2026, 9, 24, 20, 0, 0, 0, time.FixedZone("CEST", 2*60*60)),
-		Input:     zoikotax.DeterminationInput{Money: map[string]zoikotax.MoneyValue{"line.netAmount": {Amount: "100.00", Currency: "EUR"}}},
+		Input:     &zoikotax.DeterminationInput{Money: map[string]zoikotax.MoneyValue{"line.netAmount": {Amount: "100.00", Currency: "EUR"}}},
 	})
 	if err != nil {
 		t.Fatal(err)

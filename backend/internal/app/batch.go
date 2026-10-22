@@ -13,6 +13,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/idempotency"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/taxation"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/clock"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/idgen"
@@ -262,6 +263,7 @@ type itemWire struct {
 	Supersedes   *string         `json:"supersedes"`
 	EventTime    string          `json:"eventTime"`
 	Input        json.RawMessage `json:"input"`
+	Document     json.RawMessage `json:"document"`
 	Accumulators json.RawMessage `json:"accumulators"`
 }
 
@@ -277,15 +279,24 @@ func decodeItem(data []byte) (DetermineInput, error) {
 	if err != nil {
 		return DetermineInput{}, err
 	}
-	in, err := evidence.DecodeInput(w.Input)
-	if err != nil {
+	var (
+		in       evidence.Input
+		document *taxation.Document
+	)
+	if len(w.Document) > 0 {
+		d, err := taxation.DecodeDocument(w.Document)
+		if err != nil {
+			return DetermineInput{}, err
+		}
+		document = &d
+	} else if in, err = evidence.DecodeInput(w.Input); err != nil {
 		return DetermineInput{}, err
 	}
 	reads, err := evidence.DecodeReadSet(w.Accumulators)
 	if err != nil {
 		return DetermineInput{}, err
 	}
-	out := DetermineInput{BusinessKey: w.BusinessKey, EventTime: eventTime.UTC(), Input: in, Accumulators: reads}
+	out := DetermineInput{BusinessKey: w.BusinessKey, EventTime: eventTime.UTC(), Input: in, Document: document, Accumulators: reads}
 	if w.Supersedes != nil {
 		prior, err := id.ParseDecisionID(*w.Supersedes)
 		if err != nil {

@@ -94,7 +94,10 @@ func (c *compiler) run() (rule.Manifest, error) {
 			return rule.Manifest{}, err
 		}
 	}
-	if len(c.roots) == 0 && !c.refuses() {
+	// A bundle with no rules at all is a taxation-only bundle, and whether it
+	// has a taxation profile is the content compiler's to check
+	// (cmd/ztax-contentc). A bundle that has rules must make them count.
+	if len(c.prog.Rules) > 0 && len(c.roots) == 0 && !c.refuses() {
 		// A bundle that emits nothing and refuses nothing computes nothing. It
 		// would load, evaluate every node and produce an empty result, which is
 		// indistinguishable from a rule that did not apply.

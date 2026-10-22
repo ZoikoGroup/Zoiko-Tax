@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.zoikotax.sdk.model.DeterminationInput;
 import com.zoikotax.sdk.model.MoneyValue;
+import com.zoikotax.sdk.model.TaxDocument;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -30,11 +31,12 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 
 /**
- * QuoteRequest
+ * Exactly one of &#x60;input&#x60; (named values for a rule-graph pack) and &#x60;document&#x60; (a telecom document for a pack with location-aware content) is required. &#x60;eventTime&#x60; is the tax point. 
  */
 @JsonPropertyOrder({
   QuoteRequest.JSON_PROPERTY_EVENT_TIME,
   QuoteRequest.JSON_PROPERTY_INPUT,
+  QuoteRequest.JSON_PROPERTY_DOCUMENT,
   QuoteRequest.JSON_PROPERTY_ACCUMULATORS
 })
 @jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen", comments = "Generator version: 7.25.0")
@@ -44,8 +46,12 @@ public class QuoteRequest {
   private String eventTime;
 
   public static final String JSON_PROPERTY_INPUT = "input";
-  @jakarta.annotation.Nonnull
+  @jakarta.annotation.Nullable
   private DeterminationInput input;
+
+  public static final String JSON_PROPERTY_DOCUMENT = "document";
+  @jakarta.annotation.Nullable
+  private TaxDocument document;
 
   public static final String JSON_PROPERTY_ACCUMULATORS = "accumulators";
   @jakarta.annotation.Nullable
@@ -78,7 +84,7 @@ public class QuoteRequest {
   }
 
 
-  public QuoteRequest input(@jakarta.annotation.Nonnull DeterminationInput input) {
+  public QuoteRequest input(@jakarta.annotation.Nullable DeterminationInput input) {
     this.input = input;
     return this;
   }
@@ -87,18 +93,42 @@ public class QuoteRequest {
    * Get input
    * @return input
    */
-  @jakarta.annotation.Nonnull
-  @JsonProperty(value = JSON_PROPERTY_INPUT, required = true)
-  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  @jakarta.annotation.Nullable
+  @JsonProperty(value = JSON_PROPERTY_INPUT, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
   public DeterminationInput getInput() {
     return input;
   }
 
 
-  @JsonProperty(value = JSON_PROPERTY_INPUT, required = true)
-  @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setInput(@jakarta.annotation.Nonnull DeterminationInput input) {
+  @JsonProperty(value = JSON_PROPERTY_INPUT, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public void setInput(@jakarta.annotation.Nullable DeterminationInput input) {
     this.input = input;
+  }
+
+
+  public QuoteRequest document(@jakarta.annotation.Nullable TaxDocument document) {
+    this.document = document;
+    return this;
+  }
+
+  /**
+   * Get document
+   * @return document
+   */
+  @jakarta.annotation.Nullable
+  @JsonProperty(value = JSON_PROPERTY_DOCUMENT, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public TaxDocument getDocument() {
+    return document;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_DOCUMENT, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public void setDocument(@jakarta.annotation.Nullable TaxDocument document) {
+    this.document = document;
   }
 
 
@@ -148,12 +178,13 @@ public class QuoteRequest {
     QuoteRequest quoteRequest = (QuoteRequest) o;
     return Objects.equals(this.eventTime, quoteRequest.eventTime) &&
         Objects.equals(this.input, quoteRequest.input) &&
+        Objects.equals(this.document, quoteRequest.document) &&
         Objects.equals(this.accumulators, quoteRequest.accumulators);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(eventTime, input, accumulators);
+    return Objects.hash(eventTime, input, document, accumulators);
   }
 
   @Override
@@ -162,6 +193,7 @@ public class QuoteRequest {
     sb.append("class QuoteRequest {\n");
     sb.append("    eventTime: ").append(toIndentedString(eventTime)).append("\n");
     sb.append("    input: ").append(toIndentedString(input)).append("\n");
+    sb.append("    document: ").append(toIndentedString(document)).append("\n");
     sb.append("    accumulators: ").append(toIndentedString(accumulators)).append("\n");
     sb.append("}");
     return sb.toString();

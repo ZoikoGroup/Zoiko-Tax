@@ -2281,6 +2281,956 @@
         "aiAllowed": "NONE",
         "note": "The administrator who granted, revoked or superseded the authorization."
       }
+    },
+    "compliance_package": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "package_id": {
+        "class": "P0"
+      },
+      "obligation_id": {
+        "class": "P0"
+      },
+      "obligation_key": {
+        "class": "P0"
+      },
+      "responsibility_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "obligation_type": {
+        "class": "P0"
+      },
+      "jurisdiction_id": {
+        "class": "P0"
+      },
+      "period_start": {
+        "class": "P0"
+      },
+      "period_end": {
+        "class": "P0"
+      },
+      "operating_mode": {
+        "class": "P0"
+      },
+      "channel": {
+        "class": "P0"
+      },
+      "filing_country": {
+        "class": "P0"
+      },
+      "filing_authority": {
+        "class": "P0"
+      },
+      "statutory_due": {
+        "class": "P0"
+      },
+      "legal_timezone": {
+        "class": "P0"
+      },
+      "prepare_due": {
+        "class": "P0"
+      },
+      "review_due": {
+        "class": "P0"
+      },
+      "submit_target": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who instantiated the compliance package."
+      }
+    },
+    "compliance_step": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "package_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "status_after": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "payload_hash": {
+        "class": "P0"
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "review_decision": {
+        "class": "P0"
+      },
+      "submission_id": {
+        "class": "P0"
+      },
+      "channel": {
+        "class": "P0"
+      },
+      "acknowledgement": {
+        "class": "P0"
+      },
+      "resolution": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "control_total": {
+        "class": "P0",
+        "note": "A tenant's liability for a period as prepared for filing; an aggregate."
+      },
+      "authority_ref": {
+        "class": "P0",
+        "note": "The authority's receipt or reference number for a submission."
+      },
+      "evidence": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The authority's response as received, or the operator's account of what the authority answered."
+      },
+      "note": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by a preparer, reviewer, approver or operator."
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who prepared, reviewed, approved, submitted or recorded the step."
+      }
+    },
+    "remittance_beneficiary": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "beneficiary_id": {
+        "class": "P0"
+      },
+      "supersedes": {
+        "class": "P0"
+      },
+      "country_code": {
+        "class": "P0"
+      },
+      "authority": {
+        "class": "P0"
+      },
+      "legal_name": {
+        "class": "P0"
+      },
+      "payment_rail": {
+        "class": "P0"
+      },
+      "reference_rule": {
+        "class": "P0"
+      },
+      "currencies": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "account_ref": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "A vault or token reference to the payee's account details; never the account number."
+      },
+      "source": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The official instruction the payee details were taken from."
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who entered the payee details."
+      }
+    },
+    "remittance_beneficiary_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "beneficiary_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "evidence": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "How a verification confirmed the details against the authority's official source."
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who verified, suspended or superseded the version."
+      }
+    },
+    "remittance": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "remittance_id": {
+        "class": "P0"
+      },
+      "obligation_id": {
+        "class": "P0"
+      },
+      "obligation_key": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "authority": {
+        "class": "P0"
+      },
+      "period_start": {
+        "class": "P0"
+      },
+      "period_end": {
+        "class": "P0"
+      },
+      "payment_due": {
+        "class": "P0"
+      },
+      "legal_timezone": {
+        "class": "P0"
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "beneficiary_id": {
+        "class": "P0"
+      },
+      "payment_reference": {
+        "class": "P0"
+      },
+      "execution_date": {
+        "class": "P0"
+      },
+      "operating_mode": {
+        "class": "P0"
+      },
+      "supersedes": {
+        "class": "P0"
+      },
+      "instruction_hash": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "amount": {
+        "class": "P0",
+        "note": "A tenant's tax liability for a period, as instructed for payment; an aggregate."
+      },
+      "funding_ref": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "A vault or token reference to the customer's own funding account; never the account number."
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who made the payment instruction."
+      }
+    },
+    "remittance_step": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "remittance_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "status_after": {
+        "class": "P0"
+      },
+      "instruction_hash": {
+        "class": "P0"
+      },
+      "submission_id": {
+        "class": "P0"
+      },
+      "evidence_kind": {
+        "class": "P0"
+      },
+      "resolution": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "provider_ref": {
+        "class": "P0",
+        "note": "The provider's or authority's reference for a payment."
+      },
+      "raw": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The provider's response as received, or the operator's account of it."
+      },
+      "note": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by an approver or operator."
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who approved, submitted or recorded the step."
+      }
+    },
+    "shadow_comparator": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "comparator_id": {
+        "class": "P0"
+      },
+      "name": {
+        "class": "P0"
+      },
+      "comparator_type": {
+        "class": "P0"
+      },
+      "provider": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "environment": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "limitations": {
+        "class": "P2",
+        "purposes": [
+          "PURP-EVID",
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Known limitations of the comparator, entered by a person."
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the comparator profile."
+      }
+    },
+    "shadow_run": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "run_id": {
+        "class": "P0"
+      },
+      "comparator_id": {
+        "class": "P0"
+      },
+      "mode": {
+        "class": "P0"
+      },
+      "window_from": {
+        "class": "P0"
+      },
+      "window_to": {
+        "class": "P0"
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "component_map": {
+        "class": "P0"
+      },
+      "tolerance": {
+        "class": "P0"
+      },
+      "materiality": {
+        "class": "P0"
+      },
+      "input_hash": {
+        "class": "P0"
+      },
+      "cases": {
+        "class": "P0"
+      },
+      "paired": {
+        "class": "P0"
+      },
+      "exact_matches": {
+        "class": "P0"
+      },
+      "equivalent_matches": {
+        "class": "P0"
+      },
+      "monetary_variances": {
+        "class": "P0"
+      },
+      "category_variances": {
+        "class": "P0"
+      },
+      "population_variances": {
+        "class": "P0"
+      },
+      "uncomparable": {
+        "class": "P0"
+      },
+      "material": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "compared_value": {
+        "class": "P0",
+        "note": "Aggregate tax value compared in the run."
+      },
+      "absolute_variance": {
+        "class": "P0",
+        "note": "Aggregate absolute variance of the run."
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who executed the run."
+      }
+    },
+    "shadow_case": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "run_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "case_ref": {
+        "class": "P0"
+      },
+      "decision_id": {
+        "class": "P0"
+      },
+      "pairing": {
+        "class": "P0"
+      },
+      "state": {
+        "class": "P0"
+      },
+      "material": {
+        "class": "P0"
+      },
+      "comparator_total": {
+        "class": "P0",
+        "note": "A transaction's tax total as the comparator computed it."
+      },
+      "zoiko_total": {
+        "class": "P0",
+        "note": "A transaction's tax total as ZoikoTax decided it."
+      },
+      "variance": {
+        "class": "P0",
+        "note": "The difference between the two totals."
+      },
+      "components": {
+        "class": "P0",
+        "note": "Tax components compared, by code and slot, as decimal strings."
+      }
+    },
+    "shadow_discrepancy": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "discrepancy_id": {
+        "class": "P0"
+      },
+      "run_id": {
+        "class": "P0"
+      },
+      "case_seq": {
+        "class": "P0"
+      }
+    },
+    "shadow_discrepancy_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "discrepancy_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "state": {
+        "class": "P0"
+      },
+      "severity": {
+        "class": "P0"
+      },
+      "root_cause": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "note": {
+        "class": "P2",
+        "purposes": [
+          "PURP-EVID",
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text from the person investigating the discrepancy."
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who moved the discrepancy."
+      }
+    },
+    "migration_program": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "program_id": {
+        "class": "P0"
+      },
+      "name": {
+        "class": "P0"
+      },
+      "migration_type": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "period_from": {
+        "class": "P0"
+      },
+      "period_to": {
+        "class": "P0"
+      },
+      "amount_scale": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who created the migration program."
+      }
+    },
+    "migration_snapshot": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "snapshot_id": {
+        "class": "P0"
+      },
+      "program_id": {
+        "class": "P0"
+      },
+      "source_system": {
+        "class": "P0"
+      },
+      "source_version": {
+        "class": "P0"
+      },
+      "method": {
+        "class": "P0"
+      },
+      "watermark": {
+        "class": "P0"
+      },
+      "record_count": {
+        "class": "P0"
+      },
+      "snapshot_hash": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "records": {
+        "class": "P0",
+        "note": "Historical tax results as the source held them: source ids, document dates, currencies and amounts. The API accepts no personal fields."
+      },
+      "control_totals": {
+        "class": "P0",
+        "note": "Aggregate amounts the source declared, by currency."
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who registered the snapshot."
+      }
+    },
+    "migration_mapping": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "mapping_id": {
+        "class": "P0"
+      },
+      "program_id": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "codes": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the mapping version."
+      }
+    },
+    "migration_run": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "run_id": {
+        "class": "P0"
+      },
+      "program_id": {
+        "class": "P0"
+      },
+      "snapshot_id": {
+        "class": "P0"
+      },
+      "mapping_id": {
+        "class": "P0"
+      },
+      "mode": {
+        "class": "P0"
+      },
+      "source_count": {
+        "class": "P0"
+      },
+      "converted_count": {
+        "class": "P0"
+      },
+      "excepted_count": {
+        "class": "P0"
+      },
+      "crosswalk_complete": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "totals": {
+        "class": "P0",
+        "note": "Aggregate amounts reconciled by currency."
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who executed the run."
+      }
+    },
+    "migration_record": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "run_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "source_id": {
+        "class": "P0"
+      },
+      "canonical_id": {
+        "class": "P0"
+      },
+      "document_date": {
+        "class": "P0"
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "total": {
+        "class": "P0",
+        "note": "A historical document's tax total as the source recorded it."
+      },
+      "components": {
+        "class": "P0",
+        "note": "Historical tax components by ZoikoTax slot."
+      }
+    },
+    "migration_exception": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "exception_id": {
+        "class": "P0"
+      },
+      "run_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "severity": {
+        "class": "P0"
+      },
+      "source_id": {
+        "class": "P0"
+      },
+      "detail": {
+        "class": "P0"
+      }
+    },
+    "migration_exception_decision": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "exception_id": {
+        "class": "P0"
+      },
+      "disposition": {
+        "class": "P0"
+      },
+      "decided_at": {
+        "class": "P0"
+      },
+      "note": {
+        "class": "P2",
+        "purposes": [
+          "PURP-EVID",
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Why an exception was resolved or accepted as a residual."
+      },
+      "decided_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who decided the exception."
+      }
+    },
+    "migration_cutover_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "program_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "state": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "note": {
+        "class": "P2",
+        "purposes": [
+          "PURP-EVID",
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Why a cutover moved."
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who moved the cutover."
+      }
     }
   }
 }

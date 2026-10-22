@@ -99,6 +99,72 @@
     },
     {
       "method": "GET",
+      "path": "/v1/compliance/packages",
+      "operationId": "listCompliancePackages",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/compliance/packages",
+      "operationId": "createCompliancePackage",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/compliance/packages/{packageId}",
+      "operationId": "getCompliancePackage",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/compliance/packages/{packageId}/acknowledgement",
+      "operationId": "acknowledgeCompliancePackage",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/compliance/packages/{packageId}/approval",
+      "operationId": "approveCompliancePackage",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/compliance/packages/{packageId}/cancellation",
+      "operationId": "cancelCompliancePackage",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/compliance/packages/{packageId}/preparation",
+      "operationId": "prepareCompliancePackage",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/compliance/packages/{packageId}/resolution",
+      "operationId": "resolveCompliancePackage",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/compliance/packages/{packageId}/review",
+      "operationId": "reviewCompliancePackage",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/compliance/packages/{packageId}/submission",
+      "operationId": "submitCompliancePackage",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/coverage",
+      "operationId": "getCoverage",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/dashboard",
       "operationId": "getDashboard",
       "public": false
@@ -224,6 +290,60 @@
       "public": false
     },
     {
+      "method": "POST",
+      "path": "/v1/migrations/exceptions/{migrationExceptionId}/decision",
+      "operationId": "decideMigrationException",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/migrations/programs",
+      "operationId": "listMigrationPrograms",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/migrations/programs",
+      "operationId": "createMigrationProgram",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/migrations/programs/{migrationProgramId}",
+      "operationId": "getMigrationProgram",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/migrations/programs/{migrationProgramId}/cutover",
+      "operationId": "moveMigrationCutover",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/migrations/programs/{migrationProgramId}/mappings",
+      "operationId": "createMigrationMapping",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/migrations/programs/{migrationProgramId}/runs",
+      "operationId": "executeMigrationRun",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/migrations/programs/{migrationProgramId}/snapshots",
+      "operationId": "registerMigrationSnapshot",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/migrations/runs/{migrationRunId}",
+      "operationId": "getMigrationRun",
+      "public": false
+    },
+    {
       "method": "GET",
       "path": "/v1/obligations",
       "operationId": "listObligations",
@@ -278,6 +398,84 @@
       "public": false
     },
     {
+      "method": "GET",
+      "path": "/v1/remittances",
+      "operationId": "listRemittances",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/remittances",
+      "operationId": "createRemittance",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/remittances/{remittanceId}",
+      "operationId": "getRemittance",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/remittances/{remittanceId}/approval",
+      "operationId": "approveRemittance",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/remittances/{remittanceId}/cancellation",
+      "operationId": "cancelRemittance",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/remittances/{remittanceId}/provider-status",
+      "operationId": "recordRemittanceStatus",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/remittances/{remittanceId}/resolution",
+      "operationId": "resolveRemittance",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/remittances/{remittanceId}/return",
+      "operationId": "returnRemittance",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/remittances/{remittanceId}/submission",
+      "operationId": "submitRemittance",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/remittances/beneficiaries",
+      "operationId": "listBeneficiaries",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/remittances/beneficiaries",
+      "operationId": "createBeneficiary",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/remittances/beneficiaries/{beneficiaryId}/suspension",
+      "operationId": "suspendBeneficiary",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/remittances/beneficiaries/{beneficiaryId}/verification",
+      "operationId": "verifyBeneficiary",
+      "public": false
+    },
+    {
       "method": "POST",
       "path": "/v1/replay/{decisionId}",
       "operationId": "replayDecision",
@@ -317,6 +515,42 @@
       "method": "GET",
       "path": "/v1/seals/{sealId}/verification",
       "operationId": "verifySeal",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/shadow/comparators",
+      "operationId": "listComparators",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/shadow/comparators",
+      "operationId": "createComparator",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/shadow/discrepancies/{discrepancyId}/transitions",
+      "operationId": "moveDiscrepancy",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/shadow/runs",
+      "operationId": "listShadowRuns",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/shadow/runs",
+      "operationId": "executeShadowRun",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/shadow/runs/{shadowRunId}",
+      "operationId": "getShadowRun",
       "public": false
     },
     {

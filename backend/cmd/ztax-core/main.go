@@ -161,6 +161,25 @@ func run() error {
 		return err
 	}
 	router.Legal = app.NewLegalService(matrix, store.Authorizations(), store.LegalEntities(), store.Audit(), store, clk, ids)
+	// Migration converts history into its own tables; it needs no content,
+	// so it is served wherever the cell's store is.
+	router.Migration = app.NewMigrationService(store.Migrations(), store.LegalEntities(), store, clk, ids)
+	if router.Determination != nil {
+		// Compliance packages execute the obligations commits assess, and
+		// move them only on filing evidence, so they are served wherever the
+		// determination surface is.
+		router.Compliance = app.NewComplianceService(store.Compliance(), store.Obligations(), router.Determination,
+			router.Legal, store, clk, ids)
+		router.Remittance = app.NewRemittanceService(store.Remittances(), store.Obligations(), router.Determination,
+			store, clk, ids)
+		// Shadow reads committed decisions' sealed results and writes only
+		// its own runs.
+		objects, err := adapterevidence.NewFileStore(cfg.EvidenceDir)
+		if err != nil {
+			return err
+		}
+		router.Shadow = app.NewShadowService(store.Shadow(), store.Decisions(), objects, store, clk, ids)
+	}
 	// The dashboard reads what was recorded; like retention it needs no
 	// content, so a cell without a bundle reports zeros rather than 503.
 	router.Dashboard = app.NewDashboardService(store.Dashboard(), store.LegalEntities(), store.Obligations(),
