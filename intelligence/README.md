@@ -172,8 +172,29 @@ the `ToolProfile` and `ToolProvenance` immutability are verified, and the
 ## What is not here
 
 - **Any live model provider integration.** `FakeRuntime` covers local development and CI. A real provider adapter requires Security/Lane C approval and vault credentials (ADR-0017 §2.5).
-- **Temporal filtering in `rag.py`.** `KnowledgeBase` does FTS5 BM25 search today. Chapter 17 §9 requires `CURRENT` vs `AS_KNOWN_THEN` bitemporal filtering — deferred to W2 lane L.
+- **Temporal filtering in `rag.py`.** `KnowledgeBase` implements `TemporalMode.CURRENT` and `TemporalMode.AS_KNOWN_THEN` bitemporal filtering; `historical_context=True` returns `TemporalStatus.SUPERSEDED` chunks. 41 tests in `tests/test_rag_temporal_filter.py` cover these modes. What is not yet here: the embeddings-based upgrade (reserved for W2 lane L per the design notes in `rag.py`).
 - **Production mTLS.** `ZTAX_GATEWAY_INSECURE_LOCAL=true` is accepted only in `development`. Any deployed cell requires mutual TLS (ADR-0006 §2.1).
+
+## Demonstrating the AI boundary (playbook step 10)
+
+Run this one command from the `intelligence/` directory:
+
+```
+python tools/step10_demo.py
+```
+
+It runs the existing boundary proof tests and prints a status for each of the nine playbook claims:
+
+| Status | Meaning |
+|---|---|
+| `PASS` | Tests that prove the claim were executed and passed. |
+| `FAIL` | At least one test failed; see the evidence column for names. |
+| `NOT IMPLEMENTED` | No test exists yet for this claim (Go side not implemented yet). |
+| `NOT RUN` | The tool or runtime needed to run the claim was unavailable. |
+
+No live model is connected.  These checks show governance is independent of model output and payload content.  They do not show that a real model resists injection.
+
+Pass `--skip-go` to skip the Go row (C8), `--dry-run` to see all nine rows without executing anything, or `--json` for machine-readable output.
 
 ## The rule that holds regardless
 
