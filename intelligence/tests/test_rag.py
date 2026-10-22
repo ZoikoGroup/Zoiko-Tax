@@ -77,9 +77,9 @@ def test_chunk_document_splits_at_headings(tmp_path: Path) -> None:
     f = _make_markdown(tmp_path, "doc.md", _SIMPLE_MD)
     chunks = _chunk_document(f)
     assert len(chunks) == 3
-    assert chunks[0].heading == "# Section One"
-    assert chunks[1].heading == "## Section Two"
-    assert chunks[2].heading == "### Section Three"
+    assert chunks[0].heading == "Section One"
+    assert chunks[1].heading == "Section Two"
+    assert chunks[2].heading == "Section Three"
 
 
 def test_chunk_document_body_contains_heading_and_content(tmp_path: Path) -> None:
@@ -131,7 +131,7 @@ def test_chunk_document_preamble_collected_before_first_heading(tmp_path: Path) 
     chunks = _chunk_document(f)
     assert chunks[0].heading == "Preamble"
     assert "Preamble text" in chunks[0].body
-    assert chunks[1].heading == "# First Heading"
+    assert chunks[1].heading == "First Heading"
 
 
 # ---------------------------------------------------------------------------
@@ -206,7 +206,7 @@ def test_search_best_match_contains_query_terms(tmp_path: Path) -> None:
     kb.build([f])
     results = kb.search("inclusive extraction threshold")
     # The second section covers those terms.
-    assert results[0].chunk.heading == "## Section Two"
+    assert results[0].chunk.heading == "Section Two"
 
 
 def test_search_results_respect_top_k(tmp_path: Path) -> None:

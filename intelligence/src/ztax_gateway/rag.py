@@ -256,8 +256,11 @@ class Chunk:
     ``source_id`` is the canonical identifier for the document (its path
     relative to the repository root, forward-slash separated).
 
-    ``heading`` is the Markdown heading line that opened this section
-    (e.g. ``"## 2. The determination pipeline"``).
+    ``heading`` is the title of this section with the leading ATX ``#``
+    markers and the following space stripped
+    (e.g. ``"2. The determination pipeline"`` for ``## 2. The determination pipeline``).
+    This ensures the value is a clean identifier suitable for exact-match
+    scoring — consistent with the ``expected_class`` strings in the gold set.
 
     ``body`` is the full text of this section (heading + content lines).
 
@@ -372,7 +375,12 @@ def _chunk_document(path: Path) -> list[Chunk]:
         _add_chunk("Preamble", text[:first_start], 0, first_start)
 
     for i, match in enumerate(heading_matches):
-        heading_line = match.group(0).rstrip("\r\n")
+        raw_heading_line = match.group(0).rstrip("\r\n")
+        # Strip leading ATX '#' markers and the single space that follows so
+        # chunk.heading is a bare title, not a Markdown syntax line.
+        # Example: "# ontology:telecom/voice/mobile" -> "ontology:telecom/voice/mobile"
+        # This makes classifier output match MetricEngine exact-match scoring.
+        heading_line = raw_heading_line.lstrip("#").lstrip()
         body_start = match.start()
         body_end = heading_matches[i + 1].start() if i + 1 < len(heading_matches) else len(text)
         _add_chunk(heading_line, text[body_start:body_end], body_start, body_end)
