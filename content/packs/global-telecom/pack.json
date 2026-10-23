@@ -7,6 +7,7 @@
   "capabilities": ["DETERMINE", "JURISDICTION"],
   "deploymentModes": ["P0_ZOIKO_ONLY"],
   "sources": [
-    { "sourceId": "SRC-ZOIKO-GLOBAL-RATES-2026" }
+    { "sourceId": "SRC-ZOIKO-GLOBAL-RATES-2026" },
+    { "sourceId": "SRC-ZOIKO-US-STATE-TELECOM-2026" }
   ]
 }

@@ -857,20 +857,36 @@ class AiProvenance(TypedDict):
 class ClassificationProposal(TypedDict):
     """
     An advisory mapping proposal. `authoritative` is always false; a person confirms it or it is nothing.
+
+    `disposition` says what the AI plane contributed. `PROPOSED` carries a proposal (`id`, `proposedCode`,
+    `provenance`) for a person to confirm. `REVIEW_REQUIRED` carries none: the AI plane was unavailable, not
+    configured in this cell, or answered with something that cannot be used, so a person classifies the item
+    without a suggestion. `reviewReason` is the reason code.
+
     """
 
-    id: str
-    subjectRef: str
-    proposedCode: str
+    id: NotRequired[str]
     """
-    An existing ontology node, `ontology:...`.
+    Present when `disposition` is `PROPOSED`.
+    """
+    subjectRef: str
+    disposition: Literal['PROPOSED', 'REVIEW_REQUIRED']
+    reviewReason: NotRequired[str]
+    """
+    Present when `disposition` is `REVIEW_REQUIRED`: `AI_GATEWAY_UNAVAILABLE`, `AI_GATEWAY_NOT_CONFIGURED`,
+    `AI_GATEWAY_REPLY_UNEVIDENCED` or `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`.
+
+    """
+    proposedCode: NotRequired[str]
+    """
+    An existing ontology node, `ontology:...`. Present when `disposition` is `PROPOSED`.
     """
     confidence: NotRequired[str]
     """
     The model's own score as a canonical decimal in [0, 1]. Never a threshold that makes the proposal authoritative.
     """
     authoritative: Literal[False]
-    provenance: AiProvenance
+    provenance: NotRequired[AiProvenance]
 
 
 RefundId: TypeAlias = str

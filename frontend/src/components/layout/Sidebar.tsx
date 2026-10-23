@@ -11,12 +11,15 @@ import {
   IconFileCheck,
   IconFileText,
   IconGitFork,
+  IconGlobe,
   IconHome,
+  IconPlus,
   IconRotateCw,
   IconSettings,
   IconShield,
   IconSliders,
 } from '../common/DashboardIcons'
+import { BrandMark } from './BrandMark'
 
 /** The views this build serves. Every other entry has no backend yet. */
 export type View =
@@ -33,10 +36,11 @@ export type View =
   | 'documents'
   | 'evidence'
   | 'content'
+  | 'locations'
   | 'intelligence'
   | 'admin'
 
-interface NavItem {
+export interface NavItem {
   readonly id: string
   readonly label: string
   readonly icon: ReactNode
@@ -44,9 +48,9 @@ interface NavItem {
   readonly view?: View
 }
 
-const NAV_GROUPS: readonly { title: string; items: readonly NavItem[] }[] = [
+export const NAV_GROUPS: readonly { title: string; items: readonly NavItem[] }[] = [
   {
-    title: 'WORKSPACE',
+    title: 'Workspace',
     items: [
       { id: 'home', label: 'Home', icon: <IconHome />, view: 'dashboard' },
       { id: 'action-center', label: 'Action Center', icon: <IconActivity />, view: 'actions' },
@@ -57,7 +61,7 @@ const NAV_GROUPS: readonly { title: string; items: readonly NavItem[] }[] = [
     ],
   },
   {
-    title: 'SETTLE & PROVE',
+    title: 'Settle & prove',
     items: [
       { id: 'remittance', label: 'Remittance', icon: <IconCreditCard />, view: 'remittance' },
       { id: 'e-invoicing', label: 'E-Invoicing / CTC', icon: <IconFileCheck />, view: 'documents' },
@@ -66,15 +70,16 @@ const NAV_GROUPS: readonly { title: string; items: readonly NavItem[] }[] = [
     ],
   },
   {
-    title: 'INTELLIGENCE',
+    title: 'Intelligence',
     items: [
       { id: 'intelligence', label: 'Intelligence', icon: <IconSettings />, view: 'intelligence' },
       { id: 'content', label: 'Content', icon: <IconDatabase />, view: 'content' },
+      { id: 'locations', label: 'Location taxation', icon: <IconGlobe />, view: 'locations' },
       { id: 'reports', label: 'Reports', icon: <IconBarChart />, view: 'reports' },
     ],
   },
   {
-    title: 'PLATFORM',
+    title: 'Platform',
     items: [
       { id: 'migration', label: 'Migration', icon: <IconGitFork />, view: 'migration' },
       { id: 'administration', label: 'Administration', icon: <IconSliders />, view: 'admin' },
@@ -82,21 +87,45 @@ const NAV_GROUPS: readonly { title: string; items: readonly NavItem[] }[] = [
   },
 ]
 
+/** The group a view sits in, for the hero's eyebrow. */
+export function groupOf(view: View): string {
+  return NAV_GROUPS.find((g) => g.items.some((i) => i.view === view))?.title ?? 'Workspace'
+}
+
+export function labelOf(view: View): string {
+  return NAV_GROUPS.flatMap((g) => g.items).find((i) => i.view === view)?.label ?? 'Home'
+}
+
 export interface SidebarProps {
   readonly view: View
   readonly onNavigate: (view: View) => void
 }
 
-export const Sidebar = ({ view, onNavigate }: SidebarProps) => (
-  <aside className="ztax-sidebar">
-    <div className="ztax-sidebar-logo">
-      <img src="/zoikotax_logo_client.png" alt="ZoikoTax" />
+interface RailProps extends SidebarProps {
+  readonly tenant: string
+  readonly advisory: boolean | null
+  readonly open: boolean
+}
+
+export const Sidebar = ({ view, onNavigate, tenant, advisory, open }: RailProps) => (
+  <aside className={`zt-rail${open ? ' zt-rail--open' : ''}`} aria-label="Workspaces">
+    <div className="zt-rail-brand">
+      <span className="zt-rail-mark"><BrandMark /></span>
+      <div>
+        <div className="zt-rail-name">ZoikoTax<br />Command Center</div>
+        <div className="zt-rail-sub">{tenant}</div>
+      </div>
     </div>
 
-    <nav className="ztax-sidebar-nav" aria-label="Workspaces">
+    <button type="button" className="zt-rail-cta" onClick={() => { onNavigate('determine') }}>
+      <IconPlus />
+      <span>New determination</span>
+    </button>
+
+    <nav className="zt-rail-nav">
       {NAV_GROUPS.map((group) => (
-        <div key={group.title} className="ztax-sidebar-group">
-          <div className="ztax-sidebar-group-title">{group.title}</div>
+        <div key={group.title} className="zt-rail-group">
+          <div className="zt-rail-group-title">{group.title}</div>
           {group.items.map((item) => {
             const target = item.view
             const isActive = target === view
@@ -108,7 +137,7 @@ export const Sidebar = ({ view, onNavigate }: SidebarProps) => (
                 title={target === undefined ? 'No backend for this workspace yet' : undefined}
                 aria-current={isActive ? 'page' : undefined}
                 onClick={() => { if (target !== undefined) onNavigate(target) }}
-                className={`ztax-nav-item ${isActive ? 'active' : ''}`}
+                className={`zt-rail-item${isActive ? ' zt-rail-item--on' : ''}`}
               >
                 {item.icon}
                 <span>{item.label}</span>
@@ -119,9 +148,15 @@ export const Sidebar = ({ view, onNavigate }: SidebarProps) => (
       ))}
     </nav>
 
-    <div className="ztax-sidebar-footer">
-      <div>ZoikoTax is a trading name of Zoiko Tech Inc.</div>
-      <div>Confidential - Product & Engineering</div>
+    <div className="zt-rail-foot">
+      <div className="zt-rail-card">
+        <IconGlobe />
+        <div>
+          <b>{advisory === null ? 'Checking output…' : advisory ? 'Advisory output' : 'Authoritative output'}</b>
+          <span>{advisory === false ? 'Decisions may be filed' : 'Not for filing before A4'}</span>
+        </div>
+      </div>
+      <div className="zt-rail-legal">ZoikoTax is a trading name of Zoiko Tech Inc.</div>
     </div>
   </aside>
 )

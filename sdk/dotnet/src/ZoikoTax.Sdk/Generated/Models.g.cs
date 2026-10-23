@@ -2648,25 +2648,45 @@ namespace ZoikoTax.Sdk
 
     /// <summary>
     /// An advisory mapping proposal. `authoritative` is always false; a person confirms it or it is nothing.
+    /// <br/>
+    /// <br/>`disposition` says what the AI plane contributed. `PROPOSED` carries a proposal (`id`, `proposedCode`,
+    /// <br/>`provenance`) for a person to confirm. `REVIEW_REQUIRED` carries none: the AI plane was unavailable, not
+    /// <br/>configured in this cell, or answered with something that cannot be used, so a person classifies the item
+    /// <br/>without a suggestion. `reviewReason` is the reason code.
+    /// <br/>
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ClassificationProposal
     {
 
+        /// <summary>
+        /// Present when `disposition` is `PROPOSED`.
+        /// </summary>
         [System.Text.Json.Serialization.JsonPropertyName("id")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid Id { get; set; } = default!;
+        public System.Guid? Id { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("subjectRef")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string SubjectRef { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("disposition")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ClassificationProposalDisposition>))]
+        public ClassificationProposalDisposition Disposition { get; set; } = default!;
+
         /// <summary>
-        /// An existing ontology node, `ontology:...`.
+        /// Present when `disposition` is `REVIEW_REQUIRED`: `AI_GATEWAY_UNAVAILABLE`, `AI_GATEWAY_NOT_CONFIGURED`,
+        /// <br/>`AI_GATEWAY_REPLY_UNEVIDENCED` or `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`.
+        /// <br/>
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("reviewReason")]
+        public string? ReviewReason { get; set; } = default!;
+
+        /// <summary>
+        /// An existing ontology node, `ontology:...`. Present when `disposition` is `PROPOSED`.
         /// </summary>
         [System.Text.Json.Serialization.JsonPropertyName("proposedCode")]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string ProposedCode { get; set; } = default!;
+        public string? ProposedCode { get; set; } = default!;
 
         /// <summary>
         /// The model's own score as a canonical decimal in [0, 1]. Never a threshold that makes the proposal authoritative.
@@ -2678,8 +2698,7 @@ namespace ZoikoTax.Sdk
         public bool Authoritative { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("provenance")]
-        [System.ComponentModel.DataAnnotations.Required]
-        public AiProvenance Provenance { get; set; } = new AiProvenance();
+        public AiProvenance? Provenance { get; set; } = default!;
 
     }
 
@@ -8851,6 +8870,18 @@ namespace ZoikoTax.Sdk
 
         [System.Runtime.Serialization.EnumMember(Value = @"CLOSED")]
         CLOSED = 4,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ClassificationProposalDisposition
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PROPOSED")]
+        PROPOSED = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REVIEW_REQUIRED")]
+        REVIEW_REQUIRED = 1,
 
     }
 

@@ -60,31 +60,14 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/idgen"
 )
 
-// The adapter's own reason codes. They are about the transport, not about
-// governance — a governance refusal is one of ai.RefusalCodes.
+// The adapter's reason codes. They are about the transport, not about
+// governance — a governance refusal is one of ai.RefusalCodes. They are
+// registered in package ai, beside the port that promises them, so a caller
+// can act on them without importing an adapter.
 var (
-	// ReasonGatewayNotConfigured is a cell with no Gateway transport wired.
-	// CategoryUnsupported: it is a fact about this cell's coverage, not a
-	// transient failure, and retrying will not change it.
-	ReasonGatewayNotConfigured = errs.Register("AI_GATEWAY_NOT_CONFIGURED", errs.CategoryUnsupported,
-		"lane-l",
-		"AI assistance is not available in this region yet. Deterministic processing is unaffected.")
-
-	// ReasonGatewayUnavailable is a deadline, an open circuit or a transport
-	// failure. CategoryUnavailable: an advisory call has no side effect, so a
-	// retry is safe. ADR-0006 §2.4 requires the caller to render it as a
-	// degraded product state rather than as an error.
-	ReasonGatewayUnavailable = errs.Register("AI_GATEWAY_UNAVAILABLE", errs.CategoryUnavailable,
-		"lane-l",
-		"AI assistance is temporarily unavailable. Deterministic processing is unaffected and the request may be retried.")
-
-	// ReasonGatewayReplyUnevidenced is a reply that cannot say which model,
-	// provider, prompt and AI train produced it. Such output is discarded:
-	// ADR-0006 §2.7 makes the boundary an evidenced transfer, and an output
-	// whose provenance is unknown cannot be evidenced.
-	ReasonGatewayReplyUnevidenced = errs.Register("AI_GATEWAY_REPLY_UNEVIDENCED", errs.CategoryInternal,
-		"lane-l",
-		"The AI Gateway returned a result without its provenance. The result was discarded.")
+	ReasonGatewayNotConfigured    = ai.ReasonGatewayNotConfigured
+	ReasonGatewayUnavailable      = ai.ReasonGatewayUnavailable
+	ReasonGatewayReplyUnevidenced = ai.ReasonGatewayReplyUnevidenced
 )
 
 // Kind is which advisory record a call produces.

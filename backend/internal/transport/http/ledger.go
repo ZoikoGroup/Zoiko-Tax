@@ -100,21 +100,30 @@ func (rt *Router) handleProposeClassification(w http.ResponseWriter, r *http.Req
 		writeProblem(w, r, rt.log, err)
 		return
 	}
-	p, err := rt.Classification.Propose(r.Context(), app.ProposeInput{SubjectRef: req.SubjectRef, Description: req.Description})
+	o, err := rt.Classification.Propose(r.Context(), app.ProposeInput{SubjectRef: req.SubjectRef, Description: req.Description})
 	if err != nil {
 		writeProblem(w, r, rt.log, err)
 		return
 	}
-	prov := p.Provenance()
 	out := gen.ClassificationProposal{
-		ID: p.ID().String(), SubjectRef: p.SubjectRef(), ProposedCode: p.ProposedCode(),
+		SubjectRef: o.SubjectRef, Disposition: gen.ClassificationProposalDisposition(o.Disposition),
 		// Advisory by type: there is no value of this field the service can
 		// produce other than false (ADR-0006 §2.6).
 		Authoritative: false,
-		Provenance: gen.AiProvenance{
-			UseCase: string(prov.UseCase), ModelProfile: prov.ModelProfile, ProviderProfile: prov.ProviderProfile,
-			PromptProfile: prov.PromptProfile, AiTrainVersion: prov.AiTrainVersion,
-		},
+	}
+	if o.Disposition == app.DispositionReviewRequired {
+		reason := string(o.ReviewReason)
+		out.ReviewReason = &reason
+		writeJSON(w, r, rt.log, http.StatusOK, out)
+		return
+	}
+	p := o.Proposal
+	prov := p.Provenance()
+	pid, code := p.ID().String(), p.ProposedCode()
+	out.ID, out.ProposedCode = &pid, &code
+	out.Provenance = &gen.AiProvenance{
+		UseCase: string(prov.UseCase), ModelProfile: prov.ModelProfile, ProviderProfile: prov.ProviderProfile,
+		PromptProfile: prov.PromptProfile, AiTrainVersion: prov.AiTrainVersion,
 	}
 	if c := p.Confidence(); c != "" {
 		out.Confidence = &c
