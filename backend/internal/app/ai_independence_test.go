@@ -85,14 +85,13 @@ func TestDeterministicFlowIndependentOfGateway(t *testing.T) {
 		t.Fatalf("commit before any AI call: %v", err)
 	}
 
-	// The AI plane is down: Propose must fail with the gateway's own
-	// unavailable reason -- nothing in the deterministic path manufactures
-	// or swallows this.
-	_, err := cls.Propose(as(security.RoleOperator), app.ProposeInput{
+	// The AI plane is down: Propose sends the item to human review with the
+	// gateway's own unavailable reason -- nothing manufactures a proposal.
+	o, err := cls.Propose(as(security.RoleOperator), app.ProposeInput{
 		SubjectRef: "sku:PLAN-UNL-5G", Description: "Unlimited 5G plan",
 	})
-	if errs.CategoryOf(err) != errs.CategoryUnavailable || errs.ReasonOf(err) != gateway.ReasonGatewayUnavailable {
-		t.Fatalf("propose with the gateway down: got %v", err)
+	if err != nil || o.Disposition != app.DispositionReviewRequired || o.ReviewReason != gateway.ReasonGatewayUnavailable {
+		t.Fatalf("propose with the gateway down: got %+v, %v", o, err)
 	}
 
 	// Quote and Commit still succeed after the AI failure: the AI plane

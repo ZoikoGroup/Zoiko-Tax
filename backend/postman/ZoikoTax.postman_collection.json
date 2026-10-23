@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:9aab139045cb19fece0a8909a61887f0dc0cc77addb5e809fda01010cecfdb8d`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:68a1693c7c88ad0b024ee84760b168239d71cbe387b47a8fe59d4e0fe13231ad`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -7873,7 +7873,7 @@
                 "classifications:propose"
               ]
             },
-            "description": "Ask the AI plane for an advisory ontology mapping\n\n`OPERATOR` or `ANALYST`. Sends the item to the Governed Model Gateway\nunder the `classification-review` use case (ADR-0006) and returns\nwhat it proposes. The proposal is **advisory and never\nauthoritative** (ZTAX-CLS-REQ-0082): it names an existing ontology\nnode for a person to confirm, and nothing in this response can become\na classification decision without that confirmation\n(ADR-0006 §2.6).\n\nA cell with no Gateway, or a Gateway with no approved provider,\nanswers `422 AI_GATEWAY_NOT_CONFIGURED` — understood, not covered here;\na Gateway that is down or\nslow answers `503 AI_GATEWAY_UNAVAILABLE`. Deterministic processing is\nunaffected by either. A governance refusal — kill switch, residency,\nauthority — is a `403` with the Gateway's reason code."
+            "description": "Ask the AI plane for an advisory ontology mapping\n\n`OPERATOR` or `ANALYST`. Sends the item to the Governed Model Gateway\nunder the `classification-review` use case (ADR-0006) and returns\nwhat it proposes. The proposal is **advisory and never\nauthoritative** (ZTAX-CLS-REQ-0082): it names an existing ontology\nnode for a person to confirm, and nothing in this response can become\na classification decision without that confirmation\n(ADR-0006 §2.6).\n\nWhen the AI plane cannot help, the item still goes to a person: a\nGateway with no approved provider, a Gateway that is down or slow, a\nreply without its provenance, or a proposed code that is not an\n`ontology:` node all answer `200` with `disposition: REVIEW_REQUIRED`\nand the reason in `reviewReason`, and no proposal. Deterministic\nprocessing is unaffected by any of them. A cell with no classification\nservice wired at all answers `503`. A governance refusal — kill switch,\nresidency, authority — is a `403` with the Gateway's reason code."
           },
           "response": [
             {
@@ -7900,10 +7900,10 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"id\": \"01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f\",\n  \"subjectRef\": \"sku:PLAN-UNL-5G\",\n  \"proposedCode\": \"ontology:telecom/voice/mobile\",\n  \"confidence\": \"0.97\",\n  \"authoritative\": false,\n  \"provenance\": {\n    \"useCase\": \"classification-review\",\n    \"modelProfile\": \"model:cls-2027.03\",\n    \"providerProfile\": \"provider:approved-a\",\n    \"promptProfile\": \"prompt:classification-review-v1\",\n    \"aiTrainVersion\": \"ai-2027.03.1\"\n  }\n}"
+              "body": "{\n  \"id\": \"01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f\",\n  \"subjectRef\": \"sku:PLAN-UNL-5G\",\n  \"disposition\": \"PROPOSED\",\n  \"proposedCode\": \"ontology:telecom/voice/mobile\",\n  \"confidence\": \"0.97\",\n  \"authoritative\": false,\n  \"provenance\": {\n    \"useCase\": \"classification-review\",\n    \"modelProfile\": \"model:cls-2027.03\",\n    \"providerProfile\": \"provider:approved-a\",\n    \"promptProfile\": \"prompt:classification-review-v1\",\n    \"aiTrainVersion\": \"ai-2027.03.1\"\n  }\n}"
             },
             {
-              "name": "422 · This cell's Gateway has no approved provider",
+              "name": "200 · The AI plane could not help; a person classifies the item",
               "originalRequest": {
                 "method": "POST",
                 "url": {
@@ -7917,16 +7917,16 @@
                   ]
                 }
               },
-              "status": "422",
-              "code": 422,
+              "status": "200",
+              "code": 200,
               "_postman_previewlanguage": "json",
               "header": [
                 {
                   "key": "Content-Type",
-                  "value": "application/problem+json"
+                  "value": "application/json"
                 }
               ],
-              "body": "{\n  \"type\": \"https://errors.zoikotax.com/v1/ai-gateway-not-configured\",\n  \"title\": \"AI gateway not configured\",\n  \"status\": 422,\n  \"detail\": \"AI assistance is not available in this region yet.\",\n  \"instance\": \"/v1/classifications:propose\",\n  \"ztx_reason_code\": \"AI_GATEWAY_NOT_CONFIGURED\",\n  \"ztx_request_id\": \"01JBQ0S9C3X8Q1H6M2KX5R7F4Q\",\n  \"ztx_retryable\": false\n}"
+              "body": "{\n  \"subjectRef\": \"sku:PLAN-UNL-5G\",\n  \"disposition\": \"REVIEW_REQUIRED\",\n  \"reviewReason\": \"AI_GATEWAY_UNAVAILABLE\",\n  \"authoritative\": false\n}"
             }
           ],
           "event": [
@@ -10004,7 +10004,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:9aab139045cb19fece0a8909a61887f0dc0cc77addb5e809fda01010cecfdb8d",
+      "value": "sha256:68a1693c7c88ad0b024ee84760b168239d71cbe387b47a8fe59d4e0fe13231ad",
       "type": "string"
     }
   ]

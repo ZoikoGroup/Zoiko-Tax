@@ -78,6 +78,11 @@ func testClassificationContext(roles ...security.Role) security.Context {
 // requires.
 func testClassificationProposal(t *testing.T) ai.AiClassificationProposal {
 	t.Helper()
+	return testClassificationProposalWithCode(t, "ontology:telecom/voice/mobile")
+}
+
+func testClassificationProposalWithCode(t *testing.T, code string) ai.AiClassificationProposal {
+	t.Helper()
 	id, err := ai.NewAiClassificationProposalID("01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f")
 	if err != nil {
 		t.Fatalf("NewAiClassificationProposalID: %v", err)
@@ -93,7 +98,7 @@ func testClassificationProposal(t *testing.T) ai.AiClassificationProposal {
 		AuthorityOutcome: ai.AuthorityOutcomeA1,
 		AiTrainVersion:   "ai-test-1",
 	}
-	p, err := ai.NewAiClassificationProposal(id, "sku:PLAN-UNL-5G", "ontology:telecom/voice/mobile", "0.97", prov)
+	p, err := ai.NewAiClassificationProposal(id, "sku:PLAN-UNL-5G", code, "0.97", prov)
 	if err != nil {
 		t.Fatalf("NewAiClassificationProposal: %v", err)
 	}
@@ -155,16 +160,6 @@ func TestProposeClassificationErrorMapping(t *testing.T) {
 			wantCalls:        0,
 		},
 		{
-			name:  "gateway_not_configured",
-			roles: []security.Role{security.RoleOperator},
-			fakeErr: errs.New(errs.CategoryUnsupported, gateway.ReasonGatewayNotConfigured,
-				"AI assistance is not available in this region yet."),
-			wantStatus:    http.StatusUnprocessableEntity,
-			wantReason:    gateway.ReasonGatewayNotConfigured,
-			wantRetryable: false,
-			wantCalls:     1,
-		},
-		{
 			name:  "policy_refusal",
 			roles: []security.Role{security.RoleAnalyst},
 			fakeErr: errs.New(errs.CategoryPolicy, ai.ReasonResidencyRefused,
@@ -211,17 +206,6 @@ func TestProposeClassificationErrorMapping(t *testing.T) {
 			wantStatus: http.StatusInternalServerError,
 			wantReason: ai.ReasonMalformedContext,
 			wantCalls:  1,
-		},
-		{
-			name:  "gateway_unavailable",
-			roles: []security.Role{security.RoleOperator},
-			fakeErr: errs.New(errs.CategoryUnavailable, gateway.ReasonGatewayUnavailable,
-				"AI assistance is temporarily unavailable."),
-			wantStatus:     http.StatusServiceUnavailable,
-			wantReason:     gateway.ReasonGatewayUnavailable,
-			wantRetryable:  true, // CategoryUnavailable is retryable by category (errs.go:80)
-			wantRetryAfter: "2",
-			wantCalls:      1,
 		},
 	}
 
@@ -329,6 +313,7 @@ func TestProposeClassificationSuccess(t *testing.T) {
 
 	var out struct {
 		Authoritative bool   `json:"authoritative"`
+		Disposition   string `json:"disposition"`
 		ProposedCode  string `json:"proposedCode"`
 		SubjectRef    string `json:"subjectRef"`
 		Confidence    string `json:"confidence"`
@@ -339,6 +324,9 @@ func TestProposeClassificationSuccess(t *testing.T) {
 	if out.Authoritative {
 		t.Fatal("authoritative = true; an AI proposal can never be authoritative (ADR-0006 §2.6)")
 	}
+	if out.Disposition != "PROPOSED" {
+		t.Fatalf("disposition = %q, want PROPOSED", out.Disposition)
+	}
 	if out.ProposedCode != proposal.ProposedCode() || out.SubjectRef != proposal.SubjectRef() ||
 		out.Confidence != proposal.Confidence() {
 		t.Fatalf("proposal fields = %+v, want to match %+v", out, proposal)
@@ -347,6 +335,61 @@ func TestProposeClassificationSuccess(t *testing.T) {
 	if fake.seen.UseCase != app.ClassificationReviewUseCase || fake.seen.AuthorityOutcome != ai.AuthorityOutcomeA1 ||
 		fake.seen.RiskTier != ai.RiskTierT1 || len(fake.seen.DataClasses) != 1 || fake.seen.DataClasses[0] != privacy.P0 {
 		t.Fatalf("invocation = %+v", fake.seen)
+	}
+}
+
+// C9: when the AI plane cannot help, the caller gets a 200 that sends the item
+// to a person, with the reason and no proposal -- not a Problem to recover
+// from. Deterministic processing never depended on it either way.
+func TestProposeClassificationReviewRequired(t *testing.T) {
+	notANode := testClassificationProposalWithCode(t, "#ontology:telecom/voice/mobile")
+	cases := []struct {
+		name     string
+		fake     *fakeModelGateway
+		wantCode errs.ReasonCode
+	}{
+		{"gateway_not_configured", &fakeModelGateway{err: errs.New(errs.CategoryUnsupported, gateway.ReasonGatewayNotConfigured,
+			"AI assistance is not available in this region yet.")}, gateway.ReasonGatewayNotConfigured},
+		{"gateway_unavailable", &fakeModelGateway{err: errs.New(errs.CategoryUnavailable, gateway.ReasonGatewayUnavailable,
+			"AI assistance is temporarily unavailable.")}, gateway.ReasonGatewayUnavailable},
+		{"reply_unevidenced", &fakeModelGateway{err: errs.New(errs.CategoryInternal, gateway.ReasonGatewayReplyUnevidenced,
+			"The AI Gateway returned a result without its provenance.")}, gateway.ReasonGatewayReplyUnevidenced},
+		{"not_an_ontology_node", &fakeModelGateway{proposal: notANode}, ai.ReasonProposalNotAnOntologyNode},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			rt := NewRouter(nil, nil, nil, nil, slog.New(slog.DiscardHandler), idgen.V7{})
+			rt.Cell = testCell
+			rt.Classification = app.NewClassificationService(c.fake)
+			h := rt.Handler()
+
+			body := `{"subjectRef":"sku:PLAN-UNL-5G","description":"Unlimited 5G mobile plan with 20 GB hotspot"}`
+			req := httptest.NewRequest(http.MethodPost, "/v1/classifications:propose", strings.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			req = req.WithContext(security.Into(req.Context(), testClassificationContext(security.RoleOperator)))
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+			}
+			if c.fake.calls != 1 {
+				t.Fatalf("fake gateway called %d times, want 1", c.fake.calls)
+			}
+			var out map[string]any
+			if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+				t.Fatalf("decode: %v; body=%s", err, rec.Body.String())
+			}
+			if out["disposition"] != "REVIEW_REQUIRED" || out["reviewReason"] != string(c.wantCode) ||
+				out["subjectRef"] != "sku:PLAN-UNL-5G" || out["authoritative"] != false {
+				t.Fatalf("body = %s", rec.Body.String())
+			}
+			for _, absent := range []string{"id", "proposedCode", "confidence", "provenance"} {
+				if _, ok := out[absent]; ok {
+					t.Fatalf("a review-required answer carries %q: %s", absent, rec.Body.String())
+				}
+			}
+		})
 	}
 }
 
