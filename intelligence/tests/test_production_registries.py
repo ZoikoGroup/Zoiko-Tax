@@ -29,6 +29,39 @@ EvaluationProfile:
 - is_satisfied_by: False when f1 required and not met
 - is_satisfied_by: True when f1 not required
 
+ProviderProfile:
+- happy path; as_dict
+- empty provider_profile_id, owner, version, legal_entity, dpa_ref,
+  outage_terms_ref, audit_assurance_ref raises
+- empty permitted_regions, security_assurance, subprocessors is ACCEPTED
+  (common.schema.json's regions/stringList have no minItems)
+- empty item / duplicate item in security_assurance, subprocessors raises
+- provider_profile_id over 128 chars raises; at exactly 128 is accepted
+- non-semver version raises; a semver with a prerelease suffix is accepted
+- empty api_hosts raises; duplicate api_hosts raises; a non-hostname
+  api_host raises
+- negative retention_days raises
+- negative deprecation_notice_days raises
+- immutable
+
+ModelProfile:
+- happy path; as_dict
+- empty model_profile_id, owner, version, provider_profile_id, model_id,
+  terms_ref raises
+- model_version alias (latest/default/stable/preview) raises, parametrized
+- context_window_tokens < 1 raises
+- max_output_tokens < 1 raises
+- empty modalities raises
+- duplicate modalities raises
+- empty permitted_regions, permitted_data_classes, known_limitations is
+  ACCEPTED (common.schema.json's regions/privacyClasses/stringList have no
+  minItems)
+- unknown permitted_data_classes value raises
+- empty item / duplicate item in known_limitations raises
+- model_profile_id, provider_profile_id over 128 chars raises
+- non-semver version raises; a semver with a prerelease suffix is accepted
+- immutable
+
 build_manifest:
 - happy path produces valid AIReleaseManifest
 - manifest_id auto-generated when not supplied
@@ -79,8 +112,14 @@ from ztax_gateway.production_registries import (
     ManifestRegistry,
     ManifestRegistryError,
     ManifestStatus,
+    Modality,
+    ModelHosting,
+    ModelProfile,
+    ModelProfileError,
     PromptProfile,
     PromptProfileError,
+    ProviderProfile,
+    ProviderProfileError,
     build_manifest,
 )
 from ztax_gateway.provenance import AuthorityOutcome, Provenance, RiskTier
@@ -574,6 +613,335 @@ class TestEvaluationProfile:
             min_f1=None, max_calibration_error=None,
         )
         assert ep.is_satisfied_by(accuracy=0.90) is True
+
+
+# ---------------------------------------------------------------------------
+# ProviderProfile
+# ---------------------------------------------------------------------------
+
+
+def _make_provider_profile(**overrides: object) -> ProviderProfile:
+    defaults: dict[str, object] = dict(
+        provider_profile_id="provider:eu-hosted",
+        owner="lane-l",
+        version="1.0.0",
+        legal_entity="Example Hosting B.V.",
+        dpa_ref="dpa:2026-001",
+        security_assurance=("ISO27001",),
+        permitted_regions=frozenset({_REGION}),
+        subprocessors=(),
+        retention_days=0,
+        zero_data_retention=True,
+        trains_on_customer_data=False,
+        deprecation_notice_days=90,
+        outage_terms_ref="sla:2026-001",
+        audit_assurance_ref="soc2:2026",
+        api_hosts=("inference.eu.example.net",),
+        suspended=False,
+    )
+    defaults.update(overrides)
+    return ProviderProfile(**defaults)  # type: ignore[arg-type]
+
+
+class TestProviderProfile:
+    def test_happy_path(self) -> None:
+        pp = _make_provider_profile()
+        assert pp.provider_profile_id == "provider:eu-hosted"
+        assert pp.suspended is False
+
+    def test_as_dict_keys(self) -> None:
+        pp = _make_provider_profile()
+        d = pp.as_dict()
+        assert set(d.keys()) == {
+            "provider_profile_id", "owner", "version", "legal_entity",
+            "dpa_ref", "security_assurance", "permitted_regions",
+            "subprocessors", "retention_days", "zero_data_retention",
+            "trains_on_customer_data", "deprecation_notice_days",
+            "outage_terms_ref", "audit_assurance_ref", "api_hosts",
+            "suspended",
+        }
+        assert d["api_hosts"] == ["inference.eu.example.net"]
+
+    def test_empty_provider_profile_id_raises(self) -> None:
+        with pytest.raises(ProviderProfileError) as exc:
+            _make_provider_profile(provider_profile_id="")
+        assert "provider_profile_id" in exc.value.reason
+
+    def test_empty_owner_raises(self) -> None:
+        with pytest.raises(ProviderProfileError) as exc:
+            _make_provider_profile(owner="")
+        assert "owner" in exc.value.reason
+
+    def test_empty_version_raises(self) -> None:
+        with pytest.raises(ProviderProfileError) as exc:
+            _make_provider_profile(version="")
+        assert "version" in exc.value.reason
+
+    def test_empty_legal_entity_raises(self) -> None:
+        with pytest.raises(ProviderProfileError) as exc:
+            _make_provider_profile(legal_entity="")
+        assert "legal_entity" in exc.value.reason
+
+    def test_empty_dpa_ref_raises(self) -> None:
+        with pytest.raises(ProviderProfileError) as exc:
+            _make_provider_profile(dpa_ref="")
+        assert "dpa_ref" in exc.value.reason
+
+    def test_empty_outage_terms_ref_raises(self) -> None:
+        with pytest.raises(ProviderProfileError) as exc:
+            _make_provider_profile(outage_terms_ref="")
+        assert "outage_terms_ref" in exc.value.reason
+
+    def test_empty_audit_assurance_ref_raises(self) -> None:
+        with pytest.raises(ProviderProfileError) as exc:
+            _make_provider_profile(audit_assurance_ref="")
+        assert "audit_assurance_ref" in exc.value.reason
+
+    def test_empty_permitted_regions_is_accepted(self) -> None:
+        # common.schema.json's "regions" has no minItems: empty means no
+        # region is permitted, the correct default, not an error.
+        pp = _make_provider_profile(permitted_regions=frozenset())
+        assert pp.permitted_regions == frozenset()
+        assert pp.as_dict()["permitted_regions"] == []
+
+    def test_empty_security_assurance_is_accepted(self) -> None:
+        pp = _make_provider_profile(security_assurance=())
+        assert pp.as_dict()["security_assurance"] == []
+
+    def test_empty_subprocessors_is_accepted(self) -> None:
+        pp = _make_provider_profile(subprocessors=())
+        assert pp.as_dict()["subprocessors"] == []
+
+    def test_empty_item_in_security_assurance_raises(self) -> None:
+        with pytest.raises(ProviderProfileError) as exc:
+            _make_provider_profile(security_assurance=("ISO27001", ""))
+        assert "security_assurance" in exc.value.reason
+
+    def test_duplicate_security_assurance_raises(self) -> None:
+        with pytest.raises(ProviderProfileError) as exc:
+            _make_provider_profile(security_assurance=("ISO27001", "ISO27001"))
+        assert "security_assurance" in exc.value.reason
+
+    def test_duplicate_subprocessors_raises(self) -> None:
+        with pytest.raises(ProviderProfileError) as exc:
+            _make_provider_profile(subprocessors=("sub-a", "sub-a"))
+        assert "subprocessors" in exc.value.reason
+
+    def test_provider_profile_id_over_max_length_raises(self) -> None:
+        with pytest.raises(ProviderProfileError) as exc:
+            _make_provider_profile(provider_profile_id="x" * 129)
+        assert "provider_profile_id" in exc.value.reason
+
+    def test_provider_profile_id_at_max_length_is_accepted(self) -> None:
+        pp = _make_provider_profile(provider_profile_id="x" * 128)
+        assert len(pp.provider_profile_id) == 128
+
+    def test_non_semver_version_raises(self) -> None:
+        with pytest.raises(ProviderProfileError) as exc:
+            _make_provider_profile(version="v1")
+        assert "version" in exc.value.reason
+
+    def test_semver_with_prerelease_is_accepted(self) -> None:
+        pp = _make_provider_profile(version="1.0.0-beta.1")
+        assert pp.version == "1.0.0-beta.1"
+
+    def test_empty_api_hosts_raises(self) -> None:
+        with pytest.raises(ProviderProfileError) as exc:
+            _make_provider_profile(api_hosts=())
+        assert "api_hosts" in exc.value.reason
+
+    def test_duplicate_api_hosts_raises(self) -> None:
+        with pytest.raises(ProviderProfileError) as exc:
+            _make_provider_profile(
+                api_hosts=("inference.eu.example.net", "inference.eu.example.net")
+            )
+        assert "api_hosts" in exc.value.reason
+
+    def test_non_hostname_api_host_raises(self) -> None:
+        with pytest.raises(ProviderProfileError) as exc:
+            _make_provider_profile(api_hosts=("https://inference.eu.example.net/v1",))
+        assert "api_hosts" in exc.value.reason
+
+    def test_negative_retention_days_raises(self) -> None:
+        with pytest.raises(ProviderProfileError) as exc:
+            _make_provider_profile(retention_days=-1)
+        assert "retention_days" in exc.value.reason
+
+    def test_negative_deprecation_notice_days_raises(self) -> None:
+        with pytest.raises(ProviderProfileError) as exc:
+            _make_provider_profile(deprecation_notice_days=-1)
+        assert "deprecation_notice_days" in exc.value.reason
+
+    def test_immutable(self) -> None:
+        pp = _make_provider_profile()
+        with pytest.raises((AttributeError, TypeError)):
+            pp.suspended = True  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# ModelProfile
+# ---------------------------------------------------------------------------
+
+
+def _make_model_profile(**overrides: object) -> ModelProfile:
+    defaults: dict[str, object] = dict(
+        model_profile_id="model:classifier",
+        owner="lane-l",
+        version="1.0.0",
+        provider_profile_id="provider:eu-hosted",
+        model_id="classifier",
+        model_version="2026-09-01",
+        hosting=ModelHosting.PRIVATE_CLOUD,
+        context_window_tokens=128_000,
+        max_output_tokens=4096,
+        modalities=(Modality.TEXT,),
+        tool_capable=False,
+        permitted_regions=frozenset({_REGION}),
+        permitted_data_classes=frozenset({"P0", "P1"}),
+        terms_ref="contract:2026-001",
+        known_limitations=("no tabular reasoning",),
+        deprecation_date=None,
+        suspended=False,
+    )
+    defaults.update(overrides)
+    return ModelProfile(**defaults)  # type: ignore[arg-type]
+
+
+class TestModelProfile:
+    def test_happy_path(self) -> None:
+        mp = _make_model_profile()
+        assert mp.model_profile_id == "model:classifier"
+        assert mp.suspended is False
+
+    def test_as_dict_keys(self) -> None:
+        mp = _make_model_profile()
+        d = mp.as_dict()
+        assert set(d.keys()) == {
+            "model_profile_id", "owner", "version", "provider_profile_id",
+            "model_id", "model_version", "hosting", "context_window_tokens",
+            "max_output_tokens", "modalities", "tool_capable",
+            "permitted_regions", "permitted_data_classes", "terms_ref",
+            "known_limitations", "deprecation_date", "suspended",
+        }
+        assert d["hosting"] == "PRIVATE_CLOUD"
+        assert d["modalities"] == ["TEXT"]
+
+    def test_empty_model_profile_id_raises(self) -> None:
+        with pytest.raises(ModelProfileError) as exc:
+            _make_model_profile(model_profile_id="")
+        assert "model_profile_id" in exc.value.reason
+
+    def test_empty_owner_raises(self) -> None:
+        with pytest.raises(ModelProfileError) as exc:
+            _make_model_profile(owner="")
+        assert "owner" in exc.value.reason
+
+    def test_empty_version_raises(self) -> None:
+        with pytest.raises(ModelProfileError) as exc:
+            _make_model_profile(version="")
+        assert "version" in exc.value.reason
+
+    def test_empty_provider_profile_id_raises(self) -> None:
+        with pytest.raises(ModelProfileError) as exc:
+            _make_model_profile(provider_profile_id="")
+        assert "provider_profile_id" in exc.value.reason
+
+    def test_empty_model_id_raises(self) -> None:
+        with pytest.raises(ModelProfileError) as exc:
+            _make_model_profile(model_id="")
+        assert "model_id" in exc.value.reason
+
+    def test_empty_terms_ref_raises(self) -> None:
+        with pytest.raises(ModelProfileError) as exc:
+            _make_model_profile(terms_ref="")
+        assert "terms_ref" in exc.value.reason
+
+    @pytest.mark.parametrize("alias", ["latest", "default", "stable", "preview"])
+    def test_alias_model_version_raises(self, alias: str) -> None:
+        with pytest.raises(ModelProfileError) as exc:
+            _make_model_profile(model_version=alias)
+        assert "model_version" in exc.value.reason
+
+    def test_context_window_tokens_zero_raises(self) -> None:
+        with pytest.raises(ModelProfileError) as exc:
+            _make_model_profile(context_window_tokens=0)
+        assert "context_window_tokens" in exc.value.reason
+
+    def test_max_output_tokens_zero_raises(self) -> None:
+        with pytest.raises(ModelProfileError) as exc:
+            _make_model_profile(max_output_tokens=0)
+        assert "max_output_tokens" in exc.value.reason
+
+    def test_empty_modalities_raises(self) -> None:
+        with pytest.raises(ModelProfileError) as exc:
+            _make_model_profile(modalities=())
+        assert "modalities" in exc.value.reason
+
+    def test_duplicate_modalities_raises(self) -> None:
+        with pytest.raises(ModelProfileError) as exc:
+            _make_model_profile(modalities=(Modality.TEXT, Modality.TEXT))
+        assert "modalities" in exc.value.reason
+
+    def test_empty_permitted_regions_is_accepted(self) -> None:
+        # common.schema.json's "regions" has no minItems: empty means no
+        # region is permitted, the correct default, not an error.
+        mp = _make_model_profile(permitted_regions=frozenset())
+        assert mp.permitted_regions == frozenset()
+        assert mp.as_dict()["permitted_regions"] == []
+
+    def test_empty_permitted_data_classes_is_accepted(self) -> None:
+        # Deny by default: no declared class means the model may receive
+        # nothing, which common.schema.json's "privacyClasses" treats as
+        # valid (no minItems), not an error.
+        mp = _make_model_profile(permitted_data_classes=frozenset())
+        assert mp.permitted_data_classes == frozenset()
+        assert mp.as_dict()["permitted_data_classes"] == []
+
+    def test_unknown_permitted_data_class_raises(self) -> None:
+        with pytest.raises(ModelProfileError) as exc:
+            _make_model_profile(permitted_data_classes=frozenset({"P0", "SECRET"}))
+        assert "P8" not in exc.value.reason  # sanity: not a stale P0-P8 range
+        assert "SECRET" in exc.value.reason
+
+    def test_empty_known_limitations_is_accepted(self) -> None:
+        mp = _make_model_profile(known_limitations=())
+        assert mp.as_dict()["known_limitations"] == []
+
+    def test_empty_item_in_known_limitations_raises(self) -> None:
+        with pytest.raises(ModelProfileError) as exc:
+            _make_model_profile(known_limitations=("real limitation", ""))
+        assert "known_limitations" in exc.value.reason
+
+    def test_duplicate_known_limitations_raises(self) -> None:
+        with pytest.raises(ModelProfileError) as exc:
+            _make_model_profile(
+                known_limitations=("no tabular reasoning", "no tabular reasoning")
+            )
+        assert "known_limitations" in exc.value.reason
+
+    def test_model_profile_id_over_max_length_raises(self) -> None:
+        with pytest.raises(ModelProfileError) as exc:
+            _make_model_profile(model_profile_id="x" * 129)
+        assert "model_profile_id" in exc.value.reason
+
+    def test_provider_profile_id_over_max_length_raises(self) -> None:
+        with pytest.raises(ModelProfileError) as exc:
+            _make_model_profile(provider_profile_id="x" * 129)
+        assert "provider_profile_id" in exc.value.reason
+
+    def test_non_semver_version_raises(self) -> None:
+        with pytest.raises(ModelProfileError) as exc:
+            _make_model_profile(version="v1")
+        assert "version" in exc.value.reason
+
+    def test_semver_with_prerelease_is_accepted(self) -> None:
+        mp = _make_model_profile(version="1.0.0-beta.1")
+        assert mp.version == "1.0.0-beta.1"
+
+    def test_immutable(self) -> None:
+        mp = _make_model_profile()
+        with pytest.raises((AttributeError, TypeError)):
+            mp.suspended = True  # type: ignore[misc]
 
 
 # ---------------------------------------------------------------------------

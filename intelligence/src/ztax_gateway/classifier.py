@@ -38,6 +38,7 @@ Design rules
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Final
 
@@ -64,6 +65,12 @@ _DEFAULT_TOP_K: Final[int] = 3
 # Minimum SKU description length — single-word queries produce meaningless
 # rankings against a legal/technical corpus.
 _MIN_DESCRIPTION_LEN: Final[int] = 3
+
+# Pattern that every valid ontology class identifier must satisfy.
+# Applied only when Classifier.strict_ontology_prefix is True.
+# Headings that do not start with "ontology:" are spec-structure headings
+# (e.g. "1. Scope") and must not be returned as classification results.
+_ONTOLOGY_CLASS_RE: Final[re.Pattern[str]] = re.compile(r"^ontology:")
 
 
 # ---------------------------------------------------------------------------
@@ -210,6 +217,15 @@ class Classifier:
     knowledge_base: KnowledgeBase = field(default_factory=KnowledgeBase)
     output_validator: OutputSchemaValidator | None = None
     output_schema_id: str = ""
+    strict_ontology_prefix: bool = False
+    """When *True*, :meth:`classify` raises :class:`ClassificationError` for
+    any retrieved heading that does not start with ``"ontology:"``.
+
+    Set this to ``True`` when the knowledge base is built from ontology
+    documents (headings are ``"ontology:<path>"`` identifiers).  Leave it
+    ``False`` (the default) when the knowledge base contains general spec
+    documents whose headings are plain prose titles.
+    """
 
     # ------------------------------------------------------------------
     # Public API
@@ -270,14 +286,28 @@ class Classifier:
             raise ClassificationError(f"classifier: retrieval failed — {exc}") from exc
 
         # 4. Build proposals — each one is citation-mandatory.
-        proposals = tuple(
-            ClassificationProposal(
-                ontology_class=result.chunk.heading,
-                citation=result.citation,
-                rank=result.rank,
+        # When strict_ontology_prefix is True, reject any heading that does not
+        # match the ^ontology: pattern so that spec-structure headings
+        # (e.g. "1. Scope", "Preamble") never surface as a classification result.
+        # MetricEngine remains strict; this guard ensures only well-formed class
+        # identifiers are proposed.
+        proposals_list: list[ClassificationProposal] = []
+        for result in search_results:
+            cls_id = result.chunk.heading
+            if self.strict_ontology_prefix and not _ONTOLOGY_CLASS_RE.match(cls_id):
+                raise ClassificationError(
+                    f"classifier: heading {cls_id!r} does not match the required "
+                    f"pattern '^ontology:' -- the ontology document may contain "
+                    f"non-ontology headings that were returned by BM25"
+                )
+            proposals_list.append(
+                ClassificationProposal(
+                    ontology_class=cls_id,
+                    citation=result.citation,
+                    rank=result.rank,
+                )
             )
-            for result in search_results
-        )
+        proposals = tuple(proposals_list)
 
         record = ClassificationRecord(
             sku_description=sku_description,

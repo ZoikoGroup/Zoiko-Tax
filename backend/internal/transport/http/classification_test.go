@@ -13,12 +13,14 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/adapter/gateway"
+	"github.com/zoikogroup/zoikotax/backend/internal/adapter/gateway/gatewaytest"
 	"github.com/zoikogroup/zoikotax/backend/internal/app"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
+	"github.com/zoikogroup/zoikotax/backend/internal/platform/clock"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/idgen"
 )
 
@@ -172,6 +174,29 @@ func TestProposeClassificationErrorMapping(t *testing.T) {
 			wantCalls:  1,
 		},
 		{
+			// The per-use-case (or global) kill switch, governance.go:94-95.
+			// CategoryPolicy, so 403 like policy_refusal above -- this case
+			// exists to pin the EXACT reason code a caller sees for a killed
+			// use case, not just that some policy reason maps to 403.
+			name:  "kill_switch_use_case",
+			roles: []security.Role{security.RoleOperator},
+			fakeErr: errs.New(errs.CategoryPolicy, ai.ReasonKillSwitchEngaged,
+				"The AI use case is not available right now."),
+			wantStatus: http.StatusForbidden,
+			wantReason: ai.ReasonKillSwitchEngaged,
+			wantCalls:  1,
+		},
+		{
+			// A registered use case taken out of service, governance.go:104-105.
+			name:  "use_case_suspended",
+			roles: []security.Role{security.RoleOperator},
+			fakeErr: errs.New(errs.CategoryPolicy, ai.ReasonUseCaseSuspended,
+				"The AI use case is not available right now."),
+			wantStatus: http.StatusForbidden,
+			wantReason: ai.ReasonUseCaseSuspended,
+			wantCalls:  1,
+		},
+		{
 			// 500 is by design here, not a bug to fix: AI_MALFORMED_CONTEXT
 			// means the Go side itself built or forwarded a request the AI
 			// plane could not read, which is a defect in ZoikoTax, not in
@@ -248,10 +273,12 @@ func TestProposeClassificationErrorMapping(t *testing.T) {
 				if p.Detail != wantDetail {
 					t.Fatalf("detail = %q, want exactly %q", p.Detail, wantDetail)
 				}
+			}
+
+			if c.name == "malformed_context" || c.name == "kill_switch_use_case" || c.name == "use_case_suspended" {
 				// Neither the subject reference nor the description this
-				// request carried may appear in the response: a defect
-				// report about ZoikoTax's own side must not echo back the
-				// caller's content.
+				// request carried may appear in the response: a policy or
+				// defect report must not echo back the caller's content.
 				for _, leaked := range []string{"PLAN-UNL-5G", "5G mobile plan", "20 GB hotspot"} {
 					if strings.Contains(rec.Body.String(), leaked) {
 						t.Fatalf("response leaks request content %q: %s", leaked, rec.Body.String())
@@ -320,5 +347,71 @@ func TestProposeClassificationSuccess(t *testing.T) {
 	if fake.seen.UseCase != app.ClassificationReviewUseCase || fake.seen.AuthorityOutcome != ai.AuthorityOutcomeA1 ||
 		fake.seen.RiskTier != ai.RiskTierT1 || len(fake.seen.DataClasses) != 1 || fake.seen.DataClasses[0] != privacy.P0 {
 		t.Fatalf("invocation = %+v", fake.seen)
+	}
+}
+
+// fixedPolicy is a gateway.PolicySource that never changes. Unlike
+// gateway_test.go's switchablePolicy, this test does not need to flip the
+// switch mid-flight -- the use case is already killed before the first call.
+type fixedPolicy struct{ p ai.Policy }
+
+func (f fixedPolicy) Policy() ai.Policy { return f.p }
+
+// TestKilledUseCaseNeverReachesTransport wires a REAL gateway.Client -- not
+// fakeModelGateway -- in front of the same router the table test above uses.
+// This proves the kill switch stops the call inside gateway.Client itself,
+// before any transport call, not merely that *some* fake error happens to
+// map to 403 at this layer.
+func TestKilledUseCaseNeverReachesTransport(t *testing.T) {
+	killedPolicy, err := ai.NewPolicy([]ai.UseCasePolicy{{
+		UseCase:              app.ClassificationReviewUseCase,
+		Owner:                "lane-l",
+		MaxAuthority:         ai.AuthorityOutcomeA1,
+		MaxRiskTier:          ai.RiskTierT1,
+		PermittedRegions:     []string{testCell},
+		PermittedDataClasses: []privacy.Class{privacy.P0},
+	}}, []ai.AiUseCase{app.ClassificationReviewUseCase}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	transport := &gatewaytest.Fake{}
+	client, err := gateway.New(gateway.Config{
+		Transport: transport,
+		Policy:    fixedPolicy{p: killedPolicy},
+		Recorder:  &gatewaytest.Recorder{},
+		Clock:     clock.System{},
+		IDs:       idgen.V7{},
+		Region:    testCell,
+		Deadline:  time.Second,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rt := NewRouter(nil, nil, nil, nil, slog.New(slog.DiscardHandler), idgen.V7{})
+	rt.Cell = testCell
+	rt.Classification = app.NewClassificationService(client)
+	h := rt.Handler()
+
+	body := `{"subjectRef":"sku:PLAN-UNL-5G","description":"Unlimited 5G mobile plan with 20 GB hotspot"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/classifications:propose", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(security.Into(req.Context(), testClassificationContext(security.RoleOperator)))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403; body=%s", rec.Code, rec.Body.String())
+	}
+	var p Problem
+	if err := json.Unmarshal(rec.Body.Bytes(), &p); err != nil {
+		t.Fatalf("decode problem body: %v; body=%s", err, rec.Body.String())
+	}
+	if p.ReasonCode != string(ai.ReasonKillSwitchEngaged) {
+		t.Fatalf("ztx_reason_code = %q, want %q", p.ReasonCode, ai.ReasonKillSwitchEngaged)
+	}
+	if len(transport.Calls()) != 0 {
+		t.Fatalf("a killed use case reached the transport: %d call(s)", len(transport.Calls()))
 	}
 }
