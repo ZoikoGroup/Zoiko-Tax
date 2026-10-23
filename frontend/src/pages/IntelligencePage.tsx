@@ -1,38 +1,39 @@
 import { useState, type FormEvent } from 'react'
 
-import { ZoikoTaxError, type S } from '@zoikotax/sdk'
+import type { S } from '@zoikotax/sdk'
 
 import { ztax } from '../platform/client'
-import { Card, Columns, ErrorNote, Field, Id, PageHeader, Raw, Submit, errorText, useAction } from '../ui/kit'
+import { Card, Columns, ErrorNote, Field, Id, PageHeader, Raw, Submit, useAction } from '../ui/kit'
 import type { PageProps } from './types'
 import './obligations.css'
 
 type Proposal = S<'ClassificationProposal'>
 
-const reasonOf = (error: unknown) => (error instanceof ZoikoTaxError ? error.reasonCode : undefined)
-
-/** The Gateway's own failures, said plainly; anything else goes to the kit. */
-const GatewayError = ({ error }: { error: unknown }) => {
-  const reason = reasonOf(error)
-  if (reason === 'AI_GATEWAY_NOT_CONFIGURED') {
-    return (
-      <p className="ztax-error-note" role="alert">
-        AI assistance is not available in this cell: it has no Model Gateway, or the Gateway has no approved provider.
-        Deterministic processing is unaffected — classify the item by hand.
-        <span className="mono muted"> {errorText(error)}</span>
-      </p>
-    )
-  }
-  if (reason === 'AI_GATEWAY_UNAVAILABLE') {
-    return (
-      <p className="ztax-error-note" role="alert">
-        The Model Gateway is down or slow right now. Try again shortly; nothing deterministic depends on it.
-        <span className="mono muted"> {errorText(error)}</span>
-      </p>
-    )
-  }
-  return <ErrorNote error={error} />
+/** Why the AI plane could not help, said plainly. The item goes to a person either way. */
+const reviewReasons: Record<string, string> = {
+  AI_GATEWAY_NOT_CONFIGURED:
+    'AI assistance is not available in this cell: it has no Model Gateway, or the Gateway has no approved provider.',
+  AI_GATEWAY_UNAVAILABLE: 'The Model Gateway is down or slow right now.',
+  AI_GATEWAY_REPLY_UNEVIDENCED: 'The Model Gateway answered without saying which model produced it, so the answer was discarded.',
+  AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE: 'The model proposed a code that is not an ontology node, so the proposal was discarded.',
 }
+
+const ReviewRequired = ({ proposal }: { proposal: Proposal }) => (
+  <>
+    <p className="ztax-error-note" role="status">
+      Needs human review — no AI suggestion. {reviewReasons[proposal.reviewReason ?? ''] ?? ''} Classify the item by
+      hand; deterministic processing is unaffected.
+      <span className="mono muted"> {proposal.reviewReason}</span>
+    </p>
+    <dl className="ztax-kv">
+      <dt>Subject</dt>
+      <dd className="mono">{proposal.subjectRef}</dd>
+      <dt>Disposition</dt>
+      <dd className="mono">{proposal.disposition}</dd>
+    </dl>
+    <Raw value={proposal} />
+  </>
+)
 
 export const IntelligencePage = ({ session }: PageProps) => {
   const canAsk = session.user.roles.some((r) => r === 'OPERATOR' || r === 'ANALYST')
@@ -88,7 +89,7 @@ export const IntelligencePage = ({ session }: PageProps) => {
           {canAsk ? null : (
             <p className="ztax-note">Asking for a proposal needs the OPERATOR or ANALYST role; the cell will refuse it.</p>
           )}
-          {action.error === null ? null : <GatewayError error={action.error} />}
+          {action.error === null ? null : <ErrorNote error={action.error} />}
         </Card>
 
         <Card
@@ -97,6 +98,8 @@ export const IntelligencePage = ({ session }: PageProps) => {
         >
           {proposal === null ? (
             <p className="ztax-empty-note">No proposal yet. Describe an item and ask.</p>
+          ) : proposal.disposition === 'REVIEW_REQUIRED' || proposal.provenance === undefined ? (
+            <ReviewRequired proposal={proposal} />
           ) : (
             <>
               <dl className="ztax-kv">
@@ -109,7 +112,7 @@ export const IntelligencePage = ({ session }: PageProps) => {
                 <dt>Authoritative</dt>
                 <dd className="mono">{String(proposal.authoritative)}</dd>
                 <dt>Proposal</dt>
-                <dd><Id value={proposal.id} /></dd>
+                <dd>{proposal.id === undefined ? '—' : <Id value={proposal.id} />}</dd>
               </dl>
               <p className="ztax-note">
                 The confidence is the model&apos;s own score, not a threshold. A person confirms or rejects the mapping
