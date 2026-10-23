@@ -16,6 +16,7 @@ import { DeterminePage } from './pages/DeterminePage'
 import { DocumentsPage } from './pages/DocumentsPage'
 import { EvidencePage } from './pages/EvidencePage'
 import { IntelligencePage } from './pages/IntelligencePage'
+import { LocationsPage } from './pages/LocationsPage'
 import { MigrationPage } from './pages/MigrationPage'
 import { ObligationsPage } from './pages/ObligationsPage'
 import { ReconcilePage } from './pages/ReconcilePage'
@@ -128,6 +129,8 @@ export function App() {
             return <EvidencePage {...page} />
           case 'content':
             return <ContentPage {...page} />
+          case 'locations':
+            return <LocationsPage />
           case 'intelligence':
             return <IntelligencePage {...page} />
           case 'dashboard':

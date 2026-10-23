@@ -1,0 +1,221 @@
+/* The Locations page: the US tile map, its legend and the try-a-location form. */
+
+.loc-header-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.loc-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.loc-inline > span {
+  white-space: nowrap;
+}
+
+.loc-bundle {
+  font-size: 12px;
+  margin: 0 0 8px;
+}
+
+.loc-small {
+  font-size: 12px;
+}
+
+.loc-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+/* --- the tile map ------------------------------------------------------- */
+
+.loc-map-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.loc-map {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: repeat(8, auto);
+  gap: 4px;
+  flex: 1 1 520px;
+  max-width: 760px;
+}
+
+.loc-tile {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1.1;
+  min-width: 0;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+.loc-tile:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(18, 22, 28, 0.18);
+}
+.loc-tile:focus-visible {
+  outline: 2px solid #12161c;
+  outline-offset: 2px;
+}
+.loc-tile--selected {
+  outline: 2px solid #12161c;
+  outline-offset: 1px;
+}
+.loc-tile-code {
+  font-weight: 700;
+  font-size: clamp(9px, 1.4vw, 13px);
+}
+.loc-tile-rate {
+  font-size: clamp(7px, 1vw, 10px);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The bands: grey for silence, a pale tint for a legal zero, then copper. */
+.loc-band--uncovered { background: #f3f4f6; color: #9ca3af; border: 1px dashed #d1d5db; }
+.loc-band--exempt { background: #e6f4ee; color: #1b5e3f; }
+.loc-band--low { background: #fbe3d4; color: #7a3a17; }
+.loc-band--mid { background: #f2b48e; color: #5c2a0f; }
+.loc-band--high { background: #d97a45; color: #ffffff; }
+.loc-band--top { background: #9c4a1f; color: #ffffff; }
+
+.loc-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+.loc-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.loc-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+@media (max-width: 640px) {
+  .loc-map {
+    gap: 2px;
+  }
+  .loc-tile-rate {
+    display: none;
+  }
+  .loc-legend {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+/* --- state detail and tables ------------------------------------------- */
+
+.loc-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.loc-detail-head .loc-big {
+  margin-left: auto;
+  font-size: 28px;
+  font-weight: 700;
+  color: #9c4a1f;
+}
+
+.loc-row--selected > td {
+  background: #fdf3ec;
+}
+
+.loc-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: #9c4a1f;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.loc-cite summary {
+  cursor: pointer;
+  color: #5a6472;
+}
+.loc-cite-text {
+  margin: 4px 0 0;
+  max-width: 420px;
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.loc-regime {
+  padding: 8px 4px;
+}
+.loc-jurisdiction + .loc-jurisdiction {
+  margin-top: 12px;
+}
+
+/* --- try a location ---------------------------------------------------- */
+
+/* The shared .ztax-form is a grid of fields; this one is a block of fieldsets. */
+.ztax-form.loc-form {
+  display: block;
+}
+.loc-form .ztax-form-actions {
+  margin-top: 12px;
+}
+
+.loc-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+.loc-fieldset {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 12px 12px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.loc-fieldset legend {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  padding: 0 4px;
+}
+
+.loc-item {
+  border-top: 1px solid #e5e7eb;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.loc-trace {
+  font-size: 12px;
+  line-height: 1.6;
+}
