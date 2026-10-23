@@ -170,7 +170,7 @@ func TestTerritoriesOutsideTheVATAreaAreNotTaxedAsTheMainland(t *testing.T) {
 }
 
 func TestUncoveredCountriesAreUnsupported(t *testing.T) {
-	for _, cc := range []string{"US", "IN", "BR"} {
+	for _, cc := range []string{"MX", "IN", "BR"} {
 		s := sale{seller: taxation.Place{Country: cc}, evidence: usedAt(taxation.Place{Country: cc}),
 			service: "MOBILE_VOICE", currency: "USD", amount: "100.00"}
 		unresolved(t, determine(t, global(t), s.doc(t), oct2026), taxation.StateUnsupported, errs.ReasonJurisdictionUnsupported)
@@ -211,7 +211,7 @@ func TestBeforeTheContentBeginsIsNotAZero(t *testing.T) {
 
 func TestCoverageListsEveryRegimeWithItsSources(t *testing.T) {
 	cov := global(t).Coverage(oct2026)
-	if len(cov) != 38 {
+	if len(cov) != 39 {
 		t.Fatalf("%d regimes", len(cov))
 	}
 	for _, r := range cov {
