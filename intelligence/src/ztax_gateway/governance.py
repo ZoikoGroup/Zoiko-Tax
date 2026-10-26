@@ -132,7 +132,19 @@ class UseCaseRegistry:
         self._killed: set[str] = set()
 
     def register(self, use_case: UseCase) -> None:
-        """Add a use case. Re-registering an identifier is a defect."""
+        """Add a use case. Re-registering an identifier is a defect.
+
+        Note on T4: this method does NOT block a use case that declares
+        max_risk_tier=T4. That is intentional. Existing test fixtures in
+        test_capacity.py, test_invocation_evidence.py (x3),
+        test_observability.py, and test_resilience.py (x2) register T4
+        ceilings to exercise capacity-planning and evidence paths; blocking
+        registration here would break those fixtures without gaining safety.
+        The enforcement point is call time: authorise() refuses any request
+        whose risk_tier is T4 unconditionally, so a registered T4 ceiling is
+        inert — no call can ever satisfy it. load_config() in server.py is the
+        config-time guard for production registry files (REQ-0107).
+        """
         if not use_case.use_case_id:
             raise ValueError("registry: use case has no identifier")
         if not use_case.owner:
@@ -196,8 +208,8 @@ def authorise(registry: UseCaseRegistry, provenance: Provenance) -> UseCase:
     The order of the checks mirrors Go's Evaluate (governance.go) and is the
     order of decreasing blast radius: the kill switch first, because an engaged
     switch means stop everything and the reason for stopping is not up for
-    evaluation; then registration; then authority; then risk; then residency;
-    then data classes.
+    evaluation; then registration; then authority; then risk (including the T4
+    hard stop); then residency; then data classes.
 
     Getting that order wrong would not change which calls are permitted, but it
     would change what an operator sees in the logs during an incident — and
@@ -260,6 +272,25 @@ def authorise(registry: UseCaseRegistry, provenance: Provenance) -> UseCase:
 
     # 4. Risk tier. Refused rather than downgraded: downgrading would let a
     #    caller reach a lower-scrutiny path by mislabelling its own request.
+    #
+    #    T4 hard stop (ZTAX-AIGOV-001 §5, REQ-0107):
+    #    ZTAX-AIGOV-001 §5 defines T4 as "CRITICAL / RESTRICTED — Default
+    #    prohibited; only deterministic non-AI control may own final authority.
+    #    Any exceptional use requires constitutional amendment." REQ-0107 adds
+    #    "No T4 prohibited authority use may be enabled through feature flags or
+    #    customer configuration."
+    #
+    #    The check is unconditional and comes before the per-use-case ceiling
+    #    comparison, so no registry state can permit a T4 request — mirroring
+    #    the A5 hard stop at step 3. UseCaseRegistry.register() deliberately
+    #    does not block T4 ceilings (see its docstring); call-time refusal here
+    #    is the sole enforcement point for runtime requests.
+    if provenance.risk_tier == RiskTier.T4:
+        raise GovernanceRefusedError(
+            Refusal.RISK_TIER_EXCEEDED,
+            "T4 risk tier is refused unconditionally (ZTAX-AIGOV-001 §5, REQ-0107)",
+            context,
+        )
     if _RISK_ORDER[provenance.risk_tier] > _RISK_ORDER[use_case.max_risk_tier]:
         raise GovernanceRefusedError(
             Refusal.RISK_TIER_EXCEEDED,

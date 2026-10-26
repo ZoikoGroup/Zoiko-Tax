@@ -453,11 +453,17 @@ def load_config(path: Path) -> tuple[UseCaseRegistry, RoutingTable]:
                     f"load_config: use case {uc_id!r} data class {label!r} "
                     f"is not a valid PRIV-001 label (expected one of {sorted(_VALID_DATA_CLASSES)})"
                 )
+        max_risk_tier = RiskTier(entry["max_risk_tier"])
+        if max_risk_tier == RiskTier.T4:
+            raise ValueError(
+                f"load_config: use case {uc_id!r} declares max_risk_tier 'T4', "
+                "which is refused unconditionally (REQ-0107)"
+            )
         uc = UseCase(
             use_case_id=uc_id,
             owner=entry["owner"],
             description=entry["description"],
-            max_risk_tier=RiskTier(entry["max_risk_tier"]),
+            max_risk_tier=max_risk_tier,
             max_authority=AuthorityOutcome(entry["max_authority"]),
             permitted_regions=frozenset(entry.get("permitted_regions", [])),
             permitted_data_classes=frozenset(dc_raw),
