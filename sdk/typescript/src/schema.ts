@@ -1732,12 +1732,14 @@ export interface paths {
          *     a classification decision without that confirmation
          *     (ADR-0006 §2.6).
          *
-         *     A cell with no Gateway, or a Gateway with no approved provider,
-         *     answers `422 AI_GATEWAY_NOT_CONFIGURED` — understood, not covered here;
-         *     a Gateway that is down or
-         *     slow answers `503 AI_GATEWAY_UNAVAILABLE`. Deterministic processing is
-         *     unaffected by either. A governance refusal — kill switch, residency,
-         *     authority — is a `403` with the Gateway's reason code.
+         *     When the AI plane cannot help, the item still goes to a person: a
+         *     Gateway with no approved provider, a Gateway that is down or slow, a
+         *     reply without its provenance, or a proposed code that is not an
+         *     `ontology:` node all answer `200` with `disposition: REVIEW_REQUIRED`
+         *     and the reason in `reviewReason`, and no proposal. Deterministic
+         *     processing is unaffected by any of them. A cell with no classification
+         *     service wired at all answers `503`. A governance refusal — kill switch,
+         *     residency, authority — is a `403` with the Gateway's reason code.
          */
         post: operations["proposeClassification"];
         delete?: never;
@@ -3798,18 +3800,33 @@ export interface components {
         /**
          * ClassificationProposal
          * @description An advisory mapping proposal. `authoritative` is always false; a person confirms it or it is nothing.
+         *
+         *     `disposition` says what the AI plane contributed. `PROPOSED` carries a proposal (`id`, `proposedCode`,
+         *     `provenance`) for a person to confirm. `REVIEW_REQUIRED` carries none: the AI plane was unavailable, not
+         *     configured in this cell, or answered with something that cannot be used, so a person classifies the item
+         *     without a suggestion. `reviewReason` is the reason code.
          */
         ClassificationProposal: {
-            /** Format: uuid */
-            id: string;
+            /**
+             * Format: uuid
+             * @description Present when `disposition` is `PROPOSED`.
+             */
+            id?: string;
             subjectRef: string;
-            /** @description An existing ontology node, `ontology:...`. */
-            proposedCode: string;
+            /** @enum {string} */
+            disposition: "PROPOSED" | "REVIEW_REQUIRED";
+            /**
+             * @description Present when `disposition` is `REVIEW_REQUIRED`: `AI_GATEWAY_UNAVAILABLE`, `AI_GATEWAY_NOT_CONFIGURED`,
+             *     `AI_GATEWAY_REPLY_UNEVIDENCED` or `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`.
+             */
+            reviewReason?: string;
+            /** @description An existing ontology node, `ontology:...`. Present when `disposition` is `PROPOSED`. */
+            proposedCode?: string;
             /** @description The model's own score as a canonical decimal in [0, 1]. Never a threshold that makes the proposal authoritative. */
             confidence?: string;
             /** @enum {boolean} */
             authoritative: false;
-            provenance: components["schemas"]["AiProvenance"];
+            provenance?: components["schemas"]["AiProvenance"];
         };
         /**
          * RefundId
@@ -8492,7 +8509,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The advisory proposal, with the provenance that produced it. */
+            /** @description The advisory proposal with the provenance that produced it, or `REVIEW_REQUIRED` when the AI plane could not help. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -8504,15 +8521,6 @@ export interface operations {
             400: components["responses"]["Validation"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
-            /** @description AI assistance is not available in this cell (`AI_GATEWAY_NOT_CONFIGURED`). */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };

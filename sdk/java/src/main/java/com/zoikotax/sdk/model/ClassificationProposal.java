@@ -28,11 +28,13 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 
 /**
- * An advisory mapping proposal. &#x60;authoritative&#x60; is always false; a person confirms it or it is nothing.
+ * An advisory mapping proposal. &#x60;authoritative&#x60; is always false; a person confirms it or it is nothing.  &#x60;disposition&#x60; says what the AI plane contributed. &#x60;PROPOSED&#x60; carries a proposal (&#x60;id&#x60;, &#x60;proposedCode&#x60;, &#x60;provenance&#x60;) for a person to confirm. &#x60;REVIEW_REQUIRED&#x60; carries none: the AI plane was unavailable, not configured in this cell, or answered with something that cannot be used, so a person classifies the item without a suggestion. &#x60;reviewReason&#x60; is the reason code. 
  */
 @JsonPropertyOrder({
   ClassificationProposal.JSON_PROPERTY_ID,
   ClassificationProposal.JSON_PROPERTY_SUBJECT_REF,
+  ClassificationProposal.JSON_PROPERTY_DISPOSITION,
+  ClassificationProposal.JSON_PROPERTY_REVIEW_REASON,
   ClassificationProposal.JSON_PROPERTY_PROPOSED_CODE,
   ClassificationProposal.JSON_PROPERTY_CONFIDENCE,
   ClassificationProposal.JSON_PROPERTY_AUTHORITATIVE,
@@ -41,15 +43,60 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 @jakarta.annotation.Generated(value = "org.openapitools.codegen.languages.JavaClientCodegen", comments = "Generator version: 7.25.0")
 public class ClassificationProposal {
   public static final String JSON_PROPERTY_ID = "id";
-  @jakarta.annotation.Nonnull
+  @jakarta.annotation.Nullable
   private UUID id;
 
   public static final String JSON_PROPERTY_SUBJECT_REF = "subjectRef";
   @jakarta.annotation.Nonnull
   private String subjectRef;
 
-  public static final String JSON_PROPERTY_PROPOSED_CODE = "proposedCode";
+  /**
+   * Gets or Sets disposition
+   */
+  public enum DispositionEnum {
+    PROPOSED(String.valueOf("PROPOSED")),
+    
+    REVIEW_REQUIRED(String.valueOf("REVIEW_REQUIRED")),
+    
+    UNKNOWN_DEFAULT_OPEN_API(String.valueOf("unknown_default_open_api"));
+
+    private String value;
+
+    DispositionEnum(String value) {
+      this.value = value;
+    }
+
+    @JsonValue
+    public String getValue() {
+      return value;
+    }
+
+    @Override
+    public String toString() {
+      return String.valueOf(value);
+    }
+
+    @JsonCreator
+    public static DispositionEnum fromValue(String value) {
+      for (DispositionEnum b : DispositionEnum.values()) {
+        if (b.value.equals(value)) {
+          return b;
+        }
+      }
+      return UNKNOWN_DEFAULT_OPEN_API;
+    }
+  }
+
+  public static final String JSON_PROPERTY_DISPOSITION = "disposition";
   @jakarta.annotation.Nonnull
+  private DispositionEnum disposition;
+
+  public static final String JSON_PROPERTY_REVIEW_REASON = "reviewReason";
+  @jakarta.annotation.Nullable
+  private String reviewReason;
+
+  public static final String JSON_PROPERTY_PROPOSED_CODE = "proposedCode";
+  @jakarta.annotation.Nullable
   private String proposedCode;
 
   public static final String JSON_PROPERTY_CONFIDENCE = "confidence";
@@ -96,32 +143,32 @@ public class ClassificationProposal {
   private AuthoritativeEnum authoritative;
 
   public static final String JSON_PROPERTY_PROVENANCE = "provenance";
-  @jakarta.annotation.Nonnull
+  @jakarta.annotation.Nullable
   private AiProvenance provenance;
 
   public ClassificationProposal() { 
   }
 
-  public ClassificationProposal id(@jakarta.annotation.Nonnull UUID id) {
+  public ClassificationProposal id(@jakarta.annotation.Nullable UUID id) {
     this.id = id;
     return this;
   }
 
   /**
-   * Get id
+   * Present when &#x60;disposition&#x60; is &#x60;PROPOSED&#x60;.
    * @return id
    */
-  @jakarta.annotation.Nonnull
-  @JsonProperty(value = JSON_PROPERTY_ID, required = true)
-  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  @jakarta.annotation.Nullable
+  @JsonProperty(value = JSON_PROPERTY_ID, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
   public UUID getId() {
     return id;
   }
 
 
-  @JsonProperty(value = JSON_PROPERTY_ID, required = true)
-  @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setId(@jakarta.annotation.Nonnull UUID id) {
+  @JsonProperty(value = JSON_PROPERTY_ID, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public void setId(@jakarta.annotation.Nullable UUID id) {
     this.id = id;
   }
 
@@ -150,26 +197,74 @@ public class ClassificationProposal {
   }
 
 
-  public ClassificationProposal proposedCode(@jakarta.annotation.Nonnull String proposedCode) {
+  public ClassificationProposal disposition(@jakarta.annotation.Nonnull DispositionEnum disposition) {
+    this.disposition = disposition;
+    return this;
+  }
+
+  /**
+   * Get disposition
+   * @return disposition
+   */
+  @jakarta.annotation.Nonnull
+  @JsonProperty(value = JSON_PROPERTY_DISPOSITION, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public DispositionEnum getDisposition() {
+    return disposition;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_DISPOSITION, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public void setDisposition(@jakarta.annotation.Nonnull DispositionEnum disposition) {
+    this.disposition = disposition;
+  }
+
+
+  public ClassificationProposal reviewReason(@jakarta.annotation.Nullable String reviewReason) {
+    this.reviewReason = reviewReason;
+    return this;
+  }
+
+  /**
+   * Present when &#x60;disposition&#x60; is &#x60;REVIEW_REQUIRED&#x60;: &#x60;AI_GATEWAY_UNAVAILABLE&#x60;, &#x60;AI_GATEWAY_NOT_CONFIGURED&#x60;, &#x60;AI_GATEWAY_REPLY_UNEVIDENCED&#x60; or &#x60;AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE&#x60;. 
+   * @return reviewReason
+   */
+  @jakarta.annotation.Nullable
+  @JsonProperty(value = JSON_PROPERTY_REVIEW_REASON, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public String getReviewReason() {
+    return reviewReason;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_REVIEW_REASON, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public void setReviewReason(@jakarta.annotation.Nullable String reviewReason) {
+    this.reviewReason = reviewReason;
+  }
+
+
+  public ClassificationProposal proposedCode(@jakarta.annotation.Nullable String proposedCode) {
     this.proposedCode = proposedCode;
     return this;
   }
 
   /**
-   * An existing ontology node, &#x60;ontology:...&#x60;.
+   * An existing ontology node, &#x60;ontology:...&#x60;. Present when &#x60;disposition&#x60; is &#x60;PROPOSED&#x60;.
    * @return proposedCode
    */
-  @jakarta.annotation.Nonnull
-  @JsonProperty(value = JSON_PROPERTY_PROPOSED_CODE, required = true)
-  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  @jakarta.annotation.Nullable
+  @JsonProperty(value = JSON_PROPERTY_PROPOSED_CODE, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
   public String getProposedCode() {
     return proposedCode;
   }
 
 
-  @JsonProperty(value = JSON_PROPERTY_PROPOSED_CODE, required = true)
-  @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setProposedCode(@jakarta.annotation.Nonnull String proposedCode) {
+  @JsonProperty(value = JSON_PROPERTY_PROPOSED_CODE, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public void setProposedCode(@jakarta.annotation.Nullable String proposedCode) {
     this.proposedCode = proposedCode;
   }
 
@@ -222,7 +317,7 @@ public class ClassificationProposal {
   }
 
 
-  public ClassificationProposal provenance(@jakarta.annotation.Nonnull AiProvenance provenance) {
+  public ClassificationProposal provenance(@jakarta.annotation.Nullable AiProvenance provenance) {
     this.provenance = provenance;
     return this;
   }
@@ -231,17 +326,17 @@ public class ClassificationProposal {
    * Get provenance
    * @return provenance
    */
-  @jakarta.annotation.Nonnull
-  @JsonProperty(value = JSON_PROPERTY_PROVENANCE, required = true)
-  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  @jakarta.annotation.Nullable
+  @JsonProperty(value = JSON_PROPERTY_PROVENANCE, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
   public AiProvenance getProvenance() {
     return provenance;
   }
 
 
-  @JsonProperty(value = JSON_PROPERTY_PROVENANCE, required = true)
-  @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setProvenance(@jakarta.annotation.Nonnull AiProvenance provenance) {
+  @JsonProperty(value = JSON_PROPERTY_PROVENANCE, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public void setProvenance(@jakarta.annotation.Nullable AiProvenance provenance) {
     this.provenance = provenance;
   }
 
@@ -260,6 +355,8 @@ public class ClassificationProposal {
     ClassificationProposal classificationProposal = (ClassificationProposal) o;
     return Objects.equals(this.id, classificationProposal.id) &&
         Objects.equals(this.subjectRef, classificationProposal.subjectRef) &&
+        Objects.equals(this.disposition, classificationProposal.disposition) &&
+        Objects.equals(this.reviewReason, classificationProposal.reviewReason) &&
         Objects.equals(this.proposedCode, classificationProposal.proposedCode) &&
         Objects.equals(this.confidence, classificationProposal.confidence) &&
         Objects.equals(this.authoritative, classificationProposal.authoritative) &&
@@ -268,7 +365,7 @@ public class ClassificationProposal {
 
   @Override
   public int hashCode() {
-    return Objects.hash(id, subjectRef, proposedCode, confidence, authoritative, provenance);
+    return Objects.hash(id, subjectRef, disposition, reviewReason, proposedCode, confidence, authoritative, provenance);
   }
 
   @Override
@@ -277,6 +374,8 @@ public class ClassificationProposal {
     sb.append("class ClassificationProposal {\n");
     sb.append("    id: ").append(toIndentedString(id)).append("\n");
     sb.append("    subjectRef: ").append(toIndentedString(subjectRef)).append("\n");
+    sb.append("    disposition: ").append(toIndentedString(disposition)).append("\n");
+    sb.append("    reviewReason: ").append(toIndentedString(reviewReason)).append("\n");
     sb.append("    proposedCode: ").append(toIndentedString(proposedCode)).append("\n");
     sb.append("    confidence: ").append(toIndentedString(confidence)).append("\n");
     sb.append("    authoritative: ").append(toIndentedString(authoritative)).append("\n");

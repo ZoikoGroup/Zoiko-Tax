@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
 
+import { BrandMark } from '../components/layout/BrandMark'
 import { describeError } from '../platform/api'
 
 /**
@@ -32,14 +33,27 @@ export function SignIn({ onSignIn }: SignInProps) {
   const errorId = useId()
 
   return (
-    <main className="shell shell--narrow">
-      <header className="shell__header">
-        <h1>ZoikoTax</h1>
-        <p className="shell__subtitle">Tenant administration</p>
-      </header>
+    <main className="zt-signin">
+      <section className="zt-signin-brand" aria-label="ZoikoTax">
+        <div className="zt-rail-brand">
+          <span className="zt-rail-mark"><BrandMark /></span>
+          <div>
+            <div className="zt-rail-name">ZoikoTax<br />Command Center</div>
+            <div className="zt-rail-sub">Tenant administration</div>
+          </div>
+        </div>
+        <div>
+          <div className="zt-signin-eyebrow">ZoikoTax Intelligence</div>
+          <h1>Answers for a complex tax world.</h1>
+          <p>Telecom tax clarity, across jurisdictions.</p>
+        </div>
+        <ol className="zt-signin-flow" aria-label="Fiscal pipeline">
+          <li>Determine</li><li>Obligate</li><li>Comply</li><li>Reconcile</li><li>Prove</li>
+        </ol>
+      </section>
 
       <form
-        className="panel"
+        className="zt-signin-form"
         onSubmit={(event) => {
           event.preventDefault()
           setBusy(true)
@@ -49,7 +63,9 @@ export function SignIn({ onSignIn }: SignInProps) {
             .finally(() => { setBusy(false) })
         }}
       >
+        <img className="zt-signin-logo" src="/zoikotax-logo.png" alt="" />
         <h2>Sign in</h2>
+        <p className="zt-signin-lead">Use your tenant handle and the address your administrator registered.</p>
 
         <div className="field">
           <label htmlFor={tenantId}>Tenant</label>
@@ -96,7 +112,7 @@ export function SignIn({ onSignIn }: SignInProps) {
           {error}
         </p>
 
-        <button type="submit" className="btn btn--primary" disabled={busy}>
+        <button type="submit" className="zt-btn zt-btn--primary zt-signin-submit" disabled={busy}>
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
       </form>

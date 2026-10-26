@@ -136,7 +136,7 @@ Nothing about a place is assumed. A country without a regime, a service a regime
 
 | Pack | What | Status |
 |---|---|---|
-| `global-telecom` | Standard VAT/GST on telecommunications by place of supply: the EU-27, UK, Norway, Switzerland, Canada by province (GST/HST, BC PST, MB RST, SK PST, QC QST), Australia, New Zealand, Singapore, Japan, South Africa, UAE and Saudi Arabia. B2B cross-border supplies are reverse-charged where the regime does so; Japan, South Africa, UAE and Saudi Arabia cover domestic supplies only. Equipment sales are domestic only. | RESEARCH: every rate cites the authority's publication; none is reviewed |
+| `global-telecom` | Standard VAT/GST on telecommunications by place of supply: the EU-27, UK, Norway, Switzerland, Canada by province (GST/HST, BC PST, MB RST, SK PST, QC QST), the United States by state (the fifty states and DC: state-level sales, gross receipts and communications taxes on voice and messaging, state sales tax on equipment, internet access exempt under the Internet Tax Freedom Act; county and city taxes, 911 fees and the federal USF are not modelled), Australia, New Zealand, Singapore, Japan, South Africa, UAE and Saudi Arabia. B2B cross-border supplies are reverse-charged where the regime does so; Japan, South Africa, UAE and Saudi Arabia cover domestic supplies only. Equipment sales are domestic only. | RESEARCH: every rate cites the authority's publication; none is reviewed |
 | `training-telecom` | The playbook's training fixtures in fictional territories (XT, XQ, XV, XW): the §7 mixed bundle, §9 tax on tax and inclusive pricing, §8A place of supply, §29 exemptions, and a rate change at local midnight. | Training only — never a customer pack |
 | `eu-vat` | The rule-graph worked pack. | Shape test |
 
