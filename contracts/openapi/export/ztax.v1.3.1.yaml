@@ -4344,12 +4344,14 @@ paths:
         a classification decision without that confirmation
         (ADR-0006 §2.6).
 
-        A cell with no Gateway, or a Gateway with no approved provider,
-        answers `422 AI_GATEWAY_NOT_CONFIGURED` — understood, not covered here;
-        a Gateway that is down or
-        slow answers `503 AI_GATEWAY_UNAVAILABLE`. Deterministic processing is
-        unaffected by either. A governance refusal — kill switch, residency,
-        authority — is a `403` with the Gateway's reason code.
+        When the AI plane cannot help, the item still goes to a person: a
+        Gateway with no approved provider, a Gateway that is down or slow, a
+        reply without its provenance, or a proposed code that is not an
+        `ontology:` node all answer `200` with `disposition: REVIEW_REQUIRED`
+        and the reason in `reviewReason`, and no proposal. Deterministic
+        processing is unaffected by any of them. A cell with no classification
+        service wired at all answers `503`. A governance refusal — kill switch,
+        residency, authority — is a `403` with the Gateway's reason code.
       requestBody:
         required: true
         content:
@@ -4364,7 +4366,7 @@ paths:
                   description: Unlimited 5G mobile plan with 20 GB hotspot
       responses:
         "200":
-          description: The advisory proposal, with the provenance that produced it.
+          description: The advisory proposal with the provenance that produced it, or `REVIEW_REQUIRED` when the AI plane could not help.
           content:
             application/json:
               schema:
@@ -4375,6 +4377,7 @@ paths:
                   value:
                     id: 01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f
                     subjectRef: sku:PLAN-UNL-5G
+                    disposition: PROPOSED
                     proposedCode: ontology:telecom/voice/mobile
                     confidence: "0.97"
                     authoritative: false
@@ -4384,30 +4387,19 @@ paths:
                       providerProfile: provider:approved-a
                       promptProfile: prompt:classification-review-v1
                       aiTrainVersion: ai-2027.03.1
+                aiUnavailable:
+                  summary: The AI plane could not help; a person classifies the item
+                  value:
+                    subjectRef: sku:PLAN-UNL-5G
+                    disposition: REVIEW_REQUIRED
+                    reviewReason: AI_GATEWAY_UNAVAILABLE
+                    authoritative: false
         "400":
           $ref: "#/components/responses/Validation"
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
           $ref: "#/components/responses/Forbidden"
-        "422":
-          description: AI assistance is not available in this cell (`AI_GATEWAY_NOT_CONFIGURED`).
-          content:
-            application/problem+json:
-              schema:
-                $ref: "#/components/schemas/Problem"
-              examples:
-                notConfigured:
-                  summary: This cell's Gateway has no approved provider
-                  value:
-                    type: https://errors.zoikotax.com/v1/ai-gateway-not-configured
-                    title: AI gateway not configured
-                    status: 422
-                    detail: AI assistance is not available in this region yet.
-                    instance: /v1/classifications:propose
-                    ztx_reason_code: AI_GATEWAY_NOT_CONFIGURED
-                    ztx_request_id: 01JBQ0S9C3X8Q1H6M2KX5R7F4Q
-                    ztx_retryable: false
         "500":
           $ref: "#/components/responses/Internal"
         "503":
@@ -10920,29 +10912,48 @@ components:
     ClassificationProposal:
       type: object
       title: ClassificationProposal
-      description: An advisory mapping proposal. `authoritative` is always false; a person confirms it or it is nothing.
+      description: |
+        An advisory mapping proposal. `authoritative` is always false; a person confirms it or it is nothing.
+
+        `disposition` says what the AI plane contributed. `PROPOSED` carries a proposal (`id`, `proposedCode`,
+        `provenance`) for a person to confirm. `REVIEW_REQUIRED` carries none: the AI plane was unavailable, not
+        configured in this cell, or answered with something that cannot be used, so a person classifies the item
+        without a suggestion. `reviewReason` is the reason code.
       additionalProperties: false
       required:
-        - id
         - subjectRef
-        - proposedCode
+        - disposition
         - authoritative
-        - provenance
       properties:
         id:
           x-ztax-privacy:
             class: P0
           type: string
           format: uuid
+          description: Present when `disposition` is `PROPOSED`.
         subjectRef:
           x-ztax-privacy:
             class: P0
           type: string
+        disposition:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - PROPOSED
+            - REVIEW_REQUIRED
+        reviewReason:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: |
+            Present when `disposition` is `REVIEW_REQUIRED`: `AI_GATEWAY_UNAVAILABLE`, `AI_GATEWAY_NOT_CONFIGURED`,
+            `AI_GATEWAY_REPLY_UNEVIDENCED` or `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`.
         proposedCode:
           x-ztax-privacy:
             class: P0
           type: string
-          description: An existing ontology node, `ontology:...`.
+          description: An existing ontology node, `ontology:...`. Present when `disposition` is `PROPOSED`.
         confidence:
           x-ztax-privacy:
             class: P0

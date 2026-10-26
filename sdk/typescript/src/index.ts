@@ -293,6 +293,18 @@ export class ZoikoTaxClient {
   // --- determination ------------------------------------------------------
 
   /**
+   * Report what the active content determines by location: the countries
+   * covered, the services in each, and every component in force at `at`
+   * (now by default). A country absent from it is `UNSUPPORTED`.
+   */
+  getCoverage(
+    params: { at?: string } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"Coverage">>> {
+    return this.#send<S<"Coverage">>("GET", `/v1/coverage${query(params)}`, undefined, signal);
+  }
+
+  /**
    * Quote a transaction without recording it.
    *
    * A quote is an estimate, never a decision: it is always

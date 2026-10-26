@@ -1,4 +1,5 @@
 @import "./dashboard.css";
+@import "./shell.css";
 
 /* No design system yet — W3 lane N owns that alongside UX-001. What is here
    carries the distinctions ADR-0019 makes binding: an authoritative amount and

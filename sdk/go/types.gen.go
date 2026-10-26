@@ -249,6 +249,24 @@ func (e ClassificationProposalAuthoritative) Valid() bool {
 	}
 }
 
+// Defines values for ClassificationProposalDisposition.
+const (
+	ClassificationProposalDispositionPROPOSED       ClassificationProposalDisposition = "PROPOSED"
+	ClassificationProposalDispositionREVIEWREQUIRED ClassificationProposalDisposition = "REVIEW_REQUIRED"
+)
+
+// Valid indicates whether the value is a known member of the ClassificationProposalDisposition enum.
+func (e ClassificationProposalDisposition) Valid() bool {
+	switch e {
+	case ClassificationProposalDispositionPROPOSED:
+		return true
+	case ClassificationProposalDispositionREVIEWREQUIRED:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ComparatorType.
 const (
 	ComparatorTypeAUTHORITYCALCULATOR              ComparatorType = "AUTHORITY_CALCULATOR"
@@ -3392,23 +3410,38 @@ type ChangePasswordRequest struct {
 type CivilDate = string
 
 // ClassificationProposal An advisory mapping proposal. `authoritative` is always false; a person confirms it or it is nothing.
+//
+// `disposition` says what the AI plane contributed. `PROPOSED` carries a proposal (`id`, `proposedCode`,
+// `provenance`) for a person to confirm. `REVIEW_REQUIRED` carries none: the AI plane was unavailable, not
+// configured in this cell, or answered with something that cannot be used, so a person classifies the item
+// without a suggestion. `reviewReason` is the reason code.
 type ClassificationProposal struct {
 	Authoritative ClassificationProposalAuthoritative `json:"authoritative"`
 
 	// Confidence The model's own score as a canonical decimal in [0, 1]. Never a threshold that makes the proposal authoritative.
-	Confidence *string `json:"confidence,omitempty"`
-	ID         string  `json:"id"`
+	Confidence  *string                           `json:"confidence,omitempty"`
+	Disposition ClassificationProposalDisposition `json:"disposition"`
 
-	// ProposedCode An existing ontology node, `ontology:...`.
-	ProposedCode string `json:"proposedCode"`
+	// ID Present when `disposition` is `PROPOSED`.
+	ID *string `json:"id,omitempty"`
+
+	// ProposedCode An existing ontology node, `ontology:...`. Present when `disposition` is `PROPOSED`.
+	ProposedCode *string `json:"proposedCode,omitempty"`
 
 	// Provenance Which governed use case, model, provider, prompt and AI train produced an output (ADR-0006 §2.7).
-	Provenance AiProvenance `json:"provenance"`
-	SubjectRef string       `json:"subjectRef"`
+	Provenance *AiProvenance `json:"provenance,omitempty"`
+
+	// ReviewReason Present when `disposition` is `REVIEW_REQUIRED`: `AI_GATEWAY_UNAVAILABLE`, `AI_GATEWAY_NOT_CONFIGURED`,
+	// `AI_GATEWAY_REPLY_UNEVIDENCED` or `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`.
+	ReviewReason *string `json:"reviewReason,omitempty"`
+	SubjectRef   string  `json:"subjectRef"`
 }
 
 // ClassificationProposalAuthoritative defines model for ClassificationProposal.Authoritative.
 type ClassificationProposalAuthoritative bool
+
+// ClassificationProposalDisposition defines model for ClassificationProposal.Disposition.
+type ClassificationProposalDisposition string
 
 // ClassificationProposalRequest defines model for ClassificationProposalRequest.
 type ClassificationProposalRequest struct {
