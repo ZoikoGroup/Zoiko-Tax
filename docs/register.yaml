@@ -570,14 +570,15 @@ documents:
 gaps:
 
   # Both gaps re-dated from 2026-10-09 to 2026-10-23 on 2026-10-12; still open until the owners register the real facts.
+  # Both gaps re-dated from 2026-10-23 to 2026-11-10 on 2026-10-27; still open until the owners register the real facts.
   - document_id: ZTAX-STR-003
     kind: VERIFY
     issue: "Existing baseline not held in this repository. Version, approvers, publication hash and effective date are not yet registered."
     owner: "Executive Strategy"
-    due: "2026-10-23"
+    due: "2026-11-10"
 
   - document_id: ZTAX-ARCH-001
     kind: VERIFY
     issue: "Existing baseline not held in this repository. DOM-001 declares a hard dependency on it; the v2.0 approvers, publication hash and effective date are not yet registered."
     owner: "CTO / Chief Architect"
-    due: "2026-10-23"
+    due: "2026-11-10"

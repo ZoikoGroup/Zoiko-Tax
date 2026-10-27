@@ -45,20 +45,43 @@ _demo = _load_demo()
 # ---------------------------------------------------------------------------
 
 
-def _classes_in_boundary() -> dict[str, list[str]]:
-    """Parse test_ai_boundary_proof.py and return {class_name: [method_names]}."""
-    source = _BOUNDARY_PATH.read_text(encoding="utf-8")
+def _ast_info(path: Path) -> tuple[dict[str, list[str]], list[str]]:
+    """Parse a test file.
+
+    Return ({class_name: [test method names]}, [top-level test function
+    names]) -- a node id's last segment is either a class (C1-C9's boundary
+    proof classes) or a bare function (C10's test_t4_prohibition.py nodes,
+    which are plain parametrized functions with no enclosing class).
+    """
+    source = path.read_text(encoding="utf-8")
     tree = ast.parse(source)
-    result: dict[str, list[str]] = {}
-    for node in ast.walk(tree):
+    classes: dict[str, list[str]] = {}
+    functions: list[str] = []
+    for node in tree.body:
         if isinstance(node, ast.ClassDef) and node.name.startswith("Test"):
-            methods = [
+            classes[node.name] = [
                 n.name
                 for n in node.body
                 if isinstance(n, ast.FunctionDef) and n.name.startswith("test")
             ]
-            result[node.name] = methods
-    return result
+        elif isinstance(node, ast.FunctionDef) and node.name.startswith("test"):
+            functions.append(node.name)
+    return classes, functions
+
+
+def _classes_in_boundary() -> dict[str, list[str]]:
+    """Parse test_ai_boundary_proof.py and return {class_name: [method_names]}."""
+    classes, _functions = _ast_info(_BOUNDARY_PATH)
+    return classes
+
+
+def _resolvable_test_names(path: Path) -> set[str]:
+    """Names (class or top-level function) usable as `path.py::NAME`, limited
+    to names that would actually select at least one test."""
+    classes, functions = _ast_info(path)
+    names = set(functions)
+    names.update(cls for cls, methods in classes.items() if methods)
+    return names
 
 
 # ---------------------------------------------------------------------------
@@ -67,9 +90,9 @@ def _classes_in_boundary() -> dict[str, list[str]]:
 
 
 class TestClaimIds:
-    def test_ids_are_c1_to_c9(self) -> None:
+    def test_ids_are_c1_to_c10(self) -> None:
         ids = [c.id for c in _demo.CLAIMS]
-        assert ids == ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9"]
+        assert ids == ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10"]
 
     def test_ids_are_unique(self) -> None:
         ids = [c.id for c in _demo.CLAIMS]
@@ -101,23 +124,26 @@ class TestClaimIds:
 
 
 # ---------------------------------------------------------------------------
-# C9 can never be PASS
+# C9 can never be PASS -- it reports PARTIAL on success, never PASS, because
+# its tests prove less than the claim's full text.
 # ---------------------------------------------------------------------------
 
 
 class TestC9NeverPass:
-    def test_c9_kind_is_none(self) -> None:
+    def test_c9_kind_is_go(self) -> None:
         c9 = next(c for c in _demo.CLAIMS if c.id == "C9")
-        assert c9.kind == "none"
+        assert c9.kind == "go"
 
-    def test_decide_status_cannot_produce_c9_pass(self) -> None:
-        """decide_status works on exit codes, which C9 never produces (kind=none)."""
-        # Any exit code given to decide_status could theoretically yield PASS,
-        # but C9 is never routed through decide_status because kind == "none".
+    def test_c9_success_status_is_partial_not_pass(self) -> None:
         c9 = next(c for c in _demo.CLAIMS if c.id == "C9")
-        assert c9.kind != "python" and c9.kind != "go"
+        assert c9.success_status == _demo.STATUS_PARTIAL
+        assert c9.success_status != _demo.STATUS_PASS
 
-    def test_c9_status_is_not_implemented_in_main(self) -> None:
+    def test_c9_has_a_note_explaining_its_scope(self) -> None:
+        c9 = next(c for c in _demo.CLAIMS if c.id == "C9")
+        assert c9.note.strip(), "C9 must say what it does and does not prove"
+
+    def test_c9_status_never_shows_pass_in_dry_run(self) -> None:
         """main(--dry-run) never shows PASS for C9."""
         import io
         from contextlib import redirect_stdout
@@ -190,29 +216,23 @@ class TestGoStatus:
 
 
 class TestPythonNodeIds:
-    def test_all_python_nodes_name_existing_classes(self) -> None:
-        known = _classes_in_boundary()
+    def test_all_python_nodes_resolve_to_a_real_test(self) -> None:
+        """Every python-kind node id names either an existing boundary-proof
+        class with at least one test method (C1-C9's shape), or an existing
+        top-level test function (C10's shape, test_t4_prohibition.py)."""
         for claim in _demo.CLAIMS:
             if claim.kind != "python":
                 continue
             for node in claim.python_nodes:
-                # node has the form "tests/test_ai_boundary_proof.py::ClassName"
-                class_name = node.split("::")[-1]
-                assert class_name in known, (
-                    f"{claim.id}: node {node!r} references class {class_name!r}"
-                    " which does not exist in test_ai_boundary_proof.py"
-                )
-
-    def test_all_referenced_classes_have_at_least_one_test_method(self) -> None:
-        known = _classes_in_boundary()
-        for claim in _demo.CLAIMS:
-            if claim.kind != "python":
-                continue
-            for node in claim.python_nodes:
-                class_name = node.split("::")[-1]
-                methods = known.get(class_name, [])
-                assert methods, (
-                    f"{claim.id}: class {class_name!r} exists but has no test methods"
+                # node has the form "tests/<file>.py::<ClassOrFunctionName>"
+                file_part, name = node.split("::")
+                path = _TOOLS_DIR.parent / file_part
+                assert path.exists(), f"{claim.id}: {file_part!r} does not exist"
+                resolvable = _resolvable_test_names(path)
+                assert name in resolvable, (
+                    f"{claim.id}: node {node!r} does not resolve to an existing"
+                    f" function or a test class with at least one test method"
+                    f" in {file_part}"
                 )
 
 
@@ -259,7 +279,7 @@ class TestDryRun:
             ret = _demo.main(["--dry-run"])
         assert ret == 0
 
-    def test_dry_run_shows_all_nine_claim_ids(self) -> None:
+    def test_dry_run_shows_every_claim_id(self) -> None:
         import io
         from contextlib import redirect_stdout
 
@@ -290,6 +310,49 @@ class TestC8GoTestNames:
 
 
 # ---------------------------------------------------------------------------
+# C9 Go test name constants (no file access -- constants only)
+# ---------------------------------------------------------------------------
+
+
+class TestC9GoTestNames:
+    def test_app_test_name(self) -> None:
+        assert _demo.C9_APP_TESTS == ("TestProposalGoesToReviewWhenTheAIPlaneCannotHelp",)
+
+    def test_http_test_name(self) -> None:
+        assert _demo.C9_HTTP_TESTS == ("TestProposeClassificationReviewRequired",)
+
+    def test_c9_go_tests_includes_both(self) -> None:
+        c9 = next(c for c in _demo.CLAIMS if c.id == "C9")
+        for name in _demo.C9_APP_TESTS + _demo.C9_HTTP_TESTS:
+            assert name in c9.go_tests
+
+
+# ---------------------------------------------------------------------------
+# C10 -- the T4 hard stop
+# ---------------------------------------------------------------------------
+
+
+class TestC10:
+    def test_c10_exists_and_is_python(self) -> None:
+        c10 = next(c for c in _demo.CLAIMS if c.id == "C10")
+        assert c10.kind == "python"
+
+    def test_c10_nodes_point_at_t4_prohibition_file(self) -> None:
+        c10 = next(c for c in _demo.CLAIMS if c.id == "C10")
+        assert c10.python_nodes, "C10 must name at least one test node"
+        for node in c10.python_nodes:
+            assert node.startswith("tests/test_t4_prohibition.py::"), node
+
+    def test_c10_names_the_two_required_tests(self) -> None:
+        c10 = next(c for c in _demo.CLAIMS if c.id == "C10")
+        names = {node.split("::")[-1] for node in c10.python_nodes}
+        assert names == {
+            "test_t4_refused_for_every_use_case_ceiling",
+            "test_gateway_invoke_t4_runtime_never_reached",
+        }
+
+
+# ---------------------------------------------------------------------------
 # --json flag produces valid JSON
 # ---------------------------------------------------------------------------
 
@@ -304,7 +367,7 @@ class TestJsonOutput:
             _demo.main(["--dry-run", "--json"])
         data = __import__("json").loads(buf.getvalue())
         assert isinstance(data, list)
-        assert len(data) == 9
+        assert len(data) == len(_demo.CLAIMS)
         for item in data:
             assert "id" in item
             assert "text" in item

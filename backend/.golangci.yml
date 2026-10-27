@@ -44,6 +44,7 @@ linters:
             - "**/internal/domain/fiscal/**"
             - "**/internal/domain/classification/**"
             - "**/internal/domain/obligation/**"
+            - "**/internal/domain/taxation/**"
           deny:
             - pkg: "github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
               desc: "AI output may not reach an authoritative path (ADR-0006 §2.6)"
