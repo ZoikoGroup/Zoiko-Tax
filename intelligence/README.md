@@ -111,7 +111,8 @@ python -m ztax_gateway.server   # needs ZTAX_GATEWAY_CONFIG, _REGION, _AI_TRAIN 
 
 ```
 pip install -e '.[dev]'
-python -m pytest          # ~1900 tests across governance, codec, tools, classifiers, evaluation, RAG and more
+python -m pytest          # governance, codec, tools, classifiers, evaluation, RAG and more
+python -m pytest --collect-only | tail -1   # the current test count (not -q: this repo's -q reporter prints per-file counts, not a total)
 python -m ruff check .
 python -m mypy src tests  # strict, nothing waived
 ```
@@ -183,18 +184,21 @@ Run this one command from the `intelligence/` directory:
 python tools/step10_demo.py
 ```
 
-It runs the existing boundary proof tests and prints a status for each of the nine playbook claims:
+It runs the existing boundary proof tests and prints a status for each playbook
+claim it defines — run `python tools/step10_demo.py --dry-run` to list them
+all, or see `CLAIMS` in `tools/step10_demo.py` for the current set:
 
 | Status | Meaning |
 |---|---|
 | `PASS` | Tests that prove the claim were executed and passed. |
+| `PARTIAL` | Tests passed, but they prove less than the claim's full text — see that row's evidence for exactly what is and is not covered. |
 | `FAIL` | At least one test failed; see the evidence column for names. |
 | `NOT IMPLEMENTED` | No test exists yet for this claim (Go side not implemented yet). |
 | `NOT RUN` | The tool or runtime needed to run the claim was unavailable. |
 
 No live model is connected.  These checks show governance is independent of model output and payload content.  They do not show that a real model resists injection.
 
-Pass `--skip-go` to skip the Go row (C8), `--dry-run` to see all nine rows without executing anything, or `--json` for machine-readable output.
+Pass `--skip-go` to skip the Go rows (C8, C9), `--dry-run` to see every row without executing anything, or `--json` for machine-readable output.
 
 ## The rule that holds regardless
 

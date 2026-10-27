@@ -1,7 +1,9 @@
 """Step-10 AI Boundary Demo Runner.
 
 One-command demonstration of the playbook's AI boundary claims.  Prints an
-honest status for each claim: PASS, FAIL, NOT IMPLEMENTED or NOT RUN.
+honest status for each claim: PASS, PARTIAL, FAIL, NOT IMPLEMENTED or NOT RUN.
+PARTIAL means the claim's tests pass but prove less than the claim's full
+text -- see that row's evidence for exactly what is and is not covered.
 
 Usage::
 
@@ -38,8 +40,13 @@ _INTEL_DIR: Final[Path] = _TOOLS_DIR.parent
 _REPO_ROOT: Final[Path] = _INTEL_DIR.parent
 _BACKEND_DIR: Final[Path] = _REPO_ROOT / "backend"
 
-# Go source files that prove C8.
+# Go source files that prove C8 and C9. C9's app-side test lives in
+# classification_test.go, not ai_independence_test.go, so both app-package
+# files are checked.
 _GO_APP_FILE: Final[Path] = _BACKEND_DIR / "internal" / "app" / "ai_independence_test.go"
+_GO_APP_CLASSIFICATION_FILE: Final[Path] = (
+    _BACKEND_DIR / "internal" / "app" / "classification_test.go"
+)
 _GO_HTTP_FILE: Final[Path] = (
     _BACKEND_DIR / "internal" / "transport" / "http" / "classification_test.go"
 )
@@ -55,6 +62,7 @@ _KIND_NONE: Final[str] = "none"
 # Status constants -- used as strings so JSON output is human-readable.
 STATUS_PASS: Final[str] = "PASS"
 STATUS_FAIL: Final[str] = "FAIL"
+STATUS_PARTIAL: Final[str] = "PARTIAL"
 STATUS_NOT_IMPLEMENTED: Final[str] = "NOT IMPLEMENTED"
 STATUS_NOT_RUN: Final[str] = "NOT RUN"
 
@@ -68,23 +76,41 @@ class Claim:
     playbook_ref: str
     kind: str  # "python" | "go" | "none"
     python_nodes: tuple[str, ...] = dataclasses.field(default_factory=tuple)
-    go_tests: tuple[str, ...] = dataclasses.field(default_factory=tuple)
+    go_app_tests: tuple[str, ...] = dataclasses.field(default_factory=tuple)
+    go_http_tests: tuple[str, ...] = dataclasses.field(default_factory=tuple)
+    # success_status is what a go-kind claim reports when its tests all pass.
+    # Almost always PASS; C9 uses PARTIAL because passing its tests proves
+    # less than the claim's full text -- see its note.
+    success_status: str = STATUS_PASS
     note: str = ""
 
+    @property
+    def go_tests(self) -> tuple[str, ...]:
+        """Every Go test name this claim runs, app package first."""
+        return self.go_app_tests + self.go_http_tests
 
-# Go test names for C8 -- kept as named constants so the unit tests can
-# compare them without touching the filesystem.
+
+# Go test names for C8 and C9 -- kept as named constants so the unit tests
+# can compare them without touching the filesystem.
 C8_APP_TESTS: Final[tuple[str, ...]] = (
     "TestDeterministicFlowIndependentOfGateway",
     "TestDeterminationServiceTakesNoModelGateway",
 )
 C8_HTTP_TESTS: Final[tuple[str, ...]] = ("TestKilledUseCaseNeverReachesTransport",)
 
+C9_APP_TESTS: Final[tuple[str, ...]] = ("TestProposalGoesToReviewWhenTheAIPlaneCannotHelp",)
+C9_HTTP_TESTS: Final[tuple[str, ...]] = ("TestProposeClassificationReviewRequired",)
+
 _BOUNDARY_FILE: Final[str] = "tests/test_ai_boundary_proof.py"
+_T4_FILE: Final[str] = "tests/test_t4_prohibition.py"
 
 
 def _node(cls: str) -> str:
     return f"{_BOUNDARY_FILE}::{cls}"
+
+
+def _t4_node(name: str) -> str:
+    return f"{_T4_FILE}::{name}"
 
 
 CLAIMS: Final[tuple[Claim, ...]] = (
@@ -157,7 +183,8 @@ CLAIMS: Final[tuple[Claim, ...]] = (
         ),
         playbook_ref="ZTAX-ENG-RESET-001 §19, §26 step 10",
         kind=_KIND_GO,
-        go_tests=C8_APP_TESTS + C8_HTTP_TESTS,
+        go_app_tests=C8_APP_TESTS,
+        go_http_tests=C8_HTTP_TESTS,
     ),
     Claim(
         id="C9",
@@ -166,8 +193,30 @@ CLAIMS: Final[tuple[Claim, ...]] = (
             " review."
         ),
         playbook_ref="ZTAX-ENG-RESET-001 §19, §26 step 10",
-        kind=_KIND_NONE,
-        note="Go side not implemented yet",
+        kind=_KIND_GO,
+        go_app_tests=C9_APP_TESTS,
+        go_http_tests=C9_HTTP_TESTS,
+        success_status=STATUS_PARTIAL,
+        note=(
+            "Proves a review-required response when the AI gateway is"
+            " unavailable, not configured, or returns a proposal that is not"
+            " an ontology node. Does NOT prove low-confidence routing or"
+            " durable storage in a review queue."
+        ),
+    ),
+    Claim(
+        id="C10",
+        text=(
+            "A T4 (prohibited) risk-tier ceiling is refused unconditionally for"
+            " every use-case ceiling, including when the ceiling itself is T4,"
+            " and the model runtime is never invoked."
+        ),
+        playbook_ref="ZTAX-AIGOV-001 §5, REQ-0107",
+        kind=_KIND_PYTHON,
+        python_nodes=(
+            _t4_node("test_t4_refused_for_every_use_case_ceiling"),
+            _t4_node("test_gateway_invoke_t4_runtime_never_reached"),
+        ),
     ),
 )
 
@@ -186,7 +235,7 @@ def decide_status(exit_code: int) -> str:
 
 
 def go_status(output: str, exit_code: int, expected_names: tuple[str, ...]) -> str:
-    """Decide the C8 status from ``go test -v`` output and exit code.
+    """Decide a Go-backed claim's status from ``go test -v`` output and exit code.
 
     Rules:
     * Non-zero exit code -> FAIL.
@@ -308,6 +357,7 @@ def summarise(results: list[tuple[Claim, str, list[str]]]) -> str:
     """Return a one-line count of each status."""
     counts: dict[str, int] = {
         STATUS_PASS: 0,
+        STATUS_PARTIAL: 0,
         STATUS_FAIL: 0,
         STATUS_NOT_IMPLEMENTED: 0,
         STATUS_NOT_RUN: 0,
@@ -339,7 +389,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         description="Step-10 AI boundary demo runner.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--skip-go", action="store_true", help="Skip the Go C8 row.")
+    parser.add_argument("--skip-go", action="store_true", help="Skip the Go rows (C8, C9).")
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -364,7 +414,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     results: list[tuple[Claim, str, list[str]]] = []
 
     go_available = _go_available()
-    go_files_present = _GO_APP_FILE.exists() and _GO_HTTP_FILE.exists()
+    go_files_present = (
+        _GO_APP_FILE.exists()
+        and _GO_APP_CLASSIFICATION_FILE.exists()
+        and _GO_HTTP_FILE.exists()
+    )
 
     for claim in CLAIMS:
         status: str
@@ -374,8 +428,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             status = f"{STATUS_NOT_RUN} (dry run)"
         elif claim.kind == _KIND_NONE:
             status = STATUS_NOT_IMPLEMENTED
-            if claim.note:
-                evidence = [claim.note]
         elif claim.kind == _KIND_PYTHON:
             status, evidence = _run_python(claim.python_nodes, _INTEL_DIR)
         elif claim.kind == _KIND_GO:
@@ -386,25 +438,25 @@ def main(argv: Sequence[str] | None = None) -> int:
             elif not go_files_present:
                 status = f"{STATUS_NOT_RUN} (Go test files not found in this checkout)"
             else:
-                # Run ./internal/app tests
-                app_pattern = (
-                    "^("
-                    + "|".join(C8_APP_TESTS)
-                    + ")$"
-                )
-                app_status, _app_out = _run_go(
-                    "./internal/app", app_pattern, C8_APP_TESTS, _BACKEND_DIR
-                )
-                # Run ./internal/transport/http tests
-                http_pattern = "^(" + "|".join(C8_HTTP_TESTS) + ")$"
-                http_status, _http_out = _run_go(
-                    "./internal/transport/http",
-                    http_pattern,
-                    C8_HTTP_TESTS,
-                    _BACKEND_DIR,
-                )
+                # Run this claim's ./internal/app tests, if it has any.
+                app_status = STATUS_PASS
+                if claim.go_app_tests:
+                    app_pattern = "^(" + "|".join(claim.go_app_tests) + ")$"
+                    app_status, _app_out = _run_go(
+                        "./internal/app", app_pattern, claim.go_app_tests, _BACKEND_DIR
+                    )
+                # Run this claim's ./internal/transport/http tests, if it has any.
+                http_status = STATUS_PASS
+                if claim.go_http_tests:
+                    http_pattern = "^(" + "|".join(claim.go_http_tests) + ")$"
+                    http_status, _http_out = _run_go(
+                        "./internal/transport/http",
+                        http_pattern,
+                        claim.go_http_tests,
+                        _BACKEND_DIR,
+                    )
                 if app_status == STATUS_PASS and http_status == STATUS_PASS:
-                    status = STATUS_PASS
+                    status = claim.success_status
                 else:
                     status = STATUS_FAIL
                     if app_status == STATUS_FAIL:
@@ -413,6 +465,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                         evidence.append("http package: FAIL")
         else:
             status = STATUS_NOT_IMPLEMENTED
+
+        # The note describes the claim's scope (what is and is not proven);
+        # show it regardless of which branch above ran, so it is never lost
+        # for a status this file didn't anticipate.
+        if claim.note:
+            evidence = [claim.note, *evidence]
 
         results.append((claim, status, evidence))
 

@@ -35,13 +35,13 @@ and prints a formatted table to the terminal, followed by a Markdown evidence
 table you can copy into a review document.
 
 **Exit codes**
-- `0` — all 7 Intelligence boundary claims PASS and the 2 Go-side claims are
-  correctly reported as NOT IMPLEMENTED.
-- `1` — at least one Intelligence claim FAILED.
+- `0` — every claim is PASS or PARTIAL; none FAILED. (C9 reports PARTIAL even
+  on a clean run — see below for why that is correct, not a bug.)
+- `1` — at least one claim FAILED.
 
 ---
 
-## The 9 Claims
+## The 10 Claims
 
 | ID | Description | Scope |
 |----|-------------|-------|
@@ -53,7 +53,8 @@ table you can copy into a review document.
 | C6 | Sensitive data never leaks; tenant isolation strictly enforced | Intelligence |
 | C7 | Malformed context is refused at the wire layer before governance | Intelligence |
 | C8 | Commits and determination continue with AI off | Go Core Engine |
-| C9 | Ambiguous mappings route to human review | Go Core Engine |
+| C9 | Ambiguous mappings route to human review (PARTIAL — see below) | Go Core Engine |
+| C10 | A T4 (prohibited) risk tier is refused unconditionally; the model runtime is never reached | Intelligence |
 
 ---
 
@@ -66,6 +67,10 @@ no live model, no network, no external service.  The tests prove that the
 redaction, tenant scoping, wire validation) work correctly regardless of what
 a model might return.
 
+Claim C10 is proven the same way, in a separate file, `tests/test_t4_prohibition.py`:
+the T4 risk tier is refused unconditionally, including when the use case's
+own ceiling is declared T4, and the model runtime is never reached.
+
 ---
 
 ## What Is NOT IMPLEMENTED Here
@@ -77,15 +82,33 @@ must continue without interruption.  This is structurally enforced by Go and
 Python being separate processes with separate failure domains; it cannot be
 verified from the Python side.
 
-**C9 — Ambiguous mappings route to human review**  
-This is a content-review workflow: when a SKU classification is ambiguous, the
-system must route it to a human reviewer rather than accepting an uncertain
-AI proposal.  This workflow lives in the Go service and the content-review
-queue, not in the Intelligence gateway.
+This row runs real Go tests (see `tools/step10_demo.py`'s `C8_APP_TESTS` /
+`C8_HTTP_TESTS`) and reports PASS or FAIL from them, not a placeholder.
 
-These two rows will always show **NOT IMPLEMENTED** in this runner.  They must
-be demonstrated through Go integration tests and the content-review workflow,
-not through this script.
+---
+
+## What C9 Actually Proves — PARTIAL, Not "Ambiguous Mappings"
+
+**C9 — Ambiguous mappings route to human review**  
+The claim as named is broader than what is built. What the Go tests actually
+prove is narrower and different in kind: when the AI gateway cannot help at
+all — unavailable, not configured in this cell, or it answers with a
+proposal that is not a valid ontology node — the classification endpoint
+returns a `REVIEW_REQUIRED` disposition instead of a fabricated proposal, and
+the deterministic tax path is unaffected either way.
+
+**What this does NOT prove:**
+- **"Ambiguous" mappings.** There is no confidence-based routing. A
+  successful AI proposal with any confidence score, however low, is still
+  returned as a proposal for a person to confirm — it is never itself routed
+  to review for being uncertain.
+- **A content-review queue.** Nothing is persisted. The disposition is
+  returned synchronously in the API response for that one request; there is
+  no table, no repository and no endpoint to list held items.
+
+This row runs real Go tests (`C9_APP_TESTS` / `C9_HTTP_TESTS`) and reports
+**PARTIAL** when they pass — never PASS, because passing them proves less
+than the claim's full text. It reports FAIL if they do not pass.
 
 ---
 
