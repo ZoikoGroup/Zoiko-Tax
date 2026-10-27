@@ -1,13 +1,14 @@
 {
   "bundleId": "global-telecom-2026.10",
   "packId": "ZTAX-CP-GLOBAL-TELECOM",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "level": "GLOBAL",
   "status": "RESEARCH",
   "capabilities": ["DETERMINE", "JURISDICTION"],
   "deploymentModes": ["P0_ZOIKO_ONLY"],
   "sources": [
     { "sourceId": "SRC-ZOIKO-GLOBAL-RATES-2026" },
-    { "sourceId": "SRC-ZOIKO-US-STATE-TELECOM-2026" }
+    { "sourceId": "SRC-ZOIKO-US-STATE-TELECOM-2026" },
+    { "sourceId": "SRC-ZOIKO-US-LOCAL-TELECOM-2026" }
   ]
 }
