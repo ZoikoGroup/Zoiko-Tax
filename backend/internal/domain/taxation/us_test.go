@@ -155,6 +155,80 @@ func TestUnverifiedServicesAreUnsupportedNotZero(t *testing.T) {
 	}
 }
 
+// Local taxes: a place named by its city bears the state's taxes and the
+// city's on top. The pack models New York City, Chicago and Los Angeles only.
+
+func usCitySale(city, service string) sale {
+	return sale{
+		seller:   taxation.Place{Country: "US"},
+		evidence: usedAt(taxation.Place{Jurisdiction: "jurisdiction:" + city}),
+		service:  service, currency: "USD", amount: "100.00",
+	}
+}
+
+func TestUSCitiesStackLocalOnStateTaxes(t *testing.T) {
+	e := global(t)
+	type charge struct{ component, amount string }
+	cases := []struct {
+		name    string
+		city    string
+		charges []charge
+		total   string
+	}{
+		// 4% State + 4.5% City + 0.375% MCTD = 8.875%; the §186-e excise is
+		// the provider's cost and stays off the bill.
+		{"New York City mobile voice", "us-ny-new-york-city", []charge{
+			{"us-ny.sales-telecom", "4.00"},
+			{"us-ny-new-york-city.sales-telecom", "4.50"},
+			{"us-ny-new-york-city.mctd", "0.38"},
+		}, "108.88"},
+		// 8.65% Illinois excise + 7% Chicago telecommunications tax.
+		{"Chicago mobile voice", "us-il-chicago", []charge{
+			{"us-il.tet", "8.65"},
+			{"us-il-chicago.telecom", "7.00"},
+		}, "115.65"},
+		// California taxes no telecommunications; the City's 9% CUT does.
+		{"Los Angeles mobile voice", "us-ca-los-angeles", []charge{
+			{"us-ca-los-angeles.cut", "9.00"},
+		}, "109.00"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			r := determine(t, e, usCitySale(c.city, "MOBILE_VOICE").doc(t), oct2026)
+			if r.State != taxation.StateResolved {
+				t.Fatalf("state %s (%s)", r.State, r.Reason)
+			}
+			for _, ch := range c.charges {
+				eq(t, ch.component, component(t, r, "L1", ch.component).Amount, ch.amount)
+			}
+			eq(t, "customer total", r.Totals.CustomerTotal, c.total)
+		})
+	}
+}
+
+func TestLocalTaxesCiteTheirOwnSource(t *testing.T) {
+	r := determine(t, global(t), usCitySale("us-il-chicago", "MOBILE_VOICE").doc(t), oct2026)
+	c := component(t, r, "L1", "us-il-chicago.telecom")
+	if c.Source != "SRC-ZOIKO-US-LOCAL-TELECOM-2026" || c.Citation == "" {
+		t.Errorf("Chicago cites %q", c.Source)
+	}
+}
+
+func TestAStateWithoutItsCityBearsStateTaxesOnly(t *testing.T) {
+	// The engine never geocodes: a Chicago customer named only as US-IL is
+	// taxed as Illinois, so the caller must name the city to get its tax.
+	r := determine(t, global(t), usSale("IL", "MOBILE_VOICE").doc(t), oct2026)
+	eq(t, "Illinois total", r.Totals.CustomerTotal, "108.65")
+}
+
+func TestInternetAccessIsExemptInCitiesToo(t *testing.T) {
+	e := global(t)
+	for _, city := range []string{"us-ny-new-york-city", "us-il-chicago", "us-ca-los-angeles"} {
+		r := determine(t, e, usCitySale(city, "MOBILE_DATA").doc(t), oct2026)
+		eq(t, city+" total", r.Totals.CustomerTotal, "100.00")
+	}
+}
+
 func lower(s string) string {
 	b := []byte(s)
 	for i, c := range b {
