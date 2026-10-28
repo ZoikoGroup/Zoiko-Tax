@@ -22,7 +22,7 @@ export const DashboardLayout = ({ children, view, onNavigate, onSignOut, ...cont
         onMenu={() => { setMenu((m) => !m) }}
       />
       <div className="zt-body">
-        <Sidebar view={view} onNavigate={go} tenant={context.session.tenant.displayName} advisory={advisory} open={menu} />
+        <Sidebar view={view} onNavigate={go} advisory={advisory} open={menu} />
         {menu ? <button type="button" className="zt-scrim" aria-label="Close navigation" onClick={() => { setMenu(false) }} /> : null}
         <div className="zt-main">
           <Hero view={view} />

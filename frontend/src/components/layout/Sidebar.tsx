@@ -19,7 +19,6 @@ import {
   IconShield,
   IconSliders,
 } from '../common/DashboardIcons'
-import { BrandMark } from './BrandMark'
 
 /** The views this build serves. Every other entry has no backend yet. */
 export type View =
@@ -102,21 +101,12 @@ export interface SidebarProps {
 }
 
 interface RailProps extends SidebarProps {
-  readonly tenant: string
   readonly advisory: boolean | null
   readonly open: boolean
 }
 
-export const Sidebar = ({ view, onNavigate, tenant, advisory, open }: RailProps) => (
+export const Sidebar = ({ view, onNavigate, advisory, open }: RailProps) => (
   <aside className={`zt-rail${open ? ' zt-rail--open' : ''}`} aria-label="Workspaces">
-    <div className="zt-rail-brand">
-      <span className="zt-rail-mark"><BrandMark /></span>
-      <div>
-        <div className="zt-rail-name">ZoikoTax<br />Command Center</div>
-        <div className="zt-rail-sub">{tenant}</div>
-      </div>
-    </div>
-
     <button type="button" className="zt-rail-cta" onClick={() => { onNavigate('determine') }}>
       <IconPlus />
       <span>New determination</span>

@@ -107,7 +107,7 @@
 .zt-rail {
   position: fixed; top: var(--zt-top-h); bottom: 0; left: 0; width: var(--zt-rail-w); z-index: 40;
   background: var(--zt-rail); color: var(--zt-rail-ink);
-  display: flex; flex-direction: column; gap: 20px; padding: 24px 18px 18px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 18px; padding: 20px 16px 16px; overflow-y: auto;
 }
 .zt-rail > * { flex-shrink: 0; }
 .zt-rail-brand { display: flex; align-items: center; gap: 14px; }
@@ -119,25 +119,26 @@
 .zt-rail-name { font-family: var(--zt-display); font-size: 18px; font-weight: 700; line-height: 1.15; }
 .zt-rail-sub { margin-top: 3px; font-size: 13px; color: var(--zt-rail-mute); }
 .zt-rail-cta {
-  display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 16px; border-radius: 10px;
-  background: var(--zt-accent); border: 1px solid #e59a68; color: #fff; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; gap: 10px; height: 42px; padding: 0 14px; border-radius: 10px;
+  background: var(--zt-accent); border: 1px solid #e59a68; color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
 }
 .zt-rail-cta:hover { background: var(--zt-accent-2); }
-.zt-rail-cta svg { width: 20px; height: 20px; padding: 2px; border-radius: 5px; background: #fff; color: var(--zt-accent); }
+.zt-rail-cta svg { width: 18px; height: 18px; padding: 2px; border-radius: 5px; background: #fff; color: var(--zt-accent); }
 .zt-rail-nav { display: flex; flex-direction: column; gap: 14px; }
-.zt-rail-group { display: flex; flex-direction: column; gap: 3px; }
+.zt-rail-group { display: flex; flex-direction: column; gap: 2px; }
 .zt-rail-group-title {
-  padding: 0 14px 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--zt-rail-mute);
+  padding: 0 12px 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--zt-rail-mute);
 }
 .zt-rail-item {
-  display: flex; align-items: center; gap: 14px; width: 100%; padding: 10px 14px; border-radius: 10px;
-  border: 1px solid transparent; background: none; color: var(--zt-rail-ink); font: inherit; font-size: 15px; text-align: left; cursor: pointer;
+  display: flex; align-items: center; gap: 12px; width: 100%; height: 38px; padding: 0 12px; border-radius: 9px;
+  border: 1px solid transparent; background: none; color: var(--zt-rail-ink); font: inherit; font-size: 14px; text-align: left; cursor: pointer;
 }
-.zt-rail-item svg { width: 21px; height: 21px; flex: none; stroke-width: 1.7; }
+.zt-rail-item svg { width: 19px; height: 19px; flex: none; stroke-width: 1.7; }
 .zt-rail-item:hover { background: var(--zt-rail-2); }
 .zt-rail-item:disabled { opacity: .45; cursor: not-allowed; }
 .zt-rail-item--on { background: var(--zt-rail-2); border-color: #6a58c4; box-shadow: inset 3px 0 0 #8c7ae6; }
 .zt-rail-foot { margin-top: auto; display: flex; flex-direction: column; gap: 12px; padding-top: 16px; border-top: 1px solid var(--zt-rail-line); }
+/* The brand lockup; the sign-in screen shows it, the rail leaves it to the top bar. */
 .zt-rail-card {
   display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 12px;
   border: 1px solid var(--zt-rail-line); background: var(--zt-rail-2);
@@ -153,24 +154,29 @@
 .zt-main { margin-left: var(--zt-rail-w); min-width: 0; display: flex; flex-direction: column; }
 
 .zt-hero {
-  position: relative; overflow: hidden; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;
-  min-height: 168px; padding: 28px 32px 24px; background: var(--zt-surface); border-bottom: 1px solid var(--zt-line);
+  position: relative; overflow: hidden; display: flex; align-items: center; justify-content: space-between; gap: 24px;
+  min-height: 112px; padding: 20px 32px; background: var(--zt-surface); border-bottom: 1px solid var(--zt-line);
 }
 .zt-hero-text { position: relative; z-index: 1; min-width: 0; }
-.zt-hero-eyebrow { font-size: 12.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--zt-ink); }
+.zt-hero-eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--zt-ink-2); }
 .zt-hero h1 {
-  margin: 10px 0 0; font-family: var(--zt-display); font-size: clamp(28px, 3.2vw, 42px); font-weight: 700;
-  letter-spacing: -.03em; line-height: 1.08; color: var(--zt-ink); text-wrap: balance;
+  margin: 6px 0 0; font-family: var(--zt-display); font-size: clamp(22px, 2.2vw, 30px); font-weight: 700;
+  letter-spacing: -.025em; line-height: 1.12; color: var(--zt-ink); text-wrap: balance;
 }
-.zt-hero p { margin: 6px 0 0; font-size: clamp(17px, 1.7vw, 24px); color: var(--zt-ink-2); }
-.zt-hero-art { position: absolute; top: 0; right: 0; height: 100%; width: 58%; pointer-events: none; }
+.zt-hero p { margin: 4px 0 0; font-size: 15px; color: var(--zt-ink-2); }
+.zt-hero-art { position: absolute; top: 0; right: 0; height: 100%; width: 52%; pointer-events: none; }
+/* The pipeline as a row of steps sitting on the art, the current one filled. */
 .zt-hero-flow {
-  position: relative; z-index: 1; list-style: none; margin: 0; padding: 0 0 8px; display: flex; flex-direction: column; gap: 2px;
-  font-size: 14.5px; color: var(--zt-ink); border-bottom: 3px solid var(--zt-accent); min-width: 120px;
-  background: rgba(255, 255, 255, .72); border-radius: 8px 8px 0 0; padding: 8px 12px; backdrop-filter: blur(4px);
+  position: relative; z-index: 1; list-style: none; margin: 0; padding: 4px; display: flex; align-items: center; gap: 2px;
+  border-radius: 999px; background: rgba(255, 255, 255, .82); backdrop-filter: blur(6px);
+  box-shadow: 0 1px 2px rgba(35, 26, 72, .08); font-size: 13px; font-weight: 600; color: var(--zt-ink-2);
+  /* The mast sits about 13% of the hero's width from its right edge; stop short of it. */
+  margin-right: 14%;
 }
-.zt-hero-flow li:not(:last-child)::after { content: " \2192"; }
-.zt-hero-flow--on { color: var(--zt-accent-2); font-weight: 700; }
+.zt-hero-flow li { display: flex; align-items: center; height: 30px; padding: 0 12px; border-radius: 999px; white-space: nowrap; }
+.zt-hero-flow li:not(:last-child)::after { content: "\203A"; margin-left: 12px; margin-right: -12px; color: var(--zt-ink-3); }
+.zt-hero-flow li.zt-hero-flow--on { background: var(--zt-accent); color: #fff; }
+.zt-hero-flow li.zt-hero-flow--on::after { color: var(--zt-ink-3); }
 
 .zt-context {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; padding: 12px 32px;
@@ -192,9 +198,14 @@
 
 /* --- the pages inside, brought into the same family ---------------------- */
 
-.zt-app .ztax-card { border-color: var(--zt-line); border-radius: 16px; box-shadow: 0 1px 2px rgba(35, 26, 72, .05), 0 4px 16px rgba(35, 26, 72, .04); }
+.zt-app .ztax-card { border-color: var(--zt-line); border-radius: 16px; padding: 20px; box-shadow: 0 1px 2px rgba(35, 26, 72, .05), 0 4px 16px rgba(35, 26, 72, .04); }
+.zt-app .ztax-page-card { gap: 14px; }
+.zt-app .ztax-title-bar { align-items: flex-end; }
 .zt-app .ztax-title-text { font-family: var(--zt-display); font-size: 24px; letter-spacing: -.02em; color: var(--zt-ink); }
-.zt-app .ztax-card-title { font-family: var(--zt-display); color: var(--zt-ink); }
+.zt-app .ztax-status-line { flex-wrap: wrap; font-size: 13px; color: var(--zt-ink-3); }
+.zt-app .ztax-card-title { font-family: var(--zt-display); font-size: 15px; color: var(--zt-ink); }
+.zt-app .ztax-table-header { gap: 12px; min-height: 32px; }
+.zt-app .ztax-empty-note { margin: 0; font-size: 13px; }
 .zt-app .tabs { display: flex; flex-wrap: wrap; gap: 8px; border-bottom: 0; }
 .zt-app .tab {
   height: 36px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--zt-lav-line); background: var(--zt-surface);
@@ -231,6 +242,28 @@
 @media (prefers-reduced-motion: reduce) {
   .zt-rail { transition: none; }
 }
+/* Administration predates the shell; it takes the page width and the shell's
+   cards, buttons and tables instead of its own narrow column. */
+.zt-app .shell { max-width: none; margin: 0; padding: 0; }
+.zt-app .shell__header { margin-bottom: 20px; padding-bottom: 16px; border-bottom-color: var(--zt-line); }
+.zt-app .shell__header h1 { font-family: var(--zt-display); font-size: 24px; letter-spacing: -.02em; }
+.zt-app .panel { border-color: var(--zt-line); border-radius: 16px; padding: 20px; box-shadow: 0 1px 2px rgba(35, 26, 72, .05), 0 4px 16px rgba(35, 26, 72, .04); }
+.zt-app .panel h2 { font-family: var(--zt-display); font-size: 15px; }
+.zt-app .banner { border-radius: 10px; }
+.zt-app .btn { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 8px; font-weight: 500; }
+.zt-app .btn--primary { height: 36px; padding: 0 16px; background: var(--zt-accent); border-color: var(--zt-accent); color: #fff; font-weight: 600; }
+.zt-app .btn--primary:hover { background: var(--zt-accent-2); border-color: var(--zt-accent-2); }
+.zt-app .table { font-size: 13px; }
+.zt-app .table th {
+  font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--zt-ink-3);
+  border-bottom-color: var(--zt-line);
+}
+.zt-app .table td { border-bottom-color: var(--zt-line-2); vertical-align: middle; }
+.zt-app .roles { flex-direction: row; gap: 6px; }
+.zt-app .chip { height: 26px; padding: 0 10px; }
+.zt-app .chip--on { background: var(--zt-lav); border-color: var(--zt-lav-line); color: var(--zt-lav-ink); }
+.zt-app .field input { height: 36px; padding: 0 10px; border-radius: 8px; }
+
 
 /* --- sign-in ------------------------------------------------------------- */
 
@@ -245,6 +278,7 @@
 .zt-signin-eyebrow { font-size: 12.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--zt-rail-mute); }
 .zt-signin-brand h1 { margin: 12px 0 0; font-family: var(--zt-display); font-size: clamp(32px, 4vw, 52px); font-weight: 700; letter-spacing: -.03em; line-height: 1.06; text-wrap: balance; }
 .zt-signin-brand p { margin: 10px 0 0; font-size: 20px; color: var(--zt-rail-mute); }
+  .zt-hero-flow { margin-right: 18%; }
 .zt-signin-flow { list-style: none; margin: 0; padding: 0 0 8px; display: flex; flex-wrap: wrap; gap: 4px 0; font-size: 15px; border-bottom: 3px solid var(--zt-accent); align-self: flex-start; }
 .zt-signin-flow li:not(:last-child)::after { content: "\2192"; margin: 0 10px; color: var(--zt-rail-mute); }
 .zt-signin-form {
