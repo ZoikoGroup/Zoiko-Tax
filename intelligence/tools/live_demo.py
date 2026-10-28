@@ -37,7 +37,7 @@ from groq_demo_runtime import GroqDemoConfigError, GroqDemoRuntime
 from ztax_gateway.citation import Citation
 from ztax_gateway.grounding import GroundingFailure, GroundingValidator
 from ztax_gateway.invocation_evidence import InvocationEvidenceRecord
-from ztax_gateway.runtime import Result, Route
+from ztax_gateway.runtime import Result, Route, RuntimeUnavailableError
 from ztax_gateway.server import Gateway, GatewayError, load_config
 from ztax_gateway.wire import Call
 
@@ -117,7 +117,18 @@ def _demo_permitted_classification(
 ) -> None:
     _print_header("(a) one permitted classification proposal, real model")
     before = len(recorder.seen)
-    reply_bytes = gateway.invoke(_raw_call())
+    try:
+        reply_bytes = gateway.invoke(_raw_call())
+    except (GatewayError, RuntimeUnavailableError) as exc:
+        detail = exc.detail if isinstance(exc, GatewayError) else str(exc)
+        print(f"call failed: {detail}")
+        print(
+            "this is the governed refusal path, not a crash -- the provider failed "
+            "or the reply did not match the expected format, and the Gateway refused "
+            "rather than guessing. python tools/step10_demo.py shows the same "
+            "boundary claims with the fake runtime (no live model, no network)."
+        )
+        return
     reply = json.loads(reply_bytes)
     print(f"model_profile:    {reply.get('model_profile')}")
     print(f"provider_profile: {reply.get('provider_profile')}")
