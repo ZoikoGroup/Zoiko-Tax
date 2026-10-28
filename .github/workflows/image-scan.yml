@@ -132,8 +132,9 @@ jobs:
       # object's own sha).
       - name: Trivy scan (JSON, for the summary)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        # avoids anonymous trivy-db pull rate limits only; not a privileged credential
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # avoids anonymous trivy-db pull rate limits only; not a privileged credential
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           image-ref: image-scan/${{ matrix.service }}:${{ github.sha }}
           format: json

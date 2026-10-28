@@ -198,8 +198,9 @@ jobs:
       # that tag's target commit, not the tag object's own sha).
       - name: Trivy config scan (JSON, for the summary)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        # avoids anonymous trivy-db pull rate limits only; not a privileged credential
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # avoids anonymous trivy-db pull rate limits only; not a privileged credential
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           scan-type: config
           scan-ref: .
