@@ -1,0 +1,34 @@
+# DEMO ONLY. Never for production. Synthetic data only. Not part of CI.
+#
+# Overlay for a temporary demo: swaps the ztax-model-gateway service's
+# runtime for a real, pinned Groq-hosted model behind the same governed
+# Gateway, with nothing else about the stack changed. Use together with the
+# base file, never on its own:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.live-demo.yml up --build -d
+#   docker compose -f docker-compose.yml -f docker-compose.live-demo.yml down
+#
+# Needs GROQ_API_KEY and GROQ_MODEL in the local, gitignored .env --
+# see intelligence/LIVE_DEMO.md.
+#
+# Changes only the ztax-model-gateway service, and only three things on it:
+# bind-mounts intelligence/tools read-only, points the entrypoint at the new
+# intelligence/tools/serve_live_demo.py instead of `python -m
+# ztax_gateway.server`, and adds the two GROQ_* variables. Every other
+# service, and every hardening setting already on this one (read_only,
+# cap_drop, security_opt), is untouched by this file.
+#
+# GROQ_API_KEY and GROQ_MODEL use the plain ${VAR} form on purpose, not
+# ${VAR:?...} or ${VAR:-...}: docs/tools/check_secrets_manifest.py exempts
+# docker-compose.yml by name (it is on the sanctioned-files list) but this
+# file is not, and its secret-shaped-value check only recognises the plain
+# form as a safe reference.
+
+services:
+  ztax-model-gateway:
+    volumes:
+      - ./intelligence/tools:/app/tools:ro
+    entrypoint: ["python", "/app/tools/serve_live_demo.py"]
+    environment:
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL}
