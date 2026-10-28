@@ -365,13 +365,20 @@
 }
 
 .ztax-btn-copper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
   background-color: #c86a3b;
   color: #ffffff;
   border: none;
-  font-size: 12px;
+  font: inherit;
+  font-size: 13px;
   font-weight: 600;
-  padding: 8px 16px;
+  padding: 0 16px;
   border-radius: 8px;
+  white-space: nowrap;
   cursor: pointer;
   transition: background-color 0.15s;
 }
@@ -452,20 +459,41 @@
   border-radius: 4px;
 }
 
+.ztax-kpi-grid > .ztax-card {
+  display: flex;
+  flex-direction: column;
+}
+
 .ztax-kpi-value {
   font-size: 24px;
   font-weight: 700;
   color: #111827;
   margin-top: 8px;
   letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
+/* Several currencies: a compact two-column list rather than a tall stack. */
+.ztax-kpi-value:has(> div + div) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* The footer sits on the card's bottom edge, so footers line up across a row. */
 .ztax-kpi-footer {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  margin-top: 12px;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: auto;
+  padding-top: 12px;
   font-size: 12px;
+  line-height: 1.45;
 }
 
 .ztax-delta-green {
@@ -487,13 +515,19 @@
 /* Row 2: Trend Chart & Table */
 .ztax-split-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
   gap: 16px;
+}
+
+/* A long action list scrolls inside its card instead of stretching the row. */
+.ztax-action-scroll {
+  max-height: 340px;
+  overflow: auto;
 }
 
 @media (max-width: 1024px) {
   .ztax-split-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -540,7 +574,7 @@
 
 .ztax-sparkline-container {
   margin-top: 16px;
-  height: 180px;
+  height: 220px;
   width: 100%;
 }
 
@@ -602,18 +636,42 @@
 }
 
 .ztax-action-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #ffffff;
   text-align: left;
-  padding-bottom: 6px;
-  font-size: 10px;
-  font-weight: 400;
+  padding: 0 12px 8px 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: #9ca3af;
   border-bottom: 1px solid #f3f4f6;
+  white-space: nowrap;
 }
 
 .ztax-action-table td {
-  padding: 8px 0;
-  border-bottom: 1px solid #f9fafb;
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid #f3f4f6;
   vertical-align: middle;
+  line-height: 1.4;
+}
+
+/* Context is often a period and a full decision id; it is shortened here and
+   whole on hover, so the exposure, due and action columns stay in the card. */
+.ztax-action-table td.ztax-action-context {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #6b7280;
+}
+
+.ztax-action-table th:last-child,
+.ztax-action-table td:last-child {
+  padding-right: 0;
+  text-align: right;
 }
 
 .ztax-badge-priority {
@@ -860,33 +918,85 @@
   overflow: auto;
 }
 
+/* Every field is label, control, then help, top-aligned, so a field with help
+   text or a taller control never pushes its neighbours' inputs off the row.
+   The label line is a fixed 18px; with the 6px gap, a control always starts
+   24px below the top of its cell, which is where buttons in a form row sit. */
 .ztax-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
   font-size: 12px;
   color: #374151;
 }
-.ztax-field input,
+.ztax-field > span:first-child {
+  line-height: 18px;
+  font-weight: 600;
+  color: #4b5563;
+}
+.ztax-field input:not([type="checkbox"]):not([type="radio"]),
 .ztax-field select,
 .ztax-field textarea {
   font: inherit;
   font-size: 13px;
-  padding: 6px 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 0 10px;
   border: 1px solid #d1d5db;
-  border-radius: 6px;
+  border-radius: 8px;
   background: #ffffff;
+  color: #111827;
+}
+.ztax-field input:not([type="checkbox"]):not([type="radio"]),
+.ztax-field select {
+  height: 36px;
+}
+.ztax-field input[type="checkbox"],
+.ztax-field input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex: none;
+  accent-color: #c4622a;
+}
+.ztax-field textarea {
+  min-height: 88px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+.ztax-field input:focus,
+.ztax-field select:focus,
+.ztax-field textarea:focus {
+  border-color: #c4622a;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(196, 98, 42, 0.15);
+}
+.ztax-field .field__help {
+  margin: 0;
+  line-height: 1.45;
+  color: #6b7280;
 }
 
 .ztax-form {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 10px;
-  align-items: end;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+/* A button or action group placed in the form's grid lines up with the
+   controls, not with the labels above them. */
+.ztax-form > button,
+.ztax-form > .ztax-form-actions {
+  margin-top: 24px;
+  justify-self: start;
 }
 
 .ztax-form-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
 }
@@ -897,13 +1007,28 @@
 }
 
 .ztax-btn-quiet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
   font: inherit;
-  font-size: 12px;
-  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0 12px;
   border: 1px solid #d1d5db;
-  border-radius: 6px;
+  border-radius: 8px;
   background: #ffffff;
+  color: #111827;
+  white-space: nowrap;
   cursor: pointer;
+}
+.ztax-btn-quiet:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+.ztax-form .ztax-btn-quiet {
+  height: 36px;
 }
 
 .ztax-kv {

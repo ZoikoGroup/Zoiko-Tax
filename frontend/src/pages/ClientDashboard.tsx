@@ -361,7 +361,7 @@ export const ClientDashboard = ({ period }: ClientDashboardProps) => {
           {d.actions.length === 0 ? (
             <p className="ztax-empty-note">Nothing in the record needs a person right now.</p>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className="ztax-action-scroll">
               <table className="ztax-action-table">
                 <thead>
                   <tr>
@@ -380,7 +380,7 @@ export const ClientDashboard = ({ period }: ClientDashboardProps) => {
                         <span className={`ztax-badge-priority ${priorityClass(item.priority)}`}>{item.priority}</span>
                       </td>
                       <td style={{ fontWeight: 500, color: '#111827', paddingRight: 8 }}>{item.title}</td>
-                      <td style={{ color: '#6b7280', paddingRight: 8, whiteSpace: 'nowrap' }}>{item.context}</td>
+                      <td className="ztax-action-context" title={item.context}>{item.context}</td>
                       <td style={{ fontWeight: 700, color: '#111827', paddingRight: 8, whiteSpace: 'nowrap' }}>
                         {item.exposure === undefined ? '—' : moneyText(item.exposure)}
                       </td>
