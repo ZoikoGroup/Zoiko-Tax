@@ -1,0 +1,203 @@
+# Container image vulnerability scanning — report-only, same discipline as
+# dependency-scan.yml: a finding never fails this workflow. Only a scan that
+# crashed or was misconfigured fails it, so a broken scanner is never
+# mistaken for a clean one.
+#
+# A separate workflow, not another job in dependency-scan.yml (explicitly not
+# edited here) and not added to ci.yml's "all gates green" aggregate (needs:
+# [backend, crosscheck, contracts, sdk-python, sdk-go, sdk-java, sdk-dotnet,
+# frontend, stack, register] in ci.yml — this job is deliberately absent from
+# that list and nothing here changes it).
+#
+# Images scanned (from docker-compose.yml's own services and the Dockerfiles
+# they build from — confirmed by reading both, not assumed):
+#   ztax-core            backend/Dockerfile      target ztax-core
+#   ztax-migrate         backend/Dockerfile      target ztax-migrate
+#   ztax-web             frontend/Dockerfile     target ztax-web
+#   ztax-model-gateway   intelligence/Dockerfile target ztax-model-gateway
+#
+# Each is built locally in the job (docker/build-push-action with push:
+# false) rather than scanned via `trivy config`: all four base images
+# (golang, gcr.io/distroless, node, nginxinc/nginx-unprivileged, python) are
+# public and pullable with no registry login, the same assumption
+# release.yml's own `images` job already makes for ztax-core and ztax-web, so
+# nothing here needs a secret. If a future base image ever requires
+# authentication to pull, this job's build step will fail outright (not
+# silently fall back) and that is the signal to switch this job to
+# `scan-type: config` for the affected image instead.
+#
+# Trivy's own exit-code contract (aquasecurity/trivy-action's `exit-code`
+# input, confirmed from the action's documentation): exit-code "0" means the
+# action's own exit code is 0 regardless of how many vulnerabilities are
+# found -- findings are not a nonzero exit at all, unlike osv-scanner's or
+# govulncheck's text-mode contracts in dependency-scan.yml. Both Trivy steps
+# below set `exit-code: "0"` explicitly, for exactly this reason, rather than
+# relying on an implicit default. So no manual "found vulnerabilities vs
+# crashed" branching is needed here: a real scan failure (DB pull failure, a
+# malformed image, trivy itself crashing) already fails the step and the job
+# on its own, which is the report-only behaviour this workflow wants.
+name: Image scan
+
+# pull_request carries a paths filter: on a PR this only runs when an image
+# definition actually changed, so an unrelated PR does not pay for 4 image
+# builds. push/schedule/workflow_dispatch carry no filter on purpose: the
+# daily cron is what catches a new base-image CVE published against code
+# nobody touched, and that has nothing to do with which files a PR changed.
+# This stays report-only either way -- see the header above -- and is not
+# part of ci.yml's "all gates green" aggregate.
+on:
+  pull_request:
+    paths:
+      - "**/Dockerfile"
+      - "docker-compose*.yml"
+      - ".github/workflows/image-scan.yml"
+  push:
+    branches: [main]
+  schedule:
+    # 02:17 UTC, same slot as dependency-scan.yml's own cron, for the same
+    # reason: off-peak and not the top of the hour.
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-scan-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  scan:
+    name: image scan · Trivy (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: ztax-core
+            context: backend
+            target: ztax-core
+            build_contexts: ""
+          - service: ztax-migrate
+            context: backend
+            target: ztax-migrate
+            build_contexts: ""
+          # frontend/Dockerfile needs the named context `sdk`
+          # (docker-compose.yml: additional_contexts).
+          - service: ztax-web
+            context: frontend
+            target: ztax-web
+            build_contexts: "sdk=./sdk/typescript"
+          - service: ztax-model-gateway
+            context: intelligence
+            target: ztax-model-gateway
+            build_contexts: ""
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
+
+      # push: false -- this job only ever scans, never publishes. load: true
+      # puts the built image into the local Docker daemon so Trivy can
+      # reference it by tag below.
+      - name: build ${{ matrix.service }}
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: ${{ matrix.context }}
+          target: ${{ matrix.target }}
+          build-contexts: ${{ matrix.build_contexts }}
+          push: false
+          load: true
+          tags: image-scan/${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=gha,scope=image-scan-${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=image-scan-${{ matrix.service }}
+
+      - name: mkdir for evidence
+        run: mkdir -p image-scan-evidence
+
+      # JSON first, for the job summary below -- mirrors dependency-scan.yml's
+      # own "JSON for machine-readable evidence, a second run for the
+      # human-facing form" pattern (its govulncheck job runs twice for the
+      # equivalent reason).
+      # Pinned so a scanner upgrade is a reviewed diff, the same discipline as
+      # dependency-scan.yml's OSV_SCANNER_VERSION / GOVULNCHECK_VERSION.
+      # Confirmed as the current latest release via the GitHub API
+      # (repos/aquasecurity/trivy-action/releases/latest -> tag_name
+      # v0.36.0, published 2026-04-22; the pinned commit below is that tag's
+      # target commit, confirmed via git/refs/tags and git/tags, not the tag
+      # object's own sha).
+      - name: Trivy scan (JSON, for the summary)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        # avoids anonymous trivy-db pull rate limits only; not a privileged credential
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          image-ref: image-scan/${{ matrix.service }}:${{ github.sha }}
+          format: json
+          output: image-scan-evidence/${{ matrix.service }}.json
+          exit-code: "0" # report-only: never fail the job on a finding
+
+      # SARIF, uploaded as the artifact PART C asks for -- not to the GitHub
+      # Security tab, since dependency-scan.yml does not use that either.
+      - name: Trivy scan (SARIF, for the artifact)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          image-ref: image-scan/${{ matrix.service }}:${{ github.sha }}
+          format: sarif
+          output: image-scan-evidence/${{ matrix.service }}.sarif
+          exit-code: "0"
+
+      - name: job summary -- severity counts for ${{ matrix.service }}
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from collections import Counter
+
+          evidence_path = "image-scan-evidence/${{ matrix.service }}.json"
+          summary_path = os.environ["GITHUB_STEP_SUMMARY"]
+
+          with open(summary_path, "a", encoding="utf-8") as out:
+              out.write("## Trivy image scan -- ${{ matrix.service }}\n\n")
+
+              if not os.path.isfile(evidence_path):
+                  out.write(
+                      "No evidence file was produced (the scan likely failed "
+                      "before writing output -- see the previous step's log).\n"
+                  )
+                  raise SystemExit(0)
+
+              with open(evidence_path, encoding="utf-8") as f:
+                  data = json.load(f)
+
+              counts = Counter()
+              for result in data.get("Results", []):
+                  for vuln in result.get("Vulnerabilities", []) or []:
+                      counts[vuln.get("Severity", "UNKNOWN")] += 1
+
+              out.write("### Findings by severity\n\n")
+              if counts:
+                  out.write("| Severity | Count |\n|---|---|\n")
+                  known_order = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"]
+                  remaining = sorted(k for k in counts if k not in known_order)
+                  for sev in known_order + remaining:
+                      if sev in counts:
+                          out.write(f"| {sev} | {counts[sev]} |\n")
+              else:
+                  out.write("No vulnerabilities found.\n")
+          PY
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always() && hashFiles('image-scan-evidence/*') != ''
+        with:
+          name: trivy-evidence-${{ matrix.service }}
+          path: image-scan-evidence/
+          if-no-files-found: warn
+          retention-days: 30
