@@ -24,6 +24,9 @@ function initials(name: string): string {
   return `${first}${last}`.toUpperCase()
 }
 
+/** The open-menu key for the account menu; workspace menus use their group title. */
+const USER_MENU = '__user'
+
 interface TopBarProps {
   readonly session: SessionInfo
   readonly view: View
@@ -92,17 +95,36 @@ export const TopBar = ({ session, view, onNavigate, onSignOut, onMenu, menuOpen 
       </nav>
 
       <div className="zt-top-right">
-        <button type="button" className="zt-top-icon" aria-label="Find a location or tax" onClick={() => { onNavigate('locations') }}>
+        <button type="button" className="zt-top-search" aria-label="Find a location or tax" onClick={() => { onNavigate('locations') }}>
           <IconSearch />
+          <span className="zt-top-search-text">Find a location or tax</span>
         </button>
-        <span className="zt-top-user" title={session.user.email}>
-          <span className="zt-top-avatar" aria-hidden="true">{initials(session.user.displayName)}</span>
-          <span className="zt-top-username">{session.user.displayName}</span>
-        </span>
-        <button type="button" className="zt-btn zt-btn--ghost" onClick={onSignOut}>Sign out</button>
         <button type="button" className="zt-btn zt-btn--primary zt-top-cta" onClick={() => { onNavigate('determine') }}>
           New determination <IconArrowRight />
         </button>
+        <div className="zt-top-drop">
+          <button
+            type="button"
+            className="zt-top-user"
+            aria-label={`Account: ${session.user.displayName}`}
+            aria-expanded={open === USER_MENU}
+            onClick={() => { setOpen(open === USER_MENU ? null : USER_MENU) }}
+          >
+            <span className="zt-top-avatar" aria-hidden="true">{initials(session.user.displayName)}</span>
+            <span className="zt-top-username">{session.user.displayName}</span>
+            <IconChevronDown />
+          </button>
+          {open === USER_MENU ? (
+            <div className="zt-top-panel zt-top-panel--end">
+              <div className="zt-top-account">
+                <b>{session.user.displayName}</b>
+                <span>{session.user.email}</span>
+                <span>{session.tenant.displayName} · {session.user.roles.join(', ')}</span>
+              </div>
+              <button type="button" onClick={() => { setOpen(null); onSignOut() }}>Sign out</button>
+            </div>
+          ) : null}
+        </div>
       </div>
     </header>
   )

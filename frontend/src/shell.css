@@ -51,45 +51,73 @@
   z-index: 50;
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 0 24px 0 20px;
+  gap: 16px;
+  padding: 0 24px 0 0;
   background: var(--zt-surface);
   border-bottom: 1px solid var(--zt-line);
+  box-shadow: 0 1px 3px rgba(35, 26, 72, .04);
 }
 .zt-top-menu { display: none; }
-.zt-top-logo { border: 0; background: none; padding: 0; cursor: pointer; display: flex; width: calc(var(--zt-rail-w) - 44px); flex: none; }
-.zt-top-logo img { height: 34px; width: auto; }
-.zt-top-nav { display: flex; gap: 4px; }
+/* The wordmark sits in a column as wide as the rail, so the menus start where the page does. */
+.zt-top-logo {
+  border: 0; border-right: 1px solid var(--zt-line); background: none; padding: 0 24px; cursor: pointer;
+  display: flex; align-items: center; height: 100%; width: var(--zt-rail-w); flex: none;
+}
+.zt-top-logo img { height: 28px; width: auto; }
+.zt-top-nav { display: flex; align-items: center; gap: 2px; padding-left: 16px; }
 .zt-top-drop { position: relative; }
 .zt-top-link {
-  display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px;
-  border: 0; border-radius: 9px; background: none; font: inherit; font-size: 15px; font-weight: 500; color: var(--zt-ink); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px;
+  border: 0; border-radius: 999px; background: none; font: inherit; font-size: 14px; font-weight: 500; color: var(--zt-ink-2);
+  white-space: nowrap; cursor: pointer;
 }
-.zt-top-link svg { width: 15px; height: 15px; color: var(--zt-ink-2); }
-.zt-top-link:hover { background: var(--zt-surface-2); }
-.zt-top-link--here { color: var(--zt-accent-2); }
+.zt-top-link svg { width: 14px; height: 14px; color: var(--zt-ink-3); transition: transform .15s; }
+.zt-top-link:hover { background: var(--zt-surface-2); color: var(--zt-ink); }
+.zt-top-link[aria-expanded="true"] { background: var(--zt-lav); color: var(--zt-ink); }
+.zt-top-link[aria-expanded="true"] svg { transform: rotate(180deg); }
+.zt-top-link--here { background: var(--zt-accent-soft); color: var(--zt-accent-2); font-weight: 600; }
+.zt-top-link--here svg { color: var(--zt-accent-2); }
 .zt-top-panel {
-  position: absolute; top: calc(100% + 6px); left: 0; min-width: 240px; padding: 6px;
+  position: absolute; top: calc(100% + 8px); left: 0; min-width: 240px; padding: 6px;
   background: var(--zt-surface); border: 1px solid var(--zt-line); border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(35, 26, 72, .14); display: flex; flex-direction: column;
+  box-shadow: 0 12px 32px rgba(35, 26, 72, .14); display: flex; flex-direction: column; gap: 2px;
 }
+.zt-top-panel--end { left: auto; right: 0; min-width: 260px; }
 .zt-top-panel button {
-  display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 0; border-radius: 8px;
+  display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px; border: 0; border-radius: 8px;
   background: none; font: inherit; font-size: 14px; color: var(--zt-ink); text-align: left; cursor: pointer;
 }
 .zt-top-panel button svg { width: 17px; height: 17px; color: var(--zt-ink-2); }
 .zt-top-panel button:hover { background: var(--zt-lav); }
 .zt-top-panel button[aria-current="page"] { background: var(--zt-accent-soft); color: var(--zt-accent-2); font-weight: 600; }
-.zt-top-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
-.zt-top-icon { width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 10px; background: none; color: var(--zt-ink); cursor: pointer; }
-.zt-top-icon:hover { background: var(--zt-surface-2); }
-.zt-top-icon svg { width: 21px; height: 21px; }
-.zt-top-user { display: flex; align-items: center; gap: 8px; }
+.zt-top-panel button[aria-current="page"] svg { color: var(--zt-accent-2); }
+.zt-top-account {
+  display: flex; flex-direction: column; gap: 2px; padding: 8px 10px 10px; margin-bottom: 4px;
+  border-bottom: 1px solid var(--zt-line-2); font-size: 12.5px; color: var(--zt-ink-3);
+}
+.zt-top-account b { font-size: 14px; color: var(--zt-ink); }
+.zt-top-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+/* Search looks like the field it leads to: the Location taxation finder. */
+.zt-top-search {
+  display: inline-flex; align-items: center; gap: 8px; width: 240px; height: 38px; padding: 0 12px;
+  border: 1px solid var(--zt-line); border-radius: 10px; background: var(--zt-surface-2);
+  font: inherit; font-size: 13.5px; color: var(--zt-ink-3); text-align: left; cursor: pointer;
+}
+.zt-top-search:hover { border-color: var(--zt-lav-line); background: var(--zt-surface); }
+.zt-top-search svg { width: 16px; height: 16px; flex: none; }
+.zt-top-search-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zt-top-user {
+  display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 8px 0 3px; border: 1px solid transparent;
+  border-radius: 999px; background: none; font: inherit; color: var(--zt-ink); cursor: pointer;
+}
+.zt-top-user:hover, .zt-top-user[aria-expanded="true"] { border-color: var(--zt-line); background: var(--zt-surface-2); }
+.zt-top-user > svg { width: 14px; height: 14px; color: var(--zt-ink-3); }
 .zt-top-avatar {
-  width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
   background: var(--zt-lav); color: var(--zt-lav-ink); font-family: var(--zt-display); font-size: 12px; font-weight: 700;
 }
 .zt-top-username { font-size: 14px; font-weight: 600; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zt-top .zt-btn { height: 38px; padding: 0 16px; font-size: 14px; border-radius: 10px; }
 
 .zt-btn {
   display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 18px; border-radius: 9px;
@@ -110,6 +138,7 @@
   display: flex; flex-direction: column; gap: 18px; padding: 20px 16px 16px; overflow-y: auto;
 }
 .zt-rail > * { flex-shrink: 0; }
+/* The brand lockup; the sign-in screen shows it, the rail leaves it to the top bar. */
 .zt-rail-brand { display: flex; align-items: center; gap: 14px; }
 .zt-rail-mark {
   width: 64px; height: 64px; flex: none; border-radius: 14px; display: grid; place-items: center;
@@ -138,7 +167,6 @@
 .zt-rail-item:disabled { opacity: .45; cursor: not-allowed; }
 .zt-rail-item--on { background: var(--zt-rail-2); border-color: #6a58c4; box-shadow: inset 3px 0 0 #8c7ae6; }
 .zt-rail-foot { margin-top: auto; display: flex; flex-direction: column; gap: 12px; padding-top: 16px; border-top: 1px solid var(--zt-rail-line); }
-/* The brand lockup; the sign-in screen shows it, the rail leaves it to the top bar. */
 .zt-rail-card {
   display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 12px;
   border: 1px solid var(--zt-rail-line); background: var(--zt-rail-2);
@@ -214,34 +242,6 @@
 .zt-app .tab:hover { background: var(--zt-lav); }
 .zt-app .tab--selected { background: var(--zt-lav); border-color: var(--zt-lav-ink); }
 
-/* --- narrow -------------------------------------------------------------- */
-
-@media (max-width: 1180px) {
-  .zt-top-nav, .zt-top-username { display: none; }
-  .zt-hero-art { width: 70%; opacity: .55; }
-}
-@media (max-width: 980px) {
-  .zt-top { gap: 12px; padding: 0 16px; }
-  .zt-top-menu { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--zt-line); border-radius: 10px; background: var(--zt-surface); color: var(--zt-ink); cursor: pointer; }
-  .zt-top-menu svg { width: 20px; height: 20px; }
-  .zt-top-logo { width: auto; }
-  .zt-top-logo img { height: 28px; }
-  .zt-rail { transform: translateX(-100%); transition: transform .2s; box-shadow: 0 0 40px rgba(0, 0, 0, .3); }
-  .zt-rail--open { transform: none; }
-  .zt-scrim { display: block; position: fixed; inset: var(--zt-top-h) 0 0 0; z-index: 35; border: 0; background: rgba(20, 14, 40, .35); }
-  .zt-main { margin-left: 0; }
-  .zt-hero, .zt-context, .zt-viewport, .zt-foot { padding-left: 16px; padding-right: 16px; }
-  .zt-hero-flow { display: none; }
-}
-@media (max-width: 620px) {
-  .zt-top-cta, .zt-top-right .zt-btn--ghost { display: none; }
-  .zt-ctx-live { margin-left: 0; }
-  .zt-context { gap: 8px 16px; }
-  .zt-context > .zt-ctx:nth-child(n+3):not(:nth-child(5)) { display: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .zt-rail { transition: none; }
-}
 /* Administration predates the shell; it takes the page width and the shell's
    cards, buttons and tables instead of its own narrow column. */
 .zt-app .shell { max-width: none; margin: 0; padding: 0; }
@@ -264,6 +264,44 @@
 .zt-app .chip--on { background: var(--zt-lav); border-color: var(--zt-lav-line); color: var(--zt-lav-ink); }
 .zt-app .field input { height: 36px; padding: 0 10px; border-radius: 8px; }
 
+/* --- narrow -------------------------------------------------------------- */
+
+/* On a wide screen the top bar carries the call to action; the rail's copy is
+   for the drawer on a narrow one. */
+@media (min-width: 981px) {
+  .zt-rail-cta { display: none; }
+}
+@media (max-width: 1480px) {
+  .zt-top-search { width: 38px; padding: 0; justify-content: center; }
+  .zt-top-search-text { display: none; }
+}
+@media (max-width: 1180px) {
+  .zt-top-nav, .zt-top-username, .zt-top-user > svg { display: none; }
+  .zt-hero-art { width: 70%; opacity: .55; }
+  .zt-hero-flow { margin-right: 18%; }
+}
+@media (max-width: 980px) {
+  .zt-top { gap: 12px; padding: 0 16px; }
+  .zt-top-menu { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--zt-line); border-radius: 10px; background: var(--zt-surface); color: var(--zt-ink); cursor: pointer; }
+  .zt-top-menu svg { width: 20px; height: 20px; }
+  .zt-top-logo { width: auto; padding: 0; border-right: 0; }
+  .zt-top-logo img { height: 26px; }
+  .zt-rail { transform: translateX(-100%); transition: transform .2s; box-shadow: 0 0 40px rgba(0, 0, 0, .3); }
+  .zt-rail--open { transform: none; }
+  .zt-scrim { display: block; position: fixed; inset: var(--zt-top-h) 0 0 0; z-index: 35; border: 0; background: rgba(20, 14, 40, .35); }
+  .zt-main { margin-left: 0; }
+  .zt-hero, .zt-context, .zt-viewport, .zt-foot { padding-left: 16px; padding-right: 16px; }
+  .zt-hero-flow { display: none; }
+}
+@media (max-width: 620px) {
+  .zt-top-cta, .zt-top-right .zt-btn--ghost { display: none; }
+  .zt-ctx-live { margin-left: 0; }
+  .zt-context { gap: 8px 16px; }
+  .zt-context > .zt-ctx:nth-child(n+3):not(:nth-child(5)) { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zt-rail { transition: none; }
+}
 
 /* --- sign-in ------------------------------------------------------------- */
 
@@ -278,7 +316,6 @@
 .zt-signin-eyebrow { font-size: 12.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--zt-rail-mute); }
 .zt-signin-brand h1 { margin: 12px 0 0; font-family: var(--zt-display); font-size: clamp(32px, 4vw, 52px); font-weight: 700; letter-spacing: -.03em; line-height: 1.06; text-wrap: balance; }
 .zt-signin-brand p { margin: 10px 0 0; font-size: 20px; color: var(--zt-rail-mute); }
-  .zt-hero-flow { margin-right: 18%; }
 .zt-signin-flow { list-style: none; margin: 0; padding: 0 0 8px; display: flex; flex-wrap: wrap; gap: 4px 0; font-size: 15px; border-bottom: 3px solid var(--zt-accent); align-self: flex-start; }
 .zt-signin-flow li:not(:last-child)::after { content: "\2192"; margin: 0 10px; color: var(--zt-rail-mute); }
 .zt-signin-form {
