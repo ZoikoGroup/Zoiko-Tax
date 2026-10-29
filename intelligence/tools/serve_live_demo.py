@@ -13,15 +13,27 @@ drop-in replacement for the ``ztax-model-gateway`` service's entrypoint
 deployment changes.
 
 No edit to intelligence/src: everything below is built from ``server.py``'s
-own public names (``Gateway``, ``load_config``, ``serve``) and
-``GroqDemoRuntime``, imported from the sibling ``tools/`` module exactly as
-``live_demo.py`` already does.
+own public names (``Gateway``, ``load_config``, ``serve``), ``Route`` and
+``RoutingTable`` from ``runtime.py``, and ``GroqDemoRuntime``, imported from
+the sibling ``tools/`` module exactly as ``live_demo.py`` already does.
 
 ``GROQ_API_KEY`` and ``GROQ_MODEL`` are resolved first, by constructing
 ``GroqDemoRuntime`` before anything else runs. If either is missing, or
 ``GROQ_MODEL`` names a floating alias, a clear message -- never the key --
 is printed to stderr and the process exits non-zero before the config file
 is read, the Gateway is built, or any port is bound.
+
+The route loaded from ``ZTAX_GATEWAY_CONFIG`` (``registry.live-demo.json``
+for this script -- see ``docker-compose.live-demo.yml``) labels its model
+and provider "model:groq-live-demo" / "provider:groq-demo": a static
+placeholder, because ``load_config`` is a plain ``json.loads`` and a JSON
+file cannot read an environment variable. ``_patched_routes`` below replaces
+that placeholder in memory, after loading, with the real GROQ_MODEL value,
+so the Provenance table shows the model actually running. This has no
+effect on which model is actually called: ``route.model_profile`` is a
+provenance label only (``server.py``'s ``_run``), never read by
+``GroqDemoRuntime`` (``groq_demo_runtime.py`` resolves ``GROQ_MODEL`` itself,
+independently of any route).
 """
 
 from __future__ import annotations
@@ -33,6 +45,8 @@ from pathlib import Path
 
 from groq_demo_runtime import GroqDemoConfigError, GroqDemoRuntime
 
+from ztax_gateway.governance import UseCaseRegistry
+from ztax_gateway.runtime import Route, RoutingTable
 from ztax_gateway.server import Gateway, load_config, serve
 
 log = logging.getLogger("ztax_gateway.serve_live_demo")
@@ -42,9 +56,35 @@ _DEMO_WARNING = (
     "only, no authority."
 )
 
+# Matches the static placeholder in registry.live-demo.json's route -- see
+# the module docstring and _patched_routes below.
+_LIVE_MODEL_PROFILE_PREFIX = "model:groq-live-demo"
+_LIVE_PROVIDER_PROFILE = "provider:groq-demo"
+
 
 def _env(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
+
+
+def _patched_routes(registry: UseCaseRegistry, routes: RoutingTable, model: str) -> RoutingTable:
+    """Relabel every loaded route's model/provider profile with *model*.
+
+    Built only from RoutingTable's and UseCaseRegistry's own public methods
+    (``ids()``, ``route()``) and a fresh ``Route``/``RoutingTable`` -- no
+    edit to intelligence/src, and the registry file on disk is never
+    rewritten. Every use case in this registry is relabelled uniformly,
+    since registry.live-demo.json exists only to back this one live-demo
+    script (see docker-compose.live-demo.yml).
+    """
+    patched: dict[str, Route] = {}
+    for use_case_id in registry.ids():
+        route = routes.route(use_case_id)
+        patched[use_case_id] = Route(
+            model_profile=f"{_LIVE_MODEL_PROFILE_PREFIX}:{model}",
+            provider_profile=_LIVE_PROVIDER_PROFILE,
+            prompt_profile=route.prompt_profile,
+        )
+    return RoutingTable(patched)
 
 
 def main() -> int:
@@ -87,10 +127,11 @@ def main() -> int:
         )
         return 2
 
+    model = _env("GROQ_MODEL")
     registry, routes = load_config(Path(config))
+    routes = _patched_routes(registry, routes, model)
     gateway = Gateway(registry, routes, runtime, region, train)
 
-    model = _env("GROQ_MODEL")
     print(f"serve_live_demo: model={model!r} provider='groq-demo' address={address!r}")
     print(_DEMO_WARNING)
 

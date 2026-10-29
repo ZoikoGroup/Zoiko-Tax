@@ -11,12 +11,22 @@
 # Needs GROQ_API_KEY and GROQ_MODEL in the local, gitignored .env --
 # see intelligence/LIVE_DEMO.md.
 #
-# Changes only the ztax-model-gateway service, and only three things on it:
-# bind-mounts intelligence/tools read-only, points the entrypoint at the new
-# intelligence/tools/serve_live_demo.py instead of `python -m
+# Changes only the ztax-model-gateway service, and only four things on it:
+# bind-mounts intelligence/tools read-only, replaces the base registry mount
+# with intelligence/config/registry.live-demo.json (same target path, so it
+# overrides rather than adding a second mount -- the shared registry.dev.json
+# is untouched and ztax-core still reads it unchanged), points the entrypoint
+# at the new intelligence/tools/serve_live_demo.py instead of `python -m
 # ztax_gateway.server`, and adds the two GROQ_* variables. Every other
 # service, and every hardening setting already on this one (read_only,
 # cap_drop, security_opt), is untouched by this file.
+#
+# registry.live-demo.json labels the classification-review route
+# "model:groq-live-demo" / "provider:groq-demo" as a static placeholder --
+# a JSON file cannot read an environment variable. serve_live_demo.py patches
+# that label in memory at start-up with the real, pinned GROQ_MODEL value, so
+# the frontend's Provenance table shows the model actually running, with no
+# edit to the registry file and no edit to intelligence/src.
 #
 # GROQ_API_KEY and GROQ_MODEL use the plain ${VAR} form on purpose, not
 # ${VAR:?...} or ${VAR:-...}: docs/tools/check_secrets_manifest.py exempts
@@ -28,6 +38,7 @@ services:
   ztax-model-gateway:
     volumes:
       - ./intelligence/tools:/app/tools:ro
+      - ./intelligence/config/registry.live-demo.json:/etc/ztax/ai/registry.json:ro
     entrypoint: ["python", "/app/tools/serve_live_demo.py"]
     environment:
       GROQ_API_KEY: ${GROQ_API_KEY}

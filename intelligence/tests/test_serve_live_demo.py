@@ -255,8 +255,116 @@ def test_builds_gateway_with_groq_demo_runtime_and_never_leaks_the_key(
     assert captured_call["insecure_local"] is True
     assert captured_call["address"] == "127.0.0.1:0"
 
+    # The registry on disk still says "model:fake-v1" / "provider:fake" (see
+    # _MINIMAL_REGISTRY above); the Gateway actually built must carry the
+    # live-demo route instead, patched in memory with the real GROQ_MODEL.
+    patched_route = gateway._routes.route("classification-review")
+    assert patched_route.model_profile == f"model:groq-live-demo:{_FAKE_MODEL}"
+    assert patched_route.provider_profile == "provider:groq-demo"
+    assert patched_route.prompt_profile == "prompt:classification-review-v1"
+
     captured = capsys.readouterr()
     assert _FAKE_KEY not in captured.out
     assert _FAKE_KEY not in captured.err
     assert _FAKE_MODEL in captured.out
     assert "DEMO ONLY" in captured.out
+
+
+# ---------------------------------------------------------------------------
+# _patched_routes: the registry file is never rewritten; every route's
+# model/provider profile is replaced in memory with the real GROQ_MODEL.
+# ---------------------------------------------------------------------------
+
+
+def _write_registry(tmp_path: Path, doc: dict[str, Any]) -> Path:
+    path = tmp_path / "registry.json"
+    path.write_text(json.dumps(doc))
+    return path
+
+
+def test_patched_routes_relabels_model_and_provider_keeps_prompt_profile(tmp_path: Path) -> None:
+    registry, routes = serve_live_demo.load_config(_write_registry(tmp_path, _MINIMAL_REGISTRY))
+    patched = serve_live_demo._patched_routes(registry, routes, "llama-3.1-8b-instant")
+    route = patched.route("classification-review")
+    assert route.model_profile == "model:groq-live-demo:llama-3.1-8b-instant"
+    assert route.provider_profile == "provider:groq-demo"
+    assert route.prompt_profile == "prompt:classification-review-v1"
+
+
+def test_patched_routes_relabels_every_registered_use_case(tmp_path: Path) -> None:
+    two_use_cases: dict[str, Any] = {
+        "use_cases": [
+            {**_MINIMAL_REGISTRY["use_cases"][0]},
+            {
+                **_MINIMAL_REGISTRY["use_cases"][0],
+                "use_case_id": "another-use-case",
+                "route": {
+                    "model_profile": "model:fake-v1",
+                    "provider_profile": "provider:fake",
+                    "prompt_profile": "prompt:another-v1",
+                },
+            },
+        ],
+        "killed": [],
+        "global_kill": False,
+    }
+    registry, routes = serve_live_demo.load_config(_write_registry(tmp_path, two_use_cases))
+    patched = serve_live_demo._patched_routes(registry, routes, "llama-3.1-8b-instant")
+    for use_case_id in ("classification-review", "another-use-case"):
+        route = patched.route(use_case_id)
+        assert route.model_profile == "model:groq-live-demo:llama-3.1-8b-instant"
+        assert route.provider_profile == "provider:groq-demo"
+
+
+def test_patched_routes_never_rewrites_the_registry_file(tmp_path: Path) -> None:
+    original_text = json.dumps(_MINIMAL_REGISTRY)
+    registry_path = tmp_path / "registry.json"
+    registry_path.write_text(original_text)
+    registry, routes = serve_live_demo.load_config(registry_path)
+    serve_live_demo._patched_routes(registry, routes, "llama-3.1-8b-instant")
+    assert registry_path.read_text() == original_text
+
+
+# ---------------------------------------------------------------------------
+# registry.live-demo.json itself: a copy of registry.dev.json with only the
+# route's model/provider profile relabelled as the static placeholder.
+# ---------------------------------------------------------------------------
+
+_CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
+_REGISTRY_DEV_PATH = _CONFIG_DIR / "registry.dev.json"
+_REGISTRY_LIVE_DEMO_PATH = _CONFIG_DIR / "registry.live-demo.json"
+
+
+def test_registry_live_demo_json_loads_and_carries_the_placeholder_labels() -> None:
+    registry, routes = serve_live_demo.load_config(_REGISTRY_LIVE_DEMO_PATH)
+    assert registry.ids() == ["classification-review"]
+    route = routes.route("classification-review")
+    assert route.model_profile == "model:groq-live-demo"
+    assert route.provider_profile == "provider:groq-demo"
+    assert route.prompt_profile == "prompt:classification-review-v1"
+
+
+def test_registry_live_demo_json_matches_registry_dev_json_except_the_route() -> None:
+    """A copy of registry.dev.json (RULE 2): everything but the route label is
+    identical, and registry.dev.json itself is never touched by this task."""
+    dev_doc = json.loads(_REGISTRY_DEV_PATH.read_text(encoding="utf-8"))
+    live_doc = json.loads(_REGISTRY_LIVE_DEMO_PATH.read_text(encoding="utf-8"))
+    assert live_doc["killed"] == dev_doc["killed"]
+    assert live_doc["global_kill"] == dev_doc["global_kill"]
+    assert len(live_doc["use_cases"]) == len(dev_doc["use_cases"]) == 1
+    dev_uc, live_uc = dev_doc["use_cases"][0], live_doc["use_cases"][0]
+    for field in (
+        "use_case_id", "owner", "description", "max_risk_tier", "max_authority",
+        "permitted_regions", "permitted_data_classes", "suspended",
+    ):
+        assert live_uc[field] == dev_uc[field]
+    assert dev_uc["route"] == {
+        "model_profile": "model:fake-v1",
+        "provider_profile": "provider:fake",
+        "prompt_profile": "prompt:classification-review-v1",
+    }
+    assert live_uc["route"] == {
+        "model_profile": "model:groq-live-demo",
+        "provider_profile": "provider:groq-demo",
+        "prompt_profile": "prompt:classification-review-v1",
+    }
