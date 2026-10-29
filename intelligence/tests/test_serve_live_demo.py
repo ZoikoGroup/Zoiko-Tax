@@ -337,7 +337,12 @@ _REGISTRY_LIVE_DEMO_PATH = _CONFIG_DIR / "registry.live-demo.json"
 
 def test_registry_live_demo_json_loads_and_carries_the_placeholder_labels() -> None:
     registry, routes = serve_live_demo.load_config(_REGISTRY_LIVE_DEMO_PATH)
-    assert registry.ids() == ["classification-review"]
+    # classification-review was this file's first use case; a later task
+    # (report_ai_http.py's demo) added three explain-* use cases alongside
+    # it -- see test_report_ai_http.py for those. This test only re-confirms
+    # classification-review's own placeholder route is still exactly as the
+    # live-demo patching logic expects.
+    assert "classification-review" in registry.ids()
     route = routes.route("classification-review")
     assert route.model_profile == "model:groq-live-demo"
     assert route.provider_profile == "provider:groq-demo"
@@ -345,14 +350,22 @@ def test_registry_live_demo_json_loads_and_carries_the_placeholder_labels() -> N
 
 
 def test_registry_live_demo_json_matches_registry_dev_json_except_the_route() -> None:
-    """A copy of registry.dev.json (RULE 2): everything but the route label is
-    identical, and registry.dev.json itself is never touched by this task."""
+    """registry.live-demo.json's classification-review entry started as a
+    copy of registry.dev.json's (RULE 2 of that task): everything but the
+    route label is identical, and registry.dev.json itself is never touched.
+    registry.live-demo.json has since grown three more use cases
+    (test_report_ai_http.py) that registry.dev.json does not and must not
+    carry -- this test only compares the one use case the two files share.
+    """
     dev_doc = json.loads(_REGISTRY_DEV_PATH.read_text(encoding="utf-8"))
     live_doc = json.loads(_REGISTRY_LIVE_DEMO_PATH.read_text(encoding="utf-8"))
     assert live_doc["killed"] == dev_doc["killed"]
     assert live_doc["global_kill"] == dev_doc["global_kill"]
-    assert len(live_doc["use_cases"]) == len(dev_doc["use_cases"]) == 1
-    dev_uc, live_uc = dev_doc["use_cases"][0], live_doc["use_cases"][0]
+    assert len(dev_doc["use_cases"]) == 1
+    dev_uc = dev_doc["use_cases"][0]
+    live_uc = next(
+        uc for uc in live_doc["use_cases"] if uc["use_case_id"] == dev_uc["use_case_id"]
+    )
     for field in (
         "use_case_id", "owner", "description", "max_risk_tier", "max_authority",
         "permitted_regions", "permitted_data_classes", "suspended",

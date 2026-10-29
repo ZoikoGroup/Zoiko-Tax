@@ -105,6 +105,33 @@ _SYSTEM_PROMPTS: dict[Kind, str] = {
     ),
 }
 
+# The three report-explanation use cases (registry.live-demo.json only; see
+# report_ai_http.py and report_fixture.py) use Kind.EXTRACTION on the wire,
+# but need a different system prompt and a different reply shape than the
+# generic EXTRACTION case above, so they are matched by use case id rather
+# than by kind.
+_REPORT_EXPLANATION_USE_CASES: frozenset[str] = frozenset(
+    {"explain-report-figure", "explain-obligation-row", "explain-shadow-variance"}
+)
+
+# A JSON reply needs more headroom than a short code or phrase.
+_REPORT_EXPLANATION_MAX_TOKENS = 220
+
+_REPORT_EXPLANATION_SYSTEM_PROMPT = (
+    "You are a DEMO ONLY report-explanation assistant with no authority over any "
+    "real decision and no tax authority. You are given a JSON array of rows from a "
+    'synthetic reporting fixture; each row has an "id". Restate only the values and '
+    "labels given in the rows. Do not calculate anything. Never introduce a total, "
+    "subtotal, equivalent, average, difference or any other number that is not a "
+    "given row field. Do not describe what a figure also shows unless a given field "
+    "says so. Do not give causes or reasons for a figure. Give no tax advice. "
+    "Write two or three short sentences. If the given rows cannot support an "
+    'answer, set "abstain" to true and say why in "reason". Reply with JSON only, '
+    "with exactly these keys and no others: "
+    '{"explanation": "<string>", "cited_ids": ["<row id>", ...], "abstain": <bool>, '
+    '"reason": "<string, may be empty>"}.'
+)
+
 
 class GroqDemoConfigError(ValueError):
     """GROQ_API_KEY or GROQ_MODEL is missing or names a floating alias.
@@ -150,7 +177,12 @@ def build_request(model: str, api_key: str, call: Call) -> urllib.request.Reques
     the wire either). The API key appears only in the Authorization header
     of the returned Request object, never in a log or print statement.
     """
-    system = _SYSTEM_PROMPTS[call.kind]
+    if call.governance.use_case in _REPORT_EXPLANATION_USE_CASES:
+        system = _REPORT_EXPLANATION_SYSTEM_PROMPT
+        max_tokens = _REPORT_EXPLANATION_MAX_TOKENS
+    else:
+        system = _SYSTEM_PROMPTS[call.kind]
+        max_tokens = _MAX_TOKENS
     user = call.input.decode("utf-8", errors="replace")
     payload = {
         "model": model,
@@ -160,7 +192,7 @@ def build_request(model: str, api_key: str, call: Call) -> urllib.request.Reques
         ],
         "temperature": 0,
         "reasoning_effort": _REASONING_EFFORT,
-        "max_tokens": _MAX_TOKENS,
+        "max_tokens": max_tokens,
     }
     data = json.dumps(payload).encode("utf-8")
     return urllib.request.Request(
@@ -181,17 +213,57 @@ def _snippet(raw: bytes) -> str:
     return raw.decode("utf-8", errors="replace")[:_LOG_SNIPPET_CHARS]
 
 
-def _result_from_content(kind: Kind, content: str) -> Result:
-    """Map one model response string to a Result for *kind*.
+def _parse_report_explanation(content: str) -> dict[str, str]:
+    """Parse a report-explanation model reply into ``Result.fields``.
+
+    Raises ValueError -- caught in ``GroqDemoRuntime.run`` and turned into a
+    RuntimeUnavailableError with the usual diagnostic snippet -- if the reply
+    is not the required JSON shape. This is a malformed-*reply* condition,
+    the same family as the chat-completion-shape check in ``run`` below; it
+    is not the deterministic guard, which runs downstream of a successful
+    Result, in report_ai_http.py, over real fixture rows this module never
+    sees.
+    """
+    text = content.strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.startswith("json"):
+            text = text[4:]
+        text = text.strip()
+    doc = json.loads(text)
+    if not isinstance(doc, dict):
+        raise ValueError("report-explanation reply is not a JSON object")
+    explanation, cited_ids = doc.get("explanation"), doc.get("cited_ids")
+    abstain, reason = doc.get("abstain"), doc.get("reason", "")
+    if not isinstance(explanation, str):
+        raise ValueError("report-explanation reply has no string 'explanation'")
+    if not isinstance(cited_ids, list) or not all(isinstance(i, str) for i in cited_ids):
+        raise ValueError("report-explanation reply has no string-list 'cited_ids'")
+    if not isinstance(abstain, bool):
+        raise ValueError("report-explanation reply has no boolean 'abstain'")
+    if not isinstance(reason, str):
+        raise ValueError("report-explanation reply has a non-string 'reason'")
+    return {
+        "explanation": explanation,
+        "cited_ids": json.dumps(cited_ids),
+        "abstain": "true" if abstain else "false",
+        "reason": reason,
+    }
+
+
+def _result_from_content(call: Call, content: str) -> Result:
+    """Map one model response string to a Result for *call*.
 
     *content* is never empty here -- ``GroqDemoRuntime.run`` already raises
     RuntimeUnavailableError on an empty reply, with the diagnostic snippet
     attached, before calling this function.
     """
     text = content.strip()
-    if kind == Kind.CLASSIFICATION_PROPOSAL:
+    if call.governance.use_case in _REPORT_EXPLANATION_USE_CASES:
+        return Result(fields=_parse_report_explanation(content), confidence=_FIXED_CONFIDENCE)
+    if call.kind == Kind.CLASSIFICATION_PROPOSAL:
         return Result(proposed_code=text, confidence=_FIXED_CONFIDENCE)
-    if kind == Kind.EXTRACTION:
+    if call.kind == Kind.EXTRACTION:
         fields = {"model_response": text} if text else {}
         return Result(fields=fields, confidence=_FIXED_CONFIDENCE)
     return Result(text=text, confidence=_FIXED_CONFIDENCE)
@@ -265,4 +337,10 @@ class GroqDemoRuntime:
                 f"{_LOG_SNIPPET_CHARS} chars of the reply: {_snippet(raw)!r}"
             )
 
-        return _result_from_content(call.kind, content)
+        try:
+            return _result_from_content(call, content)
+        except ValueError as exc:
+            raise RuntimeUnavailableError(
+                f"groq demo runtime: {exc}; first {_LOG_SNIPPET_CHARS} chars of "
+                f"the reply: {_snippet(raw)!r}"
+            ) from exc

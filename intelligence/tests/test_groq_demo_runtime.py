@@ -183,6 +183,79 @@ def test_classification_prompt_states_the_real_ontology_grammar_not_a_fabricated
     assert "ontology:<path>" in system_prompt or "ontology:telecom" in system_prompt
 
 
+# --- the report-explanation prompt (explain-* use cases) ----------------------
+
+_REPORT_USE_CASES = ("explain-report-figure", "explain-obligation-row", "explain-shadow-variance")
+
+
+def _report_call(use_case: str) -> Call:
+    return Call(
+        kind=Kind.EXTRACTION,
+        governance=Governance(
+            tenant_id="00000000-0000-0000-0000-000000000001",
+            use_case=use_case,
+            authority_outcome=AuthorityOutcome.A1,
+            risk_tier=RiskTier.T1,
+            region="local",
+            data_classes=("P0",),
+        ),
+        subject_ref="report-explain:test",
+        input=b'[{"id": "FIG-001", "value": "1.00"}]',
+    )
+
+
+def _report_prompt() -> str:
+    prompt: str = groq_demo_runtime._REPORT_EXPLANATION_SYSTEM_PROMPT
+    return " ".join(prompt.split())  # unwrap the source's line breaks
+
+
+@pytest.mark.parametrize("use_case", _REPORT_USE_CASES)
+def test_every_report_use_case_is_sent_the_report_explanation_prompt(use_case: str) -> None:
+    body = json.loads(build_request(_FAKE_MODEL, _FAKE_KEY, _report_call(use_case)).data)
+    assert body["messages"][0]["content"] == groq_demo_runtime._REPORT_EXPLANATION_SYSTEM_PROMPT
+    assert body["messages"][1]["content"] == '[{"id": "FIG-001", "value": "1.00"}]'
+    assert body["max_tokens"] == 220
+
+
+def test_report_prompt_restates_only_the_given_values_and_labels() -> None:
+    prompt = _report_prompt()
+    assert "Restate only the values and labels given in the rows" in prompt
+    assert "Do not calculate anything" in prompt
+
+
+@pytest.mark.parametrize("word", ["total", "subtotal", "equivalent", "average", "difference"])
+def test_report_prompt_forbids_introducing_a_derived_number(word: str) -> None:
+    prompt = _report_prompt()
+    assert "Never introduce a total, subtotal, equivalent, average, difference" in prompt
+    assert word in prompt
+    assert "any other number that is not a given row field" in prompt
+
+
+def test_report_prompt_forbids_extra_commentary_and_causes() -> None:
+    prompt = _report_prompt()
+    assert "Do not describe what a figure also shows unless a given field says so" in prompt
+    assert "Do not give causes or reasons for a figure" in prompt
+    assert "Give no tax advice" in prompt
+
+
+def test_report_prompt_asks_for_two_or_three_short_sentences() -> None:
+    assert "Write two or three short sentences" in _report_prompt()
+
+
+def test_report_prompt_keeps_the_abstain_path_and_the_exact_json_shape() -> None:
+    prompt = _report_prompt()
+    assert 'set "abstain" to true' in prompt
+    assert '"explanation"' in prompt and '"cited_ids"' in prompt and '"abstain"' in prompt
+    assert "Reply with JSON only" in prompt
+
+
+def test_classification_prompt_is_unchanged_by_the_report_prompt() -> None:
+    body = json.loads(build_request(_FAKE_MODEL, _FAKE_KEY, _make_call()).data)
+    system = body["messages"][0]["content"]
+    assert system == groq_demo_runtime._SYSTEM_PROMPTS[Kind.CLASSIFICATION_PROPOSAL]
+    assert body["max_tokens"] == 64
+
+
 def test_run_never_prints_or_logs_the_key(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:

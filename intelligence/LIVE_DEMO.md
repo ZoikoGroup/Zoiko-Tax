@@ -71,6 +71,33 @@ docker compose -f docker-compose.yml -f docker-compose.live-demo.yml down
 Afterwards, `docker compose up -d` (the base file alone, no overlay) returns
 the stack to the fake runtime.
 
+## 5. Optional: the synthetic Reports explanation demo
+
+The same `up` command also starts a second, unrelated demo on the
+`ztax-model-gateway` container: a small HTTP endpoint
+([`intelligence/tools/report_ai_http.py`](tools/report_ai_http.py)) that
+explains one row of a synthetic Reports dashboard (KPI figures, an
+obligations register, a Shadow Assurance comparison -- all fake, generated
+by [`intelligence/tools/report_fixture.py`](tools/report_fixture.py)),
+through the same governed Gateway and the same real model.
+
+```bash
+curl http://localhost:18090/demo/fixture                       # the whole fixture, as JSON
+curl -X POST http://localhost:18090/demo/explain \
+  -H 'Content-Type: application/json' \
+  -d '{"kind": "obligation-row", "ids": ["OBL-001"]}'
+```
+
+The reply's `outcome` is one of `EXPLAINED` (the model's explanation is
+grounded only in the rows you named), `ABSTAINED` (the model itself
+abstained, or a deterministic guard in `report_ai_http.py` caught a
+citation or a number the given rows do not support -- a real model answer
+is overruled here, not trusted), or `REVIEW_REQUIRED` (the Gateway itself
+could not help, same reasons as the classification demo above). CORS is
+allowed only for `http://localhost:13000`; there is no frontend wired to
+this endpoint yet, so a browser request needs a page served from that
+origin, or use `curl`/Postman as above.
+
 ## Fallback: no frontend, no Docker
 
 If the stack won't come up in time, both of these show the same governance
