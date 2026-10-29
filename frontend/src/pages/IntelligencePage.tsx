@@ -73,7 +73,7 @@ const StepBadge = ({ state }: { state: StepState }) => {
   return <span className={`ztax-status ztax-status--${tone}`}>{label}</span>
 }
 
-const StepRow = ({
+export const StepRow = ({
   n, title, state, note, children,
 }: { n: number; title: string; state: StepState; note: ReactNode; children?: ReactNode }) => (
   <div className={`ztax-step ztax-step--${state}`}>

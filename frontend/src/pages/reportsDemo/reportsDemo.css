@@ -1,0 +1,260 @@
+/* Reports (demo) -- styles for the dashboard, its SVG charts and the Explain panel.
+   Reuses the shared kit and obligations.css (stepper, tables, notes); only what
+   those do not already provide is here. */
+
+.rd-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #7c2d12;
+  background: #ffedd5;
+  border: 1px solid #fdba74;
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+.rd-badge-note {
+  font-size: 12px;
+  font-weight: 600;
+  color: #7c2d12;
+}
+
+.rd-muted {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 4px 0 0;
+}
+
+/* visually hidden, still read by assistive technology (tooltip text) */
+.rd-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* tier 1: KPI cards */
+.rd-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.rd-kpi {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.rd-kpi-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rd-kpi-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.rd-kpi-value {
+  margin: 8px 0 4px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  overflow-wrap: anywhere;
+}
+
+.rd-kpi-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.rd-delta {
+  font-weight: 700;
+  color: #111827;
+}
+
+.rd-forecast {
+  color: #92400e;
+  cursor: help;
+}
+
+.rd-explain {
+  white-space: nowrap;
+}
+
+/* highlight a cited row, card, bar, column or legend entry */
+.rd-hl {
+  outline: 2px solid #c86a3b;
+  outline-offset: 2px;
+}
+
+.rd-svg-hl .rd-bar {
+  stroke: #c86a3b;
+  stroke-width: 3;
+}
+
+.rd-svg-hl-seg {
+  stroke: #c86a3b;
+  stroke-width: 3;
+}
+
+/* tier 2: SVG charts */
+.rd-svg {
+  display: block;
+  overflow: visible;
+}
+
+.rd-bar {
+  fill: #c86a3b;
+}
+
+.rd-axis {
+  stroke: #d1d5db;
+  stroke-width: 1;
+}
+
+.rd-svg-label {
+  font-size: 11px;
+  fill: #374151;
+}
+
+.rd-svg-value {
+  font-size: 11px;
+  font-weight: 600;
+  fill: #111827;
+}
+
+.rd-pill {
+  cursor: pointer;
+}
+
+.rd-pill rect {
+  fill: #fff;
+  stroke: #d1d5db;
+}
+
+.rd-pill text {
+  font-size: 11px;
+  fill: #374151;
+}
+
+.rd-pill:hover rect,
+.rd-pill:focus rect {
+  stroke: #c86a3b;
+}
+
+.rd-seg-1 { fill: #16a34a; background: #16a34a; }
+.rd-seg-2 { fill: #f59e0b; background: #f59e0b; }
+.rd-seg-3 { fill: #9ca3af; background: #9ca3af; }
+.rd-seg-4 { fill: #dc2626; background: #dc2626; }
+
+.rd-legend {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.rd-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.rd-legend-label {
+  flex: 1;
+}
+
+.rd-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* tier 3: tabs */
+.rd-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 12px;
+}
+
+.rd-tab {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.rd-tab--on {
+  color: #111827;
+  border-bottom-color: #c86a3b;
+}
+
+.rd-cite {
+  margin: 0 4px 2px 0;
+}
+
+/* the Explain side panel */
+.rd-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(440px, 100vw);
+  overflow-y: auto;
+  background: #fff;
+  border-left: 1px solid #e5e7eb;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+  padding: 16px;
+  z-index: 50;
+}
+
+.rd-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rd-ai-label {
+  font-weight: 600;
+}
+
+.rd-explanation {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #111827;
+  margin: 12px 0 8px;
+}
+
+.rd-cited {
+  margin: 4px 0 0;
+}
+
+.rd-check {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #7f1d1d;
+}
