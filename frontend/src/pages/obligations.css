@@ -43,3 +43,57 @@
   padding: 8px 10px;
   margin: 8px 0 0;
 }
+
+/* Intelligence page: the seven-step governed-AI-call stepper. */
+.ztax-stepper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ztax-step {
+  border-left: 3px solid #e5e7eb;
+  padding-left: 12px;
+}
+
+.ztax-step--passed {
+  border-left-color: #16a34a;
+}
+
+.ztax-step--stopped {
+  border-left-color: #dc2626;
+}
+
+.ztax-step-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ztax-step-n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.ztax-step-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+  flex: 1;
+}
+
+.ztax-step-note {
+  font-size: 12px;
+  color: #4b5563;
+  margin: 4px 0 0;
+}
