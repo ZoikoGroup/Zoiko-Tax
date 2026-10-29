@@ -16,6 +16,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import urllib.error
+from io import BytesIO
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -150,6 +151,38 @@ def test_build_request_pins_model_and_carries_key_only_in_header() -> None:
     assert _FAKE_KEY not in json.dumps(body)
 
 
+def test_build_request_sets_fixed_user_agent() -> None:
+    """Groq returns 403 to the default urllib User-Agent; this must not regress."""
+    request = build_request(_FAKE_MODEL, _FAKE_KEY, _make_call())
+    assert request.get_header("User-agent") == "ztax-live-demo/1.0"
+
+
+def test_build_request_sets_reasoning_effort_temperature_and_max_tokens() -> None:
+    """A fast, non-empty, bounded reply: low reasoning effort, no sampling,
+    and a max_tokens generous enough that a short demo answer is never cut
+    down to nothing."""
+    body = json.loads(build_request(_FAKE_MODEL, _FAKE_KEY, _make_call()).data)
+    assert body["reasoning_effort"] == "low"
+    assert body["temperature"] == 0
+    assert isinstance(body["max_tokens"], int)
+    assert body["max_tokens"] >= 16
+
+
+def test_classification_prompt_states_the_real_ontology_grammar_not_a_fabricated_list() -> None:
+    """The system prompt tells the model the one real, checkable constraint
+    the Go backend enforces (OntologyID.Validate: an "ontology:" prefix with
+    a non-empty path) -- it must not claim to hand over a closed list of
+    real node ids, because no such list is reachable from either half of
+    the Gateway (see the module-level comment by _ONTOLOGY_GRAMMAR_HINT)."""
+    system_prompt = groq_demo_runtime._SYSTEM_PROMPTS[Kind.CLASSIFICATION_PROPOSAL]
+    call = _make_call()
+    request = build_request(_FAKE_MODEL, _FAKE_KEY, call)
+    body = json.loads(request.data)
+    assert body["messages"][0]["content"] == system_prompt
+    assert "ontology:" in system_prompt
+    assert "ontology:<path>" in system_prompt or "ontology:telecom" in system_prompt
+
+
 def test_run_never_prints_or_logs_the_key(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -220,6 +253,54 @@ def test_http_error_raises_runtime_unavailable(monkeypatch: pytest.MonkeyPatch) 
         runtime.run(_ROUTE, _make_call())
 
 
+def test_http_error_message_carries_the_status_code_and_a_120_char_snippet_never_the_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The failure must be diagnosable from the status code and the first
+    120 characters of the provider's reply, with the key never appearing and
+    the snippet never exceeding 120 characters."""
+    monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
+    monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
+    runtime = GroqDemoRuntime()
+    long_body = b"synthetic-error-detail-" + b"x" * 200
+
+    def _fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        raise urllib.error.HTTPError(
+            request.full_url,
+            503,
+            "Service Unavailable",
+            {},  # type: ignore[arg-type]
+            BytesIO(long_body),
+        )
+
+    monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
+    with pytest.raises(RuntimeUnavailableError, match="503") as excinfo:
+        runtime.run(_ROUTE, _make_call())
+    message = str(excinfo.value)
+    assert _FAKE_KEY not in message
+    assert long_body.decode()[:120] in message
+    assert long_body.decode()[:121] not in message
+
+
+def test_http_error_with_no_readable_body_still_raises_cleanly(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An HTTPError built with fp=None (no body at all) must not itself raise
+    while the runtime is building its diagnostic message."""
+    monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
+    monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
+    runtime = GroqDemoRuntime()
+
+    def _fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        raise urllib.error.HTTPError(
+            request.full_url, 403, "Forbidden", {}, None  # type: ignore[arg-type]
+        )
+
+    monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
+    with pytest.raises(RuntimeUnavailableError, match="403"):
+        runtime.run(_ROUTE, _make_call())
+
+
 def test_url_error_raises_runtime_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
     monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
@@ -246,6 +327,26 @@ def test_malformed_response_raises_runtime_unavailable(monkeypatch: pytest.Monke
         runtime.run(_ROUTE, _make_call())
 
 
+def test_malformed_response_message_carries_a_120_char_snippet_of_the_raw_reply(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
+    monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
+    runtime = GroqDemoRuntime()
+    raw = b"not json at all, and this filler text pushes the body well past " + b"y" * 120
+
+    def _fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        return _FakeHTTPResponse(raw)
+
+    monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
+    with pytest.raises(RuntimeUnavailableError) as excinfo:
+        runtime.run(_ROUTE, _make_call())
+    message = str(excinfo.value)
+    assert raw.decode()[:120] in message
+    assert raw.decode()[:121] not in message
+    assert _FAKE_KEY not in message
+
+
 def test_empty_choices_raises_runtime_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
     monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
@@ -257,6 +358,27 @@ def test_empty_choices_raises_runtime_unavailable(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
     with pytest.raises(RuntimeUnavailableError):
         runtime.run(_ROUTE, _make_call())
+
+
+def test_empty_content_raises_runtime_unavailable_with_snippet(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An empty/whitespace-only reply is refused here, with a diagnostic
+    snippet, rather than silently passed through as an empty proposed_code."""
+    monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
+    monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
+    runtime = GroqDemoRuntime()
+    raw = _chat_completion_body("   ")
+
+    def _fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        return _FakeHTTPResponse(raw)
+
+    monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
+    with pytest.raises(RuntimeUnavailableError, match="empty") as excinfo:
+        runtime.run(_ROUTE, _make_call())
+    message = str(excinfo.value)
+    assert raw.decode()[:120] in message
+    assert _FAKE_KEY not in message
 
 
 # ---------------------------------------------------------------------------

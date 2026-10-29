@@ -45,6 +45,10 @@ __all__: list[str] = [
 _API_URL = "https://api.groq.com/openai/v1/chat/completions"
 _TIMEOUT_SECONDS = 30
 
+# Groq returns 403 to the default Python-urllib User-Agent. A fixed,
+# identifying value avoids that, and is not a secret.
+_USER_AGENT = "ztax-live-demo/1.0"
+
 # Mirrors production_registries.py's _MODEL_VERSION_ALIASES (REQ-0027): a
 # model name that floats is not a model that was actually reviewed.
 _FLOATING_ALIASES = frozenset({"latest", "default", "stable", "preview"})
@@ -54,11 +58,42 @@ _FLOATING_ALIASES = frozenset({"latest", "default", "stable", "preview"})
 # FakeRuntime uses for its own canned confidence.
 _FIXED_CONFIDENCE = "0.5000"
 
+# Keeps the call fast and keeps max_tokens from ever truncating a short demo
+# answer down to nothing (REQ item 2). "reasoning_effort": "low" is a Groq
+# request field for reasoning-capable models; a model that does not recognise
+# it ignores it.
+_REASONING_EFFORT = "low"
+_MAX_TOKENS = 64
+
+# How many characters of a refused raw reply go into the diagnostic message
+# (never the request body, never the key -- see run()).
+_LOG_SNIPPET_CHARS = 120
+
+# The real grammar the Go backend enforces for a proposed ontology node
+# (backend/internal/domain/classification/classification.go, OntologyID.Validate):
+# the string must start with "ontology:" and name something after it. That
+# function does not check the proposal against any enumerated list of real
+# nodes -- intelligence/src never gets a say either (check_result in
+# runtime.py only requires a non-empty proposed_code). The one real node
+# registry in this codebase (backend/internal/domain/ontology.Ontology) is
+# built only in test code (ontology_test.go, golden_test.go) from the golden
+# fixture backend/testdata/golden/classification/launch-corpus.json; nothing
+# wires it into a running service. So there is no live, authoritative list of
+# allowed ids this prompt could truthfully hand the model -- see
+# LIVE_DEMO.md for the rest of this finding. This line states the one real,
+# checkable constraint instead of a fabricated list.
+_ONTOLOGY_GRAMMAR_HINT = (
+    'A valid code has the exact form "ontology:<path>" (for example '
+    '"ontology:telecom/voice/mobile") -- the prefix "ontology:" followed by '
+    "a non-empty, lowercase, slash-separated path naming the product or "
+    "service family. Reply with the code alone, nothing else."
+)
+
 _SYSTEM_PROMPTS: dict[Kind, str] = {
     Kind.CLASSIFICATION_PROPOSAL: (
         "You are a DEMO ONLY classification assistant with no authority over "
-        "any real decision. Given a product or service description, reply "
-        "with a short proposed classification code only -- no explanation."
+        "any real decision. Given a product or service description, propose "
+        f"one ontology classification code. {_ONTOLOGY_GRAMMAR_HINT}"
     ),
     Kind.EXTRACTION: (
         "You are a DEMO ONLY extraction assistant with no authority over any "
@@ -124,6 +159,8 @@ def build_request(model: str, api_key: str, call: Call) -> urllib.request.Reques
             {"role": "user", "content": user},
         ],
         "temperature": 0,
+        "reasoning_effort": _REASONING_EFFORT,
+        "max_tokens": _MAX_TOKENS,
     }
     data = json.dumps(payload).encode("utf-8")
     return urllib.request.Request(
@@ -133,17 +170,23 @@ def build_request(model: str, api_key: str, call: Call) -> urllib.request.Reques
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {api_key}",
+            "User-Agent": _USER_AGENT,
         },
     )
+
+
+def _snippet(raw: bytes) -> str:
+    """The first _LOG_SNIPPET_CHARS characters of a raw reply, decoded
+    leniently -- for a diagnostic message only, never for parsing."""
+    return raw.decode("utf-8", errors="replace")[:_LOG_SNIPPET_CHARS]
 
 
 def _result_from_content(kind: Kind, content: str) -> Result:
     """Map one model response string to a Result for *kind*.
 
-    Does not invent a placeholder for an empty response -- an empty
-    proposed_code / text / fields is passed through, and
-    ``ztax_gateway.runtime.check_result`` (called by the Gateway after
-    ``run`` returns) is what refuses it as RuntimeUnavailableError.
+    *content* is never empty here -- ``GroqDemoRuntime.run`` already raises
+    RuntimeUnavailableError on an empty reply, with the diagnostic snippet
+    attached, before calling this function.
     """
     text = content.strip()
     if kind == Kind.CLASSIFICATION_PROPOSAL:
@@ -174,18 +217,26 @@ class GroqDemoRuntime:
         """Run one permitted call against the real, pinned Groq model.
 
         Raises RuntimeUnavailableError (the Gateway's own retryable-failure
-        type) on a timeout, a network error, an HTTP error status, or a
-        response that is not shaped like a chat completion -- never a raw
-        urllib or JSON exception, so the Gateway's existing error mapping
-        handles this runtime exactly like any other.
+        type) on a timeout, a network error, an HTTP error status, a
+        response that is not shaped like a chat completion, or an empty
+        reply -- never a raw urllib or JSON exception, so the Gateway's
+        existing error mapping handles this runtime exactly like any other.
+        Every one of those messages carries the first _LOG_SNIPPET_CHARS
+        characters of the raw reply (never the request body, never the key)
+        so a refusal is diagnosable from the gateway log alone.
         """
         request = build_request(self._model, self._api_key, call)
         try:
             with urllib.request.urlopen(request, timeout=_TIMEOUT_SECONDS) as response:
                 raw = response.read()
         except urllib.error.HTTPError as exc:
+            try:
+                error_body = exc.read()
+            except Exception:
+                error_body = b""
             raise RuntimeUnavailableError(
-                f"groq demo runtime: provider returned HTTP {exc.code}"
+                f"groq demo runtime: provider returned HTTP {exc.code}; first "
+                f"{_LOG_SNIPPET_CHARS} chars of the reply: {_snippet(error_body)!r}"
             ) from exc
         except urllib.error.URLError as exc:
             raise RuntimeUnavailableError(
@@ -204,7 +255,14 @@ class GroqDemoRuntime:
         except (json.JSONDecodeError, KeyError, IndexError, TypeError) as exc:
             raise RuntimeUnavailableError(
                 "groq demo runtime: provider response was not shaped like a "
-                "chat completion"
+                f"chat completion; first {_LOG_SNIPPET_CHARS} chars of the "
+                f"reply: {_snippet(raw)!r}"
             ) from exc
+
+        if not content.strip():
+            raise RuntimeUnavailableError(
+                "groq demo runtime: provider returned an empty reply; first "
+                f"{_LOG_SNIPPET_CHARS} chars of the reply: {_snippet(raw)!r}"
+            )
 
         return _result_from_content(call.kind, content)
