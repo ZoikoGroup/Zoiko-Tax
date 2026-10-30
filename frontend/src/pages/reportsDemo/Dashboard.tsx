@@ -6,7 +6,7 @@
  * explanation of the rows behind a figure; the AI never edits or computes
  * anything on the page, and if it is unavailable the page works regardless.
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 
 import { Card, Columns, PageHeader, Status } from '../../ui/kit'
 import '../obligations.css'
@@ -36,7 +36,7 @@ import type { ExplainTarget, Figure, Fixture } from './model'
 export const DemoHeader = ({ actions }: { actions?: ReactNode }) => (
   <PageHeader
     title="Reports & Executive Compliance Dashboard"
-    subtitle="Authoritative tax liabilities by authority, period and status — filing calendar and remittance register"
+    subtitle="Synthetic register: liabilities by authority, period and status — filing calendar and remittance register"
     actions={
       <>
         <span className="rd-badge">DEMO FIXTURE</span>
@@ -108,11 +108,12 @@ const KpiCard = ({
         <p className="rd-kpi-sub">
           <span className="rd-delta">
             {arrow} {vs.value}%
-            {vs.changeAmount === undefined ? '' : ` (${formatMoney(vs.changeAmount, vs.unit)})`}
+            {/* vs.unit is '%' (the figure is a percentage); the amount is in the fixture's currency */}
+            {vs.changeAmount === undefined ? '' : ` (${formatMoney(vs.changeAmount, fixture.currency)})`}
           </span>{' '}
           vs last month{' '}
           <span className="rd-forecast" title={FORECAST_TOOLTIP}>
-            ⓘ (Forecast)<span className="rd-sr"> — {FORECAST_TOOLTIP}</span>
+            ⓘ (Month-on-month)<span className="rd-sr"> — {FORECAST_TOOLTIP}</span>
           </span>
         </p>
       ) : null}
@@ -345,6 +346,27 @@ export const Dashboard = ({
     setHighlightId(id)
   }
 
+  // Left/Right (wrapping), Home and End move to a tab and select it; only the
+  // selected tab is in the Tab order (roving tabindex).
+  const onTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+    const index = TABS.findIndex((t) => t.id === tab)
+    const last = TABS.length - 1
+    let next: number
+    switch (e.key) {
+      case 'ArrowRight': next = index === last ? 0 : index + 1; break
+      case 'ArrowLeft': next = index === 0 ? last : index - 1; break
+      case 'Home': next = 0; break
+      case 'End': next = last; break
+      default: return
+    }
+    e.preventDefault()
+    const target = TABS[next]
+    if (target !== undefined) {
+      setTab(target.id)
+      document.getElementById(`rd-tab-${target.id}`)?.focus()
+    }
+  }
+
   const kpis = fixture.figures.filter((f) => f.group === 'kpi')
   const bars = fixture.figures.filter((f) => f.group === 'by_authority')
   const TabView = TAB_VIEWS[tab]
@@ -411,8 +433,10 @@ export const Dashboard = ({
               id={`rd-tab-${t.id}`}
               aria-selected={tab === t.id}
               aria-controls="rd-tabpanel"
+              tabIndex={tab === t.id ? 0 : -1}
               className={`rd-tab${tab === t.id ? ' rd-tab--on' : ''}`}
               onClick={() => { setTab(t.id) }}
+              onKeyDown={onTabKeyDown}
             >
               {t.label}
             </button>

@@ -184,7 +184,7 @@ const ReviewerPanel = ({ proposal }: { proposal: Proposal }) => {
             </select>
           </Field>
           {pending === 'MODIFY' ? (
-            <Field label="Reviewer's ontology code" help="An existing ontology node, e.g. ontology:telecom/voice/mobile.">
+            <Field label="Reviewer's ontology code" help="A code in ontology format, e.g. ontology:telecom/voice/mobile. Whether it exists is not verified here.">
               <input
                 type="text"
                 value={modifiedCode}
@@ -318,8 +318,8 @@ const Stepper = ({ proposal }: { proposal: Proposal }) => {
         state={step7State}
         note={
           isSuccess
-            ? 'The record below (invocation id, model/provider/prompt profile, AI train version, confidence) is ' +
-              'the AI provenance and audit evidence (ZTAX-AIGOV-001 §14).'
+            ? 'The table below is the provenance the gateway returned with the proposal. The audit evidence record ' +
+              '(ZTAX-AIGOV-001 §14) is written by the gateway on its side and is not shown on this page.'
             : 'Not reached as a disposition step. The actual reply received is shown below for the record.'
         }
       >
@@ -336,8 +336,8 @@ const Stepper = ({ proposal }: { proposal: Proposal }) => {
               <dd>{proposal.id === undefined ? '—' : <Id value={proposal.id} />}</dd>
             </dl>
             <p className="ztax-note">
-              The confidence is the model&apos;s own score, not a threshold. A person confirms or rejects the mapping
-              before anything relies on it.
+              The confidence is a placeholder value from the demo runtime, not a measurement. A person confirms or
+              rejects the mapping before anything relies on it.
             </p>
             <table className="ztax-action-table" style={{ marginTop: 8 }}>
               <tbody>
@@ -375,8 +375,9 @@ export const IntelligencePage = ({ session }: PageProps) => {
 
       <Card title="Advisory, never authoritative">
         <p className="ztax-alert-desc" style={{ margin: 0 }}>
-          The AI plane proposes an existing ontology node for a catalog item. Under ADR-0006 a proposal is advice: it
-          never becomes a classification decision on its own, and no confidence score makes it one. A person reviews it
+          The AI plane proposes a code in ontology format for a catalog item; whether that code is a real ontology
+          node is not verified here. Under ADR-0006 a proposal is advice: it never becomes a classification decision
+          on its own, and no confidence score makes it one. A person reviews it
           and confirms the mapping, or it is nothing. Send catalog text only — the description goes to the Model Gateway,
           so it must never contain customer data.
         </p>
