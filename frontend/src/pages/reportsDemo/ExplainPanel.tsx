@@ -8,7 +8,7 @@
  */
 import { useEffect, useRef } from 'react'
 
-import { StepRow } from '../IntelligencePage'
+import { OUTPUT_CHECK_PASSED_LABEL, StepRow } from '../IntelligencePage'
 import '../obligations.css'
 import { explainSteps } from './derive'
 import type { ExplainReply, ExplainTarget, Provenance } from './model'
@@ -75,7 +75,14 @@ const Answer = ({
     <h3 className="ztax-card-title" style={{ marginTop: 16 }}>Workflow</h3>
     <div className="ztax-stepper" style={{ marginTop: 8 }}>
       {explainSteps(target, reply).map((step) => (
-        <StepRow key={step.n} n={step.n} title={step.title} state={step.state} note={step.note}>
+        <StepRow
+          key={step.n}
+          n={step.n}
+          title={step.title}
+          state={step.state}
+          note={step.note}
+          passedLabel={step.n === 4 ? OUTPUT_CHECK_PASSED_LABEL : 'Passed'}
+        >
           {step.n === 7 && reply.provenance !== null ? <ProvenanceTable provenance={reply.provenance} /> : null}
         </StepRow>
       ))}

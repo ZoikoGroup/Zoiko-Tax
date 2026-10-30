@@ -36,7 +36,7 @@ import type { ExplainTarget, Figure, Fixture } from './model'
 export const DemoHeader = ({ actions }: { actions?: ReactNode }) => (
   <PageHeader
     title="Reports & Executive Compliance Dashboard"
-    subtitle="Synthetic register: liabilities by authority, period and status — filing calendar and remittance register"
+    subtitle="Illustrative register: liabilities by authority, period and status — filing calendar and remittance register"
     actions={
       <>
         <span className="rd-badge">DEMO FIXTURE</span>

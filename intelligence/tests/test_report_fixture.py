@@ -105,7 +105,7 @@ def test_fixture_carries_the_demo_disclaimer_and_fixed_fx_label(fx: dict[str, An
 
 
 def test_as_of_is_a_fixed_constant_not_the_clock(fx: dict[str, Any]) -> None:
-    assert fx["as_of"] == report_fixture.AS_OF == "2026-10-20"
+    assert fx["as_of"] == report_fixture.AS_OF == "2026-10-30"
     assert fx["filing_pipeline"]["as_of"] == fx["as_of"]
 
 
