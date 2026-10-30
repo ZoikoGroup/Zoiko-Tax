@@ -349,13 +349,17 @@ def test_registry_live_demo_json_loads_and_carries_the_placeholder_labels() -> N
     assert route.prompt_profile == "prompt:classification-review-v1"
 
 
-def test_registry_live_demo_json_matches_registry_dev_json_except_the_route() -> None:
+def test_registry_live_demo_json_matches_registry_dev_json_except_the_route_and_data_classes(
+) -> None:
     """registry.live-demo.json's classification-review entry started as a
-    copy of registry.dev.json's (RULE 2 of that task): everything but the
-    route label is identical, and registry.dev.json itself is never touched.
-    registry.live-demo.json has since grown three more use cases
-    (test_report_ai_http.py) that registry.dev.json does not and must not
-    carry -- this test only compares the one use case the two files share.
+    copy of registry.dev.json's: everything but the route label is identical
+    except one deliberate, intentional narrowing -- the live demo permits only
+    P0 (synthetic public data), where registry.dev.json permits P0 and P1.
+    registry.dev.json itself is never touched. registry.live-demo.json has
+    since grown three more use cases (test_report_ai_http.py) that
+    registry.dev.json does not and must not carry -- this test only compares
+    the one use case the two files share. The killed / global_kill keys are
+    kept identical to the dev file's (though load_config ignores them).
     """
     dev_doc = json.loads(_REGISTRY_DEV_PATH.read_text(encoding="utf-8"))
     live_doc = json.loads(_REGISTRY_LIVE_DEMO_PATH.read_text(encoding="utf-8"))
@@ -368,9 +372,12 @@ def test_registry_live_demo_json_matches_registry_dev_json_except_the_route() ->
     )
     for field in (
         "use_case_id", "owner", "description", "max_risk_tier", "max_authority",
-        "permitted_regions", "permitted_data_classes", "suspended",
+        "permitted_regions", "suspended",
     ):
         assert live_uc[field] == dev_uc[field]
+    # The intentional difference: P0 only in the live demo, P0 and P1 in dev.
+    assert dev_uc["permitted_data_classes"] == ["P0", "P1"]
+    assert live_uc["permitted_data_classes"] == ["P0"]
     assert dev_uc["route"] == {
         "model_profile": "model:fake-v1",
         "provider_profile": "provider:fake",

@@ -6,8 +6,10 @@ existing governed Gateway, with nothing else about the stack changed.
 
 ## 1. Add two lines to your local `.env`
 
-`.env` is already gitignored (`ADR-0017 §2.4`: a credential never lives in
-the tree). Add:
+`.env` is already gitignored, so the key is not committed. The overlay then
+passes the key into the `ztax-model-gateway` container as a plain environment
+variable, read from your local `.env`. That is a **demo-only deviation from
+ADR-0017**, not something it permits. Add:
 
 ```
 GROQ_API_KEY=your-own-groq-api-key
@@ -37,7 +39,7 @@ are unchanged and need no edits -- their existing wiring already points at
 ## 3. Open the frontend
 
 ```
-open http://localhost:3000     # or the WEB_PORT you set in .env
+open http://localhost:13000     # set WEB_PORT=13000 in .env (the base default is 3000)
 ```
 
 Sign in, open **Intelligence**, and submit a subject reference and
@@ -46,21 +48,29 @@ to the Model Gateway and, this time, on to Groq).
 
 ### What to expect
 
-- **A proposal**: if the model's reply happens to be a valid ontology-class
-  string, the page shows a proposed code, a confidence value, and the
-  provenance table (use case, model profile, provider profile, prompt
-  profile, AI train).
+- **A proposal**: if the model's reply passes the output check, the page
+  shows a proposed code, a confidence value, and the provenance table (use
+  case, model profile, provider profile, prompt profile, AI train). The
+  output check is **format-only**: the code must start with `ontology:` and
+  name something after it. It does **not** check that the code is a real
+  ontology node -- nothing in a running service holds that list.
 - **A review-required result**: unlike the fake runtime (which always
   returns a valid placeholder code), a real, unconstrained model's free-text
-  answer is quite likely to **not** be a valid ontology node. When that
-  happens the page shows "Needs human review" with reason
-  `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE` -- this is the governed boundary
-  working as designed (`backend/internal/app/classification.go`), not a bug
-  in the demo. Expect to see this outcome at least as often as a clean
-  proposal, depending on what the model returns.
-- A provider failure, a timeout, or a malformed reply also surfaces as
-  "Needs human review" (`AI_GATEWAY_UNAVAILABLE`) rather than an error page --
-  the governed path degrades to review, it does not crash.
+  answer can fail even that format check. The page then shows its seven-step
+  view stopped at step 4, **Output checks**, with the note "The model
+  proposed a code that is not an ontology node, so the proposal was
+  discarded. Deterministic processing is unaffected." and the code
+  `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`; steps 5-7 read "Not reached". This is
+  the governed boundary working as designed
+  (`backend/internal/app/classification.go`), not a bug in the demo.
+- A provider failure, a timeout, or a malformed reply stops the same view at
+  step 3, **Model call**, with "The Model Gateway is down or slow right now.
+  Deterministic processing is unaffected." and `AI_GATEWAY_UNAVAILABLE`,
+  rather than an error page -- the governed path degrades to review, it does
+  not crash.
+- **Confidence is a fixed placeholder** (`0.5000`, set in
+  `groq_demo_runtime.py`). Groq returns no probability, so the number is not
+  the model's score and means nothing, whatever the page's caption says.
 
 ## 4. Stop the demo
 
@@ -82,32 +92,58 @@ by [`intelligence/tools/report_fixture.py`](tools/report_fixture.py)),
 through the same governed Gateway and the same real model.
 
 ```bash
-curl http://localhost:18090/demo/fixture                       # the whole fixture, as JSON
-curl -X POST http://localhost:18090/demo/explain \
+curl http://127.0.0.1:18090/demo/fixture                       # the whole fixture, as JSON
+curl -X POST http://127.0.0.1:18090/demo/explain \
   -H 'Content-Type: application/json' \
   -d '{"kind": "obligation-row", "ids": ["OBL-001"]}'
 ```
 
-The reply's `outcome` is one of `EXPLAINED` (the model's explanation is
-grounded only in the rows you named), `ABSTAINED` (the model itself
-abstained, or a deterministic guard in `report_ai_http.py` caught a
-citation or a number the given rows do not support -- a real model answer
-is overruled here, not trusted), or `REVIEW_REQUIRED` (the Gateway itself
-could not help, same reasons as the classification demo above). CORS is
-allowed only for `http://localhost:13000`; there is no frontend wired to
-this endpoint yet, so a browser request needs a page served from that
-origin, or use `curl`/Postman as above.
+The reply's `outcome` is one of `EXPLAINED` (the reply passed the guard
+below), `ABSTAINED` (the model itself abstained, or the deterministic guard in
+`report_ai_http.py` rejected the reply -- a real model answer is overruled
+here, not trusted), or `REVIEW_REQUIRED` (the Gateway itself could not help,
+same reasons as the classification demo above; the reply carries only the
+Gateway's reason code, never provider text).
+
+What the guard checks: at least one row id is cited and every cited id exists
+in the rows supplied; every number equals a value in those rows exactly (or is
+a percentage that recomputes, or a year / day quoting a supplied date); and any
+lifecycle or payment status word (`PAID`, `OVERDUE`, `SETTLED`...) is the status
+of a cited row. What it **cannot** do is prove a sentence is true: swapped
+numbers and invented causes still pass, and a person must read the text.
+
+The **Reports (demo)** page in the web app uses this endpoint. It needs the
+web app on `http://localhost:13000` (CORS allows only that origin) and this
+service on `127.0.0.1:18090`; the page's Explain buttons call it from your
+browser.
+
+**The report service is unauthenticated and loopback-only.** It has no login;
+the compose overlay publishes it on `127.0.0.1` only. Never forward, tunnel or
+otherwise expose that port. Its use cases (`explain-*`) are registered at risk
+tier T1 and data class P0 only.
 
 ## Fallback: no frontend, no Docker
 
-If the stack won't come up in time, both of these show the same governance
-claims against a real model, from a terminal, with no compose change at all:
+If the stack won't come up in time, these run from a terminal with no compose
+change at all. Only the first uses a real model:
 
 ```bash
 cd intelligence
-python tools/live_demo.py        # real Groq model, same GROQ_API_KEY / GROQ_MODEL
-python tools/step10_demo.py      # no live model at all -- the boundary claims on their own
+python tools/live_demo.py        # REAL Groq model (calls Groq; needs GROQ_API_KEY / GROQ_MODEL)
+python tools/step10_demo.py      # NO model at all -- the boundary claims on their own
 ```
+
+`live_demo.py` loads `config/registry.live-demo.json` and labels its routes with
+your `GROQ_MODEL`, so its provenance names the real model. `step10_demo.py`
+only runs the existing Python and Go test suites; no live model is connected.
+
+## Kill switch
+
+`registry.live-demo.json` keeps `killed` and `global_kill` keys only because a
+test compares them with the dev file. **`load_config` ignores both.** The only
+lever that stops a use case in this stack is `"suspended": true` on that use
+case in `registry.live-demo.json`, followed by a restart of the
+`ztax-model-gateway` container.
 
 ## Rules
 

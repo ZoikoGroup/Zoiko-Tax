@@ -18,8 +18,8 @@
 # is untouched and ztax-core still reads it unchanged), points the entrypoint
 # at the new intelligence/tools/serve_live_demo.py and report_ai_http.py
 # instead of `python -m ztax_gateway.server`, adds the two GROQ_* variables,
-# and publishes one host port for report_ai_http.py's demo-only HTTP
-# endpoint. Every other service, and every hardening setting already on
+# and publishes one loopback-only host port for report_ai_http.py's
+# demo-only HTTP endpoint. Every other service, and every hardening setting already on
 # this one (read_only, cap_drop, security_opt), is untouched by this file.
 #
 # registry.live-demo.json labels the classification-review route (and the
@@ -52,8 +52,11 @@ services:
       - sh
       - -c
       - python /app/tools/report_ai_http.py & exec python /app/tools/serve_live_demo.py
+    # report_ai_http.py's endpoint has no login. It must stay loopback-only
+    # (127.0.0.1) and must never be forwarded, tunnelled or otherwise exposed
+    # beyond this machine.
     ports:
-      - "18090:18090"
+      - "127.0.0.1:18090:18090"
     environment:
       GROQ_API_KEY: ${GROQ_API_KEY}
       GROQ_MODEL: ${GROQ_MODEL}
