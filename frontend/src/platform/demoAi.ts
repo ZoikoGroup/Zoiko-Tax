@@ -18,6 +18,7 @@
  */
 
 /** Published to the host (loopback only) by docker-compose.live-demo.yml. */
+// Deviation from ADR-0019 C4 documented: see intelligence/LIVE_DEMO.md § "Deviations".
 export const DEMO_AI_BASE_URL = 'http://localhost:18090'
 
 /** How long one request may take, reading the body included. */
