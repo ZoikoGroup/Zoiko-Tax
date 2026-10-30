@@ -125,6 +125,13 @@ export interface ShadowRow {
   readonly caseState: string
 }
 
+/** Per-mille (0–1000) layout shares supplied by the server (ADR-0019 C1). */
+export interface ChartGeometry {
+  readonly authorityBars: Readonly<Record<string, bigint>>
+  readonly trendPoints: Readonly<Record<string, bigint>>
+  readonly pipelineSegments: Readonly<Record<string, { readonly start: bigint; readonly width: bigint }>>
+}
+
 export interface Fixture {
   readonly disclaimer: string
   readonly currency: string
@@ -138,6 +145,8 @@ export interface Fixture {
   readonly obligations: readonly Obligation[]
   readonly payments: readonly Payment[]
   readonly shadow: readonly ShadowRow[]
+  /** Server-supplied per-mille layout geometry; null when malformed or absent. */
+  readonly chartGeometry: ChartGeometry | null
 }
 
 function decodeFigure(r: Rec, where: string): Figure {
@@ -223,6 +232,53 @@ function decodeShadow(r: Rec, where: string): ShadowRow {
   }
 }
 
+/** Validates an integer per-mille string. Returns the bigint, or null if invalid. */
+function permille(v: unknown): bigint | null {
+  if (typeof v !== 'string') return null
+  if (!/^\d{1,4}$/.test(v)) return null
+  // BigInt is used after the digit-only regex check (parseInt is banned by ADR-0019 C1).
+  const n = BigInt(v)
+  return n > 1000n ? null : n
+}
+
+function decodeChartGeometry(raw: unknown): ChartGeometry | null {
+  try {
+    const g = rec(raw, 'chart_geometry')
+    const ab = rec(g.authority_bars, 'chart_geometry.authority_bars')
+    const tp = rec(g.trend_points, 'chart_geometry.trend_points')
+    const ps = rec(g.pipeline_segments, 'chart_geometry.pipeline_segments')
+
+    const authorityBars: Record<string, bigint> = {}
+    for (const [id, val] of Object.entries(ab)) {
+      const n = permille(val)
+      if (n === null) throw new ShapeError(`chart_geometry.authority_bars.${id}: invalid permille`)
+      authorityBars[id] = n
+    }
+
+    const trendPoints: Record<string, bigint> = {}
+    for (const [id, val] of Object.entries(tp)) {
+      const n = permille(val)
+      if (n === null) throw new ShapeError(`chart_geometry.trend_points.${id}: invalid permille`)
+      trendPoints[id] = n
+    }
+
+    const pipelineSegments: Record<string, { start: bigint; width: bigint }> = {}
+    for (const [id, seg] of Object.entries(ps)) {
+      const s = rec(seg, `chart_geometry.pipeline_segments.${id}`)
+      const start = permille(s.start)
+      const width = permille(s.width)
+      if (start === null || width === null) {
+        throw new ShapeError(`chart_geometry.pipeline_segments.${id}: invalid start or width`)
+      }
+      pipelineSegments[id] = { start, width }
+    }
+
+    return { authorityBars, trendPoints, pipelineSegments }
+  } catch {
+    return null
+  }
+}
+
 function decodeFixture(json: unknown): Fixture {
   const top = rec(json, 'fixture')
   const fx = rec(top.fx_demo_rate, 'fixture.fx_demo_rate')
@@ -252,6 +308,7 @@ function decodeFixture(json: unknown): Fixture {
     obligations: list(top.obligations, 'fixture.obligations', decodeObligation),
     payments: list(top.payments, 'fixture.payments', decodePayment),
     shadow: list(top.shadow_assurance, 'fixture.shadow_assurance', decodeShadow),
+    chartGeometry: decodeChartGeometry(top.chart_geometry),
   }
 }
 

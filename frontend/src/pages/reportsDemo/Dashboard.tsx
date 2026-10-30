@@ -402,6 +402,7 @@ export const Dashboard = ({
         <Card title="Tax Liability by Major Authority">
           <AuthorityChart
             bars={bars}
+            geometry={fixture.chartGeometry}
             highlightId={highlightId}
             onExplain={(bar) => { explain({ title: bar.label, kind: 'report-figure', ids: [bar.id] }) }}
           />
@@ -409,6 +410,7 @@ export const Dashboard = ({
         <Card title="Compliance & Filing Pipeline">
           <PipelineChart
             buckets={fixture.buckets}
+            geometry={fixture.chartGeometry}
             highlightId={highlightId}
             onExplain={(bucket) => { explain({ title: bucket.label, kind: 'filing-bucket', ids: [bucket.id] }) }}
           />
@@ -418,6 +420,7 @@ export const Dashboard = ({
       <Card title="Total tax assessed, last 6 months">
         <TrendChart
           points={fixture.trend}
+          geometry={fixture.chartGeometry}
           highlightId={highlightId}
           onExplain={(point) => { explain({ title: point.label, kind: 'trend-point', ids: [point.id] }) }}
         />

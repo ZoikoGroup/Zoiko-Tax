@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import sys
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
@@ -440,3 +441,118 @@ def test_rows_for_kind_ignores_an_id_from_another_kind(fx: dict[str, Any]) -> No
 
 def test_rows_for_kind_unknown_kind_returns_nothing(fx: dict[str, Any]) -> None:
     assert report_fixture.rows_for_kind(fx, "not-a-real-kind", ["OBL-001"]) == []
+
+
+# --- chart_geometry ----------------------------------------------------------
+
+
+def test_chart_geometry_key_exists(fx: dict[str, Any]) -> None:
+    assert "chart_geometry" in fx
+    geom = fx["chart_geometry"]
+    assert "authority_bars" in geom
+    assert "trend_points" in geom
+    assert "pipeline_segments" in geom
+
+
+def test_chart_geometry_authority_bars_are_integer_strings_0_to_1000(fx: dict[str, Any]) -> None:
+    for fig_id, val in fx["chart_geometry"]["authority_bars"].items():
+        assert isinstance(val, str), f"{fig_id}: not a string"
+        assert re.fullmatch(r"\d{1,4}", val), f"{fig_id}: not a 1-4 digit string: {val!r}"
+        assert 0 <= int(val) <= 1000, f"{fig_id}: out of range: {val}"
+
+
+def test_chart_geometry_trend_points_are_integer_strings_0_to_1000(fx: dict[str, Any]) -> None:
+    for pt_id, val in fx["chart_geometry"]["trend_points"].items():
+        assert isinstance(val, str), f"{pt_id}: not a string"
+        assert re.fullmatch(r"\d{1,4}", val), f"{pt_id}: not a 1-4 digit string: {val!r}"
+        assert 0 <= int(val) <= 1000, f"{pt_id}: out of range: {val}"
+
+
+def test_chart_geometry_pipeline_segments_are_integer_strings_0_to_1000(fx: dict[str, Any]) -> None:
+    for seg_id, seg in fx["chart_geometry"]["pipeline_segments"].items():
+        for field in ("start", "width"):
+            val = seg[field]
+            assert isinstance(val, str), f"{seg_id}.{field}: not a string"
+            assert re.fullmatch(r"\d{1,4}", val), f"{seg_id}.{field}: {val!r}"
+            assert 0 <= int(val) <= 1000, f"{seg_id}.{field}: out of range"
+
+
+def test_chart_geometry_authority_bars_max_is_1000(fx: dict[str, Any]) -> None:
+    vals = [int(v) for v in fx["chart_geometry"]["authority_bars"].values()]
+    assert vals, "authority_bars must not be empty"
+    assert max(vals) == 1000, f"expected max 1000, got {max(vals)}"
+
+
+def test_chart_geometry_trend_points_max_is_1000(fx: dict[str, Any]) -> None:
+    vals = [int(v) for v in fx["chart_geometry"]["trend_points"].values()]
+    assert vals, "trend_points must not be empty"
+    assert max(vals) == 1000, f"expected max 1000, got {max(vals)}"
+
+
+def test_chart_geometry_authority_bars_ids_match_by_authority_figures(fx: dict[str, Any]) -> None:
+    bar_figs = {f["id"] for f in fx["report_figures"] if f["group"] == "by_authority"}
+    geom_ids = set(fx["chart_geometry"]["authority_bars"].keys())
+    assert geom_ids == bar_figs
+
+
+def test_chart_geometry_trend_point_ids_match_trend_points(fx: dict[str, Any]) -> None:
+    trend_ids = {p["id"] for p in fx["trend"]["points"]}
+    geom_ids = set(fx["chart_geometry"]["trend_points"].keys())
+    assert geom_ids == trend_ids
+
+
+def test_chart_geometry_pipeline_segment_ids_match_buckets(fx: dict[str, Any]) -> None:
+    bucket_ids = {b["id"] for b in fx["filing_pipeline"]["buckets"]}
+    geom_ids = set(fx["chart_geometry"]["pipeline_segments"].keys())
+    assert geom_ids == bucket_ids
+
+
+def test_chart_geometry_pipeline_segments_tile_correctly(fx: dict[str, Any]) -> None:
+    """First start must be 0; each start = previous start+width; total must be 1000."""
+    buckets = fx["filing_pipeline"]["buckets"]
+    geom = fx["chart_geometry"]["pipeline_segments"]
+    total = int(fx["filing_pipeline"]["total_filings"])
+    prev_end = 0
+    for bucket in buckets:
+        seg = geom[bucket["id"]]
+        start, width = int(seg["start"]), int(seg["width"])
+        assert start == prev_end, f"{bucket['id']}: start {start} != expected {prev_end}"
+        prev_end = start + width
+    if total > 0:
+        assert prev_end == 1000, f"pipeline segments do not tile to 1000 (got {prev_end})"
+
+
+def test_chart_geometry_authority_bars_recompute_with_decimal(fx: dict[str, Any]) -> None:
+    """Re-derive each bar share with Decimal and confirm the fixture matches."""
+    bar_figs = [f for f in fx["report_figures"] if f["group"] == "by_authority"]
+    values = [Decimal(f["value"]) for f in bar_figs]
+    bar_max = max(values)
+    for fig, val in zip(bar_figs, values, strict=True):
+        expected = str(int(val / bar_max * 1000))
+        actual = fx["chart_geometry"]["authority_bars"][fig["id"]]
+        assert actual == expected, f"{fig['id']}: expected {expected}, got {actual}"
+
+
+def test_chart_geometry_trend_points_recompute_with_decimal(fx: dict[str, Any]) -> None:
+    """Re-derive each trend share with Decimal and confirm the fixture matches."""
+    points = fx["trend"]["points"]
+    values = [Decimal(p["value"]) for p in points]
+    trend_max = max(values)
+    for point, val in zip(points, values, strict=True):
+        expected = str(int(val / trend_max * 1000))
+        actual = fx["chart_geometry"]["trend_points"][point["id"]]
+        assert actual == expected, f"{point['id']}: expected {expected}, got {actual}"
+
+
+def test_chart_geometry_not_in_any_row(fx: dict[str, Any]) -> None:
+    """geometry keys must not appear in any row (guard isolation)."""
+    geom_keys = {"authority_bars", "trend_points", "pipeline_segments", "chart_geometry"}
+    for row in report_fixture.flatten_rows(fx).values():
+        assert not geom_keys.intersection(row.keys()), \
+            f"row {row.get('id')} contains a geometry key"
+
+
+def test_chart_geometry_is_deterministic(fx: dict[str, Any]) -> None:
+    second = report_fixture.generate_fixture()
+    assert json.dumps(fx["chart_geometry"], sort_keys=True) == \
+        json.dumps(second["chart_geometry"], sort_keys=True)

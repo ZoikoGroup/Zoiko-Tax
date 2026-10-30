@@ -772,3 +772,61 @@ def test_patched_routes_already_covers_the_new_use_cases_without_any_code_change
         route = patched.route(use_case_id)
         assert route.model_profile == "model:groq-live-demo:llama-3.1-8b-instant"
         assert route.provider_profile == "provider:groq-demo"
+
+
+# ---------------------------------------------------------------------------
+# chart_geometry tests
+# ---------------------------------------------------------------------------
+
+
+def test_fixture_includes_chart_geometry() -> None:
+    """GET /demo/fixture includes chart_geometry with the three required keys."""
+    fx = report_fixture.generate_fixture()
+    assert "chart_geometry" in fx
+    geom = fx["chart_geometry"]
+    assert "authority_bars" in geom
+    assert "trend_points" in geom
+    assert "pipeline_segments" in geom
+
+
+def test_rows_for_kind_output_has_no_geometry_keys() -> None:
+    """rows_for_kind never leaks chart_geometry keys into the rows sent to the guard."""
+    fx = report_fixture.generate_fixture()
+    geometry_top_keys = {"chart_geometry", "authority_bars", "trend_points", "pipeline_segments"}
+    for kind in report_fixture.EXPLAIN_KINDS:
+        rows = report_fixture._collection(fx, kind)
+        for row in rows:
+            assert geometry_top_keys.isdisjoint(row.keys()), \
+                f"row {row.get('id')} in {kind!r} contains a geometry key"
+
+
+def test_a_number_only_in_chart_geometry_is_rejected_by_apply_guard() -> None:
+    """A number that appears only in chart_geometry and not in any row must be rejected.
+
+    The guard calls _numeric_values(rows) which scans the supplied rows only;
+    chart_geometry is a top-level key and is never in rows_for_kind output.
+    """
+    fx = report_fixture.generate_fixture()
+    # Find a permille value that does NOT appear verbatim in any row (all are "0"..."1000").
+    # Use "1000" -- the max bar; it never appears as a fiscal decimal in the rows.
+    geom_only_number = "1000"
+
+    # Confirm it is not a numeric value in any row.
+    all_rows = list(report_fixture.flatten_rows(fx).values())
+    allowed = report_ai_http._numeric_values(all_rows)
+    from decimal import Decimal
+    assert Decimal(geom_only_number) not in allowed, (
+        f"{geom_only_number!r} was found in row numeric values -- "
+        "pick a different test value"
+    )
+
+    # Pick a real obligation row to explain.
+    rows = report_fixture.rows_for_kind(fx, "obligation-row", ["OBL-001"])
+    assert rows
+    cited_ids = [rows[0]["id"]]
+
+    # Craft an explanation that mentions only the geometry number (not a row value).
+    explanation = f"The filing covers a share of {geom_only_number} per mille."
+    passed, reason = report_ai_http.apply_guard(rows, cited_ids, explanation)
+    assert not passed, "guard should reject a number that is only in chart_geometry"
+    assert reason

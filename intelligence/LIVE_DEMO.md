@@ -151,3 +151,17 @@ case in `registry.live-demo.json`, followed by a restart of the
   it in `.env.example`, never commit `.env`.
 - **Rotate the key after the demo.** It was used for a live, unreviewed,
   temporary exercise -- treat it as spent.
+
+## Deviations
+
+### Raw fetch in `frontend/src/platform/demoAi.ts`
+
+| Field | Detail |
+|---|---|
+| **What** | A single hand-written `fetch` call to the demo AI service, with one `// eslint-disable-next-line no-restricted-globals` comment on that line. |
+| **Which rule** | ADR-0019 C4 ("the fiscal surface is reached through the SDK"). |
+| **Why not a violation** | The demo AI service (`intelligence/tools/report_ai_http.py`) is not a ZoikoTax API endpoint and has no OpenAPI contract. C4 governs hand-written fetches against ZoikoTax's own fiscal API. This fetch reaches an uncontracted, synthetic-only, demo-only service that is explicitly labelled as such. |
+| **Compensating controls** | (1) The exception is in exactly one file (`demoAi.ts`) and the lint disable is on exactly one line. (2) The service returns only synthetic, advisory data -- never a determination, obligation, or fiscal decision. (3) The fetch never throws: all errors are returned as typed failure results so a downed service cannot break the surrounding page. (4) Response shape is validated by the caller before any value is used. (5) CORS is limited to `http://localhost:13000` in `report_ai_http.py`. (6) The service binds to `0.0.0.0` inside the container but is published on `127.0.0.1` only (see `docker-compose.live-demo.yml`). |
+| **Removal condition** | Delete the Reports (demo) page and `frontend/src/platform/demoAi.ts` together. The lint exception disappears with the file. |
+| **Approver** | Lane N |
+| **Expiry / removal date** | TBD - to be set by Lane N |

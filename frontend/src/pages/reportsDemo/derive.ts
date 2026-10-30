@@ -3,10 +3,10 @@
  * the seven-step view of an explanation, and the CSV export. No React, no I/O.
  *
  * Nothing here computes a figure. Every number shown is the string the demo
- * service sent. The only arithmetic is chart GEOMETRY -- how long a bar is
- * relative to the longest -- and it is done in BigInt and emitted as percent
- * strings, so no fixture value is ever converted to a binary float (ADR-0019
- * C1 forbids parseFloat / Number / unary plus / toFixed for exactly that).
+ * service sent. Bar proportions are supplied by the server as per-mille
+ * integers (ADR-0019 C1: the server provides derived figures; the browser only
+ * positions them). The only remaining BigInt arithmetic in Charts.tsx is on
+ * layout constants and parsed per-mille integers, never on a fiscal value.
  */
 import { displayAmount, fiscalAmount, money } from '../../fiscal/money'
 import type { ExplainReply, ExplainTarget, Fixture } from './model'
@@ -46,35 +46,12 @@ export function formatFigure(value: string, unit: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// SVG geometry, in BigInt tenths-of-a-percent
+// SVG geometry, in BigInt per-mille (bar proportions supplied by the server)
 // ---------------------------------------------------------------------------
-
-const SCALE = 4
-
-/** A decimal string as a scaled integer (4 places), for comparing and ratios. 0 if malformed. */
-export function scaled(decimal: string): bigint {
-  const [whole = '', fraction = ''] = decimal.split('.')
-  const digits = `${whole}${fraction.padEnd(SCALE, '0').slice(0, SCALE)}`
-  return /^\d+$/.test(digits) ? BigInt(digits) : 0n
-}
-
-/** floor(part / whole * of), clamped to [0, of]; 0 when whole is not positive. */
-export function share(part: bigint, whole: bigint, of: bigint): bigint {
-  if (whole <= 0n || part <= 0n) {
-    return 0n
-  }
-  const v = (part * of) / whole
-  return v > of ? of : v
-}
 
 /** Tenths of a percent as an SVG length: 734n -> "73.4%". */
 export function pct(tenths: bigint): string {
   return `${tenths / 10n}.${tenths % 10n}%`
-}
-
-/** The largest of the scaled values, or 0n. */
-export function maxScaled(values: readonly string[]): bigint {
-  return values.reduce((m, v) => (scaled(v) > m ? scaled(v) : m), 0n)
 }
 
 // ---------------------------------------------------------------------------
