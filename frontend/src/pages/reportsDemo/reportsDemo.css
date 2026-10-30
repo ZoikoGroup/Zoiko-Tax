@@ -231,6 +231,12 @@
   z-index: 50;
 }
 
+/* focus is moved here when the panel opens; a visible ring, not the default box */
+.rd-panel:focus-visible {
+  outline: 2px solid #c86a3b;
+  outline-offset: -2px;
+}
+
 .rd-panel-head {
   display: flex;
   align-items: flex-start;

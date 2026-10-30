@@ -12,11 +12,16 @@
  *
  * It is the only place the page touches the network. It returns the parsed
  * body as `unknown` (the caller validates its shape) and never throws, so a
- * demo service that is down cannot break the page around it.
+ * demo service that is down cannot break the page around it. A request that
+ * takes longer than DEMO_AI_TIMEOUT_MS is cut off and reported as
+ * 'unreachable', which the page shows as its ordinary "unavailable" state.
  */
 
-/** Published to the host by docker-compose.live-demo.yml. */
+/** Published to the host (loopback only) by docker-compose.live-demo.yml. */
 export const DEMO_AI_BASE_URL = 'http://localhost:18090'
+
+/** How long one request may take, reading the body included. */
+export const DEMO_AI_TIMEOUT_MS = 30_000
 
 export type DemoAiResult =
   | { readonly ok: true; readonly body: unknown }
@@ -31,9 +36,17 @@ export async function demoAiRequest(
     init.headers = { 'Content-Type': 'application/json' }
     init.body = JSON.stringify(options.body)
   }
-  if (options.signal !== undefined) {
-    init.signal = options.signal
+  // One controller for both ways out: the caller's signal (a superseded or
+  // closed request: 'aborted') and the timeout (a slow service: 'unreachable').
+  const controller = new AbortController()
+  const abort = () => { controller.abort() }
+  const caller = options.signal
+  if (caller?.aborted === true) {
+    abort()
   }
+  caller?.addEventListener('abort', abort, { once: true })
+  const timer = setTimeout(abort, DEMO_AI_TIMEOUT_MS)
+  init.signal = controller.signal
   try {
     // eslint-disable-next-line no-restricted-globals -- the single, documented exception above
     const response = await fetch(`${DEMO_AI_BASE_URL}${path}`, init)
@@ -43,6 +56,9 @@ export async function demoAiRequest(
     const body: unknown = await response.json()
     return { ok: true, body }
   } catch {
-    return { ok: false, reason: options.signal?.aborted === true ? 'aborted' : 'unreachable' }
+    return { ok: false, reason: caller?.aborted === true ? 'aborted' : 'unreachable' }
+  } finally {
+    clearTimeout(timer)
+    caller?.removeEventListener('abort', abort)
   }
 }

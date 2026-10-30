@@ -184,7 +184,9 @@ const GOVERNANCE_REASONS: readonly string[] = [
 ]
 const MODEL_CALL_REASONS: readonly string[] = ['AI_GATEWAY_UNAVAILABLE', 'AI_GATEWAY_NOT_CONFIGURED']
 const GUARD_REASONS: readonly string[] = [
+  'the explanation cites no row id',
   'cited id(s) not in the supplied rows',
+  'explanation states a status that is not the cited row',
   'explanation states a number not present in the supplied rows',
 ]
 
@@ -256,12 +258,12 @@ export function explainSteps(target: Pick<ExplainTarget, 'kind' | 'ids'>, reply:
           ? `The deterministic guard rejected the reply: ${reply.reason} ${UNAFFECTED}`
           : at(4) === 'pending'
             ? 'Not reached.'
-            : 'The deterministic guard (not the model) found every cited id among the supplied rows and every number in the explanation grounded in them.',
+            : 'The deterministic guard (not the model) checked the explanation against the cited rows: cited ids exist, and its numbers and status words match them. It cannot prove the sentence is true, so a person should still check it.',
     },
     {
       n: 5, title: 'Disposition', state: at(5),
       note: stop === null
-        ? 'EXPLAINED — an advisory explanation grounded in the supplied rows. It never changes a figure on this page.'
+        ? 'EXPLAINED — an advisory explanation whose figures were checked against the cited rows; a person should still check it. It never changes a figure on this page.'
         : at(5) === 'stopped'
           ? `ABSTAINED — ${reply.reason} ${UNAFFECTED}`
           : `Not reached — the outcome is ${reply.outcome}, decided at the step above.`,

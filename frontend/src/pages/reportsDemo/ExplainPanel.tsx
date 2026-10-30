@@ -6,6 +6,8 @@
  * outcome is not EXPLAINED the panel shows the reason plainly and never the
  * explanation text, and says a person should check.
  */
+import { useEffect, useRef } from 'react'
+
 import { StepRow } from '../IntelligencePage'
 import '../obligations.css'
 import { explainSteps } from './derive'
@@ -84,11 +86,43 @@ const Answer = ({
 export const ExplainPanel = ({
   state, onClose, onCite,
 }: { state: PanelState; onClose: () => void; onCite: (id: string) => void }) => {
+  const panelRef = useRef<HTMLElement>(null)
+  const isOpen = state.status !== 'closed'
+
+  // On open: remember what had focus (the Explain control that was used) and
+  // move focus into the panel. On close: give focus back to that control.
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined
+    }
+    const opener = document.activeElement
+    panelRef.current?.focus()
+    return () => {
+      if ((opener instanceof HTMLElement || opener instanceof SVGElement) && opener.isConnected) {
+        opener.focus()
+      }
+    }
+  }, [isOpen])
+
+  // Escape closes the panel from anywhere on the page while it is open.
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined
+    }
+    const onKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => { document.removeEventListener('keydown', onKeyDown) }
+  }, [isOpen, onClose])
+
   if (state.status === 'closed') {
     return null
   }
   return (
-    <aside className="rd-panel" aria-label="AI explanation" aria-live="polite">
+    <aside ref={panelRef} tabIndex={-1} className="rd-panel" aria-label="AI explanation" aria-live="polite">
       <div className="rd-panel-head">
         <h2 className="ztax-card-title">Explain: {state.target.title}</h2>
         <button type="button" className="ztax-btn-quiet" onClick={onClose}>Close</button>
