@@ -32,6 +32,7 @@ export type View =
   | 'shadow'
   | 'migration'
   | 'reports'
+  | 'reports-demo'
   | 'reconcile'
   | 'documents'
   | 'evidence'
@@ -76,6 +77,7 @@ export const NAV_GROUPS: readonly { title: string; items: readonly NavItem[] }[]
       { id: 'content', label: 'Content', icon: <IconDatabase />, view: 'content' },
       { id: 'locations', label: 'Location taxation', icon: <IconGlobe />, view: 'locations' },
       { id: 'reports', label: 'Reports', icon: <IconBarChart />, view: 'reports' },
+      { id: 'reports-demo', label: 'Reports (demo)', icon: <IconBarChart />, view: 'reports-demo' },
     ],
   },
   {

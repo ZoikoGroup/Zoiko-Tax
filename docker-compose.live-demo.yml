@@ -1,0 +1,62 @@
+# DEMO ONLY. Never for production. Synthetic data only. Not part of CI.
+#
+# Overlay for a temporary demo: swaps the ztax-model-gateway service's
+# runtime for a real, pinned Groq-hosted model behind the same governed
+# Gateway, with nothing else about the stack changed. Use together with the
+# base file, never on its own:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.live-demo.yml up --build -d
+#   docker compose -f docker-compose.yml -f docker-compose.live-demo.yml down
+#
+# Needs GROQ_API_KEY and GROQ_MODEL in the local, gitignored .env --
+# see intelligence/LIVE_DEMO.md.
+#
+# Changes only the ztax-model-gateway service, and only five things on it:
+# bind-mounts intelligence/tools read-only, replaces the base registry mount
+# with intelligence/config/registry.live-demo.json (same target path, so it
+# overrides rather than adding a second mount -- the shared registry.dev.json
+# is untouched and ztax-core still reads it unchanged), points the entrypoint
+# at the new intelligence/tools/serve_live_demo.py and report_ai_http.py
+# instead of `python -m ztax_gateway.server`, adds the two GROQ_* variables,
+# and publishes one loopback-only host port for report_ai_http.py's
+# demo-only HTTP endpoint. Every other service, and every hardening setting already on
+# this one (read_only, cap_drop, security_opt), is untouched by this file.
+#
+# registry.live-demo.json labels the classification-review route (and the
+# three explain-* report-explanation use cases report_ai_http.py adds)
+# "model:groq-live-demo" / "provider:groq-demo" as a static placeholder --
+# a JSON file cannot read an environment variable. serve_live_demo.py and
+# report_ai_http.py each patch that label in memory at start-up with the
+# real, pinned GROQ_MODEL value, so the frontend's Provenance table (and
+# report_ai_http.py's own /demo/explain reply) show the model actually
+# running, with no edit to the registry file and no edit to
+# intelligence/src.
+#
+# The entrypoint runs both scripts in the one container: report_ai_http.py
+# in the background, serve_live_demo.py execed into the foreground (so it,
+# as before this line existed, is still what the container's own lifecycle
+# follows). Plain `sh -c` -- no new dependency, no change to the image.
+#
+# GROQ_API_KEY and GROQ_MODEL use the plain ${VAR} form on purpose, not
+# ${VAR:?...} or ${VAR:-...}: docs/tools/check_secrets_manifest.py exempts
+# docker-compose.yml by name (it is on the sanctioned-files list) but this
+# file is not, and its secret-shaped-value check only recognises the plain
+# form as a safe reference.
+
+services:
+  ztax-model-gateway:
+    volumes:
+      - ./intelligence/tools:/app/tools:ro
+      - ./intelligence/config/registry.live-demo.json:/etc/ztax/ai/registry.json:ro
+    entrypoint:
+      - sh
+      - -c
+      - python /app/tools/report_ai_http.py & exec python /app/tools/serve_live_demo.py
+    # report_ai_http.py's endpoint has no login. It must stay loopback-only
+    # (127.0.0.1) and must never be forwarded, tunnelled or otherwise exposed
+    # beyond this machine.
+    ports:
+      - "127.0.0.1:18090:18090"
+    environment:
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL}
