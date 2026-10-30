@@ -67,20 +67,25 @@ const sampleItems: ReadonlyArray<{ subjectRef: string; description: string }> = 
 
 type StepState = 'pending' | 'passed' | 'stopped'
 
-const StepBadge = ({ state }: { state: StepState }) => {
+const StepBadge = ({ state, passedLabel }: { state: StepState; passedLabel: string }) => {
   const tone = state === 'passed' ? 'ok' : state === 'stopped' ? 'bad' : 'neutral'
-  const label = state === 'passed' ? 'Passed' : state === 'stopped' ? 'Stopped' : 'Pending'
+  const label = state === 'passed' ? passedLabel : state === 'stopped' ? 'Stopped' : 'Pending'
   return <span className={`ztax-status ztax-status--${tone}`}>{label}</span>
 }
 
+/** Step 4 checks format only, so its passed badge says so (see the step 4 note). */
+export const OUTPUT_CHECK_PASSED_LABEL = 'Format checks passed'
+
 export const StepRow = ({
-  n, title, state, note, children,
-}: { n: number; title: string; state: StepState; note: ReactNode; children?: ReactNode }) => (
+  n, title, state, note, passedLabel = 'Passed', children,
+}: {
+  n: number; title: string; state: StepState; note: ReactNode; passedLabel?: string; children?: ReactNode
+}) => (
   <div className={`ztax-step ztax-step--${state}`}>
     <div className="ztax-step-head">
       <span className="ztax-step-n">{n}</span>
       <h3 className="ztax-step-title">{title}</h3>
-      <StepBadge state={state} />
+      <StepBadge state={state} passedLabel={passedLabel} />
     </div>
     <p className="ztax-step-note">{note}</p>
     {children}
@@ -276,6 +281,7 @@ const Stepper = ({ proposal }: { proposal: Proposal }) => {
         n={4}
         title="Output checks"
         state={step4State}
+        passedLabel={OUTPUT_CHECK_PASSED_LABEL}
         note={
           step4State === 'stopped'
             ? stoppedNote
@@ -329,7 +335,7 @@ const Stepper = ({ proposal }: { proposal: Proposal }) => {
               <dt>Proposed code</dt>
               <dd className="ztax-proposed-code mono">{proposal.proposedCode}</dd>
               <dt>Confidence</dt>
-              <dd className="mono">{proposal.confidence ?? '—'}</dd>
+              <dd className="mono">{proposal.confidence === undefined ? '—' : `${proposal.confidence} (placeholder)`}</dd>
               <dt>Authoritative</dt>
               <dd className="mono">{String(proposal.authoritative)}</dd>
               <dt>Proposal</dt>

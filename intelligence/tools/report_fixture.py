@@ -54,7 +54,7 @@ FX_DEMO_RATE: Final[dict[str, str]] = {
 _EUR_TO_USD: Final[Decimal] = Decimal(FX_DEMO_RATE["rate"])
 
 # The fixture's "today". Fixed so "due within 15 days" never drifts.
-AS_OF: Final[str] = "2026-10-20"
+AS_OF: Final[str] = "2026-10-30"
 UPCOMING_WINDOW_DAYS: Final[int] = 15
 
 _SEED: Final[int] = 20260101
