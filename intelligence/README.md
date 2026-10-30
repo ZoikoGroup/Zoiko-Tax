@@ -178,6 +178,8 @@ the `ToolProfile` and `ToolProvenance` immutability are verified, and the
 
 ## Demonstrating the AI boundary (playbook step 10)
 
+See [EVIDENCE.md](EVIDENCE.md) for a one-page matrix of what is proven, what is not, and what is not yet built.
+
 Run this one command from the `intelligence/` directory:
 
 ```
