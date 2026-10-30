@@ -70,3 +70,59 @@ All tests use a fake model and prove that governance is independent of model out
 and payload content, not that a real model resists injection. The gateway trusts the
 declared authority level; no test validates that the caller's identity assertion is
 unforgeable. This document does not close any requirement.
+
+## H. Live demo path: evidence record versus explanation guard
+
+This section covers only the **live Groq demo** path
+(`intelligence/tools/report_ai_http.py` + `docker-compose.live-demo.yml`).
+It does not affect any production gateway path.
+
+### What the evidence record contains
+
+When the demo Reports page calls `POST /demo/explain`, `report_ai_http.py`
+calls `Gateway.invoke()` in `intelligence/src/ztax_gateway/server.py`.
+The Gateway writes one evidence record (ZTAX-AIGOV-001 §14) through the
+`ztax_gateway.evidence` logger at `INFO` level **before** it returns a
+reply to the caller. The outcome recorded in that line is always **`PROPOSE`**
+-- the authority outcome at the moment of the model invocation. It does not
+reflect anything that happens after `Gateway.invoke()` returns.
+
+### What the explanation guard does (and where its decision is logged)
+
+After `Gateway.invoke()` returns, `report_ai_http.py`'s own deterministic
+`apply_guard()` / `_check()` function checks the model's reply against the
+cited rows (citation existence, number matching, status-word matching). This
+guard is independent of `intelligence/src`; it runs in `report_ai_http.py`
+itself.
+
+If the guard rejects the reply, the outcome sent to the browser is `ABSTAINED`
+and the reason is the guard's fixed code (e.g. `GUARD_NUMBER_NOT_IN_ROWS`).
+This decision is logged separately, at the line in `report_ai_http.py`
+(logger `ztax_gateway.report_ai_http`, level `INFO`):
+
+```
+log.info("explain use_case=<use_case> outcome=ABSTAINED reason=<guard_code>", ...)
+```
+
+The actual log call uses Python's `logging` percent-style format with the
+`use_case` and `guard_code` arguments; the message written to the log handler
+includes their values. The log is kept for the lifetime of the running
+container; it is not persisted after container restart.
+
+### What this means
+
+The evidence record (written by `Gateway.invoke()`) and the guard log (written
+by `report_ai_http.py`) are two separate lines. A call that the guard later
+rejects still shows `PROPOSE` in the evidence record. The full picture --
+`PROPOSE` in the gateway evidence and `ABSTAINED` in the `report_ai_http`
+log -- requires reading both.
+
+This is acceptable for the demo because no downstream system reads demo
+evidence records and no compliance decision depends on them.
+
+### Follow-up required
+
+A follow-up task is open to record the guard's outcome in the evidence record.
+That change requires an edit to `intelligence/src` (the gateway wire format or
+the evidence writer) and needs **Lane L approval** (and Lane C approval if
+`governance.py` is touched). It must not be made in the demo PR.

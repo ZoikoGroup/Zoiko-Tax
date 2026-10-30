@@ -389,6 +389,63 @@ def _generate_shadow_assurance(obligations: list[dict[str, Any]]) -> list[dict[s
     return rows
 
 
+def _generate_chart_geometry(
+    figures: list[dict[str, Any]],
+    trend: list[dict[str, Any]],
+    pipeline: dict[str, Any],
+) -> dict[str, Any]:
+    """Per-mille layout shares for the three charts -- server-supplied so the
+    browser does no arithmetic on fiscal values (ADR-0019 C1).
+
+    All values are integer strings 0..1000 (per-mille), Decimal arithmetic
+    only, no float, no round().  Kept as a separate top-level key so none of
+    these numbers appear in any row that the explain guard scans.
+    """
+    permille = Decimal(1000)
+    zero = Decimal(0)
+
+    # -- AuthorityChart: figures whose group == "by_authority" ----------------
+    bar_figs = [f for f in figures if f["group"] == "by_authority"]
+    bar_values = [Decimal(f["value"]) for f in bar_figs]
+    bar_max = max(bar_values, default=zero)
+    authority_bars: dict[str, str] = {}
+    for fig, val in zip(bar_figs, bar_values, strict=True):
+        authority_bars[fig["id"]] = (
+            "0" if bar_max <= zero else str(int(val / bar_max * permille))
+        )
+
+    # -- TrendChart: trend points ---------------------------------------------
+    trend_values = [Decimal(p["value"]) for p in trend]
+    trend_max = max(trend_values, default=zero)
+    trend_points: dict[str, str] = {}
+    for point, val in zip(trend, trend_values, strict=True):
+        trend_points[point["id"]] = (
+            "0" if trend_max <= zero else str(int(val / trend_max * permille))
+        )
+
+    # -- PipelineChart: cumulative-edge segments ------------------------------
+    buckets = pipeline["buckets"]
+    total = Decimal(pipeline["total_filings"])
+    pipeline_segments: dict[str, dict[str, str]] = {}
+    previous_edge = Decimal(0)
+    cumulative = Decimal(0)
+    for bucket in buckets:
+        cumulative += Decimal(bucket["count"])
+        edge = zero if total <= zero else Decimal(int(cumulative * permille / total))
+        width = edge - previous_edge
+        pipeline_segments[bucket["id"]] = {
+            "start": str(int(previous_edge)),
+            "width": str(int(width)),
+        }
+        previous_edge = edge
+
+    return {
+        "authority_bars": authority_bars,
+        "trend_points": trend_points,
+        "pipeline_segments": pipeline_segments,
+    }
+
+
 def generate_fixture() -> dict[str, Any]:
     """Build the whole demo fixture. Deterministic -- same output every call."""
     rng = random.Random(_SEED)
@@ -409,6 +466,7 @@ def generate_fixture() -> dict[str, Any]:
         "obligations": obligations,
         "payments": payments,
         "shadow_assurance": _generate_shadow_assurance(obligations),
+        "chart_geometry": _generate_chart_geometry(figures, trend, pipeline),
     }
 
 
