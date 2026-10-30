@@ -2,14 +2,14 @@
  * The Reports (demo) charts: plain SVG, no chart library.
  *
  * Every number drawn as a label is the string the demo service sent. Bar
- * lengths are proportions of the longest value, computed in BigInt and written
- * as percent strings (see derive.ts), so no fixture value becomes a float.
+ * proportions are supplied by the server as per-mille integers (ADR-0019 C1:
+ * the server provides derived figures; the browser only positions them).
  * Each bar, column and legend entry carries an "Explain" control.
  */
 import type { KeyboardEvent } from 'react'
 
-import { formatMoney, maxScaled, pct, scaled, share } from './derive'
-import type { Bucket, Figure, TrendPoint } from './model'
+import { formatMoney, pct } from './derive'
+import type { Bucket, ChartGeometry, Figure, TrendPoint } from './model'
 
 /** A keyboard-reachable SVG "Explain" button, positioned in tenths of a percent. */
 const ExplainPill = ({
@@ -47,9 +47,8 @@ const BAR_LABEL_END = 280n
 const BAR_MAX = 300n
 
 export const AuthorityChart = ({
-  bars, highlightId, onExplain,
-}: ChartProps<Figure> & { readonly bars: readonly Figure[] }) => {
-  const max = maxScaled(bars.map((b) => b.value))
+  bars, geometry, highlightId, onExplain,
+}: ChartProps<Figure> & { readonly bars: readonly Figure[]; readonly geometry: ChartGeometry | null }) => {
   return (
     <svg
       className="rd-svg"
@@ -60,7 +59,8 @@ export const AuthorityChart = ({
     >
       {bars.map((bar, i) => {
         const y = i * BAR_ROW + 4
-        const length = share(scaled(bar.value), max, BAR_MAX)
+        const permille = geometry?.authorityBars[bar.id] ?? 0n
+        const length = (BAR_MAX * permille) / 1000n
         return (
           <g key={bar.id} id={`rd-${bar.id}`} className={bar.id === highlightId ? 'rd-svg-hl' : undefined}>
             <text className="rd-svg-label" x="0" y={y + 17}>{bar.authority ?? bar.label}</text>
@@ -87,17 +87,13 @@ export const AuthorityChart = ({
 // ---------------------------------------------------------------------------
 
 export const PipelineChart = ({
-  buckets, highlightId, onExplain,
-}: ChartProps<Bucket> & { readonly buckets: readonly Bucket[] }) => {
-  const total = buckets.reduce((sum, b) => sum + scaled(b.count), 0n)
-  const segments: { bucket: Bucket; index: number; left: bigint; width: bigint }[] = []
-  let cumulative = 0n
-  let previousEdge = 0n
-  buckets.forEach((bucket, index) => {
-    cumulative += scaled(bucket.count)
-    const edge = share(cumulative, total, 1000n)
-    segments.push({ bucket, index, left: previousEdge, width: edge - previousEdge })
-    previousEdge = edge
+  buckets, geometry, highlightId, onExplain,
+}: ChartProps<Bucket> & { readonly buckets: readonly Bucket[]; readonly geometry: ChartGeometry | null }) => {
+  const segments = buckets.map((bucket, index) => {
+    const seg = geometry?.pipelineSegments[bucket.id]
+    const left = seg?.start ?? 0n
+    const width = seg?.width ?? 0n
+    return { bucket, index, left, width }
   })
   const filings = buckets[0]?.totalFilings
   return (
@@ -148,12 +144,11 @@ const PLOT_BASELINE = 720n
 const PLOT_MAX = 580n
 
 export const TrendChart = ({
-  points, highlightId, onExplain,
-}: ChartProps<TrendPoint> & { readonly points: readonly TrendPoint[] }) => {
+  points, geometry, highlightId, onExplain,
+}: ChartProps<TrendPoint> & { readonly points: readonly TrendPoint[]; readonly geometry: ChartGeometry | null }) => {
   if (points.length === 0) {
     return <p className="rd-muted">No trend points in the fixture.</p>
   }
-  const max = maxScaled(points.map((p) => p.value))
   const slot = 1000n / BigInt(points.length)
   const columnWidth = (slot * 6n) / 10n
   const pillWidth = (slot * 7n) / 10n
@@ -168,7 +163,8 @@ export const TrendChart = ({
       <line className="rd-axis" x1="0%" x2="100%" y1={pct(PLOT_BASELINE)} y2={pct(PLOT_BASELINE)} />
       {points.map((point, i) => {
         const left = BigInt(i) * slot
-        const height = share(scaled(point.value), max, PLOT_MAX)
+        const permille = geometry?.trendPoints[point.id] ?? 0n
+        const height = (PLOT_MAX * permille) / 1000n
         const top = PLOT_BASELINE - height
         const centre = left + slot / 2n
         return (
