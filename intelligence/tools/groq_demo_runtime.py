@@ -29,6 +29,7 @@ name that silently moves is not a model the operator actually reviewed.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import urllib.error
 import urllib.request
@@ -41,6 +42,8 @@ __all__: list[str] = [
     "GroqDemoRuntime",
     "build_request",
 ]
+
+log = logging.getLogger("ztax_gateway.groq_demo_runtime")
 
 _API_URL = "https://api.groq.com/openai/v1/chat/completions"
 _TIMEOUT_SECONDS = 30
@@ -65,8 +68,10 @@ _FIXED_CONFIDENCE = "0.5000"
 _REASONING_EFFORT = "low"
 _MAX_TOKENS = 64
 
-# How many characters of a refused raw reply go into the diagnostic message
-# (never the request body, never the key -- see run()).
+# How many characters of a refused raw reply go into the local DEBUG log line
+# (never the request body, never the key, and never an exception message --
+# see run()). Provider text is not put in any exception, because a Gateway
+# error detail can travel on to a caller.
 _LOG_SNIPPET_CHARS = 120
 
 # The real grammar the Go backend enforces for a proposed ontology node
@@ -209,7 +214,8 @@ def build_request(model: str, api_key: str, call: Call) -> urllib.request.Reques
 
 def _snippet(raw: bytes) -> str:
     """The first _LOG_SNIPPET_CHARS characters of a raw reply, decoded
-    leniently -- for a diagnostic message only, never for parsing."""
+    leniently -- for a local DEBUG log line only, never for parsing and never
+    for an exception message."""
     return raw.decode("utf-8", errors="replace")[:_LOG_SNIPPET_CHARS]
 
 
@@ -217,8 +223,8 @@ def _parse_report_explanation(content: str) -> dict[str, str]:
     """Parse a report-explanation model reply into ``Result.fields``.
 
     Raises ValueError -- caught in ``GroqDemoRuntime.run`` and turned into a
-    RuntimeUnavailableError with the usual diagnostic snippet -- if the reply
-    is not the required JSON shape. This is a malformed-*reply* condition,
+    RuntimeUnavailableError with a fixed message -- if the reply is not the
+    required JSON shape. This is a malformed-*reply* condition,
     the same family as the chat-completion-shape check in ``run`` below; it
     is not the deterministic guard, which runs downstream of a successful
     Result, in report_ai_http.py, over real fixture rows this module never
@@ -255,8 +261,7 @@ def _result_from_content(call: Call, content: str) -> Result:
     """Map one model response string to a Result for *call*.
 
     *content* is never empty here -- ``GroqDemoRuntime.run`` already raises
-    RuntimeUnavailableError on an empty reply, with the diagnostic snippet
-    attached, before calling this function.
+    RuntimeUnavailableError on an empty reply before calling this function.
     """
     text = content.strip()
     if call.governance.use_case in _REPORT_EXPLANATION_USE_CASES:
@@ -293,9 +298,10 @@ class GroqDemoRuntime:
         response that is not shaped like a chat completion, or an empty
         reply -- never a raw urllib or JSON exception, so the Gateway's
         existing error mapping handles this runtime exactly like any other.
-        Every one of those messages carries the first _LOG_SNIPPET_CHARS
-        characters of the raw reply (never the request body, never the key)
-        so a refusal is diagnosable from the gateway log alone.
+        Every message is fixed text, plus the HTTP status code where there is
+        one: never provider output, never the request body, never the key. A
+        refusal is diagnosed by the first _LOG_SNIPPET_CHARS characters of
+        the raw reply, which go to this module's logger at DEBUG only.
         """
         request = build_request(self._model, self._api_key, call)
         try:
@@ -306,14 +312,13 @@ class GroqDemoRuntime:
                 error_body = exc.read()
             except Exception:
                 error_body = b""
+            log.debug("provider HTTP %s; reply starts: %r", exc.code, _snippet(error_body))
             raise RuntimeUnavailableError(
-                f"groq demo runtime: provider returned HTTP {exc.code}; first "
-                f"{_LOG_SNIPPET_CHARS} chars of the reply: {_snippet(error_body)!r}"
+                f"groq demo runtime: provider returned HTTP {exc.code}"
             ) from exc
         except urllib.error.URLError as exc:
-            raise RuntimeUnavailableError(
-                f"groq demo runtime: network error: {exc.reason}"
-            ) from exc
+            log.debug("network error: %s", exc.reason)
+            raise RuntimeUnavailableError("groq demo runtime: network error") from exc
         except TimeoutError as exc:
             raise RuntimeUnavailableError(
                 f"groq demo runtime: request timed out after {_TIMEOUT_SECONDS}s"
@@ -325,22 +330,19 @@ class GroqDemoRuntime:
             if not isinstance(content, str):
                 raise TypeError("content is not a string")
         except (json.JSONDecodeError, KeyError, IndexError, TypeError) as exc:
+            log.debug("reply not chat-completion shaped; reply starts: %r", _snippet(raw))
             raise RuntimeUnavailableError(
-                "groq demo runtime: provider response was not shaped like a "
-                f"chat completion; first {_LOG_SNIPPET_CHARS} chars of the "
-                f"reply: {_snippet(raw)!r}"
+                "groq demo runtime: provider response was not shaped like a chat completion"
             ) from exc
 
         if not content.strip():
-            raise RuntimeUnavailableError(
-                "groq demo runtime: provider returned an empty reply; first "
-                f"{_LOG_SNIPPET_CHARS} chars of the reply: {_snippet(raw)!r}"
-            )
+            log.debug("empty reply; reply starts: %r", _snippet(raw))
+            raise RuntimeUnavailableError("groq demo runtime: provider returned an empty reply")
 
         try:
             return _result_from_content(call, content)
         except ValueError as exc:
+            log.debug("reply rejected (%s); reply starts: %r", exc, _snippet(raw))
             raise RuntimeUnavailableError(
-                f"groq demo runtime: {exc}; first {_LOG_SNIPPET_CHARS} chars of "
-                f"the reply: {_snippet(raw)!r}"
+                "groq demo runtime: provider reply was not in the required shape"
             ) from exc

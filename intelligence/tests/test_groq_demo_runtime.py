@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import logging
 import urllib.error
 from io import BytesIO
 from pathlib import Path
@@ -326,12 +327,12 @@ def test_http_error_raises_runtime_unavailable(monkeypatch: pytest.MonkeyPatch) 
         runtime.run(_ROUTE, _make_call())
 
 
-def test_http_error_message_carries_the_status_code_and_a_120_char_snippet_never_the_key(
-    monkeypatch: pytest.MonkeyPatch,
+def test_http_error_message_carries_the_status_code_only_never_provider_text_or_the_key(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """The failure must be diagnosable from the status code and the first
-    120 characters of the provider's reply, with the key never appearing and
-    the snippet never exceeding 120 characters."""
+    """The exception carries the HTTP status code and nothing the provider
+    said; the first 120 characters of its reply go to the DEBUG log only
+    (never longer than 120), and the key appears nowhere."""
     monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
     monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
     runtime = GroqDemoRuntime()
@@ -347,12 +348,19 @@ def test_http_error_message_carries_the_status_code_and_a_120_char_snippet_never
         )
 
     monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
-    with pytest.raises(RuntimeUnavailableError, match="503") as excinfo:
+    with (
+        caplog.at_level(logging.DEBUG, logger="ztax_gateway.groq_demo_runtime"),
+        pytest.raises(RuntimeUnavailableError, match="503") as excinfo,
+    ):
         runtime.run(_ROUTE, _make_call())
     message = str(excinfo.value)
+    assert message == "groq demo runtime: provider returned HTTP 503"
+    assert "synthetic-error-detail" not in message
     assert _FAKE_KEY not in message
-    assert long_body.decode()[:120] in message
-    assert long_body.decode()[:121] not in message
+    logged = caplog.text
+    assert long_body.decode()[:120] in logged
+    assert long_body.decode()[:121] not in logged
+    assert _FAKE_KEY not in logged
 
 
 def test_http_error_with_no_readable_body_still_raises_cleanly(
@@ -400,8 +408,8 @@ def test_malformed_response_raises_runtime_unavailable(monkeypatch: pytest.Monke
         runtime.run(_ROUTE, _make_call())
 
 
-def test_malformed_response_message_carries_a_120_char_snippet_of_the_raw_reply(
-    monkeypatch: pytest.MonkeyPatch,
+def test_malformed_response_message_is_fixed_text_and_the_snippet_is_debug_only(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
     monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
@@ -412,12 +420,16 @@ def test_malformed_response_message_carries_a_120_char_snippet_of_the_raw_reply(
         return _FakeHTTPResponse(raw)
 
     monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
-    with pytest.raises(RuntimeUnavailableError) as excinfo:
+    with (
+        caplog.at_level(logging.DEBUG, logger="ztax_gateway.groq_demo_runtime"),
+        pytest.raises(RuntimeUnavailableError) as excinfo,
+    ):
         runtime.run(_ROUTE, _make_call())
     message = str(excinfo.value)
-    assert raw.decode()[:120] in message
-    assert raw.decode()[:121] not in message
+    assert "not json at all" not in message
     assert _FAKE_KEY not in message
+    assert raw.decode()[:120] in caplog.text
+    assert raw.decode()[:121] not in caplog.text
 
 
 def test_empty_choices_raises_runtime_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -433,11 +445,12 @@ def test_empty_choices_raises_runtime_unavailable(monkeypatch: pytest.MonkeyPatc
         runtime.run(_ROUTE, _make_call())
 
 
-def test_empty_content_raises_runtime_unavailable_with_snippet(
-    monkeypatch: pytest.MonkeyPatch,
+def test_empty_content_raises_runtime_unavailable_with_fixed_text(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """An empty/whitespace-only reply is refused here, with a diagnostic
-    snippet, rather than silently passed through as an empty proposed_code."""
+    """An empty/whitespace-only reply is refused here, with fixed text and the
+    snippet at DEBUG only, rather than silently passed through as an empty
+    proposed_code."""
     monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
     monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
     runtime = GroqDemoRuntime()
@@ -447,11 +460,69 @@ def test_empty_content_raises_runtime_unavailable_with_snippet(
         return _FakeHTTPResponse(raw)
 
     monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
-    with pytest.raises(RuntimeUnavailableError, match="empty") as excinfo:
+    with (
+        caplog.at_level(logging.DEBUG, logger="ztax_gateway.groq_demo_runtime"),
+        pytest.raises(RuntimeUnavailableError, match="empty") as excinfo,
+    ):
         runtime.run(_ROUTE, _make_call())
     message = str(excinfo.value)
-    assert raw.decode()[:120] in message
+    assert message == "groq demo runtime: provider returned an empty reply"
+    assert raw.decode()[:120] in caplog.text
     assert _FAKE_KEY not in message
+    assert _FAKE_KEY not in caplog.text
+
+
+def test_network_error_message_is_fixed_text_without_the_underlying_reason(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
+    monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
+    runtime = GroqDemoRuntime()
+
+    def _fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        raise urllib.error.URLError("synthetic-reason-text")
+
+    monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
+    with pytest.raises(RuntimeUnavailableError) as excinfo:
+        runtime.run(_ROUTE, _make_call())
+    assert str(excinfo.value) == "groq demo runtime: network error"
+
+
+def test_unparseable_report_explanation_reply_message_never_carries_the_reply_text(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A report-explanation reply that is not the required JSON is refused with
+    fixed text; what the model said stays in the DEBUG log, not the exception."""
+    monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
+    monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
+    runtime = GroqDemoRuntime()
+    call = _make_call()
+    call = Call(
+        kind=Kind.EXTRACTION,
+        governance=Governance(
+            tenant_id=call.governance.tenant_id,
+            use_case="explain-report-figure",
+            authority_outcome=AuthorityOutcome.A1,
+            risk_tier=RiskTier.T1,
+            region="local",
+            data_classes=("P0",),
+        ),
+        subject_ref="report-explain:report-figure",
+        input=b"[]",
+    )
+    raw = _chat_completion_body("synthetic-model-prose, not JSON")
+
+    def _fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        return _FakeHTTPResponse(raw)
+
+    monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
+    with (
+        caplog.at_level(logging.DEBUG, logger="ztax_gateway.groq_demo_runtime"),
+        pytest.raises(RuntimeUnavailableError) as excinfo,
+    ):
+        runtime.run(_ROUTE, call)
+    assert "synthetic-model-prose" not in str(excinfo.value)
+    assert "synthetic-model-prose" in caplog.text
 
 
 # ---------------------------------------------------------------------------

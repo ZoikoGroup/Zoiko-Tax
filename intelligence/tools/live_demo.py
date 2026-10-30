@@ -3,12 +3,15 @@
 DEMO ONLY. Never production. Synthetic public data only. No authority.
 
 Wires ``groq_demo_runtime.GroqDemoRuntime`` into a real ``ztax_gateway.server.
-Gateway`` over the shipped ``config/registry.dev.json`` registry -- the exact
-same construction test_registry_dev.py uses for FakeRuntime, with the real
+Gateway`` over the demo's own ``config/registry.live-demo.json`` registry --
+the construction test_registry_dev.py uses for FakeRuntime, with the real
 runtime substituted in. Every call below goes through governance first,
 exactly as a production call would; only the runtime at the end of a
-permitted call is this demo's, and only for the one use case the shipped dev
-registry already declares (classification-review).
+permitted call is this demo's, and only for the one use case it exercises
+(classification-review). Its routes are relabelled in memory with the real
+GROQ_MODEL value by ``serve_live_demo._patched_routes``, the same way
+serve_live_demo.py does, so the provenance printed below names the model
+actually running rather than the dev registry's ``model:fake-v1``.
 
 This script makes real network calls to Groq once GROQ_API_KEY and
 GROQ_MODEL are set. It never constructs the runtime, and therefore never
@@ -32,6 +35,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import serve_live_demo
 from groq_demo_runtime import GroqDemoConfigError, GroqDemoRuntime
 
 from ztax_gateway.citation import Citation
@@ -41,7 +45,7 @@ from ztax_gateway.runtime import Result, Route, RuntimeUnavailableError
 from ztax_gateway.server import Gateway, GatewayError, load_config
 from ztax_gateway.wire import Call
 
-_REGISTRY_PATH = Path(__file__).resolve().parent.parent / "config" / "registry.dev.json"
+_REGISTRY_PATH = Path(__file__).resolve().parent.parent / "config" / "registry.live-demo.json"
 _TENANT = "00000000-0000-0000-0000-000000000099"
 _USE_CASE = "classification-review"
 
@@ -198,6 +202,8 @@ def main() -> int:
         return 1
 
     registry, routes = load_config(_REGISTRY_PATH)
+    # GroqDemoRuntime() above already refused a missing or floating GROQ_MODEL.
+    routes = serve_live_demo._patched_routes(registry, routes, serve_live_demo._env("GROQ_MODEL"))
     sink = _CapturingSink()
     gateway = Gateway(registry, routes, runtime, "local", "0.0.0-demo", evidence_sink=sink)
 

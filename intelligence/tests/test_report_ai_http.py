@@ -9,9 +9,11 @@ tools/ is not on pythonpath (pyproject.toml's [tool.pytest.ini_options] sets
 pythonpath = ["src"] only), so every module under test is loaded directly
 from its file path via importlib -- report_ai_http.py's own top-level
 ``import report_fixture`` / ``import serve_live_demo`` / ``from
-groq_demo_runtime import ...`` need those three names already registered in
-sys.modules first, the same two-step load test_serve_live_demo.py already
-uses for its one sibling import.
+groq_demo_runtime import ...`` need those three names visible in sys.modules
+while it is exec'd. They are visible only for that moment: the loader below
+puts back whatever sys.modules held under those four names afterwards, so no
+other test module sees them and import order between test files stops
+mattering.
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ from __future__ import annotations
 import http.client
 import importlib.util
 import json
+import logging
 import sys
 import threading
 from pathlib import Path
@@ -33,27 +36,43 @@ from ztax_gateway.wire import Call
 
 # ---------------------------------------------------------------------------
 # Load groq_demo_runtime, report_fixture, serve_live_demo and report_ai_http
-# by path, in dependency order, each registered in sys.modules before the
-# next is exec'd.
+# by path, in dependency order. Each is registered in sys.modules only while
+# the load runs (the next file's top-level import needs to find it), then
+# sys.modules is put back exactly as it was for those four names -- nothing is
+# left registered globally.
 # ---------------------------------------------------------------------------
 
 _TOOLS_DIR = Path(__file__).resolve().parent.parent / "tools"
 _CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
 
-
-def _load(name: str) -> ModuleType:
-    spec = importlib.util.spec_from_file_location(name, _TOOLS_DIR / f"{name}.py")
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    spec.loader.exec_module(module)
-    return module
+_MODULE_NAMES = ("groq_demo_runtime", "report_fixture", "serve_live_demo", "report_ai_http")
 
 
-groq_demo_runtime = _load("groq_demo_runtime")
-report_fixture = _load("report_fixture")
-serve_live_demo = _load("serve_live_demo")
-report_ai_http = _load("report_ai_http")
+def _load_modules() -> dict[str, ModuleType]:
+    before = {name: sys.modules.get(name) for name in _MODULE_NAMES}
+    loaded: dict[str, ModuleType] = {}
+    try:
+        for name in _MODULE_NAMES:
+            spec = importlib.util.spec_from_file_location(name, _TOOLS_DIR / f"{name}.py")
+            assert spec is not None and spec.loader is not None
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[name] = module
+            spec.loader.exec_module(module)
+            loaded[name] = module
+    finally:
+        for name, previous in before.items():
+            if previous is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = previous
+    return loaded
+
+
+_MODULES = _load_modules()
+groq_demo_runtime = _MODULES["groq_demo_runtime"]
+report_fixture = _MODULES["report_fixture"]
+serve_live_demo = _MODULES["serve_live_demo"]
+report_ai_http = _MODULES["report_ai_http"]
 
 # ---------------------------------------------------------------------------
 # A stub ModelRuntime -- never GroqDemoRuntime, never a network call. Each
@@ -399,6 +418,72 @@ def test_guard_accepts_filing_compliance_as_a_recomputable_percentage() -> None:
     assert ok, reason
 
 
+# --- the stricter guard: citations, exact amounts, status words --------------
+
+
+def test_guard_rejects_a_status_that_contradicts_the_cited_row() -> None:
+    """OBL-022 is PAID in the fixture; saying it is OVERDUE must abstain."""
+    assert _OBL_022["status"] == "PAID"
+    ok, reason = _guard_obl_022("OBL-022 is OVERDUE.")
+    assert not ok
+    assert "OVERDUE" in reason
+
+
+def test_guard_rejects_a_contradicting_status_written_in_lower_case() -> None:
+    ok, reason = _guard_obl_022("OBL-022 is overdue.")
+    assert not ok
+    assert "OVERDUE" in reason
+
+
+def test_guard_accepts_the_status_the_cited_row_really_has() -> None:
+    ok, reason = _guard_obl_022("OBL-022 is PAID.")
+    assert ok, reason
+
+
+def test_guard_rejects_a_payment_status_the_cited_payment_row_does_not_have() -> None:
+    pay = _row("payment-row", "PAY-001")
+    assert pay["status"] == "SETTLED"
+    ok, reason = report_ai_http.apply_guard([pay], [pay["id"]], f"{pay['id']} is PAYMENT DUE.")
+    assert not ok
+    assert "PAYMENT_DUE" in reason
+
+
+def test_guard_checks_status_words_against_cited_rows_only() -> None:
+    """A status held by a supplied but uncited row does not excuse the word."""
+    overdue = dict(_row("obligation-row", "OBL-001"), id="OBL-900", status="OVERDUE")
+    ok, _ = report_ai_http.apply_guard([_OBL_022, overdue], ["OBL-022"], "OBL-022 is OVERDUE.")
+    assert not ok
+    ok, reason = report_ai_http.apply_guard(
+        [_OBL_022, overdue], ["OBL-022", "OBL-900"], "OBL-022 is PAID; OBL-900 is OVERDUE."
+    )
+    assert ok, reason
+
+
+def test_guard_rejects_an_empty_citation_list() -> None:
+    ok, reason = report_ai_http.apply_guard([_OBL_022], [], "OBL-022 is EUR 182,500.00.")
+    assert not ok
+    assert "cites no row" in reason
+
+
+def test_guard_rejects_182500_004_where_the_row_says_182500_00() -> None:
+    """No 0.005 tolerance: an amount must equal a row value exactly."""
+    assert _OBL_022["amount"] == "182500.00"
+    ok, reason = _guard_obl_022("OBL-022 is EUR 182500.004.")
+    assert not ok
+    assert "182500.004" in reason
+    ok, reason = _guard_obl_022("OBL-022 is EUR 182,500.00.")
+    assert ok, reason
+
+
+def test_guard_cannot_catch_swapped_numbers_or_an_invented_cause() -> None:
+    """Pins the guard's known limit (see apply_guard's docstring): every number
+    here is a real row value, just on the wrong row, and the cause is made up."""
+    ok, _ = report_ai_http.apply_guard(
+        _ROWS, ["OBL-001", "OBL-002"], "OBL-001 is 7321.06 because the filer was late."
+    )
+    assert ok
+
+
 # ---------------------------------------------------------------------------
 # explain(): through the real Gateway (governance, kill switch, evidence all
 # run), with a scripted stub runtime standing in for GroqDemoRuntime.
@@ -514,6 +599,78 @@ def test_explain_refused_by_governance_surfaces_as_review_required(
     assert runtime.calls == []
 
 
+def test_explain_abstains_when_an_explained_reply_cites_nothing() -> None:
+    runtime = _ScriptedRuntime(_fields_result(f"OBL-001 is {_OBL_001_AMOUNT}.", [], abstain=False))
+    result = report_ai_http.explain(_gateway(runtime), _FIXTURE, "obligation-row", ["OBL-001"])
+    assert result["outcome"] == "ABSTAINED"
+    assert "cites no row" in result["reason"]
+
+
+def test_explain_reply_never_carries_provider_or_runtime_text() -> None:
+    """A runtime failure reaches the browser as the Gateway's fixed reason code
+    only -- not the exception text, which can hold what the provider said."""
+    from ztax_gateway.runtime import RuntimeUnavailableError
+
+    secret = "synthetic-provider-text-do-not-leak"
+    runtime = _ScriptedRuntime(
+        raises=RuntimeUnavailableError(f"groq demo runtime: provider returned HTTP 500; {secret}")
+    )
+    result = report_ai_http.explain(_gateway(runtime), _FIXTURE, "obligation-row", ["OBL-001"])
+    assert result["outcome"] == "REVIEW_REQUIRED"
+    assert result["reason"] == "AI_GATEWAY_UNAVAILABLE"
+    assert secret not in json.dumps(result)
+
+
+def test_each_explain_call_emits_one_gateway_evidence_line(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    runtime = _ScriptedRuntime(
+        _fields_result(f"OBL-001 is {_OBL_001_AMOUNT}.", ["OBL-001"], abstain=False)
+    )
+    gateway = _gateway(runtime)
+    with caplog.at_level(logging.INFO, logger="ztax_gateway.evidence"):
+        report_ai_http.explain(gateway, _FIXTURE, "obligation-row", ["OBL-001"])
+        assert len([r for r in caplog.records if r.name == "ztax_gateway.evidence"]) == 1
+        report_ai_http.explain(gateway, _FIXTURE, "obligation-row", ["OBL-002"])
+    lines = [r for r in caplog.records if r.name == "ztax_gateway.evidence"]
+    assert len(lines) == 2
+    assert all(isinstance(json.loads(r.getMessage()), dict) for r in lines)
+
+
+def test_main_configures_logging_at_info_so_evidence_lines_are_not_dropped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: dict[str, Any] = {}
+    monkeypatch.setattr(logging, "basicConfig", lambda **kw: seen.update(kw))
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)  # main() then returns 2, no network
+    assert report_ai_http.main() == 2
+    assert seen["level"] == logging.INFO
+
+
+def test_guard_decision_is_logged_as_outcome_and_reason_code_never_the_model_text(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    gateway = _gateway(
+        _ScriptedRuntime(_fields_result("OBL-001 is actually 999999.99.", ["OBL-001"], False))
+    )
+    with caplog.at_level(logging.INFO, logger="ztax_gateway.report_ai_http"):
+        report_ai_http.explain(gateway, _FIXTURE, "obligation-row", ["OBL-001"])
+    own = [r.getMessage() for r in caplog.records if r.name == "ztax_gateway.report_ai_http"]
+    assert own == [
+        "explain use_case=explain-obligation-row outcome=ABSTAINED reason=GUARD_NUMBER_NOT_IN_ROWS"
+    ]
+    assert "999999.99" not in " ".join(own)
+
+    caplog.clear()
+    ok_gateway = _gateway(
+        _ScriptedRuntime(_fields_result(f"OBL-001 is {_OBL_001_AMOUNT}.", ["OBL-001"], False))
+    )
+    with caplog.at_level(logging.INFO, logger="ztax_gateway.report_ai_http"):
+        report_ai_http.explain(ok_gateway, _FIXTURE, "obligation-row", ["OBL-001"])
+    own = [r.getMessage() for r in caplog.records if r.name == "ztax_gateway.report_ai_http"]
+    assert own == ["explain use_case=explain-obligation-row outcome=EXPLAINED reason=-"]
+
+
 # ---------------------------------------------------------------------------
 # The HTTP surface itself: loopback only, no real network, no key.
 # ---------------------------------------------------------------------------
@@ -522,6 +679,10 @@ def test_explain_refused_by_governance_surfaces_as_review_required(
 def test_http_endpoints_serve_fixture_and_explain_with_cors(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # NOTE -- the one test in this file that opens a real socket: it binds
+    # 127.0.0.1 on an OS-assigned free port (port 0) and talks only to that
+    # loopback server in this process. It reaches no external host, uses no
+    # key, and the Gateway behind it is the stub-runtime one.
     from http.server import ThreadingHTTPServer
 
     runtime = _ScriptedRuntime(
@@ -574,17 +735,22 @@ def test_http_endpoints_serve_fixture_and_explain_with_cors(
 _NEW_USE_CASES = ("explain-report-figure", "explain-obligation-row", "explain-shadow-variance")
 
 
-def test_new_use_cases_are_registered_with_classification_reviews_limits() -> None:
+def test_new_use_cases_are_registered_at_t1_with_p0_only() -> None:
+    """The explain-* use cases are narrower than classification-review on
+    purpose: tier T1 (not its T2), and P0 (synthetic public data) only. The
+    live demo's classification-review is P0-only as well, but keeps T2."""
     live_doc = json.loads((_CONFIG_DIR / "registry.live-demo.json").read_text(encoding="utf-8"))
     by_id = {uc["use_case_id"]: uc for uc in live_doc["use_cases"]}
     baseline = by_id["classification-review"]
+    assert baseline["max_risk_tier"] == "T2"
+    assert baseline["permitted_data_classes"] == ["P0"]
     for use_case_id in _NEW_USE_CASES:
         assert use_case_id in by_id, f"{use_case_id} is not registered in registry.live-demo.json"
         uc = by_id[use_case_id]
         assert uc["max_authority"] == baseline["max_authority"] == "A1"
-        assert uc["max_risk_tier"] == baseline["max_risk_tier"]
+        assert uc["max_risk_tier"] == "T1"
         assert uc["permitted_regions"] == baseline["permitted_regions"] == ["local"]
-        assert uc["permitted_data_classes"] == baseline["permitted_data_classes"]
+        assert uc["permitted_data_classes"] == ["P0"]
         assert uc["suspended"] is False
         assert uc["route"]["model_profile"] == "model:groq-live-demo"
         assert uc["route"]["provider_profile"] == "provider:groq-demo"

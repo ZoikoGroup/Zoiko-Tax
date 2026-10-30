@@ -10,8 +10,7 @@
         "local"
       ],
       "permitted_data_classes": [
-        "P0",
-        "P1"
+        "P0"
       ],
       "suspended": false,
       "route": {
@@ -24,14 +23,13 @@
       "use_case_id": "explain-report-figure",
       "owner": "lane-l",
       "description": "Explain one figure from the synthetic demo Reports dashboard (a KPI, a per-authority tax-assessed total, a monthly trend point or a filing-pipeline bucket), grounded only in the rows supplied with the call. Demo only -- the dashboard and its data are synthetic (intelligence/tools/report_fixture.py); this use case never reaches a real report.",
-      "max_risk_tier": "T2",
+      "max_risk_tier": "T1",
       "max_authority": "A1",
       "permitted_regions": [
         "local"
       ],
       "permitted_data_classes": [
-        "P0",
-        "P1"
+        "P0"
       ],
       "suspended": false,
       "route": {
@@ -44,14 +42,13 @@
       "use_case_id": "explain-obligation-row",
       "owner": "lane-l",
       "description": "Explain one row of the synthetic demo obligations register or of its payments / remittances tab, grounded only in the rows supplied with the call. Demo only -- the register is synthetic (intelligence/tools/report_fixture.py); this use case never reaches a real obligation.",
-      "max_risk_tier": "T2",
+      "max_risk_tier": "T1",
       "max_authority": "A1",
       "permitted_regions": [
         "local"
       ],
       "permitted_data_classes": [
-        "P0",
-        "P1"
+        "P0"
       ],
       "suspended": false,
       "route": {
@@ -64,14 +61,13 @@
       "use_case_id": "explain-shadow-variance",
       "owner": "lane-l",
       "description": "Explain one row of the synthetic demo Shadow Assurance comparison, grounded only in the rows supplied with the call. Demo only -- the comparison is synthetic (intelligence/tools/report_fixture.py); this use case never reaches a real comparator run.",
-      "max_risk_tier": "T2",
+      "max_risk_tier": "T1",
       "max_authority": "A1",
       "permitted_regions": [
         "local"
       ],
       "permitted_data_classes": [
-        "P0",
-        "P1"
+        "P0"
       ],
       "suspended": false,
       "route": {

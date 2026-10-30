@@ -27,8 +27,8 @@ Routes:
 
 CORS is allowed for exactly one origin, ``http://localhost:13000`` -- no
 other origin is ever reflected. Binds inside the container only; the
-live-demo compose overlay is what publishes a host port (see
-``docker-compose.live-demo.yml``). Never prints or logs ``GROQ_API_KEY`` --
+live-demo compose overlay is what publishes a host port, on 127.0.0.1 only
+(see ``docker-compose.live-demo.yml``). Never prints or logs ``GROQ_API_KEY`` --
 nothing on this HTTP surface ever carries it; the key only ever appears in
 the ``Authorization`` header of the one outbound call ``GroqDemoRuntime``
 makes, same as every other script in this directory.
@@ -42,18 +42,25 @@ change to either).
 
 The deterministic guard below (``apply_guard``) is this module's own
 check, not the model's: it never trusts the model's own "abstain" flag
-alone. A citation naming a row id outside the ones supplied, or a number in
-the explanation that is not one of the supplied rows' own values (or a
-simple percentage of two of them), forces an ABSTAINED outcome regardless
-of what the model claimed.
+alone. An explanation that cites no row, a citation naming a row id outside
+the ones supplied, a number that is not exactly one of the supplied rows' own
+values (or a simple percentage of two of them), or a lifecycle / payment
+status word that is not the status of a cited row, forces an ABSTAINED
+outcome regardless of what the model claimed. The guard cannot prove a
+sentence is true -- see the note on ``apply_guard``.
+
+This endpoint has no login. It is a loopback-only demo surface and must never
+be forwarded or exposed beyond the machine it runs on.
 """
 
 from __future__ import annotations
 
 import base64
 import json
+import logging
 import re
 import sys
+from decimal import Decimal
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -66,8 +73,10 @@ from ztax_gateway.server import Gateway, GatewayError, load_config
 
 __all__: list[str] = ["apply_guard", "explain", "main"]
 
+log = logging.getLogger("ztax_gateway.report_ai_http")
+
 # Bound inside the container only; docker-compose.live-demo.yml publishes
-# this same number as the host port (18090:18090).
+# this same number on the host's loopback interface only (127.0.0.1:18090).
 _PORT = 18090
 
 _ALLOWED_ORIGIN = "http://localhost:13000"
@@ -102,7 +111,6 @@ _KIND_TO_USE_CASE: dict[str, str] = {
 # Currency symbols and codes ("$", "€", "USD") are not digits and fall away.
 _NUMBER_RE = re.compile(r"(?<![\d.,])\d{1,3}(?:,\d{3})+(?!\d)(?:\.\d+)?%?|\d+(?:\.\d+)?%?")
 _PLAIN_NUMBER_RE = re.compile(r"^\d+(?:\.\d+)?$")
-_CLOSE_ENOUGH = 0.005
 _PERCENT_CLOSE_ENOUGH = 0.1
 
 
@@ -218,27 +226,32 @@ def _is_date_component(
     return after is not None and (_MONTH_NUMBERS[after.group(1).lower()], day) in month_days
 
 
-def _numeric_values(rows: list[dict[str, Any]]) -> set[float]:
+def _numeric_values(rows: list[dict[str, Any]]) -> set[Decimal]:
     """Every numeric value appearing anywhere in *rows* (ids are not numbers)."""
-    values: set[float] = set()
+    values: set[Decimal] = set()
     for row in rows:
         for key, value in row.items():
             if key == "id" or not isinstance(value, str):
                 continue
             if _PLAIN_NUMBER_RE.match(value):
-                values.add(float(value))
+                values.add(Decimal(value))
     return values
 
 
-def _value_allowed(num_str: str, allowed: set[float]) -> bool:
+def _value_allowed(num_str: str, allowed: set[Decimal]) -> bool:
+    """True if num_str, once its thousands commas are removed, equals a row value.
+
+    Exact, with no tolerance: "182,500" is the same number as the row value
+    182500.00, but 182500.004 is not.
+    """
     try:
-        value = float(num_str.replace(",", ""))
-    except ValueError:
+        value = Decimal(num_str.replace(",", ""))
+    except ArithmeticError:
         return False
-    return any(abs(value - a) < _CLOSE_ENOUGH for a in allowed)
+    return value in allowed
 
 
-def _percentage_allowed(num_str: str, allowed: set[float]) -> bool:
+def _percentage_allowed(num_str: str, allowed: set[Decimal]) -> bool:
     """True if num_str ("N%") is a simple percentage of two allowed values."""
     if not num_str.endswith("%"):
         return False
@@ -250,29 +263,77 @@ def _percentage_allowed(num_str: str, allowed: set[float]) -> bool:
         for b in allowed:
             if b == 0:
                 continue
-            if abs((a / b * 100) - target) < _PERCENT_CLOSE_ENOUGH:
+            if abs((float(a) / float(b) * 100) - target) < _PERCENT_CLOSE_ENOUGH:
                 return True
     return False
 
 
-def apply_guard(
-    rows: list[dict[str, Any]], cited_ids: list[str], explanation: str
-) -> tuple[bool, str]:
-    """The demo service's own check -- never trusts the model's own claims.
+# --- lifecycle and payment status words ---------------------------------------
+#
+# The obligation lifecycle states are ZTAX-OBL-001 chapter 15's (the fixture's
+# LIFECYCLE_STATES); the payment states are the remittance-domain words the
+# fixture's payment rows use. A status word the explanation uses must be the
+# status of a cited row. The enumerated words are matched as written in upper
+# case ("PAID", "PAYMENT_DUE" or "PAYMENT DUE"), so ordinary lower-case prose
+# ("paid on 2026-10-15", "filed") is not mistaken for a status claim. The few
+# words that are not ordinary prose in this fixture are also matched in any
+# case, so "overdue" is caught as well as "OVERDUE". A lower-case "paid" or
+# "active" is therefore NOT checked: that is a deliberate gap, not an accident.
+_PAYMENT_STATES: tuple[str, ...] = ("SETTLED", "PROCESSING", "SUBMITTED")
+_STATUS_WORDS: tuple[str, ...] = (*report_fixture.LIFECYCLE_STATES, *_PAYMENT_STATES)
+_ANY_CASE_STATUS_WORDS: tuple[str, ...] = (
+    "OVERDUE", "DISPUTED", "SUSPENDED", "CANCELLED", "SETTLED",
+    "PAYMENT_DUE", "AMENDMENT_REQUIRED", "DATA_REQUIRED",
+)
 
-    Returns ``(True, "")`` only if every cited id is one of *rows*' own ids
-    and every number in *explanation* is (1) one of *rows*' own numeric
-    values, (2) a simple percentage of two of them, or (3) a year / day /
-    quarter that quotes a supplied date, month or period (see "date, month
-    and period components" above). There is no sum, subtotal, average or
-    any other aggregate rule: a total passes only if a supplied row carries it
-    as a field. Otherwise returns ``(False, reason)``; the caller turns that
-    into an ABSTAINED outcome.
+
+def _status_pattern(words: tuple[str, ...], flags: int) -> re.Pattern[str]:
+    alternatives = "|".join(w.replace("_", "[_ ]") for w in words)
+    return re.compile(rf"(?<![A-Za-z0-9_])(?:{alternatives})(?![A-Za-z0-9_])", flags)
+
+
+_STATUS_UPPER_RE = _status_pattern(_STATUS_WORDS, 0)
+_STATUS_ANY_CASE_RE = _status_pattern(_ANY_CASE_STATUS_WORDS, re.IGNORECASE)
+
+
+def _status_words_in(text: str) -> set[str]:
+    """Canonical status words (upper case, underscored) that *text* uses."""
+    found = _STATUS_UPPER_RE.findall(text) + _STATUS_ANY_CASE_RE.findall(text)
+    return {w.upper().replace(" ", "_") for w in found}
+
+
+def _check(
+    rows: list[dict[str, Any]], cited_ids: list[str], explanation: str
+) -> tuple[str, str]:
+    """``("", "")`` if the reply passes, else ``(reason code, reason text)``.
+
+    The code is a short fixed token, safe to log; the text is for the browser
+    and may quote a number or an id taken from the explanation.
     """
+    if not cited_ids:
+        return "GUARD_NO_CITATION", "the explanation cites no row id"
+
     row_ids = {str(row["id"]) for row in rows}
     foreign = sorted({c for c in cited_ids if c not in row_ids})
     if foreign:
-        return False, f"cited id(s) not in the supplied rows: {', '.join(foreign)}"
+        return (
+            "GUARD_FOREIGN_CITATION",
+            f"cited id(s) not in the supplied rows: {', '.join(foreign)}",
+        )
+
+    cited_statuses = {
+        str(row["status"]) for row in rows if str(row["id"]) in cited_ids and "status" in row
+    }
+    if cited_statuses:
+        # Only checked when a cited row carries a status at all: figures, trend
+        # points and buckets have none, and their labels legitimately contain
+        # words such as "Overdue" or "Filed".
+        stray = sorted(_status_words_in(explanation) - cited_statuses)
+        if stray:
+            return (
+                "GUARD_STATUS_MISMATCH",
+                f"explanation states a status that is not the cited row's: {', '.join(stray)}",
+            )
 
     allowed = _numeric_values(rows)
     years, month_days, quarters = _date_components(rows)
@@ -288,8 +349,38 @@ def apply_guard(
         elif _is_date_component(match, explanation, years, month_days):
             # (3) a year / day beside its month name, quoting a supplied date.
             continue
-        return False, f"explanation states a number not present in the supplied rows: {num!r}"
-    return True, ""
+        return (
+            "GUARD_NUMBER_NOT_IN_ROWS",
+            f"explanation states a number not present in the supplied rows: {num!r}",
+        )
+    return "", ""
+
+
+def apply_guard(
+    rows: list[dict[str, Any]], cited_ids: list[str], explanation: str
+) -> tuple[bool, str]:
+    """The demo service's own check -- never trusts the model's own claims.
+
+    Returns ``(True, "")`` only if (0) at least one id is cited, (1) every
+    cited id is one of *rows*' own ids, (2) every lifecycle / payment status
+    word in *explanation* is the status of a cited row, and (3) every number
+    in *explanation* is exactly one of *rows*' own numeric values (once
+    thousands commas are removed -- no tolerance), a simple percentage of two
+    of them, or a year / day / quarter that quotes a supplied date, month or
+    period (see "date, month and period components" above). There is no sum,
+    subtotal, average or any other aggregate rule: a total passes only if a
+    supplied row carries it as a field. Otherwise returns ``(False, reason)``;
+    the caller turns that into an ABSTAINED outcome.
+
+    LIMIT, stated plainly: this guard checks that ids exist and that the
+    numbers and status words match the cited rows. It CANNOT catch swapped
+    numbers (one row's amount written against another row) or an invented
+    cause or narrative ("because the filer was late"), because every word of
+    those can be a real row value in the wrong place. It does not prove a
+    sentence is true; a person must still read it.
+    """
+    _code, reason = _check(rows, cited_ids, explanation)
+    return (not reason), reason
 
 
 # ---------------------------------------------------------------------------
@@ -353,11 +444,15 @@ def explain(gateway: Gateway, fixture: dict[str, Any], kind: str, ids: list[str]
     try:
         reply_bytes = gateway.invoke(raw_call)
     except GatewayError as exc:
+        # Only the Gateway's fixed reason code goes back: exc.detail is free
+        # text (it can carry a runtime or provider message) and stays out of
+        # both the reply and this log.
+        log.info("explain use_case=%s outcome=REVIEW_REQUIRED reason=%s", use_case, exc.reason)
         return {
             "outcome": "REVIEW_REQUIRED",
             "explanation": "",
             "cited_ids": [],
-            "reason": f"{exc.reason}: {exc.detail}",
+            "reason": exc.reason,
             "provenance": None,
         }
 
@@ -379,7 +474,13 @@ def explain(gateway: Gateway, fixture: dict[str, Any], kind: str, ids: list[str]
         "aiTrain": reply.get("ai_train_version", ""),
     }
 
+    # Each decision below is logged next to the call: the outcome and a fixed
+    # reason code only, never the model's text. The invocation id is not in
+    # the Gateway's wire reply, so it is not logged here (reaching it would
+    # need an edit to intelligence/src); the Gateway's own evidence line
+    # carries it.
     if model_abstain:
+        log.info("explain use_case=%s outcome=ABSTAINED reason=MODEL_ABSTAINED", use_case)
         return {
             "outcome": "ABSTAINED",
             "explanation": explanation,
@@ -388,8 +489,9 @@ def explain(gateway: Gateway, fixture: dict[str, Any], kind: str, ids: list[str]
             "provenance": provenance,
         }
 
-    ok, guard_reason = apply_guard(rows, cited_ids, explanation)
-    if not ok:
+    guard_code, guard_reason = _check(rows, cited_ids, explanation)
+    if guard_reason:
+        log.info("explain use_case=%s outcome=ABSTAINED reason=%s", use_case, guard_code)
         return {
             "outcome": "ABSTAINED",
             "explanation": explanation,
@@ -398,6 +500,7 @@ def explain(gateway: Gateway, fixture: dict[str, Any], kind: str, ids: list[str]
             "provenance": provenance,
         }
 
+    log.info("explain use_case=%s outcome=EXPLAINED reason=-", use_case)
     return {
         "outcome": "EXPLAINED",
         "explanation": explanation,
@@ -481,6 +584,10 @@ def main() -> int:
     minus the gRPC-specific address/insecure-local/TLS concerns this plain
     HTTP server does not have.
     """
+    # Without this the Gateway's evidence records (logger ztax_gateway.evidence,
+    # INFO) are dropped in this process; serve_live_demo.py configures it the
+    # same way.
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     try:
         runtime = GroqDemoRuntime()
     except GroqDemoConfigError as exc:
