@@ -561,6 +561,17 @@ class InvocationEvidenceRecord:
             self.review_ref,
             self.output_hash,
         )
+        if self.prompt_content_hash is not None:
+            if not isinstance(self.prompt_content_hash, str):
+                raise InvocationEvidenceError(
+                    "invocation_evidence: prompt_content_hash must be a string, "
+                    f"got {type(self.prompt_content_hash).__name__}"
+                )
+            if not _SHA256_HEX_RE.fullmatch(self.prompt_content_hash):
+                raise InvocationEvidenceError(
+                    "invocation_evidence: prompt_content_hash must be exactly 64 "
+                    f"lowercase hex characters; got {len(self.prompt_content_hash)} character(s)"
+                )
  
     def as_dict(self) -> dict[str, object]:
         """Return a complete, log-safe representation.
@@ -614,19 +625,22 @@ def _sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-_SHA256_HEX_RE = re.compile(r"^[0-9a-f]{64}$")
+_SHA256_HEX_RE = re.compile(r"^[0-9a-f]{64}\Z")
 
 
 def _validated_prompt_hash(value: str) -> str:
     """Validate and normalise a caller-supplied prompt content hash.
 
-    Raises :class:`InvocationEvidenceError` when ``value`` is not exactly 64
-    lowercase hex characters.  SHA-256 digests always are, so a wrong length
-    or a non-hex character indicates a programming error (wrong field passed,
-    truncated value, etc.) rather than a hash mismatch.
+    Normalises uppercase hex to lowercase before passing to the record.
+    Raises :class:`InvocationEvidenceError` when ``value`` is not a string of
+    exactly 64 hex characters.
     """
+    if not isinstance(value, str):
+        raise InvocationEvidenceError(
+            f"invocation_evidence: prompt_content_hash must be a string, got {type(value).__name__}"
+        )
     normalised = value.lower()
-    if not _SHA256_HEX_RE.match(normalised):
+    if not _SHA256_HEX_RE.fullmatch(normalised):
         raise InvocationEvidenceError(
             "invocation_evidence: prompt_content_hash must be exactly 64 "
             f"lowercase hex characters; got {len(value)} character(s)"
@@ -708,7 +722,9 @@ class InvocationEvidenceBuilder:
             Optional lowercase SHA-256 hex digest of the prompt text
             (Decision D-09 / ZTAX-AI-CONF-ADD01).  Callers that can reach a
             ``PromptProfile`` should pass ``prompt_profile.content_hash``.
-            When ``None`` (the default) the field is omitted from the record.
+            Uppercase hex strings are normalised to lowercase before passing
+            to the record.  When ``None`` (the default) the field is omitted
+            from the record.
         """
         # Governance gate -- before any work, same as every other entry point.
         # BLOCK is the one outcome that records a refusal rather than an action.
@@ -765,10 +781,11 @@ class InvocationEvidenceBuilder:
         self, prompt_content_hash: str | None
     ) -> InvocationEvidenceBuilder:
         """Set the prompt text fingerprint for this invocation (Decision D-09).
- 
+
         Pass the ``PromptProfile.content_hash`` value -- the lowercase SHA-256
         hex digest of ``system_prompt``.  Never pass raw prompt text here.
-        Passing ``None`` clears any previously set value.
+        Uppercase hex strings are normalised to lowercase before passing to
+        the record.  Passing ``None`` clears any previously set value.
         """
         self._prompt_content_hash = (
             _validated_prompt_hash(prompt_content_hash)

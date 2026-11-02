@@ -123,12 +123,12 @@ the evidence record. The full picture -- `PROPOSE` in the gateway evidence and
 This is acceptable for the demo because no downstream system reads demo
 evidence records and no compliance decision depends on them.
 
-### Follow-up required
+### Status of guard outcome follow-up
 
-A follow-up task is open to record the guard's outcome in the evidence record.
-That change requires an edit to `intelligence/src` (the gateway wire format or
-the evidence writer) and needs **Lane L approval** (and Lane C approval if
-`governance.py` is touched). It must not be made in the demo PR.
+The append-only `AnswerCheckedEvent` class and sinks are merged (`src/ztax_gateway/invocation_check_event.py`),
+and the `prompt_content_hash` field on `InvocationEvidenceRecord` is merged.
+However, `Gateway.invoke()` does not set the hash yet, and nothing emits
+the check event in production yet (wiring is deferred to a separate gateway task).
 
 ---
 
