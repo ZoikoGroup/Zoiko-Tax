@@ -126,6 +126,15 @@ from .explanation import (
     TraceStep,
     build_explanation,
 )
+from .explanation_guard import (
+    GUARD_FOREIGN_CITATION,
+    GUARD_NO_CITATION,
+    GUARD_NUMBER_NOT_IN_ROWS,
+    GUARD_STATUS_MISMATCH,
+    GuardResult,
+    apply_guard,
+    check_guard,
+)
 from .governance import (
     MAX_PERMITTED_AUTHORITY,
     GovernanceRefusedError,
@@ -252,6 +261,10 @@ from .tool_broker import (
 
 __all__ = [
     "DEFAULT_AUDIT_BUFFER_CAPACITY",
+    "GUARD_FOREIGN_CITATION",
+    "GUARD_NO_CITATION",
+    "GUARD_NUMBER_NOT_IN_ROWS",
+    "GUARD_STATUS_MISMATCH",
     "MAX_PERMITTED_ACTION_CLASS",
     "MAX_PERMITTED_AUTHORITY",
     "AIReleaseManifest",
@@ -337,6 +350,7 @@ __all__ = [
     "GoldSetError",
     "GoldSetStore",
     "GovernanceRefusedError",
+    "GuardResult",
     "GuardrailResult",
     "InMemoryEvidenceSink",
     "InvocationEvidenceBuilder",
@@ -426,6 +440,7 @@ __all__ = [
     "UseCase",
     "UseCaseRegistry",
     "WeightScanStatus",
+    "apply_guard",
     "authorise",
     "authorise_edge",
     "authorise_tool",
@@ -434,6 +449,7 @@ __all__ = [
     "build_manifest",
     "can_serve_production",
     "check_corpus_source",
+    "check_guard",
     "check_invocation_privacy",
     "check_provider_retention",
     "check_source_use",
