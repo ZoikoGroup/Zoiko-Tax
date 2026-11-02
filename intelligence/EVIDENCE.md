@@ -89,11 +89,14 @@ reflect anything that happens after `Gateway.invoke()` returns.
 
 ### What the explanation guard does (and where its decision is logged)
 
-After `Gateway.invoke()` returns, `report_ai_http.py`'s own deterministic
-`apply_guard()` / `_check()` function checks the model's reply against the
-cited rows (citation existence, number matching, status-word matching). This
-guard is independent of `intelligence/src`; it runs in `report_ai_http.py`
-itself.
+After `Gateway.invoke()` returns, `report_ai_http.py` calls
+`apply_guard()` / `_check()` from
+`intelligence/src/ztax_gateway/explanation_guard.py` (WP6: the guard was
+extracted into the governed `src/` path so the production gateway can use
+it without depending on demo tooling).  The guard checks the model's reply
+against the cited rows (citation existence, number matching, status-word
+matching).  `report_ai_http.py` imports it; the logic no longer lives in
+the tools folder itself.
 
 If the guard rejects the reply, the outcome sent to the browser is `ABSTAINED`
 and the reason is the guard's fixed code (e.g. `GUARD_NUMBER_NOT_IN_ROWS`).
@@ -112,20 +115,20 @@ container; it is not persisted after container restart.
 ### What this means
 
 The evidence record (written by `Gateway.invoke()`) and the guard log (written
-by `report_ai_http.py`) are two separate lines. A call that the guard later
-rejects still shows `PROPOSE` in the evidence record. The full picture --
-`PROPOSE` in the gateway evidence and `ABSTAINED` in the `report_ai_http`
-log -- requires reading both.
+by `report_ai_http.py`, which calls `explanation_guard.apply_guard()`) are two
+separate lines. A call that the guard later rejects still shows `PROPOSE` in
+the evidence record. The full picture -- `PROPOSE` in the gateway evidence and
+`ABSTAINED` in the `report_ai_http` log -- requires reading both.
 
 This is acceptable for the demo because no downstream system reads demo
 evidence records and no compliance decision depends on them.
 
-### Follow-up required
+### Status of guard outcome follow-up
 
-A follow-up task is open to record the guard's outcome in the evidence record.
-That change requires an edit to `intelligence/src` (the gateway wire format or
-the evidence writer) and needs **Lane L approval** (and Lane C approval if
-`governance.py` is touched). It must not be made in the demo PR.
+The append-only `AnswerCheckedEvent` class and sinks are merged (`src/ztax_gateway/invocation_check_event.py`),
+and the `prompt_content_hash` field on `InvocationEvidenceRecord` is merged.
+However, `Gateway.invoke()` does not set the hash yet, and nothing emits
+the check event in production yet (wiring is deferred to a separate gateway task).
 
 ---
 
