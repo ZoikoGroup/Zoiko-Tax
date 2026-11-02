@@ -344,6 +344,16 @@ class PromptProfile:
                 "which is unconditionally refused by the governance layer"
             )
 
+    @property
+    def content_hash(self) -> str:
+        """Lowercase SHA-256 hex digest of the exact ``system_prompt`` text.
+
+        Two profiles with identical text produce the same hash regardless of
+        label or version (Decision D-09 / ZTAX-AI-CONF-ADD01).  The raw
+        prompt text is never stored outside this class.
+        """
+        return hashlib.sha256(self.system_prompt.encode("utf-8")).hexdigest()
+
     def as_dict(self) -> dict[str, object]:
         """Return a log-safe representation."""
         return {

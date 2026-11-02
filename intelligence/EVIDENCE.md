@@ -126,3 +126,27 @@ A follow-up task is open to record the guard's outcome in the evidence record.
 That change requires an edit to `intelligence/src` (the gateway wire format or
 the evidence writer) and needs **Lane L approval** (and Lane C approval if
 `governance.py` is touched). It must not be made in the demo PR.
+
+---
+
+## I. Prompt content hash (Decision D-09 / ZTAX-AI-CONF-ADD01)
+
+`InvocationEvidenceRecord` carries an optional `prompt_content_hash` (lowercase
+SHA-256 hex of `system_prompt`). `PromptProfile.content_hash` computes it.
+The builder validates the format (exactly 64 hex chars) and raises
+`InvocationEvidenceError` on bad input. The field is emitted in `as_dict()`
+only when set; absent on legacy records (backward-compatible).
+
+**Not yet wired:** `Gateway.invoke()` in `server.py` never calls
+`set_prompt_content_hash()` because the Gateway has no access to a
+`PromptProfile` at invocation time (it only sees the label string). Every live
+record still has `prompt_content_hash = None`. Follow-up: inject
+`PromptProfileRegistry` into `Gateway` so the label can be resolved.
+
+**Scope:** covers `system_prompt` text only — `variable_schema`, `output_schema`
+and `safety_rules` do not affect the hash. Document this if a broader canonical
+hash is needed later.
+
+**Not a metrics label:** `prompt_content_hash` is never added to
+`observability.py` labels (unbounded cardinality). A regression test in
+`test_observability.py` enforces this.
