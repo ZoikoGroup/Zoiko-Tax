@@ -21,10 +21,12 @@ without it unless the process is explicitly a local development Gateway.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
 import sys
+import threading
 from concurrent import futures
 from dataclasses import dataclass
 from pathlib import Path
@@ -98,6 +100,7 @@ class Gateway:
         ai_train_version: str,
         *,
         evidence_sink: EvidenceSink | None = None,
+        kill_state_path: Path | None = None,
     ) -> None:
         if not region or not ai_train_version:
             raise ValueError("gateway: a Gateway names its region and its AI train version")
@@ -109,6 +112,13 @@ class Gateway:
         # Ch.17 §21: default to the structured-log sink; callers may inject
         # InMemoryEvidenceSink in tests for direct record assertions.
         self._evidence_sink: EvidenceSink = evidence_sink or LoggingEvidenceSink()
+        # Live kill switch (AI-09): the registry file is re-read on every call and
+        # parsed only when its bytes change. None disables it (tests, embedding).
+        self._kill_state_path = kill_state_path
+        self._kill_lock = threading.Lock()
+        self._kill_digest: str | None = None
+        self._kill_by_file: set[str] = set()
+        self._global_kill_by_file = False
 
     def invoke(self, data: bytes) -> bytes:
         try:
@@ -160,6 +170,7 @@ class Gateway:
 
         # Ch.17 §21: produce exactly one tamper-evident evidence record per
         # invocation, written to the sink *before* the reply bytes are returned.
+        self._refresh_kill_state()
         try:
             reply = guarded(self._registry, provenance, work)
         except GovernanceRefusedError as refusal:
@@ -218,6 +229,48 @@ class Gateway:
         # default) and write it to the sink before encode_reply is called.
         self._seal_success(provenance, call.input, reply)
         return encode_reply(reply)
+
+    def _refresh_kill_state(self) -> None:
+        """Bring the registry's kill state in line with the registry file.
+
+        Reads ONLY ``killed`` and ``global_kill``; ``suspended``, authority, risk
+        tier and data classes stay as ``load_config`` set them. Fails closed: a
+        file that cannot be read or parsed engages the global kill ("kill state
+        unreadable") until a later read parses cleanly. Runs before ``guarded``,
+        so a kill takes effect on the next call and never reaches the runtime.
+        """
+        if self._kill_state_path is None:
+            return
+        with self._kill_lock:
+            try:
+                raw = self._kill_state_path.read_bytes()
+            except OSError:
+                self._kill_digest = None  # re-parse as soon as it is readable again
+                self._apply_kill_state(None)
+                return
+            digest = hashlib.sha256(raw).hexdigest()
+            if digest == self._kill_digest:
+                return
+            self._kill_digest = digest
+            self._apply_kill_state(_parse_kill_state(raw))
+
+    def _apply_kill_state(self, state: tuple[bool, frozenset[str]] | None) -> None:
+        """Apply parsed kill state (None = unreadable). Kills first, releases last."""
+        if state is None and not self._global_kill_by_file:
+            log.error("gateway: kill state unreadable; global kill engaged")
+        want_global = state is None or state[0]
+        want_killed = state[1] if state is not None else frozenset()
+        if want_global and not self._registry.global_kill_engaged:
+            self._registry.engage_global_kill()
+            self._global_kill_by_file = True
+        for use_case_id in want_killed - self._kill_by_file:
+            self._registry.kill(use_case_id)
+        for use_case_id in self._kill_by_file - want_killed:
+            self._registry.revive(use_case_id)
+        self._kill_by_file = set(want_killed)
+        if not want_global and self._global_kill_by_file:
+            self._registry.release_global_kill()
+            self._global_kill_by_file = False
 
     def _run(self, route: Route, call: Call) -> Reply:
         result = self._runtime.run(route, call)
@@ -399,6 +452,28 @@ def serve(
     return server, port
 
 
+def _parse_kill_state(raw: bytes) -> tuple[bool, frozenset[str]] | None:
+    """``(global_kill, killed)`` from registry bytes, or None if unreadable.
+
+    Only these two keys are read. A missing key means "not killed" (the schema
+    treats both as optional and Go reads them the same way); a wrong type is
+    unreadable.
+    """
+    try:
+        doc = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        return None
+    if not isinstance(doc, dict):
+        return None
+    global_kill = doc.get("global_kill", False)
+    killed = doc.get("killed", [])
+    if not isinstance(global_kill, bool) or not isinstance(killed, list):
+        return None
+    if not all(isinstance(k, str) and k for k in killed):
+        return None
+    return global_kill, frozenset(killed)
+
+
 def load_config(path: Path) -> tuple[UseCaseRegistry, RoutingTable]:
     """Read the registry and routing from a JSON file.
 
@@ -427,6 +502,11 @@ def load_config(path: Path) -> tuple[UseCaseRegistry, RoutingTable]:
     A ``"suspended": true`` entry is registered with its ``suspended`` flag
     set, so the Gateway refuses it with ``AI_USE_CASE_SUSPENDED`` rather than
     ``AI_UNKNOWN_USE_CASE``.
+
+    The top-level ``"killed"`` (list of use case ids) and ``"global_kill"``
+    (bool) keys are NOT read here. A running Gateway reads them live, from the
+    same file, before every call (``Gateway._refresh_kill_state``), so a kill
+    needs no restart.
     """
     doc: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     registry = UseCaseRegistry()
@@ -531,7 +611,7 @@ def main() -> int:
         )
         return 2
     registry, routes = load_config(Path(config))
-    gateway = Gateway(registry, routes, _runtime(), region, train)
+    gateway = Gateway(registry, routes, _runtime(), region, train, kill_state_path=Path(config))
 
     cert, key, ca = (
         _env("ZTAX_GATEWAY_TLS_CERT"),
