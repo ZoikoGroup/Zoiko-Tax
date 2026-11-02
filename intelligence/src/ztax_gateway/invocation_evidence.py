@@ -102,6 +102,7 @@ Design rules (all enforced here; no exceptions, no overrides)
 from __future__ import annotations
  
 import hashlib
+import re
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -548,6 +549,11 @@ class InvocationEvidenceRecord:
     # Audit timestamp
     recorded_at: datetime
  
+    # Trailing optional field (Decision D-09 / ZTAX-AI-CONF-ADD01).
+    # Stored only when the caller has a PromptProfile to hash; absent on
+    # old records and on records where no PromptProfile was reachable.
+    prompt_content_hash: str | None = None
+ 
     def __post_init__(self) -> None:
         _validate_invariants(
             self.invocation_outcome,
@@ -585,6 +591,8 @@ class InvocationEvidenceRecord:
             d["output_hash"] = self.output_hash
         if self.review_ref is not None:
             d["review_ref"] = self.review_ref
+        if self.prompt_content_hash is not None:
+            d["prompt_content_hash"] = self.prompt_content_hash
         return d
  
     def any_guardrail_failed(self) -> bool:
@@ -604,6 +612,26 @@ def _new_invocation_id() -> str:
  
 def _sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+_SHA256_HEX_RE = re.compile(r"^[0-9a-f]{64}$")
+
+
+def _validated_prompt_hash(value: str) -> str:
+    """Validate and normalise a caller-supplied prompt content hash.
+
+    Raises :class:`InvocationEvidenceError` when ``value`` is not exactly 64
+    lowercase hex characters.  SHA-256 digests always are, so a wrong length
+    or a non-hex character indicates a programming error (wrong field passed,
+    truncated value, etc.) rather than a hash mismatch.
+    """
+    normalised = value.lower()
+    if not _SHA256_HEX_RE.match(normalised):
+        raise InvocationEvidenceError(
+            "invocation_evidence: prompt_content_hash must be exactly 64 "
+            f"lowercase hex characters; got {len(value)} character(s)"
+        )
+    return normalised
  
  
 # ---------------------------------------------------------------------------
@@ -649,6 +677,7 @@ class InvocationEvidenceBuilder:
         *,
         trace_id: str = "",
         ai_invocation_id: str | None = None,
+        prompt_content_hash: str | None = None,
     ) -> None:
         """Initialise the builder with the mandatory fields.
  
@@ -675,6 +704,11 @@ class InvocationEvidenceBuilder:
         ai_invocation_id:
             Override the auto-generated UUID4.  Supplied only in tests that
             need a stable, predictable identifier.
+        prompt_content_hash:
+            Optional lowercase SHA-256 hex digest of the prompt text
+            (Decision D-09 / ZTAX-AI-CONF-ADD01).  Callers that can reach a
+            ``PromptProfile`` should pass ``prompt_profile.content_hash``.
+            When ``None`` (the default) the field is omitted from the record.
         """
         # Governance gate -- before any work, same as every other entry point.
         # BLOCK is the one outcome that records a refusal rather than an action.
@@ -689,6 +723,10 @@ class InvocationEvidenceBuilder:
         # Optional fields -- accumulated incrementally.
         self._input_hash: str | None = None
         self._output_hash: str | None = None
+        self._prompt_content_hash: str | None = (
+            _validated_prompt_hash(prompt_content_hash)
+            if prompt_content_hash is not None else None
+        )
         self._retrieval_refs: set[str] = set()
         self._tool_calls: list[ToolCallRecord] = []
         self._guardrail_results: list[GuardrailResult] = []
@@ -721,6 +759,21 @@ class InvocationEvidenceBuilder:
                 f"got {type(raw_bytes).__name__!r}"
             )
         self._output_hash = _sha256_hex(bytes(raw_bytes))
+        return self
+ 
+    def set_prompt_content_hash(
+        self, prompt_content_hash: str | None
+    ) -> InvocationEvidenceBuilder:
+        """Set the prompt text fingerprint for this invocation (Decision D-09).
+ 
+        Pass the ``PromptProfile.content_hash`` value -- the lowercase SHA-256
+        hex digest of ``system_prompt``.  Never pass raw prompt text here.
+        Passing ``None`` clears any previously set value.
+        """
+        self._prompt_content_hash = (
+            _validated_prompt_hash(prompt_content_hash)
+            if prompt_content_hash is not None else None
+        )
         return self
  
     # ---- retrieval references ------------------------------------------
@@ -846,6 +899,7 @@ class InvocationEvidenceBuilder:
             review_ref=self._review_ref,
             usage=self._usage,
             recorded_at=datetime.now(tz=UTC),
+            prompt_content_hash=self._prompt_content_hash,
         )
         self._built = True
         return record
