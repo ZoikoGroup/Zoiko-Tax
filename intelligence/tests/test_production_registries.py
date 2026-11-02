@@ -3,6 +3,8 @@
 Coverage:
 PromptProfile:
 - happy path; as_dict; deprecated flag default False
+- content_hash: SHA-256 of system_prompt; same text -> same hash;
+  changed word -> different hash (Decision D-09)
 - empty profile_id, owner, version, system_prompt raises PromptProfileError
 - A5 authority_ceiling raises PromptProfileError
 
@@ -290,6 +292,69 @@ class TestPromptProfile:
         )
         with pytest.raises((AttributeError, TypeError)):
             pp.deprecated = True  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# PromptProfile -- content_hash (Decision D-09 / ZTAX-AI-CONF-ADD01)
+# ---------------------------------------------------------------------------
+
+
+class TestPromptProfileContentHash:
+    """SHA-256 fingerprint of the system_prompt text (Decision D-09)."""
+
+    def _make(self, system_prompt: str) -> PromptProfile:
+        return PromptProfile(
+            profile_id="pp-hash", owner="o", version="1.0",
+            system_prompt=system_prompt,
+            variable_schema={}, output_schema={},
+            max_risk_tier=RiskTier.T1, authority_ceiling=AuthorityOutcome.A1,
+            safety_rules=(),
+        )
+
+    def test_content_hash_is_64_char_lowercase_hex(self) -> None:
+        pp = self._make("You are a tax classifier.")
+        h = pp.content_hash
+        assert len(h) == 64
+        assert h == h.lower()
+        assert all(c in "0123456789abcdef" for c in h)
+
+    def test_content_hash_matches_expected_sha256(self) -> None:
+        import hashlib
+        text = "You are a DEMO ONLY extraction assistant."
+        expected = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        pp = self._make(text)
+        assert pp.content_hash == expected
+
+    def test_same_text_same_hash(self) -> None:
+        """Identical system_prompt text always produces the same fingerprint."""
+        text = "Propose one ontology classification code."
+        pp_a = self._make(text)
+        pp_b = PromptProfile(
+            profile_id="different-id", owner="other-team", version="9.9.9",
+            system_prompt=text,
+            variable_schema={"x": {}}, output_schema={"y": {}},
+            max_risk_tier=RiskTier.T2, authority_ceiling=AuthorityOutcome.A2,
+            safety_rules=("Rule 1.",),
+        )
+        assert pp_a.content_hash == pp_b.content_hash
+
+    def test_changed_word_same_label_different_hash(self) -> None:
+        """Changing one word in the text changes the hash, even if the label is the same."""
+        pp_v1 = self._make("You are a tax classification assistant.")
+        pp_v2 = self._make("You are a TAX classification assistant.")
+        # Same profile_id / version label — different text -> different hash
+        assert pp_v1.profile_id == pp_v2.profile_id
+        assert pp_v1.content_hash != pp_v2.content_hash
+
+    def test_content_hash_not_in_as_dict(self) -> None:
+        """as_dict() does not expose raw prompt text or the hash (it is a property
+        for callers to read, not an audit-log field on PromptProfile itself)."""
+        pp = self._make("You are a tax classifier.")
+        d = pp.as_dict()
+        # The audit-log format deliberately omits the hash -- the evidence record
+        # carries prompt_content_hash; PromptProfile.as_dict() is the registry view.
+        assert "system_prompt" not in d
+        assert "content_hash" not in d
 
 
 # ---------------------------------------------------------------------------

@@ -508,6 +508,18 @@ def test_model_ops_labels_include_prompt_version() -> None:
     sigs = [s for s in record_signals(_build()) if s.family is SignalFamily.MODEL_OPS]
     for sig in sigs:
         assert "prompt_version" in sig.labels
+
+
+def test_model_ops_labels_do_not_include_prompt_content_hash() -> None:
+    """prompt_content_hash must never appear as a metrics label.
+
+    SHA-256 hex digests are high-cardinality and unique per prompt text; adding
+    them to labels would create a cardinality explosion in any metrics backend
+    (Decision D-09 / observability.py module rule: no raw content, no hashes).
+    """
+    sigs = [s for s in record_signals(_build()) if s.family is SignalFamily.MODEL_OPS]
+    for sig in sigs:
+        assert "prompt_content_hash" not in sig.labels
  
  
 def test_model_ops_labels_include_ai_release_manifest_id() -> None:

@@ -132,6 +132,7 @@ def _builder(
     registry: UseCaseRegistry | None = None,
     trace_id: str = "trace-test-001",
     ai_invocation_id: str = "inv" + "0" * 29,
+    prompt_content_hash: str | None = None,
 ) -> InvocationEvidenceBuilder:
     return InvocationEvidenceBuilder(
         provenance=provenance,
@@ -139,6 +140,7 @@ def _builder(
         registry=registry or _registry_for(provenance),
         trace_id=trace_id,
         ai_invocation_id=ai_invocation_id,
+        prompt_content_hash=prompt_content_hash,
     )
  
  
@@ -1074,8 +1076,164 @@ def test_as_dict_recorded_at_is_iso8601_string() -> None:
     # Must be parseable as an ISO-8601 datetime.
     parsed = datetime.fromisoformat(d["recorded_at"])  # type: ignore[arg-type]
     assert parsed.tzinfo is not None
- 
- 
+
+
+# ---------------------------------------------------------------------------
+# InvocationEvidenceRecord -- prompt_content_hash (Decision D-09)
+# ---------------------------------------------------------------------------
+
+
+def test_as_dict_prompt_content_hash_absent_when_none() -> None:
+    """Records without a hash emit no 'prompt_content_hash' key (backward compat)."""
+    assert "prompt_content_hash" not in _build_simple().as_dict()
+
+
+def test_as_dict_prompt_content_hash_present_when_set_via_builder_init() -> None:
+    """Hash supplied at builder construction time appears in as_dict()."""
+    import hashlib
+    text = "You are a DEMO ONLY tax assistant."
+    h = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    b = _builder(prompt_content_hash=h)
+    d = b.build().as_dict()
+    assert d["prompt_content_hash"] == h
+
+
+def test_as_dict_prompt_content_hash_present_when_set_via_setter() -> None:
+    """Hash supplied via set_prompt_content_hash() appears in as_dict()."""
+    import hashlib
+    text = "Propose one ontology classification code."
+    h = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    b = _builder()
+    b.set_prompt_content_hash(h)
+    d = b.build().as_dict()
+    assert d["prompt_content_hash"] == h
+
+
+def test_prompt_content_hash_same_text_same_hash_in_record() -> None:
+    """Same prompt text -> same hash in the evidence record."""
+    import hashlib
+    text = "You are a tax classifier. Reply with a code only."
+    h = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    b1 = _builder(prompt_content_hash=h)
+    b2 = _builder(prompt_content_hash=h)
+    assert b1.build().prompt_content_hash == b2.build().prompt_content_hash
+
+
+def test_prompt_content_hash_changed_word_same_label_different_hash() -> None:
+    """Changing one word changes the hash even when prompt_version label stays identical."""
+    import hashlib
+    text_v1 = "You are a tax classification assistant."
+    text_v2 = "You are a TAX classification assistant."
+    h1 = hashlib.sha256(text_v1.encode("utf-8")).hexdigest()
+    h2 = hashlib.sha256(text_v2.encode("utf-8")).hexdigest()
+    # Same prompt_version label on both builders
+    b1 = _builder(prompt_content_hash=h1)
+    b2 = _builder(prompt_content_hash=h2)
+    rec1 = b1.build()
+    rec2 = b2.build()
+    assert rec1.prompt_version == rec2.prompt_version  # same label
+    assert rec1.prompt_content_hash != rec2.prompt_content_hash  # different hash
+
+
+def test_builder_set_prompt_content_hash_is_fluent() -> None:
+    """set_prompt_content_hash() returns the builder (fluent API)."""
+    import hashlib
+    h = hashlib.sha256(b"any text").hexdigest()
+    b = _builder()
+    result = b.set_prompt_content_hash(h)
+    assert result is b
+
+
+def test_builder_set_prompt_content_hash_none_clears() -> None:
+    """set_prompt_content_hash(None) removes a previously set value."""
+    import hashlib
+    h = hashlib.sha256(b"some text").hexdigest()
+    b = _builder()
+    b.set_prompt_content_hash(h)
+    b.set_prompt_content_hash(None)
+    assert "prompt_content_hash" not in b.build().as_dict()
+
+
+def test_direct_record_without_prompt_content_hash_still_works() -> None:
+    """Old direct-construction code that omits prompt_content_hash remains valid."""
+    rec = _direct_record()  # no prompt_content_hash kwarg
+    assert rec.prompt_content_hash is None
+    assert "prompt_content_hash" not in rec.as_dict()
+
+
+def test_direct_record_with_prompt_content_hash() -> None:
+    """Direct construction with prompt_content_hash stores and emits it."""
+    import hashlib
+    h = hashlib.sha256(b"direct construct").hexdigest()
+    rec = _direct_record(prompt_content_hash=h)
+    assert rec.prompt_content_hash == h
+    assert rec.as_dict()["prompt_content_hash"] == h
+
+
+# ---------------------------------------------------------------------------
+# prompt_content_hash -- validation & whitespace sensitivity (Gap 4 / Gap 2)
+# ---------------------------------------------------------------------------
+
+
+def _valid_hash(text: str = "You are a tax classifier.") -> str:
+    import hashlib
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def test_builder_rejects_empty_string_hash() -> None:
+    """An empty string is not a valid SHA-256 hex digest."""
+    b = _builder()
+    with pytest.raises(InvocationEvidenceError, match="64"):
+        b.set_prompt_content_hash("")
+
+
+def test_builder_rejects_63_char_hash() -> None:
+    """63 characters is one short of a valid SHA-256 digest."""
+    b = _builder()
+    with pytest.raises(InvocationEvidenceError, match="64"):
+        b.set_prompt_content_hash("a" * 63)
+
+
+def test_builder_rejects_65_char_hash() -> None:
+    """65 characters is one too many for a SHA-256 digest."""
+    b = _builder()
+    with pytest.raises(InvocationEvidenceError, match="64"):
+        b.set_prompt_content_hash("a" * 65)
+
+
+def test_builder_rejects_non_hex_characters() -> None:
+    """A 64-character string with non-hex characters is rejected."""
+    b = _builder()
+    bad = "z" * 64  # 'z' is not a hex character
+    with pytest.raises(InvocationEvidenceError, match="64"):
+        b.set_prompt_content_hash(bad)
+
+
+def test_builder_init_rejects_malformed_hash() -> None:
+    """Malformed hash passed at construction time is also rejected."""
+    with pytest.raises(InvocationEvidenceError, match="64"):
+        _builder(prompt_content_hash="tooshort")
+
+
+def test_prompt_hash_is_whitespace_sensitive() -> None:
+    """A trailing newline or extra space changes the SHA-256 hash.
+
+    This matters because prompt templates built by string concatenation may
+    inadvertently include trailing whitespace.  The hash is computed on the
+    exact bytes, so callers must supply the canonical text.
+    """
+    import hashlib
+    text_clean = "You are a tax classifier."
+    text_newline = "You are a tax classifier.\n"
+    text_space = "You are a tax classifier. "
+    h_clean = hashlib.sha256(text_clean.encode("utf-8")).hexdigest()
+    h_newline = hashlib.sha256(text_newline.encode("utf-8")).hexdigest()
+    h_space = hashlib.sha256(text_space.encode("utf-8")).hexdigest()
+    assert h_clean != h_newline, "trailing newline must change the hash"
+    assert h_clean != h_space, "trailing space must change the hash"
+    assert h_newline != h_space, "newline vs space must also differ"
+
+
 # ---------------------------------------------------------------------------
 # Builder chaining (fluent API)
 # ---------------------------------------------------------------------------

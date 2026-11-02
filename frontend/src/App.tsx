@@ -21,6 +21,7 @@ import { MigrationPage } from './pages/MigrationPage'
 import { ObligationsPage } from './pages/ObligationsPage'
 import { ReconcilePage } from './pages/ReconcilePage'
 import { RemittancePage } from './pages/RemittancePage'
+import { ReportsDemoPage } from './pages/ReportsDemoPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { ShadowPage } from './pages/ShadowPage'
 import { CellHealth } from './platform/CellHealth'
@@ -123,6 +124,8 @@ export function App() {
             return <MigrationPage {...page} />
           case 'reports':
             return <ReportsPage />
+          case 'reports-demo':
+            return <ReportsDemoPage />
           case 'documents':
             return <DocumentsPage {...page} />
           case 'evidence':
