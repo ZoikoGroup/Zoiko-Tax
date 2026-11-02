@@ -359,7 +359,8 @@ def test_registry_live_demo_json_matches_registry_dev_json_except_the_route_and_
     since grown three more use cases (test_report_ai_http.py) that
     registry.dev.json does not and must not carry -- this test only compares
     the one use case the two files share. The killed / global_kill keys are
-    kept identical to the dev file's (though load_config ignores them).
+    kept identical to the dev file's (load_config does not read them; the
+    running Gateway reads them live, before every call).
     """
     dev_doc = json.loads(_REGISTRY_DEV_PATH.read_text(encoding="utf-8"))
     live_doc = json.loads(_REGISTRY_LIVE_DEMO_PATH.read_text(encoding="utf-8"))
