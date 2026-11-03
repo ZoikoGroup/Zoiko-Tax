@@ -158,6 +158,11 @@ type Config struct {
 	// (ZTAX-LEG-001 §4; ADR-LEG-001): legal content, reviewed and versioned
 	// like any other. With none, every legally sensitive action is blocked.
 	LegalMatrix string
+
+	// MarketCatalogue is the path of the market research catalogue: the
+	// global taxonomy's country profiles. It is research, never coverage;
+	// with none, the dashboard reports only the markets content covers.
+	MarketCatalogue string
 }
 
 // LocalSecretPrefix is the one recognised variable family whose members are not
@@ -218,6 +223,7 @@ var known = map[string]struct {
 	"ZTAX_SEAL_SIGNING_KEY":             {def: ""},
 	"ZTAX_SEAL_KEY_ID":                  {def: ""},
 	"ZTAX_LEGAL_MATRIX":                 {def: ""},
+	"ZTAX_MARKET_CATALOGUE":             {def: ""},
 	"ZTAX_BOOTSTRAP_TENANT":             {def: ""},
 	"ZTAX_BOOTSTRAP_TENANT_NAME":        {def: ""},
 	"ZTAX_BOOTSTRAP_ADMIN_EMAIL":        {def: ""},
@@ -350,7 +356,8 @@ func Load() (Config, error) {
 		SealSigningKey: get("ZTAX_SEAL_SIGNING_KEY"),
 		SealKeyID:      get("ZTAX_SEAL_KEY_ID"),
 
-		LegalMatrix: get("ZTAX_LEGAL_MATRIX"),
+		LegalMatrix:     get("ZTAX_LEGAL_MATRIX"),
+		MarketCatalogue: get("ZTAX_MARKET_CATALOGUE"),
 
 		BootstrapTenant:           get("ZTAX_BOOTSTRAP_TENANT"),
 		BootstrapTenantName:       get("ZTAX_BOOTSTRAP_TENANT_NAME"),
@@ -505,6 +512,7 @@ func (c Config) LogAttrs() []any {
 		"seal.signing", c.SealSigningKey != "",
 		"seal.key_id", c.SealKeyID,
 		"legal.matrix", c.LegalMatrix,
+		"market.catalogue", c.MarketCatalogue,
 		"known_vars", strconv.Itoa(len(known)),
 	}
 }

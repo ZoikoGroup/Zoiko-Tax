@@ -49,6 +49,18 @@ func TestIntegrationDashboard(t *testing.T) {
 	if ob := d.Obligations; ob.Due != 1 || ob.Overdue != 0 || len(ob.Amounts) != 1 || ob.Amounts[0].Currency() != "EUR" {
 		t.Errorf("obligations %+v", ob)
 	}
+	// The same return is the calendar's only entry; nothing fell due in
+	// September.
+	if len(d.Calendar) != 1 || d.Calendar[0].Due != "2026-10-20" || d.Calendar[0].Exposure == nil {
+		t.Errorf("calendar %+v", d.Calendar)
+	}
+	if c := d.Compliance; c.Due != 0 || c.Filed != 0 {
+		t.Errorf("compliance %+v", c)
+	}
+	// Commits post collected tax only; no document was issued.
+	if len(d.Accrued) != 0 || len(d.Adjustments) != 0 || d.Documents.Issued != 0 || d.Documents.Corrections != 0 {
+		t.Errorf("accrued %+v adjustments %+v documents %+v", d.Accrued, d.Adjustments, d.Documents)
+	}
 	if e := d.Evidence; e.Decisions != 2 || e.Sealed != 0 || e.Seals != 0 {
 		t.Errorf("evidence %+v", e)
 	}

@@ -1,0 +1,628 @@
+{
+  "version": "global-telecom-master-1.0",
+  "issued": "2026-10-30",
+  "source": "ZoikoTax Global Telecom Tax Code Master v1.0, sheet 05_COUNTRY_PACKS",
+  "note": "Research profiles only. A profile here is never coverage: none is activated, and the cell reports a market ACTIVE only from content in force, an authoritative cell and a ready filing gate.",
+  "markets": [
+    {
+      "country": "US",
+      "name": "United States",
+      "region": "North America",
+      "research": "EVIDENCE_REVIEWED",
+      "sources": [
+        "S11",
+        "S14",
+        "S15",
+        "S16",
+        "S20"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "CA",
+      "name": "Canada",
+      "region": "North America",
+      "research": "EVIDENCE_REVIEWED",
+      "sources": [
+        "S28",
+        "S29"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "MX",
+      "name": "Mexico",
+      "region": "North America",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S45"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "GB",
+      "name": "United Kingdom",
+      "region": "Europe",
+      "research": "EVIDENCE_REVIEWED",
+      "sources": [
+        "S26",
+        "S27"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "IE",
+      "name": "Ireland",
+      "region": "Europe",
+      "research": "EVIDENCE_REVIEWED",
+      "sources": [
+        "S24",
+        "S39"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "DE",
+      "name": "Germany",
+      "region": "Europe",
+      "research": "EVIDENCE_REVIEWED",
+      "sources": [
+        "S24",
+        "S40"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "FR",
+      "name": "France",
+      "region": "Europe",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S24"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "NL",
+      "name": "Netherlands",
+      "region": "Europe",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S24"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "BE",
+      "name": "Belgium",
+      "region": "Europe",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S24"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "ES",
+      "name": "Spain",
+      "region": "Europe",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S24"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "PT",
+      "name": "Portugal",
+      "region": "Europe",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S24"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "IT",
+      "name": "Italy",
+      "region": "Europe",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S24"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "SE",
+      "name": "Sweden",
+      "region": "Europe",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S24"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "DK",
+      "name": "Denmark",
+      "region": "Europe",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S24"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "FI",
+      "name": "Finland",
+      "region": "Europe",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S24"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "PL",
+      "name": "Poland",
+      "region": "Europe",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S24"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "CH",
+      "name": "Switzerland",
+      "region": "Europe",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "NO",
+      "name": "Norway",
+      "region": "Europe",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "TR",
+      "name": "Türkiye",
+      "region": "Europe/Asia",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "BR",
+      "name": "Brazil",
+      "region": "Latin America",
+      "research": "EVIDENCE_REVIEWED",
+      "sources": [
+        "S34",
+        "S35",
+        "S36"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "AR",
+      "name": "Argentina",
+      "region": "Latin America",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S45"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "CL",
+      "name": "Chile",
+      "region": "Latin America",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S45"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "CO",
+      "name": "Colombia",
+      "region": "Latin America",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S45"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "PE",
+      "name": "Peru",
+      "region": "Latin America",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S45"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "DO",
+      "name": "Dominican Republic",
+      "region": "Caribbean",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S45"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "JM",
+      "name": "Jamaica",
+      "region": "Caribbean",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S45"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "BB",
+      "name": "Barbados",
+      "region": "Caribbean",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S45"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "TT",
+      "name": "Trinidad and Tobago",
+      "region": "Caribbean",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S45"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "BS",
+      "name": "Bahamas",
+      "region": "Caribbean",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S45"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "KY",
+      "name": "Cayman Islands",
+      "region": "Caribbean",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S44"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "GY",
+      "name": "Guyana",
+      "region": "Caribbean",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S45"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "PR",
+      "name": "Puerto Rico (US)",
+      "region": "Caribbean",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S12",
+        "S43"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "IN",
+      "name": "India",
+      "region": "Asia",
+      "research": "EVIDENCE_REVIEWED_PARTIAL",
+      "sources": [
+        "S37"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "SG",
+      "name": "Singapore",
+      "region": "Asia",
+      "research": "EVIDENCE_REVIEWED",
+      "sources": [
+        "S30",
+        "S31"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "JP",
+      "name": "Japan",
+      "region": "Asia",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "KR",
+      "name": "South Korea",
+      "region": "Asia",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "MY",
+      "name": "Malaysia",
+      "region": "Asia",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "ID",
+      "name": "Indonesia",
+      "region": "Asia",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "PH",
+      "name": "Philippines",
+      "region": "Asia",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "TH",
+      "name": "Thailand",
+      "region": "Asia",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "VN",
+      "name": "Vietnam",
+      "region": "Asia",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "BD",
+      "name": "Bangladesh",
+      "region": "Asia",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "PK",
+      "name": "Pakistan",
+      "region": "Asia",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "AE",
+      "name": "United Arab Emirates",
+      "region": "Middle East",
+      "research": "EVIDENCE_REVIEWED_PARTIAL",
+      "sources": [
+        "S32"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "SA",
+      "name": "Saudi Arabia",
+      "region": "Middle East",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "QA",
+      "name": "Qatar",
+      "region": "Middle East",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "BH",
+      "name": "Bahrain",
+      "region": "Middle East",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "ZA",
+      "name": "South Africa",
+      "region": "Africa",
+      "research": "EVIDENCE_REVIEWED_PARTIAL",
+      "sources": [
+        "S42"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "KE",
+      "name": "Kenya",
+      "region": "Africa",
+      "research": "EVIDENCE_REVIEWED_PARTIAL",
+      "sources": [
+        "S48"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "UG",
+      "name": "Uganda",
+      "region": "Africa",
+      "research": "EVIDENCE_REVIEWED_PARTIAL",
+      "sources": [
+        "S47"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "NG",
+      "name": "Nigeria",
+      "region": "Africa",
+      "research": "EVIDENCE_REVIEWED_PARTIAL",
+      "sources": [
+        "S41"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "GH",
+      "name": "Ghana",
+      "region": "Africa",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S44"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "TZ",
+      "name": "Tanzania",
+      "region": "Africa",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S44"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "RW",
+      "name": "Rwanda",
+      "region": "Africa",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S44"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "ZM",
+      "name": "Zambia",
+      "region": "Africa",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S44"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "EG",
+      "name": "Egypt",
+      "region": "Africa",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S44"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "MA",
+      "name": "Morocco",
+      "region": "Africa",
+      "research": "RESEARCH_ONLY",
+      "sources": [
+        "S43",
+        "S44"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "AU",
+      "name": "Australia",
+      "region": "Oceania",
+      "research": "EVIDENCE_REVIEWED_PARTIAL",
+      "sources": [
+        "S38"
+      ],
+      "asOf": "2026-10-30"
+    },
+    {
+      "country": "NZ",
+      "name": "New Zealand",
+      "region": "Oceania",
+      "research": "EVIDENCE_REVIEWED_PARTIAL",
+      "sources": [
+        "S33"
+      ],
+      "asOf": "2026-10-30"
+    }
+  ]
+}

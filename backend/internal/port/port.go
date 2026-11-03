@@ -872,6 +872,17 @@ type DashboardRepository interface {
 	// DeadDeliveries counts webhook deliveries dead-lettered among those
 	// created at or after since.
 	DeadDeliveries(ctx context.Context, since time.Time) (int, error)
+	// Documents counts the fiscal documents a legal entity issued with an
+	// issue date in [from, to), and those among them that correct another.
+	Documents(ctx context.Context, legalEntityID id.LegalEntityID, from, to time.Time) (DocumentCount, error)
+}
+
+// DocumentCount is the fiscal documents issued in a range.
+type DocumentCount struct {
+	Issued int
+	// Corrections are documents that are not their own root: credit notes,
+	// rebills and the rest of an original's lineage.
+	Corrections int
 }
 
 // DecisionCount is one month's decisions.

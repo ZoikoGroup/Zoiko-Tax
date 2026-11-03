@@ -67,7 +67,20 @@ func toDashboard(d app.Dashboard) gen.Dashboard {
 			PreviousTax:       toMoneyValues(d.Determinations.PreviousTax),
 			ReviewRequired:    int32(d.Determinations.ReviewRequired), //nolint:gosec // G115: as above
 		},
-		Liability: make([]gen.ControlBalance, len(d.Liability)),
+		Liability:    toControlBalances(d.Liability),
+		Accrued:      toControlBalances(d.Accrued),
+		Adjustments:  toControlBalances(d.Adjustments),
+		LiabilityMix: make([]gen.DashboardLiabilityMix, len(d.Mix)),
+		Compliance: gen.DashboardCompliance{
+			Due:   int32(d.Compliance.Due),   //nolint:gosec // G115: at most the listing cap
+			Filed: int32(d.Compliance.Filed), //nolint:gosec // G115: as above
+		},
+		Calendar: make([]gen.DashboardDeadline, len(d.Calendar)),
+		Documents: gen.DashboardDocuments{
+			Issued:      int32(d.Documents.Issued),      //nolint:gosec // G115: a count of rows
+			Corrections: int32(d.Documents.Corrections), //nolint:gosec // G115: as above
+		},
+		Coverage: toDashboardCoverage(d.Coverage),
 		Obligations: gen.DashboardObligations{
 			WindowDays: int32(d.Obligations.WindowDays), //nolint:gosec // G115: a constant
 			Due:        int32(d.Obligations.Due),        //nolint:gosec // G115: at most the listing cap
@@ -94,10 +107,18 @@ func toDashboard(d app.Dashboard) gen.Dashboard {
 		Actions: make([]gen.DashboardAction, len(d.Actions)),
 		Trend:   gen.DashboardTrend{Points: make([]gen.DashboardTrendPoint, len(d.Trend.Points))},
 	}
-	for i, b := range d.Liability {
-		out.Liability[i] = gen.ControlBalance{
-			Account: gen.ControlAccount(b.Account), Currency: string(b.Credits.Currency()),
-			Debits: b.Debits.CanonicalString(), Credits: b.Credits.CanonicalString(),
+	for i, m := range d.Mix {
+		out.LiabilityMix[i] = gen.DashboardLiabilityMix{
+			Currency: string(m.Currency), Collected: toMoneyValue(m.Collected), Accrued: toMoneyValue(m.Accrued),
+			Adjustments:    toMoneyValue(m.Adjustments),
+			CollectedShare: int32(m.CollectedShare), AccruedShare: int32(m.AccruedShare), //nolint:gosec // G115: 0–100
+			AdjustmentsShare: int32(m.AdjustmentsShare), //nolint:gosec // G115: 0–100
+		}
+	}
+	for i, c := range d.Calendar {
+		out.Calendar[i] = gen.DashboardDeadline{
+			ObligationID: c.ObligationID, Type: c.Type, Jurisdiction: c.Jurisdiction, Due: c.Due,
+			Status: gen.EffectiveObligationStatus(c.Status), Exposure: optMoneyValue(c.Exposure),
 		}
 	}
 	for i, a := range d.Jurisdictions.Authorities {
@@ -122,6 +143,46 @@ func toDashboard(d app.Dashboard) gen.Dashboard {
 			Period: p.Period, Decisions: int32(p.Decisions), //nolint:gosec // G115: a count of rows
 			Liability: optMoneyValue(p.Liability), LiabilityIndex: int32(p.Index), //nolint:gosec // G115: 0–100
 		}
+	}
+	return out
+}
+
+func toControlBalances(bs []app.DashboardBalance) []gen.ControlBalance {
+	out := make([]gen.ControlBalance, len(bs))
+	for i, b := range bs {
+		out[i] = gen.ControlBalance{
+			Account: gen.ControlAccount(b.Account), Currency: string(b.Credits.Currency()),
+			Debits: b.Debits.CanonicalString(), Credits: b.Credits.CanonicalString(),
+		}
+	}
+	return out
+}
+
+func toDashboardCoverage(c app.DashboardCoverage) gen.DashboardCoverage {
+	out := gen.DashboardCoverage{
+		Catalogue: optional(c.Catalogue),
+		Active:    int32(c.Active),   //nolint:gosec // G115: countries
+		Pilot:     int32(c.Pilot),    //nolint:gosec // G115: as above
+		Research:  int32(c.Research), //nolint:gosec // G115: as above
+		Markets:   make([]gen.DashboardMarket, len(c.Markets)),
+	}
+	for i, m := range c.Markets {
+		gm := gen.DashboardMarket{
+			Country: m.Country, Name: optional(m.Name), Region: optional(m.Region),
+			Status: gen.DashboardMarketStatus(m.Status), Services: make([]gen.ServiceFamily, len(m.Services)),
+		}
+		if m.Reason != "" {
+			r := gen.DashboardMarketReason(m.Reason)
+			gm.Reason = &r
+		}
+		if m.Research != "" {
+			r := gen.DashboardResearch(m.Research)
+			gm.Research = &r
+		}
+		for j, s := range m.Services {
+			gm.Services[j] = gen.ServiceFamily(s)
+		}
+		out.Markets[i] = gm
 	}
 	return out
 }
