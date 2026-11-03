@@ -1800,6 +1800,118 @@ class DashboardObligations(TypedDict):
     amounts: list[MoneyValue]
 
 
+class DashboardLiabilityMix(TypedDict):
+    """
+    One currency's credits in the period to `TAX_COLLECTED_LIABILITY`
+    (`collected`), `TAX_ACCRUED_LIABILITY` (`accrued`, owed by the
+    provider on its own account) and `TAX_ADJUSTMENT_CONTROL`
+    (`adjustments`). The shares are whole percentages for drawing,
+    allocated by largest remainder so they sum to 100, and all zero when
+    nothing was credited. They are not amounts.
+
+    """
+
+    currency: CurrencyCode
+    collected: MoneyValue
+    accrued: MoneyValue
+    adjustments: MoneyValue
+    collectedShare: int
+    accruedShare: int
+    adjustmentsShare: int
+
+
+class DashboardCompliance(TypedDict):
+    """
+    Obligations whose legal due date falls in the period, and those
+    among them a return is known to have been filed for. A submission
+    whose outcome is `UNCERTAIN` is not counted as filed.
+
+    """
+
+    due: int
+    filed: int
+
+
+class DashboardDeadline(TypedDict):
+    """
+    One unfiled obligation in the window. `due` is a day in the obligation's legal calendar.
+    """
+
+    obligationId: ObligationId
+    type: str
+    jurisdiction: str
+    due: CivilDate
+    status: EffectiveObligationStatus
+    exposure: NotRequired[MoneyValue]
+
+
+class DashboardDocuments(TypedDict):
+    """
+    Fiscal documents issued with an issue date in the period, and those
+    among them that correct an earlier document. These are the cell's
+    own fiscal documents, not clearance e-invoices.
+
+    """
+
+    issued: int
+    corrections: int
+
+
+DashboardMarketStatus: TypeAlias = Literal['ACTIVE', 'PILOT', 'RESEARCH_ONLY']
+"""
+`ACTIVE` when content is in force, the cell is authoritative and an
+authority's filing gate is ready; `PILOT` when content is in force
+and something short of that; `RESEARCH_ONLY` when the market is
+researched and not available for calculation. A country the coverage
+does not list is not available.
+
+"""
+
+
+DashboardMarketReason: TypeAlias = Literal['ADVISORY_CELL', 'FILING_NOT_READY', 'NO_CONTENT_IN_FORCE']
+"""
+What keeps the market from the next state.
+"""
+
+
+DashboardResearch: TypeAlias = Literal['RESEARCH_ONLY', 'EVIDENCE_REVIEWED_PARTIAL', 'EVIDENCE_REVIEWED']
+"""
+How far the research behind a catalogue profile has got. Research is never coverage.
+"""
+
+
+class DashboardMarket(TypedDict):
+    """
+    One market. `name`, `region` and `research` come from the research
+    catalogue and are absent for a country only content names;
+    `services` are the service families content in force covers there.
+
+    """
+
+    country: CountryCode
+    name: NotRequired[str]
+    region: NotRequired[str]
+    status: DashboardMarketStatus
+    reason: NotRequired[DashboardMarketReason]
+    research: NotRequired[DashboardResearch]
+    services: list[ServiceFamily]
+
+
+class DashboardCoverage(TypedDict):
+    """
+    Every market the research catalogue or the content in force names,
+    ordered by country, and the count in each state. `catalogue` is the
+    research catalogue's version, absent when the cell has none.
+
+    """
+
+    catalogue: NotRequired[str]
+    active: int
+    pilot: int
+    research: int
+    markets: list[DashboardMarket]
+
+
 class DashboardReconciliation(TypedDict):
     """
     Items of the latest run of each legal period. `matched` counts
@@ -3198,7 +3310,33 @@ class Dashboard(TypedDict):
     and debits apart. Empty when nothing posted.
 
     """
+    accrued: list[ControlBalance]
+    """
+    `TAX_ACCRUED_LIABILITY` for the period, per currency, credits and
+    debits apart: tax the provider owes on its own account rather than
+    collects from a customer. Never folded into `liability`.
+
+    """
+    adjustments: list[ControlBalance]
+    """
+    `TAX_ADJUSTMENT_CONTROL` for the period, per currency, credits and debits apart.
+    """
+    liabilityMix: list[DashboardLiabilityMix]
+    """
+    The period's credits to collected liability, accrued liability and
+    adjustment control, one entry per currency, ordered by currency.
+
+    """
     obligations: DashboardObligations
+    compliance: DashboardCompliance
+    calendar: list[DashboardDeadline]
+    """
+    The obligation window's unfiled obligations, overdue ones
+    included, earliest due first. At most 10.
+
+    """
+    documents: DashboardDocuments
+    coverage: DashboardCoverage
     reconciliation: DashboardReconciliation
     evidence: DashboardEvidence
     jurisdictions: DashboardJurisdictions

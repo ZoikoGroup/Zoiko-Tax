@@ -60,6 +60,9 @@ export type Decision = components["schemas"]["Decision"];
 export type ReplayReport = components["schemas"]["ReplayReport"];
 export type Dashboard = components["schemas"]["Dashboard"];
 export type DashboardAction = components["schemas"]["DashboardAction"];
+export type DashboardDeadline = components["schemas"]["DashboardDeadline"];
+export type DashboardMarket = components["schemas"]["DashboardMarket"];
+export type DashboardMarketStatus = components["schemas"]["DashboardMarketStatus"];
 export type MoneyValue = components["schemas"]["MoneyValue"];
 
 /** A schema of the contract by name: `S<"Obligation">`. */

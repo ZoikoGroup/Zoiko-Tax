@@ -4425,9 +4425,14 @@ paths:
         not an amount.
 
         `period` defaults to the current month in UTC. Every figure but the
-        obligation window, the reconciliation counts, the evidence coverage
-        and the action list is scoped to it; those describe the tenant as it
-        stands today.
+        obligation window, the calendar, the reconciliation counts, the
+        evidence coverage, the action list and market coverage is scoped to
+        it; those describe the tenant as it stands today.
+
+        `coverage` never inflates: a research profile is `RESEARCH_ONLY`,
+        content in force is a `PILOT`, and a market is `ACTIVE` only when
+        content is in force, the cell is authoritative and the filing gate
+        for an authority there is ready.
 
         Served without a content bundle: it reads what was recorded, and in a
         cell that has recorded nothing every count is zero.
@@ -4469,6 +4474,63 @@ paths:
                         currency: EUR
                         debits: "10.50"
                         credits: "882.00"
+                    accrued:
+                      - account: TAX_ACCRUED_LIABILITY
+                        currency: EUR
+                        debits: "0.00"
+                        credits: "64.00"
+                    adjustments: []
+                    liabilityMix:
+                      - currency: EUR
+                        collected:
+                          amount: "882.00"
+                          currency: EUR
+                        accrued:
+                          amount: "64.00"
+                          currency: EUR
+                        adjustments:
+                          amount: "0.00"
+                          currency: EUR
+                        collectedShare: 93
+                        accruedShare: 7
+                        adjustmentsShare: 0
+                    compliance:
+                      due: 3
+                      filed: 2
+                    calendar:
+                      - obligationId: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                        type: VAT_RETURN
+                        jurisdiction: jurisdiction:xa
+                        due: 2026-10-20
+                        status: OVERDUE
+                        exposure:
+                          amount: "882.00"
+                          currency: EUR
+                    documents:
+                      issued: 40
+                      corrections: 2
+                    coverage:
+                      catalogue: global-telecom-master-1.0
+                      active: 0
+                      pilot: 1
+                      research: 1
+                      markets:
+                        - country: DE
+                          name: Germany
+                          region: Europe
+                          status: PILOT
+                          reason: ADVISORY_CELL
+                          research: EVIDENCE_REVIEWED
+                          services:
+                            - MOBILE_DATA
+                            - MOBILE_VOICE
+                        - country: MX
+                          name: Mexico
+                          region: North America
+                          status: RESEARCH_ONLY
+                          reason: NO_CONTENT_IN_FORCE
+                          research: RESEARCH_ONLY
+                          services: []
                     obligations:
                       windowDays: 30
                       due: 1
@@ -13622,12 +13684,19 @@ components:
         - legalEntityId
         - determinations
         - liability
+        - accrued
+        - adjustments
+        - liabilityMix
         - obligations
+        - compliance
+        - calendar
+        - documents
         - reconciliation
         - evidence
         - jurisdictions
         - actions
         - trend
+        - coverage
       properties:
         asOf:
           $ref: "#/components/schemas/Timestamp"
@@ -13644,8 +13713,41 @@ components:
             and debits apart. Empty when nothing posted.
           items:
             $ref: "#/components/schemas/ControlBalance"
+        accrued:
+          type: array
+          description: |
+            `TAX_ACCRUED_LIABILITY` for the period, per currency, credits and
+            debits apart: tax the provider owes on its own account rather than
+            collects from a customer. Never folded into `liability`.
+          items:
+            $ref: "#/components/schemas/ControlBalance"
+        adjustments:
+          type: array
+          description: "`TAX_ADJUSTMENT_CONTROL` for the period, per currency, credits and debits apart."
+          items:
+            $ref: "#/components/schemas/ControlBalance"
+        liabilityMix:
+          type: array
+          description: |
+            The period's credits to collected liability, accrued liability and
+            adjustment control, one entry per currency, ordered by currency.
+          items:
+            $ref: "#/components/schemas/DashboardLiabilityMix"
         obligations:
           $ref: "#/components/schemas/DashboardObligations"
+        compliance:
+          $ref: "#/components/schemas/DashboardCompliance"
+        calendar:
+          type: array
+          description: |
+            The obligation window's unfiled obligations, overdue ones
+            included, earliest due first. At most 10.
+          items:
+            $ref: "#/components/schemas/DashboardDeadline"
+        documents:
+          $ref: "#/components/schemas/DashboardDocuments"
+        coverage:
+          $ref: "#/components/schemas/DashboardCoverage"
         reconciliation:
           $ref: "#/components/schemas/DashboardReconciliation"
         evidence:
@@ -13739,6 +13841,239 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/MoneyValue"
+    DashboardLiabilityMix:
+      type: object
+      title: DashboardLiabilityMix
+      description: |
+        One currency's credits in the period to `TAX_COLLECTED_LIABILITY`
+        (`collected`), `TAX_ACCRUED_LIABILITY` (`accrued`, owed by the
+        provider on its own account) and `TAX_ADJUSTMENT_CONTROL`
+        (`adjustments`). The shares are whole percentages for drawing,
+        allocated by largest remainder so they sum to 100, and all zero when
+        nothing was credited. They are not amounts.
+      additionalProperties: false
+      required:
+        - currency
+        - collected
+        - accrued
+        - adjustments
+        - collectedShare
+        - accruedShare
+        - adjustmentsShare
+      properties:
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        collected:
+          $ref: "#/components/schemas/MoneyValue"
+        accrued:
+          $ref: "#/components/schemas/MoneyValue"
+        adjustments:
+          $ref: "#/components/schemas/MoneyValue"
+        collectedShare:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 100
+        accruedShare:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 100
+        adjustmentsShare:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 100
+    DashboardCompliance:
+      type: object
+      title: DashboardCompliance
+      description: |
+        Obligations whose legal due date falls in the period, and those
+        among them a return is known to have been filed for. A submission
+        whose outcome is `UNCERTAIN` is not counted as filed.
+      additionalProperties: false
+      required:
+        - due
+        - filed
+      properties:
+        due:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        filed:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+    DashboardDeadline:
+      type: object
+      title: DashboardDeadline
+      description: One unfiled obligation in the window. `due` is a day in the obligation's legal calendar.
+      additionalProperties: false
+      required:
+        - obligationId
+        - type
+        - jurisdiction
+        - due
+        - status
+      properties:
+        obligationId:
+          $ref: "#/components/schemas/ObligationId"
+        type:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        jurisdiction:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        due:
+          $ref: "#/components/schemas/CivilDate"
+        status:
+          $ref: "#/components/schemas/EffectiveObligationStatus"
+        exposure:
+          $ref: "#/components/schemas/MoneyValue"
+    DashboardDocuments:
+      type: object
+      title: DashboardDocuments
+      description: |
+        Fiscal documents issued with an issue date in the period, and those
+        among them that correct an earlier document. These are the cell's
+        own fiscal documents, not clearance e-invoices.
+      additionalProperties: false
+      required:
+        - issued
+        - corrections
+      properties:
+        issued:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        corrections:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+    DashboardMarketStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: DashboardMarketStatus
+      description: |
+        `ACTIVE` when content is in force, the cell is authoritative and an
+        authority's filing gate is ready; `PILOT` when content is in force
+        and something short of that; `RESEARCH_ONLY` when the market is
+        researched and not available for calculation. A country the coverage
+        does not list is not available.
+      enum:
+        - ACTIVE
+        - PILOT
+        - RESEARCH_ONLY
+    DashboardMarketReason:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: DashboardMarketReason
+      description: What keeps the market from the next state.
+      enum:
+        - ADVISORY_CELL
+        - FILING_NOT_READY
+        - NO_CONTENT_IN_FORCE
+    DashboardResearch:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: DashboardResearch
+      description: How far the research behind a catalogue profile has got. Research is never coverage.
+      enum:
+        - RESEARCH_ONLY
+        - EVIDENCE_REVIEWED_PARTIAL
+        - EVIDENCE_REVIEWED
+    DashboardMarket:
+      type: object
+      title: DashboardMarket
+      description: |
+        One market. `name`, `region` and `research` come from the research
+        catalogue and are absent for a country only content names;
+        `services` are the service families content in force covers there.
+      additionalProperties: false
+      required:
+        - country
+        - status
+        - services
+      properties:
+        country:
+          $ref: "#/components/schemas/CountryCode"
+        name:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        region:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        status:
+          $ref: "#/components/schemas/DashboardMarketStatus"
+        reason:
+          $ref: "#/components/schemas/DashboardMarketReason"
+        research:
+          $ref: "#/components/schemas/DashboardResearch"
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceFamily"
+    DashboardCoverage:
+      type: object
+      title: DashboardCoverage
+      description: |
+        Every market the research catalogue or the content in force names,
+        ordered by country, and the count in each state. `catalogue` is the
+        research catalogue's version, absent when the cell has none.
+      additionalProperties: false
+      required:
+        - active
+        - pilot
+        - research
+        - markets
+      properties:
+        catalogue:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        active:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        pilot:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        research:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        markets:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardMarket"
     DashboardReconciliation:
       type: object
       title: DashboardReconciliation

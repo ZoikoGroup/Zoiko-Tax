@@ -1771,9 +1771,14 @@ export interface paths {
          *     not an amount.
          *
          *     `period` defaults to the current month in UTC. Every figure but the
-         *     obligation window, the reconciliation counts, the evidence coverage
-         *     and the action list is scoped to it; those describe the tenant as it
-         *     stands today.
+         *     obligation window, the calendar, the reconciliation counts, the
+         *     evidence coverage, the action list and market coverage is scoped to
+         *     it; those describe the tenant as it stands today.
+         *
+         *     `coverage` never inflates: a research profile is `RESEARCH_ONLY`,
+         *     content in force is a `PILOT`, and a market is `ACTIVE` only when
+         *     content is in force, the cell is authoritative and the filing gate
+         *     for an authority there is ready.
          *
          *     Served without a content bundle: it reads what was recorded, and in a
          *     cell that has recorded nothing every count is zero.
@@ -4842,7 +4847,28 @@ export interface components {
              *     and debits apart. Empty when nothing posted.
              */
             liability: components["schemas"]["ControlBalance"][];
+            /**
+             * @description `TAX_ACCRUED_LIABILITY` for the period, per currency, credits and
+             *     debits apart: tax the provider owes on its own account rather than
+             *     collects from a customer. Never folded into `liability`.
+             */
+            accrued: components["schemas"]["ControlBalance"][];
+            /** @description `TAX_ADJUSTMENT_CONTROL` for the period, per currency, credits and debits apart. */
+            adjustments: components["schemas"]["ControlBalance"][];
+            /**
+             * @description The period's credits to collected liability, accrued liability and
+             *     adjustment control, one entry per currency, ordered by currency.
+             */
+            liabilityMix: components["schemas"]["DashboardLiabilityMix"][];
             obligations: components["schemas"]["DashboardObligations"];
+            compliance: components["schemas"]["DashboardCompliance"];
+            /**
+             * @description The obligation window's unfiled obligations, overdue ones
+             *     included, earliest due first. At most 10.
+             */
+            calendar: components["schemas"]["DashboardDeadline"][];
+            documents: components["schemas"]["DashboardDocuments"];
+            coverage: components["schemas"]["DashboardCoverage"];
             reconciliation: components["schemas"]["DashboardReconciliation"];
             evidence: components["schemas"]["DashboardEvidence"];
             jurisdictions: components["schemas"]["DashboardJurisdictions"];
@@ -4883,6 +4909,116 @@ export interface components {
             /** Format: int32 */
             overdue: number;
             amounts: components["schemas"]["MoneyValue"][];
+        };
+        /**
+         * DashboardLiabilityMix
+         * @description One currency's credits in the period to `TAX_COLLECTED_LIABILITY`
+         *     (`collected`), `TAX_ACCRUED_LIABILITY` (`accrued`, owed by the
+         *     provider on its own account) and `TAX_ADJUSTMENT_CONTROL`
+         *     (`adjustments`). The shares are whole percentages for drawing,
+         *     allocated by largest remainder so they sum to 100, and all zero when
+         *     nothing was credited. They are not amounts.
+         */
+        DashboardLiabilityMix: {
+            currency: components["schemas"]["CurrencyCode"];
+            collected: components["schemas"]["MoneyValue"];
+            accrued: components["schemas"]["MoneyValue"];
+            adjustments: components["schemas"]["MoneyValue"];
+            /** Format: int32 */
+            collectedShare: number;
+            /** Format: int32 */
+            accruedShare: number;
+            /** Format: int32 */
+            adjustmentsShare: number;
+        };
+        /**
+         * DashboardCompliance
+         * @description Obligations whose legal due date falls in the period, and those
+         *     among them a return is known to have been filed for. A submission
+         *     whose outcome is `UNCERTAIN` is not counted as filed.
+         */
+        DashboardCompliance: {
+            /** Format: int32 */
+            due: number;
+            /** Format: int32 */
+            filed: number;
+        };
+        /**
+         * DashboardDeadline
+         * @description One unfiled obligation in the window. `due` is a day in the obligation's legal calendar.
+         */
+        DashboardDeadline: {
+            obligationId: components["schemas"]["ObligationId"];
+            type: string;
+            jurisdiction: string;
+            due: components["schemas"]["CivilDate"];
+            status: components["schemas"]["EffectiveObligationStatus"];
+            exposure?: components["schemas"]["MoneyValue"];
+        };
+        /**
+         * DashboardDocuments
+         * @description Fiscal documents issued with an issue date in the period, and those
+         *     among them that correct an earlier document. These are the cell's
+         *     own fiscal documents, not clearance e-invoices.
+         */
+        DashboardDocuments: {
+            /** Format: int32 */
+            issued: number;
+            /** Format: int32 */
+            corrections: number;
+        };
+        /**
+         * DashboardMarketStatus
+         * @description `ACTIVE` when content is in force, the cell is authoritative and an
+         *     authority's filing gate is ready; `PILOT` when content is in force
+         *     and something short of that; `RESEARCH_ONLY` when the market is
+         *     researched and not available for calculation. A country the coverage
+         *     does not list is not available.
+         * @enum {string}
+         */
+        DashboardMarketStatus: "ACTIVE" | "PILOT" | "RESEARCH_ONLY";
+        /**
+         * DashboardMarketReason
+         * @description What keeps the market from the next state.
+         * @enum {string}
+         */
+        DashboardMarketReason: "ADVISORY_CELL" | "FILING_NOT_READY" | "NO_CONTENT_IN_FORCE";
+        /**
+         * DashboardResearch
+         * @description How far the research behind a catalogue profile has got. Research is never coverage.
+         * @enum {string}
+         */
+        DashboardResearch: "RESEARCH_ONLY" | "EVIDENCE_REVIEWED_PARTIAL" | "EVIDENCE_REVIEWED";
+        /**
+         * DashboardMarket
+         * @description One market. `name`, `region` and `research` come from the research
+         *     catalogue and are absent for a country only content names;
+         *     `services` are the service families content in force covers there.
+         */
+        DashboardMarket: {
+            country: components["schemas"]["CountryCode"];
+            name?: string;
+            region?: string;
+            status: components["schemas"]["DashboardMarketStatus"];
+            reason?: components["schemas"]["DashboardMarketReason"];
+            research?: components["schemas"]["DashboardResearch"];
+            services: components["schemas"]["ServiceFamily"][];
+        };
+        /**
+         * DashboardCoverage
+         * @description Every market the research catalogue or the content in force names,
+         *     ordered by country, and the count in each state. `catalogue` is the
+         *     research catalogue's version, absent when the cell has none.
+         */
+        DashboardCoverage: {
+            catalogue?: string;
+            /** Format: int32 */
+            active: number;
+            /** Format: int32 */
+            pilot: number;
+            /** Format: int32 */
+            research: number;
+            markets: components["schemas"]["DashboardMarket"][];
         };
         /**
          * DashboardReconciliation
