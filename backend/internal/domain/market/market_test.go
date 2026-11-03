@@ -1,19 +1,15 @@
 package market_test
 
 import (
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/market"
+	"github.com/zoikogroup/zoikotax/backend/internal/goldentest"
 )
 
 func TestTheShippedCatalogueParses(t *testing.T) {
-	b, err := os.ReadFile("../../../../content/markets/catalogue.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	c, err := market.ParseCatalogue(b)
+	c, err := market.ParseCatalogue(goldentest.ReadFile(t, "../../../../content/markets/catalogue.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
