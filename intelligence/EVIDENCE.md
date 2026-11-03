@@ -89,11 +89,14 @@ reflect anything that happens after `Gateway.invoke()` returns.
 
 ### What the explanation guard does (and where its decision is logged)
 
-After `Gateway.invoke()` returns, `report_ai_http.py`'s own deterministic
-`apply_guard()` / `_check()` function checks the model's reply against the
-cited rows (citation existence, number matching, status-word matching). This
-guard is independent of `intelligence/src`; it runs in `report_ai_http.py`
-itself.
+After `Gateway.invoke()` returns, `report_ai_http.py` calls
+`apply_guard()` / `_check()` from
+`intelligence/src/ztax_gateway/explanation_guard.py` (WP6: the guard was
+extracted into the governed `src/` path so the production gateway can use
+it without depending on demo tooling).  The guard checks the model's reply
+against the cited rows (citation existence, number matching, status-word
+matching).  `report_ai_http.py` imports it; the logic no longer lives in
+the tools folder itself.
 
 If the guard rejects the reply, the outcome sent to the browser is `ABSTAINED`
 and the reason is the guard's fixed code (e.g. `GUARD_NUMBER_NOT_IN_ROWS`).
@@ -112,41 +115,34 @@ container; it is not persisted after container restart.
 ### What this means
 
 The evidence record (written by `Gateway.invoke()`) and the guard log (written
-by `report_ai_http.py`) are two separate lines. A call that the guard later
-rejects still shows `PROPOSE` in the evidence record. The full picture --
-`PROPOSE` in the gateway evidence and `ABSTAINED` in the `report_ai_http`
-log -- requires reading both.
+by `report_ai_http.py`, which calls `explanation_guard.apply_guard()`) are two
+separate lines. A call that the guard later rejects still shows `PROPOSE` in
+the evidence record. The full picture -- `PROPOSE` in the gateway evidence and
+`ABSTAINED` in the `report_ai_http` log -- requires reading both.
 
 This is acceptable for the demo because no downstream system reads demo
 evidence records and no compliance decision depends on them.
 
-### Follow-up required
+### Status of guard outcome follow-up
 
-A follow-up task is open to record the guard's outcome in the evidence record.
-That change requires an edit to `intelligence/src` (the gateway wire format or
-the evidence writer) and needs **Lane L approval** (and Lane C approval if
-`governance.py` is touched). It must not be made in the demo PR.
+`AnswerCheckedEvent` and sinks are merged in `src/ztax_gateway/invocation_check_event.py`.
+Check events are emitted by the demo through `record_answer_check` for every guard
+outcome; a refused or killed call emits none. Production gRPC emission remains unwired.
 
 ---
 
 ## I. Prompt content hash (Decision D-09 / ZTAX-AI-CONF-ADD01)
 
-`InvocationEvidenceRecord` carries an optional `prompt_content_hash` (lowercase
-SHA-256 hex of `system_prompt`). `PromptProfile.content_hash` computes it.
-The builder validates the format (exactly 64 hex chars) and raises
-`InvocationEvidenceError` on bad input. The field is emitted in `as_dict()`
-only when set; absent on legacy records (backward-compatible).
+`InvocationEvidenceRecord` carries an optional `prompt_content_hash` (lowercase SHA-256
+hex of `system_prompt`). Format is validated by the record and normalised (lowercased)
+by the builder; omitted when unset.
 
-**Not yet wired:** `Gateway.invoke()` in `server.py` never calls
-`set_prompt_content_hash()` because the Gateway has no access to a
-`PromptProfile` at invocation time (it only sees the label string). Every live
-record still has `prompt_content_hash = None`. Follow-up: inject
-`PromptProfileRegistry` into `Gateway` so the label can be resolved.
+**Status:** `Gateway.invoke()` sets the prompt hash only when a `PromptProfileRegistry` is
+injected AND the call reaches the runtime; blocked, refused or killed calls keep the hash
+empty. No deployed path (`src/ztax_gateway/server.py` main, `tools/serve_live_demo.py`,
+`tools/report_ai_http.py` main) injects a registry, and the live demo's prompts are its own,
+not the registry's, so live records currently carry no hash. Injecting a registry into
+deployed servers remains unwired.
 
-**Scope:** covers `system_prompt` text only — `variable_schema`, `output_schema`
-and `safety_rules` do not affect the hash. Document this if a broader canonical
-hash is needed later.
-
-**Not a metrics label:** `prompt_content_hash` is never added to
-`observability.py` labels (unbounded cardinality). A regression test in
-`test_observability.py` enforces this.
+**Scope:** Covers `system_prompt` only. Never added to `observability.py` labels
+(`tests/test_observability.py::test_model_ops_labels_do_not_include_prompt_content_hash`).

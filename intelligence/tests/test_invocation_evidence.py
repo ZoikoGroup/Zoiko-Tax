@@ -40,11 +40,14 @@ Test groups
 from __future__ import annotations
  
 import hashlib
+import json
+import logging
 from dataclasses import FrozenInstanceError, replace
 from datetime import UTC, datetime
- 
+
 import pytest
- 
+
+from ztax_gateway.evidence_sink import LoggingEvidenceSink
 from ztax_gateway.governance import GovernanceRefusedError, Refusal, UseCase, UseCaseRegistry
 from ztax_gateway.invocation_evidence import (
     GuardrailResult,
@@ -55,6 +58,7 @@ from ztax_gateway.invocation_evidence import (
     ToolCallRecord,
     UsageMetrics,
 )
+from ztax_gateway.production_registries import PromptProfile
 from ztax_gateway.provenance import AuthorityOutcome, Provenance, RiskTier
  
 # ---------------------------------------------------------------------------
@@ -1232,6 +1236,151 @@ def test_prompt_hash_is_whitespace_sensitive() -> None:
     assert h_clean != h_newline, "trailing newline must change the hash"
     assert h_clean != h_space, "trailing space must change the hash"
     assert h_newline != h_space, "newline vs space must also differ"
+
+
+def test_builder_normalises_uppercase_hash_to_lowercase() -> None:
+    """Builder normalises uppercase hex characters to lowercase."""
+    upper_hash = "A" * 64
+    lower_hash = "a" * 64
+    b = _builder(prompt_content_hash=upper_hash)
+    assert b.build().prompt_content_hash == lower_hash
+
+    b2 = _builder()
+    b2.set_prompt_content_hash(upper_hash)
+    assert b2.build().prompt_content_hash == lower_hash
+
+
+def test_builder_rejects_trailing_newline_hash() -> None:
+    """Builder rejects a 64-char hex string with a trailing newline."""
+    b = _builder()
+    with pytest.raises(InvocationEvidenceError, match="64"):
+        b.set_prompt_content_hash("a" * 64 + "\n")
+
+    with pytest.raises(InvocationEvidenceError, match="64"):
+        _builder(prompt_content_hash="a" * 64 + "\n")
+
+
+def test_record_rejects_uppercase_hash() -> None:
+    """Direct record construction rejects uppercase hex characters."""
+    with pytest.raises(InvocationEvidenceError, match="64"):
+        _direct_record(prompt_content_hash="A" * 64)
+
+
+def test_record_rejects_wrong_length_hash() -> None:
+    """Direct record construction rejects hashes not exactly 64 characters."""
+    with pytest.raises(InvocationEvidenceError, match="64"):
+        _direct_record(prompt_content_hash="a" * 63)
+    with pytest.raises(InvocationEvidenceError, match="64"):
+        _direct_record(prompt_content_hash="a" * 65)
+
+
+def test_record_rejects_empty_string_hash() -> None:
+    """Direct record construction rejects empty string."""
+    with pytest.raises(InvocationEvidenceError, match="64"):
+        _direct_record(prompt_content_hash="")
+
+
+def test_record_rejects_non_hex_characters() -> None:
+    """Direct record construction rejects non-hex characters."""
+    with pytest.raises(InvocationEvidenceError, match="64"):
+        _direct_record(prompt_content_hash="z" * 64)
+
+
+def test_record_rejects_trailing_newline_hash() -> None:
+    """Direct record construction rejects trailing newline."""
+    with pytest.raises(InvocationEvidenceError, match="64"):
+        _direct_record(prompt_content_hash="a" * 64 + "\n")
+
+
+def test_record_accepts_valid_lowercase_hash() -> None:
+    """Direct record construction accepts a valid 64 lowercase hex hash."""
+    rec = _direct_record(prompt_content_hash="a" * 64)
+    assert rec.prompt_content_hash == "a" * 64
+
+
+def test_record_accepts_none_hash() -> None:
+    """Direct record construction accepts None."""
+    rec = _direct_record(prompt_content_hash=None)
+    assert rec.prompt_content_hash is None
+
+
+def test_raw_prompt_text_does_not_leak_in_record_or_logging_sink(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Raw system prompt text must never appear in record or sink output."""
+    sentinel = "SENTINEL-PROMPT-TEXT-7f3a"
+    profile = PromptProfile(
+        profile_id="pp-sentinel-test",
+        owner="team-ai",
+        version="1.0.0",
+        system_prompt=sentinel,
+        variable_schema={},
+        output_schema={},
+        max_risk_tier=RiskTier.T1,
+        authority_ceiling=AuthorityOutcome.A1,
+        safety_rules=(),
+    )
+    b = _builder(prompt_content_hash=profile.content_hash)
+    record = b.build()
+
+    record_json = json.dumps(record.as_dict())
+    assert sentinel not in record_json
+    assert profile.content_hash in record_json
+
+    sink = LoggingEvidenceSink()
+    with caplog.at_level(logging.INFO, logger="ztax_gateway.evidence"):
+        sink.write(record)
+
+    assert len(caplog.records) >= 1
+    log_line = caplog.records[-1].message
+    assert sentinel not in log_line
+    assert profile.content_hash in log_line
+
+
+def test_error_message_never_echoes_prompt_text_sentinel() -> None:
+    """Exception message on invalid hash must never echo the raw prompt content."""
+    sentinel = "SENTINEL-PROMPT-TEXT-7f3a"
+    # Direct record
+    with pytest.raises(InvocationEvidenceError) as exc_info:
+        _direct_record(prompt_content_hash=sentinel)
+    assert sentinel not in str(exc_info.value)
+
+    # Builder constructor
+    with pytest.raises(InvocationEvidenceError) as exc_info:
+        _builder(prompt_content_hash=sentinel)
+    assert sentinel not in str(exc_info.value)
+
+    # Builder setter
+    b = _builder()
+    with pytest.raises(InvocationEvidenceError) as exc_info:
+        b.set_prompt_content_hash(sentinel)
+    assert sentinel not in str(exc_info.value)
+
+
+def test_non_string_prompt_content_hash_rejected_without_value_leak() -> None:
+    """Non-string hash inputs are rejected reporting type, not the value itself."""
+    for bad_value in (123, b"a" * 64):
+        # Direct record
+        with pytest.raises(InvocationEvidenceError) as exc_info:
+            _direct_record(prompt_content_hash=bad_value)
+        msg = str(exc_info.value)
+        assert type(bad_value).__name__ in msg
+        assert str(bad_value) not in msg
+
+        # Builder constructor
+        with pytest.raises(InvocationEvidenceError) as exc_info:
+            _builder(prompt_content_hash=bad_value)  # type: ignore[arg-type]
+        msg = str(exc_info.value)
+        assert type(bad_value).__name__ in msg
+        assert str(bad_value) not in msg
+
+        # Builder setter
+        b = _builder()
+        with pytest.raises(InvocationEvidenceError) as exc_info:
+            b.set_prompt_content_hash(bad_value)  # type: ignore[arg-type]
+        msg = str(exc_info.value)
+        assert type(bad_value).__name__ in msg
+        assert str(bad_value) not in msg
 
 
 # ---------------------------------------------------------------------------
