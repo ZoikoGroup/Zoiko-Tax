@@ -130,7 +130,7 @@ def main() -> int:
     model = _env("GROQ_MODEL")
     registry, routes = load_config(Path(config))
     routes = _patched_routes(registry, routes, model)
-    gateway = Gateway(registry, routes, runtime, region, train)
+    gateway = Gateway(registry, routes, runtime, region, train, kill_state_path=Path(config))
 
     print(f"serve_live_demo: model={model!r} provider='groq-demo' address={address!r}")
     print(_DEMO_WARNING)

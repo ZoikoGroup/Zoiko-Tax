@@ -830,3 +830,129 @@ def test_a_number_only_in_chart_geometry_is_rejected_by_apply_guard() -> None:
     passed, reason = report_ai_http.apply_guard(rows, cited_ids, explanation)
     assert not passed, "guard should reject a number that is only in chart_geometry"
     assert reason
+
+
+# ---------------------------------------------------------------------------
+# Failing sink: record_answer_check raises; reply must still be returned
+# (Kaushal audit follow-up — demo path only).
+# ---------------------------------------------------------------------------
+
+_SENTINEL = "SENTINEL-SINK-SECRET-9c1"
+
+
+class _RaisingSink:
+    """A CheckEventSink that always raises RuntimeError with a sentinel message."""
+
+    def write_check_event(self, event: object) -> None:
+        raise RuntimeError(_SENTINEL)
+
+
+def _gateway_with_raising_sink(runtime: Any) -> Gateway:
+    """Build a Gateway whose check-event sink always raises."""
+    registry, routes = load_config(_CONFIG_DIR / "registry.live-demo.json")
+    sink = _RaisingSink()
+    gw = Gateway(registry, routes, runtime, "local", "0.0.0-test", check_event_sink=sink)
+    return gw
+
+
+def _explained_result() -> Result:
+    """Return a well-formed result that passes the guard for OBL-001."""
+    rows = report_fixture.rows_for_kind(_FIXTURE, "obligation-row", ["OBL-001"])
+    amount = rows[0]["amount"]
+    cited_id = rows[0]["id"]
+    explanation = f"The obligation amount is {amount}."
+    return _fields_result(explanation, [cited_id], abstain=False)
+
+
+def test_failing_sink_does_not_drop_explained_reply(caplog: pytest.LogCaptureFixture) -> None:
+    """A raising sink must not drop an EXPLAINED reply (demo path only).
+
+    The reply must equal the normal reply. The WARNING must contain the fixed
+    code. The sentinel must not appear in any log record or the reply.
+    The evidence record is still written (the invocation itself succeeds).
+    """
+    runtime = _ScriptedRuntime(result=_explained_result())
+    gw = _gateway_with_raising_sink(runtime)
+    fixture = report_fixture.generate_fixture()
+
+    with caplog.at_level(logging.WARNING):
+        result = report_ai_http.explain(gw, fixture, "obligation-row", ["OBL-001"])
+
+    assert result["outcome"] == "EXPLAINED"
+    warning_texts = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+    assert any("CHECK_EVENT_WRITE_FAILED" in t for t in warning_texts), (
+        "expected CHECK_EVENT_WRITE_FAILED warning when sink raises"
+    )
+    for text in warning_texts:
+        assert _SENTINEL not in text, "sentinel must not appear in any log record"
+    assert _SENTINEL not in str(result), "sentinel must not appear in the reply"
+
+
+def test_failing_sink_does_not_drop_abstained_reply(caplog: pytest.LogCaptureFixture) -> None:
+    """A raising sink must not drop an ABSTAINED (model-abstained) reply (demo path only)."""
+    rows = report_fixture.rows_for_kind(_FIXTURE, "obligation-row", ["OBL-001"])
+    amount = rows[0]["amount"]
+    cited_id = rows[0]["id"]
+    runtime = _ScriptedRuntime(
+        result=_fields_result(amount, [cited_id], abstain=True, reason="low confidence")
+    )
+    gw = _gateway_with_raising_sink(runtime)
+    fixture = report_fixture.generate_fixture()
+
+    with caplog.at_level(logging.WARNING):
+        result = report_ai_http.explain(gw, fixture, "obligation-row", ["OBL-001"])
+
+    assert result["outcome"] == "ABSTAINED"
+    warning_texts = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+    assert any("CHECK_EVENT_WRITE_FAILED" in t for t in warning_texts)
+    for text in warning_texts:
+        assert _SENTINEL not in text
+    assert _SENTINEL not in str(result)
+
+
+# ---------------------------------------------------------------------------
+# Live kill-switch on demo servers: kill_state_path wired into report_ai_http
+# ---------------------------------------------------------------------------
+
+
+def test_report_ai_http_gateway_obeys_live_kill(tmp_path: Path) -> None:
+    """A use case listed in 'killed' is refused after the registry file changes.
+
+    Uses a temp copy of the registry (never the real file). Confirms that
+    kill_state_path is wired so the demo server re-reads flags without restart.
+    """
+    import json as _json
+    import shutil
+
+    src = _CONFIG_DIR / "registry.live-demo.json"
+    tmp_reg = tmp_path / "registry.test.json"
+    shutil.copy(src, tmp_reg)
+
+    from ztax_gateway.server import load_config as _load_config
+
+    runtime = _ScriptedRuntime(result=_explained_result())
+    registry, routes = _load_config(tmp_reg)
+    gw = Gateway(
+        registry,
+        routes,
+        runtime,
+        "local",
+        "0.0.0-test",
+        kill_state_path=tmp_reg,
+    )
+    fixture = report_fixture.generate_fixture()
+
+    # Without a kill the call succeeds.
+    result = report_ai_http.explain(gw, fixture, "obligation-row", ["OBL-001"])
+    assert result["outcome"] == "EXPLAINED"
+
+    # Add the use case to "killed" in the temp registry IN PLACE.
+    doc = _json.loads(tmp_reg.read_text(encoding="utf-8"))
+    doc["killed"] = ["explain-obligation-row"]
+    tmp_reg.write_text(_json.dumps(doc), encoding="utf-8")
+
+    # The next call must be refused — no restart required.
+    result2 = report_ai_http.explain(gw, fixture, "obligation-row", ["OBL-001"])
+    assert result2["outcome"] == "REVIEW_REQUIRED", (
+        f"expected REVIEW_REQUIRED after live kill, got {result2['outcome']!r}"
+    )

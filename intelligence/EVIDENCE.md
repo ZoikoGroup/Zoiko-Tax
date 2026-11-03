@@ -144,5 +144,14 @@ empty. No deployed path (`src/ztax_gateway/server.py` main, `tools/serve_live_de
 not the registry's, so live records currently carry no hash. Injecting a registry into
 deployed servers remains unwired.
 
+**Demo-path resilience:** If the check-event sink raises when `record_answer_check` is
+called, `report_ai_http.py` catches the exception, logs a fixed WARNING
+(`check_event_write_failed reason=CHECK_EVENT_WRITE_FAILED`) without echoing the exception
+text, and still returns the explanation reply. Demo only; production paths are unaffected.
+
+**Kill flags live on demo servers:** `tools/report_ai_http.py` and `tools/serve_live_demo.py`
+now pass `kill_state_path` to `Gateway`, so the demo servers re-read `killed` and
+`global_kill` before every call without a container restart (same as `server.py`).
+
 **Scope:** Covers `system_prompt` only. Never added to `observability.py` labels
 (`tests/test_observability.py::test_model_ops_labels_do_not_include_prompt_content_hash`).

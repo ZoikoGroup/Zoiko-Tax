@@ -8,8 +8,9 @@ Decision reference: D-07.  The guard is intentionally append-only: it never
 mutates the rows or the explanation, and it never emits an event itself.
 Callers that want to record the outcome should use ``AnswerCheckedEvent`` /
 ``CheckEventSink`` from ``ztax_gateway.invocation_check_event``; the
-``invocation_id`` keyword on :func:`apply_guard` is plumbing for that
-follow-up (WP5) and is not used yet.
+``invocation_id`` keyword on :func:`apply_guard` and :func:`check_guard` is
+the evidence record id callers pass to link an answer-checked event. The guard
+does not emit events itself.
 
 Reason codes (``GUARD_*``) match the ``CheckReason`` values in
 ``invocation_check_event.py`` so that a future PR can wire them together
@@ -402,9 +403,9 @@ def check_guard(
     explanation:
         The free-text explanation produced by the model.
     invocation_id:
-        Optional.  The ``ai_invocation_id`` from the evidence record.  Not used
-        in this version; reserved for WP5, which will emit an
-        ``AnswerCheckedEvent`` linked to this id for every guard outcome.
+        Optional.  The ``ai_invocation_id`` from the evidence record; callers
+        pass this to link an answer-checked event to the invocation. The guard
+        does not emit events itself.
     """
     code, message = _check(rows, cited_ids, explanation)
     return GuardResult(ok=not message, code=code, message=message)
@@ -450,8 +451,8 @@ def apply_guard(
         The free-text explanation produced by the model.
     invocation_id:
         Optional.  The ``ai_invocation_id`` from the evidence record for this
-        call.  Not used in this version; reserved for WP5, which will emit an
-        ``AnswerCheckedEvent`` linked to this id for every guard outcome.
+        call; callers pass this to link an answer-checked event to the
+        invocation. The guard does not emit events itself.
 
     LIMIT, stated plainly
     ---------------------

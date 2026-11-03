@@ -139,11 +139,21 @@ only runs the existing Python and Go test suites; no live model is connected.
 
 ## Kill switch
 
-`registry.live-demo.json` keeps `killed` and `global_kill` keys only because a
-test compares them with the dev file. **`load_config` ignores both.** The only
-lever that stops a use case in this stack is `"suspended": true` on that use
-case in `registry.live-demo.json`, followed by a restart of the
-`ztax-model-gateway` container.
+The Python gateway monitors its registry file (`config/registry.live-demo.json`) for live kill-switch changes:
+
+- **Per-call sync without restart:** Before every call, the gateway re-reads its registry file (`Gateway._refresh_kill_state` in `server.py`). When the file's bytes change, it syncs `"killed"` (a list of use case ids) and `"global_kill"` (`true` or `false`). Any kill takes effect on the next call, with no restart required.
+- **Releasing a kill:** Removing an id from `"killed"`, or setting `"global_kill"` back to `false`, restores service on the next call. Only kills that the file set are released.
+- **Fail closed:** If the file is missing, unreadable, malformed JSON, or a key has the wrong type, the gateway engages the global kill until the file parses cleanly again.
+- **Missing keys:** Missing `"killed"` or `"global_kill"` keys mean "not killed".
+- **Startup-only keys:** `"suspended"` and every other registry key are still read only at start-up, so changing them needs a restart of the `ztax-model-gateway` container.
+- **Go side:** The Go services still read the kill keys at start-up only.
+
+> [!WARNING]
+> **Edit the registry file IN PLACE:** Open the file, change it, and save to the same file. Do not replace the file (such as copying a new file over it, or an editor that saves by writing a new file and renaming it). The registry is mounted into the container as a single file, and a replaced file may not show up inside the container, so you could believe a use case is stopped when the gateway never saw the change.
+
+### Verification in Demo
+
+For demo verification: call a killed use case, see it refused with the expected error, and check `EVIDENCE.md` / audit log to confirm no prompt content hash was sealed and no check event was written (because killed calls abort before reaching generation).
 
 ## Rules
 
