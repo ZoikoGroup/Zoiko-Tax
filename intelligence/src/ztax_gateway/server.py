@@ -78,6 +78,10 @@ REASON_KEY = "ztax-reason"
 # ReasonGatewayUnavailable).
 REASON_NOT_CONFIGURED = "AI_GATEWAY_NOT_CONFIGURED"
 REASON_UNAVAILABLE = "AI_GATEWAY_UNAVAILABLE"
+# Fixed caller-facing details for UNAVAILABLE: the exception text of a runtime or
+# an evidence sink can carry provider or store text, so it never reaches the caller.
+DETAIL_RUNTIME_UNAVAILABLE = "model runtime unavailable"
+DETAIL_EVIDENCE_WRITE_FAILED = "evidence write failed"
 
 # PRIV-001 valid privacy class labels (P0 through P7).
 _VALID_DATA_CLASSES: Final[frozenset[str]] = frozenset(f"P{i}" for i in range(8))
@@ -271,7 +275,9 @@ class Gateway:
                 call.input,
                 refusal_code=REASON_UNAVAILABLE,
             )
-            raise GatewayError(grpc.StatusCode.UNAVAILABLE, REASON_UNAVAILABLE, str(exc)) from exc
+            raise GatewayError(
+                grpc.StatusCode.UNAVAILABLE, REASON_UNAVAILABLE, DETAIL_RUNTIME_UNAVAILABLE
+            ) from exc
 
         # Successful invocation: seal a PROPOSE record (the authority-derived
         # default) and write it to the sink before encode_reply is called.
@@ -375,7 +381,9 @@ class Gateway:
                 call.input,
                 refusal_code=REASON_UNAVAILABLE,
             )
-            raise GatewayError(grpc.StatusCode.UNAVAILABLE, REASON_UNAVAILABLE, str(exc)) from exc
+            raise GatewayError(
+                grpc.StatusCode.UNAVAILABLE, REASON_UNAVAILABLE, DETAIL_RUNTIME_UNAVAILABLE
+            ) from exc
 
         invocation_id = self._seal_success(provenance, call.input, reply)
         return encode_reply(reply), invocation_id
@@ -533,8 +541,16 @@ class Gateway:
         """
         try:
             self._evidence_sink.write(record)
-        except Exception:
-            log.exception("gateway: evidence sink write failed (BLOCK record)")
+        except Exception as exc:
+            # Class name only: the exception text and traceback can carry
+            # provider or store text, which must not reach the logs.
+            log.error(
+                "gateway: evidence sink write failed (BLOCK record)",
+                extra={
+                    "use_case": record.caller_security_context_ref,
+                    "error_type": type(exc).__name__,
+                },
+            )
             if original_error is not None:
                 raise original_error from None
             # residency / runtime-failure paths: the caller raises after us,
@@ -551,9 +567,15 @@ class Gateway:
         try:
             self._evidence_sink.write(record)
         except Exception as exc:
-            log.exception("gateway: evidence sink write failed")
+            log.error(
+                "gateway: evidence sink write failed",
+                extra={
+                    "use_case": record.caller_security_context_ref,
+                    "error_type": type(exc).__name__,
+                },
+            )
             raise GatewayError(
-                grpc.StatusCode.UNAVAILABLE, REASON_UNAVAILABLE, str(exc)
+                grpc.StatusCode.UNAVAILABLE, REASON_UNAVAILABLE, DETAIL_EVIDENCE_WRITE_FAILED
             ) from exc
 
 
@@ -572,8 +594,8 @@ def handler(gateway: Gateway) -> grpc.GenericRpcHandler:
             return gateway.invoke(request)
         except GatewayError as err:
             _abort(context, err)
-        except Exception:
-            log.exception("gateway: unhandled error")
+        except Exception as exc:
+            log.error("gateway: unhandled error", extra={"error_type": type(exc).__name__})
             _abort(
                 context,
                 GatewayError(grpc.StatusCode.UNAVAILABLE, REASON_UNAVAILABLE, "internal error"),
