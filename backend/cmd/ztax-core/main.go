@@ -32,6 +32,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/legal"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/market"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/rule"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
@@ -184,6 +185,11 @@ func run() error {
 	// content, so a cell without a bundle reports zeros rather than 503.
 	router.Dashboard = app.NewDashboardService(store.Dashboard(), store.LegalEntities(), store.Obligations(),
 		store.Authorizations(), matrix, clk)
+	catalogue, err := loadMarketCatalogue(cfg, log)
+	if err != nil {
+		return err
+	}
+	router.Dashboard.WithMarkets(catalogue, contentInForce(content), cfg.Authoritative)
 	models, closeModels, err := wireModelGateway(cfg, clk, ids, log)
 	if err != nil {
 		return err
@@ -574,6 +580,44 @@ func loadLegalMatrix(cfg config.Config, log *slog.Logger) (legal.Matrix, error) 
 	}
 	log.Info("legal authorization matrix loaded", "version", m.Version, "digest", m.Digest.String(), "rules", len(m.Rules), "draft", m.Draft)
 	return m, nil
+}
+
+// loadMarketCatalogue reads the market research catalogue. With none
+// configured the cell still starts, and the dashboard reports only the
+// markets content covers: research is context, never a precondition.
+func loadMarketCatalogue(cfg config.Config, log *slog.Logger) (market.Catalogue, error) {
+	if cfg.MarketCatalogue == "" {
+		log.Warn("no market research catalogue configured; coverage will list only markets with content")
+		return market.Catalogue{}, nil
+	}
+	// #nosec G304 -- a path from this process's own configuration.
+	b, err := os.ReadFile(cfg.MarketCatalogue)
+	if err != nil {
+		return market.Catalogue{}, fmt.Errorf("market catalogue: %w", err)
+	}
+	c, err := market.ParseCatalogue(b)
+	if err != nil {
+		return market.Catalogue{}, err
+	}
+	log.Info("market research catalogue loaded", "version", c.Version, "profiles", len(c.Markets))
+	return c, nil
+}
+
+// contentInForce reads, at each call, the service families the active
+// bundle covers per country at t. The bundle is swapped atomically, so the
+// dashboard always reports the content a determination would use.
+func contentInForce(h *rule.Holder) func(time.Time) map[string][]string {
+	return func(t time.Time) map[string][]string {
+		out := map[string][]string{}
+		b := h.Current()
+		if b == nil || b.Taxation() == nil {
+			return out
+		}
+		for _, rg := range b.Taxation().Coverage(t) {
+			out[rg.Country] = rg.Services
+		}
+		return out
+	}
 }
 
 // wireSeals builds the period-seal service (ADR-0011 §2.4). A cell with the

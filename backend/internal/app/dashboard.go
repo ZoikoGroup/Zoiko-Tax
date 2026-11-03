@@ -13,6 +13,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/fiscal"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/legal"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/market"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/obligation"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/subledger"
@@ -39,6 +40,8 @@ const (
 	dashboardLookback = 30 * 24 * time.Hour
 	// dashboardObligationCap is the most obligations the window reads.
 	dashboardObligationCap = 500
+	// dashboardCalendarLimit caps the compliance calendar.
+	dashboardCalendarLimit = 10
 )
 
 var legalPeriodShape = regexp.MustCompile(`^[0-9]{4}-(0[1-9]|1[0-2])$`)
@@ -51,6 +54,11 @@ type DashboardService struct {
 	auths       port.AuthorizationRepository
 	matrix      legal.Matrix
 	clock       clock.Clock
+
+	// Market coverage; see WithMarkets.
+	catalogue     market.Catalogue
+	content       func(time.Time) map[string][]string
+	authoritative bool
 }
 
 // NewDashboardService wires the dashboard over the stores it reads and the
@@ -61,6 +69,17 @@ func NewDashboardService(repo port.DashboardRepository, entities port.LegalEntit
 	return &DashboardService{repo: repo, entities: entities, obligations: obligations, auths: auths, matrix: matrix, clock: clk}
 }
 
+// WithMarkets gives the dashboard what it needs to report market coverage:
+// the research catalogue, the service families content in force covers per
+// country at an instant, and whether the cell is authoritative. Without it
+// every market the coverage lists is absent, which is the truth about a cell
+// that knows of none.
+func (s *DashboardService) WithMarkets(catalogue market.Catalogue, content func(time.Time) map[string][]string,
+	authoritative bool) *DashboardService {
+	s.catalogue, s.content, s.authoritative = catalogue, content, authoritative
+	return s
+}
+
 // Dashboard is the Tax Command Center for one legal period.
 type Dashboard struct {
 	AsOf           time.Time
@@ -68,8 +87,20 @@ type Dashboard struct {
 	LegalEntity    id.LegalEntityID
 	Determinations DashboardDeterminations
 	// Liability is TAX_COLLECTED_LIABILITY for the period, by currency.
-	Liability      []DashboardBalance
+	Liability []DashboardBalance
+	// Accrued is TAX_ACCRUED_LIABILITY for the period: tax the provider owes
+	// on its own account, not collected from a customer.
+	Accrued []DashboardBalance
+	// Adjustments is TAX_ADJUSTMENT_CONTROL for the period.
+	Adjustments []DashboardBalance
+	// Mix is the period's credits to the three accounts above, per
+	// currency, with each one's share for drawing.
+	Mix            []DashboardLiabilityMix
 	Obligations    DashboardObligations
+	Compliance     DashboardCompliance
+	Calendar       []DashboardDeadline
+	Documents      port.DocumentCount
+	Coverage       DashboardCoverage
 	Reconciliation port.ReconciliationSummary
 	Evidence       port.SealCoverage
 	Jurisdictions  DashboardJurisdictions
@@ -100,6 +131,44 @@ type DashboardObligations struct {
 	Due        int
 	Overdue    int
 	Amounts    []fiscal.Money
+}
+
+// DashboardLiabilityMix is one currency's credits to collected liability,
+// accrued liability and adjustment control in the period. The shares are
+// whole percentages for drawing, largest remainder so they sum to 100, and
+// all zero when nothing was credited. They are not amounts.
+type DashboardLiabilityMix struct {
+	Currency                                       fiscal.Currency
+	Collected, Accrued, Adjustments                fiscal.Money
+	CollectedShare, AccruedShare, AdjustmentsShare int
+}
+
+// DashboardCompliance counts the obligations whose legal due date falls in
+// the period, and those among them a return has been filed for. A
+// submission whose outcome is unknown is not filed.
+type DashboardCompliance struct {
+	Due, Filed int
+}
+
+// DashboardDeadline is one unfiled obligation in the window, overdue ones
+// included.
+type DashboardDeadline struct {
+	ObligationID string
+	Type         string
+	Jurisdiction string
+	// Due is a civil date, YYYY-MM-DD, in the obligation's legal calendar.
+	Due      string
+	Status   obligation.Status
+	Exposure *fiscal.Money
+}
+
+// DashboardCoverage is every market the research catalogue or the content in
+// force names, with its state.
+type DashboardCoverage struct {
+	// Catalogue is the research catalogue's version; empty with none.
+	Catalogue               string
+	Active, Pilot, Research int
+	Markets                 []market.Market
 }
 
 // Readiness is whether filing with an authority could proceed now.
@@ -226,14 +295,26 @@ func (s *DashboardService) Dashboard(ctx context.Context, period string) (Dashbo
 			PreviousTax:       ledger.creditsIn(prev),
 			ReviewRequired:    decisions[period].ReviewRequired,
 		},
-		Liability: ledger.balances(period),
+		Liability: ledger.balances(period, subledger.AccountTaxCollectedLiability),
 	}
 	if d.Trend, err = ledger.trend(first, DashboardTrendPeriods, decisions); err != nil {
 		return Dashboard{}, err
 	}
+	if d.Accrued, err = s.periodBalances(ctx, le.ID, subledger.AccountTaxAccruedLiability, period); err != nil {
+		return Dashboard{}, err
+	}
+	if d.Adjustments, err = s.periodBalances(ctx, le.ID, subledger.AccountTaxAdjustmentControl, period); err != nil {
+		return Dashboard{}, err
+	}
+	if d.Mix, err = liabilityMix(d.Liability, d.Accrued, d.Adjustments); err != nil {
+		return Dashboard{}, err
+	}
+	if d.Documents, err = s.repo.Documents(ctx, le.ID, start, end); err != nil {
+		return Dashboard{}, err
+	}
 
 	var actions []DashboardAction
-	if d.Obligations, actions, err = s.obligationWindow(ctx, le.ID, now); err != nil {
+	if d.Obligations, d.Compliance, d.Calendar, actions, err = s.obligationWindow(ctx, le.ID, period, now); err != nil {
 		return Dashboard{}, err
 	}
 	summary, breaks, err := s.repo.Reconciliation(ctx, le.ID, dashboardActionLimit)
@@ -288,7 +369,52 @@ func (s *DashboardService) Dashboard(ctx context.Context, period string) (Dashbo
 	if d.Jurisdictions, err = s.jurisdictions(ctx, le.ID, period, now); err != nil {
 		return Dashboard{}, err
 	}
+	d.Coverage = s.coverage(now, d.Jurisdictions)
 	return d, nil
+}
+
+// periodBalances reports one control account for the period, per currency.
+func (s *DashboardService) periodBalances(ctx context.Context, le id.LegalEntityID, account subledger.Account,
+	period string) ([]DashboardBalance, error) {
+	postings, err := s.repo.Postings(ctx, le, account, period, period)
+	if err != nil {
+		return nil, err
+	}
+	sums, err := foldPostings(postings)
+	if err != nil {
+		return nil, err
+	}
+	return sums.balances(period, account), nil
+}
+
+// coverage assesses every market against the content in force now and the
+// filing gate the jurisdictions were resolved through.
+func (s *DashboardService) coverage(now time.Time, j DashboardJurisdictions) DashboardCoverage {
+	out := DashboardCoverage{Catalogue: s.catalogue.Version}
+	content := map[string][]string{}
+	if s.content != nil {
+		content = s.content(now)
+	}
+	ready := map[string]bool{}
+	for _, a := range j.Authorities {
+		if a.Readiness == ReadinessReady {
+			ready[a.Country] = true
+		}
+	}
+	out.Markets = market.Assess(market.Facts{
+		Catalogue: s.catalogue, Content: content, FilingReady: ready, Authoritative: s.authoritative,
+	})
+	for _, m := range out.Markets {
+		switch m.Status {
+		case market.StatusActive:
+			out.Active++
+		case market.StatusPilot:
+			out.Pilot++
+		case market.StatusResearchOnly:
+			out.Research++
+		}
+	}
+	return out
 }
 
 // periodStart parses a YYYY-MM period, or takes now's month for "".
@@ -307,12 +433,16 @@ func periodStart(period string, now time.Time) (time.Time, error) {
 }
 
 // obligationWindow counts the default entity's unfiled obligations due
-// within the window, overdue included, and the actions they need.
-func (s *DashboardService) obligationWindow(ctx context.Context, le id.LegalEntityID, now time.Time) (DashboardObligations, []DashboardAction, error) {
+// within the window, overdue included, and the actions they need; lists the
+// earliest of them as the calendar; and counts the period's compliance.
+func (s *DashboardService) obligationWindow(ctx context.Context, le id.LegalEntityID, period string, now time.Time) (
+	DashboardObligations, DashboardCompliance, []DashboardDeadline, []DashboardAction, error) {
 	out := DashboardObligations{WindowDays: DashboardWindowDays}
+	var compliance DashboardCompliance
+	calendar := []DashboardDeadline{}
 	rows, err := s.obligations.List(ctx, port.ObligationFilter{Limit: dashboardObligationCap})
 	if err != nil {
-		return out, nil, err
+		return out, compliance, calendar, nil, err
 	}
 	rows = slices.DeleteFunc(rows, func(o obligation.Obligation) bool { return o.LegalEntity != le })
 	keys := make([]string, len(rows))
@@ -321,7 +451,7 @@ func (s *DashboardService) obligationWindow(ctx context.Context, le id.LegalEnti
 	}
 	sums, err := s.obligations.Assessed(ctx, keys)
 	if err != nil {
-		return out, nil, err
+		return out, compliance, calendar, nil, err
 	}
 	amounts := moneyByCurrency{}
 	var actions []DashboardAction
@@ -354,6 +484,12 @@ func (s *DashboardService) obligationWindow(ctx context.Context, le id.LegalEnti
 		case obligation.StatusAmendmentRequired, obligation.StatusDataRequired:
 			a.Kind, a.Priority = ActionObligationAttention, P1
 		}
+		if due.Format("2006-01") == period {
+			compliance.Due++
+			if confirmedFiled(status) {
+				compliance.Filed++
+			}
+		}
 		if !filed(status) && days <= DashboardWindowDays {
 			out.Due++
 			if status == obligation.StatusOverdue {
@@ -361,9 +497,13 @@ func (s *DashboardService) obligationWindow(ctx context.Context, le id.LegalEnti
 			}
 			if a.Exposure != nil {
 				if err := amounts.add(*a.Exposure); err != nil {
-					return out, nil, err
+					return out, compliance, calendar, nil, err
 				}
 			}
+			calendar = append(calendar, DashboardDeadline{
+				ObligationID: o.ID.String(), Type: o.Type, Jurisdiction: o.JurisdictionID,
+				Due: a.Due, Status: status, Exposure: a.Exposure,
+			})
 			if a.Kind == "" {
 				a.Kind, a.Priority = ActionObligationDue, P2
 				if days <= 7 {
@@ -376,7 +516,95 @@ func (s *DashboardService) obligationWindow(ctx context.Context, le id.LegalEnti
 		}
 	}
 	out.Amounts = amounts.sorted()
-	return out, actions, nil
+	slices.SortStableFunc(calendar, func(a, b DashboardDeadline) int {
+		return cmp.Or(cmp.Compare(a.Due, b.Due), cmp.Compare(a.ObligationID, b.ObligationID))
+	})
+	if len(calendar) > dashboardCalendarLimit {
+		calendar = calendar[:dashboardCalendarLimit]
+	}
+	return out, compliance, calendar, actions, nil
+}
+
+// liabilityMix lines up the credits of the three accounts per currency and
+// computes each one's share with exact rational arithmetic.
+func liabilityMix(collected, accrued, adjustments []DashboardBalance) ([]DashboardLiabilityMix, error) {
+	byCur := map[fiscal.Currency]*DashboardLiabilityMix{}
+	at := func(m fiscal.Money) *DashboardLiabilityMix {
+		x, ok := byCur[m.Currency()]
+		if !ok {
+			x = &DashboardLiabilityMix{Currency: m.Currency(), Collected: m.Zero(), Accrued: m.Zero(), Adjustments: m.Zero()}
+			byCur[m.Currency()] = x
+		}
+		return x
+	}
+	for _, b := range collected {
+		at(b.Credits).Collected = b.Credits
+	}
+	for _, b := range accrued {
+		at(b.Credits).Accrued = b.Credits
+	}
+	for _, b := range adjustments {
+		at(b.Credits).Adjustments = b.Credits
+	}
+	out := make([]DashboardLiabilityMix, 0, len(byCur))
+	for _, x := range byCur {
+		shares, err := wholeShares(x.Collected, x.Accrued, x.Adjustments)
+		if err != nil {
+			return nil, err
+		}
+		x.CollectedShare, x.AccruedShare, x.AdjustmentsShare = shares[0], shares[1], shares[2]
+		out = append(out, *x)
+	}
+	slices.SortFunc(out, func(a, b DashboardLiabilityMix) int { return cmp.Compare(a.Currency, b.Currency) })
+	return out, nil
+}
+
+// wholeShares splits 100 across amounts in proportion, largest remainder
+// first, ties to the earlier amount. All zero when the amounts sum to zero.
+func wholeShares(amounts ...fiscal.Money) ([]int, error) {
+	values := make([]*big.Rat, len(amounts))
+	total := new(big.Rat)
+	for i, m := range amounts {
+		v, ok := new(big.Rat).SetString(m.CanonicalString())
+		if !ok {
+			return nil, internal(fmt.Errorf("unparseable amount %q", m.CanonicalString()), "The dashboard could not draw the liability mix.")
+		}
+		if v.Sign() < 0 {
+			v.SetInt64(0)
+		}
+		values[i] = v
+		total.Add(total, v)
+	}
+	shares := make([]int, len(amounts))
+	if total.Sign() == 0 {
+		return shares, nil
+	}
+	remainders := make([]*big.Rat, len(amounts))
+	given := 0
+	for i, v := range values {
+		q := new(big.Rat).Mul(v, big.NewRat(100, 1))
+		q.Quo(q, total)
+		whole := new(big.Int).Quo(q.Num(), q.Denom())
+		shares[i] = int(whole.Int64())
+		given += shares[i]
+		remainders[i] = q.Sub(q, new(big.Rat).SetInt(whole))
+	}
+	order := make([]int, len(amounts))
+	for i := range order {
+		order[i] = i
+	}
+	slices.SortStableFunc(order, func(a, b int) int { return remainders[b].Cmp(remainders[a]) })
+	for k := 0; given < 100; k++ {
+		shares[order[k%len(order)]]++
+		given++
+	}
+	return shares, nil
+}
+
+// confirmedFiled reports whether a return is known to have been filed. An
+// uncertain submission is not: nobody knows yet whether the authority has it.
+func confirmedFiled(s obligation.Status) bool {
+	return filed(s) && s != obligation.StatusUncertain
 }
 
 // filed reports whether an obligation is past the point a window counts it.
@@ -555,7 +783,7 @@ func (l ledgerSums) creditsIn(period string) []fiscal.Money { return l.credits[p
 
 // balances reports the period per currency, debits and credits apart, a
 // missing side as a zero in that currency.
-func (l ledgerSums) balances(period string) []DashboardBalance {
+func (l ledgerSums) balances(period string, account subledger.Account) []DashboardBalance {
 	byCur := map[fiscal.Currency]*DashboardBalance{}
 	for _, side := range []struct {
 		sums   moneyByCurrency
@@ -564,7 +792,7 @@ func (l ledgerSums) balances(period string) []DashboardBalance {
 		for c, m := range side.sums {
 			b, ok := byCur[c]
 			if !ok {
-				b = &DashboardBalance{Account: subledger.AccountTaxCollectedLiability, Debits: m.Zero(), Credits: m.Zero()}
+				b = &DashboardBalance{Account: account, Debits: m.Zero(), Credits: m.Zero()}
 				byCur[c] = b
 			}
 			if side.credit {

@@ -756,6 +756,48 @@ func (e DashboardActionKind) Valid() bool {
 	}
 }
 
+// Defines values for DashboardMarketReason.
+const (
+	ADVISORYCELL     DashboardMarketReason = "ADVISORY_CELL"
+	FILINGNOTREADY   DashboardMarketReason = "FILING_NOT_READY"
+	NOCONTENTINFORCE DashboardMarketReason = "NO_CONTENT_IN_FORCE"
+)
+
+// Valid indicates whether the value is a known member of the DashboardMarketReason enum.
+func (e DashboardMarketReason) Valid() bool {
+	switch e {
+	case ADVISORYCELL:
+		return true
+	case FILINGNOTREADY:
+		return true
+	case NOCONTENTINFORCE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DashboardMarketStatus.
+const (
+	DashboardMarketStatusACTIVE       DashboardMarketStatus = "ACTIVE"
+	DashboardMarketStatusPILOT        DashboardMarketStatus = "PILOT"
+	DashboardMarketStatusRESEARCHONLY DashboardMarketStatus = "RESEARCH_ONLY"
+)
+
+// Valid indicates whether the value is a known member of the DashboardMarketStatus enum.
+func (e DashboardMarketStatus) Valid() bool {
+	switch e {
+	case DashboardMarketStatusACTIVE:
+		return true
+	case DashboardMarketStatusPILOT:
+		return true
+	case DashboardMarketStatusRESEARCHONLY:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DashboardPriority.
 const (
 	DashboardPriorityP0 DashboardPriority = "P0"
@@ -792,6 +834,27 @@ func (e DashboardReadiness) Valid() bool {
 	case DashboardReadinessBLOCKED:
 		return true
 	case DashboardReadinessREADY:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DashboardResearch.
+const (
+	DashboardResearchEVIDENCEREVIEWED        DashboardResearch = "EVIDENCE_REVIEWED"
+	DashboardResearchEVIDENCEREVIEWEDPARTIAL DashboardResearch = "EVIDENCE_REVIEWED_PARTIAL"
+	DashboardResearchRESEARCHONLY            DashboardResearch = "RESEARCH_ONLY"
+)
+
+// Valid indicates whether the value is a known member of the DashboardResearch enum.
+func (e DashboardResearch) Valid() bool {
+	switch e {
+	case DashboardResearchEVIDENCEREVIEWED:
+		return true
+	case DashboardResearchEVIDENCEREVIEWEDPARTIAL:
+		return true
+	case DashboardResearchRESEARCHONLY:
 		return true
 	default:
 		return false
@@ -4194,17 +4257,44 @@ type CutoverState string
 
 // Dashboard The Tax Command Center for one legal period of the tenant's default legal entity.
 type Dashboard struct {
+	// Accrued `TAX_ACCRUED_LIABILITY` for the period, per currency, credits and
+	// debits apart: tax the provider owes on its own account rather than
+	// collects from a customer. Never folded into `liability`.
+	Accrued []ControlBalance `json:"accrued"`
+
 	// Actions What needs a person, most urgent first. At most 25.
 	Actions []DashboardAction `json:"actions"`
+
+	// Adjustments `TAX_ADJUSTMENT_CONTROL` for the period, per currency, credits and debits apart.
+	Adjustments []ControlBalance `json:"adjustments"`
 
 	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
 	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
 	// encodings of one instant must not produce two digests.
 	AsOf Timestamp `json:"asOf"`
 
+	// Calendar The obligation window's unfiled obligations, overdue ones
+	// included, earliest due first. At most 10.
+	Calendar []DashboardDeadline `json:"calendar"`
+
+	// Compliance Obligations whose legal due date falls in the period, and those
+	// among them a return is known to have been filed for. A submission
+	// whose outcome is `UNCERTAIN` is not counted as filed.
+	Compliance DashboardCompliance `json:"compliance"`
+
+	// Coverage Every market the research catalogue or the content in force names,
+	// ordered by country, and the count in each state. `catalogue` is the
+	// research catalogue's version, absent when the cell has none.
+	Coverage DashboardCoverage `json:"coverage"`
+
 	// Determinations Decisions recorded in the period and the one before it, and the tax
 	// their journals credited to `TAX_COLLECTED_LIABILITY`, per currency.
 	Determinations DashboardDeterminations `json:"determinations"`
+
+	// Documents Fiscal documents issued with an issue date in the period, and those
+	// among them that correct an earlier document. These are the cell's
+	// own fiscal documents, not clearance e-invoices.
+	Documents DashboardDocuments `json:"documents"`
 
 	// Evidence Seal coverage of the tenant's decisions: how many are recorded, and
 	// how many fall inside a period seal and can therefore prove their
@@ -4223,6 +4313,10 @@ type Dashboard struct {
 	// Liability `TAX_COLLECTED_LIABILITY` for the period, per currency, credits
 	// and debits apart. Empty when nothing posted.
 	Liability []ControlBalance `json:"liability"`
+
+	// LiabilityMix The period's credits to collected liability, accrued liability and
+	// adjustment control, one entry per currency, ordered by currency.
+	LiabilityMix []DashboardLiabilityMix `json:"liabilityMix"`
 
 	// Obligations Current obligations not yet filed whose due date falls within
 	// `windowDays` of today in their own legal calendar, overdue ones
@@ -4286,6 +4380,44 @@ type DashboardAuthority struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
+// DashboardCompliance Obligations whose legal due date falls in the period, and those
+// among them a return is known to have been filed for. A submission
+// whose outcome is `UNCERTAIN` is not counted as filed.
+type DashboardCompliance struct {
+	Due   int32 `json:"due"`
+	Filed int32 `json:"filed"`
+}
+
+// DashboardCoverage Every market the research catalogue or the content in force names,
+// ordered by country, and the count in each state. `catalogue` is the
+// research catalogue's version, absent when the cell has none.
+type DashboardCoverage struct {
+	Active    int32             `json:"active"`
+	Catalogue *string           `json:"catalogue,omitempty"`
+	Markets   []DashboardMarket `json:"markets"`
+	Pilot     int32             `json:"pilot"`
+	Research  int32             `json:"research"`
+}
+
+// DashboardDeadline One unfiled obligation in the window. `due` is a day in the obligation's legal calendar.
+type DashboardDeadline struct {
+	// Due A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	Due CivilDate `json:"due"`
+
+	// Exposure An amount and its currency, never one without the other.
+	Exposure     *MoneyValue `json:"exposure,omitempty"`
+	Jurisdiction string      `json:"jurisdiction"`
+
+	// ObligationID One row of an obligation's history. A UUID in lowercase canonical form.
+	ObligationID ObligationID `json:"obligationId"`
+
+	// Status A stored status, or `OVERDUE` derived as of today for an unfiled obligation past its due date.
+	Status EffectiveObligationStatus `json:"status"`
+	Type   string                    `json:"type"`
+}
+
 // DashboardDeterminations Decisions recorded in the period and the one before it, and the tax
 // their journals credited to `TAX_COLLECTED_LIABILITY`, per currency.
 type DashboardDeterminations struct {
@@ -4299,6 +4431,14 @@ type DashboardDeterminations struct {
 	// ReviewRequired Decisions in the period whose outcome needs a person — REVIEW_REQUIRED, AMBIGUOUS, CONFLICTED or UNSUPPORTED.
 	ReviewRequired int32        `json:"reviewRequired"`
 	Tax            []MoneyValue `json:"tax"`
+}
+
+// DashboardDocuments Fiscal documents issued with an issue date in the period, and those
+// among them that correct an earlier document. These are the cell's
+// own fiscal documents, not clearance e-invoices.
+type DashboardDocuments struct {
+	Corrections int32 `json:"corrections"`
+	Issued      int32 `json:"issued"`
 }
 
 // DashboardEvidence Seal coverage of the tenant's decisions: how many are recorded, and
@@ -4320,6 +4460,63 @@ type DashboardJurisdictions struct {
 	Blocked     int32                `json:"blocked"`
 	Ready       int32                `json:"ready"`
 }
+
+// DashboardLiabilityMix One currency's credits in the period to `TAX_COLLECTED_LIABILITY`
+// (`collected`), `TAX_ACCRUED_LIABILITY` (`accrued`, owed by the
+// provider on its own account) and `TAX_ADJUSTMENT_CONTROL`
+// (`adjustments`). The shares are whole percentages for drawing,
+// allocated by largest remainder so they sum to 100, and all zero when
+// nothing was credited. They are not amounts.
+type DashboardLiabilityMix struct {
+	// Accrued An amount and its currency, never one without the other.
+	Accrued      MoneyValue `json:"accrued"`
+	AccruedShare int32      `json:"accruedShare"`
+
+	// Adjustments An amount and its currency, never one without the other.
+	Adjustments      MoneyValue `json:"adjustments"`
+	AdjustmentsShare int32      `json:"adjustmentsShare"`
+
+	// Collected An amount and its currency, never one without the other.
+	Collected      MoneyValue `json:"collected"`
+	CollectedShare int32      `json:"collectedShare"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+}
+
+// DashboardMarket One market. `name`, `region` and `research` come from the research
+// catalogue and are absent for a country only content names;
+// `services` are the service families content in force covers there.
+type DashboardMarket struct {
+	// Country ISO 3166-1 alpha-2.
+	Country CountryCode `json:"country"`
+	Name    *string     `json:"name,omitempty"`
+
+	// Reason What keeps the market from the next state.
+	Reason *DashboardMarketReason `json:"reason,omitempty"`
+	Region *string                `json:"region,omitempty"`
+
+	// Research How far the research behind a catalogue profile has got. Research is never coverage.
+	Research *DashboardResearch `json:"research,omitempty"`
+	Services []ServiceFamily    `json:"services"`
+
+	// Status `ACTIVE` when content is in force, the cell is authoritative and an
+	// authority's filing gate is ready; `PILOT` when content is in force
+	// and something short of that; `RESEARCH_ONLY` when the market is
+	// researched and not available for calculation. A country the coverage
+	// does not list is not available.
+	Status DashboardMarketStatus `json:"status"`
+}
+
+// DashboardMarketReason What keeps the market from the next state.
+type DashboardMarketReason string
+
+// DashboardMarketStatus `ACTIVE` when content is in force, the cell is authoritative and an
+// authority's filing gate is ready; `PILOT` when content is in force
+// and something short of that; `RESEARCH_ONLY` when the market is
+// researched and not available for calculation. A country the coverage
+// does not list is not available.
+type DashboardMarketStatus string
 
 // DashboardObligations Current obligations not yet filed whose due date falls within
 // `windowDays` of today in their own legal calendar, overdue ones
@@ -4348,6 +4545,9 @@ type DashboardReconciliation struct {
 	Open    int32 `json:"open"`
 	Runs    int32 `json:"runs"`
 }
+
+// DashboardResearch How far the research behind a catalogue profile has got. Research is never coverage.
+type DashboardResearch string
 
 // DashboardTrend The eight periods ending with the reported one, oldest first:
 // decisions recorded, and tax credited to `TAX_COLLECTED_LIABILITY` in

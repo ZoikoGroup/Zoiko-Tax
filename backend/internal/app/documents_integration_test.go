@@ -10,7 +10,9 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/document"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/legal"
 	"github.com/zoikogroup/zoikotax/backend/internal/fiscaltest"
+	"github.com/zoikogroup/zoikotax/backend/internal/port"
 )
 
 // Fiscal documents against PostgreSQL. The worked pack posts TAX_VAT and
@@ -186,6 +188,20 @@ func TestIntegrationFINREQ0004CreditsVoidsAndRebillsAreLinkedSuccessors(t *testi
 	}
 	if err := ch.Validate(); err != nil || ch[0].ID != inv {
 		t.Fatalf("the chain: %v", err)
+	}
+
+	// The dashboard counts the four by issue date: one original, three
+	// corrections, all in September and none in October.
+	dash := app.NewDashboardService(c.store.Dashboard(), c.store.LegalEntities(), c.store.Obligations(),
+		c.store.Authorizations(), legal.Matrix{}, c.clock)
+	for period, want := range map[string]port.DocumentCount{"2026-09": {Issued: 4, Corrections: 3}, "2026-10": {}} {
+		d, err := dash.Dashboard(c.ctx, period)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if d.Documents != want {
+			t.Errorf("%s documents %+v, want %+v", period, d.Documents, want)
+		}
 	}
 }
 

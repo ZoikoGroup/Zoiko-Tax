@@ -83,6 +83,11 @@ LIMIT $3`
 
 	sqlDashboardDeadDeliveries = `SELECT count(*) FROM ztax.webhook_delivery
 WHERE tenant_id = $1 AND status = 'DEAD' AND created_at >= $2`
+
+	// issue_date is a civil date: the range is of dates, not instants.
+	sqlDashboardDocuments = `SELECT count(*), count(*) FILTER (WHERE document_id <> root_id)
+FROM ztax.fiscal_document
+WHERE tenant_id = $1 AND legal_entity_id = $2 AND issue_date >= $3::date AND issue_date < $4::date`
 )
 
 // DashboardRepo implements port.DashboardRepository.
@@ -246,4 +251,16 @@ func (r *DashboardRepo) DeadDeliveries(ctx context.Context, since time.Time) (in
 		return 0, mapError(err, "count dead deliveries")
 	}
 	return n, nil
+}
+
+// Documents counts a legal entity's fiscal documents issued in [from, to).
+func (r *DashboardRepo) Documents(ctx context.Context, legalEntityID id.LegalEntityID, from, to time.Time) (port.DocumentCount, error) {
+	tenant, err := tenantOf(ctx)
+	if err != nil {
+		return port.DocumentCount{}, err
+	}
+	var out port.DocumentCount
+	err = r.s.db(ctx).QueryRow(ctx, sqlDashboardDocuments, tenant.UUID(), legalEntityID.UUID(),
+		from.Format(time.DateOnly), to.Format(time.DateOnly)).Scan(&out.Issued, &out.Corrections)
+	return out, mapError(err, "count documents")
 }

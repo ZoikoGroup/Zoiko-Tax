@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type JSX } from 'react'
 
+import { useRoutedTab } from './routedTab'
 import type { PageProps } from './types'
 import { Card, Field, PageHeader } from '../ui/kit'
 import { TabBar } from './determine/shared'
@@ -15,9 +16,9 @@ const TABS: readonly { value: Tab; label: string }[] = [
   { value: 'issue', label: 'Issue a document' },
 ]
 
-// Documents are not per period, so the page takes none of the shell's props.
-export const DocumentsPage: (props: PageProps) => JSX.Element = () => {
-  const [tab, setTab] = useState<Tab>('lookup')
+// Documents are not per period; the page takes only the route, for its tab.
+export const DocumentsPage: (props: PageProps) => JSX.Element = ({ route, onTabChange }) => {
+  const [tab, setTab] = useRoutedTab(TABS.map((t) => t.value), 'lookup', route, onTabChange)
   const [id, setId] = useState('')
   const [draft, setDraft] = useState('')
 

@@ -5263,9 +5263,56 @@ namespace ZoikoTax.Sdk
         [System.ComponentModel.DataAnnotations.Required]
         public System.Collections.Generic.ICollection<ControlBalance> Liability { get; set; } = new System.Collections.ObjectModel.Collection<ControlBalance>();
 
+        /// <summary>
+        /// `TAX_ACCRUED_LIABILITY` for the period, per currency, credits and
+        /// <br/>debits apart: tax the provider owes on its own account rather than
+        /// <br/>collects from a customer. Never folded into `liability`.
+        /// <br/>
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("accrued")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<ControlBalance> Accrued { get; set; } = new System.Collections.ObjectModel.Collection<ControlBalance>();
+
+        /// <summary>
+        /// `TAX_ADJUSTMENT_CONTROL` for the period, per currency, credits and debits apart.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("adjustments")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<ControlBalance> Adjustments { get; set; } = new System.Collections.ObjectModel.Collection<ControlBalance>();
+
+        /// <summary>
+        /// The period's credits to collected liability, accrued liability and
+        /// <br/>adjustment control, one entry per currency, ordered by currency.
+        /// <br/>
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("liabilityMix")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<DashboardLiabilityMix> LiabilityMix { get; set; } = new System.Collections.ObjectModel.Collection<DashboardLiabilityMix>();
+
         [System.Text.Json.Serialization.JsonPropertyName("obligations")]
         [System.ComponentModel.DataAnnotations.Required]
         public DashboardObligations Obligations { get; set; } = new DashboardObligations();
+
+        [System.Text.Json.Serialization.JsonPropertyName("compliance")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public DashboardCompliance Compliance { get; set; } = new DashboardCompliance();
+
+        /// <summary>
+        /// The obligation window's unfiled obligations, overdue ones
+        /// <br/>included, earliest due first. At most 10.
+        /// <br/>
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("calendar")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<DashboardDeadline> Calendar { get; set; } = new System.Collections.ObjectModel.Collection<DashboardDeadline>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("documents")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public DashboardDocuments Documents { get; set; } = new DashboardDocuments();
+
+        [System.Text.Json.Serialization.JsonPropertyName("coverage")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public DashboardCoverage Coverage { get; set; } = new DashboardCoverage();
 
         [System.Text.Json.Serialization.JsonPropertyName("reconciliation")]
         [System.ComponentModel.DataAnnotations.Required]
@@ -5356,6 +5403,256 @@ namespace ZoikoTax.Sdk
         [System.Text.Json.Serialization.JsonPropertyName("amounts")]
         [System.ComponentModel.DataAnnotations.Required]
         public System.Collections.Generic.ICollection<MoneyValue> Amounts { get; set; } = new System.Collections.ObjectModel.Collection<MoneyValue>();
+
+    }
+
+    /// <summary>
+    /// One currency's credits in the period to `TAX_COLLECTED_LIABILITY`
+    /// <br/>(`collected`), `TAX_ACCRUED_LIABILITY` (`accrued`, owed by the
+    /// <br/>provider on its own account) and `TAX_ADJUSTMENT_CONTROL`
+    /// <br/>(`adjustments`). The shares are whole percentages for drawing,
+    /// <br/>allocated by largest remainder so they sum to 100, and all zero when
+    /// <br/>nothing was credited. They are not amounts.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DashboardLiabilityMix
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("currency")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z]{3}$")]
+        public string Currency { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("collected")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public MoneyValue Collected { get; set; } = new MoneyValue();
+
+        [System.Text.Json.Serialization.JsonPropertyName("accrued")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public MoneyValue Accrued { get; set; } = new MoneyValue();
+
+        [System.Text.Json.Serialization.JsonPropertyName("adjustments")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public MoneyValue Adjustments { get; set; } = new MoneyValue();
+
+        [System.Text.Json.Serialization.JsonPropertyName("collectedShare")]
+        [System.ComponentModel.DataAnnotations.Range(0, 100)]
+        public int CollectedShare { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("accruedShare")]
+        [System.ComponentModel.DataAnnotations.Range(0, 100)]
+        public int AccruedShare { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("adjustmentsShare")]
+        [System.ComponentModel.DataAnnotations.Range(0, 100)]
+        public int AdjustmentsShare { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// Obligations whose legal due date falls in the period, and those
+    /// <br/>among them a return is known to have been filed for. A submission
+    /// <br/>whose outcome is `UNCERTAIN` is not counted as filed.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DashboardCompliance
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("due")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Due { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("filed")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Filed { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// One unfiled obligation in the window. `due` is a day in the obligation's legal calendar.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DashboardDeadline
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("obligationId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid ObligationId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("type")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Type { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("jurisdiction")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Jurisdiction { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("due")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")]
+        public string Due { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<EffectiveObligationStatus>))]
+        public EffectiveObligationStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("exposure")]
+        public MoneyValue? Exposure { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// Fiscal documents issued with an issue date in the period, and those
+    /// <br/>among them that correct an earlier document. These are the cell's
+    /// <br/>own fiscal documents, not clearance e-invoices.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DashboardDocuments
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("issued")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Issued { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("corrections")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Corrections { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// `ACTIVE` when content is in force, the cell is authoritative and an
+    /// <br/>authority's filing gate is ready; `PILOT` when content is in force
+    /// <br/>and something short of that; `RESEARCH_ONLY` when the market is
+    /// <br/>researched and not available for calculation. A country the coverage
+    /// <br/>does not list is not available.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum DashboardMarketStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ACTIVE")]
+        ACTIVE = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PILOT")]
+        PILOT = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RESEARCH_ONLY")]
+        RESEARCH_ONLY = 2,
+
+    }
+
+    /// <summary>
+    /// What keeps the market from the next state.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum DashboardMarketReason
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ADVISORY_CELL")]
+        ADVISORY_CELL = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"FILING_NOT_READY")]
+        FILING_NOT_READY = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"NO_CONTENT_IN_FORCE")]
+        NO_CONTENT_IN_FORCE = 2,
+
+    }
+
+    /// <summary>
+    /// How far the research behind a catalogue profile has got. Research is never coverage.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum DashboardResearch
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RESEARCH_ONLY")]
+        RESEARCH_ONLY = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"EVIDENCE_REVIEWED_PARTIAL")]
+        EVIDENCE_REVIEWED_PARTIAL = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"EVIDENCE_REVIEWED")]
+        EVIDENCE_REVIEWED = 2,
+
+    }
+
+    /// <summary>
+    /// One market. `name`, `region` and `research` come from the research
+    /// <br/>catalogue and are absent for a country only content names;
+    /// <br/>`services` are the service families content in force covers there.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DashboardMarket
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("country")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[A-Z]{2}$")]
+        public string Country { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string? Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("region")]
+        public string? Region { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<DashboardMarketStatus>))]
+        public DashboardMarketStatus Status { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<DashboardMarketReason>))]
+        public DashboardMarketReason? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("research")]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<DashboardResearch>))]
+        public DashboardResearch? Research { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("services")]
+        // TODO(system.text.json): Add ItemConverterType with enum converter when supported
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<ServiceFamily> Services { get; set; } = new System.Collections.ObjectModel.Collection<ServiceFamily>();
+
+    }
+
+    /// <summary>
+    /// Every market the research catalogue or the content in force names,
+    /// <br/>ordered by country, and the count in each state. `catalogue` is the
+    /// <br/>research catalogue's version, absent when the cell has none.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DashboardCoverage
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("catalogue")]
+        public string? Catalogue { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("active")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Active { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("pilot")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Pilot { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("research")]
+        [System.ComponentModel.DataAnnotations.Range(0, int.MaxValue)]
+        public int Research { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("markets")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<DashboardMarket> Markets { get; set; } = new System.Collections.ObjectModel.Collection<DashboardMarket>();
 
     }
 

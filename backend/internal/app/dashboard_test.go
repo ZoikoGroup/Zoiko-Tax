@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/identity"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/legal"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/market"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/obligation"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/subledger"
@@ -33,6 +35,9 @@ type fakeDashboardRepo struct {
 	seals     port.SealCoverage
 	refunds   []port.RefundAwaiting
 	dead      int
+	// other control accounts than TAX_COLLECTED_LIABILITY
+	accounts  map[subledger.Account][]port.Posting
+	documents port.DocumentCount
 
 	// what the service asked for
 	fromPeriod, toPeriod string
@@ -42,9 +47,16 @@ func (f *fakeDashboardRepo) Decisions(context.Context, time.Time, time.Time) (ma
 	return f.decisions, nil
 }
 
-func (f *fakeDashboardRepo) Postings(_ context.Context, _ id.LegalEntityID, _ subledger.Account, from, to string) ([]port.Posting, error) {
+func (f *fakeDashboardRepo) Postings(_ context.Context, _ id.LegalEntityID, account subledger.Account, from, to string) ([]port.Posting, error) {
+	if account != subledger.AccountTaxCollectedLiability {
+		return f.accounts[account], nil
+	}
 	f.fromPeriod, f.toPeriod = from, to
 	return f.postings, nil
+}
+
+func (f *fakeDashboardRepo) Documents(context.Context, id.LegalEntityID, time.Time, time.Time) (port.DocumentCount, error) {
+	return f.documents, nil
 }
 
 func (f *fakeDashboardRepo) Reconciliation(context.Context, id.LegalEntityID, int) (port.ReconciliationSummary, []port.ReconciliationException, error) {
@@ -157,6 +169,12 @@ func TestDashboardEmptyCellReportsZeros(t *testing.T) {
 	if d.Actions == nil || len(d.Actions) != 0 || len(d.Liability) != 0 || d.Jurisdictions.Authorities == nil {
 		t.Fatalf("an empty cell has empty, not absent, lists: %+v", d)
 	}
+	if d.Mix == nil || len(d.Mix) != 0 {
+		t.Fatalf("an empty cell has an empty liability mix: %+v", d.Mix)
+	}
+	if d.Calendar == nil || len(d.Calendar) != 0 || d.Coverage.Markets == nil || len(d.Coverage.Markets) != 0 {
+		t.Fatalf("an empty cell has an empty calendar and no markets: %+v %+v", d.Calendar, d.Coverage)
+	}
 }
 
 func TestDashboardAssemblesTheRecord(t *testing.T) {
@@ -181,6 +199,10 @@ func TestDashboardAssemblesTheRecord(t *testing.T) {
 		refunds: []port.RefundAwaiting{{RefundID: "01920a50-2a3b-7c4d-8e5f-6a7b8c9d0e1f", Status: "UNCERTAIN",
 			Amount: money(t, "10.50", "EUR"), PaymentReference: "psp:1", RequestedAt: now.Add(-48 * time.Hour)}},
 		dead: 3,
+		accounts: map[subledger.Account][]port.Posting{
+			subledger.AccountTaxAccruedLiability: {{Period: "2026-09", Side: subledger.Credit, Amount: money(t, "12.00", "EUR"), Lines: 1}},
+		},
+		documents: port.DocumentCount{Issued: 5, Corrections: 1},
 	}
 	obligations := fakeObligations{
 		rows: []obligation.Obligation{
@@ -189,6 +211,7 @@ func TestDashboardAssemblesTheRecord(t *testing.T) {
 			dueObligation("later", obligation.StatusOpen, time.Date(2026, 11, 5, 0, 0, 0, 0, time.UTC)),
 			dueObligation("filed", obligation.StatusFiled, time.Date(2026, 10, 2, 0, 0, 0, 0, time.UTC)),
 			dueObligation("outside", obligation.StatusOpen, time.Date(2027, 1, 20, 0, 0, 0, 0, time.UTC)),
+			dueObligation("sept-filed", obligation.StatusAccepted, time.Date(2026, 9, 20, 0, 0, 0, 0, time.UTC)),
 		},
 		sums: map[string]fiscal.Money{
 			"late": money(t, "40.00", "EUR"), "soon": money(t, "2.50", "EUR"),
@@ -287,6 +310,115 @@ func TestDashboardAssemblesTheRecord(t *testing.T) {
 	}
 	if a := d.Actions[4]; a.Title != "2 decisions need review" {
 		t.Errorf("review action %q", a.Title)
+	}
+
+	// Accrued and adjustments are their own accounts, never folded into
+	// collected liability.
+	if len(d.Accrued) != 1 || d.Accrued[0].Account != subledger.AccountTaxAccruedLiability ||
+		d.Accrued[0].Credits.CanonicalString() != "12.00" || len(d.Adjustments) != 0 {
+		t.Errorf("accrued %+v adjustments %+v", d.Accrued, d.Adjustments)
+	}
+	// EUR: 100.00 collected and 12.00 accrued is 89.29% and 10.71%; the
+	// leftover point goes to the larger remainder. USD is all collected.
+	if len(d.Mix) != 2 {
+		t.Fatalf("mix %+v", d.Mix)
+	}
+	if m := d.Mix[0]; m.Currency != "EUR" || m.Collected.CanonicalString() != "100.00" || m.Accrued.CanonicalString() != "12.00" ||
+		m.Adjustments.CanonicalString() != "0.00" || m.CollectedShare != 89 || m.AccruedShare != 11 || m.AdjustmentsShare != 0 {
+		t.Errorf("EUR mix %+v", m)
+	}
+	if m := d.Mix[1]; m.Currency != "USD" || m.CollectedShare != 100 || m.AccruedShare != 0 {
+		t.Errorf("USD mix %+v", m)
+	}
+	if d.Documents.Issued != 5 || d.Documents.Corrections != 1 {
+		t.Errorf("documents %+v", d.Documents)
+	}
+
+	if d.Compliance.Due != 1 || d.Compliance.Filed != 1 {
+		t.Errorf("compliance %+v", d.Compliance)
+	}
+
+	// The calendar is the window, earliest first.
+	var dues []string
+	for _, c := range d.Calendar {
+		dues = append(dues, c.Due)
+	}
+	if strings.Join(dues, " ") != "2026-10-01 2026-10-14 2026-11-05" || d.Calendar[0].Status != obligation.StatusOverdue {
+		t.Errorf("calendar %v (%+v)", dues, d.Calendar)
+	}
+}
+
+func TestDashboardLiabilityMixSharesSumToAHundred(t *testing.T) {
+	credit := func(amount string) []port.Posting {
+		return []port.Posting{{Period: "2026-09", Side: subledger.Credit, Amount: money(t, amount, "EUR"), Lines: 1}}
+	}
+	repo := &fakeDashboardRepo{
+		postings: credit("1.00"),
+		accounts: map[subledger.Account][]port.Posting{
+			subledger.AccountTaxAccruedLiability:  credit("1.00"),
+			subledger.AccountTaxAdjustmentControl: credit("1.00"),
+		},
+	}
+	svc := app.NewDashboardService(repo, fakeEntities{}, fakeObligations{}, fakeAuths{}, legal.Matrix{},
+		&settableClock{t: time.Date(2026, 10, 9, 10, 0, 0, 0, time.UTC)})
+	d, err := svc.Dashboard(as(security.RoleAnalyst), "2026-09")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Three equal thirds: the leftover point goes to the first.
+	if len(d.Mix) != 1 || d.Mix[0].CollectedShare != 34 || d.Mix[0].AccruedShare != 33 || d.Mix[0].AdjustmentsShare != 33 {
+		t.Errorf("mix %+v", d.Mix)
+	}
+}
+
+func TestDashboardComplianceCountsOnlyConfirmedFilings(t *testing.T) {
+	sept := func(day int) time.Time { return time.Date(2026, 9, day, 0, 0, 0, 0, time.UTC) }
+	obligations := fakeObligations{rows: []obligation.Obligation{
+		dueObligation("accepted", obligation.StatusAccepted, sept(10)),
+		dueObligation("paid", obligation.StatusPaid, sept(15)),
+		dueObligation("unknown", obligation.StatusUncertain, sept(20)),
+		dueObligation("late", obligation.StatusOverdue, sept(25)),
+		dueObligation("october", obligation.StatusAccepted, time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)),
+	}}
+	svc := app.NewDashboardService(&fakeDashboardRepo{}, fakeEntities{}, obligations, fakeAuths{}, legal.Matrix{},
+		&settableClock{t: time.Date(2026, 10, 9, 10, 0, 0, 0, time.UTC)})
+	d, err := svc.Dashboard(as(security.RoleAnalyst), "2026-09")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// An uncertain submission is not filed: nobody knows the authority has it.
+	if d.Compliance.Due != 4 || d.Compliance.Filed != 2 {
+		t.Errorf("compliance %+v, want 2 of 4 filed", d.Compliance)
+	}
+}
+
+func TestDashboardCoverageNeverInflates(t *testing.T) {
+	now := time.Date(2026, 10, 9, 10, 0, 0, 0, time.UTC)
+	cat := market.Catalogue{Version: "cat-1", Markets: []market.Profile{
+		{Country: "FR", Name: "France", Region: "Europe", Research: market.ResearchOnly, AsOf: "2026-10-30"},
+		{Country: "MX", Name: "Mexico", Region: "North America", Research: market.ResearchOnly, AsOf: "2026-10-30"},
+	}}
+	content := func(time.Time) map[string][]string { return map[string][]string{"FR": {"VOICE"}, "DE": {"DATA"}} }
+
+	for _, authoritative := range []bool{false, true} {
+		svc := app.NewDashboardService(&fakeDashboardRepo{}, fakeEntities{}, fakeObligations{}, fakeAuths{},
+			dashboardMatrix(), &settableClock{t: now}).WithMarkets(cat, content, authoritative)
+		d, err := svc.Dashboard(as(security.RoleAnalyst), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		c := d.Coverage
+		if c.Catalogue != "cat-1" || len(c.Markets) != 3 || c.Research != 1 {
+			t.Fatalf("authoritative=%v coverage %+v", authoritative, c)
+		}
+		// FR files READY in the matrix; DE only awaits a customer grant.
+		wantActive := 0
+		if authoritative {
+			wantActive = 1
+		}
+		if c.Active != wantActive || c.Active+c.Pilot != 2 {
+			t.Errorf("authoritative=%v: active %d pilot %d", authoritative, c.Active, c.Pilot)
+		}
 	}
 }
 

@@ -23,9 +23,14 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.zoikotax.sdk.model.ControlBalance;
 import com.zoikotax.sdk.model.DashboardAction;
+import com.zoikotax.sdk.model.DashboardCompliance;
+import com.zoikotax.sdk.model.DashboardCoverage;
+import com.zoikotax.sdk.model.DashboardDeadline;
 import com.zoikotax.sdk.model.DashboardDeterminations;
+import com.zoikotax.sdk.model.DashboardDocuments;
 import com.zoikotax.sdk.model.DashboardEvidence;
 import com.zoikotax.sdk.model.DashboardJurisdictions;
+import com.zoikotax.sdk.model.DashboardLiabilityMix;
 import com.zoikotax.sdk.model.DashboardObligations;
 import com.zoikotax.sdk.model.DashboardReconciliation;
 import com.zoikotax.sdk.model.DashboardTrend;
@@ -45,7 +50,14 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
   Dashboard.JSON_PROPERTY_LEGAL_ENTITY_ID,
   Dashboard.JSON_PROPERTY_DETERMINATIONS,
   Dashboard.JSON_PROPERTY_LIABILITY,
+  Dashboard.JSON_PROPERTY_ACCRUED,
+  Dashboard.JSON_PROPERTY_ADJUSTMENTS,
+  Dashboard.JSON_PROPERTY_LIABILITY_MIX,
   Dashboard.JSON_PROPERTY_OBLIGATIONS,
+  Dashboard.JSON_PROPERTY_COMPLIANCE,
+  Dashboard.JSON_PROPERTY_CALENDAR,
+  Dashboard.JSON_PROPERTY_DOCUMENTS,
+  Dashboard.JSON_PROPERTY_COVERAGE,
   Dashboard.JSON_PROPERTY_RECONCILIATION,
   Dashboard.JSON_PROPERTY_EVIDENCE,
   Dashboard.JSON_PROPERTY_JURISDICTIONS,
@@ -74,9 +86,37 @@ public class Dashboard {
   @jakarta.annotation.Nonnull
   private List<ControlBalance> liability;
 
+  public static final String JSON_PROPERTY_ACCRUED = "accrued";
+  @jakarta.annotation.Nonnull
+  private List<ControlBalance> accrued;
+
+  public static final String JSON_PROPERTY_ADJUSTMENTS = "adjustments";
+  @jakarta.annotation.Nonnull
+  private List<ControlBalance> adjustments;
+
+  public static final String JSON_PROPERTY_LIABILITY_MIX = "liabilityMix";
+  @jakarta.annotation.Nonnull
+  private List<DashboardLiabilityMix> liabilityMix;
+
   public static final String JSON_PROPERTY_OBLIGATIONS = "obligations";
   @jakarta.annotation.Nonnull
   private DashboardObligations obligations;
+
+  public static final String JSON_PROPERTY_COMPLIANCE = "compliance";
+  @jakarta.annotation.Nonnull
+  private DashboardCompliance compliance;
+
+  public static final String JSON_PROPERTY_CALENDAR = "calendar";
+  @jakarta.annotation.Nonnull
+  private List<DashboardDeadline> calendar;
+
+  public static final String JSON_PROPERTY_DOCUMENTS = "documents";
+  @jakarta.annotation.Nonnull
+  private DashboardDocuments documents;
+
+  public static final String JSON_PROPERTY_COVERAGE = "coverage";
+  @jakarta.annotation.Nonnull
+  private DashboardCoverage coverage;
 
   public static final String JSON_PROPERTY_RECONCILIATION = "reconciliation";
   @jakarta.annotation.Nonnull
@@ -229,6 +269,102 @@ public class Dashboard {
   }
 
 
+  public Dashboard accrued(@jakarta.annotation.Nonnull List<ControlBalance> accrued) {
+    this.accrued = accrued;
+    return this;
+  }
+
+  public Dashboard addAccruedItem(ControlBalance accruedItem) {
+    if (this.accrued == null) {
+      this.accrued = new ArrayList<>();
+    }
+    this.accrued.add(accruedItem);
+    return this;
+  }
+
+  /**
+   * &#x60;TAX_ACCRUED_LIABILITY&#x60; for the period, per currency, credits and debits apart: tax the provider owes on its own account rather than collects from a customer. Never folded into &#x60;liability&#x60;. 
+   * @return accrued
+   */
+  @jakarta.annotation.Nonnull
+  @JsonProperty(value = JSON_PROPERTY_ACCRUED, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public List<ControlBalance> getAccrued() {
+    return accrued;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_ACCRUED, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public void setAccrued(@jakarta.annotation.Nonnull List<ControlBalance> accrued) {
+    this.accrued = accrued;
+  }
+
+
+  public Dashboard adjustments(@jakarta.annotation.Nonnull List<ControlBalance> adjustments) {
+    this.adjustments = adjustments;
+    return this;
+  }
+
+  public Dashboard addAdjustmentsItem(ControlBalance adjustmentsItem) {
+    if (this.adjustments == null) {
+      this.adjustments = new ArrayList<>();
+    }
+    this.adjustments.add(adjustmentsItem);
+    return this;
+  }
+
+  /**
+   * &#x60;TAX_ADJUSTMENT_CONTROL&#x60; for the period, per currency, credits and debits apart.
+   * @return adjustments
+   */
+  @jakarta.annotation.Nonnull
+  @JsonProperty(value = JSON_PROPERTY_ADJUSTMENTS, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public List<ControlBalance> getAdjustments() {
+    return adjustments;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_ADJUSTMENTS, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public void setAdjustments(@jakarta.annotation.Nonnull List<ControlBalance> adjustments) {
+    this.adjustments = adjustments;
+  }
+
+
+  public Dashboard liabilityMix(@jakarta.annotation.Nonnull List<DashboardLiabilityMix> liabilityMix) {
+    this.liabilityMix = liabilityMix;
+    return this;
+  }
+
+  public Dashboard addLiabilityMixItem(DashboardLiabilityMix liabilityMixItem) {
+    if (this.liabilityMix == null) {
+      this.liabilityMix = new ArrayList<>();
+    }
+    this.liabilityMix.add(liabilityMixItem);
+    return this;
+  }
+
+  /**
+   * The period&#39;s credits to collected liability, accrued liability and adjustment control, one entry per currency, ordered by currency. 
+   * @return liabilityMix
+   */
+  @jakarta.annotation.Nonnull
+  @JsonProperty(value = JSON_PROPERTY_LIABILITY_MIX, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public List<DashboardLiabilityMix> getLiabilityMix() {
+    return liabilityMix;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_LIABILITY_MIX, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public void setLiabilityMix(@jakarta.annotation.Nonnull List<DashboardLiabilityMix> liabilityMix) {
+    this.liabilityMix = liabilityMix;
+  }
+
+
   public Dashboard obligations(@jakarta.annotation.Nonnull DashboardObligations obligations) {
     this.obligations = obligations;
     return this;
@@ -250,6 +386,110 @@ public class Dashboard {
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
   public void setObligations(@jakarta.annotation.Nonnull DashboardObligations obligations) {
     this.obligations = obligations;
+  }
+
+
+  public Dashboard compliance(@jakarta.annotation.Nonnull DashboardCompliance compliance) {
+    this.compliance = compliance;
+    return this;
+  }
+
+  /**
+   * Get compliance
+   * @return compliance
+   */
+  @jakarta.annotation.Nonnull
+  @JsonProperty(value = JSON_PROPERTY_COMPLIANCE, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public DashboardCompliance getCompliance() {
+    return compliance;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_COMPLIANCE, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public void setCompliance(@jakarta.annotation.Nonnull DashboardCompliance compliance) {
+    this.compliance = compliance;
+  }
+
+
+  public Dashboard calendar(@jakarta.annotation.Nonnull List<DashboardDeadline> calendar) {
+    this.calendar = calendar;
+    return this;
+  }
+
+  public Dashboard addCalendarItem(DashboardDeadline calendarItem) {
+    if (this.calendar == null) {
+      this.calendar = new ArrayList<>();
+    }
+    this.calendar.add(calendarItem);
+    return this;
+  }
+
+  /**
+   * The obligation window&#39;s unfiled obligations, overdue ones included, earliest due first. At most 10. 
+   * @return calendar
+   */
+  @jakarta.annotation.Nonnull
+  @JsonProperty(value = JSON_PROPERTY_CALENDAR, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public List<DashboardDeadline> getCalendar() {
+    return calendar;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_CALENDAR, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public void setCalendar(@jakarta.annotation.Nonnull List<DashboardDeadline> calendar) {
+    this.calendar = calendar;
+  }
+
+
+  public Dashboard documents(@jakarta.annotation.Nonnull DashboardDocuments documents) {
+    this.documents = documents;
+    return this;
+  }
+
+  /**
+   * Get documents
+   * @return documents
+   */
+  @jakarta.annotation.Nonnull
+  @JsonProperty(value = JSON_PROPERTY_DOCUMENTS, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public DashboardDocuments getDocuments() {
+    return documents;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_DOCUMENTS, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public void setDocuments(@jakarta.annotation.Nonnull DashboardDocuments documents) {
+    this.documents = documents;
+  }
+
+
+  public Dashboard coverage(@jakarta.annotation.Nonnull DashboardCoverage coverage) {
+    this.coverage = coverage;
+    return this;
+  }
+
+  /**
+   * Get coverage
+   * @return coverage
+   */
+  @jakarta.annotation.Nonnull
+  @JsonProperty(value = JSON_PROPERTY_COVERAGE, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public DashboardCoverage getCoverage() {
+    return coverage;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_COVERAGE, required = true)
+  @JsonInclude(value = JsonInclude.Include.ALWAYS)
+  public void setCoverage(@jakarta.annotation.Nonnull DashboardCoverage coverage) {
+    this.coverage = coverage;
   }
 
 
@@ -398,7 +638,14 @@ public class Dashboard {
         Objects.equals(this.legalEntityId, dashboard.legalEntityId) &&
         Objects.equals(this.determinations, dashboard.determinations) &&
         Objects.equals(this.liability, dashboard.liability) &&
+        Objects.equals(this.accrued, dashboard.accrued) &&
+        Objects.equals(this.adjustments, dashboard.adjustments) &&
+        Objects.equals(this.liabilityMix, dashboard.liabilityMix) &&
         Objects.equals(this.obligations, dashboard.obligations) &&
+        Objects.equals(this.compliance, dashboard.compliance) &&
+        Objects.equals(this.calendar, dashboard.calendar) &&
+        Objects.equals(this.documents, dashboard.documents) &&
+        Objects.equals(this.coverage, dashboard.coverage) &&
         Objects.equals(this.reconciliation, dashboard.reconciliation) &&
         Objects.equals(this.evidence, dashboard.evidence) &&
         Objects.equals(this.jurisdictions, dashboard.jurisdictions) &&
@@ -408,7 +655,7 @@ public class Dashboard {
 
   @Override
   public int hashCode() {
-    return Objects.hash(asOf, period, legalEntityId, determinations, liability, obligations, reconciliation, evidence, jurisdictions, actions, trend);
+    return Objects.hash(asOf, period, legalEntityId, determinations, liability, accrued, adjustments, liabilityMix, obligations, compliance, calendar, documents, coverage, reconciliation, evidence, jurisdictions, actions, trend);
   }
 
   @Override
@@ -420,7 +667,14 @@ public class Dashboard {
     sb.append("    legalEntityId: ").append(toIndentedString(legalEntityId)).append("\n");
     sb.append("    determinations: ").append(toIndentedString(determinations)).append("\n");
     sb.append("    liability: ").append(toIndentedString(liability)).append("\n");
+    sb.append("    accrued: ").append(toIndentedString(accrued)).append("\n");
+    sb.append("    adjustments: ").append(toIndentedString(adjustments)).append("\n");
+    sb.append("    liabilityMix: ").append(toIndentedString(liabilityMix)).append("\n");
     sb.append("    obligations: ").append(toIndentedString(obligations)).append("\n");
+    sb.append("    compliance: ").append(toIndentedString(compliance)).append("\n");
+    sb.append("    calendar: ").append(toIndentedString(calendar)).append("\n");
+    sb.append("    documents: ").append(toIndentedString(documents)).append("\n");
+    sb.append("    coverage: ").append(toIndentedString(coverage)).append("\n");
     sb.append("    reconciliation: ").append(toIndentedString(reconciliation)).append("\n");
     sb.append("    evidence: ").append(toIndentedString(evidence)).append("\n");
     sb.append("    jurisdictions: ").append(toIndentedString(jurisdictions)).append("\n");

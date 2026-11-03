@@ -7,6 +7,7 @@ import { instant } from '../../dashboard/format'
 import {
   Amount, Card, Columns, Field, Id, Loaded, Outcome, Raw, Status, Submit, useAction, useLoad,
 } from '../../ui/kit'
+import { DeterminationCard } from '../locations/document'
 import { DecisionFacts } from './QuoteCommitTab'
 import { CURRENCY, EmittedTable, Invalid, isDecimal, isNotFound, KeyNote, KV, useIdempotencyKey } from './shared'
 
@@ -49,9 +50,12 @@ const DecisionView = ({ id, onOpenRefund }: { id: string; onOpenRefund: (id: str
             aside={<button type="button" className="ztax-btn-quiet" onClick={reload}>Refresh</button>}
           >
             <DecisionFacts decision={d} />
-            <EmittedTable emitted={d.emitted} caption="Emitted, per component" />
+            {d.document === undefined ? <EmittedTable emitted={d.emitted} caption="Emitted, per component" /> : null}
             <Raw value={d} label="Full decision" />
           </Card>
+          {d.document === undefined ? null : (
+            <DeterminationCard determination={d.document} title="Decided at the location" />
+          )}
           <Columns>
             <ReplayCard id={id} />
             <InclusionCard id={id} />

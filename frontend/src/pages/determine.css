@@ -23,10 +23,18 @@
   padding: 0 4px;
 }
 
+/* A checkbox sits on the controls' row of a form grid, not on the labels'. */
 .ztax-check {
   flex-direction: row !important;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+}
+.ztax-form > .ztax-check {
+  min-height: 36px;
+  margin-top: 24px;
+}
+.ztax-check > span {
+  line-height: 1.4;
 }
 
 .ztax-note {

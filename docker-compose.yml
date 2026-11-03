@@ -151,6 +151,11 @@ services:
       # a legal opinion.
       ZTAX_LEGAL_MATRIX: /etc/ztax/legal/matrix.json
 
+      # The market research catalogue: country profiles from the global
+      # taxonomy. Research, never coverage; the dashboard decides a market's
+      # state from the content in force and the legal gate.
+      ZTAX_MARKET_CATALOGUE: /etc/ztax/markets/catalogue.json
+
       # Content, evidence and period seals: off unless .env turns them on (see
       # .env.example). A cell with no content is a legitimate deployment
       # before A4, and a stack that refused to start until somebody had run
@@ -165,6 +170,7 @@ services:
     volumes:
       - ./intelligence/config/registry.dev.json:/etc/ztax/ai/registry.json:ro
       - ./content/legal/authorization-matrix.dev.json:/etc/ztax/legal/matrix.json:ro
+      - ./content/markets/catalogue.json:/etc/ztax/markets/catalogue.json:ro
       - ./content/build:/etc/ztax/content:ro
       - ./content/.keys:/etc/ztax/content-keys:ro
       - ./.seal-keys:/etc/ztax/seal-keys:ro

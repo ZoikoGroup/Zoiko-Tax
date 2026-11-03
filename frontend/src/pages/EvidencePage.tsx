@@ -6,6 +6,7 @@ import { InclusionTab } from './evidence/InclusionTab'
 import { RetentionTab } from './evidence/RetentionTab'
 import { SealsTab } from './evidence/SealsTab'
 import './evidence/pages.css'
+import { useRoutedTab } from './routedTab'
 import type { PageProps } from './types'
 
 type Tab = 'seals' | 'inclusion' | 'holds' | 'retention'
@@ -17,9 +18,9 @@ const TABS: readonly { id: Tab; label: string }[] = [
   { id: 'retention', label: 'Retention' },
 ]
 
-export const EvidencePage = ({ session }: PageProps) => {
+export const EvidencePage = ({ session, route, onTabChange }: PageProps) => {
   const admin = session.user.roles.includes('ADMIN')
-  const [tab, setTab] = useState<Tab>('seals')
+  const [tab, setTab] = useRoutedTab(TABS.map((t) => t.id), 'seals', route, onTabChange)
   const [sealId, setSealId] = useState<string | null>(null)
 
   const openSeal = (id: string) => {

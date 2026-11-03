@@ -2,14 +2,17 @@
  * One line of the active worked pack, as a person types it, and the request
  * body it becomes.
  *
- * The names — line.netAmount, line.quantity and the two flags — are the
- * pack's, not the contract's. Accumulators are never sent: the cell reads the
- * ones its content binds, and a request that supplies one is refused.
+ * The names — line.netAmount, line.quantity, the two flags and line.usState —
+ * are the packs', not the contract's. Accumulators are never sent: the cell
+ * reads the ones its content binds, and a request that supplies one is refused.
  */
 import type { S } from '@zoikotax/sdk'
 
 import { Field } from '../../ui/kit'
+import { US_STATES } from '../locations/usStates'
 import { CURRENCY, isDecimal, nowUtcLocal, toTimestamp } from './shared'
+
+const STATES = [...US_STATES].sort((a, b) => a.name.localeCompare(b.name))
 
 export interface LineDraft {
   readonly businessKey: string
@@ -20,6 +23,8 @@ export interface LineDraft {
   readonly unit: string
   readonly reducedRateApplies: boolean
   readonly exemptCertificateHeld: boolean
+  /** A two-letter state code, or empty to send none. */
+  readonly usState: string
 }
 
 export function emptyLine(businessKey = ''): LineDraft {
@@ -32,6 +37,7 @@ export function emptyLine(businessKey = ''): LineDraft {
     unit: 'EA',
     reducedRateApplies: false,
     exemptCertificateHeld: false,
+    usState: '',
   }
 }
 
@@ -66,6 +72,7 @@ function input(line: LineDraft): S<'DeterminationInput'> {
       'line.reducedRateApplies': line.reducedRateApplies,
       'line.exemptCertificateHeld': line.exemptCertificateHeld,
     },
+    ...(line.usState === '' ? {} : { strings: { 'line.usState': line.usState } }),
   }
 }
 
@@ -121,6 +128,12 @@ export const LineFields = ({ line, onChange, idPrefix }: {
           maxLength={3}
           autoComplete="off"
         />
+      </Field>
+      <Field label="US state" help="line.usState — read by the global telecom pack; leave empty for other packs.">
+        <select value={line.usState} onChange={(e) => { set('usState', e.target.value) }}>
+          <option value="">— not sent —</option>
+          {STATES.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
+        </select>
       </Field>
       <Field label="Quantity" help="line.quantity">
         <input inputMode="decimal" value={line.quantity} onChange={(e) => { set('quantity', e.target.value) }} />

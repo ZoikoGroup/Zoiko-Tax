@@ -15,8 +15,300 @@
 # PRODUCTION pack requires. Until it has, every decision it supports is
 # ADVISORY and must not be invoiced or filed from.
 #
-# The pack has no rules: everything it determines is location-aware content
-# in taxation.json beside this file, compiled into the same signed manifest.
+# What the pack determines from a document is location-aware content in
+# taxation.json beside this file, compiled into the same signed manifest.
+# The one rule below answers named inputs: the US state sales tax on an
+# equipment sale, at the rates taxation.json declares.
 
 bundle "global-telecom-2026.10"
 ir 1
+
+policy line2 = HALF_UP scale 2 basis LINE
+
+# --------------------------------------------------------------------------
+# US state sales tax on an equipment sale, from named inputs.
+#
+# The statewide rates of the us-*.sales-goods components in taxation.json,
+# as in force on 2026-10-30, for callers that send named values instead of a
+# document. A document remains the way to determine a line: it places the
+# supply, dates the rate and applies every component in force there. This
+# rule does none of that. It reads a two-letter state code and a net amount
+# and applies that state's rate. It has no effective dating, so a rate change
+# in taxation.json is copied here as a new rule version; the compile test
+# for this pack fails until it is.
+#
+# IR version 1 has no conditional refusal, so a code that is not a state or
+# DC cannot be refused. It yields a zero rate and US_STATE_COVERED = false,
+# which a caller reads before it uses the amount.
+# --------------------------------------------------------------------------
+rule "us-state-equipment-sales-tax" version "2026.10.1" semantic "ZTAX-RULE-US-STATE-EQUIPMENT-SALES-TAX" {
+    const none rate "0.0000" basis NET
+
+    const stAK   string "AK"
+    const stAL   string "AL"
+    const stAR   string "AR"
+    const stAZ   string "AZ"
+    const stCA   string "CA"
+    const stCO   string "CO"
+    const stCT   string "CT"
+    const stDC   string "DC"
+    const stDE   string "DE"
+    const stFL   string "FL"
+    const stGA   string "GA"
+    const stHI   string "HI"
+    const stIA   string "IA"
+    const stID   string "ID"
+    const stIL   string "IL"
+    const stIN   string "IN"
+    const stKS   string "KS"
+    const stKY   string "KY"
+    const stLA   string "LA"
+    const stMA   string "MA"
+    const stMD   string "MD"
+    const stME   string "ME"
+    const stMI   string "MI"
+    const stMN   string "MN"
+    const stMO   string "MO"
+    const stMS   string "MS"
+    const stMT   string "MT"
+    const stNC   string "NC"
+    const stND   string "ND"
+    const stNE   string "NE"
+    const stNH   string "NH"
+    const stNJ   string "NJ"
+    const stNM   string "NM"
+    const stNV   string "NV"
+    const stNY   string "NY"
+    const stOH   string "OH"
+    const stOK   string "OK"
+    const stOR   string "OR"
+    const stPA   string "PA"
+    const stRI   string "RI"
+    const stSC   string "SC"
+    const stSD   string "SD"
+    const stTN   string "TN"
+    const stTX   string "TX"
+    const stUT   string "UT"
+    const stVA   string "VA"
+    const stVT   string "VT"
+    const stWA   string "WA"
+    const stWI   string "WI"
+    const stWV   string "WV"
+    const stWY   string "WY"
+
+    const rateAK rate   "0.0000"  basis NET
+    const rateAL rate   "0.0400"  basis NET
+    const rateAR rate   "0.0650"  basis NET
+    const rateAZ rate   "0.0560"  basis NET
+    const rateCA rate   "0.0725"  basis NET
+    const rateCO rate   "0.0290"  basis NET
+    const rateCT rate   "0.0635"  basis NET
+    const rateDC rate   "0.0600"  basis NET
+    const rateDE rate   "0.0000"  basis NET
+    const rateFL rate   "0.0600"  basis NET
+    const rateGA rate   "0.0400"  basis NET
+    const rateHI rate   "0.0400"  basis NET
+    const rateIA rate   "0.0600"  basis NET
+    const rateID rate   "0.0600"  basis NET
+    const rateIL rate   "0.0625"  basis NET
+    const rateIN rate   "0.0700"  basis NET
+    const rateKS rate   "0.0650"  basis NET
+    const rateKY rate   "0.0600"  basis NET
+    const rateLA rate   "0.0500"  basis NET
+    const rateMA rate   "0.0625"  basis NET
+    const rateMD rate   "0.0600"  basis NET
+    const rateME rate   "0.0550"  basis NET
+    const rateMI rate   "0.0600"  basis NET
+    const rateMN rate   "0.06875" basis NET
+    const rateMO rate   "0.04225" basis NET
+    const rateMS rate   "0.0700"  basis NET
+    const rateMT rate   "0.0000"  basis NET
+    const rateNC rate   "0.0475"  basis NET
+    const rateND rate   "0.0500"  basis NET
+    const rateNE rate   "0.0550"  basis NET
+    const rateNH rate   "0.0000"  basis NET
+    const rateNJ rate   "0.06625" basis NET
+    const rateNM rate   "0.04875" basis NET
+    const rateNV rate   "0.0685"  basis NET
+    const rateNY rate   "0.0400"  basis NET
+    const rateOH rate   "0.0575"  basis NET
+    const rateOK rate   "0.0450"  basis NET
+    const rateOR rate   "0.0000"  basis NET
+    const ratePA rate   "0.0600"  basis NET
+    const rateRI rate   "0.0700"  basis NET
+    const rateSC rate   "0.0600"  basis NET
+    const rateSD rate   "0.0420"  basis NET
+    const rateTN rate   "0.0700"  basis NET
+    const rateTX rate   "0.0625"  basis NET
+    const rateUT rate   "0.0485"  basis NET
+    const rateVA rate   "0.0430"  basis NET
+    const rateVT rate   "0.0600"  basis NET
+    const rateWA rate   "0.0650"  basis NET
+    const rateWI rate   "0.0500"  basis NET
+    const rateWV rate   "0.0600"  basis NET
+    const rateWY rate   "0.0400"  basis NET
+
+    input state string "line.usState"
+    input net   money  "line.netAmount"
+
+    let isAK = compare eq state stAK
+    let isAL = compare eq state stAL
+    let isAR = compare eq state stAR
+    let isAZ = compare eq state stAZ
+    let isCA = compare eq state stCA
+    let isCO = compare eq state stCO
+    let isCT = compare eq state stCT
+    let isDC = compare eq state stDC
+    let isDE = compare eq state stDE
+    let isFL = compare eq state stFL
+    let isGA = compare eq state stGA
+    let isHI = compare eq state stHI
+    let isIA = compare eq state stIA
+    let isID = compare eq state stID
+    let isIL = compare eq state stIL
+    let isIN = compare eq state stIN
+    let isKS = compare eq state stKS
+    let isKY = compare eq state stKY
+    let isLA = compare eq state stLA
+    let isMA = compare eq state stMA
+    let isMD = compare eq state stMD
+    let isME = compare eq state stME
+    let isMI = compare eq state stMI
+    let isMN = compare eq state stMN
+    let isMO = compare eq state stMO
+    let isMS = compare eq state stMS
+    let isMT = compare eq state stMT
+    let isNC = compare eq state stNC
+    let isND = compare eq state stND
+    let isNE = compare eq state stNE
+    let isNH = compare eq state stNH
+    let isNJ = compare eq state stNJ
+    let isNM = compare eq state stNM
+    let isNV = compare eq state stNV
+    let isNY = compare eq state stNY
+    let isOH = compare eq state stOH
+    let isOK = compare eq state stOK
+    let isOR = compare eq state stOR
+    let isPA = compare eq state stPA
+    let isRI = compare eq state stRI
+    let isSC = compare eq state stSC
+    let isSD = compare eq state stSD
+    let isTN = compare eq state stTN
+    let isTX = compare eq state stTX
+    let isUT = compare eq state stUT
+    let isVA = compare eq state stVA
+    let isVT = compare eq state stVT
+    let isWA = compare eq state stWA
+    let isWI = compare eq state stWI
+    let isWV = compare eq state stWV
+    let isWY = compare eq state stWY
+
+    # The rate of the one state the code matches, or none when it matches no state.
+    let rAK = select isAK rateAK none
+    let rAL = select isAL rateAL rAK
+    let rAR = select isAR rateAR rAL
+    let rAZ = select isAZ rateAZ rAR
+    let rCA = select isCA rateCA rAZ
+    let rCO = select isCO rateCO rCA
+    let rCT = select isCT rateCT rCO
+    let rDC = select isDC rateDC rCT
+    let rDE = select isDE rateDE rDC
+    let rFL = select isFL rateFL rDE
+    let rGA = select isGA rateGA rFL
+    let rHI = select isHI rateHI rGA
+    let rIA = select isIA rateIA rHI
+    let rID = select isID rateID rIA
+    let rIL = select isIL rateIL rID
+    let rIN = select isIN rateIN rIL
+    let rKS = select isKS rateKS rIN
+    let rKY = select isKY rateKY rKS
+    let rLA = select isLA rateLA rKY
+    let rMA = select isMA rateMA rLA
+    let rMD = select isMD rateMD rMA
+    let rME = select isME rateME rMD
+    let rMI = select isMI rateMI rME
+    let rMN = select isMN rateMN rMI
+    let rMO = select isMO rateMO rMN
+    let rMS = select isMS rateMS rMO
+    let rMT = select isMT rateMT rMS
+    let rNC = select isNC rateNC rMT
+    let rND = select isND rateND rNC
+    let rNE = select isNE rateNE rND
+    let rNH = select isNH rateNH rNE
+    let rNJ = select isNJ rateNJ rNH
+    let rNM = select isNM rateNM rNJ
+    let rNV = select isNV rateNV rNM
+    let rNY = select isNY rateNY rNV
+    let rOH = select isOH rateOH rNY
+    let rOK = select isOK rateOK rOH
+    let rOR = select isOR rateOR rOK
+    let rPA = select isPA ratePA rOR
+    let rRI = select isRI rateRI rPA
+    let rSC = select isSC rateSC rRI
+    let rSD = select isSD rateSD rSC
+    let rTN = select isTN rateTN rSD
+    let rTX = select isTX rateTX rTN
+    let rUT = select isUT rateUT rTX
+    let rVA = select isVA rateVA rUT
+    let rVT = select isVT rateVT rVA
+    let rWA = select isWA rateWA rVT
+    let rWI = select isWI rateWI rWA
+    let rWV = select isWV rateWV rWI
+    let rWY = select isWY rateWY rWV
+
+    let cAL = or isAK isAL
+    let cAR = or cAL isAR
+    let cAZ = or cAR isAZ
+    let cCA = or cAZ isCA
+    let cCO = or cCA isCO
+    let cCT = or cCO isCT
+    let cDC = or cCT isDC
+    let cDE = or cDC isDE
+    let cFL = or cDE isFL
+    let cGA = or cFL isGA
+    let cHI = or cGA isHI
+    let cIA = or cHI isIA
+    let cID = or cIA isID
+    let cIL = or cID isIL
+    let cIN = or cIL isIN
+    let cKS = or cIN isKS
+    let cKY = or cKS isKY
+    let cLA = or cKY isLA
+    let cMA = or cLA isMA
+    let cMD = or cMA isMD
+    let cME = or cMD isME
+    let cMI = or cME isMI
+    let cMN = or cMI isMN
+    let cMO = or cMN isMO
+    let cMS = or cMO isMS
+    let cMT = or cMS isMT
+    let cNC = or cMT isNC
+    let cND = or cNC isND
+    let cNE = or cND isNE
+    let cNH = or cNE isNH
+    let cNJ = or cNH isNJ
+    let cNM = or cNJ isNM
+    let cNV = or cNM isNV
+    let cNY = or cNV isNY
+    let cOH = or cNY isOH
+    let cOK = or cOH isOK
+    let cOR = or cOK isOR
+    let cPA = or cOR isPA
+    let cRI = or cPA isRI
+    let cSC = or cRI isSC
+    let cSD = or cSC isSD
+    let cTN = or cSD isTN
+    let cTX = or cTN isTX
+    let cUT = or cTX isUT
+    let cVA = or cUT isVA
+    let cVT = or cVA isVT
+    let cWA = or cVT isWA
+    let cWI = or cWA isWI
+    let cWV = or cWI isWV
+    let cWY = or cWV isWY
+
+    let tax = apply_rate net rWY policy line2
+
+    emit "US_STATE_EQUIPMENT_SALES_TAX" tax
+    emit "US_STATE_COVERED" cWY
+}
