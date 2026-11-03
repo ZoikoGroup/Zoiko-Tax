@@ -1,5 +1,7 @@
 import { useState } from 'react'
 
+import { useRoutedTab } from './routedTab'
+
 import type { PageProps } from './types'
 import { periodLabel } from '../dashboard/format'
 import { PageHeader } from '../ui/kit'
@@ -21,8 +23,8 @@ const TABS: readonly { value: Tab; label: string }[] = [
   { value: 'batch', label: 'Batch' },
 ]
 
-export const DeterminePage = ({ period }: PageProps) => {
-  const [tab, setTab] = useState<Tab>('quote')
+export const DeterminePage = ({ period, route, onTabChange }: PageProps) => {
+  const [tab, setTab] = useRoutedTab(TABS.map((t) => t.value), 'quote', route, onTabChange)
   const [decisionId, setDecisionId] = useState('')
   const [refundId, setRefundId] = useState('')
 

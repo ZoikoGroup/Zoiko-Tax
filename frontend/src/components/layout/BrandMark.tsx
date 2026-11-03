@@ -10,3 +10,16 @@ export const BrandMark = ({ size = 34 }: { size?: number }) => (
     <circle cx="31" cy="20" r="1.8" fill="currentColor" stroke="none" />
   </svg>
 )
+
+/**
+ * The wordmark set for the dark rail: the image wordmark's purple would
+ * disappear on it, so it is typeset, with the ring mark standing in for the
+ * first O as it does in the image.
+ */
+export const Wordmark = () => (
+  <span className="zt-wordmark" aria-hidden="true">
+    <span className="zt-wordmark-zoiko">Z<span className="zt-wordmark-o"><BrandMark size={22} /></span>IKO</span>
+    <span className="zt-wordmark-tax">Tax</span>
+    <sup>™</sup>
+  </span>
+)

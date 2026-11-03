@@ -1,4 +1,4 @@
-import { groupOf, labelOf, type View } from './Sidebar'
+import { placeOf, type Route, type View } from './Sidebar'
 
 const STAGES = ['Determine', 'Obligate', 'Comply', 'Reconcile', 'Prove'] as const
 type Stage = (typeof STAGES)[number]
@@ -20,12 +20,13 @@ const STAGE: Partial<Record<View, Stage>> = {
  * The band at the top of every workspace: where you are, the platform's
  * promise, and which stage of determine → prove this screen serves.
  */
-export const Hero = ({ view }: { view: View }) => {
-  const stage = STAGE[view]
+export const Hero = ({ route }: { route: Route }) => {
+  const stage = STAGE[route.view]
+  const { group, label } = placeOf(route)
   return (
-    <section className="zt-hero" aria-label={labelOf(view)}>
+    <section className="zt-hero" aria-label={label}>
       <div className="zt-hero-text">
-        <div className="zt-hero-eyebrow">ZoikoTax {groupOf(view)} · {labelOf(view)}</div>
+        <div className="zt-hero-eyebrow">ZoikoTax {group} · {label}</div>
         <h1>Answers for a complex tax world.</h1>
         <p>Telecom tax clarity, across jurisdictions.</p>
       </div>

@@ -362,10 +362,11 @@ const Stepper = ({ proposal }: { proposal: Proposal }) => {
   )
 }
 
-export const IntelligencePage = ({ session }: PageProps) => {
+export const IntelligencePage = ({ session, route }: PageProps) => {
   const canAsk = session.user.roles.some((r) => r === 'OPERATOR' || r === 'ANALYST')
   const [subjectRef, setSubjectRef] = useState('')
-  const [description, setDescription] = useState('')
+  // A description handed over from Home's assistant card, if any.
+  const [description, setDescription] = useState(route?.draft ?? '')
   const action = useAction<Proposal>()
 
   const submit = (e: FormEvent) => {

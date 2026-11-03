@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { ztax } from '../platform/client'
 import { Loaded, PageHeader, useLoad } from '../ui/kit'
 import { TabBar } from './determine/shared'
+import { useRoutedTab } from './routedTab'
+import type { PageProps } from './types'
 import { CountriesTab } from './locations/CountriesTab'
 import { coverageInstant, today, type Service } from './locations/coverage'
 import { OverviewTab } from './locations/OverviewTab'
@@ -27,8 +29,8 @@ const TABS: readonly { value: Tab; label: string }[] = [
  * States by state. Everything here is read from GET /v1/coverage at the date
  * the person picks, so a rate change shows on the day it takes effect.
  */
-export const LocationsPage = () => {
-  const [tab, setTab] = useState<Tab>('overview')
+export const LocationsPage = ({ route, onTabChange }: PageProps) => {
+  const [tab, setTab] = useRoutedTab(TABS.map((t) => t.value), 'overview', route, onTabChange)
   const [date, setDate] = useState(today)
   const [preset, setPreset] = useState<Preset | null>(null)
   const { load, reload } = useLoad((signal) => ztax.getCoverage({ at: coverageInstant(date) }, signal), [date])

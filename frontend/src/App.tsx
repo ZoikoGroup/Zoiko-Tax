@@ -6,10 +6,10 @@ import { AdminPanel } from './admin/AdminPanel'
 import { SignIn } from './admin/SignIn'
 import { useSession } from './admin/useSession'
 import { DashboardLayout } from './components/layout/DashboardLayout'
-import type { View } from './components/layout/Sidebar'
+import type { Navigate, Route } from './components/layout/Sidebar'
 import { recentPeriods } from './dashboard/format'
 import { ActionCenterPage } from './pages/ActionCenterPage'
-import { ClientDashboard } from './pages/ClientDashboard'
+import { HomePage } from './home/HomePage'
 import { CompliancePage } from './pages/CompliancePage'
 import { ContentPage } from './pages/ContentPage'
 import { DeterminePage } from './pages/DeterminePage'
@@ -24,8 +24,12 @@ import { RemittancePage } from './pages/RemittancePage'
 import { ReportsDemoPage } from './pages/ReportsDemoPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { ShadowPage } from './pages/ShadowPage'
+import type { PageProps } from './pages/types'
 import { CellHealth } from './platform/CellHealth'
 import { ztax } from './platform/client'
+
+/** Where a session starts, and where signing out returns. */
+const HOME: Route = { view: 'dashboard', navId: 'home.overview', seq: 0 }
 
 /**
  * ZoikoTax shell.
@@ -38,7 +42,7 @@ import { ztax } from './platform/client'
  */
 export function App() {
   const { state, session, detail, refresh, signIn, signOut } = useSession()
-  const [view, setView] = useState<View>('dashboard')
+  const [route, setRoute] = useState<Route>(HOME)
   const periods = useMemo(() => recentPeriods(new Date(), 12), [])
   const [period, setPeriod] = useState(periods[0] ?? '')
   const [capabilities, setCapabilities] = useState<Capabilities | null>(null)
@@ -87,23 +91,32 @@ export function App() {
     return <SignIn onSignIn={signIn} />
   }
 
+  const navigate: Navigate = (target, navId) => {
+    setRoute((r) => ({ ...target, ...(navId === undefined ? {} : { navId }), seq: r.seq + 1 }))
+  }
+  const openView: PageProps['onNavigate'] = (view, options = {}) => {
+    setRoute((r) => ({ view, ...options, seq: r.seq + 1 }))
+  }
+  // A tab chosen inside a page moves the menu, not the page: no new seq.
+  const onTabChange = (tab: string) => { setRoute((r) => ({ ...r, tab })) }
+
   return (
     <DashboardLayout
-      view={view}
-      onNavigate={setView}
+      route={route}
+      onNavigate={navigate}
       session={session}
       capabilities={capabilities}
       period={period}
       periods={periods}
       onPeriodChange={setPeriod}
       onSignOut={() => {
-        setView('dashboard')
+        setRoute(HOME)
         void signOut()
       }}
     >
       {(() => {
-        const page = { session, period, onNavigate: setView }
-        switch (view) {
+        const page: PageProps = { session, period, onNavigate: openView, route, onTabChange }
+        switch (route.view) {
           case 'admin':
             return <AdminPanel session={session} onSignOut={signOut} onRefresh={refresh} />
           case 'actions':
@@ -133,11 +146,11 @@ export function App() {
           case 'content':
             return <ContentPage {...page} />
           case 'locations':
-            return <LocationsPage />
+            return <LocationsPage {...page} />
           case 'intelligence':
             return <IntelligencePage {...page} />
           case 'dashboard':
-            return <ClientDashboard period={period} />
+            return <HomePage {...page} capabilities={capabilities} />
         }
       })()}
     </DashboardLayout>

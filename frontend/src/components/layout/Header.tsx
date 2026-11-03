@@ -5,7 +5,7 @@ import type { Capabilities } from '@zoikotax/sdk'
 import { periodLabel } from '../../dashboard/format'
 import type { SessionInfo } from '../../platform/api'
 import { IconArrowRight, IconChevronDown, IconMenu, IconSearch } from '../common/DashboardIcons'
-import { NAV_GROUPS, type View } from './Sidebar'
+import type { Navigate } from './Sidebar'
 
 export interface HeaderProps {
   readonly session: SessionInfo
@@ -24,20 +24,23 @@ function initials(name: string): string {
   return `${first}${last}`.toUpperCase()
 }
 
-/** The open-menu key for the account menu; workspace menus use their group title. */
+/** The open-menu key for the account menu. */
 const USER_MENU = '__user'
 
 interface TopBarProps {
   readonly session: SessionInfo
-  readonly view: View
-  readonly onNavigate: (view: View) => void
+  readonly onNavigate: Navigate
   readonly onSignOut: () => void
   readonly onMenu: () => void
   readonly menuOpen: boolean
 }
 
-/** The white bar across the top: wordmark, the workspaces as menus, the user. */
-export const TopBar = ({ session, view, onNavigate, onSignOut, onMenu, menuOpen }: TopBarProps) => {
+/**
+ * The white bar beside the rail: search, the call to action, the user. The
+ * workspaces live in the rail; on a narrow screen the bar carries the
+ * wordmark and the button that opens the rail as a drawer.
+ */
+export const TopBar = ({ session, onNavigate, onSignOut, onMenu, menuOpen }: TopBarProps) => {
   const [open, setOpen] = useState<string | null>(null)
   const ref = useRef<HTMLElement>(null)
 
@@ -55,51 +58,25 @@ export const TopBar = ({ session, view, onNavigate, onSignOut, onMenu, menuOpen 
       <button type="button" className="zt-top-menu" aria-label="Open navigation" aria-expanded={menuOpen} onClick={onMenu}>
         <IconMenu />
       </button>
-      <button type="button" className="zt-top-logo" onClick={() => { onNavigate('dashboard') }} aria-label="ZoikoTax home">
+      <button type="button" className="zt-top-logo" onClick={() => { onNavigate({ view: 'dashboard' }, 'home.overview') }} aria-label="ZoikoTax home">
         <img src="/zoikotax-logo.png" alt="ZoikoTax" />
       </button>
 
-      <nav className="zt-top-nav" aria-label="Workspace menus">
-        {NAV_GROUPS.map((g) => {
-          const here = g.items.some((i) => i.view === view)
-          return (
-            <div key={g.title} className="zt-top-drop">
-              <button
-                type="button"
-                className={`zt-top-link${here ? ' zt-top-link--here' : ''}`}
-                aria-expanded={open === g.title}
-                onClick={() => { setOpen(open === g.title ? null : g.title) }}
-              >
-                {g.title}
-                <IconChevronDown />
-              </button>
-              {open === g.title ? (
-                <div className="zt-top-panel">
-                  {g.items.map((i) => (
-                    <button
-                      key={i.id}
-                      type="button"
-                      disabled={i.view === undefined}
-                      aria-current={i.view === view ? 'page' : undefined}
-                      onClick={() => { if (i.view !== undefined) { onNavigate(i.view); setOpen(null) } }}
-                    >
-                      {i.icon}
-                      <span>{i.label}</span>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          )
-        })}
-      </nav>
-
       <div className="zt-top-right">
-        <button type="button" className="zt-top-search" aria-label="Find a location or tax" onClick={() => { onNavigate('locations') }}>
+        <button
+          type="button"
+          className="zt-top-search"
+          aria-label="Search jurisdictions, services and taxes"
+          onClick={() => { onNavigate({ view: 'locations', tab: 'countries' }, 'home.readiness') }}
+        >
           <IconSearch />
-          <span className="zt-top-search-text">Find a location or tax</span>
+          <span className="zt-top-search-text">Search jurisdictions, services, taxes…</span>
         </button>
-        <button type="button" className="zt-btn zt-btn--primary zt-top-cta" onClick={() => { onNavigate('determine') }}>
+        <button
+          type="button"
+          className="zt-btn zt-btn--primary zt-top-cta"
+          onClick={() => { onNavigate({ view: 'determine', tab: 'quote' }, 'determine.preview') }}
+        >
           New determination <IconArrowRight />
         </button>
         <div className="zt-top-drop">
