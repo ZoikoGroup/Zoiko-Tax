@@ -125,31 +125,24 @@ evidence records and no compliance decision depends on them.
 
 ### Status of guard outcome follow-up
 
-The append-only `AnswerCheckedEvent` class and sinks are merged (`src/ztax_gateway/invocation_check_event.py`),
-and the `prompt_content_hash` field on `InvocationEvidenceRecord` is merged.
-However, `Gateway.invoke()` does not set the hash yet, and nothing emits
-the check event in production yet (wiring is deferred to a separate gateway task).
+`AnswerCheckedEvent` and sinks are merged in `src/ztax_gateway/invocation_check_event.py`.
+Check events are emitted by the demo through `record_answer_check` for every guard
+outcome; a refused or killed call emits none. Production gRPC emission remains unwired.
 
 ---
 
 ## I. Prompt content hash (Decision D-09 / ZTAX-AI-CONF-ADD01)
 
-`InvocationEvidenceRecord` carries an optional `prompt_content_hash` (lowercase
-SHA-256 hex of `system_prompt`). `PromptProfile.content_hash` computes it.
-The builder validates the format (exactly 64 hex chars) and raises
-`InvocationEvidenceError` on bad input. The field is emitted in `as_dict()`
-only when set; absent on legacy records (backward-compatible).
+`InvocationEvidenceRecord` carries an optional `prompt_content_hash` (lowercase SHA-256
+hex of `system_prompt`). Format is validated by the record and normalised (lowercased)
+by the builder; omitted when unset.
 
-**Not yet wired:** `Gateway.invoke()` in `server.py` never calls
-`set_prompt_content_hash()` because the Gateway has no access to a
-`PromptProfile` at invocation time (it only sees the label string). Every live
-record still has `prompt_content_hash = None`. Follow-up: inject
-`PromptProfileRegistry` into `Gateway` so the label can be resolved.
+**Status:** `Gateway.invoke()` sets the prompt hash only when a `PromptProfileRegistry` is
+injected AND the call reaches the runtime; blocked, refused or killed calls keep the hash
+empty. No deployed path (`src/ztax_gateway/server.py` main, `tools/serve_live_demo.py`,
+`tools/report_ai_http.py` main) injects a registry, and the live demo's prompts are its own,
+not the registry's, so live records currently carry no hash. Injecting a registry into
+deployed servers remains unwired.
 
-**Scope:** covers `system_prompt` text only — `variable_schema`, `output_schema`
-and `safety_rules` do not affect the hash. Document this if a broader canonical
-hash is needed later.
-
-**Not a metrics label:** `prompt_content_hash` is never added to
-`observability.py` labels (unbounded cardinality). A regression test in
-`test_observability.py` enforces this.
+**Scope:** Covers `system_prompt` only. Never added to `observability.py` labels
+(`tests/test_observability.py::test_model_ops_labels_do_not_include_prompt_content_hash`).

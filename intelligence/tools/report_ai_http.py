@@ -70,10 +70,11 @@ import serve_live_demo
 from groq_demo_runtime import GroqDemoConfigError, GroqDemoRuntime
 
 from ztax_gateway.explanation_guard import (
-    _check,
     _numeric_values,  # noqa: F401 -- accessed as report_ai_http._numeric_values in tests
     apply_guard,
+    check_guard,
 )
+from ztax_gateway.invocation_check_event import CheckReason, Verdict
 from ztax_gateway.server import Gateway, GatewayError, load_config
 
 __all__: list[str] = ["apply_guard", "explain", "main"]
@@ -90,6 +91,8 @@ _ALLOWED_ORIGIN = "http://localhost:13000"
 # live_demo.py's (...099), so the two demos' evidence records are never
 # mistaken for one another in a shared log.
 _TENANT = "00000000-0000-0000-0000-000000000098"
+
+_VALIDATOR = "explanation_guard@1"
 
 # Each explain kind runs under an already-registered governed use case:
 # trend points and filing-pipeline buckets are dashboard figures, and a
@@ -164,11 +167,12 @@ def explain(gateway: Gateway, fixture: dict[str, Any], kind: str, ids: list[str]
 
     raw_call = _build_raw_call(use_case, kind, rows)
     try:
-        reply_bytes = gateway.invoke(raw_call)
+        reply_bytes, invocation_id = gateway.invoke_with_id(raw_call)
     except GatewayError as exc:
         # Only the Gateway's fixed reason code goes back: exc.detail is free
         # text (it can carry a runtime or provider message) and stays out of
         # both the reply and this log.
+        # A refused or killed call produces no answer, so it emits NO check event.
         log.info("explain use_case=%s outcome=REVIEW_REQUIRED reason=%s", use_case, exc.reason)
         return {
             "outcome": "REVIEW_REQUIRED",
@@ -197,12 +201,13 @@ def explain(gateway: Gateway, fixture: dict[str, Any], kind: str, ids: list[str]
     }
 
     # Each decision below is logged next to the call: the outcome and a fixed
-    # reason code only, never the model's text. The invocation id is not in
-    # the Gateway's wire reply, so it is not logged here (reaching it would
-    # need an edit to intelligence/src); the Gateway's own evidence line
-    # carries it.
+    # reason code only, never the model's text.
     if model_abstain:
         log.info("explain use_case=%s outcome=ABSTAINED reason=MODEL_ABSTAINED", use_case)
+        if invocation_id is not None:
+            gateway.record_answer_check(
+                invocation_id, Verdict.ABSTAIN, CheckReason.MODEL_ABSTAINED, _VALIDATOR
+            )
         return {
             "outcome": "ABSTAINED",
             "explanation": explanation,
@@ -211,18 +216,26 @@ def explain(gateway: Gateway, fixture: dict[str, Any], kind: str, ids: list[str]
             "provenance": provenance,
         }
 
-    guard_code, guard_reason = _check(rows, cited_ids, explanation)
-    if guard_reason:
-        log.info("explain use_case=%s outcome=ABSTAINED reason=%s", use_case, guard_code)
+    result = check_guard(rows, cited_ids, explanation, invocation_id=invocation_id)
+    if not result.ok:
+        log.info("explain use_case=%s outcome=ABSTAINED reason=%s", use_case, result.code)
+        if invocation_id is not None:
+            gateway.record_answer_check(
+                invocation_id, Verdict.ABSTAIN, CheckReason(result.code), _VALIDATOR
+            )
         return {
             "outcome": "ABSTAINED",
             "explanation": explanation,
             "cited_ids": cited_ids,
-            "reason": guard_reason,
+            "reason": result.message,
             "provenance": provenance,
         }
 
     log.info("explain use_case=%s outcome=EXPLAINED reason=-", use_case)
+    if invocation_id is not None:
+        gateway.record_answer_check(
+            invocation_id, Verdict.PASS, CheckReason.CHECKS_PASSED, _VALIDATOR
+        )
     return {
         "outcome": "EXPLAINED",
         "explanation": explanation,

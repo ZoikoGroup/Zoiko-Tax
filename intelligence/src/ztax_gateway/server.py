@@ -37,6 +37,13 @@ import grpc
 from .evidence_sink import EvidenceSink, LoggingEvidenceSink
 from .fake_runtime import FakeRuntime
 from .governance import GovernanceRefusedError, Refusal, UseCase, UseCaseRegistry
+from .invocation_check_event import (
+    AnswerCheckedEvent,
+    CheckEventSink,
+    CheckReason,
+    LoggingCheckEventSink,
+    Verdict,
+)
 from .invocation_evidence import (
     GuardrailResult,
     InvocationEvidenceBuilder,
@@ -44,6 +51,7 @@ from .invocation_evidence import (
     InvocationOutcome,
     UsageMetrics,
 )
+from .production_gates import PromptProfileRegistry
 from .provenance import AuthorityOutcome, Provenance, RiskTier
 from .runtime import (
     ModelRuntime,
@@ -101,6 +109,8 @@ class Gateway:
         *,
         evidence_sink: EvidenceSink | None = None,
         kill_state_path: Path | None = None,
+        prompt_profile_registry: PromptProfileRegistry | None = None,
+        check_event_sink: CheckEventSink | None = None,
     ) -> None:
         if not region or not ai_train_version:
             raise ValueError("gateway: a Gateway names its region and its AI train version")
@@ -112,6 +122,10 @@ class Gateway:
         # Ch.17 §21: default to the structured-log sink; callers may inject
         # InMemoryEvidenceSink in tests for direct record assertions.
         self._evidence_sink: EvidenceSink = evidence_sink or LoggingEvidenceSink()
+        # WP5: optional registry for resolving prompt labels to PromptProfile hashes.
+        self._prompt_registry: PromptProfileRegistry | None = prompt_profile_registry
+        # WP5: sink for AnswerCheckedEvents; defaults to the logging sink.
+        self._check_event_sink: CheckEventSink = check_event_sink or LoggingCheckEventSink()
         # Live kill switch (AI-09): the registry file is re-read on every call and
         # parsed only when its bytes change. None disables it (tests, embedding).
         self._kill_state_path = kill_state_path
@@ -119,6 +133,40 @@ class Gateway:
         self._kill_digest: str | None = None
         self._kill_by_file: set[str] = set()
         self._global_kill_by_file = False
+
+    def record_answer_check(
+        self,
+        invocation_id: str,
+        verdict: Verdict,
+        reason_code: CheckReason,
+        validator_version: str,
+    ) -> None:
+        """Append one :class:`AnswerCheckedEvent` to the check-event sink (WP5).
+
+        Builds the event from the supplied fields and writes it to
+        ``self._check_event_sink``.  Never edits the original evidence record.
+
+        Parameters
+        ----------
+        invocation_id:
+            The ``ai_invocation_id`` from the original evidence record.
+        verdict:
+            The check conclusion (:class:`~ztax_gateway.invocation_check_event.Verdict`).
+        reason_code:
+            Why the verdict was reached (:class:`~ztax_gateway.invocation_check_event.CheckReason`).
+        validator_version:
+            The version string of the validator that ran (e.g. ``"explanation_guard@1"``).
+        """
+        from datetime import UTC, datetime
+
+        event = AnswerCheckedEvent(
+            evidence_id=invocation_id,
+            verdict=verdict,
+            reason_code=reason_code,
+            validator_version=validator_version,
+            created_at=datetime.now(UTC),
+        )
+        self._check_event_sink.write_check_event(event)
 
     def invoke(self, data: bytes) -> bytes:
         try:
@@ -230,6 +278,108 @@ class Gateway:
         self._seal_success(provenance, call.input, reply)
         return encode_reply(reply)
 
+    def invoke_with_id(self, data: bytes) -> tuple[bytes, str | None]:
+        """Like :meth:`invoke` but also returns the ``ai_invocation_id`` for check events.
+
+        Returns ``(reply_bytes, invocation_id)``.  ``invocation_id`` is ``None``
+        when the call is refused or killed before reaching the runtime.  Each
+        call's id is local to that call; this method is safe to call concurrently.
+        """
+        invocation_id: str | None = None
+        try:
+            call = decode_call(data)
+        except WireError as exc:
+            raise GatewayError(
+                grpc.StatusCode.INVALID_ARGUMENT, Refusal.MALFORMED_CONTEXT.value, str(exc)
+            ) from exc
+
+        g = call.governance
+        route: Route | None
+        try:
+            route = self._routes.route(g.use_case)
+        except UnroutedUseCaseError:
+            route = None
+        unrouted = "unrouted"
+        provenance = Provenance(
+            use_case=g.use_case,
+            model_profile=route.model_profile if route else unrouted,
+            provider_profile=route.provider_profile if route else unrouted,
+            prompt_profile=route.prompt_profile if route else unrouted,
+            region=g.region,
+            data_class=g.highest_data_class(),
+            risk_tier=g.risk_tier,
+            authority_outcome=g.authority_outcome,
+            ai_train_version=self._train,
+            data_classes=g.data_classes,
+        )
+
+        if g.region != self._region:
+            self._seal_block(
+                provenance,
+                call.input,
+                refusal_code=Refusal.RESIDENCY_REFUSED.value,
+            )
+            raise GatewayError(
+                grpc.StatusCode.PERMISSION_DENIED,
+                Refusal.RESIDENCY_REFUSED.value,
+                f"this Gateway serves {self._region!r}; the call is from {g.region!r}",
+            )
+
+        def work(_: UseCase) -> Reply:
+            if route is None:
+                raise UnroutedUseCaseError(f"use case {g.use_case!r} has no route")
+            return self._run(route, call)
+
+        self._refresh_kill_state()
+        try:
+            reply = guarded(self._registry, provenance, work)
+        except GovernanceRefusedError as refusal:
+            caller_err = GatewayError(
+                _REFUSAL_STATUS[refusal.refusal], refusal.refusal.value, refusal.detail
+            )
+            self._seal_block(
+                provenance,
+                call.input,
+                refusal_code=refusal.refusal.value,
+                original_error=caller_err,
+            )
+            raise caller_err from refusal
+        except RuntimeNotConfiguredError as exc:
+            caller_err = GatewayError(
+                grpc.StatusCode.UNIMPLEMENTED, REASON_NOT_CONFIGURED, str(exc)
+            )
+            self._seal_block(
+                provenance,
+                call.input,
+                refusal_code=REASON_NOT_CONFIGURED,
+                original_error=caller_err,
+            )
+            raise caller_err from exc
+        except UnroutedUseCaseError as exc:
+            log.error(
+                "gateway: registered use case without a route", extra={"use_case": g.use_case}
+            )
+            caller_err = GatewayError(
+                grpc.StatusCode.UNIMPLEMENTED, REASON_NOT_CONFIGURED, str(exc)
+            )
+            self._seal_block(
+                provenance,
+                call.input,
+                refusal_code=REASON_NOT_CONFIGURED,
+                original_error=caller_err,
+            )
+            raise caller_err from exc
+        except RuntimeUnavailableError as exc:
+            self._seal_block(
+                provenance,
+                call.input,
+                refusal_code=REASON_UNAVAILABLE,
+            )
+            raise GatewayError(grpc.StatusCode.UNAVAILABLE, REASON_UNAVAILABLE, str(exc)) from exc
+
+        invocation_id = self._seal_success(provenance, call.input, reply)
+        return encode_reply(reply), invocation_id
+
     def _refresh_kill_state(self) -> None:
         """Bring the registry's kill state in line with the registry file.
 
@@ -291,12 +441,20 @@ class Gateway:
     # Evidence helpers (Ch.17 §21)
     # ------------------------------------------------------------------
 
-    def _seal_success(self, provenance: Provenance, input_bytes: bytes, reply: Reply) -> None:
+    def _seal_success(self, provenance: Provenance, input_bytes: bytes, reply: Reply) -> str:
         """Build and write a successful-invocation evidence record.
 
         The outcome is derived from the authority outcome so that the
         evidence vocabulary (PROPOSE / PRIORITIZE / REVIEW / …) matches
         what the governed context declared.
+
+        WP5 (Decision D-09): the prompt content hash is set here — only when
+        the call actually reaches the model runtime.  BLOCK records (refused or
+        killed before the runtime) must never carry the hash, because evidence
+        must not claim a prompt was used when it was not.
+
+        Returns the ``ai_invocation_id`` of the sealed record so the caller can
+        emit a linked check event without touching shared state.
         """
         outcome = InvocationOutcome.from_authority_outcome(provenance.authority_outcome)
         builder = InvocationEvidenceBuilder(
@@ -311,8 +469,21 @@ class Gateway:
         builder.set_output(reply_bytes)
         builder.add_guardrail(GuardrailResult("governance.authority", "PASS"))
         builder.set_usage(UsageMetrics())  # provider telemetry not yet available
+        # WP5 Part A: resolve the route's prompt label to a PromptProfile and
+        # set the content hash on the builder.  No registry or no matching
+        # profile: leave the hash None and log one warning; never fail the call.
+        if self._prompt_registry is not None:
+            profile = self._prompt_registry.get(provenance.prompt_profile)
+            if profile is not None:
+                builder.set_prompt_content_hash(profile.content_hash)
+            else:
+                log.warning(
+                    "gateway: no PromptProfile for label %r; prompt_content_hash will be None",
+                    provenance.prompt_profile,
+                )
         record = builder.build()
         self._write_sink(record)
+        return record.ai_invocation_id
 
     def _seal_block(
         self,
