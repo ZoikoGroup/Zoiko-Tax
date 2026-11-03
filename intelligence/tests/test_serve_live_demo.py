@@ -389,3 +389,54 @@ def test_registry_live_demo_json_matches_registry_dev_json_except_the_route_and_
         "provider_profile": "provider:groq-demo",
         "prompt_profile": "prompt:classification-review-v1",
     }
+
+
+def test_serve_live_demo_gateway_obeys_live_kill(tmp_path: Path) -> None:
+    """A use case listed in 'killed' is refused when the registry file changes live."""
+    from ztax_gateway.runtime import Result
+    from ztax_gateway.server import Gateway, GatewayError
+
+    registry_path = tmp_path / "registry.json"
+    registry_path.write_text(json.dumps(_MINIMAL_REGISTRY), encoding="utf-8")
+
+    class _StubRuntime:
+        def run(self, route: Any, call: Any) -> Any:
+            return Result(proposed_code="telecom/voice", confidence="0.8000")
+
+    registry, routes = serve_live_demo.load_config(registry_path)
+    patched = serve_live_demo._patched_routes(registry, routes, "llama-3.1-8b-instant")
+    gw = Gateway(
+        registry,
+        patched,
+        _StubRuntime(),
+        "local",
+        "0.0.0-test",
+        kill_state_path=registry_path,
+    )
+
+    raw_call = json.dumps({
+        "kind": "CLASSIFICATION_PROPOSAL",
+        "governance": {
+            "tenant_id": "00000000-0000-0000-0000-000000000001",
+            "use_case": "classification-review",
+            "authority_outcome": "A1",
+            "risk_tier": "T1",
+            "region": "local",
+            "data_classes": ["P0"],
+        },
+        "subject_ref": "test",
+        "input_b64": "e30=",
+    }).encode()
+
+    reply_bytes, _ = gw.invoke_with_id(raw_call)
+    assert reply_bytes
+
+    # Add use case to 'killed' in-place
+    doc = json.loads(registry_path.read_text(encoding="utf-8"))
+    doc["killed"] = ["classification-review"]
+    registry_path.write_text(json.dumps(doc), encoding="utf-8")
+
+    # Next call must refuse with GatewayError (AI_KILL_SWITCH_ENGAGED)
+    with pytest.raises(GatewayError) as exc_info:
+        gw.invoke_with_id(raw_call)
+    assert exc_info.value.reason == "AI_KILL_SWITCH_ENGAGED"

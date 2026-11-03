@@ -526,10 +526,6 @@ def test_the_guard_rejection_message_does_not_quote_the_answer() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="check sink failure drops the demo reply; fix pending in report_ai_http.explain",
-)
 def test_a_raising_check_event_sink_must_not_drop_the_reply() -> None:
     amount_rig = _ExplainRig(_answer("placeholder"))
     amount = str(

@@ -81,6 +81,33 @@ __all__: list[str] = ["apply_guard", "explain", "main"]
 
 log = logging.getLogger("ztax_gateway.report_ai_http")
 
+# ---------------------------------------------------------------------------
+# Demo-path: safe check-event helper
+# ---------------------------------------------------------------------------
+
+_CHECK_EVENT_WRITE_FAILED = "CHECK_EVENT_WRITE_FAILED"
+
+
+def _record_answer_check_safe(
+    gateway: Gateway,
+    invocation_id: str,
+    verdict: Verdict,
+    reason: CheckReason,
+    validator: str,
+) -> None:
+    """Write a check event; on failure log a fixed WARNING and continue.
+
+    Demo path only. A failing sink must never drop the caller's reply.
+    Never logs str(exc) or repr(exc) to prevent leaking runtime messages.
+    """
+    try:
+        gateway.record_answer_check(invocation_id, verdict, reason, validator)
+    except Exception:
+        log.warning(
+            "check_event_write_failed reason=%s",
+            _CHECK_EVENT_WRITE_FAILED,
+        )
+
 # Bound inside the container only; docker-compose.live-demo.yml publishes
 # this same number on the host's loopback interface only (127.0.0.1:18090).
 _PORT = 18090
@@ -205,8 +232,8 @@ def explain(gateway: Gateway, fixture: dict[str, Any], kind: str, ids: list[str]
     if model_abstain:
         log.info("explain use_case=%s outcome=ABSTAINED reason=MODEL_ABSTAINED", use_case)
         if invocation_id is not None:
-            gateway.record_answer_check(
-                invocation_id, Verdict.ABSTAIN, CheckReason.MODEL_ABSTAINED, _VALIDATOR
+            _record_answer_check_safe(
+                gateway, invocation_id, Verdict.ABSTAIN, CheckReason.MODEL_ABSTAINED, _VALIDATOR
             )
         return {
             "outcome": "ABSTAINED",
@@ -220,8 +247,8 @@ def explain(gateway: Gateway, fixture: dict[str, Any], kind: str, ids: list[str]
     if not result.ok:
         log.info("explain use_case=%s outcome=ABSTAINED reason=%s", use_case, result.code)
         if invocation_id is not None:
-            gateway.record_answer_check(
-                invocation_id, Verdict.ABSTAIN, CheckReason(result.code), _VALIDATOR
+            _record_answer_check_safe(
+                gateway, invocation_id, Verdict.ABSTAIN, CheckReason(result.code), _VALIDATOR
             )
         return {
             "outcome": "ABSTAINED",
@@ -233,8 +260,8 @@ def explain(gateway: Gateway, fixture: dict[str, Any], kind: str, ids: list[str]
 
     log.info("explain use_case=%s outcome=EXPLAINED reason=-", use_case)
     if invocation_id is not None:
-        gateway.record_answer_check(
-            invocation_id, Verdict.PASS, CheckReason.CHECKS_PASSED, _VALIDATOR
+        _record_answer_check_safe(
+            gateway, invocation_id, Verdict.PASS, CheckReason.CHECKS_PASSED, _VALIDATOR
         )
     return {
         "outcome": "EXPLAINED",
@@ -343,7 +370,7 @@ def main() -> int:
     model = serve_live_demo._env("GROQ_MODEL")
     registry, routes = load_config(Path(config))
     routes = serve_live_demo._patched_routes(registry, routes, model)
-    gateway = Gateway(registry, routes, runtime, region, train)
+    gateway = Gateway(registry, routes, runtime, region, train, kill_state_path=Path(config))
     fixture = report_fixture.generate_fixture()
 
     handler_cls = _make_handler(gateway, fixture)
