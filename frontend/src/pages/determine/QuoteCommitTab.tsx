@@ -4,9 +4,14 @@ import type { S } from '@zoikotax/sdk'
 
 import { ztax } from '../../platform/client'
 import { instant } from '../../dashboard/format'
-import { Card, Columns, Field, Id, Outcome, Raw, Status, Submit, useAction } from '../../ui/kit'
+import { Card, Columns, Field, Id, Loaded, Outcome, Raw, Status, Submit, useAction, useLoad } from '../../ui/kit'
+import { coverageInstant, today } from '../locations/coverage'
+import {
+  DeterminationCard, emptyLocation, LocationFields, locationDocument, locationEventTime, locationProblem,
+  type LocationDraft,
+} from '../locations/document'
 import { commitBody, emptyLine, LineFields, lineProblem, quoteBody, type LineDraft } from './line'
-import { EmittedTable, Invalid, KeyNote, KV, useIdempotencyKey } from './shared'
+import { EmittedTable, Invalid, KeyNote, KV, TabBar, useIdempotencyKey } from './shared'
 
 /** The header facts of a recorded decision. */
 export const DecisionFacts = ({ decision }: { decision: S<'Decision'> }) => (
@@ -29,35 +34,59 @@ export const DecisionFacts = ({ decision }: { decision: S<'Decision'> }) => (
   />
 )
 
+/**
+ * What a line is determined from: a telecom document at a place (content with
+ * location-aware rules), or the named values of a rule-graph pack.
+ */
+type Mode = 'location' | 'pack'
+
+const MODES: readonly { value: Mode; label: string }[] = [
+  { value: 'location', label: 'At a location' },
+  { value: 'pack', label: 'Worked pack inputs' },
+]
+
 export const QuoteCommitTab = ({ onOpenDecision }: { onOpenDecision: (id: string) => void }) => {
+  const [mode, setMode] = useState<Mode>('location')
   const [line, setLine] = useState<LineDraft>(() => emptyLine())
+  const [location, setLocation] = useState<LocationDraft>(emptyLocation)
+  const [businessKey, setBusinessKey] = useState('')
   const [supersedes, setSupersedes] = useState('')
   const [problem, setProblem] = useState<string | null>(null)
+  // Only the countries and subdivisions the active content covers are offered.
+  const coverage = useLoad((signal) => ztax.getCoverage({ at: coverageInstant(today()) }, signal), [])
   const quote = useAction<S<'Quote'>>()
   const commit = useAction<S<'Decision'>>()
   const commitKey = useIdempotencyKey()
   const adjustKey = useIdempotencyKey()
   const adjusting = supersedes.trim() !== ''
 
+  const problemOf = (needKey: boolean): string | null =>
+    mode === 'pack' ? lineProblem(line, needKey)
+      : needKey && businessKey.trim() === '' ? 'A business key is required to commit.'
+        : locationProblem(location)
+
   const onQuote = () => {
-    const p = lineProblem(line, false)
+    const p = problemOf(false)
     setProblem(p)
     if (p !== null) {
       return
     }
-    void quote.run(() => ztax.createQuote(quoteBody(line)))
+    const body: S<'QuoteRequest'> = mode === 'pack'
+      ? quoteBody(line)
+      : { eventTime: locationEventTime(location), document: locationDocument(location) }
+    void quote.run(() => ztax.createQuote(body))
   }
 
   const onCommit = (e: FormEvent) => {
     e.preventDefault()
-    const p = lineProblem(line, true)
+    const p = problemOf(true)
     setProblem(p)
     if (p !== null) {
       return
     }
     // :commit and :adjust are separate key scopes (ADR-0013 §2.2), so each
     // keeps its own key.
-    const body = commitBody(line, supersedes)
+    const body = mode === 'pack' ? commitBody(line, supersedes) : locationCommitBody(location, businessKey, supersedes)
     const keys = adjusting ? adjustKey : commitKey
     const key = keys.keyFor(body)
     void commit
@@ -65,28 +94,54 @@ export const QuoteCommitTab = ({ onOpenDecision }: { onOpenDecision: (id: string
       .then((d) => { if (d !== null) keys.succeeded() })
   }
 
+  const supersedesField = (
+    <Field
+      label="Supersedes (optional)"
+      help="A decision id. When set, Commit becomes an adjustment: a correction under the content that made that decision."
+    >
+      <input value={supersedes} onChange={(e) => { setSupersedes(e.target.value) }} autoComplete="off" className="mono" />
+    </Field>
+  )
+  const actions = (
+    <div className="ztax-form-actions">
+      <button type="button" className="ztax-btn-quiet" onClick={onQuote} disabled={quote.busy}>
+        {quote.busy ? 'Quoting…' : 'Quote'}
+      </button>
+      <Submit busy={commit.busy}>{adjusting ? 'Commit adjustment' : 'Commit'}</Submit>
+    </div>
+  )
+
   return (
     <>
-      <Card title="One line of the active worked pack">
+      <Card title={mode === 'location' ? 'One telecom line at a location' : 'One line of the active worked pack'}>
+        <TabBar label="Determine from" tabs={MODES} current={mode} onSelect={(m) => { setMode(m); setProblem(null) }} />
         <p className="muted ztax-note">
-          A quote evaluates the line and records nothing. A commit records an immutable decision and posts it to the Tax
-          Control Subledger. Accumulators are read by the cell itself and are not sent.
+          {mode === 'location'
+            ? 'The engine places the line from the seller, the customer and the evidence of where the service is used, then applies every component in force there.'
+            : 'Named values for a rule-graph pack. Accumulators are read by the cell itself and are not sent.'}
+          {' '}A quote evaluates the line and records nothing. A commit records an immutable decision and posts it to the
+          Tax Control Subledger.
         </p>
-        <form className="ztax-form" onSubmit={onCommit} aria-label="Quote or commit a line">
-          <LineFields line={line} onChange={setLine} idPrefix="qc" />
-          <Field
-            label="Supersedes (optional)"
-            help="A decision id. When set, Commit becomes an adjustment: a correction under the content that made that decision."
-          >
-            <input value={supersedes} onChange={(e) => { setSupersedes(e.target.value) }} autoComplete="off" className="mono" />
-          </Field>
-          <div className="ztax-form-actions">
-            <button type="button" className="ztax-btn-quiet" onClick={onQuote} disabled={quote.busy}>
-              {quote.busy ? 'Quoting…' : 'Quote'}
-            </button>
-            <Submit busy={commit.busy}>{adjusting ? 'Commit adjustment' : 'Commit'}</Submit>
-          </div>
-        </form>
+        {mode === 'location' ? (
+          <form className="ztax-form loc-form" onSubmit={onCommit} aria-label="Quote or commit a line at a location">
+            <div className="loc-form-grid">
+              <Field label="Business key" help="Your stable reference for the line, e.g. INV-0001/1.">
+                <input value={businessKey} onChange={(e) => { setBusinessKey(e.target.value) }} autoComplete="off" />
+              </Field>
+              {supersedesField}
+            </div>
+            <Loaded load={coverage.load}>
+              {(c) => <LocationFields coverage={c} draft={location} onChange={setLocation} />}
+            </Loaded>
+            {actions}
+          </form>
+        ) : (
+          <form className="ztax-form" onSubmit={onCommit} aria-label="Quote or commit a line">
+            <LineFields line={line} onChange={setLine} idPrefix="qc" />
+            {supersedesField}
+            {actions}
+          </form>
+        )}
         <Invalid message={problem} />
         <KeyNote value={adjusting ? adjustKey.current : commitKey.current} />
       </Card>
@@ -102,7 +157,13 @@ export const QuoteCommitTab = ({ onOpenDecision }: { onOpenDecision: (id: string
                 Advisory estimate ({quote.done.reasonCode}) — a quote is never a decision and must not be filed or
                 invoiced from.
               </p>
-              <EmittedTable emitted={quote.done.emitted} caption={`Quoted ${instant(quote.done.quotedAt)} against ${quote.done.bundle.bundleId}`} />
+              {quote.done.document === undefined ? (
+                <EmittedTable emitted={quote.done.emitted} caption={`Quoted ${instant(quote.done.quotedAt)} against ${quote.done.bundle.bundleId}`} />
+              ) : (
+                <p className="muted" style={{ margin: 0 }}>
+                  Quoted {instant(quote.done.quotedAt)} against {quote.done.bundle.bundleId}; the location result is below.
+                </p>
+              )}
               <Raw value={quote.done} label="Full quote" />
             </>
           )}
@@ -115,7 +176,9 @@ export const QuoteCommitTab = ({ onOpenDecision }: { onOpenDecision: (id: string
           ) : (
             <>
               <DecisionFacts decision={commit.done} />
-              <EmittedTable emitted={commit.done.emitted} caption="Emitted by the decision" />
+              {commit.done.document === undefined ? (
+                <EmittedTable emitted={commit.done.emitted} caption="Emitted by the decision" />
+              ) : null}
               <div className="ztax-form-actions">
                 <button
                   type="button"
@@ -137,6 +200,24 @@ export const QuoteCommitTab = ({ onOpenDecision }: { onOpenDecision: (id: string
           )}
         </Card>
       </Columns>
+
+      {quote.done?.document === undefined ? null : (
+        <DeterminationCard determination={quote.done.document} title="Quoted at the location" />
+      )}
+      {commit.done?.document === undefined ? null : (
+        <DeterminationCard determination={commit.done.document} title="Decided at the location" />
+      )}
     </>
   )
+}
+
+/** The commit (or adjust) body for a location. Call only once the draft has no problem. */
+function locationCommitBody(location: LocationDraft, businessKey: string, supersedes: string): S<'CommitRequest'> {
+  const base: S<'CommitRequest'> = {
+    businessKey: businessKey.trim(),
+    eventTime: locationEventTime(location),
+    document: locationDocument(location),
+  }
+  const s = supersedes.trim()
+  return s === '' ? base : { ...base, supersedes: s }
 }
