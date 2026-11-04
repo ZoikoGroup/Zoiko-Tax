@@ -53,8 +53,11 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import date
 from enum import StrEnum
 from typing import TYPE_CHECKING
+
+from .ontology_guard import ApprovedOntologyList, GuardVerdict, OntologyGuardError
 
 if TYPE_CHECKING:
     from .classifier import ClassificationRecord
@@ -121,6 +124,9 @@ class AssessmentReason(StrEnum):
     NO_CANDIDATES = "NO_CANDIDATES"
     TOP_TOO_WEAK = "TOP_TOO_WEAK"
     AMBIGUOUS_MARGIN = "AMBIGUOUS_MARGIN"
+    UNKNOWN_CODE = "UNKNOWN_CODE"
+    NOT_YET_EFFECTIVE = "NOT_YET_EFFECTIVE"
+    EXPIRED = "EXPIRED"
 
 
 @dataclass(frozen=True, slots=True)
@@ -182,6 +188,8 @@ def assess_candidates(
     *,
     max_top_rank: float,
     min_margin: float,
+    approved_list: ApprovedOntologyList | None = None,
+    as_of: date | None = None,
 ) -> Assessment:
     """Route a classification based on BM25-ranked candidates.
 
@@ -199,6 +207,15 @@ def assess_candidates(
         (inclusive; ``margin == min_margin`` passes). Must be finite and
         non-negative. With ``min_margin == 0`` a perfect tie with a different
         class still passes as PROPOSE / CLEAR.
+    approved_list:
+        Optional approved-ontology list.  When ``None`` (the default), the
+        ontology guard is skipped entirely and behaviour is unchanged.  When
+        supplied, *as_of* must also be provided.
+    as_of:
+        Reference date for the ontology guard.  Ignored when *approved_list*
+        is ``None``.  When *approved_list* is provided and *as_of* is ``None``,
+        :class:`~ztax_gateway.ontology_guard.OntologyGuardError` is raised
+        (fail-closed: an approved list without a date is an error, not a pass).
 
     Returns
     -------
@@ -212,6 +229,8 @@ def assess_candidates(
     ValueError
         If any rank, ``max_top_rank``, or ``min_margin`` is NaN or infinite, or
         if ``min_margin`` is negative.
+    OntologyGuardError
+        If *approved_list* is provided but *as_of* is ``None``.
     """
     # -- validate thresholds --------------------------------------------------
     _validate_threshold("max_top_rank", max_top_rank)
@@ -220,6 +239,12 @@ def assess_candidates(
         raise ValueError(
             f"assess_candidates: 'min_margin' must be non-negative, got {min_margin!r}"
         )
+
+    # -- fail-closed: approved_list without as_of is an error ------------------
+    if approved_list is not None and as_of is None:
+        raise OntologyGuardError(
+            "assess_candidates: 'as_of' is required when 'approved_list' is provided"
+        ) from None
 
     # -- validate all ranks in the candidate list ------------------------------
     for cls, rank in candidates:
@@ -240,6 +265,27 @@ def assess_candidates(
 
     top_class, top_rank = sorted_candidates[0]
     top_class_normalised = top_class.strip().lower()
+
+    # -- ontology guard: check the top candidate against the approved list -----
+    # Applied after sorting so the check is always on the highest-ranked class.
+    # When the verdict is not ALLOWED the proposal abstains and the refused
+    # code is NOT carried in the returned Assessment (top_class is None).
+    if approved_list is not None and as_of is not None:
+        from .ontology_guard import check_code  # local import avoids circular at module level
+
+        verdict = check_code(top_class, as_of, approved_list)
+        if verdict is not GuardVerdict.ALLOWED:
+            reason_map = {
+                GuardVerdict.UNKNOWN: AssessmentReason.UNKNOWN_CODE,
+                GuardVerdict.NOT_YET_EFFECTIVE: AssessmentReason.NOT_YET_EFFECTIVE,
+                GuardVerdict.EXPIRED: AssessmentReason.EXPIRED,
+            }
+            return Assessment(
+                route=AssessmentRoute.ABSTAIN,
+                reason=reason_map[verdict],
+                # top_class intentionally omitted so the refused code is not
+                # carried in the routing verdict.
+            )
 
     # -- ceiling check: top rank must be <= max_top_rank ----------------------
     if top_rank > max_top_rank:
@@ -298,6 +344,8 @@ def assess_record(
     *,
     max_top_rank: float,
     min_margin: float,
+    approved_list: ApprovedOntologyList | None = None,
+    as_of: date | None = None,
 ) -> Assessment:
     """Thin adapter: route a :class:`~ztax_gateway.classifier.ClassificationRecord`.
 
@@ -313,6 +361,10 @@ def assess_record(
         Passed directly to :func:`assess_candidates`.
     min_margin:
         Passed directly to :func:`assess_candidates`.
+    approved_list:
+        Passed directly to :func:`assess_candidates`.
+    as_of:
+        Passed directly to :func:`assess_candidates`.
 
     Returns
     -------
@@ -320,4 +372,10 @@ def assess_record(
         See :func:`assess_candidates`.
     """
     candidates = [(p.ontology_class, p.rank) for p in record.proposals]
-    return assess_candidates(candidates, max_top_rank=max_top_rank, min_margin=min_margin)
+    return assess_candidates(
+        candidates,
+        max_top_rank=max_top_rank,
+        min_margin=min_margin,
+        approved_list=approved_list,
+        as_of=as_of,
+    )
