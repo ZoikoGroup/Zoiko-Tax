@@ -11,7 +11,7 @@
 # Needs GROQ_API_KEY and GROQ_MODEL in the local, gitignored .env --
 # see intelligence/LIVE_DEMO.md.
 #
-# Changes only the ztax-model-gateway service, and only five things on it:
+# Changes only the ztax-model-gateway service, and only six things on it:
 # bind-mounts intelligence/tools read-only, replaces the base registry mount
 # with intelligence/config/registry.live-demo.json (same target path, so it
 # overrides rather than adding a second mount -- the shared registry.dev.json
@@ -19,7 +19,9 @@
 # at the new intelligence/tools/serve_live_demo.py and report_ai_http.py
 # instead of `python -m ztax_gateway.server`, adds the two GROQ_* variables,
 # and publishes one loopback-only host port for report_ai_http.py's
-# demo-only HTTP endpoint. Every other service, and every hardening setting already on
+# demo-only HTTP endpoint. It also mounts config/prompt_profiles.live-demo.json
+# read-only next to the registry and names it in ZTAX_GATEWAY_PROMPT_PROFILES;
+# both servers refuse to start without it. Every other service, and every hardening setting already on
 # this one (read_only, cap_drop, security_opt), is untouched by this file.
 #
 # registry.live-demo.json labels the classification-review route (and the
@@ -48,6 +50,7 @@ services:
     volumes:
       - ./intelligence/tools:/app/tools:ro
       - ./intelligence/config/registry.live-demo.json:/etc/ztax/ai/registry.json:ro
+      - ./intelligence/config/prompt_profiles.live-demo.json:/etc/ztax/ai/prompt_profiles.json:ro
     entrypoint:
       - sh
       - -c
@@ -60,3 +63,4 @@ services:
     environment:
       GROQ_API_KEY: ${GROQ_API_KEY}
       GROQ_MODEL: ${GROQ_MODEL}
+      ZTAX_GATEWAY_PROMPT_PROFILES: /etc/ztax/ai/prompt_profiles.json
