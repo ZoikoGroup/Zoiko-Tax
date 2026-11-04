@@ -1,0 +1,44 @@
+name: Deploy to the zoikotax VM
+
+# A commit is deployed only after the repository's own "CI" workflow has passed on main.
+# "Run workflow" deploys the latest main by hand ("force" redoes backend and frontend).
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Rebuild and redeploy backend and frontend even if nothing changed"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-zoikotax
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Deploy over SSH (the key can only start a deploy)
+        env:
+          SSH_HOST: ${{ secrets.GCP_SSH_HOST }}
+          SSH_USER: ${{ secrets.GCP_SSH_USER }}
+          SSH_KEY: ${{ secrets.GCP_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.GCP_SSH_KNOWN_HOSTS }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          FORCE: ${{ inputs.force && '1' || '0' }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=30 "$SSH_USER@$SSH_HOST" "SHA=$SHA FORCE=$FORCE"
