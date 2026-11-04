@@ -74,8 +74,9 @@ from ztax_gateway.explanation_guard import (
     apply_guard,
     check_guard,
 )
+from ztax_gateway.gateway_factory import GatewayFactoryError, build_gateway
 from ztax_gateway.invocation_check_event import CheckReason, Verdict
-from ztax_gateway.server import Gateway, GatewayError, load_config
+from ztax_gateway.server import Gateway, GatewayError
 
 __all__: list[str] = ["apply_guard", "explain", "main"]
 
@@ -368,9 +369,19 @@ def main() -> int:
         return 2
 
     model = serve_live_demo._env("GROQ_MODEL")
-    registry, routes = load_config(Path(config))
-    routes = serve_live_demo._patched_routes(registry, routes, model)
-    gateway = Gateway(registry, routes, runtime, region, train, kill_state_path=Path(config))
+    try:
+        gateway = build_gateway(
+            Path(config),
+            region,
+            train,
+            runtime_factory=runtime.with_prompt_registry,
+            route_transform=lambda registry, routes: serve_live_demo._patched_routes(
+                registry, routes, model
+            ),
+        )
+    except (GatewayFactoryError, GroqDemoConfigError) as exc:
+        print(f"report_ai_http: {exc}", file=sys.stderr)
+        return 2
     fixture = report_fixture.generate_fixture()
 
     handler_cls = _make_handler(gateway, fixture)

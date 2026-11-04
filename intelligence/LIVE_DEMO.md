@@ -137,6 +137,14 @@ python tools/step10_demo.py      # NO model at all -- the boundary claims on the
 your `GROQ_MODEL`, so its provenance names the real model. `step10_demo.py`
 only runs the existing Python and Go test suites; no live model is connected.
 
+## Prompt profiles
+
+- **Required env var:** `ZTAX_GATEWAY_PROMPT_PROFILES` names the prompt-profile file. There is no default path and no fallback.
+- **Mount:** the compose overlay mounts `config/prompt_profiles.live-demo.json` read-only (`:ro`) at `/etc/ztax/ai/prompt_profiles.json`, next to the registry, and sets the variable to that path.
+- **Startup fails closed:** `serve_live_demo.py` and `report_ai_http.py` exit with status 2 if the variable is unset, the file is missing or invalid, a route's `prompt_profile` label has no profile, or a profile's text differs from the text the runtime sends. A profile that no route uses only logs one warning.
+- **Read once, never live:** the profiles are read at startup only, so after editing the file the service must be restarted. The single-file mount has the same edit-in-place caveat as the registry mount (see the warning under "Kill switch"): a replaced file may not show up inside the container.
+- **`live_demo.py`** reads the same variable (and exits with status 1 on the same failures), so set it before running it from a terminal.
+
 ## Kill switch
 
 The Python gateway monitors its registry file (`config/registry.live-demo.json`) for live kill-switch changes:

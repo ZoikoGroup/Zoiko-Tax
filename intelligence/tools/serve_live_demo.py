@@ -45,9 +45,10 @@ from pathlib import Path
 
 from groq_demo_runtime import GroqDemoConfigError, GroqDemoRuntime
 
+from ztax_gateway.gateway_factory import GatewayFactoryError, build_gateway
 from ztax_gateway.governance import UseCaseRegistry
 from ztax_gateway.runtime import Route, RoutingTable
-from ztax_gateway.server import Gateway, load_config, serve
+from ztax_gateway.server import load_config, serve  # noqa: F401 -- load_config: used by tests
 
 log = logging.getLogger("ztax_gateway.serve_live_demo")
 
@@ -128,9 +129,17 @@ def main() -> int:
         return 2
 
     model = _env("GROQ_MODEL")
-    registry, routes = load_config(Path(config))
-    routes = _patched_routes(registry, routes, model)
-    gateway = Gateway(registry, routes, runtime, region, train, kill_state_path=Path(config))
+    try:
+        gateway = build_gateway(
+            Path(config),
+            region,
+            train,
+            runtime_factory=runtime.with_prompt_registry,
+            route_transform=lambda registry, routes: _patched_routes(registry, routes, model),
+        )
+    except (GatewayFactoryError, GroqDemoConfigError) as exc:
+        print(f"serve_live_demo: {exc}", file=sys.stderr)
+        return 2
 
     print(f"serve_live_demo: model={model!r} provider='groq-demo' address={address!r}")
     print(_DEMO_WARNING)

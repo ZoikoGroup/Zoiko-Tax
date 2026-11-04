@@ -39,8 +39,10 @@ import serve_live_demo
 from groq_demo_runtime import GroqDemoConfigError, GroqDemoRuntime
 
 from ztax_gateway.citation import Citation
+from ztax_gateway.gateway_factory import ENV_PROMPT_PROFILES
 from ztax_gateway.grounding import GroundingFailure, GroundingValidator
 from ztax_gateway.invocation_evidence import InvocationEvidenceRecord
+from ztax_gateway.prompt_profile_file import PromptProfileFileError, load_prompt_profiles
 from ztax_gateway.runtime import Result, Route, RuntimeUnavailableError
 from ztax_gateway.server import Gateway, GatewayError, load_config
 from ztax_gateway.wire import Call
@@ -191,7 +193,7 @@ def _demo_fabricated_citation() -> None:
 
 def main() -> int:
     try:
-        runtime = _RecordingRuntime(GroqDemoRuntime())
+        groq = GroqDemoRuntime()
     except GroqDemoConfigError as exc:
         print(f"live_demo: {exc}", file=sys.stderr)
         print(
@@ -204,8 +206,32 @@ def main() -> int:
     registry, routes = load_config(_REGISTRY_PATH)
     # GroqDemoRuntime() above already refused a missing or floating GROQ_MODEL.
     routes = serve_live_demo._patched_routes(registry, routes, serve_live_demo._env("GROQ_MODEL"))
+
+    # The prompt profiles are the one source of the prompt hash on the evidence
+    # record. No default path: an unset variable stops the demo. This one-shot
+    # script keeps killing and reviving in memory, so it takes no kill_state_path.
+    profiles_path = serve_live_demo._env(ENV_PROMPT_PROFILES)
+    try:
+        if not profiles_path:
+            raise PromptProfileFileError(f"{ENV_PROMPT_PROFILES} is required and has no default")
+        profiles = load_prompt_profiles(Path(profiles_path))
+        groq = groq.with_prompt_registry(profiles)
+        groq.verify_prompts(registry, routes)
+    except (PromptProfileFileError, GroqDemoConfigError) as exc:
+        print(f"live_demo: {exc}", file=sys.stderr)
+        return 1
+    runtime = _RecordingRuntime(groq)
+
     sink = _CapturingSink()
-    gateway = Gateway(registry, routes, runtime, "local", "0.0.0-demo", evidence_sink=sink)
+    gateway = Gateway(
+        registry,
+        routes,
+        runtime,
+        "local",
+        "0.0.0-demo",
+        evidence_sink=sink,
+        prompt_profile_registry=profiles,
+    )
 
     _demo_permitted_classification(gateway, sink, runtime)
 
