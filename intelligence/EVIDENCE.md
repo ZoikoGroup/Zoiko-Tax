@@ -139,10 +139,9 @@ by the builder; omitted when unset.
 
 **Status:** `Gateway.invoke()` sets the prompt hash only when a `PromptProfileRegistry` is
 injected AND the call reaches the runtime; blocked, refused or killed calls keep the hash
-empty. No deployed path (`src/ztax_gateway/server.py` main, `tools/serve_live_demo.py`,
-`tools/report_ai_http.py` main) injects a registry, and the live demo's prompts are its own,
-not the registry's, so live records currently carry no hash. Injecting a registry into
-deployed servers remains unwired.
+empty. The two live demo servers (`tools/serve_live_demo.py`, `tools/report_ai_http.py`) load prompt profiles at startup (`ZTAX_GATEWAY_PROMPT_PROFILES`), so their records carry the hash: SHA-256 of the profile's `system_prompt`, computed from the text and never read from the file, checked at startup against the text the runtime sends. `server.py` main (fake runtime) injects nothing and carries no hash on purpose. The check-event sink is the logging sink; there is no file-based sink yet. With a registry, `classification-review` accepts only `CLASSIFICATION_PROPOSAL`; other kinds are refused before any request is built (BLOCK record, no hash).
+
+**Known gap (wire kind):** the registry and the Gateway do not restrict which wire kind a use case may receive; the runtime guard is demo-only. An allowed-kinds field per use case needs a registry contract decision.
 
 **Demo-path resilience:** If the check-event sink raises when `record_answer_check` is
 called, `report_ai_http.py` catches the exception, logs a fixed WARNING
