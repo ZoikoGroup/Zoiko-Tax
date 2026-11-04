@@ -84,6 +84,8 @@ def _set_gateway_env(monkeypatch: pytest.MonkeyPatch, registry_path: Path) -> No
     monkeypatch.setenv("ZTAX_GATEWAY_ADDRESS", "127.0.0.1:0")
     monkeypatch.setenv("ZTAX_GATEWAY_INSECURE_LOCAL", "true")
     monkeypatch.setenv("ZTAX_ENVIRONMENT", "development")
+    profiles = Path(__file__).resolve().parent.parent / "config" / "prompt_profiles.live-demo.json"
+    monkeypatch.setenv("ZTAX_GATEWAY_PROMPT_PROFILES", str(profiles))
 
 
 class _FakeGRPCServer:

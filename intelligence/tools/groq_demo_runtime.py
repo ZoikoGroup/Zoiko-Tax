@@ -28,19 +28,25 @@ name that silently moves is not a model the operator actually reviewed.
 
 from __future__ import annotations
 
+import copy
+import hashlib
 import json
 import logging
 import os
 import urllib.error
 import urllib.request
 
-from ztax_gateway.runtime import Result, Route, RuntimeUnavailableError
+from ztax_gateway.governance import UseCaseRegistry
+from ztax_gateway.production_gates import PromptProfileRegistry
+from ztax_gateway.runtime import Result, Route, RoutingTable, RuntimeUnavailableError
 from ztax_gateway.wire import Call, Kind
 
 __all__: list[str] = [
     "GroqDemoConfigError",
     "GroqDemoRuntime",
     "build_request",
+    "permitted_kinds",
+    "system_prompt_for",
 ]
 
 log = logging.getLogger("ztax_gateway.groq_demo_runtime")
@@ -138,6 +144,14 @@ _REPORT_EXPLANATION_SYSTEM_PROMPT = (
 )
 
 
+# With a prompt registry, a route that sends the generic per-kind prompt may
+# receive only this kind: its profile pins exactly one system prompt, and the
+# other kinds' prompts differ from it. Fixed text; never echoes input or prompt.
+_KIND_REFUSED = "groq demo runtime: this route does not accept that kind"
+_NO_PROFILE = "groq demo runtime: no prompt profile for this route"
+_PINNED_KIND = Kind.CLASSIFICATION_PROPOSAL
+
+
 class GroqDemoConfigError(ValueError):
     """GROQ_API_KEY or GROQ_MODEL is missing or names a floating alias.
 
@@ -175,6 +189,29 @@ def _resolve_config() -> tuple[str, str]:
     return api_key, model
 
 
+def system_prompt_for(use_case_id: str, kind: Kind) -> str:
+    """The system prompt sent for *use_case_id* and *kind*. Pure.
+
+    The three report-explanation use cases send one prompt whatever the kind;
+    every other use case sends the generic prompt for its kind.
+    """
+    if use_case_id in _REPORT_EXPLANATION_USE_CASES:
+        return _REPORT_EXPLANATION_SYSTEM_PROMPT
+    return _SYSTEM_PROMPTS[kind]
+
+
+def permitted_kinds(use_case_id: str) -> tuple[Kind, ...]:
+    """Kinds a route may receive when a prompt registry is in force.
+
+    The explain routes send one prompt for every kind, so every kind is
+    allowed. Any other route is pinned to ``CLASSIFICATION_PROPOSAL``, the one
+    kind whose prompt its profile holds.
+    """
+    if use_case_id in _REPORT_EXPLANATION_USE_CASES:
+        return tuple(Kind)
+    return (_PINNED_KIND,)
+
+
 def build_request(model: str, api_key: str, call: Call) -> urllib.request.Request:
     """Build the HTTPS request for one call. Pure -- makes no network call.
 
@@ -182,11 +219,10 @@ def build_request(model: str, api_key: str, call: Call) -> urllib.request.Reques
     the wire either). The API key appears only in the Authorization header
     of the returned Request object, never in a log or print statement.
     """
+    system = system_prompt_for(call.governance.use_case, call.kind)
     if call.governance.use_case in _REPORT_EXPLANATION_USE_CASES:
-        system = _REPORT_EXPLANATION_SYSTEM_PROMPT
         max_tokens = _REPORT_EXPLANATION_MAX_TOKENS
     else:
-        system = _SYSTEM_PROMPTS[call.kind]
         max_tokens = _MAX_TOKENS
     user = call.input.decode("utf-8", errors="replace")
     payload = {
@@ -287,8 +323,39 @@ class GroqDemoRuntime:
     alias.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, prompt_registry: PromptProfileRegistry | None = None) -> None:
         self._api_key, self._model = _resolve_config()
+        # When given, every call is checked against the route's profile and the
+        # kinds the route may receive. When None, behaviour is unchanged.
+        self._prompts = prompt_registry
+
+    def with_prompt_registry(self, prompt_registry: PromptProfileRegistry) -> GroqDemoRuntime:
+        """A copy of this runtime (same key and model) that enforces *prompt_registry*."""
+        clone = copy.copy(self)
+        clone._prompts = prompt_registry
+        return clone
+
+    def verify_prompts(self, use_cases: UseCaseRegistry, routes: RoutingTable) -> None:
+        """Startup check: the text this runtime sends hashes to the route's profile.
+
+        For every route and every kind it may receive, the system prompt must
+        hash to the ``content_hash`` of the profile named by
+        ``route.prompt_profile``. Errors name the route label only, never any
+        prompt text.
+        """
+        if self._prompts is None:
+            raise GroqDemoConfigError("groq demo runtime: no prompt registry to verify against")
+        for use_case_id in use_cases.ids():
+            label = routes.route(use_case_id).prompt_profile
+            profile = self._prompts.get(label)
+            if profile is None:
+                raise GroqDemoConfigError(f"no prompt profile for route {label!r}")
+            for kind in permitted_kinds(use_case_id):
+                text = system_prompt_for(use_case_id, kind)
+                if hashlib.sha256(text.encode("utf-8")).hexdigest() != profile.content_hash:
+                    raise GroqDemoConfigError(
+                        f"prompt profile does not match the runtime prompt for route {label!r}"
+                    )
 
     def run(self, route: Route, call: Call) -> Result:
         """Run one permitted call against the real, pinned Groq model.
@@ -303,6 +370,12 @@ class GroqDemoRuntime:
         refusal is diagnosed by the first _LOG_SNIPPET_CHARS characters of
         the raw reply, which go to this module's logger at DEBUG only.
         """
+        if self._prompts is not None:
+            # Refused before any request is built or sent.
+            if self._prompts.get(route.prompt_profile) is None:
+                raise RuntimeUnavailableError(_NO_PROFILE)
+            if call.kind not in permitted_kinds(call.governance.use_case):
+                raise RuntimeUnavailableError(_KIND_REFUSED)
         request = build_request(self._model, self._api_key, call)
         try:
             with urllib.request.urlopen(request, timeout=_TIMEOUT_SECONDS) as response:
