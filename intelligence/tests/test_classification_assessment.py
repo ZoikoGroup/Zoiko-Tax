@@ -48,9 +48,11 @@ Real-classifier tests (tmp Markdown ontology, real Classifier):
 
 from __future__ import annotations
 
+import json
 import math
 import random
 from dataclasses import FrozenInstanceError
+from datetime import date
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -66,6 +68,11 @@ from ztax_gateway.classification_assessment import (
     AssessmentRoute,
     assess_candidates,
     assess_record,
+)
+from ztax_gateway.ontology_guard import (
+    ApprovedOntologyList,
+    OntologyGuardError,
+    load_approved_list,
 )
 
 # ---------------------------------------------------------------------------
@@ -784,3 +791,192 @@ def test_assess_record_delegates_to_assess_candidates(tmp_path: Path) -> None:
     via_record = assess_record(record, max_top_rank=0.0, min_margin=0.0)
 
     assert direct == via_record
+
+
+# ---------------------------------------------------------------------------
+# WP7 Ontology Guard hook tests
+# (Synthetic fixture list — not real tax content)
+# ---------------------------------------------------------------------------
+
+_GUARD_CODE = "ontology:fixture/guard/alpha"
+_GUARD_CODE_B = "ontology:fixture/guard/beta"
+_GUARD_FROM = date(2024, 1, 1)
+_GUARD_TO = date(2026, 12, 31)
+_GUARD_AS_OF = date(2025, 6, 15)
+
+
+def _make_guard_list(
+    code: str = _GUARD_CODE,
+    effective_from: str = "2024-01-01",
+    effective_to: str | None = "2026-12-31",
+) -> ApprovedOntologyList:
+    entry: dict[str, object] = {"code": code, "effective_from": effective_from}
+    if effective_to is not None:
+        entry["effective_to"] = effective_to
+    payload = json.dumps({"list_version": "guard-fixture-v1", "approved": [entry]})
+    return load_approved_list(payload)
+
+
+# -- no list: behaviour unchanged ------------------------------------------
+
+
+def test_guard_no_list_propose_unchanged() -> None:
+    """When approved_list is None the guard is bypassed entirely."""
+    result = assess_candidates(
+        [(_GUARD_CODE, -20.0)],
+        max_top_rank=0.0,
+        min_margin=0.0,
+    )
+    assert result.route == AssessmentRoute.PROPOSE
+    assert result.top_class == _GUARD_CODE
+
+
+def test_guard_no_list_abstain_unchanged() -> None:
+    """When approved_list is None a weak candidate still abstains normally."""
+    result = assess_candidates(
+        [(_GUARD_CODE, 100.0)],
+        max_top_rank=0.0,
+        min_margin=0.0,
+    )
+    assert result.route == AssessmentRoute.ABSTAIN
+    assert result.reason == AssessmentReason.TOP_TOO_WEAK
+
+
+# -- list without as_of raises (fail closed) --------------------------------
+
+
+def test_guard_list_without_as_of_raises() -> None:
+    """approved_list provided but as_of=None must raise OntologyGuardError."""
+    lst = _make_guard_list()
+    with pytest.raises(OntologyGuardError):
+        assess_candidates(
+            [(_GUARD_CODE, -20.0)],
+            max_top_rank=0.0,
+            min_margin=0.0,
+            approved_list=lst,
+        )
+
+
+# -- ALLOWED: normal assessment proceeds -----------------------------------
+
+
+def test_guard_allowed_code_proceeds_to_propose() -> None:
+    """ALLOWED code proceeds through normal assessment -> PROPOSE."""
+    lst = _make_guard_list()
+    result = assess_candidates(
+        [(_GUARD_CODE, -20.0)],
+        max_top_rank=0.0,
+        min_margin=0.0,
+        approved_list=lst,
+        as_of=_GUARD_AS_OF,
+    )
+    assert result.route == AssessmentRoute.PROPOSE
+    assert result.top_class == _GUARD_CODE
+
+
+# -- UNKNOWN verdict -> ABSTAIN / UNKNOWN_CODE and code not carried ----------
+
+
+def test_guard_unknown_code_abstains() -> None:
+    """Code not in the approved list -> ABSTAIN with UNKNOWN_CODE reason."""
+    lst = _make_guard_list()
+    result = assess_candidates(
+        [("ontology:fixture/not-in-list", -20.0)],
+        max_top_rank=0.0,
+        min_margin=0.0,
+        approved_list=lst,
+        as_of=_GUARD_AS_OF,
+    )
+    assert result.route == AssessmentRoute.ABSTAIN
+    assert result.reason == AssessmentReason.UNKNOWN_CODE
+    # The refused code must not appear in the result.
+    assert result.top_class is None
+
+
+def test_guard_unknown_code_top_class_is_none() -> None:
+    """The refused code is never carried as top_class after UNKNOWN_CODE abstain."""
+    lst = _make_guard_list()
+    refused = "ontology:fixture/refused"
+    result = assess_candidates(
+        [(refused, -20.0)],
+        max_top_rank=0.0,
+        min_margin=0.0,
+        approved_list=lst,
+        as_of=_GUARD_AS_OF,
+    )
+    assert result.top_class is None
+    assert result.top_rank is None
+
+
+# -- NOT_YET_EFFECTIVE verdict -> ABSTAIN -----------------------------------
+
+
+def test_guard_not_yet_effective_abstains() -> None:
+    """Code present but as_of is before effective_from -> ABSTAIN / NOT_YET_EFFECTIVE."""
+    lst = _make_guard_list()
+    before_effective = date(2023, 12, 31)
+    result = assess_candidates(
+        [(_GUARD_CODE, -20.0)],
+        max_top_rank=0.0,
+        min_margin=0.0,
+        approved_list=lst,
+        as_of=before_effective,
+    )
+    assert result.route == AssessmentRoute.ABSTAIN
+    assert result.reason == AssessmentReason.NOT_YET_EFFECTIVE
+    assert result.top_class is None
+
+
+# -- EXPIRED verdict -> ABSTAIN --------------------------------------------
+
+
+def test_guard_expired_code_abstains() -> None:
+    """Code present but as_of is after effective_to -> ABSTAIN / EXPIRED."""
+    lst = _make_guard_list()
+    after_expiry = date(2027, 1, 1)
+    result = assess_candidates(
+        [(_GUARD_CODE, -20.0)],
+        max_top_rank=0.0,
+        min_margin=0.0,
+        approved_list=lst,
+        as_of=after_expiry,
+    )
+    assert result.route == AssessmentRoute.ABSTAIN
+    assert result.reason == AssessmentReason.EXPIRED
+    assert result.top_class is None
+
+
+# -- assess_record also accepts the guard parameters -----------------------
+
+
+def test_guard_assess_record_no_list_unchanged(tmp_path: Path) -> None:
+    """assess_record with no approved_list works identically to before."""
+    classifier = _make_classifier_for(tmp_path, _CLEAR_ONTOLOGY)
+    provenance, registry = _make_provenance_and_registry()
+    record = classifier.classify(
+        sku_description="mobile data plan",
+        provenance=provenance,
+        registry=registry,
+        top_k=3,
+    )
+    result = assess_record(record, max_top_rank=0.0, min_margin=0.0)
+    assert result.route in (
+        AssessmentRoute.PROPOSE,
+        AssessmentRoute.REVIEW_AMBIGUOUS,
+        AssessmentRoute.ABSTAIN,
+    )
+
+
+def test_guard_assess_record_list_without_as_of_raises(tmp_path: Path) -> None:
+    """assess_record with approved_list but no as_of raises OntologyGuardError."""
+    classifier = _make_classifier_for(tmp_path, _CLEAR_ONTOLOGY)
+    provenance, registry = _make_provenance_and_registry()
+    record = classifier.classify(
+        sku_description="mobile data plan",
+        provenance=provenance,
+        registry=registry,
+        top_k=3,
+    )
+    lst = _make_guard_list()
+    with pytest.raises(OntologyGuardError):
+        assess_record(record, max_top_rank=0.0, min_margin=0.0, approved_list=lst)
