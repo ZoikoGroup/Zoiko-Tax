@@ -1,11 +1,8 @@
 name: Deploy to the zoikotax VM
 
-# A commit is deployed only after the repository's own "CI" workflow has passed on main.
-# "Run workflow" deploys the latest main by hand ("force" redoes backend and frontend).
+# Runs on every push to main (that is, every merge). "Run workflow" redeploys the latest main by hand.
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
+  push:
     branches: [main]
   workflow_dispatch:
     inputs:
@@ -23,7 +20,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -33,7 +30,7 @@ jobs:
           SSH_USER: ${{ secrets.GCP_SSH_USER }}
           SSH_KEY: ${{ secrets.GCP_SSH_KEY }}
           KNOWN_HOSTS: ${{ secrets.GCP_SSH_KNOWN_HOSTS }}
-          SHA: ${{ github.event.workflow_run.head_sha }}
+          SHA: ${{ github.event_name == 'push' && github.sha || '' }}
           FORCE: ${{ inputs.force && '1' || '0' }}
         run: |
           set -euo pipefail
