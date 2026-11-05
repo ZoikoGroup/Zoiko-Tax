@@ -213,6 +213,22 @@ export const api = {
   changePassword: (currentPassword: string, newPassword: string): Promise<void> =>
     request<void>('POST', '/v1/auth/password', { currentPassword, newPassword }),
 
+  // Always resolves for a well-formed request: whether the account exists is
+  // not something the cell tells anyone.
+  requestPasswordReset: (tenant: string, email: string): Promise<void> =>
+    request<void>('POST', '/v1/auth/password-reset', { tenant, email }),
+
+  setPasswordWithLink: (token: string, password: string): Promise<{ tenant: string; email: string }> =>
+    request<{ tenant: string; email: string }>('POST', '/v1/auth/password-link', { token, password }),
+
+  // company is omitted rather than empty, as createUser omits password.
+  submitContact: (input: {
+    name: string
+    email: string
+    company?: string | undefined
+    message: string
+  }): Promise<void> => request<void>('POST', '/v1/contact', input),
+
   capabilities: (): Promise<Capabilities> => request<Capabilities>('GET', '/v1/capabilities'),
 
   listUsers: (): Promise<{ users: User[] }> => request<{ users: User[] }>('GET', '/v1/admin/users'),
@@ -226,6 +242,9 @@ export const api = {
     roles: Role[]
     password?: string | undefined
   }): Promise<User> => request<User>('POST', '/v1/admin/users', input),
+
+  sendInvitation: (userId: string): Promise<void> =>
+    request<void>('POST', `/v1/admin/users/${encodeURIComponent(userId)}/invitation`),
 
   setUserStatus: (userId: string, status: UserStatus): Promise<void> =>
     request<void>('POST', `/v1/admin/users/${encodeURIComponent(userId)}/status`, { status }),
