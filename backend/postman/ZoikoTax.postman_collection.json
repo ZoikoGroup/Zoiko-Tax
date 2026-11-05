@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:02c4adb0e0184e3c9b378367114ef691e1ea8180376bcc37ce38c7350b1bb8de`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:e2d8afa4fc879c8bbedcb88ec1092aa0809dc0be3bf8db317948a68c058fed87`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -597,6 +597,46 @@
                   "  pm.expect(pm.response.text()).to.not.match(/\"(password|verifier|salt|hash|argon)/i);",
                   "});",
                   "pm.collectionVariables.set('userId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/admin/users/{userId}/invitation — Email an invitation to set a password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/admin/users/{{userId}}/invitation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "admin",
+                "users",
+                "{{userId}}",
+                "invitation"
+              ]
+            },
+            "description": "Email an invitation to set a password\n\n`ADMIN` only. Emails a one-time link that lets an invited user — one\ncreated without a password — set theirs and activate the account. Sending\nagain re-sends: the new link spends the old one. A link expires after 72\nhours.\n\n409 when the user is not invited, because they already have a password;\n503 when the cell sends no mail, or the mail server refused the message."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('sendInvitation returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([204]);",
+                  "});"
                 ]
               }
             }
@@ -9552,6 +9592,233 @@
       ]
     },
     {
+      "name": "97 · Sends email — run deliberately, not as part of a pass",
+      "description": "Each of these makes the cell send a real message: a password reset to the example address, an enquiry to the cell's contact inbox. `setPasswordWithLink` presents the example link, which matches nothing, so it answers `403` `CREDENTIAL_LINK_INVALID`. A cell with no mail configured answers `503` to all three, and repeating them quickly answers `429`.\n\n`sendInvitation` in `04` emails too, but only to the user that folder just created.",
+      "item": [
+        {
+          "name": "POST /v1/auth/password-reset — Email a password-reset link",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant\": \"{{tenantSlug}}\",\n  \"email\": \"analyst@acme.example\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/password-reset",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "password-reset"
+              ]
+            },
+            "description": "Email a password-reset link\n\nEmails a one-time link that sets a new password to the account at this\ntenant and address, if there is one. An invited user who never set a\npassword is sent a fresh invitation instead; a disabled account is sent\nnothing.\n\n**The answer is always 202**, whether or not the account exists: which\naccounts exist is not the caller's to learn. The message is sent off the\nrequest path for the same reason, so its round trip to the mail server\ndoes not time the answer. A reset link expires after an hour and works\nonce, and issuing one spends every earlier one.\n\nAnswers 503 when the cell sends no mail, and 429 when one client or one\naddress asks too often."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('requestPasswordReset returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([202]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/auth/password-link — Set a password from an emailed link",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"q9Zl3m0rYV8c2oQF6wq1n0Cw5hJ1tKx8bF3pTqYk2sA\",\n  \"password\": \"{{newPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/password-link",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "password-link"
+              ]
+            },
+            "description": "Set a password from an emailed link\n\nRedeems an invitation or reset link: sets the password, activates an\ninvited account, spends the link and **revokes every session the user\nholds**. It opens no session; the caller signs in with the new password,\nand the response names the tenant and address to sign in with.\n\nAn unknown, expired, superseded or already-used link is one answer,\n`CREDENTIAL_LINK_INVALID`: the holder can do nothing different about any\nof them but ask for a new one."
+          },
+          "response": [
+            {
+              "name": "200 · An invitation accepted",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/auth/password-link",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "auth",
+                    "password-link"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"tenant\": \"acme\",\n  \"email\": \"analyst@acme.example\"\n}"
+            },
+            {
+              "name": "403 · An expired link",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/auth/password-link",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "auth",
+                    "password-link"
+                  ]
+                }
+              },
+              "status": "403",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/problem+json"
+                }
+              ],
+              "body": "{\n  \"type\": \"https://errors.zoikotax.com/v1/credential-link-invalid\",\n  \"title\": \"Credential link invalid\",\n  \"status\": 403,\n  \"detail\": \"The link is not valid, has expired or has already been used. Ask for a new one.\",\n  \"instance\": \"/v1/auth/password-link\",\n  \"ztx_reason_code\": \"CREDENTIAL_LINK_INVALID\",\n  \"ztx_request_id\": \"01JBQ0S9C3X8Q1H6M2KX5R7F4Q\",\n  \"ztx_retryable\": false\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('setPasswordWithLink returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/contact — Send a message to ZoikoTax",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Grace Hopper\",\n  \"email\": \"grace@example.com\",\n  \"company\": \"Example Telecom\",\n  \"message\": \"We operate in twelve EU markets and would like a demonstration.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/contact",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "contact"
+              ]
+            },
+            "description": "Send a message to ZoikoTax\n\nThe public contact form. The message is emailed to the cell's inbox with\n`Reply-To` set to the sender, and **nothing is stored**: the cell keeps no\ncopy of an enquiry it has no other use for.\n\nAnswers 503 when the cell has no inbox configured or the mail server\nrefused the message, and 429 when one client sends too often."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('submitContact returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([202]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.variables.get('runMail') !== 'true') {",
+              "  console.info('skipped: set runMail=true to send these messages');",
+              "  pm.execution.skipRequest();",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "98 · Destructive — run deliberately, not as part of a pass",
       "description": "`changePassword` revokes every session for the subject, including the calling one — a password change is what you do when a credential is believed compromised, and leaving other sessions alive would defeat it.\n\nIt also leaves the bootstrap administrator on `{{newPassword}}`, which the collection's `adminPassword` no longer names. Run it when you mean to, then update `adminPassword` or re-bootstrap the tenant.",
       "item": [
@@ -10004,7 +10271,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:02c4adb0e0184e3c9b378367114ef691e1ea8180376bcc37ce38c7350b1bb8de",
+      "value": "sha256:e2d8afa4fc879c8bbedcb88ec1092aa0809dc0be3bf8db317948a68c058fed87",
       "type": "string"
     }
   ]

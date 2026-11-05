@@ -103,6 +103,7 @@ const FOLDERS = [
     operations: [
       "listUsers",
       "createUser",
+      "sendInvitation",
       "grantRole",
       "setUserStatus",
       "listSessions",
@@ -221,6 +222,20 @@ const FOLDERS = [
     description:
       "After everything that needs the session this ends — including the conformance folders `05` and `07`, which sit before it for that reason.",
     operations: ["signOut"],
+  },
+  {
+    name: "97 · Sends email — run deliberately, not as part of a pass",
+    description:
+      "Each of these makes the cell send a real message: a password reset to the example address, an enquiry to the cell's contact inbox. `setPasswordWithLink` presents the example link, which matches nothing, so it answers `403` `CREDENTIAL_LINK_INVALID`. A cell with no mail configured answers `503` to all three, and repeating them quickly answers `429`.\n\n`sendInvitation` in `04` emails too, but only to the user that folder just created.",
+    operations: ["requestPasswordReset", "setPasswordWithLink", "submitContact"],
+    // Skipped unless asked for: a Collection Runner pass should not fill
+    // somebody's inbox.
+    prerequest: [
+      "if (pm.variables.get('runMail') !== 'true') {",
+      "  console.info('skipped: set runMail=true to send these messages');",
+      "  pm.execution.skipRequest();",
+      "}",
+    ],
   },
   {
     name: "98 · Destructive — run deliberately, not as part of a pass",

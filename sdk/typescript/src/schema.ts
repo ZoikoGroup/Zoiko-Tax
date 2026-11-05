@@ -134,6 +134,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/auth/password-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Email a password-reset link
+         * @description Emails a one-time link that sets a new password to the account at this
+         *     tenant and address, if there is one. An invited user who never set a
+         *     password is sent a fresh invitation instead; a disabled account is sent
+         *     nothing.
+         *
+         *     **The answer is always 202**, whether or not the account exists: which
+         *     accounts exist is not the caller's to learn. The message is sent off the
+         *     request path for the same reason, so its round trip to the mail server
+         *     does not time the answer. A reset link expires after an hour and works
+         *     once, and issuing one spends every earlier one.
+         *
+         *     Answers 503 when the cell sends no mail, and 429 when one client or one
+         *     address asks too often.
+         */
+        post: operations["requestPasswordReset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/password-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set a password from an emailed link
+         * @description Redeems an invitation or reset link: sets the password, activates an
+         *     invited account, spends the link and **revokes every session the user
+         *     holds**. It opens no session; the caller signs in with the new password,
+         *     and the response names the tenant and address to sign in with.
+         *
+         *     An unknown, expired, superseded or already-used link is one answer,
+         *     `CREDENTIAL_LINK_INVALID`: the holder can do nothing different about any
+         *     of them but ask for a new one.
+         */
+        post: operations["setPasswordWithLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a message to ZoikoTax
+         * @description The public contact form. The message is emailed to the cell's inbox with
+         *     `Reply-To` set to the sender, and **nothing is stored**: the cell keeps no
+         *     copy of an enquiry it has no other use for.
+         *
+         *     Answers 503 when the cell has no inbox configured or the mail server
+         *     refused the message, and 429 when one client sends too often.
+         */
+        post: operations["submitContact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/tenant": {
         parameters: {
             query?: never;
@@ -197,6 +281,32 @@ export interface paths {
          *     whose access has not been withdrawn.
          */
         post: operations["setUserStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users/{userId}/invitation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Email an invitation to set a password
+         * @description `ADMIN` only. Emails a one-time link that lets an invited user — one
+         *     created without a password — set theirs and activate the account. Sending
+         *     again re-sends: the new link spends the old one. A link expires after 72
+         *     hours.
+         *
+         *     409 when the user is not invited, because they already have a password;
+         *     503 when the cell sends no mail, or the mail server refused the message.
+         */
+        post: operations["sendInvitation"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2994,6 +3104,59 @@ export interface components {
              * @example a considerably longer passphrase than that one
              */
             newPassword: string;
+        };
+        /** PasswordResetRequest */
+        PasswordResetRequest: {
+            /**
+             * @description The tenant slug.
+             * @example acme
+             */
+            tenant: string;
+            /**
+             * Format: email
+             * @example analyst@acme.example
+             */
+            email: string;
+        };
+        /** SetPasswordWithLinkRequest */
+        SetPasswordWithLinkRequest: {
+            /**
+             * @description The secret from the emailed link, as it appears after `#set-password=`.
+             * @example q9Zl3m0rYV8c2oQF6wq1n0Cw5hJ1tKx8bF3pTqYk2sA
+             */
+            token: string;
+            /**
+             * Format: password
+             * @example a considerably longer passphrase than that one
+             */
+            password: string;
+        };
+        /** PasswordSet */
+        PasswordSet: {
+            /**
+             * @description The tenant slug to sign in to.
+             * @example acme
+             */
+            tenant: string;
+            /**
+             * Format: email
+             * @example analyst@acme.example
+             */
+            email: string;
+        };
+        /** ContactRequest */
+        ContactRequest: {
+            /** @example Grace Hopper */
+            name: string;
+            /**
+             * Format: email
+             * @example grace@example.com
+             */
+            email: string;
+            /** @example Example Telecom */
+            company?: string;
+            /** @example We operate in twelve EU markets and would like a demonstration. */
+            message: string;
         };
         /** CreateUserRequest */
         CreateUserRequest: {
@@ -6231,6 +6394,23 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /**
+         * @description Too many requests from this client or for this account. The request was
+         *     not applied; `Retry-After` says when to try again.
+         */
+        RateLimited: {
+            headers: {
+                /**
+                 * @description Seconds to wait before retrying.
+                 * @example 600
+                 */
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
     };
     parameters: {
         /**
@@ -6503,6 +6683,98 @@ export interface operations {
             503: components["responses"]["Unavailable"];
         };
     };
+    requestPasswordReset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted. If the account exists, a link is on its way. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Validation"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    setPasswordWithLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetPasswordWithLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description The password is set. Sign in with it. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PasswordSet"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            /**
+             * @description The link cannot set a password — `CREDENTIAL_LINK_INVALID` — or the
+             *     account or its tenant has been disabled since it was sent.
+             */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    submitContact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactRequest"];
+            };
+        };
+        responses: {
+            /** @description The message is sent. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["Validation"];
+            429: components["responses"]["RateLimited"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
     getTenant: {
         parameters: {
             query?: never;
@@ -6616,6 +6888,36 @@ export interface operations {
                 content?: never;
             };
             400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    sendInvitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The user identifier.
+                 * @example ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C
+                 */
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The invitation is sent. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];

@@ -3905,6 +3905,14 @@ type ComponentMapping struct {
 	Slot ZoikoSlot `json:"slot"`
 }
 
+// ContactRequest defines model for ContactRequest.
+type ContactRequest struct {
+	Company *string `json:"company,omitempty"`
+	Email   string  `json:"email"`
+	Message string  `json:"message"`
+	Name    string  `json:"name"`
+}
+
 // ContentCapability The rule bundle this cell is running. Absent where no bundle is loaded.
 //
 // The digest is here because it is what a replay names: quoting the bundle
@@ -6087,6 +6095,22 @@ type Outcome string
 // PartyReference A party's reference in the caller's systems. Not interpreted; a certificate's holder must equal the customer's.
 type PartyReference = string
 
+// PasswordResetRequest defines model for PasswordResetRequest.
+type PasswordResetRequest struct {
+	Email string `json:"email"`
+
+	// Tenant The tenant slug.
+	Tenant string `json:"tenant"`
+}
+
+// PasswordSet defines model for PasswordSet.
+type PasswordSet struct {
+	Email string `json:"email"`
+
+	// Tenant The tenant slug to sign in to.
+	Tenant string `json:"tenant"`
+}
+
 // PaymentEvidence The kind of proof a provider status carries (ZTAX-REM-001 §18).
 type PaymentEvidence string
 
@@ -7228,6 +7252,14 @@ type SessionSummary struct {
 	UserID UserID `json:"userId"`
 }
 
+// SetPasswordWithLinkRequest defines model for SetPasswordWithLinkRequest.
+type SetPasswordWithLinkRequest struct {
+	Password string `json:"password"`
+
+	// Token The secret from the emailed link, as it appears after `#set-password=`.
+	Token string `json:"token"`
+}
+
 // SetUserStatusRequest defines model for SetUserStatusRequest.
 type SetUserStatusRequest struct {
 	// Status `INVITED` is a user who exists and has no password, and therefore cannot
@@ -8074,6 +8106,12 @@ type Internal = Problem
 // fetched through an audited path.
 type NotFound = Problem
 
+// RateLimited RFC 9457 Problem Details, with the `ztx_` extensions from ADR-0016 §2.5.
+// The extensions carry identifiers rather than data: an error that needs
+// data to be understood names a decision or a request, and the data is
+// fetched through an audited path.
+type RateLimited = Problem
+
 // Unauthenticated RFC 9457 Problem Details, with the `ztx_` extensions from ADR-0016 §2.5.
 // The extensions carry identifiers rather than data: an error that needs
 // data to be understood names a decision or a request, and the data is
@@ -8267,6 +8305,12 @@ type SetUserStatusJSONRequestBody = SetUserStatusRequest
 // ChangePasswordJSONRequestBody defines body for ChangePassword for application/json ContentType.
 type ChangePasswordJSONRequestBody = ChangePasswordRequest
 
+// SetPasswordWithLinkJSONRequestBody defines body for SetPasswordWithLink for application/json ContentType.
+type SetPasswordWithLinkJSONRequestBody = SetPasswordWithLinkRequest
+
+// RequestPasswordResetJSONRequestBody defines body for RequestPasswordReset for application/json ContentType.
+type RequestPasswordResetJSONRequestBody = PasswordResetRequest
+
 // SignInJSONRequestBody defines body for SignIn for application/json ContentType.
 type SignInJSONRequestBody = SignInRequest
 
@@ -8299,6 +8343,9 @@ type ReviewCompliancePackageJSONRequestBody = ComplianceReviewRequest
 
 // SubmitCompliancePackageJSONRequestBody defines body for SubmitCompliancePackage for application/json ContentType.
 type SubmitCompliancePackageJSONRequestBody = ComplianceSubmissionRequest
+
+// SubmitContactJSONRequestBody defines body for SubmitContact for application/json ContentType.
+type SubmitContactJSONRequestBody = ContactRequest
 
 // IssueDocumentJSONRequestBody defines body for IssueDocument for application/json ContentType.
 type IssueDocumentJSONRequestBody = DocumentRequest
