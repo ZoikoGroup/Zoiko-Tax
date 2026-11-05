@@ -264,3 +264,37 @@
   font-size: 13px;
   color: #7f1d1d;
 }
+
+/* CitedRows: collapsible deterministic register details (Part B, WP12) */
+.rd-cited-rows {
+  margin: 10px 0 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 0 10px;
+}
+
+.rd-cited-rows summary {
+  cursor: pointer;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+  user-select: none;
+}
+
+.rd-cited-rows-heading {
+  margin: 4px 0 8px;
+}
+
+.rd-cited-row-block {
+  margin: 8px 0 12px;
+}
+
+.rd-cited-row-id {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.rd-cited-row-table {
+  width: 100%;
+}
