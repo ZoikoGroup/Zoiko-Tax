@@ -130,6 +130,38 @@ type AuditRepository interface {
 	ListForSubject(ctx context.Context, subjectType, subjectID string, limit int) ([]AuditRecord, error)
 }
 
+// CredentialTokenRepository stores the one-time links that set a password.
+type CredentialTokenRepository interface {
+	// Issue stores t and spends every unspent token its user holds for the
+	// same purpose, so only the newest link in anyone's inbox works.
+	Issue(ctx context.Context, t identity.CredentialToken) error
+	// ByDigest resolves a presented token. Like a session cookie, a link names
+	// no tenant: a digest resolves to exactly one token or to none, and the
+	// row says whose it is.
+	ByDigest(ctx context.Context, digest []byte) (identity.CredentialToken, error)
+	// Spend marks the token used, within the context's tenant. It reports
+	// false when the token was already spent, so two requests racing with
+	// the same link cannot both set a password.
+	Spend(ctx context.Context, digest []byte, at time.Time) (bool, error)
+}
+
+// Message is one plain-text email. The sender is the mailer's own
+// configuration, never the caller's: nothing a request carries chooses whose
+// name a message goes out under.
+type Message struct {
+	To      string
+	ReplyTo string
+	Subject string
+	Text    string
+}
+
+// Mailer sends email. A send is not transactional: callers send after the
+// change they report has committed, so a message never announces something
+// that rolled back.
+type Mailer interface {
+	Send(ctx context.Context, m Message) error
+}
+
 // ---------------------------------------------------------------------------
 // evidence
 // ---------------------------------------------------------------------------
