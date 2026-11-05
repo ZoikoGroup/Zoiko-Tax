@@ -131,8 +131,10 @@ func writeProblem(w http.ResponseWriter, r *http.Request, log *slog.Logger, err 
 // are the bytes the first caller was given.
 func writeProblemBytes(w http.ResponseWriter, status int, body []byte, reason errs.ReasonCode) {
 	// Retry-After is what makes a 503 or a 429 actionable rather than a hint.
-	if status == http.StatusServiceUnavailable || status == http.StatusTooManyRequests ||
-		reason == errs.ReasonRequestInProgress {
+	// A caller that knows the interval — a rate limit's window — has set it
+	// already, and that answer is the more exact one.
+	if (status == http.StatusServiceUnavailable || status == http.StatusTooManyRequests ||
+		reason == errs.ReasonRequestInProgress) && w.Header().Get("Retry-After") == "" {
 		w.Header().Set("Retry-After", "2")
 	}
 	w.Header().Set("Content-Type", "application/problem+json")

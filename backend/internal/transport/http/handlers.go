@@ -199,6 +199,13 @@ func (rt *Router) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, r, rt.log, err)
 		return
 	}
+	// A user created with a password can sign in now, so they are greeted
+	// now. One created without is greeted when the invitation activates them.
+	if user.Status == identity.UserActive && rt.Credentials != nil {
+		if welcome, err := rt.Credentials.Welcome(r.Context(), user); err == nil {
+			rt.sendLater(r, welcome, "welcome")
+		}
+	}
 	writeJSON(w, r, rt.log, http.StatusCreated, toUser(user))
 }
 
