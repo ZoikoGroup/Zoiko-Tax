@@ -198,3 +198,65 @@ func TestBootstrapExtraRolesAreDevelopmentOnly(t *testing.T) {
 		})
 	}
 }
+
+func TestMailIsConfiguredWhole(t *testing.T) {
+	whole := map[string]string{
+		"ZTAX_SMTP_ADDR":         "smtpout.secureserver.net:465",
+		"ZTAX_SMTP_USERNAME":     "info@zoikotax.com",
+		"ZTAX_SMTP_PASSWORD_REF": "local://smtp-password",
+		"ZTAX_MAIL_FROM":         "ZoikoTax <info@zoikotax.com>",
+		"ZTAX_CONTACT_TO":        "info@zoikotax.com",
+		"ZTAX_PUBLIC_URL":        "http://localhost:8080",
+	}
+	with := func(name, value string) map[string]string {
+		m := map[string]string{}
+		for k, v := range whole {
+			m[k] = v
+		}
+		m[name] = value
+		return m
+	}
+	for _, tc := range []struct {
+		name    string
+		env     map[string]string
+		wantErr string
+	}{
+		{name: "none, which is a cell that sends no mail", env: map[string]string{}},
+		{name: "all of it", env: whole},
+		{name: "no port", env: with("ZTAX_SMTP_ADDR", "smtpout.secureserver.net"), wantErr: "ZTAX_SMTP_ADDR"},
+		{name: "no password", env: with("ZTAX_SMTP_PASSWORD_REF", ""), wantErr: "ZTAX_SMTP_PASSWORD_REF"},
+		{name: "no sender", env: with("ZTAX_MAIL_FROM", ""), wantErr: "ZTAX_MAIL_FROM"},
+		{name: "a sender that is not an address", env: with("ZTAX_MAIL_FROM", "ZoikoTax"), wantErr: "ZTAX_MAIL_FROM"},
+		{name: "no base for links", env: with("ZTAX_PUBLIC_URL", ""), wantErr: "ZTAX_PUBLIC_URL"},
+		{name: "a base that is not a URL", env: with("ZTAX_PUBLIC_URL", "localhost:8080"), wantErr: "ZTAX_PUBLIC_URL"},
+		{name: "an inbox that is not an address", env: with("ZTAX_CONTACT_TO", "info"), wantErr: "ZTAX_CONTACT_TO"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			withEnv(t, tc.env)
+			cfg, err := config.Load()
+			if tc.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+					t.Fatalf("error %v; want one naming %s", err, tc.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("did not start: %v", err)
+			}
+			if cfg.SMTPAddr != tc.env["ZTAX_SMTP_ADDR"] || cfg.PublicURL != tc.env["ZTAX_PUBLIC_URL"] {
+				t.Errorf("read %q/%q", cfg.SMTPAddr, cfg.PublicURL)
+			}
+		})
+	}
+}
+
+func TestEmailedLinksAreHTTPSOutsideDevelopment(t *testing.T) {
+	withEnv(t, map[string]string{
+		"ZTAX_ENVIRONMENT":    "staging",
+		"ZTAX_SECURE_COOKIES": "true",
+		"ZTAX_PUBLIC_URL":     "http://tax.example.com",
+	})
+	if _, err := config.Load(); err == nil || !strings.Contains(err.Error(), "ZTAX_PUBLIC_URL") {
+		t.Fatalf("error %v; want plain-HTTP links refused outside development", err)
+	}
+}

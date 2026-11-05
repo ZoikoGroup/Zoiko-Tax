@@ -13,6 +13,9 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net"
+	"net/mail"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -163,6 +166,23 @@ type Config struct {
 	// global taxonomy's country profiles. It is research, never coverage;
 	// with none, the dashboard reports only the markets content covers.
 	MarketCatalogue string
+
+	// Email. SMTPAddr is the submission server as host:port: port 465 speaks
+	// TLS from the first byte, any other port must offer STARTTLS, and mail
+	// never travels in clear. SMTPPasswordRef names where the password lives —
+	// a reference resolved through internal/platform/secrets, never the
+	// password. Empty SMTPAddr is a cell that sends no mail: invitations and
+	// password resets answer 503 and the contact form is closed.
+	//
+	// MailFrom is the From header, ContactTo where the public contact form
+	// delivers, and PublicURL the address people open the app at — the base
+	// of every link a message carries, so it is required with SMTPAddr.
+	SMTPAddr        string
+	SMTPUsername    string
+	SMTPPasswordRef string
+	MailFrom        string
+	ContactTo       string
+	PublicURL       string
 }
 
 // LocalSecretPrefix is the one recognised variable family whose members are not
@@ -224,6 +244,12 @@ var known = map[string]struct {
 	"ZTAX_SEAL_KEY_ID":                  {def: ""},
 	"ZTAX_LEGAL_MATRIX":                 {def: ""},
 	"ZTAX_MARKET_CATALOGUE":             {def: ""},
+	"ZTAX_SMTP_ADDR":                    {def: ""},
+	"ZTAX_SMTP_USERNAME":                {def: ""},
+	"ZTAX_SMTP_PASSWORD_REF":            {def: ""},
+	"ZTAX_MAIL_FROM":                    {def: ""},
+	"ZTAX_CONTACT_TO":                   {def: ""},
+	"ZTAX_PUBLIC_URL":                   {def: ""},
 	"ZTAX_BOOTSTRAP_TENANT":             {def: ""},
 	"ZTAX_BOOTSTRAP_TENANT_NAME":        {def: ""},
 	"ZTAX_BOOTSTRAP_ADMIN_EMAIL":        {def: ""},
@@ -359,6 +385,13 @@ func Load() (Config, error) {
 		LegalMatrix:     get("ZTAX_LEGAL_MATRIX"),
 		MarketCatalogue: get("ZTAX_MARKET_CATALOGUE"),
 
+		SMTPAddr:        get("ZTAX_SMTP_ADDR"),
+		SMTPUsername:    get("ZTAX_SMTP_USERNAME"),
+		SMTPPasswordRef: get("ZTAX_SMTP_PASSWORD_REF"),
+		MailFrom:        get("ZTAX_MAIL_FROM"),
+		ContactTo:       get("ZTAX_CONTACT_TO"),
+		PublicURL:       get("ZTAX_PUBLIC_URL"),
+
 		BootstrapTenant:           get("ZTAX_BOOTSTRAP_TENANT"),
 		BootstrapTenantName:       get("ZTAX_BOOTSTRAP_TENANT_NAME"),
 		BootstrapAdminEmail:       get("ZTAX_BOOTSTRAP_ADMIN_EMAIL"),
@@ -444,6 +477,42 @@ func Load() (Config, error) {
 		problems = append(problems, "ZTAX_SEAL_KEYRING needs ZTAX_EVIDENCE_DIR; a seal is verified against the evidence it covers")
 	}
 
+	// A mailer half-configured would fail at the first invitation rather than
+	// at startup, and a link built on no base URL leads nowhere.
+	if c.SMTPAddr != "" {
+		if _, port, err := net.SplitHostPort(c.SMTPAddr); err != nil || port == "" {
+			problems = append(problems, fmt.Sprintf("ZTAX_SMTP_ADDR: %q is not host:port", c.SMTPAddr))
+		}
+		if c.SMTPUsername == "" || c.SMTPPasswordRef == "" {
+			problems = append(problems, "ZTAX_SMTP_ADDR needs ZTAX_SMTP_USERNAME and ZTAX_SMTP_PASSWORD_REF")
+		}
+		if c.MailFrom == "" {
+			problems = append(problems, "ZTAX_SMTP_ADDR needs ZTAX_MAIL_FROM")
+		} else if _, err := mail.ParseAddress(c.MailFrom); err != nil {
+			problems = append(problems, fmt.Sprintf("ZTAX_MAIL_FROM: %q is not an address", c.MailFrom))
+		}
+		if c.PublicURL == "" {
+			problems = append(problems, "ZTAX_SMTP_ADDR needs ZTAX_PUBLIC_URL; every link a message carries starts there")
+		}
+	}
+	if c.ContactTo != "" {
+		if _, err := mail.ParseAddress(c.ContactTo); err != nil {
+			problems = append(problems, fmt.Sprintf("ZTAX_CONTACT_TO: %q is not an address", c.ContactTo))
+		}
+	}
+	if c.PublicURL != "" {
+		u, err := url.Parse(c.PublicURL)
+		switch {
+		case err != nil || u.Host == "" || (u.Scheme != "https" && u.Scheme != "http"):
+			problems = append(problems, fmt.Sprintf("ZTAX_PUBLIC_URL: %q is not an http(s) URL", c.PublicURL))
+		case u.Scheme != "https" && c.Environment != "development":
+			// A set-password link over plain HTTP hands the token to anyone
+			// on the path.
+			problems = append(problems, fmt.Sprintf(
+				"ZTAX_PUBLIC_URL: refused as http in environment %q; emailed links carry credentials", c.Environment))
+		}
+	}
+
 	// Telemetry in clear is a development affordance for the same reason.
 	if c.OTLPInsecure && c.Environment != "development" {
 		problems = append(problems, fmt.Sprintf(
@@ -513,6 +582,10 @@ func (c Config) LogAttrs() []any {
 		"seal.key_id", c.SealKeyID,
 		"legal.matrix", c.LegalMatrix,
 		"market.catalogue", c.MarketCatalogue,
+		"smtp.addr", c.SMTPAddr,
+		"smtp.password_ref", c.SMTPPasswordRef,
+		"mail.from", c.MailFrom,
+		"public_url", c.PublicURL,
 		"known_vars", strconv.Itoa(len(known)),
 	}
 }
