@@ -461,6 +461,13 @@ export const Dashboard = ({
           setPanel({ status: 'closed' })
         }}
         onCite={cite}
+        resolveRow={(id) =>
+          fixture.obligations.find((r) => r.id === id) ??
+          fixture.payments.find((r) => r.id === id) ??
+          fixture.shadow.find((r) => r.id === id) ??
+          fixture.figures.find((r) => r.id === id) ??
+          null
+        }
       />
     </div>
   )

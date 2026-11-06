@@ -106,6 +106,8 @@ tags:
     description: Shadow assurance — another engine's results compared with ZoikoTax's decisions, component by component. Non-impact; matching a comparator is not verified correctness.
   - name: migration
     description: Migration programs — immutable source snapshots, versioned code mappings, AS_KNOWN conversion with crosswalk and reconciliation, governed exceptions and a cutover state machine.
+  - name: contact
+    description: The public contact form. Delivered to the cell's inbox by email; nothing is stored.
   - name: dashboard
     description: The Tax Command Center — read-only aggregates over the record the other surfaces write. Never a second source of any figure.
 security:
@@ -378,6 +380,158 @@ paths:
           $ref: "#/components/responses/Internal"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/auth/password-reset:
+    post:
+      operationId: requestPasswordReset
+      tags:
+        - authentication
+      summary: Email a password-reset link
+      description: |
+        Emails a one-time link that sets a new password to the account at this
+        tenant and address, if there is one. An invited user who never set a
+        password is sent a fresh invitation instead; a disabled account is sent
+        nothing.
+
+        **The answer is always 202**, whether or not the account exists: which
+        accounts exist is not the caller's to learn. The message is sent off the
+        request path for the same reason, so its round trip to the mail server
+        does not time the answer. A reset link expires after an hour and works
+        once, and issuing one spends every earlier one.
+
+        Answers 503 when the cell sends no mail, and 429 when one client or one
+        address asks too often.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetRequest"
+            examples:
+              default:
+                summary: A user who has forgotten their password
+                value:
+                  tenant: acme
+                  email: analyst@acme.example
+      responses:
+        "202":
+          description: Accepted. If the account exists, a link is on its way.
+        "400":
+          $ref: "#/components/responses/Validation"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/auth/password-link:
+    post:
+      operationId: setPasswordWithLink
+      tags:
+        - authentication
+      summary: Set a password from an emailed link
+      description: |
+        Redeems an invitation or reset link: sets the password, activates an
+        invited account, spends the link and **revokes every session the user
+        holds**. It opens no session; the caller signs in with the new password,
+        and the response names the tenant and address to sign in with.
+
+        An unknown, expired, superseded or already-used link is one answer,
+        `CREDENTIAL_LINK_INVALID`: the holder can do nothing different about any
+        of them but ask for a new one.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetPasswordWithLinkRequest"
+            examples:
+              default:
+                summary: Accepting an invitation
+                value:
+                  token: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                  password: a considerably longer passphrase than that one
+      responses:
+        "200":
+          description: The password is set. Sign in with it.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PasswordSet"
+              examples:
+                default:
+                  summary: An invitation accepted
+                  value:
+                    tenant: acme
+                    email: analyst@acme.example
+        "400":
+          $ref: "#/components/responses/Validation"
+        "403":
+          description: |
+            The link cannot set a password — `CREDENTIAL_LINK_INVALID` — or the
+            account or its tenant has been disabled since it was sent.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+              examples:
+                linkInvalid:
+                  summary: An expired link
+                  value:
+                    type: https://errors.zoikotax.com/v1/credential-link-invalid
+                    title: Credential link invalid
+                    status: 403
+                    detail: The link is not valid, has expired or has already been used. Ask for a new one.
+                    instance: /v1/auth/password-link
+                    ztx_reason_code: CREDENTIAL_LINK_INVALID
+                    ztx_request_id: 01JBQ0S9C3X8Q1H6M2KX5R7F4Q
+                    ztx_retryable: false
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/contact:
+    post:
+      operationId: submitContact
+      tags:
+        - contact
+      summary: Send a message to ZoikoTax
+      description: |
+        The public contact form. The message is emailed to the cell's inbox with
+        `Reply-To` set to the sender, and **nothing is stored**: the cell keeps no
+        copy of an enquiry it has no other use for.
+
+        Answers 503 when the cell has no inbox configured or the mail server
+        refused the message, and 429 when one client sends too often.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactRequest"
+            examples:
+              default:
+                summary: A sales enquiry
+                value:
+                  name: Grace Hopper
+                  email: grace@example.com
+                  company: Example Telecom
+                  message: We operate in twelve EU markets and would like a demonstration.
+      responses:
+        "202":
+          description: The message is sent.
+        "400":
+          $ref: "#/components/responses/Validation"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/admin/tenant:
     get:
       operationId: getTenant
@@ -541,6 +695,37 @@ paths:
           description: The status is set.
         "400":
           $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/admin/users/{userId}/invitation:
+    post:
+      operationId: sendInvitation
+      tags:
+        - administration
+      summary: Email an invitation to set a password
+      description: |
+        `ADMIN` only. Emails a one-time link that lets an invited user — one
+        created without a password — set theirs and activate the account. Sending
+        again re-sends: the new link spends the old one. A link expires after 72
+        hours.
+
+        409 when the user is not invited, because they already have a password;
+        503 when the cell sends no mail, or the mail server refused the message.
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: The invitation is sent.
         "401":
           $ref: "#/components/responses/Unauthenticated"
         "403":
@@ -8591,6 +8776,34 @@ components:
                 ztx_reason_code: DATABASE_UNAVAILABLE
                 ztx_request_id: 01JBQ0S9C3X8Q1H6M2KX5R7F4Q
                 ztx_retryable: true
+    RateLimited:
+      description: |
+        Too many requests from this client or for this account. The request was
+        not applied; `Retry-After` says when to try again.
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+          example: 600
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+          examples:
+            rateLimited:
+              summary: Too many reset requests
+              value:
+                type: https://errors.zoikotax.com/v1/rate-limited
+                title: Rate limited
+                status: 429
+                detail: Too many requests. Retry after the interval given in Retry-After.
+                instance: /v1/auth/password-reset
+                ztx_reason_code: RATE_LIMITED
+                ztx_request_id: 01JBQ0S9C3X8Q1H6M2KX5R7F4Q
+                ztx_retryable: true
   schemas:
     Problem:
       type: object
@@ -9254,6 +9467,146 @@ components:
           format: password
           minLength: 12
           example: a considerably longer passphrase than that one
+    PasswordResetRequest:
+      type: object
+      title: PasswordResetRequest
+      additionalProperties: false
+      required:
+        - tenant
+        - email
+      properties:
+        tenant:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The tenant slug.
+          example: acme
+        email:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-SUPPORT
+            retention: RET-TRANSIENT
+            redaction: REDACT
+            aiAllowed: NONE
+          type: string
+          format: email
+          example: analyst@acme.example
+    SetPasswordWithLinkRequest:
+      type: object
+      title: SetPasswordWithLinkRequest
+      additionalProperties: false
+      required:
+        - token
+        - password
+      properties:
+        token:
+          x-ztax-privacy:
+            class: P7
+            purposes:
+              - PURP-SEC
+            retention: RET-TRANSIENT
+            redaction: NO_LOG
+            aiAllowed: NONE
+            evidencePolicy: NONE
+          type: string
+          description: The secret from the emailed link, as it appears after `#set-password=`.
+          example: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+        password:
+          x-ztax-privacy:
+            class: P7
+            purposes:
+              - PURP-SEC
+            retention: RET-TRANSIENT
+            redaction: NO_LOG
+            aiAllowed: NONE
+            evidencePolicy: NONE
+          type: string
+          format: password
+          minLength: 12
+          example: a considerably longer passphrase than that one
+    PasswordSet:
+      type: object
+      title: PasswordSet
+      additionalProperties: false
+      required:
+        - tenant
+        - email
+      properties:
+        tenant:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The tenant slug to sign in to.
+          example: acme
+        email:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-SUPPORT
+            retention: RET-TRANSIENT
+            redaction: REDACT
+            aiAllowed: NONE
+          type: string
+          format: email
+          example: analyst@acme.example
+    ContactRequest:
+      type: object
+      title: ContactRequest
+      additionalProperties: false
+      required:
+        - name
+        - email
+        - message
+      properties:
+        name:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SUPPORT
+            retention: RET-TRANSIENT
+            redaction: REDACT
+            aiAllowed: NONE
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: Grace Hopper
+        email:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SUPPORT
+            retention: RET-TRANSIENT
+            redaction: REDACT
+            aiAllowed: NONE
+          type: string
+          format: email
+          example: grace@example.com
+        company:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SUPPORT
+            retention: RET-TRANSIENT
+            redaction: REDACT
+            aiAllowed: NONE
+          type: string
+          maxLength: 200
+          example: Example Telecom
+        message:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SUPPORT
+            retention: RET-TRANSIENT
+            redaction: REDACT
+            aiAllowed: NONE
+          type: string
+          minLength: 1
+          maxLength: 5000
+          example: We operate in twelve EU markets and would like a demonstration.
     CreateUserRequest:
       type: object
       title: CreateUserRequest

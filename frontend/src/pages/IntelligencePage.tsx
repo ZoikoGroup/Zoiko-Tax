@@ -237,6 +237,7 @@ const Stepper = ({ proposal }: { proposal: Proposal }) => {
     <>
       {reasonText} Deterministic processing is unaffected.
       <span className="mono muted"> {reason}</span>
+      {' '}No AI output is shown and nothing was changed.
     </>
   )
 
@@ -245,7 +246,8 @@ const Stepper = ({ proposal }: { proposal: Proposal }) => {
       {isSuccess ? (
         <p className="ztax-note" style={{ fontWeight: 600 }}>
           AI-generated suggestion. General information, not tax advice or an authoritative determination.
-          Deterministic processing decides.
+          Deterministic processing decides.{' '}
+          It can be wrong. A qualified person must review it before anything relies on it.
         </p>
       ) : null}
 
@@ -335,14 +337,14 @@ const Stepper = ({ proposal }: { proposal: Proposal }) => {
               <dt>Proposed code</dt>
               <dd className="ztax-proposed-code mono">{proposal.proposedCode}</dd>
               <dt>Confidence</dt>
-              <dd className="mono">{proposal.confidence === undefined ? '—' : `${proposal.confidence} (placeholder)`}</dd>
+              <dd className="mono">Not calibrated</dd>
               <dt>Authoritative</dt>
               <dd className="mono">{String(proposal.authoritative)}</dd>
               <dt>Proposal</dt>
               <dd>{proposal.id === undefined ? '—' : <Id value={proposal.id} />}</dd>
             </dl>
             <p className="ztax-note">
-              The confidence is a placeholder value from the demo runtime, not a measurement. A person confirms or
+              No measured accuracy exists for this proposal yet, so no confidence figure is shown. A person confirms or
               rejects the mapping before anything relies on it.
             </p>
             <table className="ztax-action-table" style={{ marginTop: 8 }}>

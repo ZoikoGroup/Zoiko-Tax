@@ -231,6 +231,42 @@
         "class": "P0"
       }
     },
+    "credential_token": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "token_digest": {
+        "class": "P7",
+        "purposes": [
+          "PURP-SEC"
+        ],
+        "retention": "RET-SESSION",
+        "redaction": "NO_LOG",
+        "aiAllowed": "NONE",
+        "note": "SHA-256 of the emailed link secret. It sets a password, so it is treated as the credential."
+      },
+      "user_id": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC"
+        ],
+        "retention": "RET-SESSION",
+        "redaction": "NONE",
+        "aiAllowed": "NONE"
+      },
+      "purpose": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "expires_at": {
+        "class": "P0"
+      },
+      "used_at": {
+        "class": "P0"
+      }
+    },
     "cross_cell_transfer": {
       "tenant_id": {
         "class": "P0"

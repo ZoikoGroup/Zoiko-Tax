@@ -28,6 +28,25 @@ import type { PageProps } from './pages/types'
 import { CellHealth } from './platform/CellHealth'
 import { ztax } from './platform/client'
 
+/**
+ * The secret from a set-password link, read once when the page loads. The
+ * link carries it in the fragment, which never reaches a server or a Referer;
+ * it is taken out of the address bar at once, so it does not linger in the
+ * history or get copied along with the URL.
+ */
+const LINK = ((): string | null => {
+  const match = /^#set-password=(.+)$/.exec(window.location.hash)
+  if (!match?.[1]) {
+    return null
+  }
+  window.history.replaceState(null, '', window.location.pathname + window.location.search)
+  try {
+    return decodeURIComponent(match[1])
+  } catch {
+    return null
+  }
+})()
+
 /** Where a session starts, and where signing out returns. */
 const HOME: Route = { view: 'dashboard', navId: 'home.overview', seq: 0 }
 
@@ -46,6 +65,7 @@ export function App() {
   const periods = useMemo(() => recentPeriods(new Date(), 12), [])
   const [period, setPeriod] = useState(periods[0] ?? '')
   const [capabilities, setCapabilities] = useState<Capabilities | null>(null)
+  const [link, setLink] = useState(LINK)
 
   useEffect(() => {
     if (state !== 'signed-in') {
@@ -87,8 +107,20 @@ export function App() {
     )
   }
 
-  if (state === 'anonymous' || session === null) {
-    return <SignIn onSignIn={signIn} />
+  // A set-password link is honoured whoever is signed in: setting the password
+  // revokes the account's sessions, and the session check that follows sorts
+  // out what to show next.
+  if (link !== null || state === 'anonymous' || session === null) {
+    return (
+      <SignIn
+        onSignIn={signIn}
+        link={link}
+        onLinkDone={() => {
+          setLink(null)
+          void refresh()
+        }}
+      />
+    )
   }
 
   const navigate: Navigate = (target, navId) => {

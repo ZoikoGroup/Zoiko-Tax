@@ -570,6 +570,82 @@ namespace ZoikoTax.Sdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PasswordResetRequest
+    {
+
+        /// <summary>
+        /// The tenant slug.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("tenant")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Tenant { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("email")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Email { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class SetPasswordWithLinkRequest
+    {
+
+        /// <summary>
+        /// The secret from the emailed link, as it appears after `#set-password=`.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("token")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Token { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("password")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(int.MaxValue, MinimumLength = 12)]
+        public string Password { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class PasswordSet
+    {
+
+        /// <summary>
+        /// The tenant slug to sign in to.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("tenant")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Tenant { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("email")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Email { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ContactRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(200, MinimumLength = 1)]
+        public string Name { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("email")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Email { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("company")]
+        [System.ComponentModel.DataAnnotations.StringLength(200)]
+        public string? Company { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("message")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(5000, MinimumLength = 1)]
+        public string Message { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class CreateUserRequest
     {
 

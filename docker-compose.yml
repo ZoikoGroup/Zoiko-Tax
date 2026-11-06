@@ -129,6 +129,17 @@ services:
       # like every local:// value: the resolver refuses it anywhere else.
       ZTAX_WEBHOOK_KEY_REF: local://webhook-key
       ZTAX_LOCAL_SECRET_WEBHOOK_KEY: ${ZTAX_WEBHOOK_KEY:?set ZTAX_WEBHOOK_KEY in .env; copy .env.example}
+      # Email: invitations, password resets and the contact form. Off unless
+      # .env sets ZTAX_SMTP_ADDR, in which case those routes answer 503. The
+      # password goes in as a local:// secret like the others; links in the
+      # messages point at the web container.
+      ZTAX_SMTP_ADDR: ${ZTAX_SMTP_ADDR:-}
+      ZTAX_SMTP_USERNAME: ${ZTAX_SMTP_USERNAME:-}
+      ZTAX_SMTP_PASSWORD_REF: ${ZTAX_SMTP_PASSWORD:+local://smtp-password}
+      ZTAX_LOCAL_SECRET_SMTP_PASSWORD: ${ZTAX_SMTP_PASSWORD:-}
+      ZTAX_MAIL_FROM: ${ZTAX_MAIL_FROM:-}
+      ZTAX_CONTACT_TO: ${ZTAX_CONTACT_TO:-}
+      ZTAX_PUBLIC_URL: ${ZTAX_PUBLIC_URL:-http://localhost:${WEB_PORT:-3000}}
 
       ZTAX_HTTP_ADDR: ":8080"
       ZTAX_LOG_LEVEL: ${ZTAX_LOG_LEVEL:-debug}
