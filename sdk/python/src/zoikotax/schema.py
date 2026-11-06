@@ -256,6 +256,37 @@ class ChangePasswordRequest(TypedDict):
     newPassword: str
 
 
+class PasswordResetRequest(TypedDict):
+    tenant: str
+    """
+    The tenant slug.
+    """
+    email: str
+
+
+class SetPasswordWithLinkRequest(TypedDict):
+    token: str
+    """
+    The secret from the emailed link, as it appears after `#set-password=`.
+    """
+    password: str
+
+
+class PasswordSet(TypedDict):
+    tenant: str
+    """
+    The tenant slug to sign in to.
+    """
+    email: str
+
+
+class ContactRequest(TypedDict):
+    name: str
+    email: str
+    company: NotRequired[str]
+    message: str
+
+
 class CreateUserRequest(TypedDict):
     email: str
     displayName: str

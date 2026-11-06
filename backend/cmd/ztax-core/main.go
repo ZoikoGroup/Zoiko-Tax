@@ -26,6 +26,7 @@ import (
 	adaptercontent "github.com/zoikogroup/zoikotax/backend/internal/adapter/content"
 	adapterevidence "github.com/zoikogroup/zoikotax/backend/internal/adapter/evidence"
 	"github.com/zoikogroup/zoikotax/backend/internal/adapter/gateway"
+	"github.com/zoikogroup/zoikotax/backend/internal/adapter/mailer"
 	"github.com/zoikogroup/zoikotax/backend/internal/adapter/postgres"
 	"github.com/zoikogroup/zoikotax/backend/internal/app"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
@@ -136,6 +137,9 @@ func run() error {
 		return err
 	}
 	if router.Webhooks, err = wireWebhooks(cfg, store, clk, ids, log); err != nil {
+		return err
+	}
+	if router.Credentials, router.Contact, err = wireMail(cfg, store, clk, ids, log); err != nil {
 		return err
 	}
 	if router.Seals, err = wireSeals(cfg, store, clk, ids, log); err != nil {
@@ -680,6 +684,34 @@ func wireWebhooks(cfg config.Config, store *postgres.Store, clk clock.Clock, ids
 	}
 	log.Info("webhook surface enabled")
 	return app.NewWebhookService(store.Webhooks(), box, store, clk, ids, cfg.WebhookAllowPrivate), nil
+}
+
+// wireMail builds the mailer and the services that send through it. A cell
+// with no SMTP server sends nothing: invitations and resets answer 503, and so
+// does the contact form, which also needs an inbox to deliver to.
+func wireMail(cfg config.Config, store *postgres.Store, clk clock.Clock, ids idgen.Generator, log *slog.Logger) (*app.CredentialService, *app.ContactService, error) {
+	if cfg.SMTPAddr == "" {
+		log.Warn("no SMTP server configured; invitations, password resets and the contact form will refuse with 503")
+		return nil, nil, nil
+	}
+	password, err := secrets.Resolve(secrets.EnvResolver{Environment: cfg.Environment}, cfg.SMTPPasswordRef)
+	if err != nil {
+		return nil, nil, err
+	}
+	mail, err := mailer.NewSMTP(cfg.SMTPAddr, cfg.SMTPUsername, password, cfg.MailFrom)
+	if err != nil {
+		return nil, nil, err
+	}
+	credentials := app.NewCredentialService(store.Tenants(), store.Users(), store.Sessions(), store.CredentialTokens(),
+		store.Audit(), store, clk, ids, mail, cfg.PublicURL)
+	var contact *app.ContactService
+	if cfg.ContactTo != "" {
+		contact = app.NewContactService(mail, cfg.ContactTo)
+	} else {
+		log.Warn("no contact inbox configured; the contact form will refuse with 503")
+	}
+	log.Info("email enabled", "smtp.addr", cfg.SMTPAddr, "from", mail.From())
+	return credentials, contact, nil
 }
 
 // wireModelGateway builds the Governed Model Gateway client (ADR-0006). A cell

@@ -140,18 +140,28 @@ function UsersPanel({ canManage, onChanged }: { canManage: boolean; onChanged: (
   const load = useCallback(() => api.listUsers(), [])
   const { data, error, loading, reload } = useList(load)
   const [actionError, setActionError] = useState('')
+  const [notice, setNotice] = useState('')
 
-  const run = (work: Promise<unknown>) => {
+  const run = (work: Promise<unknown>, done = '') => {
     setActionError('')
+    setNotice('')
     void work
-      .then(() => { reload(); return onChanged() })
+      .then(() => { setNotice(done); reload(); return onChanged() })
       .catch((cause: unknown) => { setActionError(describeError(cause)) })
   }
 
   return (
     <section className="panel" aria-labelledby="users-heading">
       <h2 id="users-heading">Users</h2>
-      {canManage && <CreateUser onCreated={() => { run(Promise.resolve()) }} />}
+      {canManage && (
+        <CreateUser
+          onCreated={(message, problem) => {
+            run(Promise.resolve(), message)
+            if (problem) setActionError(problem)
+          }}
+        />
+      )}
+      {notice && <p className="panel__note" role="status">{notice}</p>}
 
       <Status loading={loading} error={error || actionError} empty={data?.users.length === 0} what="users" />
 
@@ -180,7 +190,7 @@ function UsersPanel({ canManage, onChanged }: { canManage: boolean; onChanged: (
                 </td>
                 {canManage && (
                   <td>
-                    <UserActions user={user} onAction={(work) => { run(work) }} />
+                    <UserActions user={user} onAction={(work, done) => { run(work, done) }} />
                   </td>
                 )}
               </tr>
@@ -231,7 +241,23 @@ function RoleEditor({
   )
 }
 
-function UserActions({ user, onAction }: { user: User; onAction: (work: Promise<unknown>) => void }) {
+function UserActions({ user, onAction }: { user: User; onAction: (work: Promise<unknown>, done?: string) => void }) {
+  if (user.status === 'INVITED') {
+    // An invited user has no password; the invitation is how they get one.
+    // Sending again spends the link sent before.
+    return (
+      <div className="confirm__actions">
+        <button
+          type="button"
+          className="btn"
+          onClick={() => { onAction(api.sendInvitation(user.id), `Invitation sent to ${user.email}.`) }}
+        >
+          Send invitation
+        </button>
+        <DisableUser user={user} onAction={onAction} />
+      </div>
+    )
+  }
   if (user.status === 'DISABLED') {
     return (
       <Confirm
@@ -241,6 +267,10 @@ function UserActions({ user, onAction }: { user: User; onAction: (work: Promise<
       />
     )
   }
+  return <DisableUser user={user} onAction={onAction} />
+}
+
+function DisableUser({ user, onAction }: { user: User; onAction: (work: Promise<unknown>) => void }) {
   return (
     <Confirm
       action="Disable"
@@ -259,7 +289,7 @@ function UserActions({ user, onAction }: { user: User; onAction: (work: Promise<
   )
 }
 
-function CreateUser({ onCreated }: { onCreated: () => void }) {
+function CreateUser({ onCreated }: { onCreated: (message: string, problem?: string) => void }) {
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState('')
   const [displayName, setDisplayName] = useState('')
@@ -290,10 +320,22 @@ function CreateUser({ onCreated }: { onCreated: () => void }) {
             roles,
             ...(password === '' ? {} : { password }),
           })
-          .then(() => {
+          .then(async (user) => {
             setOpen(false)
             setEmail(''); setDisplayName(''); setRoles([]); setPassword('')
-            onCreated()
+            if (user.status !== 'INVITED') {
+              onCreated(`${user.displayName} can sign in now.`)
+              return
+            }
+            // An invited user cannot sign in until they set a password, so the
+            // invitation goes at once. The user exists either way; a failed
+            // send is reported and can be retried from the list.
+            try {
+              await api.sendInvitation(user.id)
+              onCreated(`Invitation sent to ${user.email}. The link expires in 72 hours.`)
+            } catch (cause) {
+              onCreated('', `${user.displayName} was created, but the invitation was not sent: ${describeError(cause)} Use Send invitation to retry.`)
+            }
           })
           .catch((cause: unknown) => { setError(describeError(cause)) })
           .finally(() => { setBusy(false) })
@@ -344,8 +386,8 @@ function CreateUser({ onCreated }: { onCreated: () => void }) {
         {/* Leaving it blank is a real choice with a real meaning, so it is
             stated rather than left for someone to discover. */}
         <p className="field__help" id="new-user-password-help">
-          Leave blank to create an invited user who cannot sign in until a password is set.
-          Minimum 12 characters.
+          Leave blank to email an invitation instead: the user chooses their own password from a
+          one-time link. Minimum 12 characters.
         </p>
       </div>
 

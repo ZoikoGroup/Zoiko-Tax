@@ -143,6 +143,13 @@ var (
 		"lane-c",
 		"The password does not meet the minimum length or complexity policy.")
 
+	// ReasonCredentialLinkInvalid is an invitation or reset link that cannot
+	// set a password. Unknown, expired, superseded and used are one answer:
+	// the holder can do nothing different about any of them but ask again.
+	ReasonCredentialLinkInvalid = Register("CREDENTIAL_LINK_INVALID", CategoryPolicy,
+		"lane-c",
+		"The link is not valid, has expired or has already been used. Ask for a new one.")
+
 	// ---- residency and transfer (SEC-001 §11, PRIV-001 §16) ---------------
 
 	// ReasonTenantNotResident is an authenticated request for a tenant whose

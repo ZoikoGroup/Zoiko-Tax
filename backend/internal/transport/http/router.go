@@ -138,6 +138,18 @@ type Router struct {
 	// Dashboard serves the Tax Command Center. It reads what was recorded
 	// and needs no content, so it is served wherever the store is.
 	Dashboard *app.DashboardService
+
+	// Credentials sends invitations and password resets, and redeems their
+	// links. Nil in a cell that sends no mail, which answers 503.
+	Credentials *app.CredentialService
+
+	// Contact delivers the public contact form. Nil in a cell with no mail
+	// or no inbox, which answers 503.
+	Contact *app.ContactService
+
+	// limits are the windows on the public routes that send mail or try a
+	// credential.
+	limits limits
 }
 
 // Trains are the seven release-train versions, as the contract names them.
@@ -145,7 +157,7 @@ type Trains = gen.Trains
 
 // NewRouter wires the surface.
 func NewRouter(auth *app.AuthService, admin *app.AdminService, users port.UserRepository, ready Readiness, log *slog.Logger, ids idgen.Generator) *Router {
-	return &Router{auth: auth, admin: admin, users: users, ready: ready, log: mustLogger(log), ids: ids}
+	return &Router{auth: auth, admin: admin, users: users, ready: ready, log: mustLogger(log), ids: ids, limits: newLimits()}
 }
 
 // Route is one entry in the surface.
@@ -164,8 +176,8 @@ func NewRouter(auth *app.AuthService, admin *app.AdminService, users port.UserRe
 type Route struct {
 	Method  string
 	Pattern string
-	// Public marks a route that requires no session. There are three, and each
-	// has a reason recorded at its declaration.
+	// Public marks a route that requires no session. Each has a reason
+	// recorded at its declaration.
 	Public bool
 	// Roles are the roles permitted. Empty with Public false means any
 	// authenticated subject.
@@ -203,12 +215,22 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/auth/sign-out", false, nil}, rt.handleSignOut},
 		{Route{"GET", "/v1/auth/session", false, nil}, rt.handleSession},
 		{Route{"POST", "/v1/auth/password", false, nil}, rt.handleChangePassword},
+		// Getting a password back, or a first one, is necessarily done without
+		// one. Both are rate limited, and neither says whether an account
+		// exists.
+		{Route{"POST", "/v1/auth/password-reset", true, nil}, rt.handleRequestPasswordReset},
+		{Route{"POST", "/v1/auth/password-link", true, nil}, rt.handleSetPasswordWithLink},
+
+		// The contact form is for people who have no account yet. Rate
+		// limited; nothing is stored.
+		{Route{"POST", "/v1/contact", true, nil}, rt.handleSubmitContact},
 
 		// Administration.
 		{Route{"GET", "/v1/admin/tenant", false, nil}, rt.handleGetTenant},
 		{Route{"GET", "/v1/admin/users", false, []security.Role{admin, security.RoleAnalyst, security.RoleAuditor}}, rt.handleListUsers},
 		{Route{"POST", "/v1/admin/users", false, []security.Role{admin}}, rt.handleCreateUser},
 		{Route{"POST", "/v1/admin/users/{userId}/status", false, []security.Role{admin}}, rt.handleSetUserStatus},
+		{Route{"POST", "/v1/admin/users/{userId}/invitation", false, []security.Role{admin}}, rt.handleSendInvitation},
 		{Route{"POST", "/v1/admin/users/{userId}/roles", false, []security.Role{admin}}, rt.handleGrantRole},
 		{Route{"DELETE", "/v1/admin/users/{userId}/roles/{role}", false, []security.Role{admin}}, rt.handleRevokeRole},
 		{Route{"GET", "/v1/admin/sessions", false, []security.Role{admin}}, rt.handleListSessions},
