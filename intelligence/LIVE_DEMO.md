@@ -68,6 +68,10 @@ to the Model Gateway and, this time, on to Groq).
   Deterministic processing is unaffected." and `AI_GATEWAY_UNAVAILABLE`,
   rather than an error page -- the governed path degrades to review, it does
   not crash.
+- **Time and concurrency limits**: the demo Gateway gives up on a model call
+  after 45 seconds, and at most 8 model calls run at once. A call that hits
+  either limit is refused with "model runtime unavailable" and one evidence
+  record, and the screen shows the same review-required view as above.
 - **Confidence is a fixed placeholder** (`0.5000`, set in
   `groq_demo_runtime.py`). Groq returns no probability, so the number is not
   the model's score and means nothing, whatever the page's caption says.

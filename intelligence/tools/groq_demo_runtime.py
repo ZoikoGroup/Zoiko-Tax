@@ -42,6 +42,7 @@ from ztax_gateway.runtime import Result, Route, RoutingTable, RuntimeUnavailable
 from ztax_gateway.wire import Call, Kind
 
 __all__: list[str] = [
+    "GATEWAY_RUNTIME_TIMEOUT_SECONDS",
     "GroqDemoConfigError",
     "GroqDemoRuntime",
     "build_request",
@@ -53,6 +54,12 @@ log = logging.getLogger("ztax_gateway.groq_demo_runtime")
 
 _API_URL = "https://api.groq.com/openai/v1/chat/completions"
 _TIMEOUT_SECONDS = 30
+
+# The Gateway's total deadline for one runtime call (passed to build_gateway as
+# runtime_timeout_seconds). It must stay above the runtime's own per-step limit,
+# _TIMEOUT_SECONDS, so a slow but valid reply is not cut off by the Gateway.
+# tests/test_live_demo_timeout_wiring.py checks that it does.
+GATEWAY_RUNTIME_TIMEOUT_SECONDS = 45
 
 # Groq returns 403 to the default Python-urllib User-Agent. A fixed,
 # identifying value avoids that, and is not a secret.
