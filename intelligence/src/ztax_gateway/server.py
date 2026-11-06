@@ -21,9 +21,11 @@ without it unless the process is explicitly a local development Gateway.
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import logging
+import math
 import os
 import sys
 import threading
@@ -55,6 +57,7 @@ from .production_gates import PromptProfileRegistry
 from .provenance import AuthorityOutcome, Provenance, RiskTier
 from .runtime import (
     ModelRuntime,
+    Result,
     Route,
     RoutingTable,
     RuntimeNotConfiguredError,
@@ -78,10 +81,27 @@ REASON_KEY = "ztax-reason"
 # ReasonGatewayUnavailable).
 REASON_NOT_CONFIGURED = "AI_GATEWAY_NOT_CONFIGURED"
 REASON_UNAVAILABLE = "AI_GATEWAY_UNAVAILABLE"
-# Fixed caller-facing details for UNAVAILABLE: the exception text of a runtime or
-# an evidence sink can carry provider or store text, so it never reaches the caller.
+# Fixed caller-facing details. Exception text never reaches the caller on any path
+# that reports a malformed call, a runtime that is not configured, an unrouted use
+# case, an unavailable runtime, a failed evidence write or a residency refusal: a
+# runtime, a sink or a caller's own bytes can put provider, store or caller text in
+# an exception, so each of these paths returns one of the constants below instead.
+# A governance refusal returns the detail the governance check wrote; some of those
+# details name the use case the caller sent (known gap, tracked separately).
+DETAIL_CALL_MALFORMED = "call is malformed"
+DETAIL_NOT_CONFIGURED = "model runtime is not configured"
+DETAIL_RESIDENCY_REFUSED = "call is from a region this Gateway does not serve"
 DETAIL_RUNTIME_UNAVAILABLE = "model runtime unavailable"
 DETAIL_EVIDENCE_WRITE_FAILED = "evidence write failed"
+
+# Most runtime calls that may be in flight at once when a runtime timeout is set.
+# A call that times out leaves its worker running until the runtime returns, so
+# the count includes abandoned workers: with every slot taken a new call fails
+# closed at once instead of queueing behind a hung runtime.
+RUNTIME_MAX_IN_FLIGHT: Final = 8
+_RUNTIME_TIMED_OUT = "runtime: call timed out"
+_RUNTIME_BUSY = "runtime: no free slot for a call"
+_RUNTIME_NO_WORKER = "runtime: a worker could not be started"
 
 # PRIV-001 valid privacy class labels (P0 through P7).
 _VALID_DATA_CLASSES: Final[frozenset[str]] = frozenset(f"P{i}" for i in range(8))
@@ -115,9 +135,12 @@ class Gateway:
         kill_state_path: Path | None = None,
         prompt_profile_registry: PromptProfileRegistry | None = None,
         check_event_sink: CheckEventSink | None = None,
+        runtime_timeout_seconds: float | None = None,
     ) -> None:
         if not region or not ai_train_version:
             raise ValueError("gateway: a Gateway names its region and its AI train version")
+        if runtime_timeout_seconds is not None and not _valid_timeout(runtime_timeout_seconds):
+            raise ValueError("gateway: runtime_timeout_seconds must be None or a positive number")
         self._registry = registry
         self._routes = routes
         self._runtime = runtime
@@ -133,6 +156,10 @@ class Gateway:
         # Live kill switch (AI-09): the registry file is re-read on every call and
         # parsed only when its bytes change. None disables it (tests, embedding).
         self._kill_state_path = kill_state_path
+        # None keeps the runtime call synchronous on the caller's thread. When set,
+        # the call runs in a daemon worker thread bounded by ``_runtime_slots``.
+        self._runtime_timeout = runtime_timeout_seconds
+        self._runtime_slots = threading.BoundedSemaphore(RUNTIME_MAX_IN_FLIGHT)
         self._kill_lock = threading.Lock()
         self._kill_digest: str | None = None
         self._kill_by_file: set[str] = set()
@@ -173,12 +200,41 @@ class Gateway:
         self._check_event_sink.write_check_event(event)
 
     def invoke(self, data: bytes) -> bytes:
-        try:
+        """Run one call and return the encoded reply.
+
+        Delegates to :meth:`invoke_with_id`, so the two entry points cannot
+        diverge: every refusal, record and error is produced in one place.
+        """
+        return self.invoke_with_id(data)[0]
+
+    @staticmethod
+    def _decode(data: bytes) -> Call:
+        """Decode a call, or raise a GatewayError with a fixed detail.
+
+        The WireError is swallowed inside the ``with`` and the GatewayError is
+        raised after it, so the error handed to the transport has no
+        ``__cause__`` and no ``__context__``: nothing in it can lead back to the
+        caller's bytes (the wire messages echo JSON errors and caller values).
+        """
+        call: Call | None = None
+        with contextlib.suppress(WireError):
             call = decode_call(data)
-        except WireError as exc:
+        if call is None:
             raise GatewayError(
-                grpc.StatusCode.INVALID_ARGUMENT, Refusal.MALFORMED_CONTEXT.value, str(exc)
-            ) from exc
+                grpc.StatusCode.INVALID_ARGUMENT,
+                Refusal.MALFORMED_CONTEXT.value,
+                DETAIL_CALL_MALFORMED,
+            )
+        return call
+
+    def invoke_with_id(self, data: bytes) -> tuple[bytes, str | None]:
+        """Run one call and also return the ``ai_invocation_id`` for check events.
+
+        Returns ``(reply_bytes, invocation_id)``.  ``invocation_id`` is ``None``
+        when the call is refused or killed before reaching the runtime.  Each
+        call's id is local to that call; this method is safe to call concurrently.
+        """
+        call = self._decode(data)
 
         g = call.governance
         route: Route | None
@@ -203,7 +259,7 @@ class Gateway:
         if g.region != self._region:
             # ADR-0006 §2.8: residency is per cell. A call from another cell's
             # region has reached the wrong Gateway, whatever the use case
-            # permits.
+            # permits. The detail is fixed text: it names neither region.
             self._seal_block(
                 provenance,
                 call.input,
@@ -212,17 +268,22 @@ class Gateway:
             raise GatewayError(
                 grpc.StatusCode.PERMISSION_DENIED,
                 Refusal.RESIDENCY_REFUSED.value,
-                f"this Gateway serves {self._region!r}; the call is from {g.region!r}",
+                DETAIL_RESIDENCY_REFUSED,
             )
 
         def work(_: UseCase) -> Reply:
             if route is None:
-                raise UnroutedUseCaseError(f"use case {g.use_case!r} has no route")
+                raise UnroutedUseCaseError("use case has no route")
             return self._run(route, call)
 
         # Ch.17 §21: produce exactly one tamper-evident evidence record per
         # invocation, written to the sink *before* the reply bytes are returned.
         self._refresh_kill_state()
+        # The two "not configured" failures are recorded in flags and handled
+        # after the try statement, so the error raised for the caller is not
+        # raised inside an ``except`` block and carries no ``__context__``.
+        not_configured = False
+        no_route = False
         try:
             reply = guarded(self._registry, provenance, work)
         except GovernanceRefusedError as refusal:
@@ -238,37 +299,13 @@ class Gateway:
                 original_error=caller_err,
             )
             raise caller_err from refusal
-        except RuntimeNotConfiguredError as exc:
-            # Gap 1: the cell has no approved runtime — write a BLOCK record
-            # with a FAIL guardrail so the call is auditable, then surface
-            # the original UNIMPLEMENTED / AI_GATEWAY_NOT_CONFIGURED error.
-            caller_err = GatewayError(
-                grpc.StatusCode.UNIMPLEMENTED, REASON_NOT_CONFIGURED, str(exc)
-            )
-            self._seal_block(
-                provenance,
-                call.input,
-                refusal_code=REASON_NOT_CONFIGURED,
-                original_error=caller_err,
-            )
-            raise caller_err from exc
-        except UnroutedUseCaseError as exc:
-            # Gap 2: a deployment defect — the registry permits what routing
-            # cannot serve.  The provenance already carries "unrouted"
-            # placeholders so the record can be built; write it before raising.
-            log.error(
-                "gateway: registered use case without a route", extra={"use_case": g.use_case}
-            )
-            caller_err = GatewayError(
-                grpc.StatusCode.UNIMPLEMENTED, REASON_NOT_CONFIGURED, str(exc)
-            )
-            self._seal_block(
-                provenance,
-                call.input,
-                refusal_code=REASON_NOT_CONFIGURED,
-                original_error=caller_err,
-            )
-            raise caller_err from exc
+        except RuntimeNotConfiguredError:
+            # Gap 1: the cell has no approved runtime.
+            not_configured = True
+        except UnroutedUseCaseError:
+            # Gap 2: a deployment defect - the registry permits what routing
+            # cannot serve.
+            no_route = True
         except RuntimeUnavailableError as exc:
             self._seal_block(
                 provenance,
@@ -278,115 +315,39 @@ class Gateway:
             raise GatewayError(
                 grpc.StatusCode.UNAVAILABLE, REASON_UNAVAILABLE, DETAIL_RUNTIME_UNAVAILABLE
             ) from exc
+        if not_configured or no_route:
+            self._refuse_not_configured(provenance, call, no_route=no_route)
 
         # Successful invocation: seal a PROPOSE record (the authority-derived
         # default) and write it to the sink before encode_reply is called.
-        self._seal_success(provenance, call.input, reply)
-        return encode_reply(reply)
-
-    def invoke_with_id(self, data: bytes) -> tuple[bytes, str | None]:
-        """Like :meth:`invoke` but also returns the ``ai_invocation_id`` for check events.
-
-        Returns ``(reply_bytes, invocation_id)``.  ``invocation_id`` is ``None``
-        when the call is refused or killed before reaching the runtime.  Each
-        call's id is local to that call; this method is safe to call concurrently.
-        """
-        invocation_id: str | None = None
-        try:
-            call = decode_call(data)
-        except WireError as exc:
-            raise GatewayError(
-                grpc.StatusCode.INVALID_ARGUMENT, Refusal.MALFORMED_CONTEXT.value, str(exc)
-            ) from exc
-
-        g = call.governance
-        route: Route | None
-        try:
-            route = self._routes.route(g.use_case)
-        except UnroutedUseCaseError:
-            route = None
-        unrouted = "unrouted"
-        provenance = Provenance(
-            use_case=g.use_case,
-            model_profile=route.model_profile if route else unrouted,
-            provider_profile=route.provider_profile if route else unrouted,
-            prompt_profile=route.prompt_profile if route else unrouted,
-            region=g.region,
-            data_class=g.highest_data_class(),
-            risk_tier=g.risk_tier,
-            authority_outcome=g.authority_outcome,
-            ai_train_version=self._train,
-            data_classes=g.data_classes,
-        )
-
-        if g.region != self._region:
-            self._seal_block(
-                provenance,
-                call.input,
-                refusal_code=Refusal.RESIDENCY_REFUSED.value,
-            )
-            raise GatewayError(
-                grpc.StatusCode.PERMISSION_DENIED,
-                Refusal.RESIDENCY_REFUSED.value,
-                f"this Gateway serves {self._region!r}; the call is from {g.region!r}",
-            )
-
-        def work(_: UseCase) -> Reply:
-            if route is None:
-                raise UnroutedUseCaseError(f"use case {g.use_case!r} has no route")
-            return self._run(route, call)
-
-        self._refresh_kill_state()
-        try:
-            reply = guarded(self._registry, provenance, work)
-        except GovernanceRefusedError as refusal:
-            caller_err = GatewayError(
-                _REFUSAL_STATUS[refusal.refusal], refusal.refusal.value, refusal.detail
-            )
-            self._seal_block(
-                provenance,
-                call.input,
-                refusal_code=refusal.refusal.value,
-                original_error=caller_err,
-            )
-            raise caller_err from refusal
-        except RuntimeNotConfiguredError as exc:
-            caller_err = GatewayError(
-                grpc.StatusCode.UNIMPLEMENTED, REASON_NOT_CONFIGURED, str(exc)
-            )
-            self._seal_block(
-                provenance,
-                call.input,
-                refusal_code=REASON_NOT_CONFIGURED,
-                original_error=caller_err,
-            )
-            raise caller_err from exc
-        except UnroutedUseCaseError as exc:
-            log.error(
-                "gateway: registered use case without a route", extra={"use_case": g.use_case}
-            )
-            caller_err = GatewayError(
-                grpc.StatusCode.UNIMPLEMENTED, REASON_NOT_CONFIGURED, str(exc)
-            )
-            self._seal_block(
-                provenance,
-                call.input,
-                refusal_code=REASON_NOT_CONFIGURED,
-                original_error=caller_err,
-            )
-            raise caller_err from exc
-        except RuntimeUnavailableError as exc:
-            self._seal_block(
-                provenance,
-                call.input,
-                refusal_code=REASON_UNAVAILABLE,
-            )
-            raise GatewayError(
-                grpc.StatusCode.UNAVAILABLE, REASON_UNAVAILABLE, DETAIL_RUNTIME_UNAVAILABLE
-            ) from exc
-
         invocation_id = self._seal_success(provenance, call.input, reply)
         return encode_reply(reply), invocation_id
+
+    def _refuse_not_configured(
+        self, provenance: Provenance, call: Call, *, no_route: bool
+    ) -> NoReturn:
+        """Seal a BLOCK record, then raise UNIMPLEMENTED / AI_GATEWAY_NOT_CONFIGURED.
+
+        Called outside any ``except`` block. The detail is a fixed constant:
+        the runtime's own text (which a custom runtime chooses) is never used.
+        For an unrouted use case the missing route is logged for the operator
+        (use case id only), since the caller cannot be told.
+        """
+        if no_route:
+            log.error(
+                "gateway: registered use case without a route",
+                extra={"use_case": call.governance.use_case},
+            )
+        caller_err = GatewayError(
+            grpc.StatusCode.UNIMPLEMENTED, REASON_NOT_CONFIGURED, DETAIL_NOT_CONFIGURED
+        )
+        self._seal_block(
+            provenance,
+            call.input,
+            refusal_code=REASON_NOT_CONFIGURED,
+            original_error=caller_err,
+        )
+        raise caller_err
 
     def _refresh_kill_state(self) -> None:
         """Bring the registry's kill state in line with the registry file.
@@ -430,8 +391,70 @@ class Gateway:
             self._registry.release_global_kill()
             self._global_kill_by_file = False
 
+    def _call_runtime(self, route: Route, call: Call) -> Result:
+        """Run the runtime, within ``runtime_timeout_seconds`` when one is set.
+
+        Without a timeout this is the plain synchronous call. With one, the call
+        runs in a daemon thread (so a hung runtime cannot keep the process alive
+        at exit) and the number of runtime calls in flight is capped at
+        ``RUNTIME_MAX_IN_FLIGHT``. It fails closed with RuntimeUnavailableError
+        when no slot is free (no queueing), when the thread cannot start, and on
+        timeout. A result that arrives after the timeout is dropped: nothing
+        reads it, so it is never sealed or returned. Anything the runtime raises
+        (any ``BaseException``) is stored by the worker and re-raised, the same
+        object, by the waiting thread, as in the no-timeout mode; it never reaches
+        ``threading.excepthook``.
+
+        A slot is released exactly once per acquire: by the worker when the runtime
+        returns, or at once if the worker could not be started.
+        """
+        timeout = self._runtime_timeout
+        if timeout is None:
+            return self._runtime.run(route, call)
+        if not self._runtime_slots.acquire(blocking=False):
+            raise RuntimeUnavailableError(_RUNTIME_BUSY)
+        done = threading.Event()
+        outcome: list[Result | BaseException] = []
+        # Taken (and never given back) by whoever releases the slot first, so the
+        # worker and the start-failure path can never both release it.
+        slot_released = threading.Lock()
+
+        def release_slot() -> None:
+            if slot_released.acquire(blocking=False):
+                self._runtime_slots.release()
+
+        def worker() -> None:
+            try:
+                try:
+                    outcome.append(self._runtime.run(route, call))
+                except BaseException as exc:  # re-raised by the waiting thread, same object
+                    outcome.append(exc)
+                done.set()
+            finally:
+                release_slot()
+
+        start_failed = False
+        try:
+            thread = threading.Thread(target=worker, name="ztax-gateway-runtime", daemon=True)
+            thread.start()
+        except BaseException as exc:
+            release_slot()
+            if not isinstance(exc, Exception):
+                raise  # KeyboardInterrupt, SystemExit: not ours to turn into a refusal
+            start_failed = True
+        # Raised after the except block, so it carries no __context__ (the error
+        # from the failed start can hold OS text).
+        if start_failed:
+            raise RuntimeUnavailableError(_RUNTIME_NO_WORKER)
+        if not done.wait(timeout):
+            raise RuntimeUnavailableError(_RUNTIME_TIMED_OUT)
+        result = outcome[0]
+        if isinstance(result, BaseException):
+            raise result
+        return result
+
     def _run(self, route: Route, call: Call) -> Reply:
-        result = self._runtime.run(route, call)
+        result = self._call_runtime(route, call)
         check_result(call.kind, result)
         return Reply(
             model_profile=route.model_profile,
@@ -539,6 +562,7 @@ class Gateway:
         fall through to the UNAVAILABLE path (residency / runtime-failure own
         their error at the call site and set original_error=None).
         """
+        failed = False
         try:
             self._evidence_sink.write(record)
         except Exception as exc:
@@ -551,10 +575,13 @@ class Gateway:
                     "error_type": type(exc).__name__,
                 },
             )
-            if original_error is not None:
-                raise original_error from None
-            # residency / runtime-failure paths: the caller raises after us,
-            # so simply return; the outer except will raise the right error.
+            failed = True
+        # Raised after the except block, so the sink's exception is not attached
+        # to the caller's error as its ``__context__``.
+        if failed and original_error is not None:
+            raise original_error from None
+        # residency / runtime-failure paths: the caller raises after us,
+        # so simply return; the caller raises the right error.
 
     def _write_sink(self, record: InvocationEvidenceRecord) -> None:
         """Write a PERMIT record to the sink.
@@ -577,6 +604,22 @@ class Gateway:
             raise GatewayError(
                 grpc.StatusCode.UNAVAILABLE, REASON_UNAVAILABLE, DETAIL_EVIDENCE_WRITE_FAILED
             ) from exc
+
+
+def _valid_timeout(value: object) -> bool:
+    """True for a positive, finite int or float (not a bool) that a wait can take.
+
+    The upper bound is ``threading.TIMEOUT_MAX``: a larger value would be accepted
+    here and then raise OverflowError when the wait starts. Never raises: an int too
+    large for a float (``10**400``) is simply not valid.
+    """
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        return False
+    try:
+        as_float = float(value)
+    except (OverflowError, ValueError, TypeError):
+        return False
+    return math.isfinite(as_float) and 0 < as_float <= threading.TIMEOUT_MAX
 
 
 def _abort(context: grpc.ServicerContext, err: GatewayError) -> NoReturn:

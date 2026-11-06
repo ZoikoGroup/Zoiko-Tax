@@ -45,6 +45,7 @@ def build_gateway(
     *,
     runtime_factory: Callable[[PromptProfileRegistry], ModelRuntime],
     route_transform: Callable[[UseCaseRegistry, RoutingTable], RoutingTable] | None = None,
+    runtime_timeout_seconds: float | None = None,
 ) -> Gateway:
     """Load config and prompt profiles, check them, and return the Gateway.
 
@@ -52,6 +53,9 @@ def build_gateway(
     If that runtime has a ``verify_prompts(use_cases, routes)`` method it is
     called, so a mismatch between the profile text and the text the runtime
     sends stops startup.
+
+    ``runtime_timeout_seconds`` is passed to the Gateway unchanged: ``None`` (the
+    default) keeps the runtime call without a time limit.
     """
     profiles_path = os.environ.get(ENV_PROMPT_PROFILES, "").strip()
     if not profiles_path:
@@ -88,4 +92,5 @@ def build_gateway(
         kill_state_path=config_path,
         prompt_profile_registry=profiles,
         check_event_sink=LoggingCheckEventSink(),
+        runtime_timeout_seconds=runtime_timeout_seconds,
     )
