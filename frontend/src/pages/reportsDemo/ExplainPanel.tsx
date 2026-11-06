@@ -10,6 +10,7 @@ import { useEffect, useRef } from 'react'
 
 import { OUTPUT_CHECK_PASSED_LABEL, StepRow } from '../IntelligencePage'
 import '../obligations.css'
+import { CitedRows, type RegisterRow } from './CitedRows'
 import { explainSteps } from './derive'
 import type { ExplainReply, ExplainTarget, Provenance } from './model'
 
@@ -21,7 +22,8 @@ export type PanelState =
 
 export const AI_LABEL =
   'AI-generated explanation. General information, not tax advice or an authoritative determination. ' +
-  'The figures come from the deterministic register.'
+  'The figures come from the deterministic register. ' +
+  'The wording can be wrong: check it against the cited rows.'
 
 const ProvenanceTable = ({ provenance }: { provenance: Provenance }) => (
   <table className="ztax-action-table" style={{ marginTop: 8 }}>
@@ -36,8 +38,8 @@ const ProvenanceTable = ({ provenance }: { provenance: Provenance }) => (
 )
 
 const Answer = ({
-  target, reply, onCite,
-}: { target: ExplainTarget; reply: ExplainReply; onCite: (id: string) => void }) => (
+  target, reply, onCite, resolveRow,
+}: { target: ExplainTarget; reply: ExplainReply; onCite: (id: string) => void; resolveRow: (id: string) => RegisterRow | null }) => (
   <>
     <p className="ztax-note rd-ai-label" role="note">{AI_LABEL}</p>
 
@@ -62,6 +64,9 @@ const Answer = ({
             ))
           )}
         </p>
+        {reply.citedIds.length > 0 ? (
+          <CitedRows citedIds={reply.citedIds} resolveRow={resolveRow} />
+        ) : null}
       </>
     ) : (
       <>
@@ -91,8 +96,13 @@ const Answer = ({
 )
 
 export const ExplainPanel = ({
-  state, onClose, onCite,
-}: { state: PanelState; onClose: () => void; onCite: (id: string) => void }) => {
+  state, onClose, onCite, resolveRow,
+}: {
+  state: PanelState
+  onClose: () => void
+  onCite: (id: string) => void
+  resolveRow: (id: string) => RegisterRow | null
+}) => {
   const panelRef = useRef<HTMLElement>(null)
   const isOpen = state.status !== 'closed'
 
@@ -143,7 +153,7 @@ export const ExplainPanel = ({
         </p>
       ) : null}
 
-      {state.status === 'done' ? <Answer target={state.target} reply={state.reply} onCite={onCite} /> : null}
+      {state.status === 'done' ? <Answer target={state.target} reply={state.reply} onCite={onCite} resolveRow={resolveRow} /> : null}
     </aside>
   )
 }
