@@ -435,7 +435,7 @@ paths:
               default:
                 summary: Accepting an invitation
                 value:
-                  token: q9Zl3m0rYV8c2oQF6wq1n0Cw5hJ1tKx8bF3pTqYk2sA
+                  token: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
                   password: "a considerably longer passphrase than that one"
       responses:
         "200":
@@ -7604,7 +7604,7 @@ components:
           x-ztax-privacy: { class: P7, purposes: [PURP-SEC], retention: RET-TRANSIENT, redaction: NO_LOG, aiAllowed: NONE, evidencePolicy: NONE }
           type: string
           description: The secret from the emailed link, as it appears after `#set-password=`.
-          example: q9Zl3m0rYV8c2oQF6wq1n0Cw5hJ1tKx8bF3pTqYk2sA
+          example: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
         password:
           x-ztax-privacy: { class: P7, purposes: [PURP-SEC], retention: RET-TRANSIENT, redaction: NO_LOG, aiAllowed: NONE, evidencePolicy: NONE }
           type: string

@@ -19,7 +19,13 @@ paths = [
     '''docker-compose\.yml''',
     '''^\.env\.example$''',
     '''backend/\.env\.local\.example''',
-    '''\.github/workflows/ci\.yml''',
+    '''\.github/workflows/(?i:ci)\.yml''',
     '''docs/tools/tests/test_check_secrets_manifest\.py'''
+]
+# Exact values, not patterns. The contract once used this random-looking
+# string as the example set-password link token; it was never issued by any
+# cell and is now AAAA…, but it stays in this branch's history, which CI scans.
+regexes = [
+    '''^q9Zl3m0rYV8c2oQF6wq1n0Cw5hJ1tKx8bF3pTqYk2sA$''',
 ]
 

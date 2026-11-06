@@ -3122,7 +3122,7 @@ export interface components {
         SetPasswordWithLinkRequest: {
             /**
              * @description The secret from the emailed link, as it appears after `#set-password=`.
-             * @example q9Zl3m0rYV8c2oQF6wq1n0Cw5hJ1tKx8bF3pTqYk2sA
+             * @example AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
              */
             token: string;
             /**
