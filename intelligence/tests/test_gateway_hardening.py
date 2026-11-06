@@ -694,3 +694,175 @@ def test_a_base_exception_from_the_runtime_keeps_its_type_with_a_timeout(
     assert sink.records == []  # as without a timeout: nothing is sealed
     # The slot was released: every slot is free again.
     _assert_all_slots_free(timed)
+
+
+# ---------------------------------------------------------------------------
+# Second review follow-ups: the validator never raises; slot safety around start
+# ---------------------------------------------------------------------------
+
+
+class _RaisingFloat(float):
+    def __float__(self) -> float:
+        raise RuntimeError("no float")
+
+
+class _RaisingInt(int):
+    def __float__(self) -> float:
+        raise RuntimeError("no float")
+
+
+class _HostileClass:
+    """isinstance() reaches for ``__class__`` and gets an exception."""
+
+    @property  # type: ignore[misc]
+    def __class__(self) -> type:
+        raise RuntimeError("no class")
+
+
+class _ModalRuntime:
+    """Blocks on ``gate`` until released; in ``barrier_mode`` every call waits at a
+    barrier of RUNTIME_MAX_IN_FLIGHT parties instead. Counts runtime calls in flight."""
+
+    def __init__(self) -> None:
+        self.gate = threading.Event()
+        self.barrier_mode = False
+        self.barrier = threading.Barrier(RUNTIME_MAX_IN_FLIGHT, timeout=10)
+        self.lock = threading.Lock()
+        self.in_flight = 0
+        self.peak = 0
+        self.calls = 0
+
+    def run(self, route: Route, call: Call) -> Result:
+        with self.lock:
+            self.calls += 1
+            self.in_flight += 1
+            self.peak = max(self.peak, self.in_flight)
+            barrier_mode = self.barrier_mode
+        try:
+            if barrier_mode:
+                self.barrier.wait()
+            else:
+                self.gate.wait(10)
+            return Result(text="ok", confidence="0.9")
+        finally:
+            with self.lock:
+                self.in_flight -= 1
+
+
+def _wait_for(predicate: Callable[[], bool], timeout: float = 5.0) -> None:
+    deadline = time.monotonic() + timeout
+    while not predicate():
+        assert time.monotonic() < deadline, "condition not reached in time"
+        time.sleep(0.005)
+
+
+@pytest.mark.parametrize(
+    "make_bad",
+    [lambda: _RaisingFloat(2.5), lambda: _RaisingInt(3), lambda: _HostileClass()],
+    ids=["float-subclass", "int-subclass", "hostile-class"],
+)
+def test_the_validator_returns_false_and_never_raises(make_bad: Callable[[], Any]) -> None:
+    from ztax_gateway.server import _valid_timeout
+
+    bad = make_bad()  # built here: pytest must not touch the hostile object at collection
+    assert _valid_timeout(bad) is False
+    with pytest.raises(ValueError, match="runtime_timeout_seconds"):
+        _gateway(_Runtime(), timeout=bad)
+
+
+@pytest.mark.parametrize("good", [2.5, 1, threading.TIMEOUT_MAX])
+def test_the_validator_still_accepts_numbers_within_the_bound(good: float) -> None:
+    from ztax_gateway.server import _valid_timeout
+
+    assert _valid_timeout(good) is True
+
+
+def test_a_failure_between_acquire_and_thread_start_frees_the_slot(
+    monkeypatch: pytest.MonkeyPatch, debug_logs: pytest.LogCaptureFixture
+) -> None:
+    runtime = _BarrierRuntime()
+    gateway, sink = _gateway(runtime, timeout=10.0)
+    real_event = threading.Event
+    attempts: list[int] = []
+
+    def flaky_event() -> threading.Event:
+        attempts.append(1)
+        if len(attempts) == 1:
+            raise MemoryError(f"no event {SENTINEL}")
+        return real_event()
+
+    with monkeypatch.context() as patch:
+        patch.setattr(threading, "Event", flaky_event)
+        with pytest.raises(GatewayError) as info:
+            gateway.invoke(_call())
+    err = info.value
+    assert err.code == grpc.StatusCode.UNAVAILABLE
+    assert err.reason == REASON_UNAVAILABLE
+    assert err.detail == DETAIL_RUNTIME_UNAVAILABLE
+    cause = err.__cause__
+    assert isinstance(cause, RuntimeUnavailableError)
+    assert cause.__context__ is None
+    assert runtime.calls == 0
+    assert len(sink.records) == 1
+    assert sink.records[0].invocation_outcome is InvocationOutcome.BLOCK
+    _assert_clean("stored records", _stored_blob(sink))
+    _assert_clean("log output", _log_blob(debug_logs))
+    # All 8 slots are free: 8 calls can be in flight together.
+    _assert_all_slots_free(gateway)
+
+
+def test_a_start_that_fails_after_the_thread_began_keeps_the_slot_until_the_runtime_returns(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime = _ModalRuntime()
+    gateway, sink = _gateway(runtime, timeout=10.0)
+    real_thread = threading.Thread
+
+    class _FailsAfterStart(real_thread):  # type: ignore[valid-type, misc]
+        def start(self) -> None:
+            super().start()
+            raise OSError("start failed after the thread began")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(threading, "Thread", _FailsAfterStart)
+        with pytest.raises(GatewayError) as info:
+            gateway.invoke(_call())
+    assert info.value.reason == REASON_UNAVAILABLE
+    assert info.value.detail == DETAIL_RUNTIME_UNAVAILABLE
+    assert len(sink.records) == 1
+    assert sink.records[0].invocation_outcome is InvocationOutcome.BLOCK
+
+    # That call's runtime is still running (blocked on the gate) and still owns its slot.
+    _wait_for(lambda: runtime.in_flight == 1)
+    errors: list[BaseException] = []
+
+    def filler() -> None:
+        try:
+            gateway.invoke(_call())
+        except BaseException as exc:  # collected and asserted below
+            errors.append(exc)
+
+    fillers = [threading.Thread(target=filler) for _ in range(RUNTIME_MAX_IN_FLIGHT - 1)]
+    for t in fillers:
+        t.start()
+    try:
+        _wait_for(lambda: runtime.in_flight == RUNTIME_MAX_IN_FLIGHT)
+        # 1 orphaned + 7 fillers fill all 8 slots: one more call is refused at once.
+        started = time.monotonic()
+        with pytest.raises(GatewayError) as busy:
+            gateway.invoke(_call())
+        assert time.monotonic() - started < 0.5
+        assert busy.value.reason == REASON_UNAVAILABLE
+        assert runtime.calls == RUNTIME_MAX_IN_FLIGHT
+        assert runtime.peak == RUNTIME_MAX_IN_FLIGHT
+    finally:
+        runtime.gate.set()
+    for t in fillers:
+        t.join(15)
+    assert not errors
+
+    # Once the runtime returned the worker released its slot: all 8 are free again.
+    _wait_for(lambda: not any(t.name == "ztax-gateway-runtime" for t in threading.enumerate()))
+    runtime.barrier_mode = True
+    _assert_all_slots_free(gateway)
+    assert runtime.peak <= RUNTIME_MAX_IN_FLIGHT

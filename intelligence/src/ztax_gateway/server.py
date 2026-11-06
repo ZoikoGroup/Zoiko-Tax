@@ -413,32 +413,49 @@ class Gateway:
             return self._runtime.run(route, call)
         if not self._runtime_slots.acquire(blocking=False):
             raise RuntimeUnavailableError(_RUNTIME_BUSY)
-        done = threading.Event()
+        # Everything from here until the worker thread has really started is inside
+        # the try statement, so ANY failure releases the slot, once. After the
+        # thread has started the slot belongs to the worker: its ``finally``
+        # releases it when the runtime returns, and nothing here may free it earlier.
+        slot_released: threading.Lock | None = None
+        thread: threading.Thread | None = None
+        done_event: threading.Event
         outcome: list[Result | BaseException] = []
-        # Taken (and never given back) by whoever releases the slot first, so the
-        # worker and the start-failure path can never both release it.
-        slot_released = threading.Lock()
-
-        def release_slot() -> None:
-            if slot_released.acquire(blocking=False):
-                self._runtime_slots.release()
-
-        def worker() -> None:
-            try:
-                try:
-                    outcome.append(self._runtime.run(route, call))
-                except BaseException as exc:  # re-raised by the waiting thread, same object
-                    outcome.append(exc)
-                done.set()
-            finally:
-                release_slot()
-
         start_failed = False
         try:
+            # Taken (and never given back) by whoever releases the slot first, so
+            # the worker and a failure path can never both release it.
+            lock = threading.Lock()
+            slot_released = lock
+            done_event = threading.Event()
+            outcome = []
+
+            def release_slot() -> None:
+                if lock.acquire(blocking=False):
+                    self._runtime_slots.release()
+
+            def worker() -> None:
+                try:
+                    try:
+                        outcome.append(self._runtime.run(route, call))
+                    except BaseException as exc:  # re-raised by the waiting thread, same object
+                        outcome.append(exc)
+                    done_event.set()
+                finally:
+                    release_slot()
+
             thread = threading.Thread(target=worker, name="ztax-gateway-runtime", daemon=True)
             thread.start()
         except BaseException as exc:
-            release_slot()
+            if thread is not None and thread.ident is not None:
+                # The worker thread began running: it owns the slot now.
+                pass
+            elif slot_released is None:
+                # Not even the lock exists, so no worker can: release directly.
+                self._runtime_slots.release()
+            elif slot_released.acquire(blocking=False):
+                # No worker ever ran: release, once.
+                self._runtime_slots.release()
             if not isinstance(exc, Exception):
                 raise  # KeyboardInterrupt, SystemExit: not ours to turn into a refusal
             start_failed = True
@@ -446,7 +463,7 @@ class Gateway:
         # from the failed start can hold OS text).
         if start_failed:
             raise RuntimeUnavailableError(_RUNTIME_NO_WORKER)
-        if not done.wait(timeout):
+        if not done_event.wait(timeout):
             raise RuntimeUnavailableError(_RUNTIME_TIMED_OUT)
         result = outcome[0]
         if isinstance(result, BaseException):
@@ -611,15 +628,17 @@ def _valid_timeout(value: object) -> bool:
 
     The upper bound is ``threading.TIMEOUT_MAX``: a larger value would be accepted
     here and then raise OverflowError when the wait starts. Never raises: an int too
-    large for a float (``10**400``) is simply not valid.
+    large for a float (``10**400``), or a subclass that raises, is simply not valid.
     """
-    if isinstance(value, bool) or not isinstance(value, int | float):
-        return False
     try:
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            return False
         as_float = float(value)
-    except (OverflowError, ValueError, TypeError):
+        return math.isfinite(as_float) and 0 < as_float <= threading.TIMEOUT_MAX
+    except Exception:
+        # Anything odd (a subclass whose __float__ or __class__ raises, an int too
+        # large for a float, ...) is simply not a valid timeout.
         return False
-    return math.isfinite(as_float) and 0 < as_float <= threading.TIMEOUT_MAX
 
 
 def _abort(context: grpc.ServicerContext, err: GatewayError) -> NoReturn:
