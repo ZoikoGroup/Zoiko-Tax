@@ -67,7 +67,11 @@ from typing import Any
 
 import report_fixture
 import serve_live_demo
-from groq_demo_runtime import GroqDemoConfigError, GroqDemoRuntime
+from groq_demo_runtime import (
+    GATEWAY_RUNTIME_TIMEOUT_SECONDS,
+    GroqDemoConfigError,
+    GroqDemoRuntime,
+)
 
 from ztax_gateway.explanation_guard import (
     _numeric_values,  # noqa: F401 -- accessed as report_ai_http._numeric_values in tests
@@ -378,6 +382,7 @@ def main() -> int:
             route_transform=lambda registry, routes: serve_live_demo._patched_routes(
                 registry, routes, model
             ),
+            runtime_timeout_seconds=GATEWAY_RUNTIME_TIMEOUT_SECONDS,
         )
     except (GatewayFactoryError, GroqDemoConfigError) as exc:
         print(f"report_ai_http: {exc}", file=sys.stderr)

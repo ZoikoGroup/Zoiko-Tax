@@ -43,7 +43,11 @@ import os
 import sys
 from pathlib import Path
 
-from groq_demo_runtime import GroqDemoConfigError, GroqDemoRuntime
+from groq_demo_runtime import (
+    GATEWAY_RUNTIME_TIMEOUT_SECONDS,
+    GroqDemoConfigError,
+    GroqDemoRuntime,
+)
 
 from ztax_gateway.gateway_factory import GatewayFactoryError, build_gateway
 from ztax_gateway.governance import UseCaseRegistry
@@ -136,6 +140,7 @@ def main() -> int:
             train,
             runtime_factory=runtime.with_prompt_registry,
             route_transform=lambda registry, routes: _patched_routes(registry, routes, model),
+            runtime_timeout_seconds=GATEWAY_RUNTIME_TIMEOUT_SECONDS,
         )
     except (GatewayFactoryError, GroqDemoConfigError) as exc:
         print(f"serve_live_demo: {exc}", file=sys.stderr)
