@@ -1,6 +1,12 @@
+# Deploys to the zoikotax VM on every push to main (that is, every merge).
+# "Run workflow" redeploys the latest main by hand.
+#
+# Gate: ci.yml runs on pull requests only. For it to actually gate production,
+# branch protection on main must require the `all checks` status and block
+# direct pushes (Settings > Branches). Without that, this workflow will deploy
+# anything that lands on main.
 name: Deploy to the zoikotax VM
 
-# Runs on every push to main (that is, every merge). "Run workflow" redeploys the latest main by hand.
 on:
   push:
     branches: [main]
@@ -14,15 +20,21 @@ on:
 permissions:
   contents: read
 
+# Never cancel a deploy that is mid-build or mid-migration; queue the next one.
 concurrency:
   group: deploy-zoikotax
   cancel-in-progress: false
 
 jobs:
   deploy:
+    name: deploy and smoke test
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    # Deploys take about 70 s; anything near this limit is hung.
+    timeout-minutes: 15
+    # Gives a deploy history in the GitHub UI. Add required reviewers under
+    # Settings > Environments > production if you want a manual approval step.
+    environment: production
     steps:
       - name: Deploy over SSH (the key can only start a deploy)
         env:
@@ -35,7 +47,56 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
+
+          # Fail early with a clear message if a secret is missing or empty.
+          for v in SSH_HOST SSH_USER SSH_KEY KNOWN_HOSTS; do
+            if [ -z "${!v}" ]; then
+              echo "::error::secret for $v is not set"
+              exit 1
+            fi
+          done
+
+          # Only ever send a full commit SHA (or nothing) and 0/1.
+          if [ -n "$SHA" ] && ! printf '%s' "$SHA" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "::error::unexpected SHA value"
+            exit 1
+          fi
+
           mkdir -p ~/.ssh
+          trap 'rm -f ~/.ssh/deploy_key' EXIT
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=30 "$SSH_USER@$SSH_HOST" "SHA=$SHA FORCE=$FORCE"
+
+          ssh -i ~/.ssh/deploy_key \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o BatchMode=yes \
+            -o ConnectTimeout=20 \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=30 \
+            "$SSH_USER@$SSH_HOST" "SHA=$SHA FORCE=$FORCE"
+
+      # The server script rolls back on its own failures; this catches a deploy
+      # that finished but left something unhealthy. It reports, it does not
+      # roll back: check /var/www/zoikotax-platform/deploy.log on the VM.
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+
+          check() {
+            url="$1"
+            for i in $(seq 1 12); do
+              if curl -fsS --max-time 10 -o /dev/null "$url"; then
+                echo "ok: $url"
+                return 0
+              fi
+              echo "waiting ($i/12): $url"
+              sleep 5
+            done
+            echo "::error::smoke test failed: $url"
+            return 1
+          }
+
+          check https://api.zoikotax.com/readyz
+          check https://app.zoikotax.com/login
+          check https://zoikotax.com/
