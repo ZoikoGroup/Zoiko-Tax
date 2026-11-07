@@ -58,10 +58,10 @@ is available. Three statuses are used:
 - Gold-set cases in the repo are placeholder records, not reviewed evidence.
 - ZTAX-CLS-001 (Telecom Product Ontology) is registered as a DRAFT in `docs/register.yaml`; no plain-text or Markdown spec exists under `docs/specs/`. The registered document is a binary DOCX; `ontology_alignment.py` requires a Markdown input and cannot read it. No alignment run has been completed and no match count is available.
 - Go-side behaviour for T4 is not checked from this folder.
-- Fixed: an error the Gateway does not name (not Unavailable, NotConfigured or Unrouted) now leaves one BLOCK record
-  (AI_GATEWAY_UNAVAILABLE, fixed detail, no exception text); the caller sees what it saw before.
-- `usage.latency_ms` is the measured runtime-call time on every record of a call that reached the runtime (0 on a
-  refusal before it). Tokens and cost are still unpopulated: no provider telemetry reaches the Gateway.
+- Fixed: an error the Gateway does not name now leaves one BLOCK record (AI_GATEWAY_UNAVAILABLE, fixed detail, no exception text).
+- `usage.latency_ms` is set on every record of a call that reached the runtime; tokens and cost are unpopulated: no provider telemetry.
+- Refusal details for kill switch, unknown or suspended use case, region and malformed context are fixed text; an unknown id is
+  logged and recorded as `unregistered`. Data-class refusal details still name the PRIV-001 class, because existing tests assert it.
 
 ## F. Open decisions (from the project team, not verifiable from code)
 

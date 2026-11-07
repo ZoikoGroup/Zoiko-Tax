@@ -31,7 +31,7 @@ import sys
 import threading
 import time
 from concurrent import futures
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Final, NoReturn
 
@@ -39,7 +39,13 @@ import grpc
 
 from .evidence_sink import EvidenceSink, LoggingEvidenceSink
 from .fake_runtime import FakeRuntime
-from .governance import GovernanceRefusedError, Refusal, UseCase, UseCaseRegistry
+from .governance import (
+    UNREGISTERED_USE_CASE,
+    GovernanceRefusedError,
+    Refusal,
+    UseCase,
+    UseCaseRegistry,
+)
 from .invocation_check_event import (
     AnswerCheckedEvent,
     CheckEventSink,
@@ -303,12 +309,20 @@ class Gateway:
             data_classes=g.data_classes,
         )
 
+        # What a refusal record may hold. A use-case id the registry does not know is
+        # whatever the caller sent, and so is the region of a call from another cell:
+        # neither is copied into the evidence record (the record names this cell's own
+        # region instead, the place that took the decision).
+        refusal_provenance = provenance
+        if self._registry.get(g.use_case) is None:
+            refusal_provenance = replace(refusal_provenance, use_case=UNREGISTERED_USE_CASE)
+
         if g.region != self._region:
             # ADR-0006 §2.8: residency is per cell. A call from another cell's
             # region has reached the wrong Gateway, whatever the use case
             # permits. The detail is fixed text: it names neither region.
             self._seal_block(
-                provenance,
+                replace(refusal_provenance, region=self._region),
                 call.input,
                 refusal_code=Refusal.RESIDENCY_REFUSED.value,
             )
@@ -343,7 +357,7 @@ class Gateway:
                 _REFUSAL_STATUS[refusal.refusal], refusal.refusal.value, refusal.detail
             )
             self._seal_block(
-                provenance,
+                refusal_provenance,
                 call.input,
                 refusal_code=refusal.refusal.value,
                 original_error=caller_err,
