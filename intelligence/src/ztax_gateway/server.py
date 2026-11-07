@@ -29,8 +29,9 @@ import math
 import os
 import sys
 import threading
+import time
 from concurrent import futures
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Final, NoReturn
 
@@ -38,7 +39,13 @@ import grpc
 
 from .evidence_sink import EvidenceSink, LoggingEvidenceSink
 from .fake_runtime import FakeRuntime
-from .governance import GovernanceRefusedError, Refusal, UseCase, UseCaseRegistry
+from .governance import (
+    UNREGISTERED_USE_CASE,
+    GovernanceRefusedError,
+    Refusal,
+    UseCase,
+    UseCaseRegistry,
+)
 from .invocation_check_event import (
     AnswerCheckedEvent,
     CheckEventSink,
@@ -93,6 +100,9 @@ DETAIL_NOT_CONFIGURED = "model runtime is not configured"
 DETAIL_RESIDENCY_REFUSED = "call is from a region this Gateway does not serve"
 DETAIL_RUNTIME_UNAVAILABLE = "model runtime unavailable"
 DETAIL_EVIDENCE_WRITE_FAILED = "evidence write failed"
+# Detail of the BLOCK record written when a runtime raises an error the Gateway has no
+# name for. Fixed text: the record never carries the exception's text or class name.
+RECORD_DETAIL_UNEXPECTED_ERROR = "runtime raised an unexpected error"
 
 # Most runtime calls that may be in flight at once when a runtime timeout is set.
 # A call that times out leaves its worker running until the runtime returns, so
@@ -118,6 +128,49 @@ class GatewayError(Exception):
 
 _REFUSAL_STATUS = {r: grpc.StatusCode.PERMISSION_DENIED for r in Refusal}
 _REFUSAL_STATUS[Refusal.MALFORMED_CONTEXT] = grpc.StatusCode.INVALID_ARGUMENT
+
+_NS_PER_MS: Final = 1_000_000
+
+
+def _monotonic_ns() -> int:
+    """The clock the usage latency is measured with.
+
+    A module-level function so a test can replace it and never has to sleep.
+    """
+    return time.monotonic_ns()
+
+
+class _CallTiming:
+    """Whole milliseconds the runtime call took, set when it ends however it ends."""
+
+    __slots__ = ("ms",)
+
+    def __init__(self) -> None:
+        self.ms = 0
+
+
+class _UnexpectedRuntimeError(Exception):
+    """Carries an error the runtime raised that the Gateway has no name for.
+
+    Private to this module: ``_run`` raises it (outside its ``except`` block) so that
+    ``invoke_with_id`` can write one BLOCK record, then re-raises ``original`` exactly
+    as before. It has no message of its own.
+    """
+
+    def __init__(self, original: Exception) -> None:
+        super().__init__()
+        self.original = original
+
+
+# Errors the runtime path may raise on purpose; each has its own handling in
+# ``invoke_with_id``. Anything else that is an ``Exception`` is "unexpected".
+_EXPECTED_RUNTIME_FAILURES: Final = (
+    GovernanceRefusedError,
+    GatewayError,
+    RuntimeNotConfiguredError,
+    RuntimeUnavailableError,
+    UnroutedUseCaseError,
+)
 
 
 class Gateway:
@@ -256,12 +309,20 @@ class Gateway:
             data_classes=g.data_classes,
         )
 
+        # What a refusal record may hold. A use-case id the registry does not know is
+        # whatever the caller sent, and so is the region of a call from another cell:
+        # neither is copied into the evidence record (the record names this cell's own
+        # region instead, the place that took the decision).
+        refusal_provenance = provenance
+        if self._registry.get(g.use_case) is None:
+            refusal_provenance = replace(refusal_provenance, use_case=UNREGISTERED_USE_CASE)
+
         if g.region != self._region:
             # ADR-0006 §2.8: residency is per cell. A call from another cell's
             # region has reached the wrong Gateway, whatever the use case
             # permits. The detail is fixed text: it names neither region.
             self._seal_block(
-                provenance,
+                replace(refusal_provenance, region=self._region),
                 call.input,
                 refusal_code=Refusal.RESIDENCY_REFUSED.value,
             )
@@ -271,10 +332,12 @@ class Gateway:
                 DETAIL_RESIDENCY_REFUSED,
             )
 
+        timing = _CallTiming()
+
         def work(_: UseCase) -> Reply:
             if route is None:
                 raise UnroutedUseCaseError("use case has no route")
-            return self._run(route, call)
+            return self._run(route, call, timing)
 
         # Ch.17 §21: produce exactly one tamper-evident evidence record per
         # invocation, written to the sink *before* the reply bytes are returned.
@@ -284,6 +347,7 @@ class Gateway:
         # raised inside an ``except`` block and carries no ``__context__``.
         not_configured = False
         no_route = False
+        unexpected: Exception | None = None
         try:
             reply = guarded(self._registry, provenance, work)
         except GovernanceRefusedError as refusal:
@@ -293,7 +357,7 @@ class Gateway:
                 _REFUSAL_STATUS[refusal.refusal], refusal.refusal.value, refusal.detail
             )
             self._seal_block(
-                provenance,
+                refusal_provenance,
                 call.input,
                 refusal_code=refusal.refusal.value,
                 original_error=caller_err,
@@ -311,16 +375,37 @@ class Gateway:
                 provenance,
                 call.input,
                 refusal_code=REASON_UNAVAILABLE,
+                latency_ms=timing.ms,
             )
             raise GatewayError(
                 grpc.StatusCode.UNAVAILABLE, REASON_UNAVAILABLE, DETAIL_RUNTIME_UNAVAILABLE
             ) from exc
+        except _UnexpectedRuntimeError as failure:
+            # ADR-0006 §2.7: the crossing is evidenced even when the runtime fails in a
+            # way nobody named. Handled after the try statement.
+            unexpected = failure.original
         if not_configured or no_route:
             self._refuse_not_configured(provenance, call, no_route=no_route)
+        if unexpected is not None:
+            # One BLOCK record, the same shape as the runtime-unavailable one (verdict
+            # AI_GATEWAY_UNAVAILABLE) with a fixed detail and no exception text. If the
+            # sink fails here the failure is logged and the error below is unchanged.
+            self._seal_block(
+                provenance,
+                call.input,
+                refusal_code=REASON_UNAVAILABLE,
+                detail=RECORD_DETAIL_UNEXPECTED_ERROR,
+                latency_ms=timing.ms,
+            )
+            # The caller sees exactly what it saw before this record existed: the
+            # original error (the transport turns it into UNAVAILABLE / "internal error").
+            raise unexpected
 
         # Successful invocation: seal a PROPOSE record (the authority-derived
         # default) and write it to the sink before encode_reply is called.
-        invocation_id = self._seal_success(provenance, call.input, reply)
+        invocation_id = self._seal_success(
+            provenance, call.input, reply, latency_ms=timing.ms
+        )
         return encode_reply(reply), invocation_id
 
     def _refuse_not_configured(
@@ -470,26 +555,54 @@ class Gateway:
             raise result
         return result
 
-    def _run(self, route: Route, call: Call) -> Reply:
-        result = self._call_runtime(route, call)
-        check_result(call.kind, result)
-        return Reply(
-            model_profile=route.model_profile,
-            provider_profile=route.provider_profile,
-            prompt_profile=route.prompt_profile,
-            ai_train_version=self._train,
-            text=result.text,
-            payload=result.payload,
-            fields=dict(result.fields or {}),
-            proposed_code=result.proposed_code,
-            confidence=result.confidence,
-        )
+    def _run(self, route: Route, call: Call, timing: _CallTiming | None = None) -> Reply:
+        """Run the routed model and shape its reply.
+
+        ``timing`` receives the whole milliseconds spent in :meth:`_call_runtime`
+        (including a wait for a slot or for the timeout), however that call ends.
+        An ``Exception`` the Gateway has no name for, from the runtime or from the
+        output check, is logged once by class name only and re-raised wrapped in a
+        private error so the caller can write one evidence record for it.
+        """
+        unexpected: Exception  # set only by the except block below
+        try:
+            started = _monotonic_ns()
+            try:
+                result = self._call_runtime(route, call)
+            finally:
+                if timing is not None:
+                    timing.ms = max(0, (_monotonic_ns() - started) // _NS_PER_MS)
+            check_result(call.kind, result)
+            return Reply(
+                model_profile=route.model_profile,
+                provider_profile=route.provider_profile,
+                prompt_profile=route.prompt_profile,
+                ai_train_version=self._train,
+                text=result.text,
+                payload=result.payload,
+                fields=dict(result.fields or {}),
+                proposed_code=result.proposed_code,
+                confidence=result.confidence,
+            )
+        except _EXPECTED_RUNTIME_FAILURES:
+            raise
+        except Exception as exc:
+            # Class name only: the text and traceback can carry provider text.
+            log.error(
+                "gateway: runtime raised an unexpected error",
+                extra={"error_type": type(exc).__name__},
+            )
+            unexpected = exc
+        # Raised after the except block, so it carries no __context__ or __cause__.
+        raise _UnexpectedRuntimeError(unexpected)
 
     # ------------------------------------------------------------------
     # Evidence helpers (Ch.17 §21)
     # ------------------------------------------------------------------
 
-    def _seal_success(self, provenance: Provenance, input_bytes: bytes, reply: Reply) -> str:
+    def _seal_success(
+        self, provenance: Provenance, input_bytes: bytes, reply: Reply, *, latency_ms: int = 0
+    ) -> str:
         """Build and write a successful-invocation evidence record.
 
         The outcome is derived from the authority outcome so that the
@@ -516,7 +629,9 @@ class Gateway:
         reply_bytes = encode_reply(reply)
         builder.set_output(reply_bytes)
         builder.add_guardrail(GuardrailResult("governance.authority", "PASS"))
-        builder.set_usage(UsageMetrics())  # provider telemetry not yet available
+        # Only latency is measured here. Tokens and cost stay zero: no provider
+        # telemetry reaches the Gateway yet.
+        builder.set_usage(UsageMetrics(latency_ms=latency_ms))
         # WP5 Part A: resolve the route's prompt label to a PromptProfile and
         # set the content hash on the builder.  No registry or no matching
         # profile: leave the hash None and log one warning; never fail the call.
@@ -540,6 +655,8 @@ class Gateway:
         *,
         refusal_code: str,
         original_error: GatewayError | None = None,
+        detail: str = "",
+        latency_ms: int = 0,
     ) -> None:
         """Build and write a BLOCK evidence record for a governance refusal.
 
@@ -561,7 +678,10 @@ class Gateway:
             registry=self._registry,
         )
         builder.set_input(input_bytes)
-        builder.add_guardrail(GuardrailResult("governance.authority", refusal_code))
+        builder.add_guardrail(GuardrailResult("governance.authority", refusal_code, detail))
+        # Latency is set only for a call that reached the runtime; a refusal before
+        # it keeps the zero default. Tokens and cost are never populated here.
+        builder.set_usage(UsageMetrics(latency_ms=latency_ms))
         record = builder.build()
         self._write_sink_block(record, original_error=original_error)
 

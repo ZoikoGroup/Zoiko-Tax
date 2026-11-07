@@ -202,6 +202,22 @@ class UseCaseRegistry:
         return self._global_kill or use_case_id in self._killed
 
 
+# Refusal details are fixed text. A detail is copied into the caller's error, the INFO
+# log and (through the transport) the audit trail, so it never repeats anything the
+# caller sent: not the use-case id, not the region, nothing from an error message
+# built from the request. The detail that names a registry-owned use-case id, an
+# enum value (authority, risk tier) or a PRIV-001 class label stays where it is.
+DETAIL_MALFORMED_CONTEXT = "the governance context is malformed"
+DETAIL_KILL_SWITCH_ENGAGED = "the kill switch is engaged for this use case"
+DETAIL_UNKNOWN_USE_CASE = "the use case is not a registered AI use case"
+DETAIL_USE_CASE_SUSPENDED = "the use case is suspended"
+DETAIL_REGION_NOT_PERMITTED = "the region is not permitted for this use case"
+
+# What stands in for a use-case id the registry does not know, in a refusal context
+# and in the evidence record: that id is whatever the caller sent.
+UNREGISTERED_USE_CASE = "unregistered"
+
+
 def authorise(registry: UseCaseRegistry, provenance: Provenance) -> UseCase:
     """Decide whether a call may proceed. Returns the use case, or refuses.
 
@@ -216,19 +232,26 @@ def authorise(registry: UseCaseRegistry, provenance: Provenance) -> UseCase:
     "unknown use case" appearing while the global kill is engaged would send
     somebody looking in the wrong place.
     """
+    malformed = False
     try:
         provenance.validate()
-    except ValueError as exc:
-        raise GovernanceRefusedError(Refusal.MALFORMED_CONTEXT, str(exc)) from exc
+    except ValueError:
+        malformed = True
+    if malformed:
+        # Raised after the except block: no __context__, and the validation message
+        # (which can quote a field of the request) goes nowhere.
+        raise GovernanceRefusedError(Refusal.MALFORMED_CONTEXT, DETAIL_MALFORMED_CONTEXT)
 
     context = provenance.redacted()
+    if registry.get(provenance.use_case) is None:
+        context["use_case"] = UNREGISTERED_USE_CASE
 
     # 1. Kill switch. Checked before registration so that an unregistered use
     #    case under a global kill is reported as killed, not as unknown.
     if registry.is_killed(provenance.use_case):
         raise GovernanceRefusedError(
             Refusal.KILL_SWITCH_ENGAGED,
-            f"the kill switch is engaged for {provenance.use_case!r}",
+            DETAIL_KILL_SWITCH_ENGAGED,
             context,
         )
 
@@ -237,14 +260,14 @@ def authorise(registry: UseCaseRegistry, provenance: Provenance) -> UseCase:
     if use_case is None:
         raise GovernanceRefusedError(
             Refusal.UNKNOWN_USE_CASE,
-            f"{provenance.use_case!r} is not a registered AI use case",
+            DETAIL_UNKNOWN_USE_CASE,
             context,
         )
 
     if use_case.suspended:
         raise GovernanceRefusedError(
             Refusal.USE_CASE_SUSPENDED,
-            f"{provenance.use_case!r} is suspended",
+            DETAIL_USE_CASE_SUSPENDED,
             context,
         )
 
@@ -306,7 +329,7 @@ def authorise(registry: UseCaseRegistry, provenance: Provenance) -> UseCase:
     if provenance.region not in use_case.permitted_regions:
         raise GovernanceRefusedError(
             Refusal.RESIDENCY_REFUSED,
-            f"region {provenance.region!r} is not permitted for {use_case.use_case_id!r}",
+            DETAIL_REGION_NOT_PERMITTED,
             context,
         )
 
