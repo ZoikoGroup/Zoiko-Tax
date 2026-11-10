@@ -1,0 +1,39 @@
+{
+  "list_version": "synthetic-demo-v0",
+  "approved": [
+    {
+      "code": "ontology:telecom/voice/mobile",
+      "effective_from": "2024-01-01"
+    },
+    {
+      "code": "ontology:telecom/voice/fixed",
+      "effective_from": "2024-01-01"
+    },
+    {
+      "code": "ontology:telecom/data/broadband",
+      "effective_from": "2024-01-01"
+    },
+    {
+      "code": "ontology:telecom/data/mobile",
+      "effective_from": "2024-01-01"
+    },
+    {
+      "code": "ontology:telecom/messaging/sms",
+      "effective_from": "2024-01-01"
+    },
+    {
+      "code": "ontology:telecom/voice/roaming",
+      "effective_from": "2024-01-01"
+    },
+    {
+      "code": "ontology:telecom/data/roaming",
+      "effective_from": "2020-01-01",
+      "effective_to": "2023-12-31"
+    },
+    {
+      "code": "ontology:telecom/esim/digital",
+      "effective_from": "2030-01-01"
+    }
+  ]
+}
+

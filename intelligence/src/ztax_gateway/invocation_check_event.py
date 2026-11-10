@@ -66,6 +66,15 @@ class CheckReason(StrEnum):
     that service logs when the model itself abstains. ``CHECKS_PASSED`` goes
     with ``Verdict.PASS``. Add a value only together with the check that
     produces it.
+
+    The ``GUARD_ONTOLOGY_*`` values are produced by the ontology guard in
+    ``tools/report_ai_http.py`` (``POST /demo/classify``).  They correspond
+    one-to-one to :class:`ztax_gateway.ontology_guard.GuardVerdict` values
+    that are not ``ALLOWED``:
+
+    - ``GUARD_ONTOLOGY_UNKNOWN``           -- code not in the approved list.
+    - ``GUARD_ONTOLOGY_NOT_YET_EFFECTIVE`` -- code present but not yet effective.
+    - ``GUARD_ONTOLOGY_EXPIRED``           -- code present but past its ``effective_to``.
     """
 
     CHECKS_PASSED = "CHECKS_PASSED"
@@ -74,6 +83,9 @@ class CheckReason(StrEnum):
     GUARD_STATUS_MISMATCH = "GUARD_STATUS_MISMATCH"
     GUARD_NUMBER_NOT_IN_ROWS = "GUARD_NUMBER_NOT_IN_ROWS"
     MODEL_ABSTAINED = "MODEL_ABSTAINED"
+    GUARD_ONTOLOGY_UNKNOWN = "GUARD_ONTOLOGY_UNKNOWN"
+    GUARD_ONTOLOGY_NOT_YET_EFFECTIVE = "GUARD_ONTOLOGY_NOT_YET_EFFECTIVE"
+    GUARD_ONTOLOGY_EXPIRED = "GUARD_ONTOLOGY_EXPIRED"
 
 
 @dataclass(frozen=True, slots=True)

@@ -24,6 +24,15 @@ Routes:
                                    "REVIEW_REQUIRED", "explanation": str,
                                    "cited_ids": [str], "reason": str,
                                    "provenance": {...} | None}
+    POST /demo/classify            body: {"subject_ref": str,
+                                   "description": str}
+                                   -> {"outcome": "PROPOSED" | "ABSTAIN" |
+                                   "REFUSED" | "NOT_CONFIGURED",
+                                   "evidence_id": str | None,
+                                   "verdict": str, "reason_code": str,
+                                   "list_version": str | None,
+                                   "proposed_code": str}  # only when PROPOSED
+                                   "confidence_calibrated": false}
 
 CORS is allowed for exactly one origin, ``http://localhost:13000`` -- no
 other origin is ever reflected. Binds inside the container only; the
@@ -51,6 +60,13 @@ cited row, forces an ABSTAINED outcome regardless of what the model claimed.
 The guard cannot prove a sentence is true -- see the note on ``apply_guard``
 in ``ztax_gateway.explanation_guard``.
 
+The ontology guard (``apply_ontology_guard``) in this module validates
+``POST /demo/classify`` proposals against a synthetic approved-ontology list
+loaded from the path in ``ZTAX_ONTOLOGY_APPROVED_LIST``.  When that
+environment variable is unset, the route returns ``NOT_CONFIGURED`` and all
+other routes are unaffected.  When it is set to an unreadable or invalid
+file, the server refuses to start.
+
 This endpoint has no login. It is a loopback-only demo surface and must never
 be forwarded or exposed beyond the machine it runs on.
 """
@@ -60,7 +76,9 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import os
 import sys
+from datetime import UTC, date, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -80,9 +98,16 @@ from ztax_gateway.explanation_guard import (
 )
 from ztax_gateway.gateway_factory import GatewayFactoryError, build_gateway
 from ztax_gateway.invocation_check_event import CheckReason, Verdict
+from ztax_gateway.ontology_guard import (
+    ApprovedOntologyList,
+    GuardVerdict,
+    OntologyGuardError,
+    check_code,
+    load_approved_list,
+)
 from ztax_gateway.server import Gateway, GatewayError
 
-__all__: list[str] = ["apply_guard", "explain", "main"]
+__all__: list[str] = ["apply_guard", "apply_ontology_guard", "classify", "explain", "main"]
 
 log = logging.getLogger("ztax_gateway.report_ai_http")
 
@@ -126,6 +151,14 @@ _TENANT = "00000000-0000-0000-0000-000000000098"
 
 _VALIDATOR = "explanation_guard@1"
 
+# Use case and validator for the ontology-guard classify route.
+_CLASSIFY_USE_CASE = "classification-review"
+_ONTOLOGY_GUARD_VALIDATOR = "ontology_guard@1"
+
+# Maximum byte size for a /demo/classify request body (same order of
+# magnitude as the explain route's implicit limit from Content-Length).
+_CLASSIFY_MAX_BODY = 32 * 1024  # 32 KiB
+
 # Each explain kind runs under an already-registered governed use case:
 # trend points and filing-pipeline buckets are dashboard figures, and a
 # payment is a row of the obligations register's Payments tab. No new use
@@ -138,6 +171,45 @@ _KIND_TO_USE_CASE: dict[str, str] = {
     "payment-row": "explain-obligation-row",
     "shadow-variance": "explain-shadow-variance",
 }
+
+
+# ---------------------------------------------------------------------------
+# Ontology-guard helper (pure, no I/O, no logging)
+# ---------------------------------------------------------------------------
+
+# Mapping from GuardVerdict to (Verdict, CheckReason) for ABSTAIN cases.
+# ALLOWED is handled by the caller, not this table.
+_VERDICT_MAP: dict[GuardVerdict, tuple[Verdict, CheckReason]] = {
+    GuardVerdict.UNKNOWN: (Verdict.ABSTAIN, CheckReason.GUARD_ONTOLOGY_UNKNOWN),
+    GuardVerdict.NOT_YET_EFFECTIVE: (
+        Verdict.ABSTAIN,
+        CheckReason.GUARD_ONTOLOGY_NOT_YET_EFFECTIVE,
+    ),
+    GuardVerdict.EXPIRED: (Verdict.ABSTAIN, CheckReason.GUARD_ONTOLOGY_EXPIRED),
+}
+
+
+def apply_ontology_guard(
+    proposed_code: str,
+    as_of: date,
+    approved_list: ApprovedOntologyList,
+) -> tuple[Verdict, CheckReason]:
+    """Check *proposed_code* against *approved_list* as of *as_of*.
+
+    Returns ``(Verdict.PASS, CheckReason.CHECKS_PASSED)`` when ALLOWED.
+    Returns ``(Verdict.ABSTAIN, <reason>)`` for UNKNOWN, NOT_YET_EFFECTIVE
+    or EXPIRED.
+
+    Does NOT call ``strip_heading_marker``.  A code with a heading marker
+    (``#ontology:...``) is not an approved code and must return ABSTAIN with
+    GUARD_ONTOLOGY_UNKNOWN.
+
+    DEMO ONLY -- the approved list is synthetic; not a production list.
+    """
+    verdict = check_code(proposed_code, as_of, approved_list)
+    if verdict is GuardVerdict.ALLOWED:
+        return Verdict.PASS, CheckReason.CHECKS_PASSED
+    return _VERDICT_MAP[verdict]
 
 
 # ---------------------------------------------------------------------------
@@ -277,12 +349,139 @@ def explain(gateway: Gateway, fixture: dict[str, Any], kind: str, ids: list[str]
     }
 
 
+def _build_classify_raw_call(subject_ref: str, description: str) -> bytes:
+    """The raw gateway-call JSON for one /demo/classify request.
+
+    Uses the same wire shape as live_demo.py's _raw_call.
+    The user content is the description string only, encoded as JSON.
+    """
+    doc: dict[str, Any] = {
+        "kind": "CLASSIFICATION_PROPOSAL",
+        "governance": {
+            "tenant_id": _TENANT,
+            "use_case": _CLASSIFY_USE_CASE,
+            "authority_outcome": "A1",
+            "risk_tier": "T1",
+            "region": "local",
+            "data_classes": ["P0"],
+        },
+        "subject_ref": subject_ref,
+        "input_b64": base64.b64encode(
+            json.dumps({"description": description}).encode()
+        ).decode(),
+    }
+    return json.dumps(doc).encode()
+
+
+def classify(
+    gateway: Gateway,
+    subject_ref: str,
+    description: str,
+    as_of: date,
+    approved_list: ApprovedOntologyList | None,
+) -> dict[str, Any]:
+    """Propose an ontology classification via *gateway* and guard the result.
+
+    *as_of* is the reference date for the effectivity window check; the HTTP
+    handler passes ``date.today()`` and tests pass a fixed date.
+
+    *approved_list* is ``None`` when ``ZTAX_ONTOLOGY_APPROVED_LIST`` is unset.
+    In that case the route returns ``NOT_CONFIGURED`` without calling the
+    gateway; ``/demo/explain`` is unaffected.
+
+    Never raises for a Gateway outcome -- every case maps to one of the four
+    documented outcomes (PROPOSED, ABSTAIN, REFUSED, NOT_CONFIGURED).
+    Never returns the rejected code or any model text on ABSTAIN.
+    """
+    if approved_list is None:
+        return {
+            "outcome": "NOT_CONFIGURED",
+            "evidence_id": None,
+            "verdict": Verdict.ABSTAIN,
+            "reason_code": CheckReason.GUARD_ONTOLOGY_UNKNOWN,
+            "list_version": None,
+            "confidence_calibrated": False,
+        }
+
+    raw_call = _build_classify_raw_call(subject_ref, description)
+    try:
+        reply_bytes, invocation_id = gateway.invoke_with_id(raw_call)
+    except GatewayError as exc:
+        # A refused or killed call: only the fixed reason code goes back.
+        log.info(
+            "classify use_case=%s outcome=REFUSED reason=%s",
+            _CLASSIFY_USE_CASE,
+            exc.reason,
+        )
+        return {
+            "outcome": "REFUSED",
+            "evidence_id": None,
+            "verdict": Verdict.BLOCK,
+            "reason_code": exc.reason,
+            "list_version": approved_list.list_version,
+            "confidence_calibrated": False,
+        }
+
+    reply = json.loads(reply_bytes)
+    proposed_code: str = reply.get("proposed_code", "")
+
+    verdict, reason_code = apply_ontology_guard(proposed_code, as_of, approved_list)
+
+    if verdict is Verdict.ABSTAIN:
+        log.info(
+            "classify use_case=%s outcome=ABSTAIN reason=%s",
+            _CLASSIFY_USE_CASE,
+            reason_code,
+        )
+        if invocation_id is not None:
+            _record_answer_check_safe(
+                gateway,
+                invocation_id,
+                Verdict.ABSTAIN,
+                reason_code,
+                _ONTOLOGY_GUARD_VALIDATOR,
+            )
+        # Never return the rejected code or any model text on ABSTAIN.
+        return {
+            "outcome": "ABSTAIN",
+            "evidence_id": invocation_id,
+            "verdict": verdict,
+            "reason_code": reason_code,
+            "list_version": approved_list.list_version,
+            "confidence_calibrated": False,
+        }
+
+    # PASS: approved code -- include proposed_code in the response.
+    log.info("classify use_case=%s outcome=PROPOSED reason=-", _CLASSIFY_USE_CASE)
+    if invocation_id is not None:
+        _record_answer_check_safe(
+            gateway,
+            invocation_id,
+            Verdict.PASS,
+            CheckReason.CHECKS_PASSED,
+            _ONTOLOGY_GUARD_VALIDATOR,
+        )
+    return {
+        "outcome": "PROPOSED",
+        "evidence_id": invocation_id,
+        "verdict": verdict,
+        "reason_code": reason_code,
+        "list_version": approved_list.list_version,
+        "proposed_code": proposed_code,
+        "confidence_calibrated": False,
+    }
+
+
 # ---------------------------------------------------------------------------
 # The HTTP surface itself.
 # ---------------------------------------------------------------------------
 
 
-def _make_handler(gateway: Gateway, fixture: dict[str, Any]) -> type[BaseHTTPRequestHandler]:
+def _make_handler(
+    gateway: Gateway,
+    fixture: dict[str, Any],
+    approved_list: ApprovedOntologyList | None,
+) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
         server_version = "ztax-report-ai-demo/1.0"
 
@@ -313,27 +512,56 @@ def _make_handler(gateway: Gateway, fixture: dict[str, Any]) -> type[BaseHTTPReq
             self._send_json(404, {"error": "not found"})
 
         def do_POST(self) -> None:
-            if self.path != "/demo/explain":
-                self._send_json(404, {"error": "not found"})
-                return
-            length = int(self.headers.get("Content-Length", "0") or "0")
-            raw_body = self.rfile.read(length) if length else b""
-            try:
-                req = json.loads(raw_body) if raw_body else {}
-            except json.JSONDecodeError:
-                self._send_json(400, {"error": "request body is not JSON"})
-                return
-            kind = req.get("kind")
-            ids = req.get("ids")
-            if not isinstance(kind, str) or kind not in _KIND_TO_USE_CASE:
+            if self.path == "/demo/explain":
+                length = int(self.headers.get("Content-Length", "0") or "0")
+                raw_body = self.rfile.read(length) if length else b""
+                try:
+                    req = json.loads(raw_body) if raw_body else {}
+                except json.JSONDecodeError:
+                    self._send_json(400, {"error": "request body is not JSON"})
+                    return
+                kind = req.get("kind")
+                ids = req.get("ids")
+                if not isinstance(kind, str) or kind not in _KIND_TO_USE_CASE:
+                    self._send_json(
+                        400, {"error": f"kind must be one of {sorted(_KIND_TO_USE_CASE)}"}
+                    )
+                    return
+                if not isinstance(ids, list) or not ids or not all(isinstance(i, str) for i in ids):
+                    self._send_json(400, {"error": "ids must be a non-empty list of strings"})
+                    return
+                self._send_json(200, explain(gateway, fixture, kind, ids))
+            elif self.path == "/demo/classify":
+                length = int(self.headers.get("Content-Length", "0") or "0")
+                if length > _CLASSIFY_MAX_BODY:
+                    self._send_json(400, {"error": "request body too large"})
+                    return
+                raw_body = self.rfile.read(length) if length else b""
+                try:
+                    req = json.loads(raw_body) if raw_body else {}
+                except json.JSONDecodeError:
+                    self._send_json(400, {"error": "request body is not JSON"})
+                    return
+                subject_ref = req.get("subject_ref")
+                description = req.get("description")
+                if not isinstance(subject_ref, str) or not subject_ref.strip():
+                    self._send_json(400, {"error": "subject_ref must be a non-empty string"})
+                    return
+                if not isinstance(description, str) or not description.strip():
+                    self._send_json(400, {"error": "description must be a non-empty string"})
+                    return
                 self._send_json(
-                    400, {"error": f"kind must be one of {sorted(_KIND_TO_USE_CASE)}"}
+                    200,
+                    classify(
+                        gateway,
+                        subject_ref,
+                        description,
+                        datetime.now(UTC).date(),
+                        approved_list,
+                    ),
                 )
-                return
-            if not isinstance(ids, list) or not ids or not all(isinstance(i, str) for i in ids):
-                self._send_json(400, {"error": "ids must be a non-empty list of strings"})
-                return
-            self._send_json(200, explain(gateway, fixture, kind, ids))
+            else:
+                self._send_json(404, {"error": "not found"})
 
         def log_message(self, format: str, *args: object) -> None:
             # Quiet by default -- never the key (nothing on this surface
@@ -389,7 +617,23 @@ def main() -> int:
         return 2
     fixture = report_fixture.generate_fixture()
 
-    handler_cls = _make_handler(gateway, fixture)
+    # Load the optional approved-ontology list from the env var.
+    # Unset → approved_list is None → /demo/classify returns NOT_CONFIGURED.
+    # Set but unreadable or invalid → print fixed message and exit non-zero
+    # before binding the port.
+    approved_list: ApprovedOntologyList | None = None
+    list_path = os.environ.get("ZTAX_ONTOLOGY_APPROVED_LIST", "").strip()
+    if list_path:
+        try:
+            approved_list = load_approved_list(Path(list_path).read_text(encoding="utf-8"))
+        except (OntologyGuardError, OSError):
+            print(
+                "report_ai_http: approved ontology list: invalid or unreadable",
+                file=sys.stderr,
+            )
+            return 2
+
+    handler_cls = _make_handler(gateway, fixture, approved_list)
     server = ThreadingHTTPServer(("0.0.0.0", _PORT), handler_cls)
     print(
         f"report_ai_http: DEMO ONLY -- serving synthetic report explanations on "
