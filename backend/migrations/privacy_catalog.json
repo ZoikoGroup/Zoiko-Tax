@@ -2176,6 +2176,75 @@
         "note": "The administrator who placed, changed or released the hold."
       }
     },
+    "levy_responsibility": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "responsibility_decision_id": {
+        "class": "P0"
+      },
+      "decision_id": {
+        "class": "P0"
+      },
+      "item_key": {
+        "class": "P0"
+      },
+      "component_id": {
+        "class": "P0"
+      },
+      "component_version": {
+        "class": "P0"
+      },
+      "tax_type": {
+        "class": "P0"
+      },
+      "jurisdiction": {
+        "class": "P0"
+      },
+      "authority": {
+        "class": "P0"
+      },
+      "treatment": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "rule_id": {
+        "class": "P0"
+      },
+      "rule_version": {
+        "class": "P0"
+      },
+      "bundle_id": {
+        "class": "P0"
+      },
+      "bundle_digest": {
+        "class": "P0"
+      },
+      "effective_from": {
+        "class": "P0"
+      },
+      "status": {
+        "class": "P0"
+      },
+      "assignments": {
+        "class": "P5",
+        "purposes": [
+          "PURP-TAX-CALC",
+          "PURP-OBL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-FISCAL",
+        "redaction": "REDACT",
+        "evidencePolicy": "RAW_REQUIRED",
+        "aiAllowed": "NONE",
+        "note": "Who holds each role. A party is named by the caller's own reference, which for a customer may be a subscriber account."
+      },
+      "recorded_at": {
+        "class": "P0"
+      }
+    },
     "customer_authorization": {
       "tenant_id": {
         "class": "P0"
