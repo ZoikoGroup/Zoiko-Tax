@@ -272,8 +272,7 @@ def _parse_entry(raw: Any, index: int) -> ApprovedEntry:
     unknown = set(raw.keys()) - _ENTRY_ALLOWED_KEYS
     if unknown:
         raise OntologyGuardError(
-            f"ontology_guard: approved[{index}] has unknown key(s): "
-            f"{sorted(unknown)!r}"
+            f"ontology_guard: approved[{index}] has unknown key(s)"
         ) from None
 
     missing = _ENTRY_REQUIRED_KEYS - set(raw.keys())
@@ -353,12 +352,13 @@ def load_approved_list(payload: str | bytes) -> ApprovedOntologyList:
             f" ({len(payload_bytes)} bytes)"
         ) from None
 
+    _json_error: str | None = None
     try:
         data = json.loads(payload)
     except json.JSONDecodeError:
-        raise OntologyGuardError(
-            "ontology_guard: payload is not valid JSON"
-        ) from None
+        _json_error = "ontology_guard: payload is not valid JSON"
+    if _json_error is not None:
+        raise OntologyGuardError(_json_error) from None
 
     if not isinstance(data, dict):
         raise OntologyGuardError(
@@ -368,7 +368,7 @@ def load_approved_list(payload: str | bytes) -> ApprovedOntologyList:
     unknown_top = set(data.keys()) - _TOP_LEVEL_ALLOWED_KEYS
     if unknown_top:
         raise OntologyGuardError(
-            f"ontology_guard: top-level has unknown key(s): {sorted(unknown_top)!r}"
+            "ontology_guard: top-level has unknown key(s)"
         ) from None
 
     if "list_version" not in data:

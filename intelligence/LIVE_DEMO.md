@@ -136,7 +136,7 @@ tier T1 and data class P0 only.
 The demo HTTP server ([`intelligence/tools/report_ai_http.py`](tools/report_ai_http.py))
 also provides `POST /demo/classify`, which validates model-proposed classification
 codes against an approved ontology list using `apply_ontology_guard()`
-([`intelligence/src/ztax_gateway/ontology_guard.py`](src/ztax_gateway/ontology_guard.py)).
+([`intelligence/tools/report_ai_http.py`](tools/report_ai_http.py), wrapping [`ontology_guard.py`](src/ztax_gateway/ontology_guard.py)).
 
 ### What it shows
 
@@ -187,7 +187,8 @@ The three response shapes are:
      "reason_code": "CHECKS_PASSED",
      "list_version": "synthetic-demo-v0",
      "proposed_code": "ontology:telecom/voice/mobile",
-     "confidence_calibrated": false
+     "confidence_calibrated": false,
+     "synthetic": true
    }
    ```
 
@@ -199,7 +200,8 @@ The three response shapes are:
      "verdict": "ABSTAIN",
      "reason_code": "GUARD_ONTOLOGY_UNKNOWN",
      "list_version": "synthetic-demo-v0",
-     "confidence_calibrated": false
+     "confidence_calibrated": false,
+     "synthetic": true
    }
    ```
 
@@ -209,7 +211,7 @@ The three response shapes are:
      "outcome": "NOT_CONFIGURED",
      "evidence_id": null,
      "verdict": "ABSTAIN",
-     "reason_code": "GUARD_ONTOLOGY_UNKNOWN",
+     "reason_code": "GUARD_ONTOLOGY_NOT_CONFIGURED",
      "list_version": null,
      "confidence_calibrated": false
    }

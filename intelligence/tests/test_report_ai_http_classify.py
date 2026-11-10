@@ -146,6 +146,7 @@ def test_approved_code_gives_proposed(caplog: pytest.LogCaptureFixture) -> None:
     assert result["reason_code"] == CheckReason.CHECKS_PASSED
     assert result["list_version"] == _APPROVED_LIST.list_version
     assert result["confidence_calibrated"] is False
+    assert result["synthetic"] is True
     assert "evidence_id" in result
     # No model text or rejected code
     body_str = json.dumps(result)
@@ -168,6 +169,7 @@ def test_unknown_code_gives_abstain() -> None:
     assert result["verdict"] == Verdict.ABSTAIN
     assert result["reason_code"] == CheckReason.GUARD_ONTOLOGY_UNKNOWN
     assert result["confidence_calibrated"] is False
+    assert result["synthetic"] is True
     # Rejected code must NOT appear in the response
     assert "proposed_code" not in result
     assert _UNKNOWN_CODE not in json.dumps(result)
@@ -288,6 +290,8 @@ def test_env_unset_gives_not_configured() -> None:
 
     assert result["outcome"] == "NOT_CONFIGURED"
     assert result["evidence_id"] is None
+    assert result["verdict"] == Verdict.ABSTAIN
+    assert result["reason_code"] == CheckReason.GUARD_ONTOLOGY_NOT_CONFIGURED
     assert result["list_version"] is None
     assert result["confidence_calibrated"] is False
     # Gateway must not have been called
@@ -390,6 +394,30 @@ def test_missing_list_file_causes_startup_failure(tmp_path: Path) -> None:
     try:
         _og.load_approved_list(missing.read_text(encoding="utf-8"))
     except (_og.OntologyGuardError, OSError):
+        print(
+            "report_ai_http: approved ontology list: invalid or unreadable",
+            file=stderr_buf,
+        )
+        exit_code = 2
+
+    assert exit_code == 2
+    assert "report_ai_http: approved ontology list: invalid or unreadable" in stderr_buf.getvalue()
+
+
+def test_non_utf8_list_file_causes_clean_failure(tmp_path: Path) -> None:
+    """A list file with invalid UTF-8 bytes raises UnicodeDecodeError; main() catches it cleanly."""
+    bad_utf8 = tmp_path / "bad_utf8.json"
+    bad_utf8.write_bytes(b"\xff\xfe\x00\x00\x80\x81")
+
+    import io
+
+    from ztax_gateway import ontology_guard as _og
+
+    stderr_buf = io.StringIO()
+    exit_code = 0
+    try:
+        _og.load_approved_list(bad_utf8.read_text(encoding="utf-8"))
+    except (_og.OntologyGuardError, OSError, UnicodeDecodeError):
         print(
             "report_ai_http: approved ontology list: invalid or unreadable",
             file=stderr_buf,
@@ -504,5 +532,332 @@ def test_kill_switch_gives_refused(tmp_path: Path) -> None:
     )
     assert result_after["outcome"] == "REFUSED"
     assert result_after["confidence_calibrated"] is False
+    assert result_after["synthetic"] is True
     # No model text; proposed_code is absent
     assert "proposed_code" not in result_after
+
+
+# ---------------------------------------------------------------------------
+# 12. HTTP-level tests for /demo/classify (32 KiB limit, 400 cases, 404, CORS)
+# ---------------------------------------------------------------------------
+
+
+def test_http_classify_endpoints() -> None:
+    """HTTP-level testing for /demo/classify:
+    - 200 PROPOSED with CORS on valid input
+    - 400 on request body > 32 KiB (_CLASSIFY_MAX_BODY)
+    - 400 on non-JSON request body
+    - 400 on invalid or missing subject_ref
+    - 400 on invalid or missing description
+    - 404 on GET /demo/classify or unknown paths
+    """
+    import http.client
+    import threading
+    from http.server import ThreadingHTTPServer
+
+    runtime = _ScriptedRuntime(result=_classify_result(_APPROVED_CODE))
+    gw = _gateway(runtime)
+    rf = _MODULES["report_fixture"]
+    fixture = rf.generate_fixture()
+
+    handler_cls = report_ai_http._make_handler(gw, fixture, _APPROVED_LIST)
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler_cls)
+    port = server.server_address[1]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+
+        # 1. Valid request -> 200 with CORS and synthetic: true
+        valid_body = json.dumps({
+            "subject_ref": "sku:PLAN-01",
+            "description": "Unlimited voice plan",
+        }).encode("utf-8")
+        conn.request(
+            "POST", "/demo/classify", body=valid_body, headers={"Content-Type": "application/json"}
+        )
+        resp = conn.getresponse()
+        assert resp.status == 200
+        assert resp.getheader("Access-Control-Allow-Origin") == "http://localhost:13000"
+        data = json.loads(resp.read())
+        assert data["outcome"] == "PROPOSED"
+        assert data["synthetic"] is True
+        assert data["proposed_code"] == _APPROVED_CODE
+
+        # 2. Body exceeding 32 KiB limit -> 400 "request body too large"
+        oversized = json.dumps({
+            "subject_ref": "sku:BIG",
+            "description": "A" * (33 * 1024),
+        }).encode("utf-8")
+        conn.request(
+            "POST", "/demo/classify", body=oversized, headers={"Content-Type": "application/json"}
+        )
+        resp = conn.getresponse()
+        assert resp.status == 400
+        err_data = json.loads(resp.read())
+        assert err_data["error"] == "request body too large"
+
+        # 3. Non-JSON body -> 400 "request body is not JSON"
+        conn.request(
+            "POST",
+            "/demo/classify",
+            body=b"not-json{{{",
+            headers={"Content-Type": "application/json"},
+        )
+        resp = conn.getresponse()
+        assert resp.status == 400
+        assert json.loads(resp.read())["error"] == "request body is not JSON"
+
+        # 4. Missing or empty subject_ref -> 400
+        for bad_ref in [None, "", "   ", 123]:
+            payload: dict[str, Any] = {"description": "Valid description"}
+            if bad_ref is not None:
+                payload["subject_ref"] = bad_ref
+            conn.request(
+                "POST",
+                "/demo/classify",
+                body=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+            resp = conn.getresponse()
+            assert resp.status == 400
+            assert "subject_ref must be a non-empty string" in json.loads(resp.read())["error"]
+
+        # 5. Missing or empty description -> 400
+        for bad_desc in [None, "", "   ", 456]:
+            payload = {"subject_ref": "sku:VALID"}
+            if bad_desc is not None:
+                payload["description"] = bad_desc
+            conn.request(
+                "POST",
+                "/demo/classify",
+                body=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+            resp = conn.getresponse()
+            assert resp.status == 400
+            assert "description must be a non-empty string" in json.loads(resp.read())["error"]
+
+        # 6. GET /demo/classify -> 404
+        conn.request("GET", "/demo/classify")
+        resp = conn.getresponse()
+        assert resp.status == 404
+        assert json.loads(resp.read())["error"] == "not found"
+
+        # 7. POST to unknown path -> 404
+        conn.request(
+            "POST",
+            "/demo/unknown",
+            body=b"{}",
+            headers={"Content-Type": "application/json"},
+        )
+        resp = conn.getresponse()
+        assert resp.status == 404
+        assert json.loads(resp.read())["error"] == "not found"
+
+        conn.close()
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+# ---------------------------------------------------------------------------
+# 13. Model call counts for refused / abstained / not-configured cases
+# ---------------------------------------------------------------------------
+
+
+def test_model_call_counts_for_refused_and_abstained_cases(tmp_path: Path) -> None:
+    """Verifies that model calls are strictly bounded across all non-PROPOSED paths:
+    - NOT_CONFIGURED (no approved list): exactly 0 calls to runtime
+    - ABSTAIN (unknown code): exactly 1 call to runtime
+    - ABSTAIN (expired code): exactly 1 call to runtime
+    - ABSTAIN (future code): exactly 1 call to runtime
+    - ABSTAIN (heading code): exactly 1 call to runtime
+    - REFUSED (kill switch): exactly 0 calls to runtime
+    """
+    import shutil
+
+    # 1. NOT_CONFIGURED: 0 calls
+    runtime_nc = _ScriptedRuntime(result=_classify_result(_APPROVED_CODE))
+    gw_nc = _gateway(runtime_nc)
+    res_nc = report_ai_http.classify(gw_nc, "sku:1", "desc", _AS_OF, None)
+    assert res_nc["outcome"] == "NOT_CONFIGURED"
+    assert len(runtime_nc.calls) == 0
+
+    # 2. Unknown code: 1 call
+    runtime_unk = _ScriptedRuntime(result=_classify_result(_UNKNOWN_CODE))
+    gw_unk = _gateway(runtime_unk)
+    res_unk = report_ai_http.classify(gw_unk, "sku:1", "desc", _AS_OF, _APPROVED_LIST)
+    assert res_unk["outcome"] == "ABSTAIN"
+    assert len(runtime_unk.calls) == 1
+
+    # 3. Expired code: 1 call
+    runtime_exp = _ScriptedRuntime(result=_classify_result(_EXPIRED_CODE))
+    gw_exp = _gateway(runtime_exp)
+    res_exp = report_ai_http.classify(gw_exp, "sku:1", "desc", _AS_OF, _APPROVED_LIST)
+    assert res_exp["outcome"] == "ABSTAIN"
+    assert len(runtime_exp.calls) == 1
+
+    # 4. Future code: 1 call
+    runtime_fut = _ScriptedRuntime(result=_classify_result(_FUTURE_CODE))
+    gw_fut = _gateway(runtime_fut)
+    res_fut = report_ai_http.classify(gw_fut, "sku:1", "desc", _AS_OF, _APPROVED_LIST)
+    assert res_fut["outcome"] == "ABSTAIN"
+    assert len(runtime_fut.calls) == 1
+
+    # 5. Heading-marker code: 1 call
+    runtime_hd = _ScriptedRuntime(result=_classify_result(_HEADING_CODE))
+    gw_hd = _gateway(runtime_hd)
+    res_hd = report_ai_http.classify(gw_hd, "sku:1", "desc", _AS_OF, _APPROVED_LIST)
+    assert res_hd["outcome"] == "ABSTAIN"
+    assert len(runtime_hd.calls) == 1
+
+    # 6. Kill switch active: 0 calls
+    tmp_reg = tmp_path / "registry.killed.json"
+    shutil.copy(_CONFIG_DIR / "registry.live-demo.json", tmp_reg)
+    doc = json.loads(tmp_reg.read_text(encoding="utf-8"))
+    doc["killed"] = ["classification-review"]
+    tmp_reg.write_text(json.dumps(doc), encoding="utf-8")
+
+    runtime_kill = _ScriptedRuntime(result=_classify_result(_APPROVED_CODE))
+    reg, routes = load_config(tmp_reg)
+    gw_kill = Gateway(reg, routes, runtime_kill, "local", "0.0.0-test", kill_state_path=tmp_reg)
+    res_kill = report_ai_http.classify(gw_kill, "sku:1", "desc", _AS_OF, _APPROVED_LIST)
+    assert res_kill["outcome"] == "REFUSED"
+    assert len(runtime_kill.calls) == 0
+
+
+# ---------------------------------------------------------------------------
+# 14. Unhandled runtime exception in HTTP handler (item 6)
+# ---------------------------------------------------------------------------
+
+
+def test_http_handler_classify_unhandled_exception_returns_refusal(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An unexpected runtime exception inside classify() must NOT escape the HTTP handler.
+
+    The handler must:
+    - return HTTP 200 with outcome REFUSED and AI_GATEWAY_UNAVAILABLE
+    - log the exception CLASS NAME only (never the exception message/repr)
+    - never print a traceback to stderr
+    """
+    import http.client
+    import threading
+    from http.server import ThreadingHTTPServer
+
+    # A runtime that raises a totally unexpected non-GatewayError exception
+    class _BoomRuntime:
+        def run(self, route: Any, call: Any) -> Any:
+            raise RuntimeError("INTERNAL_BOOM_MARKER_DO_NOT_ECHO")
+
+    runtime = _BoomRuntime()
+    registry, routes = load_config(_CONFIG_DIR / "registry.live-demo.json")
+    from ztax_gateway.invocation_check_event import LoggingCheckEventSink
+    gw = Gateway(
+        registry,
+        routes,
+        runtime,
+        "local",
+        "0.0.0-test",
+        check_event_sink=LoggingCheckEventSink(),
+    )
+    rf = _MODULES["report_fixture"]
+    fixture = rf.generate_fixture()
+
+    handler_cls = report_ai_http._make_handler(gw, fixture, _APPROVED_LIST)
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler_cls)
+    port = server.server_address[1]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+        body = json.dumps({"subject_ref": "sku:X", "description": "Test description"}).encode()
+        with caplog.at_level(logging.DEBUG, logger="ztax_gateway.report_ai_http"):
+            conn.request("POST", "/demo/classify", body=body,
+                         headers={"Content-Type": "application/json"})
+            resp = conn.getresponse()
+            data = json.loads(resp.read())
+
+        assert resp.status == 200
+        assert data["outcome"] == "REFUSED"
+        assert data["reason_code"] == "AI_GATEWAY_UNAVAILABLE"
+
+        # Class name must appear in logs
+        own_logs = [r.getMessage() for r in caplog.records
+                    if r.name == "ztax_gateway.report_ai_http"]
+        assert any("RuntimeError" in m for m in own_logs), (
+            f"Expected exception class name in logs, got: {own_logs}"
+        )
+        # Exception message must NOT appear anywhere in logs
+        full_log_text = " ".join(own_logs)
+        assert "INTERNAL_BOOM_MARKER_DO_NOT_ECHO" not in full_log_text
+
+        conn.close()
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_http_handler_explain_unhandled_exception_returns_refusal(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An unexpected runtime exception inside explain() must NOT escape the HTTP handler.
+
+    The handler must return HTTP 200 with outcome REVIEW_REQUIRED and
+    log the exception class name only.
+    """
+    import http.client
+    import threading
+    from http.server import ThreadingHTTPServer
+
+    class _BoomRuntime:
+        def run(self, route: Any, call: Any) -> Any:
+            raise ValueError("EXPLAIN_BOOM_MARKER_DO_NOT_ECHO")
+
+    runtime = _BoomRuntime()
+    registry, routes = load_config(_CONFIG_DIR / "registry.live-demo.json")
+    from ztax_gateway.invocation_check_event import LoggingCheckEventSink
+    gw = Gateway(
+        registry,
+        routes,
+        runtime,
+        "local",
+        "0.0.0-test",
+        check_event_sink=LoggingCheckEventSink(),
+    )
+    rf = _MODULES["report_fixture"]
+    fixture = rf.generate_fixture()
+
+    handler_cls = report_ai_http._make_handler(gw, fixture, _APPROVED_LIST)
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler_cls)
+    port = server.server_address[1]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+        body = json.dumps({"kind": "obligation-row", "ids": ["OBL-001"]}).encode()
+        with caplog.at_level(logging.DEBUG, logger="ztax_gateway.report_ai_http"):
+            conn.request("POST", "/demo/explain", body=body,
+                         headers={"Content-Type": "application/json"})
+            resp = conn.getresponse()
+            data = json.loads(resp.read())
+
+        assert resp.status == 200
+        assert data["outcome"] == "REVIEW_REQUIRED"
+
+        own_logs = [r.getMessage() for r in caplog.records
+                    if r.name == "ztax_gateway.report_ai_http"]
+        assert any("ValueError" in m for m in own_logs), (
+            f"Expected exception class name in logs, got: {own_logs}"
+        )
+        full_log_text = " ".join(own_logs)
+        assert "EXPLAIN_BOOM_MARKER_DO_NOT_ECHO" not in full_log_text
+
+        conn.close()
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)

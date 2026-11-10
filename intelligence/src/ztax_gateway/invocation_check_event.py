@@ -75,6 +75,7 @@ class CheckReason(StrEnum):
     - ``GUARD_ONTOLOGY_UNKNOWN``           -- code not in the approved list.
     - ``GUARD_ONTOLOGY_NOT_YET_EFFECTIVE`` -- code present but not yet effective.
     - ``GUARD_ONTOLOGY_EXPIRED``           -- code present but past its ``effective_to``.
+    - ``GUARD_ONTOLOGY_NOT_CONFIGURED``    -- approved list not configured (no code checked).
     """
 
     CHECKS_PASSED = "CHECKS_PASSED"
@@ -86,6 +87,7 @@ class CheckReason(StrEnum):
     GUARD_ONTOLOGY_UNKNOWN = "GUARD_ONTOLOGY_UNKNOWN"
     GUARD_ONTOLOGY_NOT_YET_EFFECTIVE = "GUARD_ONTOLOGY_NOT_YET_EFFECTIVE"
     GUARD_ONTOLOGY_EXPIRED = "GUARD_ONTOLOGY_EXPIRED"
+    GUARD_ONTOLOGY_NOT_CONFIGURED = "GUARD_ONTOLOGY_NOT_CONFIGURED"
 
 
 @dataclass(frozen=True, slots=True)

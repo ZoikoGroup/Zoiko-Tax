@@ -398,7 +398,7 @@ def classify(
             "outcome": "NOT_CONFIGURED",
             "evidence_id": None,
             "verdict": Verdict.ABSTAIN,
-            "reason_code": CheckReason.GUARD_ONTOLOGY_UNKNOWN,
+            "reason_code": CheckReason.GUARD_ONTOLOGY_NOT_CONFIGURED,
             "list_version": None,
             "confidence_calibrated": False,
         }
@@ -420,10 +420,11 @@ def classify(
             "reason_code": exc.reason,
             "list_version": approved_list.list_version,
             "confidence_calibrated": False,
+            "synthetic": True,
         }
 
     reply = json.loads(reply_bytes)
-    proposed_code: str = reply.get("proposed_code", "")
+    proposed_code: str = reply.get("proposed_code", "").strip()
 
     verdict, reason_code = apply_ontology_guard(proposed_code, as_of, approved_list)
 
@@ -449,6 +450,7 @@ def classify(
             "reason_code": reason_code,
             "list_version": approved_list.list_version,
             "confidence_calibrated": False,
+            "synthetic": True,
         }
 
     # PASS: approved code -- include proposed_code in the response.
@@ -469,6 +471,7 @@ def classify(
         "list_version": approved_list.list_version,
         "proposed_code": proposed_code,
         "confidence_calibrated": False,
+        "synthetic": True,
     }
 
 
@@ -530,10 +533,28 @@ def _make_handler(
                 if not isinstance(ids, list) or not ids or not all(isinstance(i, str) for i in ids):
                     self._send_json(400, {"error": "ids must be a non-empty list of strings"})
                     return
-                self._send_json(200, explain(gateway, fixture, kind, ids))
+                try:
+                    self._send_json(200, explain(gateway, fixture, kind, ids))
+                except Exception as exc:
+                    log.error(
+                        "explain unhandled exception type=%s",
+                        type(exc).__name__,
+                    )
+                    self._send_json(
+                        200,
+                        {
+                            "outcome": "REVIEW_REQUIRED",
+                            "explanation": "",
+                            "cited_ids": [],
+                            "reason": "AI_GATEWAY_UNAVAILABLE",
+                            "provenance": None,
+                        },
+                    )
             elif self.path == "/demo/classify":
                 length = int(self.headers.get("Content-Length", "0") or "0")
                 if length > _CLASSIFY_MAX_BODY:
+                    if length > 0:
+                        _ = self.rfile.read(min(length, 1024 * 1024))
                     self._send_json(400, {"error": "request body too large"})
                     return
                 raw_body = self.rfile.read(length) if length else b""
@@ -550,16 +571,34 @@ def _make_handler(
                 if not isinstance(description, str) or not description.strip():
                     self._send_json(400, {"error": "description must be a non-empty string"})
                     return
-                self._send_json(
-                    200,
-                    classify(
-                        gateway,
-                        subject_ref,
-                        description,
-                        datetime.now(UTC).date(),
-                        approved_list,
-                    ),
-                )
+                try:
+                    self._send_json(
+                        200,
+                        classify(
+                            gateway,
+                            subject_ref,
+                            description,
+                            datetime.now(UTC).date(),
+                            approved_list,
+                        ),
+                    )
+                except Exception as exc:
+                    log.error(
+                        "classify unhandled exception type=%s",
+                        type(exc).__name__,
+                    )
+                    self._send_json(
+                        200,
+                        {
+                            "outcome": "REFUSED",
+                            "evidence_id": None,
+                            "verdict": Verdict.BLOCK,
+                            "reason_code": "AI_GATEWAY_UNAVAILABLE",
+                            "list_version": None,
+                            "confidence_calibrated": False,
+                            "synthetic": True,
+                        },
+                    )
             else:
                 self._send_json(404, {"error": "not found"})
 
@@ -626,7 +665,7 @@ def main() -> int:
     if list_path:
         try:
             approved_list = load_approved_list(Path(list_path).read_text(encoding="utf-8"))
-        except (OntologyGuardError, OSError):
+        except (OntologyGuardError, OSError, UnicodeDecodeError):
             print(
                 "report_ai_http: approved ontology list: invalid or unreadable",
                 file=sys.stderr,
