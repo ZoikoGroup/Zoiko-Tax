@@ -21,9 +21,21 @@ func (s *DeterminationService) fiscalActive(b *rule.Bundle) bool {
 }
 
 // record records a commit — or, with prior set, an adjustment of prior —
-// under bundle b, with the bundle's fiscal effects in the caller's
-// transaction.
+// under bundle b, with the bundle's fiscal effects and each levy's
+// responsibility in the caller's transaction.
 func (s *DeterminationService) record(ctx context.Context, sc security.Context, in DetermineInput, b *rule.Bundle, prior *evidence.Record) (evidence.Decision, error) {
+	d, err := s.recordFiscal(ctx, sc, in, b, prior)
+	if err != nil {
+		return evidence.Decision{}, err
+	}
+	if err := s.decideResponsibility(ctx, b, d); err != nil {
+		return evidence.Decision{}, err
+	}
+	return d, nil
+}
+
+// recordFiscal records the decision and its fiscal effects.
+func (s *DeterminationService) recordFiscal(ctx context.Context, sc security.Context, in DetermineInput, b *rule.Bundle, prior *evidence.Record) (evidence.Decision, error) {
 	if !s.fiscalActive(b) {
 		return s.determineWith(ctx, sc, in, b)
 	}

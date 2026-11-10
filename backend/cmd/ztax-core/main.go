@@ -528,7 +528,8 @@ func wireDetermination(cfg config.Config, store *postgres.Store, content *rule.H
 			Accumulators: store.Accumulators(), Journals: store.Journals(),
 			LegalEntities: store.LegalEntities(), Outbox: store.Outbox(), Obligations: store.Obligations(),
 			Periods: store.Periods(),
-		})
+		}).
+		WithResponsibility(store.Responsibilities())
 	log.Info("determination surface enabled", "evidence.dir", cfg.EvidenceDir)
 	return svc, nil
 }

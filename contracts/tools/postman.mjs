@@ -196,7 +196,7 @@ const FOLDERS = [
     ],
     operations: [
       "getCoverage",
-      "createQuote", "commitTransaction", "getDecision", "replayDecision", "listDecisionJournals",
+      "createQuote", "commitTransaction", "getDecision", "replayDecision", "listDecisionJournals", "listDecisionResponsibility",
       "getSubledgerBalances", "listObligations", "getObligation", "transitionObligation",
       "createCompliancePackage", "getCompliancePackage", "listCompliancePackages", "prepareCompliancePackage",
       "reviewCompliancePackage", "approveCompliancePackage", "submitCompliancePackage",

@@ -267,6 +267,7 @@ func (rt *Router) routes() []struct {
 		{Route{"GET", "/v1/decisions/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetDecision},
 		{Route{"POST", "/v1/replay/{decisionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleReplay},
 		{Route{"GET", "/v1/decisions/{decisionId}/journals", false, []security.Role{operator, analyst, auditor}}, rt.handleDecisionJournals},
+		{Route{"GET", "/v1/decisions/{decisionId}/responsibility", false, []security.Role{operator, analyst, auditor}}, rt.handleDecisionResponsibility},
 		{Route{"GET", "/v1/decisions/{decisionId}/inclusion", false, []security.Role{operator, analyst, auditor, admin}}, rt.handleDecisionInclusion},
 
 		// Period seals. Making one is ADMIN's — it is a statement about the

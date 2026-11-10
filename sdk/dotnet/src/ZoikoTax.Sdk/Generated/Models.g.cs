@@ -2399,6 +2399,213 @@ namespace ZoikoTax.Sdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LevyResponsibilityList
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("levies")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<LevyResponsibility> Levies { get; set; } = new System.Collections.ObjectModel.Collection<LevyResponsibility>();
+
+    }
+
+    /// <summary>
+    /// The five-role responsibility decision for one levy on one item of a
+    /// <br/>committed decision (ZTAX-ENG-007 §29). Immutable: a correction is a
+    /// <br/>new decision with its own.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class LevyResponsibility
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.Guid Id { get; set; } = default!;
+
+        /// <summary>
+        /// The result item's key — its line, or line/part for a bundle part.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("item")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Item { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("component")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(256)]
+        public string Component { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("componentVersion")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(256)]
+        public string ComponentVersion { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("taxType")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(256)]
+        public string TaxType { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("jurisdiction")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(256)]
+        public string Jurisdiction { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("authority")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(256)]
+        public string Authority { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("treatment")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<LevyResponsibilityTreatment>))]
+        public LevyResponsibilityTreatment Treatment { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("legalEntityId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid LegalEntityId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("rule")]
+        [System.ComponentModel.DataAnnotations.Required]
+        public ResponsibilityRuleRef Rule { get; set; } = new ResponsibilityRuleRef();
+
+        [System.Text.Json.Serialization.JsonPropertyName("bundleId")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(256)]
+        public string BundleId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("bundleDigest")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(256)]
+        public string BundleDigest { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("effectiveFrom")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string EffectiveFrom { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ResponsibilityStatus>))]
+        public ResponsibilityStatus Status { get; set; } = default!;
+
+        /// <summary>
+        /// Every role, in INCIDENCE, COLLECTION, REPORTING, REMITTANCE, ECONOMIC_BEARER order.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("roles")]
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.MinLength(5)]
+        [System.ComponentModel.DataAnnotations.MaxLength(5)]
+        public System.Collections.Generic.ICollection<RoleAssignment> Roles { get; set; } = new System.Collections.ObjectModel.Collection<RoleAssignment>();
+
+        [System.Text.Json.Serialization.JsonPropertyName("recordedAt")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$")]
+        public string RecordedAt { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// The content assignment the decision applied, and the levy version it was applied for.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ResponsibilityRuleRef
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(256)]
+        public string Id { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("version")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(256)]
+        public string Version { get; set; } = default!;
+
+    }
+
+    /// <summary>
+    /// A role's or a decision's outcome. `NOT_APPLICABLE` is a role the law
+    /// <br/>gives to nobody and is a role status only; a decision is the worst
+    /// <br/>of its roles, with `NOT_APPLICABLE` counting as `RESOLVED`.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ResponsibilityStatus
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RESOLVED")]
+        RESOLVED = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"NOT_APPLICABLE")]
+        NOT_APPLICABLE = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"AMBIGUOUS")]
+        AMBIGUOUS = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CONFLICTED")]
+        CONFLICTED = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"UNSUPPORTED")]
+        UNSUPPORTED = 4,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RoleAssignment
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("role")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RoleAssignmentRole>))]
+        public RoleAssignmentRole Role { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("status")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ResponsibilityStatus>))]
+        public ResponsibilityStatus Status { get; set; } = default!;
+
+        /// <summary>
+        /// The party the law places the role on. Present only when RESOLVED.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("statutory")]
+        public RoleHolder? Statutory { get; set; } = default!;
+
+        /// <summary>
+        /// A party performing the role for the statutory party, where the law permits delegation.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("agent")]
+        public RoleHolder? Agent { get; set; } = default!;
+
+        /// <summary>
+        /// Why the role did not resolve, or why it has no holder.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("detail")]
+        public string? Detail { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RoleHolder
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("kind")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<RoleHolderKind>))]
+        public RoleHolderKind Kind { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("legalEntityId")]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+        public System.Guid? LegalEntityId { get; set; } = default!;
+
+        /// <summary>
+        /// The party's reference in the caller's systems, as the document named it; for a customer it may be a subscriber account.
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("ref")]
+        public string? Ref { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ControlBalance
     {
 
@@ -9169,6 +9376,66 @@ namespace ZoikoTax.Sdk
         [System.Text.Json.Serialization.JsonPropertyName("version")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string Version { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum LevyResponsibilityTreatment
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"CUSTOMER_CHARGE")]
+        CUSTOMER_CHARGE = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"PROVIDER_COST")]
+        PROVIDER_COST = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REVERSE_CHARGE")]
+        REVERSE_CHARGE = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum RoleAssignmentRole
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"INCIDENCE")]
+        INCIDENCE = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"COLLECTION")]
+        COLLECTION = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REPORTING")]
+        REPORTING = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"REMITTANCE")]
+        REMITTANCE = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"ECONOMIC_BEARER")]
+        ECONOMIC_BEARER = 4,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum RoleHolderKind
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"SELLER")]
+        SELLER = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"BUYER")]
+        BUYER = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"MARKETPLACE")]
+        MARKETPLACE = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"WHOLESALER")]
+        WHOLESALER = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RESELLER")]
+        RESELLER = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"END_USER")]
+        END_USER = 5,
 
     }
 

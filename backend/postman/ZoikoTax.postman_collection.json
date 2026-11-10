@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:d9c86511a2eb3d331b75e16c2911cc5244a1e32064ba871422ede8dd9605126b`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:205a1a22a1a64c1f7d6c7bafb54e2627f966170eea853d0c6698a9f3e435fbdf`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -4857,6 +4857,74 @@
                   "pm.test('ZTAX-FIN-REQ-0077 — the commit posted a balanced journal', function () {",
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.json().journals.length).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/decisions/{decisionId}/responsibility — Who owes, collects, reports, remits and bears each levy of a decision",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/decisions/{{decisionId}}/responsibility",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decisions",
+                "{{decisionId}}",
+                "responsibility"
+              ]
+            },
+            "description": "Who owes, collects, reports, remits and bears each levy of a decision\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. For each levy on each item of a\ncommitted document decision, the five-role responsibility decision\nrecorded with it (ZTAX-ENG-007 §29): statutory incidence, collection,\nreporting, remittance and economic burden, each resolved against the\nparties the document names. A role whose party is absent or\ncontested is `AMBIGUOUS` or `CONFLICTED`, never a default to the\nseller or the customer (ZTAX-OBL-REQ-0017); a role the law gives to\nnobody, such as collection of a reverse-charged levy, is\n`NOT_APPLICABLE`.\n\nA decision committed before responsibility was recorded, and one\nthat assessed no levies, has an empty list."
+          },
+          "response": [
+            {
+              "name": "200 · A voice tax the seller collects from its customer",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/decisions/{{decisionId}}/responsibility",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "decisions",
+                    "{{decisionId}}",
+                    "responsibility"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"levies\": [\n    {\n      \"id\": \"01920a4c-2e3f-7a40-8b51-6c7d8e9fa0aa\",\n      \"item\": \"line-1\",\n      \"component\": \"xt.voice-tax\",\n      \"componentVersion\": \"2026.10.1\",\n      \"taxType\": \"TELECOM_EXCISE\",\n      \"jurisdiction\": \"jurisdiction:xt\",\n      \"authority\": \"authority:xt-revenue\",\n      \"treatment\": \"CUSTOMER_CHARGE\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"rule\": {\n        \"id\": \"seller-collects\",\n        \"version\": \"xt.voice-tax@2026.10.1\"\n      },\n      \"bundleId\": \"training-telecom-2026.10\",\n      \"bundleDigest\": \"zt1:9f2c\",\n      \"effectiveFrom\": \"2026-10-05T09:00:00.000000Z\",\n      \"status\": \"RESOLVED\",\n      \"roles\": [\n        {\n          \"role\": \"INCIDENCE\",\n          \"status\": \"RESOLVED\",\n          \"statutory\": {\n            \"kind\": \"SELLER\",\n            \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n            \"ref\": \"seller-1\"\n          }\n        },\n        {\n          \"role\": \"COLLECTION\",\n          \"status\": \"RESOLVED\",\n          \"statutory\": {\n            \"kind\": \"SELLER\",\n            \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n            \"ref\": \"seller-1\"\n          }\n        },\n        {\n          \"role\": \"REPORTING\",\n          \"status\": \"RESOLVED\",\n          \"statutory\": {\n            \"kind\": \"SELLER\",\n            \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n            \"ref\": \"seller-1\"\n          }\n        },\n        {\n          \"role\": \"REMITTANCE\",\n          \"status\": \"RESOLVED\",\n          \"statutory\": {\n            \"kind\": \"SELLER\",\n            \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n            \"ref\": \"seller-1\"\n          }\n        },\n        {\n          \"role\": \"ECONOMIC_BEARER\",\n          \"status\": \"RESOLVED\",\n          \"statutory\": {\n            \"kind\": \"BUYER\",\n            \"ref\": \"customer-42\"\n          }\n        }\n      ],\n      \"recordedAt\": \"2026-10-05T09:00:01.000000Z\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listDecisionResponsibility returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
                   "});"
                 ]
               }
@@ -10271,7 +10339,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:d9c86511a2eb3d331b75e16c2911cc5244a1e32064ba871422ede8dd9605126b",
+      "value": "sha256:205a1a22a1a64c1f7d6c7bafb54e2627f966170eea853d0c6698a9f3e435fbdf",
       "type": "string"
     }
   ]

@@ -994,6 +994,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/decisions/{decisionId}/responsibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Who owes, collects, reports, remits and bears each levy of a decision
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. For each levy on each item of a
+         *     committed document decision, the five-role responsibility decision
+         *     recorded with it (ZTAX-ENG-007 §29): statutory incidence, collection,
+         *     reporting, remittance and economic burden, each resolved against the
+         *     parties the document names. A role whose party is absent or
+         *     contested is `AMBIGUOUS` or `CONFLICTED`, never a default to the
+         *     seller or the customer (ZTAX-OBL-REQ-0017); a role the law gives to
+         *     nobody, such as collection of a reverse-charged levy, is
+         *     `NOT_APPLICABLE`.
+         *
+         *     A decision committed before responsibility was recorded, and one
+         *     that assessed no levies, has an empty list.
+         */
+        get: operations["listDecisionResponsibility"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/decisions/{decisionId}/inclusion": {
         parameters: {
             query?: never;
@@ -3843,6 +3874,75 @@ export interface components {
         /** JournalList */
         JournalList: {
             journals: components["schemas"]["Journal"][];
+        };
+        /** LevyResponsibilityList */
+        LevyResponsibilityList: {
+            levies: components["schemas"]["LevyResponsibility"][];
+        };
+        /**
+         * LevyResponsibility
+         * @description The five-role responsibility decision for one levy on one item of a
+         *     committed decision (ZTAX-ENG-007 §29). Immutable: a correction is a
+         *     new decision with its own.
+         */
+        LevyResponsibility: {
+            /** Format: uuid */
+            id: string;
+            /** @description The result item's key — its line, or line/part for a bundle part. */
+            item: string;
+            component: components["schemas"]["ContentLabel"];
+            componentVersion: components["schemas"]["ContentLabel"];
+            taxType: components["schemas"]["ContentLabel"];
+            jurisdiction: components["schemas"]["ContentLabel"];
+            authority: components["schemas"]["ContentLabel"];
+            /** @enum {string} */
+            treatment: "CUSTOMER_CHARGE" | "PROVIDER_COST" | "REVERSE_CHARGE";
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            rule: components["schemas"]["ResponsibilityRuleRef"];
+            bundleId: components["schemas"]["ContentLabel"];
+            bundleDigest: components["schemas"]["ContentLabel"];
+            effectiveFrom: components["schemas"]["Timestamp"];
+            status: components["schemas"]["ResponsibilityStatus"];
+            /** @description Every role, in INCIDENCE, COLLECTION, REPORTING, REMITTANCE, ECONOMIC_BEARER order. */
+            roles: components["schemas"]["RoleAssignment"][];
+            recordedAt: components["schemas"]["Timestamp"];
+        };
+        /**
+         * ResponsibilityRuleRef
+         * @description The content assignment the decision applied, and the levy version it was applied for.
+         */
+        ResponsibilityRuleRef: {
+            id: components["schemas"]["ContentLabel"];
+            version: components["schemas"]["ContentLabel"];
+        };
+        /**
+         * ResponsibilityStatus
+         * @description A role's or a decision's outcome. `NOT_APPLICABLE` is a role the law
+         *     gives to nobody and is a role status only; a decision is the worst
+         *     of its roles, with `NOT_APPLICABLE` counting as `RESOLVED`.
+         * @example RESOLVED
+         * @enum {string}
+         */
+        ResponsibilityStatus: "RESOLVED" | "NOT_APPLICABLE" | "AMBIGUOUS" | "CONFLICTED" | "UNSUPPORTED";
+        /** RoleAssignment */
+        RoleAssignment: {
+            /** @enum {string} */
+            role: "INCIDENCE" | "COLLECTION" | "REPORTING" | "REMITTANCE" | "ECONOMIC_BEARER";
+            status: components["schemas"]["ResponsibilityStatus"];
+            /** @description The party the law places the role on. Present only when RESOLVED. */
+            statutory?: components["schemas"]["RoleHolder"];
+            /** @description A party performing the role for the statutory party, where the law permits delegation. */
+            agent?: components["schemas"]["RoleHolder"];
+            /** @description Why the role did not resolve, or why it has no holder. */
+            detail?: string;
+        };
+        /** RoleHolder */
+        RoleHolder: {
+            /** @enum {string} */
+            kind: "SELLER" | "BUYER" | "MARKETPLACE" | "WHOLESALER" | "RESELLER" | "END_USER";
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            /** @description The party's reference in the caller's systems, as the document named it; for a customer it may be a subscriber account. */
+            ref?: string;
         };
         /** ControlBalance */
         ControlBalance: {
@@ -7809,6 +7909,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JournalList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDecisionResponsibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The decision identifier.
+                 * @example 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                 */
+                decisionId: components["parameters"]["DecisionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Each levy's decision, in item then levy order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LevyResponsibilityList"];
                 };
             };
             401: components["responses"]["Unauthenticated"];

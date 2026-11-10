@@ -52,6 +52,10 @@ type DeterminationService struct {
 	// fiscal holds the stores a commit's fiscal effects write to (fiscal.go).
 	// Nil, or a bundle with no fiscal profile, records the decision alone.
 	fiscal *FiscalStores
+
+	// responsibility records each committed levy's five-role decision
+	// (responsibility.go). Nil records none.
+	responsibility port.ResponsibilityRepository
 }
 
 // NewDeterminationService wires the service. trains are the seven release-train
