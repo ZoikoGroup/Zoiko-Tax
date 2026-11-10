@@ -50,10 +50,15 @@ to the Model Gateway and, this time, on to Groq).
 
 - **A proposal**: if the model's reply passes the output check, the page
   shows a proposed code, a confidence value, and the provenance table (use
-  case, model profile, provider profile, prompt profile, AI train). The
-  output check is **format-only**: the code must start with `ontology:` and
-  name something after it. It does **not** check that the code is a real
-  ontology node -- nothing in a running service holds that list.
+  case, model profile, provider profile, prompt profile, AI train). On this
+  main Intelligence page (the Go-to-gRPC path), the output check is
+  **format-only**: the code must start with `ontology:` and name something
+  after it; it does **not** check that the code is on an approved list (the Go
+  core holds no such list, and the screen note "whether that code is a real
+  ontology node is not verified here" is accurate). For the approved-list check
+  that validates proposed codes against an approved list and yields `ABSTAIN`
+  on unknown codes, see [Section 6](#6-optional-classification-with-the-approved-list-check-democlassify)
+  below (`POST /demo/classify`).
 - **A review-required result**: unlike the fake runtime (which always
   returns a valid placeholder code), a real, unconstrained model's free-text
   answer can fail even that format check. The page then shows its seven-step
@@ -125,6 +130,113 @@ browser.
 the compose overlay publishes it on `127.0.0.1` only. Never forward, tunnel or
 otherwise expose that port. Its use cases (`explain-*`) are registered at risk
 tier T1 and data class P0 only.
+
+## 6. Optional: classification with the approved-list check (/demo/classify)
+
+The demo HTTP server ([`intelligence/tools/report_ai_http.py`](tools/report_ai_http.py))
+also provides `POST /demo/classify`, which validates model-proposed classification
+codes against an approved ontology list using `apply_ontology_guard()`
+([`intelligence/src/ztax_gateway/ontology_guard.py`](src/ztax_gateway/ontology_guard.py)).
+
+### What it shows
+
+A real model proposes an ontology class for catalog text through `Gateway.invoke_with_id()`.
+The ontology guard then checks the proposal against the approved list:
+- A code present and currently effective ends as **`PROPOSED`** (`CHECKS_PASSED`).
+- A code not in the list, expired, not yet effective, or prefixed with a Markdown heading
+  marker (`#`) ends as **`ABSTAIN`** with the corresponding reason code
+  (`GUARD_ONTOLOGY_UNKNOWN`, `GUARD_ONTOLOGY_EXPIRED`, or `GUARD_ONTOLOGY_NOT_YET_EFFECTIVE`).
+- On `ABSTAIN`, the response **never returns the rejected code** or any model text.
+
+### Approved list configuration and compose follow-up
+
+The guard reads the approved list path from the **`ZTAX_ONTOLOGY_APPROVED_LIST`** environment
+variable. A synthetic demo list is provided at
+[`intelligence/config/approved_ontology.live-demo.json`](config/approved_ontology.live-demo.json)
+(`list_version: "synthetic-demo-v0"`). **The list is synthetic** (8 telecom codes for demonstration;
+the authoritative list awaits Decision D-05) and **confidence is not calibrated** (`confidence_calibrated: false`).
+
+> [!NOTE]
+> `docker-compose.live-demo.yml` does **not** mount this list file yet. Mounting it is a documented
+> follow-up for the deployment owner. Two lines are required under `ztax-model-gateway`:
+> ```yaml
+> volumes:
+>   - ./intelligence/config/approved_ontology.live-demo.json:/etc/ztax/ai/approved_ontology.json:ro
+> environment:
+>   ZTAX_ONTOLOGY_APPROVED_LIST: /etc/ztax/ai/approved_ontology.json
+> ```
+> Do not edit the compose file now; merging to main deploys without this gate, and an unset variable
+> safely returns `NOT_CONFIGURED` without affecting server startup or `/demo/explain`.
+
+### Invocation and response shapes
+
+```bash
+curl -X POST http://127.0.0.1:18090/demo/classify \
+  -H 'Content-Type: application/json' \
+  -d '{"subject_ref": "sku:PLAN-PRE-VOICE-500", "description": "Prepaid voice bundle, 500 minutes, no data included"}'
+```
+
+The three response shapes are:
+
+1. **`PROPOSED`** (code approved and effective):
+   ```json
+   {
+     "outcome": "PROPOSED",
+     "evidence_id": "019318f0-...",
+     "verdict": "PASS",
+     "reason_code": "CHECKS_PASSED",
+     "list_version": "synthetic-demo-v0",
+     "proposed_code": "ontology:telecom/voice/mobile",
+     "confidence_calibrated": false
+   }
+   ```
+
+2. **`ABSTAIN`** (code unknown, expired, future, or heading-marked — rejected code is omitted):
+   ```json
+   {
+     "outcome": "ABSTAIN",
+     "evidence_id": "019318f0-...",
+     "verdict": "ABSTAIN",
+     "reason_code": "GUARD_ONTOLOGY_UNKNOWN",
+     "list_version": "synthetic-demo-v0",
+     "confidence_calibrated": false
+   }
+   ```
+
+3. **`NOT_CONFIGURED`** (`ZTAX_ONTOLOGY_APPROVED_LIST` is unset):
+   ```json
+   {
+     "outcome": "NOT_CONFIGURED",
+     "evidence_id": null,
+     "verdict": "ABSTAIN",
+     "reason_code": "GUARD_ONTOLOGY_UNKNOWN",
+     "list_version": null,
+     "confidence_calibrated": false
+   }
+   ```
+
+### Evidence record vs answer-checked event
+
+Two separate records are logged:
+1. **Gateway evidence record**: `Gateway.invoke_with_id()` emits one tamper-evident record
+   via logger `ztax_gateway.evidence` at level `INFO`. The outcome recorded there is always
+   `PROPOSE` (reflecting the authority state at model invocation time).
+2. **Linked answer-checked event**: `_record_answer_check_safe()` records an `AnswerCheckedEvent`
+   with validator `ontology_guard@1`, linked to the evidence record by `ai_invocation_id`.
+   The actual guard decision (`PASS` or `ABSTAIN`) lives in this check event, **not** in the initial
+   gateway evidence record.
+
+## 7. Demo script
+
+This script maps the five demonstration capabilities to what is operational in the codebase today:
+
+| Step | Action | What actually happens today |
+|---|---|---|
+| **1. Classify** | Submit item description on the Intelligence UI page or via `POST /demo/classify`. | • **Main page (Go gRPC path):** Runs format check only (`ontology:*`). UI disclaimer *"whether that code is a real ontology node is not verified here"* is correct.<br>• **HTTP endpoint (`/demo/classify`):** Runs the approved-list check against `config/approved_ontology.live-demo.json`; returns `PROPOSED` or `ABSTAIN`. |
+| **2. Explain** | Open Reports (demo) page and click Explain on any row. | `report_ai_http.py` (`POST /demo/explain`) runs `explanation_guard`. Checks model reply against cited row IDs, numbers, and statuses; returns `EXPLAINED` or `ABSTAINED`. |
+| **3. Kill switch** | Edit `intelligence/config/registry.live-demo.json` in place to add a use case to `"killed"` or set `"global_kill": true`. | Python gateway re-reads flags on the next request without container restart (`Gateway._refresh_kill_state`). Call is immediately refused with `KILL_SWITCH_ENGAGED` / `REVIEW_REQUIRED`. |
+| **4. Evidence & events** | Inspect container logs (`docker compose logs ztax-model-gateway`). | Every model invocation seals a tamper-evident `PROPOSE` record (`ztax_gateway.evidence`) with prompt hash and latency. Answer checks append a linked `AnswerCheckedEvent` naming the invocation ID. |
+| **5. Governed fallback** | Cause a model failure, timeout (>45s), or format error. | The UI never crashes with an unhandled exception. It degrades gracefully to human review (`AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`, `AI_GATEWAY_UNAVAILABLE`, `REVIEW_REQUIRED`), proving fail-closed governance. |
 
 ## Fallback: no frontend, no Docker
 

@@ -60,8 +60,10 @@ is available. Three statuses are used:
 - Go-side behaviour for T4 is not checked from this folder.
 - Fixed: an error the Gateway does not name now leaves one BLOCK record (AI_GATEWAY_UNAVAILABLE, fixed detail, no exception text).
 - `usage.latency_ms` is set on every record of a call that reached the runtime; tokens and cost are unpopulated: no provider telemetry.
-- Refusal details for kill switch, unknown or suspended use case, region and malformed context are fixed text; an unknown id is
-  logged and recorded as `unregistered`. Data-class refusal details still name the PRIV-001 class, because existing tests assert it.
+- Refusal details for kill switch, unknown or suspended use case, region and malformed context are fixed text; an unknown id is logged and recorded as `unregistered`. Data-class refusal details still name the PRIV-001 class, because existing tests assert it.
+- The approved ontology list (`config/approved_ontology.live-demo.json`) is synthetic; the real list needs Decision D-05 (`tools/report_ai_http.py`).
+- The approved-list check runs only on `POST /demo/classify` (`tools/report_ai_http.py`); the Go-to-gRPC classification path (`src/ztax_gateway/server.py`) gets only the `ontology:` format check (`tests/test_report_ai_http_classify.py`).
+- The check-event sink is the logging sink; there is no file-based sink yet (`src/ztax_gateway/server.py`).
 
 ## F. Open decisions (from the project team, not verifiable from code)
 
@@ -93,28 +95,22 @@ reflect anything that happens after `Gateway.invoke()` returns.
 
 ### What the explanation guard does (and where its decision is logged)
 
-After `Gateway.invoke()` returns, `report_ai_http.py` calls
-`apply_guard()` / `_check()` from
-`intelligence/src/ztax_gateway/explanation_guard.py` (WP6: the guard was
-extracted into the governed `src/` path so the production gateway can use
-it without depending on demo tooling).  The guard checks the model's reply
-against the cited rows (citation existence, number matching, status-word
-matching).  `report_ai_http.py` imports it; the logic no longer lives in
-the tools folder itself.
+After `Gateway.invoke()` returns, `report_ai_http.py` calls `apply_guard()` / `_check()` from
+`intelligence/src/ztax_gateway/explanation_guard.py` (WP6: the guard was extracted into the governed `src/` path
+so the gateway can use it without depending on demo tooling). The guard checks the model's reply against
+the cited rows (citation existence, number matching, status-word matching). If rejected, the browser receives `ABSTAINED`
+and the reason is the guard's fixed code (e.g. `GUARD_NUMBER_NOT_IN_ROWS`), logged at `INFO` level (`ztax_gateway.report_ai_http`).
+The log is kept for the lifetime of the running container; it is not persisted after container restart.
 
-If the guard rejects the reply, the outcome sent to the browser is `ABSTAINED`
-and the reason is the guard's fixed code (e.g. `GUARD_NUMBER_NOT_IN_ROWS`).
-This decision is logged separately, at the line in `report_ai_http.py`
-(logger `ztax_gateway.report_ai_http`, level `INFO`):
+### What the approved-list check on /demo/classify does
 
-```
-log.info("explain use_case=<use_case> outcome=ABSTAINED reason=<guard_code>", ...)
-```
-
-The actual log call uses Python's `logging` percent-style format with the
-`use_case` and `guard_code` arguments; the message written to the log handler
-includes their values. The log is kept for the lifetime of the running
-container; it is not persisted after container restart.
+On `POST /demo/classify`, `report_ai_http.py` runs `apply_ontology_guard()` (`src/ztax_gateway/ontology_guard.py::check_code`).
+The validator ID is `ontology_guard@1`. An allowed code yields `PASS` with `CHECKS_PASSED`;
+an unknown, expired, or not-yet-effective code yields `ABSTAIN` with `GUARD_ONTOLOGY_UNKNOWN`,
+`GUARD_ONTOLOGY_EXPIRED`, or `GUARD_ONTOLOGY_NOT_YET_EFFECTIVE`. The result is a separate
+linked append-only `AnswerCheckedEvent` naming the invocation ID (`src/ztax_gateway/invocation_check_event.py`).
+On `ABSTAIN`, the response never returns the rejected code, and the gateway evidence record contains
+no prompt or answer text (`tests/test_report_ai_http_classify.py::test_rejected_code_never_in_response_body`).
 
 ### What this means
 

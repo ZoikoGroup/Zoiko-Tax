@@ -689,7 +689,7 @@ def test_http_endpoints_serve_fixture_and_explain_with_cors(
         _fields_result(f"OBL-001 is {_OBL_001_AMOUNT} USD.", ["OBL-001"], abstain=False)
     )
     gateway = _gateway(runtime)
-    handler_cls = report_ai_http._make_handler(gateway, _FIXTURE)
+    handler_cls = report_ai_http._make_handler(gateway, _FIXTURE, None)
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler_cls)
     port = server.server_address[1]
     thread = threading.Thread(target=server.serve_forever, daemon=True)
