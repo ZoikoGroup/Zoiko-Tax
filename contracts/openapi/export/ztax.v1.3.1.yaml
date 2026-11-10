@@ -2379,6 +2379,92 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+  /v1/decisions/{decisionId}/responsibility:
+    get:
+      operationId: listDecisionResponsibility
+      tags:
+        - determination
+      summary: Who owes, collects, reports, remits and bears each levy of a decision
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. For each levy on each item of a
+        committed document decision, the five-role responsibility decision
+        recorded with it (ZTAX-ENG-007 §29): statutory incidence, collection,
+        reporting, remittance and economic burden, each resolved against the
+        parties the document names. A role whose party is absent or
+        contested is `AMBIGUOUS` or `CONFLICTED`, never a default to the
+        seller or the customer (ZTAX-OBL-REQ-0017); a role the law gives to
+        nobody, such as collection of a reverse-charged levy, is
+        `NOT_APPLICABLE`.
+
+        A decision committed before responsibility was recorded, and one
+        that assessed no levies, has an empty list.
+      parameters:
+        - $ref: "#/components/parameters/DecisionId"
+      responses:
+        "200":
+          description: Each levy's decision, in item then levy order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LevyResponsibilityList"
+              examples:
+                default:
+                  summary: A voice tax the seller collects from its customer
+                  value:
+                    levies:
+                      - id: 01920a4c-2e3f-7a40-8b51-6c7d8e9fa0aa
+                        item: line-1
+                        component: xt.voice-tax
+                        componentVersion: 2026.10.1
+                        taxType: TELECOM_EXCISE
+                        jurisdiction: jurisdiction:xt
+                        authority: authority:xt-revenue
+                        treatment: CUSTOMER_CHARGE
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        rule:
+                          id: seller-collects
+                          version: xt.voice-tax@2026.10.1
+                        bundleId: training-telecom-2026.10
+                        bundleDigest: zt1:9f2c
+                        effectiveFrom: 2026-10-05T09:00:00.000000Z
+                        status: RESOLVED
+                        roles:
+                          - role: INCIDENCE
+                            status: RESOLVED
+                            statutory:
+                              kind: SELLER
+                              legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                              ref: seller-1
+                          - role: COLLECTION
+                            status: RESOLVED
+                            statutory:
+                              kind: SELLER
+                              legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                              ref: seller-1
+                          - role: REPORTING
+                            status: RESOLVED
+                            statutory:
+                              kind: SELLER
+                              legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                              ref: seller-1
+                          - role: REMITTANCE
+                            status: RESOLVED
+                            statutory:
+                              kind: SELLER
+                              legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                              ref: seller-1
+                          - role: ECONOMIC_BEARER
+                            status: RESOLVED
+                            statutory:
+                              kind: BUYER
+                              ref: customer-42
+                        recordedAt: 2026-10-05T09:00:01.000000Z
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/Internal"
         "503":
@@ -11022,6 +11108,185 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Journal"
+    LevyResponsibilityList:
+      type: object
+      title: LevyResponsibilityList
+      additionalProperties: false
+      required:
+        - levies
+      properties:
+        levies:
+          type: array
+          items:
+            $ref: "#/components/schemas/LevyResponsibility"
+    LevyResponsibility:
+      type: object
+      title: LevyResponsibility
+      description: |
+        The five-role responsibility decision for one levy on one item of a
+        committed decision (ZTAX-ENG-007 §29). Immutable: a correction is a
+        new decision with its own.
+      additionalProperties: false
+      required:
+        - id
+        - item
+        - component
+        - componentVersion
+        - taxType
+        - jurisdiction
+        - authority
+        - treatment
+        - legalEntityId
+        - rule
+        - bundleId
+        - bundleDigest
+        - effectiveFrom
+        - status
+        - roles
+        - recordedAt
+      properties:
+        id:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          format: uuid
+        item:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The result item's key — its line, or line/part for a bundle part.
+        component:
+          $ref: "#/components/schemas/ContentLabel"
+        componentVersion:
+          $ref: "#/components/schemas/ContentLabel"
+        taxType:
+          $ref: "#/components/schemas/ContentLabel"
+        jurisdiction:
+          $ref: "#/components/schemas/ContentLabel"
+        authority:
+          $ref: "#/components/schemas/ContentLabel"
+        treatment:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - CUSTOMER_CHARGE
+            - PROVIDER_COST
+            - REVERSE_CHARGE
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        rule:
+          $ref: "#/components/schemas/ResponsibilityRuleRef"
+        bundleId:
+          $ref: "#/components/schemas/ContentLabel"
+        bundleDigest:
+          $ref: "#/components/schemas/ContentLabel"
+        effectiveFrom:
+          $ref: "#/components/schemas/Timestamp"
+        status:
+          $ref: "#/components/schemas/ResponsibilityStatus"
+        roles:
+          type: array
+          description: Every role, in INCIDENCE, COLLECTION, REPORTING, REMITTANCE, ECONOMIC_BEARER order.
+          minItems: 5
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/RoleAssignment"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+    ResponsibilityRuleRef:
+      type: object
+      title: ResponsibilityRuleRef
+      description: The content assignment the decision applied, and the levy version it was applied for.
+      additionalProperties: false
+      required:
+        - id
+        - version
+      properties:
+        id:
+          $ref: "#/components/schemas/ContentLabel"
+        version:
+          $ref: "#/components/schemas/ContentLabel"
+    ResponsibilityStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ResponsibilityStatus
+      description: |
+        A role's or a decision's outcome. `NOT_APPLICABLE` is a role the law
+        gives to nobody and is a role status only; a decision is the worst
+        of its roles, with `NOT_APPLICABLE` counting as `RESOLVED`.
+      enum:
+        - RESOLVED
+        - NOT_APPLICABLE
+        - AMBIGUOUS
+        - CONFLICTED
+        - UNSUPPORTED
+      example: RESOLVED
+    RoleAssignment:
+      type: object
+      title: RoleAssignment
+      additionalProperties: false
+      required:
+        - role
+        - status
+      properties:
+        role:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - INCIDENCE
+            - COLLECTION
+            - REPORTING
+            - REMITTANCE
+            - ECONOMIC_BEARER
+        status:
+          $ref: "#/components/schemas/ResponsibilityStatus"
+        statutory:
+          $ref: "#/components/schemas/RoleHolder"
+          description: The party the law places the role on. Present only when RESOLVED.
+        agent:
+          $ref: "#/components/schemas/RoleHolder"
+          description: A party performing the role for the statutory party, where the law permits delegation.
+        detail:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: Why the role did not resolve, or why it has no holder.
+    RoleHolder:
+      type: object
+      title: RoleHolder
+      additionalProperties: false
+      required:
+        - kind
+      properties:
+        kind:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - SELLER
+            - BUYER
+            - MARKETPLACE
+            - WHOLESALER
+            - RESELLER
+            - END_USER
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        ref:
+          x-ztax-privacy:
+            class: P5
+            purposes:
+              - PURP-TAX-CALC
+              - PURP-OBL
+              - PURP-EVID
+            retention: RET-FISCAL
+            redaction: REDACT
+            aiAllowed: NONE
+            evidencePolicy: RAW_REQUIRED
+          type: string
+          description: The party's reference in the caller's systems, as the document named it; for a customer it may be a subscriber account.
     ControlBalance:
       type: object
       title: ControlBalance

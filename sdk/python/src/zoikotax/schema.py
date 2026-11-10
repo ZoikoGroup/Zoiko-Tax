@@ -760,6 +760,33 @@ class JournalList(TypedDict):
     journals: list[Journal]
 
 
+class ResponsibilityRuleRef(TypedDict):
+    """
+    The content assignment the decision applied, and the levy version it was applied for.
+    """
+
+    id: ContentLabel
+    version: ContentLabel
+
+
+ResponsibilityStatus: TypeAlias = Literal['RESOLVED', 'NOT_APPLICABLE', 'AMBIGUOUS', 'CONFLICTED', 'UNSUPPORTED']
+"""
+A role's or a decision's outcome. `NOT_APPLICABLE` is a role the law
+gives to nobody and is a role status only; a decision is the worst
+of its roles, with `NOT_APPLICABLE` counting as `RESOLVED`.
+
+"""
+
+
+class RoleHolder(TypedDict):
+    kind: Literal['SELLER', 'BUYER', 'MARKETPLACE', 'WHOLESALER', 'RESELLER', 'END_USER']
+    legalEntityId: NotRequired[LegalEntityId]
+    ref: NotRequired[str]
+    """
+    The party's reference in the caller's systems, as the document named it; for a customer it may be a subscriber account.
+    """
+
+
 class ControlBalance(TypedDict):
     account: ControlAccount
     currency: CurrencyCode
@@ -3275,6 +3302,23 @@ class Coverage(TypedDict):
     regimes: list[CoverageRegime]
 
 
+class RoleAssignment(TypedDict):
+    role: Literal['INCIDENCE', 'COLLECTION', 'REPORTING', 'REMITTANCE', 'ECONOMIC_BEARER']
+    status: ResponsibilityStatus
+    statutory: NotRequired[RoleHolder]
+    """
+    The party the law places the role on. Present only when RESOLVED.
+    """
+    agent: NotRequired[RoleHolder]
+    """
+    A party performing the role for the statutory party, where the law permits delegation.
+    """
+    detail: NotRequired[str]
+    """
+    Why the role did not resolve, or why it has no holder.
+    """
+
+
 class PeriodEvent(TypedDict):
     seq: int
     state: PeriodState
@@ -3443,9 +3487,45 @@ class Decision(TypedDict):
     document: NotRequired[DocumentDetermination]
 
 
+class LevyResponsibility(TypedDict):
+    """
+    The five-role responsibility decision for one levy on one item of a
+    committed decision (ZTAX-ENG-007 §29). Immutable: a correction is a
+    new decision with its own.
+
+    """
+
+    id: str
+    item: str
+    """
+    The result item's key — its line, or line/part for a bundle part.
+    """
+    component: ContentLabel
+    componentVersion: ContentLabel
+    taxType: ContentLabel
+    jurisdiction: ContentLabel
+    authority: ContentLabel
+    treatment: Literal['CUSTOMER_CHARGE', 'PROVIDER_COST', 'REVERSE_CHARGE']
+    legalEntityId: LegalEntityId
+    rule: ResponsibilityRuleRef
+    bundleId: ContentLabel
+    bundleDigest: ContentLabel
+    effectiveFrom: Timestamp
+    status: ResponsibilityStatus
+    roles: list[RoleAssignment]
+    """
+    Every role, in INCIDENCE, COLLECTION, REPORTING, REMITTANCE, ECONOMIC_BEARER order.
+    """
+    recordedAt: Timestamp
+
+
 class BatchRequest(TypedDict):
     operation: Literal['COMMIT']
     """
     What each item does. `COMMIT` commits it, or corrects with it when it names `supersedes`.
     """
     items: list[CommitRequest]
+
+
+class LevyResponsibilityList(TypedDict):
+    levies: list[LevyResponsibility]

@@ -1455,6 +1455,27 @@ func (e LegalStatus) Valid() bool {
 	}
 }
 
+// Defines values for LevyResponsibilityTreatment.
+const (
+	LevyResponsibilityTreatmentCUSTOMERCHARGE LevyResponsibilityTreatment = "CUSTOMER_CHARGE"
+	LevyResponsibilityTreatmentPROVIDERCOST   LevyResponsibilityTreatment = "PROVIDER_COST"
+	LevyResponsibilityTreatmentREVERSECHARGE  LevyResponsibilityTreatment = "REVERSE_CHARGE"
+)
+
+// Valid indicates whether the value is a known member of the LevyResponsibilityTreatment enum.
+func (e LevyResponsibilityTreatment) Valid() bool {
+	switch e {
+	case LevyResponsibilityTreatmentCUSTOMERCHARGE:
+		return true
+	case LevyResponsibilityTreatmentPROVIDERCOST:
+		return true
+	case LevyResponsibilityTreatmentREVERSECHARGE:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MigrationDecision.
 const (
 	MigrationDecisionACCEPTEDRESIDUAL MigrationDecision = "ACCEPTED_RESIDUAL"
@@ -2355,6 +2376,33 @@ func (e ResolutionRequestAction) Valid() bool {
 	}
 }
 
+// Defines values for ResponsibilityStatus.
+const (
+	ResponsibilityStatusAMBIGUOUS     ResponsibilityStatus = "AMBIGUOUS"
+	ResponsibilityStatusCONFLICTED    ResponsibilityStatus = "CONFLICTED"
+	ResponsibilityStatusNOTAPPLICABLE ResponsibilityStatus = "NOT_APPLICABLE"
+	ResponsibilityStatusRESOLVED      ResponsibilityStatus = "RESOLVED"
+	ResponsibilityStatusUNSUPPORTED   ResponsibilityStatus = "UNSUPPORTED"
+)
+
+// Valid indicates whether the value is a known member of the ResponsibilityStatus enum.
+func (e ResponsibilityStatus) Valid() bool {
+	switch e {
+	case ResponsibilityStatusAMBIGUOUS:
+		return true
+	case ResponsibilityStatusCONFLICTED:
+		return true
+	case ResponsibilityStatusNOTAPPLICABLE:
+		return true
+	case ResponsibilityStatusRESOLVED:
+		return true
+	case ResponsibilityStatusUNSUPPORTED:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResponsibleParty.
 const (
 	ResponsiblePartyBUYER  ResponsibleParty = "BUYER"
@@ -2466,6 +2514,63 @@ func (e Role) Valid() bool {
 	case AUDITOR:
 		return true
 	case OPERATOR:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RoleAssignmentRole.
+const (
+	RoleAssignmentRoleCOLLECTION     RoleAssignmentRole = "COLLECTION"
+	RoleAssignmentRoleECONOMICBEARER RoleAssignmentRole = "ECONOMIC_BEARER"
+	RoleAssignmentRoleINCIDENCE      RoleAssignmentRole = "INCIDENCE"
+	RoleAssignmentRoleREMITTANCE     RoleAssignmentRole = "REMITTANCE"
+	RoleAssignmentRoleREPORTING      RoleAssignmentRole = "REPORTING"
+)
+
+// Valid indicates whether the value is a known member of the RoleAssignmentRole enum.
+func (e RoleAssignmentRole) Valid() bool {
+	switch e {
+	case RoleAssignmentRoleCOLLECTION:
+		return true
+	case RoleAssignmentRoleECONOMICBEARER:
+		return true
+	case RoleAssignmentRoleINCIDENCE:
+		return true
+	case RoleAssignmentRoleREMITTANCE:
+		return true
+	case RoleAssignmentRoleREPORTING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RoleHolderKind.
+const (
+	RoleHolderKindBUYER       RoleHolderKind = "BUYER"
+	RoleHolderKindENDUSER     RoleHolderKind = "END_USER"
+	RoleHolderKindMARKETPLACE RoleHolderKind = "MARKETPLACE"
+	RoleHolderKindRESELLER    RoleHolderKind = "RESELLER"
+	RoleHolderKindSELLER      RoleHolderKind = "SELLER"
+	RoleHolderKindWHOLESALER  RoleHolderKind = "WHOLESALER"
+)
+
+// Valid indicates whether the value is a known member of the RoleHolderKind enum.
+func (e RoleHolderKind) Valid() bool {
+	switch e {
+	case RoleHolderKindBUYER:
+		return true
+	case RoleHolderKindENDUSER:
+		return true
+	case RoleHolderKindMARKETPLACE:
+		return true
+	case RoleHolderKindRESELLER:
+		return true
+	case RoleHolderKindSELLER:
+		return true
+	case RoleHolderKindWHOLESALER:
 		return true
 	default:
 		return false
@@ -3005,22 +3110,22 @@ func (e TenantStatus) Valid() bool {
 
 // Defines values for Treatment.
 const (
-	CUSTOMERCHARGE Treatment = "CUSTOMER_CHARGE"
-	EXEMPT         Treatment = "EXEMPT"
-	PROVIDERCOST   Treatment = "PROVIDER_COST"
-	REVERSECHARGE  Treatment = "REVERSE_CHARGE"
+	TreatmentCUSTOMERCHARGE Treatment = "CUSTOMER_CHARGE"
+	TreatmentEXEMPT         Treatment = "EXEMPT"
+	TreatmentPROVIDERCOST   Treatment = "PROVIDER_COST"
+	TreatmentREVERSECHARGE  Treatment = "REVERSE_CHARGE"
 )
 
 // Valid indicates whether the value is a known member of the Treatment enum.
 func (e Treatment) Valid() bool {
 	switch e {
-	case CUSTOMERCHARGE:
+	case TreatmentCUSTOMERCHARGE:
 		return true
-	case EXEMPT:
+	case TreatmentEXEMPT:
 		return true
-	case PROVIDERCOST:
+	case TreatmentPROVIDERCOST:
 		return true
-	case REVERSECHARGE:
+	case TreatmentREVERSECHARGE:
 		return true
 	default:
 		return false
@@ -5626,6 +5731,69 @@ type LegalRule struct {
 // LegalStatus defines model for LegalStatus.
 type LegalStatus string
 
+// LevyResponsibility The five-role responsibility decision for one levy on one item of a
+// committed decision (ZTAX-ENG-007 §29). Immutable: a correction is a
+// new decision with its own.
+type LevyResponsibility struct {
+	// Authority An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Authority ContentLabel `json:"authority"`
+
+	// BundleDigest An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	BundleDigest ContentLabel `json:"bundleDigest"`
+
+	// BundleID An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	BundleID ContentLabel `json:"bundleId"`
+
+	// Component An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Component ContentLabel `json:"component"`
+
+	// ComponentVersion An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	ComponentVersion ContentLabel `json:"componentVersion"`
+
+	// EffectiveFrom RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	EffectiveFrom Timestamp `json:"effectiveFrom"`
+	ID            string    `json:"id"`
+
+	// Item The result item's key — its line, or line/part for a bundle part.
+	Item string `json:"item"`
+
+	// Jurisdiction An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Jurisdiction ContentLabel `json:"jurisdiction"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// Roles Every role, in INCIDENCE, COLLECTION, REPORTING, REMITTANCE, ECONOMIC_BEARER order.
+	Roles []RoleAssignment `json:"roles"`
+
+	// Rule The content assignment the decision applied, and the levy version it was applied for.
+	Rule ResponsibilityRuleRef `json:"rule"`
+
+	// Status A role's or a decision's outcome. `NOT_APPLICABLE` is a role the law
+	// gives to nobody and is a role status only; a decision is the worst
+	// of its roles, with `NOT_APPLICABLE` counting as `RESOLVED`.
+	Status ResponsibilityStatus `json:"status"`
+
+	// TaxType An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	TaxType   ContentLabel                `json:"taxType"`
+	Treatment LevyResponsibilityTreatment `json:"treatment"`
+}
+
+// LevyResponsibilityTreatment defines model for LevyResponsibility.Treatment.
+type LevyResponsibilityTreatment string
+
+// LevyResponsibilityList defines model for LevyResponsibilityList.
+type LevyResponsibilityList struct {
+	Levies []LevyResponsibility `json:"levies"`
+}
+
 // LocationCode An ISO 3166-1 alpha-2 country code (`DE`) or ISO 3166-2 subdivision code (`CA-QC`).
 type LocationCode = string
 
@@ -6881,6 +7049,20 @@ type ResponsibilityAssignment struct {
 	Reporting  ResponsibleParty `json:"reporting"`
 }
 
+// ResponsibilityRuleRef The content assignment the decision applied, and the levy version it was applied for.
+type ResponsibilityRuleRef struct {
+	// ID An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	ID ContentLabel `json:"id"`
+
+	// Version An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
+	Version ContentLabel `json:"version"`
+}
+
+// ResponsibilityStatus A role's or a decision's outcome. `NOT_APPLICABLE` is a role the law
+// gives to nobody and is a role status only; a decision is the worst
+// of its roles, with `NOT_APPLICABLE` counting as `RESOLVED`.
+type ResponsibilityStatus string
+
 // ResponsibleParty defines model for ResponsibleParty.
 type ResponsibleParty string
 
@@ -7047,6 +7229,41 @@ type RevocationRequest struct {
 // Role A role within a tenant. Closed: adding one is a reviewed change with an
 // authorization matrix entry, not a string a caller may invent.
 type Role string
+
+// RoleAssignment defines model for RoleAssignment.
+type RoleAssignment struct {
+	// Agent A party performing the role for the statutory party, where the law permits delegation.
+	Agent *RoleHolder `json:"agent,omitempty"`
+
+	// Detail Why the role did not resolve, or why it has no holder.
+	Detail *string            `json:"detail,omitempty"`
+	Role   RoleAssignmentRole `json:"role"`
+
+	// Status A role's or a decision's outcome. `NOT_APPLICABLE` is a role the law
+	// gives to nobody and is a role status only; a decision is the worst
+	// of its roles, with `NOT_APPLICABLE` counting as `RESOLVED`.
+	Status ResponsibilityStatus `json:"status"`
+
+	// Statutory The party the law places the role on. Present only when RESOLVED.
+	Statutory *RoleHolder `json:"statutory,omitempty"`
+}
+
+// RoleAssignmentRole defines model for RoleAssignment.Role.
+type RoleAssignmentRole string
+
+// RoleHolder defines model for RoleHolder.
+type RoleHolder struct {
+	Kind RoleHolderKind `json:"kind"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID *LegalEntityID `json:"legalEntityId,omitempty"`
+
+	// Ref The party's reference in the caller's systems, as the document named it; for a customer it may be a subscriber account.
+	Ref *string `json:"ref,omitempty"`
+}
+
+// RoleHolderKind defines model for RoleHolder.Kind.
+type RoleHolderKind string
 
 // RoleRequest defines model for RoleRequest.
 type RoleRequest struct {

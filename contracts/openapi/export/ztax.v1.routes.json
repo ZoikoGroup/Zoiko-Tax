@@ -213,6 +213,12 @@
     },
     {
       "method": "GET",
+      "path": "/v1/decisions/{decisionId}/responsibility",
+      "operationId": "listDecisionResponsibility",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/decisions/{decisionId}/retention",
       "operationId": "getDecisionRetention",
       "public": false
