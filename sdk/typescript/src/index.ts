@@ -386,6 +386,11 @@ export class ZoikoTaxClient {
     return this.#send<S<"JournalList">>("GET", `/v1/decisions/${encodeURIComponent(decisionId)}/journals`, undefined, signal);
   }
 
+  /** List decision responsibility. `GET /v1/decisions/{decisionId}/responsibility`. */
+  listDecisionResponsibility(decisionId: string, signal?: AbortSignal): Promise<Result<S<"LevyResponsibilityList">>> {
+    return this.#send<S<"LevyResponsibilityList">>("GET", `/v1/decisions/${encodeURIComponent(decisionId)}/responsibility`, undefined, signal);
+  }
+
   /** Get decision inclusion. `GET /v1/decisions/{decisionId}/inclusion`. */
   getDecisionInclusion(decisionId: string, signal?: AbortSignal): Promise<Result<S<"InclusionProof">>> {
     return this.#send<S<"InclusionProof">>("GET", `/v1/decisions/${encodeURIComponent(decisionId)}/inclusion`, undefined, signal);

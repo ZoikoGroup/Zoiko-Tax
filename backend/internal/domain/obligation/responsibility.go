@@ -67,10 +67,14 @@ type ResponsibilityStatus string
 
 // The statuses.
 const (
-	ResponsibilityResolved    ResponsibilityStatus = "RESOLVED"
-	ResponsibilityAmbiguous   ResponsibilityStatus = "AMBIGUOUS"
-	ResponsibilityConflicted  ResponsibilityStatus = "CONFLICTED"
-	ResponsibilityUnsupported ResponsibilityStatus = "UNSUPPORTED"
+	ResponsibilityResolved ResponsibilityStatus = "RESOLVED"
+	// ResponsibilityNotApplicable is a role the law gives to nobody: a
+	// reverse-charged or provider-borne levy has no collector. It is a
+	// resolved answer, not a missing one, so it never worsens a decision.
+	ResponsibilityNotApplicable ResponsibilityStatus = "NOT_APPLICABLE"
+	ResponsibilityAmbiguous     ResponsibilityStatus = "AMBIGUOUS"
+	ResponsibilityConflicted    ResponsibilityStatus = "CONFLICTED"
+	ResponsibilityUnsupported   ResponsibilityStatus = "UNSUPPORTED"
 )
 
 // RoleRule is content's answer to one role: the party kinds that may hold it,
@@ -84,6 +88,10 @@ type RoleRule struct {
 	// on the statutory party's behalf. Without it, tenant configuration cannot
 	// name an agent for the role (ZTAX-OBL-REQ-0008).
 	DelegationPermitted bool
+	// NoParty says the law places this role on nobody, so the decision
+	// records NOT_APPLICABLE rather than looking for a holder. It takes no
+	// candidates and cannot be delegated: there is no act to perform.
+	NoParty bool
 }
 
 // ResponsibilityRule is the content rule for one obligation definition. It
@@ -219,6 +227,8 @@ func DecideResponsibility(rule ResponsibilityRule, in ResponsibilityInput) (Resp
 		switch {
 		case !ok:
 			a.Status, a.Detail = ResponsibilityUnsupported, "the rule does not address this role"
+		case rr.NoParty:
+			a.Status, a.Detail = ResponsibilityNotApplicable, "the rule places this role on no party"
 		default:
 			a = resolveRole(rr, byKind)
 		}
@@ -265,7 +275,8 @@ func resolveRole(rr RoleRule, byKind map[PartyKind][]Party) Assignment {
 }
 
 var statusRank = map[ResponsibilityStatus]int{
-	ResponsibilityResolved: 0, ResponsibilityAmbiguous: 1, ResponsibilityConflicted: 2, ResponsibilityUnsupported: 3,
+	ResponsibilityResolved: 0, ResponsibilityNotApplicable: 0,
+	ResponsibilityAmbiguous: 1, ResponsibilityConflicted: 2, ResponsibilityUnsupported: 3,
 }
 
 func worse(a, b ResponsibilityStatus) ResponsibilityStatus {
@@ -297,6 +308,17 @@ func validateRule(rule ResponsibilityRule) error {
 			return fmt.Errorf("obligation: rule %s addresses %s twice", rule.ID, rr.Role)
 		}
 		seen[rr.Role] = true
+		if rr.NoParty {
+			if len(rr.Candidates) > 0 || rr.DelegationPermitted {
+				return fmt.Errorf("obligation: rule %s places %s on no party and also names candidates or a delegation", rule.ID, rr.Role)
+			}
+			if rr.Role == RoleIncidence || rr.Role == RoleEconomicBearer {
+				// Somebody always owes a levy and somebody always pays it;
+				// "nobody" there is an unanswered question, not an answer.
+				return fmt.Errorf("obligation: rule %s places %s on no party; a levy always has one", rule.ID, rr.Role)
+			}
+			continue
+		}
 		if len(rr.Candidates) == 0 {
 			return fmt.Errorf("obligation: rule %s names no candidate for %s", rule.ID, rr.Role)
 		}
@@ -307,6 +329,29 @@ func validateRule(rule ResponsibilityRule) error {
 		}
 	}
 	return nil
+}
+
+// LevyResponsibility is the responsibility decision for one levy on one item
+// of one committed tax decision (ZTAX-ENG-007 §29): who owes it, collects
+// it, reports it, remits it and pays for it, decided from the parties the
+// document names. It is a record of its own beside the tax decision rather
+// than a field inside it, so it can be read, reviewed and handed to an
+// obligation without changing the sealed result a replay compares.
+type LevyResponsibility struct {
+	Decision ResponsibilityDecision
+	// TaxDecision is the committed decision the levy was assessed in.
+	TaxDecision id.DecisionID
+	// Item is the result item's key: its line, or line/part for a bundle.
+	Item string
+	// Component and ComponentVersion name the levy as the content does.
+	Component        string
+	ComponentVersion string
+	TaxType          string
+	Jurisdiction     string
+	Authority        string
+	// Treatment is CUSTOMER_CHARGE, PROVIDER_COST or REVERSE_CHARGE.
+	Treatment  string
+	RecordedAt time.Time
 }
 
 // Canonical renders the decision for evidence.

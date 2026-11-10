@@ -192,7 +192,7 @@ test("the fiscal surface is reachable: paths, query strings and idempotency keys
   assert.equal(calls[5].init.method, "POST");
 
   for (const name of [
-    "adjustTransaction", "getRefund", "reportRefund", "submitBatch", "getJob", "listDecisionJournals",
+    "adjustTransaction", "getRefund", "reportRefund", "submitBatch", "getJob", "listDecisionJournals", "listDecisionResponsibility",
     "getDecisionInclusion", "getSubledgerBalances", "transitionSubledgerPeriod", "requestPeriodReopen",
     "getObligation", "transitionObligation", "issueDocument", "getDocument", "getDocumentLineage",
     "runReconciliation", "getReconciliation", "listSeals", "sealPeriod", "getSeal", "verifySeal",

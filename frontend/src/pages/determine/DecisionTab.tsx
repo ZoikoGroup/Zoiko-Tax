@@ -61,6 +61,7 @@ const DecisionView = ({ id, onOpenRefund }: { id: string; onOpenRefund: (id: str
             <InclusionCard id={id} />
             <RetentionCard id={id} />
           </Columns>
+          {d.document === undefined ? null : <ResponsibilityCard id={id} />}
           <JournalsCard id={id} />
           <RefundForm decision={d} onOpenRefund={onOpenRefund} />
         </>
@@ -168,6 +169,96 @@ const RetentionCard = ({ id }: { id: string }) => {
             ['Evaluated', instant(verdict.done.evaluatedAt)],
           ]}
         />
+      )}
+    </Card>
+  )
+}
+
+const ROLE_LABEL: Record<S<'RoleAssignment'>['role'], string> = {
+  INCIDENCE: 'Owes it',
+  COLLECTION: 'Collects it',
+  REPORTING: 'Reports it',
+  REMITTANCE: 'Remits it',
+  ECONOMIC_BEARER: 'Pays for it',
+}
+
+const PARTY_LABEL: Record<S<'RoleHolder'>['kind'], string> = {
+  SELLER: 'Seller',
+  BUYER: 'Customer',
+  MARKETPLACE: 'Marketplace',
+  WHOLESALER: 'Wholesaler',
+  RESELLER: 'Reseller',
+  END_USER: 'End user',
+}
+
+/** Who holds a role: the party, its reference, and an agent acting for it. */
+const Holder = ({ role }: { role: S<'RoleAssignment'> }) => {
+  if (role.status === 'NOT_APPLICABLE') return <span className="ztax-empty-note">Nobody, by law</span>
+  if (role.statutory === undefined) return <Status value={role.status} />
+  const p = role.statutory
+  return (
+    <span title={role.detail}>
+      {PARTY_LABEL[p.kind]}
+      {p.ref === undefined ? null : <> · <span className="mono">{p.ref}</span></>}
+      {role.agent === undefined ? null : <> · via {PARTY_LABEL[role.agent.kind]}</>}
+    </span>
+  )
+}
+
+/**
+ * Who owes, collects, reports, remits and pays for each levy (ZTAX-ENG-007).
+ * Five separate answers per levy, read from the record kept with the commit;
+ * an unanswered role shows its status, never a guessed party.
+ */
+const ResponsibilityCard = ({ id }: { id: string }) => {
+  const levies = useAction<S<'LevyResponsibilityList'>>()
+  const roles = Object.keys(ROLE_LABEL) as S<'RoleAssignment'>['role'][]
+  return (
+    <Card
+      title="Who is responsible"
+      aside={
+        <button type="button" className="ztax-btn-quiet" disabled={levies.busy} onClick={() => { void levies.run(() => ztax.listDecisionResponsibility(id)) }}>
+          {levies.busy ? 'Reading…' : 'Show responsibility'}
+        </button>
+      }
+    >
+      <Outcome error={levies.error} done={null} />
+      {levies.done === null ? (
+        <p className="ztax-empty-note">For each levy: who the law places it on, who collects, reports and remits it, and who ends up paying.</p>
+      ) : levies.done.levies.length === 0 ? (
+        <p className="ztax-empty-note">No responsibility was recorded: the decision assessed no levies, or it was committed before responsibility was recorded.</p>
+      ) : (
+        <div className="ztax-table-scroll">
+          <table className="table">
+            <caption className="table__caption">Five roles per levy, decided from the parties on the document</caption>
+            <thead>
+              <tr>
+                <th scope="col">Item</th>
+                <th scope="col">Levy</th>
+                <th scope="col">Treatment</th>
+                {roles.map((r) => <th scope="col" key={r}>{ROLE_LABEL[r]}</th>)}
+                <th scope="col">Decision</th>
+              </tr>
+            </thead>
+            <tbody>
+              {levies.done.levies.map((l) => (
+                <tr key={l.id}>
+                  <td className="mono">{l.item}</td>
+                  <td>
+                    <span className="mono">{l.component}</span>
+                    <div className="ztax-empty-note">{l.taxType} · {l.authority}</div>
+                  </td>
+                  <td>{l.treatment.replaceAll('_', ' ').toLowerCase()}</td>
+                  {roles.map((r) => {
+                    const a = l.roles.find((x) => x.role === r)
+                    return <td key={r}>{a === undefined ? '—' : <Holder role={a} />}</td>
+                  })}
+                  <td><Status value={l.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </Card>
   )

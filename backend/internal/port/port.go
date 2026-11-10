@@ -145,6 +145,18 @@ type CredentialTokenRepository interface {
 	Spend(ctx context.Context, digest []byte, at time.Time) (bool, error)
 }
 
+// ResponsibilityRepository stores the five-role decision made for each levy
+// of a committed tax decision. Append-only: a decision's responsibility is
+// recorded with it and never edited; a correction is a new tax decision with
+// its own.
+type ResponsibilityRepository interface {
+	Append(ctx context.Context, r obligation.LevyResponsibility) error
+	// ForDecision lists a tax decision's levies in item, then component,
+	// order. A decision recorded before responsibility was decided, or with
+	// no levies, has none.
+	ForDecision(ctx context.Context, decision id.DecisionID) ([]obligation.LevyResponsibility, error)
+}
+
 // Message is one plain-text email. The sender is the mailer's own
 // configuration, never the caller's: nothing a request carries chooses whose
 // name a message goes out under.

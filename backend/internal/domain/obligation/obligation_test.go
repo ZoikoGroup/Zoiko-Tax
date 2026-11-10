@@ -184,6 +184,62 @@ func TestOBLREQ0019AffiliatesAreNotOneFilerByDefault(t *testing.T) {
 	}
 }
 
+func TestNoPartyIsAnAnswerNotAGap(t *testing.T) {
+	// A reverse-charged levy has no collector. The law says so; the decision
+	// records NOT_APPLICABLE for that role, names nobody, and stays RESOLVED.
+	roles := []obligation.RoleRule{
+		{Role: obligation.RoleIncidence, Candidates: []obligation.PartyKind{obligation.PartyBuyer}},
+		{Role: obligation.RoleCollection, NoParty: true},
+		{Role: obligation.RoleReporting, Candidates: []obligation.PartyKind{obligation.PartyBuyer}},
+		{Role: obligation.RoleRemittance, Candidates: []obligation.PartyKind{obligation.PartyBuyer}},
+		{Role: obligation.RoleEconomicBearer, Candidates: []obligation.PartyKind{obligation.PartyBuyer}},
+	}
+	d := decide(t, rule(roles...), []obligation.Party{seller, buyer})
+	if d.Status != obligation.ResponsibilityResolved {
+		t.Fatalf("status %s, want RESOLVED", d.Status)
+	}
+	a, _ := d.Assignment(obligation.RoleCollection)
+	if a.Status != obligation.ResponsibilityNotApplicable || a.Statutory != nil {
+		t.Fatalf("collection %+v, want NOT_APPLICABLE naming nobody", a)
+	}
+	if b, _ := d.Assignment(obligation.RoleIncidence); b.Statutory == nil || b.Statutory.Ref != "customer-42" {
+		t.Fatalf("incidence %+v, want the buyer", b)
+	}
+}
+
+func TestNoPartyDoesNotHideAWorseRole(t *testing.T) {
+	// NOT_APPLICABLE ranks with RESOLVED, so an absent party elsewhere still
+	// makes the decision AMBIGUOUS.
+	roles := append([]obligation.RoleRule{{Role: obligation.RoleCollection, NoParty: true}},
+		obligation.RoleRule{Role: obligation.RoleIncidence, Candidates: []obligation.PartyKind{obligation.PartyMarketplace}},
+		obligation.RoleRule{Role: obligation.RoleReporting, Candidates: []obligation.PartyKind{obligation.PartySeller}},
+		obligation.RoleRule{Role: obligation.RoleRemittance, Candidates: []obligation.PartyKind{obligation.PartySeller}},
+		obligation.RoleRule{Role: obligation.RoleEconomicBearer, Candidates: []obligation.PartyKind{obligation.PartyBuyer}},
+	)
+	if d := decide(t, rule(roles...), []obligation.Party{seller, buyer}); d.Status != obligation.ResponsibilityAmbiguous {
+		t.Fatalf("status %s, want AMBIGUOUS", d.Status)
+	}
+}
+
+func TestNoPartyRulesThatCannotBeTrueAreRefused(t *testing.T) {
+	for name, rr := range map[string]obligation.RoleRule{
+		"nobody owes it":          {Role: obligation.RoleIncidence, NoParty: true},
+		"nobody pays it":          {Role: obligation.RoleEconomicBearer, NoParty: true},
+		"nobody, and a candidate": {Role: obligation.RoleCollection, NoParty: true, Candidates: []obligation.PartyKind{obligation.PartySeller}},
+		"nobody, delegated":       {Role: obligation.RoleCollection, NoParty: true, DelegationPermitted: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := obligation.DecideResponsibility(rule(rr), obligation.ResponsibilityInput{
+				ID:       id.NewResponsibilityDecisionID(uuid.MustParse("00000000-0000-7000-8000-0000000000ab")),
+				TenantID: tenant, LegalEntity: entity, EffectiveFrom: when, Parties: []obligation.Party{seller, buyer},
+			})
+			if err == nil {
+				t.Fatal("the rule was accepted")
+			}
+		})
+	}
+}
+
 // ---------------------------------------------------------------------------
 // definitions and triggers
 // ---------------------------------------------------------------------------
