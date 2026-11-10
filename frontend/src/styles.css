@@ -385,3 +385,8 @@ code {
 .field__error { font-size: 0.8125rem; color: #b91c1c; margin: 0.25rem 0; min-height: 1.2em; }
 
 fieldset.field { border: none; padding: 0; margin-inline: 0; }
+
+/* A wide table scrolls inside its card rather than widening the page. */
+.ztax-table-scroll {
+  overflow-x: auto;
+}
