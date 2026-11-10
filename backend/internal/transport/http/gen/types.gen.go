@@ -2403,27 +2403,6 @@ func (e ResponsibilityStatus) Valid() bool {
 	}
 }
 
-// Defines values for ResponsibleParty.
-const (
-	ResponsiblePartyBUYER  ResponsibleParty = "BUYER"
-	ResponsiblePartyNONE   ResponsibleParty = "NONE"
-	ResponsiblePartySELLER ResponsibleParty = "SELLER"
-)
-
-// Valid indicates whether the value is a known member of the ResponsibleParty enum.
-func (e ResponsibleParty) Valid() bool {
-	switch e {
-	case ResponsiblePartyBUYER:
-		return true
-	case ResponsiblePartyNONE:
-		return true
-	case ResponsiblePartySELLER:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for RetentionRecordClass.
 const (
 	RetentionRecordClassDECISION RetentionRecordClass = "DECISION"
@@ -3081,6 +3060,30 @@ func (e TaxDocumentType) Valid() bool {
 	case TaxDocumentTypeCREDITNOTE:
 		return true
 	case TaxDocumentTypeINVOICE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TaxIntermediaryKind.
+const (
+	TaxIntermediaryKindENDUSER     TaxIntermediaryKind = "END_USER"
+	TaxIntermediaryKindMARKETPLACE TaxIntermediaryKind = "MARKETPLACE"
+	TaxIntermediaryKindRESELLER    TaxIntermediaryKind = "RESELLER"
+	TaxIntermediaryKindWHOLESALER  TaxIntermediaryKind = "WHOLESALER"
+)
+
+// Valid indicates whether the value is a known member of the TaxIntermediaryKind enum.
+func (e TaxIntermediaryKind) Valid() bool {
+	switch e {
+	case TaxIntermediaryKindENDUSER:
+		return true
+	case TaxIntermediaryKindMARKETPLACE:
+		return true
+	case TaxIntermediaryKindRESELLER:
+		return true
+	case TaxIntermediaryKindWHOLESALER:
 		return true
 	default:
 		return false
@@ -7039,14 +7042,43 @@ type ResolutionRequestAction string
 
 // ResponsibilityAssignment The five roles, each answered separately (ZTAX-OBL-REQ-0002 to -0006).
 type ResponsibilityAssignment struct {
-	Collection     ResponsibleParty `json:"collection"`
+	// Collection Who the content places a role on: `NONE`, one party kind, or several
+	// separated by `|` in precedence order, the first present on the
+	// document holding the role. `MARKETPLACE|SELLER` is the marketplace
+	// when there is one, otherwise the seller. The resolved holder is in
+	// `GET /v1/decisions/{decisionId}/responsibility`.
+	Collection ResponsibleParty `json:"collection"`
+
+	// EconomicBearer Who the content places a role on: `NONE`, one party kind, or several
+	// separated by `|` in precedence order, the first present on the
+	// document holding the role. `MARKETPLACE|SELLER` is the marketplace
+	// when there is one, otherwise the seller. The resolved holder is in
+	// `GET /v1/decisions/{decisionId}/responsibility`.
 	EconomicBearer ResponsibleParty `json:"economicBearer"`
 
 	// ID An identifier or label from the active content — a component, regime, authority, tax type, slot or certificate type.
-	ID         ContentLabel     `json:"id"`
-	Incidence  ResponsibleParty `json:"incidence"`
+	ID ContentLabel `json:"id"`
+
+	// Incidence Who the content places a role on: `NONE`, one party kind, or several
+	// separated by `|` in precedence order, the first present on the
+	// document holding the role. `MARKETPLACE|SELLER` is the marketplace
+	// when there is one, otherwise the seller. The resolved holder is in
+	// `GET /v1/decisions/{decisionId}/responsibility`.
+	Incidence ResponsibleParty `json:"incidence"`
+
+	// Remittance Who the content places a role on: `NONE`, one party kind, or several
+	// separated by `|` in precedence order, the first present on the
+	// document holding the role. `MARKETPLACE|SELLER` is the marketplace
+	// when there is one, otherwise the seller. The resolved holder is in
+	// `GET /v1/decisions/{decisionId}/responsibility`.
 	Remittance ResponsibleParty `json:"remittance"`
-	Reporting  ResponsibleParty `json:"reporting"`
+
+	// Reporting Who the content places a role on: `NONE`, one party kind, or several
+	// separated by `|` in precedence order, the first present on the
+	// document holding the role. `MARKETPLACE|SELLER` is the marketplace
+	// when there is one, otherwise the seller. The resolved holder is in
+	// `GET /v1/decisions/{decisionId}/responsibility`.
+	Reporting ResponsibleParty `json:"reporting"`
 }
 
 // ResponsibilityRuleRef The content assignment the decision applied, and the levy version it was applied for.
@@ -7063,8 +7095,12 @@ type ResponsibilityRuleRef struct {
 // of its roles, with `NOT_APPLICABLE` counting as `RESOLVED`.
 type ResponsibilityStatus string
 
-// ResponsibleParty defines model for ResponsibleParty.
-type ResponsibleParty string
+// ResponsibleParty Who the content places a role on: `NONE`, one party kind, or several
+// separated by `|` in precedence order, the first present on the
+// document holding the role. `MARKETPLACE|SELLER` is the marketplace
+// when there is one, otherwise the seller. The resolved holder is in
+// `GET /v1/decisions/{decisionId}/responsibility`.
+type ResponsibleParty = string
 
 // ResultValue One emitted value. `type` says which other members are present:
 // `amount` and `currency` for `MONEY`; `value` and `basis` for `RATE`;
@@ -7962,7 +7998,14 @@ type TaxDocument struct {
 	Currency CurrencyCode        `json:"currency"`
 	Customer TaxParty            `json:"customer"`
 	Evidence []SitusEvidenceItem `json:"evidence,omitempty"`
-	Lines    []TaxLine           `json:"lines"`
+
+	// Intermediaries The other parties to the supply — a marketplace, wholesaler,
+	// reseller or the end user of a business customer's service — so a
+	// levy's responsibility can fall on them (ZTAX-OBL-REQ-0020). They
+	// do not change what is owed, only who holds each role for it. Each
+	// party is named once.
+	Intermediaries []TaxIntermediary `json:"intermediaries,omitempty"`
+	Lines          []TaxLine         `json:"lines"`
 
 	// PriceMode `EXCLUSIVE`: amounts are net and customer charges are added.
 	// `INCLUSIVE`: amounts include the customer-charged taxes, which are
@@ -7976,6 +8019,16 @@ type TaxDocument struct {
 
 // TaxDocumentType An `INVOICE` carries non-negative amounts; a `CREDIT_NOTE` carries non-positive ones.
 type TaxDocumentType string
+
+// TaxIntermediary A party to the supply besides the seller and the customer.
+type TaxIntermediary struct {
+	// ID A party's reference in the caller's systems. Not interpreted; a certificate's holder must equal the customer's.
+	ID   PartyReference      `json:"id"`
+	Kind TaxIntermediaryKind `json:"kind"`
+}
+
+// TaxIntermediaryKind defines model for TaxIntermediary.Kind.
+type TaxIntermediaryKind string
 
 // TaxLine One rated line, in the document currency. A bundle line carries
 // `parts` instead of its own `service` and `quantity`, and the parts
