@@ -12,11 +12,13 @@ config/approved_ontology.live-demo.json (the synthetic list created in Step 2).
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import json
 import logging
 import os
 import sys
+from collections.abc import Iterator
 from datetime import date
 from pathlib import Path
 from types import ModuleType
@@ -545,7 +547,7 @@ def test_kill_switch_gives_refused(tmp_path: Path) -> None:
 def test_http_classify_endpoints() -> None:
     """HTTP-level testing for /demo/classify:
     - 200 PROPOSED with CORS on valid input
-    - 400 on request body > 32 KiB (_CLASSIFY_MAX_BODY)
+    - 400 on request body > 32 KiB (_DEMO_MAX_BODY)
     - 400 on non-JSON request body
     - 400 on invalid or missing subject_ref
     - 400 on invalid or missing description
@@ -861,3 +863,208 @@ def test_http_handler_explain_unhandled_exception_returns_refusal(
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
+
+
+# ---------------------------------------------------------------------------
+# 15. Route hardening: body shape, Content-Length, size, field limits, reply shape
+# ---------------------------------------------------------------------------
+
+_REPLY_KEYS = {
+    "outcome",
+    "verdict",
+    "reason_code",
+    "evidence_id",
+    "list_version",
+    "confidence_calibrated",
+    "synthetic",
+}
+
+
+@contextlib.contextmanager
+def _serving(
+    runtime: Any = None, approved: ApprovedOntologyList | None = _APPROVED_LIST
+) -> Iterator[int]:
+    """A real local demo server on a free port; yields the port."""
+    import threading
+    from http.server import ThreadingHTTPServer
+
+    gw = _gateway(runtime or _ScriptedRuntime(result=_classify_result(_APPROVED_CODE)))
+    fixture = _MODULES["report_fixture"].generate_fixture()
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0), report_ai_http._make_handler(gw, fixture, approved)
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield int(server.server_address[1])
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def _post(port: int, path: str, body: bytes) -> tuple[int, dict[str, Any]]:
+    import http.client
+
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+    try:
+        conn.request("POST", path, body=body, headers={"Content-Type": "application/json"})
+        resp = conn.getresponse()
+        return resp.status, json.loads(resp.read())
+    finally:
+        conn.close()
+
+
+def _post_raw_length(port: int, path: str, length_value: str) -> tuple[int, dict[str, Any]]:
+    """Send a request whose Content-Length header is written by hand."""
+    import socket
+
+    request = (
+        f"POST {path} HTTP/1.1\r\nHost: 127.0.0.1\r\n"
+        f"Content-Type: application/json\r\nContent-Length: {length_value}\r\n"
+        "Connection: close\r\n\r\n"
+    ).encode("ascii")
+    with socket.create_connection(("127.0.0.1", port), timeout=5) as sock:
+        sock.sendall(request)
+        chunks = []
+        while True:
+            data = sock.recv(4096)
+            if not data:
+                break
+            chunks.append(data)
+    raw = b"".join(chunks)
+    head, _, body = raw.partition(b"\r\n\r\n")
+    status = int(head.split(b" ", 2)[1])
+    return status, json.loads(body)
+
+
+def _classify_body(subject_ref: str, description: str) -> bytes:
+    return json.dumps({"subject_ref": subject_ref, "description": description}).encode()
+
+
+@pytest.mark.parametrize("path", ["/demo/classify", "/demo/explain"])
+@pytest.mark.parametrize("body", [b"null", b"[1, 2]", b'"text"', b"5", b"true"])
+def test_a_json_body_that_is_not_an_object_is_refused(path: str, body: bytes) -> None:
+    with _serving() as port:
+        status, doc = _post(port, path, body)
+    assert status == 400
+    assert doc == {"error": "request body must be an object"}
+
+
+@pytest.mark.parametrize("path", ["/demo/classify", "/demo/explain"])
+def test_a_body_that_is_not_utf8_is_refused_as_not_json(path: str) -> None:
+    with _serving() as port:
+        status, doc = _post(port, path, b"\xff\xfe\xfa")
+    assert status == 400
+    assert doc == {"error": "request body is not JSON"}
+
+
+@pytest.mark.parametrize("path", ["/demo/classify", "/demo/explain"])
+@pytest.mark.parametrize("value", ["abc", "-1", "1.5", "+5", "0x10"])
+def test_an_invalid_or_negative_content_length_is_refused(path: str, value: str) -> None:
+    with _serving() as port:
+        status, doc = _post_raw_length(port, path, value)
+    assert status == 400
+    assert doc == {"error": "invalid content length"}
+
+
+def test_an_empty_explain_body_keeps_its_field_error() -> None:
+    with _serving() as port:
+        status, doc = _post(port, "/demo/explain", b"")
+    assert status == 400
+    assert "kind must be one of" in doc["error"]
+
+
+def test_an_empty_classify_body_gives_the_field_error() -> None:
+    with _serving() as port:
+        status, doc = _post(port, "/demo/classify", b"")
+    assert status == 400
+    assert doc == {"error": "subject_ref must be a non-empty string"}
+
+
+def test_an_oversize_explain_body_is_refused() -> None:
+    body = json.dumps({"kind": "obligation-row", "ids": ["A" * (34 * 1024)]}).encode()
+    with _serving() as port:
+        status, doc = _post(port, "/demo/explain", body)
+    assert status == 400
+    assert doc == {"error": "request body too large"}
+
+
+def test_the_demo_body_limit_is_32_kib_and_is_not_named_for_one_route() -> None:
+    assert report_ai_http._DEMO_MAX_BODY == 32 * 1024
+    assert not hasattr(report_ai_http, "_CLASSIFY_MAX_BODY")
+
+
+def test_subject_ref_of_512_passes_the_route_and_513_is_refused() -> None:
+    assert report_ai_http._SUBJECT_REF_MAX == 512
+    with _serving() as port:
+        ok_status, ok_doc = _post(port, "/demo/classify", _classify_body("s" * 512, "d"))
+        bad_status, bad_doc = _post(port, "/demo/classify", _classify_body("s" * 513, "d"))
+    assert ok_status == 200
+    assert ok_doc["outcome"] == "PROPOSED"
+    assert bad_status == 400
+    assert bad_doc == {"error": "subject_ref is too long"}
+
+
+def test_description_of_1000_passes_the_route_and_1001_is_refused() -> None:
+    assert report_ai_http._DESCRIPTION_MAX == 1000
+    with _serving() as port:
+        ok_status, ok_doc = _post(port, "/demo/classify", _classify_body("s", "d" * 1000))
+        bad_status, bad_doc = _post(port, "/demo/classify", _classify_body("s", "d" * 1001))
+    assert ok_status == 200
+    assert ok_doc["outcome"] == "PROPOSED"
+    assert bad_status == 400
+    assert bad_doc == {"error": "description is too long"}
+
+
+def test_a_too_long_field_never_reaches_the_runtime() -> None:
+    runtime = _ScriptedRuntime(result=_classify_result(_APPROVED_CODE))
+    with _serving(runtime) as port:
+        _post(port, "/demo/classify", _classify_body("s" * 513, "d"))
+        _post(port, "/demo/classify", _classify_body("s", "d" * 1001))
+    assert len(runtime.calls) == 0
+
+
+def test_every_classify_reply_has_the_same_key_set() -> None:
+    """The four outcomes all carry the seven keys. Only PROPOSED adds proposed_code.
+    synthetic is true and confidence_calibrated is false on every one."""
+
+    def _run(code: str, subject_ref: str, approved: ApprovedOntologyList | None) -> Any:
+        gw = _gateway(_ScriptedRuntime(result=_classify_result(code)))
+        return report_ai_http.classify(gw, subject_ref, "d", _AS_OF, approved)
+
+    not_configured = _run(_APPROVED_CODE, "s", None)
+    abstain = _run(_UNKNOWN_CODE, "s", _APPROVED_LIST)
+    proposed = _run(_APPROVED_CODE, "s", _APPROVED_LIST)
+    # A subject_ref over the wire limit makes the Gateway refuse the call.
+    refused = _run(_APPROVED_CODE, "s" * 600, _APPROVED_LIST)
+    assert not_configured["outcome"] == "NOT_CONFIGURED"
+    assert abstain["outcome"] == "ABSTAIN"
+    assert proposed["outcome"] == "PROPOSED"
+    assert refused["outcome"] == "REFUSED"
+    for reply in (not_configured, abstain, refused):
+        assert set(reply) == _REPLY_KEYS, reply["outcome"]
+    assert set(proposed) == _REPLY_KEYS | {"proposed_code"}
+    for reply in (not_configured, abstain, proposed, refused):
+        assert reply["synthetic"] is True
+        assert reply["confidence_calibrated"] is False
+
+
+@pytest.mark.parametrize("with_list", [True, False])
+def test_the_handler_fallback_has_the_same_key_set(
+    monkeypatch: pytest.MonkeyPatch, with_list: bool
+) -> None:
+    def _boom(*args: Any, **kwargs: Any) -> Any:
+        raise RuntimeError("FALLBACK_BOOM_MARKER_DO_NOT_ECHO")
+
+    monkeypatch.setattr(report_ai_http, "classify", _boom)
+    approved = _APPROVED_LIST if with_list else None
+    with _serving(approved=approved) as port:
+        status, doc = _post(port, "/demo/classify", _classify_body("s", "d"))
+    assert status == 200
+    assert set(doc) == _REPLY_KEYS
+    assert doc["outcome"] == "REFUSED"
+    assert doc["reason_code"] == "AI_GATEWAY_UNAVAILABLE"
+    assert doc["synthetic"] is True
+    assert doc["list_version"] == (_APPROVED_LIST.list_version if with_list else None)
+    assert "FALLBACK_BOOM_MARKER_DO_NOT_ECHO" not in json.dumps(doc)

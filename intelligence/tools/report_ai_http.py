@@ -155,9 +155,13 @@ _VALIDATOR = "explanation_guard@1"
 _CLASSIFY_USE_CASE = "classification-review"
 _ONTOLOGY_GUARD_VALIDATOR = "ontology_guard@1"
 
-# Maximum byte size for a /demo/classify request body (same order of
-# magnitude as the explain route's implicit limit from Content-Length).
-_CLASSIFY_MAX_BODY = 32 * 1024  # 32 KiB
+# Maximum byte size of a request body on either demo POST route. A body over
+# it is drained up to this many bytes and refused with a fixed 400.
+_DEMO_MAX_BODY = 32 * 1024  # 32 KiB
+
+# /demo/classify field limits, checked at the route before the Gateway.
+_SUBJECT_REF_MAX = 512  # characters
+_DESCRIPTION_MAX = 1000  # characters
 
 # Each explain kind runs under an already-registered governed use case:
 # trend points and filing-pipeline buckets are dashboard figures, and a
@@ -373,6 +377,35 @@ def _build_classify_raw_call(subject_ref: str, description: str) -> bytes:
     return json.dumps(doc).encode()
 
 
+def _classify_reply(
+    outcome: str,
+    verdict: Verdict,
+    reason_code: str,
+    evidence_id: str | None,
+    list_version: str | None,
+    proposed_code: str | None = None,
+) -> dict[str, Any]:
+    """The one place a /demo/classify reply is built, so its shape cannot drift.
+
+    Every reply carries exactly: outcome, verdict, reason_code, evidence_id,
+    list_version, confidence_calibrated, synthetic. ``proposed_code`` is added
+    only for ``PROPOSED``. The whole route is demo only, so ``synthetic`` is
+    always true.
+    """
+    reply: dict[str, Any] = {
+        "outcome": outcome,
+        "verdict": verdict,
+        "reason_code": reason_code,
+        "evidence_id": evidence_id,
+        "list_version": list_version,
+        "confidence_calibrated": False,
+        "synthetic": True,
+    }
+    if outcome == "PROPOSED" and proposed_code is not None:
+        reply["proposed_code"] = proposed_code
+    return reply
+
+
 def classify(
     gateway: Gateway,
     subject_ref: str,
@@ -394,14 +427,13 @@ def classify(
     Never returns the rejected code or any model text on ABSTAIN.
     """
     if approved_list is None:
-        return {
-            "outcome": "NOT_CONFIGURED",
-            "evidence_id": None,
-            "verdict": Verdict.ABSTAIN,
-            "reason_code": CheckReason.GUARD_ONTOLOGY_NOT_CONFIGURED,
-            "list_version": None,
-            "confidence_calibrated": False,
-        }
+        return _classify_reply(
+            "NOT_CONFIGURED",
+            Verdict.ABSTAIN,
+            CheckReason.GUARD_ONTOLOGY_NOT_CONFIGURED,
+            None,
+            None,
+        )
 
     raw_call = _build_classify_raw_call(subject_ref, description)
     try:
@@ -413,15 +445,9 @@ def classify(
             _CLASSIFY_USE_CASE,
             exc.reason,
         )
-        return {
-            "outcome": "REFUSED",
-            "evidence_id": None,
-            "verdict": Verdict.BLOCK,
-            "reason_code": exc.reason,
-            "list_version": approved_list.list_version,
-            "confidence_calibrated": False,
-            "synthetic": True,
-        }
+        return _classify_reply(
+            "REFUSED", Verdict.BLOCK, exc.reason, None, approved_list.list_version
+        )
 
     reply = json.loads(reply_bytes)
     proposed_code: str = reply.get("proposed_code", "").strip()
@@ -443,15 +469,9 @@ def classify(
                 _ONTOLOGY_GUARD_VALIDATOR,
             )
         # Never return the rejected code or any model text on ABSTAIN.
-        return {
-            "outcome": "ABSTAIN",
-            "evidence_id": invocation_id,
-            "verdict": verdict,
-            "reason_code": reason_code,
-            "list_version": approved_list.list_version,
-            "confidence_calibrated": False,
-            "synthetic": True,
-        }
+        return _classify_reply(
+            "ABSTAIN", verdict, reason_code, invocation_id, approved_list.list_version
+        )
 
     # PASS: approved code -- include proposed_code in the response.
     log.info("classify use_case=%s outcome=PROPOSED reason=-", _CLASSIFY_USE_CASE)
@@ -463,16 +483,14 @@ def classify(
             CheckReason.CHECKS_PASSED,
             _ONTOLOGY_GUARD_VALIDATOR,
         )
-    return {
-        "outcome": "PROPOSED",
-        "evidence_id": invocation_id,
-        "verdict": verdict,
-        "reason_code": reason_code,
-        "list_version": approved_list.list_version,
-        "proposed_code": proposed_code,
-        "confidence_calibrated": False,
-        "synthetic": True,
-    }
+    return _classify_reply(
+        "PROPOSED",
+        verdict,
+        reason_code,
+        invocation_id,
+        approved_list.list_version,
+        proposed_code,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -501,6 +519,32 @@ def _make_handler(
             self.end_headers()
             self.wfile.write(body)
 
+        def _read_json_object(self) -> dict[str, Any] | None:
+            """Read the request body as a JSON object, or send a fixed 400 and return None.
+
+            A missing Content-Length means 0 and an empty body means ``{}``. The
+            error texts are fixed: nothing of the request or of an exception is echoed.
+            """
+            raw_length = self.headers.get("Content-Length", "0") or "0"
+            if not (raw_length.isascii() and raw_length.isdigit()):
+                self._send_json(400, {"error": "invalid content length"})
+                return None
+            length = int(raw_length)
+            if length > _DEMO_MAX_BODY:
+                _ = self.rfile.read(_DEMO_MAX_BODY)
+                self._send_json(400, {"error": "request body too large"})
+                return None
+            raw_body = self.rfile.read(length) if length else b""
+            try:
+                req = json.loads(raw_body) if raw_body else {}
+            except ValueError:
+                self._send_json(400, {"error": "request body is not JSON"})
+                return None
+            if not isinstance(req, dict):
+                self._send_json(400, {"error": "request body must be an object"})
+                return None
+            return req
+
         def do_OPTIONS(self) -> None:
             self.send_response(204)
             self._cors()
@@ -516,12 +560,8 @@ def _make_handler(
 
         def do_POST(self) -> None:
             if self.path == "/demo/explain":
-                length = int(self.headers.get("Content-Length", "0") or "0")
-                raw_body = self.rfile.read(length) if length else b""
-                try:
-                    req = json.loads(raw_body) if raw_body else {}
-                except json.JSONDecodeError:
-                    self._send_json(400, {"error": "request body is not JSON"})
+                req = self._read_json_object()
+                if req is None:
                     return
                 kind = req.get("kind")
                 ids = req.get("ids")
@@ -551,25 +591,22 @@ def _make_handler(
                         },
                     )
             elif self.path == "/demo/classify":
-                length = int(self.headers.get("Content-Length", "0") or "0")
-                if length > _CLASSIFY_MAX_BODY:
-                    if length > 0:
-                        _ = self.rfile.read(min(length, 1024 * 1024))
-                    self._send_json(400, {"error": "request body too large"})
-                    return
-                raw_body = self.rfile.read(length) if length else b""
-                try:
-                    req = json.loads(raw_body) if raw_body else {}
-                except json.JSONDecodeError:
-                    self._send_json(400, {"error": "request body is not JSON"})
+                req = self._read_json_object()
+                if req is None:
                     return
                 subject_ref = req.get("subject_ref")
                 description = req.get("description")
                 if not isinstance(subject_ref, str) or not subject_ref.strip():
                     self._send_json(400, {"error": "subject_ref must be a non-empty string"})
                     return
+                if len(subject_ref) > _SUBJECT_REF_MAX:
+                    self._send_json(400, {"error": "subject_ref is too long"})
+                    return
                 if not isinstance(description, str) or not description.strip():
                     self._send_json(400, {"error": "description must be a non-empty string"})
+                    return
+                if len(description) > _DESCRIPTION_MAX:
+                    self._send_json(400, {"error": "description is too long"})
                     return
                 try:
                     self._send_json(
@@ -589,15 +626,13 @@ def _make_handler(
                     )
                     self._send_json(
                         200,
-                        {
-                            "outcome": "REFUSED",
-                            "evidence_id": None,
-                            "verdict": Verdict.BLOCK,
-                            "reason_code": "AI_GATEWAY_UNAVAILABLE",
-                            "list_version": None,
-                            "confidence_calibrated": False,
-                            "synthetic": True,
-                        },
+                        _classify_reply(
+                            "REFUSED",
+                            Verdict.BLOCK,
+                            "AI_GATEWAY_UNAVAILABLE",
+                            None,
+                            approved_list.list_version if approved_list is not None else None,
+                        ),
                     )
             else:
                 self._send_json(404, {"error": "not found"})

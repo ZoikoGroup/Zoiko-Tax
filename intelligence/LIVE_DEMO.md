@@ -176,7 +176,7 @@ curl -X POST http://127.0.0.1:18090/demo/classify \
   -d '{"subject_ref": "sku:PLAN-PRE-VOICE-500", "description": "Prepaid voice bundle, 500 minutes, no data included"}'
 ```
 
-The three response shapes are:
+The four response shapes are (all have the same seven keys, plus `proposed_code` on `PROPOSED` only):
 
 1. **`PROPOSED`** (code approved and effective):
    ```json
@@ -213,9 +213,54 @@ The three response shapes are:
      "verdict": "ABSTAIN",
      "reason_code": "GUARD_ONTOLOGY_NOT_CONFIGURED",
      "list_version": null,
-     "confidence_calibrated": false
+     "confidence_calibrated": false,
+     "synthetic": true
    }
    ```
+
+4. **`REFUSED`** (the Gateway refused the call, or an unexpected error was caught; no model text is returned):
+   ```json
+   {
+     "outcome": "REFUSED",
+     "evidence_id": null,
+     "verdict": "BLOCK",
+     "reason_code": "AI_KILL_SWITCH_ENGAGED",
+     "list_version": "synthetic-demo-v0",
+     "confidence_calibrated": false,
+     "synthetic": true
+   }
+   ```
+   `list_version` is the approved list's version when a list is loaded, otherwise `null`.
+
+### Status codes, error texts and limits
+
+- **Every outcome is HTTP 200**, including `REFUSED` and `NOT_CONFIGURED`. Read `outcome`, not the status.
+- **400** with a fixed text, and nothing of the request echoed:
+
+  | Case | `error` text |
+  |---|---|
+  | Content-Length is not a non-negative whole number | `invalid content length` |
+  | Body over 32 KiB | `request body too large` |
+  | Body is not JSON | `request body is not JSON` |
+  | JSON body that is not an object (`null`, list, string, number) | `request body must be an object` |
+  | `subject_ref` missing, not a string or blank | `subject_ref must be a non-empty string` |
+  | `subject_ref` over 512 characters | `subject_ref is too long` |
+  | `description` missing, not a string or blank | `description must be a non-empty string` |
+  | `description` over 1000 characters | `description is too long` |
+
+- **404** `{"error": "not found"}` for any other path. The 32 KiB body limit and the Content-Length rule also apply to `POST /demo/explain`.
+- **Limits:** 32 KiB request body, 512 characters for `subject_ref`, 1000 characters for `description`.
+
+### Reason codes the frontend can meet
+
+| Outcome | `reason_code` values |
+|---|---|
+| `PROPOSED` | `CHECKS_PASSED` |
+| `ABSTAIN` | `GUARD_ONTOLOGY_UNKNOWN`, `GUARD_ONTOLOGY_EXPIRED`, `GUARD_ONTOLOGY_NOT_YET_EFFECTIVE` |
+| `NOT_CONFIGURED` | `GUARD_ONTOLOGY_NOT_CONFIGURED` |
+| `REFUSED` | From `governance.py`: `AI_UNKNOWN_USE_CASE`, `AI_USE_CASE_SUSPENDED`, `AI_KILL_SWITCH_ENGAGED`, `AI_AUTHORITY_REFUSED`, `AI_RISK_TIER_EXCEEDED`, `AI_RESIDENCY_REFUSED`, `AI_MALFORMED_CONTEXT`, `AI_DATA_CLASS_REFUSED`. From `server.py`: `AI_GATEWAY_UNAVAILABLE`, `AI_GATEWAY_NOT_CONFIGURED`. |
+
+`REFUSED` passes the Gateway's reason through, so this set may grow. A client should treat an unknown `reason_code` as a refusal, not as an error. `AI_GATEWAY_NOT_CONFIGURED` (the model runtime is not configured) is a different thing from the `NOT_CONFIGURED` outcome (no approved list).
 
 ### Evidence record vs answer-checked event
 
@@ -236,9 +281,9 @@ This script maps the five demonstration capabilities to what is operational in t
 |---|---|---|
 | **1. Classify** | Submit item description on the Intelligence UI page or via `POST /demo/classify`. | • **Main page (Go gRPC path):** Runs format check only (`ontology:*`). UI disclaimer *"whether that code is a real ontology node is not verified here"* is correct.<br>• **HTTP endpoint (`/demo/classify`):** Runs the approved-list check against `config/approved_ontology.live-demo.json`; returns `PROPOSED` or `ABSTAIN`. |
 | **2. Explain** | Open Reports (demo) page and click Explain on any row. | `report_ai_http.py` (`POST /demo/explain`) runs `explanation_guard`. Checks model reply against cited row IDs, numbers, and statuses; returns `EXPLAINED` or `ABSTAINED`. |
-| **3. Kill switch** | Edit `intelligence/config/registry.live-demo.json` in place to add a use case to `"killed"` or set `"global_kill": true`. | Python gateway re-reads flags on the next request without container restart (`Gateway._refresh_kill_state`). Call is immediately refused with `KILL_SWITCH_ENGAGED` / `REVIEW_REQUIRED`. |
+| **3. Kill switch** | Edit `intelligence/config/registry.live-demo.json` in place to add a use case to `"killed"` or set `"global_kill": true`. | Python gateway re-reads flags on the next request without container restart (`Gateway._refresh_kill_state`). Call is immediately refused with `KILL_SWITCH_ENGAGED` / `REVIEW_REQUIRED` (explain route). The classify route answers `REFUSED` with `AI_KILL_SWITCH_ENGAGED`. |
 | **4. Evidence & events** | Inspect container logs (`docker compose logs ztax-model-gateway`). | Every model invocation seals a tamper-evident `PROPOSE` record (`ztax_gateway.evidence`) with prompt hash and latency. Answer checks append a linked `AnswerCheckedEvent` naming the invocation ID. |
-| **5. Governed fallback** | Cause a model failure, timeout (>45s), or format error. | The UI never crashes with an unhandled exception. It degrades gracefully to human review (`AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`, `AI_GATEWAY_UNAVAILABLE`, `REVIEW_REQUIRED`), proving fail-closed governance. |
+| **5. Governed fallback** | Cause a model failure, timeout (>45s), or format error. | The UI never crashes with an unhandled exception. It degrades gracefully to human review (`AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`, `AI_GATEWAY_UNAVAILABLE`, `REVIEW_REQUIRED`), proving fail-closed governance. The classify route answers `REFUSED` with `AI_GATEWAY_UNAVAILABLE`. |
 
 ## Fallback: no frontend, no Docker
 

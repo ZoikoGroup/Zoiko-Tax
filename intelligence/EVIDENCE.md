@@ -62,7 +62,7 @@ is available. Three statuses are used:
 - `usage.latency_ms` is set on every record of a call that reached the runtime; tokens and cost are unpopulated: no provider telemetry.
 - Refusal details for kill switch, unknown or suspended use case, region and malformed context are fixed text; an unknown id is logged and recorded as `unregistered`. Data-class refusal details still name the PRIV-001 class, because existing tests assert it.
 - The approved ontology list (`config/approved_ontology.live-demo.json`) is synthetic; the real list needs Decision D-05 (`tools/report_ai_http.py`).
-- The approved-list check runs only on `POST /demo/classify` (`tools/report_ai_http.py`); the Go-to-gRPC classification path (`backend/internal/app/classification.go`) gets only the `ontology:` format check (`tests/test_report_ai_http_classify.py`).
+- The approved-list check runs only on `POST /demo/classify` (`tools/report_ai_http.py`); the Go-to-gRPC classification path (`backend/internal/app/classification.go`) gets only the `ontology:` format check (`backend/internal/app/classification.go`, test `TestProposalGoesToReviewWhenTheAIPlaneCannotHelp` in `backend/internal/app/classification_test.go`).
 - The check-event sink is the logging sink; there is no file-based sink yet (`src/ztax_gateway/server.py`).
 
 ## F. Open decisions (from the project team, not verifiable from code)
