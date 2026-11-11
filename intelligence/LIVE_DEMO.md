@@ -148,7 +148,7 @@ The ontology guard then checks the proposal against the approved list:
   (`GUARD_ONTOLOGY_UNKNOWN`, `GUARD_ONTOLOGY_EXPIRED`, or `GUARD_ONTOLOGY_NOT_YET_EFFECTIVE`).
 - On `ABSTAIN`, the response **never returns the rejected code** or any model text.
 
-### Approved list configuration and compose follow-up
+### Approved list configuration
 
 The guard reads the approved list path from the **`ZTAX_ONTOLOGY_APPROVED_LIST`** environment
 variable. A synthetic demo list is provided at
@@ -156,17 +156,22 @@ variable. A synthetic demo list is provided at
 (`list_version: "synthetic-demo-v0"`). **The list is synthetic** (8 telecom codes for demonstration;
 the authoritative list awaits Decision D-05) and **confidence is not calibrated** (`confidence_calibrated: false`).
 
-> [!NOTE]
-> `docker-compose.live-demo.yml` does **not** mount this list file yet. Mounting it is a documented
-> follow-up for the deployment owner. Two lines are required under `ztax-model-gateway`:
-> ```yaml
-> volumes:
->   - ./intelligence/config/approved_ontology.live-demo.json:/etc/ztax/ai/approved_ontology.json:ro
-> environment:
->   ZTAX_ONTOLOGY_APPROVED_LIST: /etc/ztax/ai/approved_ontology.json
-> ```
-> Do not edit the compose file now; merging to main deploys without this gate, and an unset variable
-> safely returns `NOT_CONFIGURED` without affecting server startup or `/demo/explain`.
+The list is mounted read-only into the container, and `ZTAX_ONTOLOGY_APPROVED_LIST` is set to the
+mounted path, both in `docker-compose.live-demo.yml` (service `ztax-model-gateway`):
+
+```yaml
+volumes:
+  - ./intelligence/config/approved_ontology.live-demo.json:/etc/ztax/ai/approved_ontology.json:ro
+environment:
+  ZTAX_ONTOLOGY_APPROVED_LIST: /etc/ztax/ai/approved_ontology.json
+```
+
+> [!WARNING]
+> If the list file is invalid or unreadable, the HTTP server (`report_ai_http.py`) exits with code 2
+> before it opens its port. The container stays up, because the other process keeps it running, but
+> port 18090 stops answering. Both `/demo/explain` and `/demo/classify` then fail. So after every
+> deploy, call `/demo/classify` and expect `PROPOSED` or `ABSTAIN`. `NOT_CONFIGURED` means the
+> variable is not set in the running container.
 
 ### Invocation and response shapes
 
@@ -272,6 +277,34 @@ Two separate records are logged:
    with validator `ontology_guard@1`, linked to the evidence record by `ai_invocation_id`.
    The actual guard decision (`PASS` or `ABSTAIN`) lives in this check event, **not** in the initial
    gateway evidence record.
+
+### Manual check list for the classify panel
+
+The panel is on the Reports (demo) page. There are no frontend tests, so run these by hand after a
+change. Use synthetic text only. Never publish or forward port 18090.
+
+1. **Accepted code.** Click Classify with the prefilled text. Expect "Proposed", a code from the
+   synthetic list, "Confidence: not calibrated", the "Synthetic demo data" badge, and the sentence
+   that the list is synthetic and not the approved ontology list.
+2. **Set-aside code.** Use a description the model will not map to an approved code (or a stub that
+   returns an unknown code). Expect "Set aside — not classified", a fixed sentence, no code on the
+   page, and an evidence id or "Evidence id not available".
+3. **Not configured.** Start the server without `ZTAX_ONTOLOGY_APPROVED_LIST`. Expect "Not configured"
+   and "Synthetic demo data only."
+4. **Rejected input.** Clear a field and submit (the browser blocks it), then send a request that is
+   too long with curl. In the page, a rejected request shows "The request was not accepted. Check the
+   fields and try again." and no server text.
+5. **Slow service.** The page waits for `DEMO_AI_TIMEOUT_MS` (30 seconds), then shows the timeout text
+   with a "Try again" button. Pressing it sends the form again. There is no automatic retry. The
+   address the page calls is the constant `DEMO_AI_BASE_URL` in `frontend/src/platform/demoAi.ts`, so
+   a stand-in service has to answer on `127.0.0.1:18090` (with the real one stopped) and allow the
+   origin `http://localhost:13000`.
+6. **Unknown outcome.** With a stand-in service that answers `{"outcome": "SOMETHING_NEW", ...}` and
+   valid other fields, the page shows "Result could not be interpreted" and no error.
+7. **Keyboard only.** Tab to the two fields and the button, press Enter to submit, and tab to
+   "Try again" when it shows. The result is read out by a screen reader (one live region).
+8. **No rejected code anywhere.** For a set-aside result, search the page text and the network
+   response in the browser tools. The rejected code must not appear in either.
 
 ## 7. Demo script
 

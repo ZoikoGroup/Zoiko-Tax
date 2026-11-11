@@ -407,17 +407,6 @@ export function parseExplainReply(json: unknown): ExplainReply | null {
 // the classify reply (POST /demo/classify)
 // ---------------------------------------------------------------------------
 
-/** Wire outcome strings returned by the backend. */
-export type ClassifyOutcome =
-  | 'PROPOSED'
-  | 'ABSTAIN'
-  | 'ABSTAINED'
-  | 'REFUSED'
-  | 'BLOCKED'
-  | 'BLOCK'
-  | 'NOT_CONFIGURED'
-  | 'REVIEW_REQUIRED'
-
 export interface ClassifyReply {
   readonly outcome: string        // kept as raw string; outcomes.ts maps it
   readonly evidence_id: string | null

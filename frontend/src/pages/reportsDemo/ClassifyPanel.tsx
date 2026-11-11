@@ -1,17 +1,22 @@
 /**
  * ClassifyPanel — "Classification with approved-list check (demo)" panel.
  *
- * Covers all 7 outcome states: PROPOSED (pass), ABSTAIN (set aside),
- * NOT_CONFIGURED, BLOCKED/REFUSED, timeout (>30 s), unreachable, unknown.
+ * States: idle, busy, reply (proposed, set aside, blocked, not configured, could
+ * not be interpreted), rejected input, timeout, unavailable.
+ *
+ * It switches on `kind` from outcomes.ts and never on a wire string, and it shows
+ * only fixed text: nothing the server sends is displayed except the proposed code
+ * of a passed reply, the list version and the evidence id.
  *
  * DEMO ONLY. Synthetic data only. Never computes a real fiscal determination.
  */
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 
+import { DEMO_AI_TIMEOUT_MS } from '../../platform/demoAi'
 import { Id } from '../../ui/kit'
-import { requestClassify, type ClassifyResult } from './api'
+import { DESCRIPTION_MAX, requestClassify, SUBJECT_REF_MAX, type ClassifyResult } from './api'
 import type { ClassifyReply } from './model'
-import { lookupOutcome, NEEDS_REVIEW_ENTRY } from './outcomes'
+import { viewOf, type ClassifyView } from './outcomes'
 
 // ---------------------------------------------------------------------------
 // Prefill text (synthetic demo data)
@@ -21,144 +26,64 @@ const PREFILL_SUBJECT_REF = 'sku:DEMO-PLAN-5G-UNLIMITED'
 const PREFILL_DESCRIPTION =
   'Unlimited 5G mobile plan with 20 GB mobile hotspot and international roaming (synthetic demo data)'
 
-// ---------------------------------------------------------------------------
-// Per-reason plain English sentences for ABSTAIN
-// ---------------------------------------------------------------------------
-
-const ABSTAIN_REASON_TEXT: Readonly<Record<string, string>> = {
-  GUARD_ONTOLOGY_UNKNOWN:
-    'The proposed ontology code is not recognised in the approved list for this demo service.',
-  GUARD_ONTOLOGY_EXPIRED:
-    'The proposed ontology code has expired and is no longer valid in the approved list.',
-  GUARD_ONTOLOGY_NOT_YET_EFFECTIVE:
-    'The proposed ontology code is not yet effective in the approved list.',
-}
-
-const DEFAULT_ABSTAIN_TEXT = 'The proposal was set aside. A person should review it.'
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
+const TIMEOUT_SECONDS = Math.round(DEMO_AI_TIMEOUT_MS / 1000)
 
 type ClassifyState =
   | { readonly kind: 'idle' }
   | { readonly kind: 'busy' }
+  | { readonly kind: 'rejected' }
   | { readonly kind: 'timeout' }
   | { readonly kind: 'unavailable' }
   | { readonly kind: 'reply'; readonly reply: ClassifyReply }
 
-const ProposedResult = ({ reply }: { reply: ClassifyReply }) => {
-  const entry = lookupOutcome(reply.outcome)
-  // PROPOSED with non-PASS verdict degrades to NEEDS_REVIEW
-  const isPass = reply.outcome === 'PROPOSED' && reply.verdict === 'PASS'
-  const effective = isPass ? entry : NEEDS_REVIEW_ENTRY
+// ---------------------------------------------------------------------------
+// Result view
+// ---------------------------------------------------------------------------
 
-  if (!isPass) {
-    return (
-      <div className="rd-cl-result rd-cl-result--neutral">
-        <p className="rd-cl-headline">{effective.headline}</p>
-        <p className="rd-cl-body">
-          This result could not be interpreted. A person should check it.
-        </p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="rd-cl-result rd-cl-result--pass">
-      <div className="rd-cl-result-head">
-        <span className="rd-cl-headline">{effective.headline}</span>
-        {reply.synthetic === true ? (
-          <span className="rd-badge rd-cl-synthetic-badge">Synthetic demo data</span>
-        ) : null}
-      </div>
-      {reply.proposed_code !== undefined ? (
-        <p className="rd-cl-code mono">{reply.proposed_code}</p>
-      ) : null}
-      {reply.list_version !== null ? (
-        <p className="rd-cl-body rd-muted">
-          Checked against the SYNTHETIC demo list{' '}
-          <span className="mono">{reply.list_version}</span>. This is not the
-          approved ontology list (pending D-05).
-        </p>
-      ) : null}
-      <p className="rd-cl-body rd-muted">Confidence: not calibrated</p>
-      {reply.evidence_id !== null ? (
-        <p className="rd-cl-body rd-muted">
-          Evidence: <Id value={reply.evidence_id} />
-        </p>
-      ) : null}
-      <p className="rd-check">A person should review this proposal before it is used.</p>
-    </div>
-  )
+const toneOf = (view: ClassifyView): 'pass' | 'caution' | 'neutral' => {
+  if (view.kind === 'proposed') return 'pass'
+  if (view.kind === 'abstain' || view.kind === 'blocked') return 'caution'
+  return 'neutral'
 }
 
-const AbstainResult = ({ reply }: { reply: ClassifyReply }) => {
-  const reasonText = ABSTAIN_REASON_TEXT[reply.reason_code] ?? DEFAULT_ABSTAIN_TEXT
-  return (
-    <div className="rd-cl-result rd-cl-result--caution">
-      <p className="rd-cl-headline">Set aside — not classified</p>
-      <p className="rd-cl-body">{reasonText}</p>
-      {reply.evidence_id !== null ? (
-        <p className="rd-cl-body rd-muted">
-          Evidence: <Id value={reply.evidence_id} />
-        </p>
-      ) : null}
-      <p className="rd-check"><strong>A person should check this.</strong></p>
-    </div>
+const SyntheticNote = ({ view, listVersion }: { view: ClassifyView; listVersion: string | null }) =>
+  view.listChecked && listVersion !== null ? (
+    <p className="rd-cl-body rd-muted">
+      Synthetic demo. Checked against the SYNTHETIC list <span className="mono">{listVersion}</span>.
+      This is not the approved ontology list (pending D-05).
+    </p>
+  ) : (
+    <p className="rd-cl-body rd-muted">Synthetic demo data only.</p>
   )
-}
 
-const BlockedResult = () => (
-  <div className="rd-cl-result rd-cl-result--caution">
-    <p className="rd-cl-headline">Blocked by governance</p>
-    <p className="rd-cl-body">
-      This request was blocked by a governance rule. The rule does not permit this
-      operation on the demo service.
-    </p>
-    <p className="rd-check"><strong>A person should check this.</strong></p>
-  </div>
+const EvidenceLine = ({ evidenceId }: { evidenceId: string | null }) => (
+  <p className="rd-cl-body rd-muted">
+    {evidenceId !== null ? (
+      <>
+        Evidence: <Id value={evidenceId} />
+      </>
+    ) : (
+      'Evidence id not available'
+    )}
+  </p>
 )
-
-const NotConfiguredResult = () => (
-  <div className="rd-cl-result rd-cl-result--neutral">
-    <p className="rd-cl-headline">Not configured</p>
-    <p className="rd-cl-body">
-      The approved-list check is not set up on this demo service.
-    </p>
-    <p className="rd-check"><strong>A person should check this.</strong></p>
-  </div>
-)
-
-const NeedsReviewResult = () => (
-  <div className="rd-cl-result rd-cl-result--neutral">
-    <p className="rd-cl-headline">Result could not be interpreted</p>
-    <p className="rd-cl-body">
-      This result could not be interpreted. A person should check it.
-    </p>
-  </div>
-)
-
-// ---------------------------------------------------------------------------
-// Outcome router — the ONLY place outcome strings are dispatched
-// ---------------------------------------------------------------------------
 
 const ReplyView = ({ reply }: { reply: ClassifyReply }) => {
-  const normalised =
-    reply.outcome === 'ABSTAINED' ? 'ABSTAIN'
-    : reply.outcome === 'REFUSED' || reply.outcome === 'BLOCK' ? 'BLOCKED'
-    : reply.outcome
-
-  if (normalised === 'PROPOSED') return <ProposedResult reply={reply} />
-  if (normalised === 'ABSTAIN') return <AbstainResult reply={reply} />
-  if (normalised === 'BLOCKED') return <BlockedResult />
-  if (normalised === 'NOT_CONFIGURED') return <NotConfiguredResult />
-  // REVIEW_REQUIRED or any truly unknown outcome string
-  const entry = lookupOutcome(normalised)
-  if (entry === NEEDS_REVIEW_ENTRY || normalised === 'REVIEW_REQUIRED') {
-    return <NeedsReviewResult />
-  }
-  return <NeedsReviewResult />
+  const view = viewOf(reply)
+  const showsEvidence = view.kind === 'proposed' || view.kind === 'abstain'
+  return (
+    <div className={`rd-cl-result rd-cl-result--${toneOf(view)}`}>
+      <div className="rd-cl-result-head">
+        <span className="rd-cl-headline">{view.headline}</span>
+        <span className="rd-badge rd-cl-synthetic-badge">Synthetic demo data</span>
+      </div>
+      {view.code !== null ? <p className="rd-cl-code mono">{view.code}</p> : null}
+      <p className="rd-cl-body">{view.sentence}</p>
+      <SyntheticNote view={view} listVersion={reply.list_version} />
+      {view.kind === 'proposed' ? <p className="rd-cl-body rd-muted">Confidence: not calibrated</p> : null}
+      {showsEvidence ? <EvidenceLine evidenceId={reply.evidence_id} /> : null}
+    </div>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -173,8 +98,16 @@ export const ClassifyPanel = () => {
 
   const isBusy = state.kind === 'busy'
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
+  // Leaving the page cancels the request that is still waiting.
+  useEffect(
+    () => () => {
+      inFlight.current?.abort()
+    },
+    [],
+  )
+
+  /** Sends the current form values. Used by the form and by "Try again" (manual retry only). */
+  const run = () => {
     // Abort any in-flight request before starting a new one
     inFlight.current?.abort()
     const controller = new AbortController()
@@ -183,11 +116,14 @@ export const ClassifyPanel = () => {
 
     void requestClassify({ subjectRef: subjectRef.trim(), description: description.trim() }, controller.signal)
       .then((result: ClassifyResult) => {
-        // Discard result if this request was superseded
+        // Discard the result if this request was superseded or the page was left
         if (controller.signal.aborted) return
         switch (result.status) {
           case 'reply':
             setState({ kind: 'reply', reply: result.reply })
+            break
+          case 'rejected':
+            setState({ kind: 'rejected' })
             break
           case 'timeout':
             setState({ kind: 'timeout' })
@@ -202,8 +138,9 @@ export const ClassifyPanel = () => {
       })
   }
 
-  const retry = () => {
-    setState({ kind: 'idle' })
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    run()
   }
 
   return (
@@ -225,7 +162,7 @@ export const ClassifyPanel = () => {
             type="text"
             className="ztax-input"
             value={subjectRef}
-            maxLength={200}
+            maxLength={SUBJECT_REF_MAX}
             required
             disabled={isBusy}
             onChange={(e) => { setSubjectRef(e.target.value) }}
@@ -240,7 +177,7 @@ export const ClassifyPanel = () => {
             id="rd-cl-description"
             className="ztax-input rd-cl-textarea"
             value={description}
-            maxLength={2000}
+            maxLength={DESCRIPTION_MAX}
             rows={3}
             required
             disabled={isBusy}
@@ -249,36 +186,35 @@ export const ClassifyPanel = () => {
         </div>
 
         <div className="ztax-form-actions">
-          <button
-            type="submit"
-            className="ztax-btn-copper"
-            disabled={isBusy}
-          >
+          <button type="submit" className="ztax-btn-copper" disabled={isBusy}>
             {isBusy ? 'Classifying…' : 'Classify'}
           </button>
         </div>
       </form>
 
+      {/* The one live region of the panel. Nothing inside it carries its own role. */}
       <div className="rd-cl-output" aria-live="polite" aria-atomic="true">
+        {state.kind === 'rejected' ? (
+          <p className="ztax-error-note rd-cl-result">
+            The request was not accepted. Check the fields and try again.
+          </p>
+        ) : null}
+
         {state.kind === 'timeout' ? (
-          <div className="rd-cl-result rd-cl-result--neutral" role="status">
+          <div className="rd-cl-result rd-cl-result--neutral">
             <p className="rd-cl-body">
-              The AI service is taking longer than expected (over 30 seconds). It may
-              still finish in the background. You can try again. Deterministic
-              processing is unaffected.
+              The AI service is taking longer than expected (over {TIMEOUT_SECONDS} seconds). It may
+              still finish in the background. You can try again. Deterministic processing is
+              unaffected.
             </p>
-            <button
-              type="button"
-              className="ztax-btn-quiet"
-              onClick={retry}
-            >
+            <button type="button" className="ztax-btn-quiet" onClick={run}>
               Try again
             </button>
           </div>
         ) : null}
 
         {state.kind === 'unavailable' ? (
-          <p className="ztax-error-note rd-cl-result" role="alert">
+          <p className="ztax-error-note rd-cl-result">
             The AI service is unavailable. Deterministic processing is unaffected.
           </p>
         ) : null}
@@ -288,4 +224,3 @@ export const ClassifyPanel = () => {
     </section>
   )
 }
-

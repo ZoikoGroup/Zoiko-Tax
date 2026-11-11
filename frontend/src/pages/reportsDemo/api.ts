@@ -32,13 +32,24 @@ export async function requestExplain(
   return reply === null ? { status: 'unavailable' } : { status: 'reply', reply }
 }
 
+/**
+ * Request limits of POST /demo/classify, in characters. They must match
+ * _SUBJECT_REF_MAX and _DESCRIPTION_MAX in intelligence/tools/report_ai_http.py.
+ */
+export const SUBJECT_REF_MAX = 512
+export const DESCRIPTION_MAX = 1000
+
 export type ClassifyResult =
   | { readonly status: 'reply'; readonly reply: ClassifyReply }
+  | { readonly status: 'rejected' }
   | { readonly status: 'unavailable' }
   | { readonly status: 'timeout' }
   | { readonly status: 'aborted' }
 
-/** POST /demo/classify. Returns 'timeout' when the 30 s timer fires. */
+/**
+ * POST /demo/classify. 'timeout' is the platform timer (DEMO_AI_TIMEOUT_MS) firing;
+ * 'rejected' is a non-2xx answer such as the fixed HTTP 400 for bad input.
+ */
 export async function requestClassify(
   params: { readonly subjectRef: string; readonly description: string },
   signal: AbortSignal,
@@ -50,6 +61,7 @@ export async function requestClassify(
   if (!res.ok) {
     if (res.reason === 'aborted') return { status: 'aborted' }
     if (res.reason === 'timeout') return { status: 'timeout' }
+    if (res.reason === 'rejected') return { status: 'rejected' }
     return { status: 'unavailable' }
   }
   const reply = parseClassifyReply(res.body)

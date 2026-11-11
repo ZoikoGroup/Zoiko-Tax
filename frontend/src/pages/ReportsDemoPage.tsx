@@ -38,9 +38,7 @@ export const ReportsDemoPage = () => {
     return (
       <>
         <Dashboard fixture={load.fixture} />
-        <div className="ztax-page">
-          <ClassifyPanel />
-        </div>
+        <ClassifyPanel />
       </>
     )
   }
