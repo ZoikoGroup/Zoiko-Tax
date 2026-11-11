@@ -1,6 +1,6 @@
 /** The page's two calls to the demo AI service, decoded. See platform/demoAi.ts. */
 import { demoAiRequest } from '../../platform/demoAi'
-import { parseExplainReply, parseFixture, type ExplainReply, type ExplainTarget, type Fixture } from './model'
+import { parseClassifyReply, parseExplainReply, parseFixture, type ClassifyReply, type ExplainReply, type ExplainTarget, type Fixture } from './model'
 
 export type FixtureResult = { readonly ok: true; readonly fixture: Fixture } | { readonly ok: false }
 
@@ -29,5 +29,29 @@ export async function requestExplain(
     return res.reason === 'aborted' ? { status: 'aborted' } : { status: 'unavailable' }
   }
   const reply = parseExplainReply(res.body)
+  return reply === null ? { status: 'unavailable' } : { status: 'reply', reply }
+}
+
+export type ClassifyResult =
+  | { readonly status: 'reply'; readonly reply: ClassifyReply }
+  | { readonly status: 'unavailable' }
+  | { readonly status: 'timeout' }
+  | { readonly status: 'aborted' }
+
+/** POST /demo/classify. Returns 'timeout' when the 30 s timer fires. */
+export async function requestClassify(
+  params: { readonly subjectRef: string; readonly description: string },
+  signal: AbortSignal,
+): Promise<ClassifyResult> {
+  const res = await demoAiRequest('/demo/classify', {
+    body: { subject_ref: params.subjectRef, description: params.description },
+    signal,
+  })
+  if (!res.ok) {
+    if (res.reason === 'aborted') return { status: 'aborted' }
+    if (res.reason === 'timeout') return { status: 'timeout' }
+    return { status: 'unavailable' }
+  }
+  const reply = parseClassifyReply(res.body)
   return reply === null ? { status: 'unavailable' } : { status: 'reply', reply }
 }

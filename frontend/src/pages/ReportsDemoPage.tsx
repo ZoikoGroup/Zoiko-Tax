@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react'
 
 import { loadFixture } from './reportsDemo/api'
+import { ClassifyPanel } from './reportsDemo/ClassifyPanel'
 import { Dashboard, DemoHeader } from './reportsDemo/Dashboard'
 import type { Fixture } from './reportsDemo/model'
 
@@ -34,7 +35,14 @@ export const ReportsDemoPage = () => {
   }, [])
 
   if (load.status === 'ready') {
-    return <Dashboard fixture={load.fixture} />
+    return (
+      <>
+        <Dashboard fixture={load.fixture} />
+        <div className="ztax-page">
+          <ClassifyPanel />
+        </div>
+      </>
+    )
   }
   return (
     <div className="ztax-page">
@@ -50,6 +58,7 @@ export const ReportsDemoPage = () => {
           </span>
         </p>
       )}
+      <ClassifyPanel />
     </div>
   )
 }

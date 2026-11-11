@@ -26,10 +26,10 @@ export const DEMO_AI_TIMEOUT_MS = 30_000
 
 export type DemoAiResult =
   | { readonly ok: true; readonly body: unknown }
-  | { readonly ok: false; readonly reason: 'unreachable' | 'rejected' | 'aborted' }
+  | { readonly ok: false; readonly reason: 'unreachable' | 'rejected' | 'aborted' | 'timeout' }
 
 export async function demoAiRequest(
-  path: '/demo/fixture' | '/demo/explain',
+  path: '/demo/fixture' | '/demo/explain' | '/demo/classify',
   options: { readonly body?: unknown; readonly signal?: AbortSignal } = {},
 ): Promise<DemoAiResult> {
   const init: RequestInit = { method: options.body === undefined ? 'GET' : 'POST' }
@@ -38,15 +38,17 @@ export async function demoAiRequest(
     init.body = JSON.stringify(options.body)
   }
   // One controller for both ways out: the caller's signal (a superseded or
-  // closed request: 'aborted') and the timeout (a slow service: 'unreachable').
+  // closed request: 'aborted') and the timeout (a slow service: 'timeout').
   const controller = new AbortController()
+  let timedOut = false
   const abort = () => { controller.abort() }
+  const onTimeout = () => { timedOut = true; controller.abort() }
   const caller = options.signal
   if (caller?.aborted === true) {
     abort()
   }
   caller?.addEventListener('abort', abort, { once: true })
-  const timer = setTimeout(abort, DEMO_AI_TIMEOUT_MS)
+  const timer = setTimeout(onTimeout, DEMO_AI_TIMEOUT_MS)
   init.signal = controller.signal
   try {
     // eslint-disable-next-line no-restricted-globals -- the single, documented exception above
@@ -57,7 +59,10 @@ export async function demoAiRequest(
     const body: unknown = await response.json()
     return { ok: true, body }
   } catch {
-    return { ok: false, reason: caller?.aborted === true ? 'aborted' : 'unreachable' }
+    if (caller?.aborted === true) {
+      return { ok: false, reason: 'aborted' }
+    }
+    return { ok: false, reason: timedOut ? 'timeout' : 'unreachable' }
   } finally {
     clearTimeout(timer)
     caller?.removeEventListener('abort', abort)
