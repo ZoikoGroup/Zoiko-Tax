@@ -19,7 +19,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/port"
 )
 
-// Levy responsibility (ZTAX-ENG-007; G-018), at the use case, against the
+// Levy responsibility (ZTAX-OBL-001), at the use case, against the
 // shipped training pack: every levy a committed document assesses gets a
 // five-role decision resolved against the document's own parties.
 

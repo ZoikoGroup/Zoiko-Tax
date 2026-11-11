@@ -16,7 +16,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/port"
 )
 
-// Statutory responsibility per levy (ZTAX-ENG-007; G-018).
+// Statutory responsibility per levy (ZTAX-OBL-001).
 //
 // Every levy a committed document decision assesses gets a five-role
 // decision of its own: who the law places the levy on, who collects it, who
