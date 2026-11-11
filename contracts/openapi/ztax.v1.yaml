@@ -8223,6 +8223,19 @@ components:
         establishment: { $ref: "#/components/schemas/Place" }
         vat: { $ref: "#/components/schemas/VatIdentification" }
 
+    TaxIntermediary:
+      type: object
+      title: TaxIntermediary
+      description: A party to the supply besides the seller and the customer.
+      additionalProperties: false
+      required: [kind, id]
+      properties:
+        kind:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [MARKETPLACE, WHOLESALER, RESELLER, END_USER]
+        id: { $ref: "#/components/schemas/PartyReference" }
+
     SitusEvidenceItem:
       type: object
       title: SitusEvidenceItem
@@ -8309,6 +8322,16 @@ components:
         priceMode: { $ref: "#/components/schemas/PriceMode" }
         seller: { $ref: "#/components/schemas/TaxParty" }
         customer: { $ref: "#/components/schemas/TaxParty" }
+        intermediaries:
+          type: array
+          description: |
+            The other parties to the supply — a marketplace, wholesaler,
+            reseller or the end user of a business customer's service — so a
+            levy's responsibility can fall on them (ZTAX-OBL-REQ-0020). They
+            do not change what is owed, only who holds each role for it. Each
+            party is named once.
+          maxItems: 8
+          items: { $ref: "#/components/schemas/TaxIntermediary" }
         evidence:
           type: array
           items: { $ref: "#/components/schemas/SitusEvidenceItem" }
@@ -8346,7 +8369,13 @@ components:
       x-ztax-privacy: { class: P0 }
       type: string
       title: ResponsibleParty
-      enum: [SELLER, BUYER, NONE]
+      description: |
+        Who the content places a role on: `NONE`, one party kind, or several
+        separated by `|` in precedence order, the first present on the
+        document holding the role. `MARKETPLACE|SELLER` is the marketplace
+        when there is one, otherwise the seller. The resolved holder is in
+        `GET /v1/decisions/{decisionId}/responsibility`.
+      pattern: "^(NONE|(SELLER|BUYER|MARKETPLACE|WHOLESALER|RESELLER|END_USER)([|](SELLER|BUYER|MARKETPLACE|WHOLESALER|RESELLER|END_USER))*)$"
       example: SELLER
 
     ResponsibilityAssignment:

@@ -518,15 +518,43 @@ func validResponsibility(r ResponsibilityDecl) error {
 		"incidence": r.Incidence, "collection": r.Collection, "reporting": r.Reporting,
 		"remittance": r.Remittance, "economicBearer": r.EconomicBearer,
 	} {
-		switch party {
-		case PartySeller, PartyBuyer, PartyNone:
-		default:
+		kinds, err := RoleCandidates(party)
+		if err != nil {
 			// Every role is answered. An unanswered role is the single
 			// "supplier type" field the playbook warns against, in disguise.
-			return fmt.Errorf("taxation: responsibility %s assigns %s to %q; SELLER, BUYER or NONE", r.ID, role, party)
+			return fmt.Errorf("taxation: responsibility %s assigns %s: %w", r.ID, role, err)
+		}
+		if kinds == nil && (role == "incidence" || role == "economicBearer") {
+			// Somebody always owes a levy and somebody always pays for it.
+			return fmt.Errorf("taxation: responsibility %s places %s on no party; a levy always has one", r.ID, role)
 		}
 	}
 	return nil
+}
+
+// RoleCandidates reads one role's declared assignment: NONE, which is nil,
+// or one party kind, or several separated by "|" in precedence order — the
+// first kind present on a document holds the role. "MARKETPLACE|SELLER" is a
+// marketplace facilitator rule: the marketplace when there is one, otherwise
+// the seller.
+func RoleCandidates(party string) ([]string, error) {
+	if party == PartyNone {
+		return nil, nil
+	}
+	parts := strings.Split(party, "|")
+	seen := map[string]bool{}
+	for _, k := range parts {
+		switch {
+		case k == PartySeller, k == PartyBuyer, intermediaryKind(k):
+		default:
+			return nil, fmt.Errorf("%q is not NONE or party kinds (SELLER, BUYER, MARKETPLACE, WHOLESALER, RESELLER, END_USER) separated by |", party)
+		}
+		if seen[k] {
+			return nil, fmt.Errorf("%q names %s twice", party, k)
+		}
+		seen[k] = true
+	}
+	return parts, nil
 }
 
 func (e *Engine) buildRegime(r RegimeDecl) (*regime, error) {

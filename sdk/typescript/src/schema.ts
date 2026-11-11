@@ -3567,6 +3567,15 @@ export interface components {
             vat?: components["schemas"]["VatIdentification"];
         };
         /**
+         * TaxIntermediary
+         * @description A party to the supply besides the seller and the customer.
+         */
+        TaxIntermediary: {
+            /** @enum {string} */
+            kind: "MARKETPLACE" | "WHOLESALER" | "RESELLER" | "END_USER";
+            id: components["schemas"]["PartyReference"];
+        };
+        /**
          * SitusEvidenceItem
          * @description One typed, attributed signal about where the supply took place (JUR-001 §3.1).
          */
@@ -3631,6 +3640,14 @@ export interface components {
             priceMode: components["schemas"]["PriceMode"];
             seller: components["schemas"]["TaxParty"];
             customer: components["schemas"]["TaxParty"];
+            /**
+             * @description The other parties to the supply — a marketplace, wholesaler,
+             *     reseller or the end user of a business customer's service — so a
+             *     levy's responsibility can fall on them (ZTAX-OBL-REQ-0020). They
+             *     do not change what is owed, only who holds each role for it. Each
+             *     party is named once.
+             */
+            intermediaries?: components["schemas"]["TaxIntermediary"][];
             evidence?: components["schemas"]["SitusEvidenceItem"][];
             certificates?: components["schemas"]["ExemptionCertificate"][];
             lines: components["schemas"]["TaxLine"][];
@@ -3655,10 +3672,14 @@ export interface components {
         Treatment: "CUSTOMER_CHARGE" | "PROVIDER_COST" | "REVERSE_CHARGE" | "EXEMPT";
         /**
          * ResponsibleParty
+         * @description Who the content places a role on: `NONE`, one party kind, or several
+         *     separated by `|` in precedence order, the first present on the
+         *     document holding the role. `MARKETPLACE|SELLER` is the marketplace
+         *     when there is one, otherwise the seller. The resolved holder is in
+         *     `GET /v1/decisions/{decisionId}/responsibility`.
          * @example SELLER
-         * @enum {string}
          */
-        ResponsibleParty: "SELLER" | "BUYER" | "NONE";
+        ResponsibleParty: string;
         /**
          * ResponsibilityAssignment
          * @description The five roles, each answered separately (ZTAX-OBL-REQ-0002 to -0006).

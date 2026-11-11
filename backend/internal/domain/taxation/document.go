@@ -28,11 +28,45 @@ type Document struct {
 	PriceMode string
 	Seller    Party
 	Customer  Party
+	// Intermediaries are the other parties to the supply — a marketplace, a
+	// wholesaler, a reseller, the end user of a business customer's service
+	// — named as facts so a levy's responsibility can fall on them
+	// (ZTAX-OBL-REQ-0020). They do not change what tax is owed, only who
+	// holds each role for it.
+	Intermediaries []Intermediary
 	// Evidence is document-level situs evidence (JUR-001 §3): the customer's
 	// service address, billing address, SIM country and so on.
 	Evidence     []Evidence
 	Certificates []Certificate
 	Lines        []Line
+}
+
+// Intermediary is one further party to the document: its kind, and its
+// reference in the caller's systems.
+type Intermediary struct {
+	Kind string
+	ID   string
+}
+
+// The intermediary kinds. Seller and customer are the document's own
+// parties and are never intermediaries.
+const (
+	PartyMarketplace = "MARKETPLACE"
+	PartyWholesaler  = "WHOLESALER"
+	PartyReseller    = "RESELLER"
+	PartyEndUser     = "END_USER"
+)
+
+// MaxIntermediaries bounds the parties one document names beside its seller
+// and customer. A supply chain longer than this is not one document's facts.
+const MaxIntermediaries = 8
+
+func intermediaryKind(k string) bool {
+	switch k {
+	case PartyMarketplace, PartyWholesaler, PartyReseller, PartyEndUser:
+		return true
+	}
+	return false
 }
 
 // Party is one party to the document.
@@ -166,6 +200,23 @@ func (d Document) Validate() error {
 		if !countryCode(v.Country) || !jurisdiction.VATValidation(v.Validation).Valid() {
 			return fieldError("document.customer.vat", "names a country and a validation status of VALIDATED, UNVALIDATED or VALIDATION_UNAVAILABLE")
 		}
+	}
+	if len(d.Intermediaries) > MaxIntermediaries {
+		return fieldError("document.intermediaries", fmt.Sprintf("names at most %d parties", MaxIntermediaries))
+	}
+	named := map[Intermediary]bool{}
+	for i, p := range d.Intermediaries {
+		at := fmt.Sprintf("document.intermediaries[%d]", i)
+		if !intermediaryKind(p.Kind) {
+			return fieldError(at+".kind", "is MARKETPLACE, WHOLESALER, RESELLER or END_USER")
+		}
+		if p.ID == "" || len(p.ID) > 128 {
+			return fieldError(at+".id", "is required, at most 128 characters")
+		}
+		if named[p] {
+			return fieldError("document.intermediaries", "names each party once")
+		}
+		named[p] = true
 	}
 	for i, e := range d.Evidence {
 		if err := e.validate(fmt.Sprintf("document.evidence[%d]", i)); err != nil {
@@ -373,6 +424,9 @@ func (d Document) Canonical() canonical.Value {
 		canonical.F("priceMode", canonical.String(d.PriceMode)),
 		canonical.F("seller", d.Seller.canonical()),
 		canonical.F("customer", d.Customer.canonical()),
+		// Absent when there are none, so every document recorded before
+		// intermediaries existed encodes, and replays, exactly as it did.
+		canonical.F("intermediaries", intermediaryArray(d.Intermediaries)),
 		canonical.F("evidence", evidenceArray(d.Evidence)),
 		canonical.F("certificates", certificateArray(d.Certificates)),
 		canonical.F("lines", lineArray(d.Lines)),
@@ -404,6 +458,20 @@ func (p Place) canonical() canonical.Value {
 		canonical.F("subdivision", canonical.OptString(p.Subdivision)),
 		canonical.F("country", canonical.OptString(p.Country)),
 	)
+}
+
+func intermediaryArray(ps []Intermediary) canonical.Value {
+	if len(ps) == 0 {
+		return canonical.Absent()
+	}
+	out := make([]canonical.Value, len(ps))
+	for i, p := range ps {
+		out[i] = canonical.Object(
+			canonical.F("kind", canonical.String(p.Kind)),
+			canonical.F("id", canonical.String(p.ID)),
+		)
+	}
+	return canonical.Array(out...)
 }
 
 func evidenceArray(es []Evidence) canonical.Value {
@@ -528,11 +596,15 @@ func DecodeDocument(data []byte) (Document, error) {
 // DocumentWire is the document's JSON form, shared by the evidence decoder
 // and, through the same field names, the transport.
 type documentWire struct {
-	Type         string            `json:"type"`
-	Currency     string            `json:"currency"`
-	PriceMode    string            `json:"priceMode"`
-	Seller       partyWire         `json:"seller"`
-	Customer     partyWire         `json:"customer"`
+	Type           string    `json:"type"`
+	Currency       string    `json:"currency"`
+	PriceMode      string    `json:"priceMode"`
+	Seller         partyWire `json:"seller"`
+	Customer       partyWire `json:"customer"`
+	Intermediaries []struct {
+		Kind string `json:"kind"`
+		ID   string `json:"id"`
+	} `json:"intermediaries"`
 	Evidence     []evidenceWire    `json:"evidence"`
 	Certificates []certificateWire `json:"certificates"`
 	Lines        []lineWire        `json:"lines"`
@@ -597,6 +669,9 @@ func (w documentWire) decode() (Document, error) {
 	d := Document{
 		Type: w.Type, Currency: cur, PriceMode: w.PriceMode,
 		Seller: w.Seller.decode(), Customer: w.Customer.decode(),
+	}
+	for _, p := range w.Intermediaries {
+		d.Intermediaries = append(d.Intermediaries, Intermediary{Kind: p.Kind, ID: p.ID})
 	}
 	var err error
 	if d.Evidence, err = decodeEvidence(w.Evidence); err != nil {
