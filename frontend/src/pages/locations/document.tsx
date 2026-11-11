@@ -41,6 +41,15 @@ const REGION = (() => {
   }
 })()
 
+type Via = '' | 'MARKETPLACE' | 'RESELLER' | 'WHOLESALER'
+
+const VIA: { value: Via; label: string }[] = [
+  { value: '', label: 'Sold directly' },
+  { value: 'MARKETPLACE', label: 'A marketplace' },
+  { value: 'RESELLER', label: 'A reseller' },
+  { value: 'WHOLESALER', label: 'A wholesaler' },
+]
+
 export interface LocationDraft {
   sellerCountry: string
   sellerSubdivision: string
@@ -48,6 +57,8 @@ export interface LocationDraft {
   subdivision: string
   evidence: EvidenceType
   business: boolean
+  /** A party the supply went through, or '' for a direct sale. */
+  via: Via
   service: Service
   amount: string
   currency: string
@@ -63,6 +74,7 @@ export function emptyLocation(): LocationDraft {
     subdivision: 'US-CA',
     evidence: 'PRIMARY_PLACE_OF_USE',
     business: false,
+    via: '',
     service: 'MOBILE_VOICE',
     amount: '100.00',
     currency: 'USD',
@@ -99,6 +111,8 @@ export function locationDocument(draft: LocationDraft): S<'TaxDocument'> {
     priceMode: draft.priceMode,
     seller: { id: 'SELLER', establishment: place(draft.sellerCountry, draft.sellerSubdivision) },
     customer,
+    // Named as a fact for responsibility; it never changes the tax.
+    ...(draft.via === '' ? {} : { intermediaries: [{ kind: draft.via, id: draft.via }] }),
     evidence: [{ type: draft.evidence, source: 'SELLER_RECORDED', place: where }],
     lines: [{ key: 'L1', service: draft.service, amount: draft.amount }],
   }
@@ -194,6 +208,11 @@ export const LocationFields = ({ coverage, draft, onChange }: {
           />
           <span>Business customer with a validated VAT registration there</span>
         </label>
+        <Field label="Sold through" help="Who a levy's collection or reporting can fall on. It never changes the tax.">
+          <select value={draft.via} onChange={(e) => { set('via', e.target.value as Via) }}>
+            {VIA.map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
+          </select>
+        </Field>
       </fieldset>
 
       <fieldset className="loc-fieldset">

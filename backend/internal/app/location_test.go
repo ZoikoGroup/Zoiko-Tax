@@ -30,6 +30,17 @@ const trainingPack = "../../../content/packs/training-telecom"
 // parse the rule-less source, attach the profile, encode, decode, load.
 func trainingBundle(t testing.TB) *rule.Bundle {
 	t.Helper()
+	raw, err := os.ReadFile(trainingPack + "/taxation.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return trainingBundleWith(t, raw)
+}
+
+// trainingBundleWith builds the training bundle with the taxation profile
+// given, so a test can vary one declaration and nothing else.
+func trainingBundleWith(t testing.TB, raw []byte) *rule.Bundle {
+	t.Helper()
 	src, err := os.ReadFile(trainingPack + "/training-telecom.ztax")
 	if err != nil {
 		t.Fatal(err)
@@ -39,10 +50,6 @@ func trainingBundle(t testing.TB) *rule.Bundle {
 		t.Fatal(err)
 	}
 	m, err := compile.Compile(prog)
-	if err != nil {
-		t.Fatal(err)
-	}
-	raw, err := os.ReadFile(trainingPack + "/taxation.json")
 	if err != nil {
 		t.Fatal(err)
 	}

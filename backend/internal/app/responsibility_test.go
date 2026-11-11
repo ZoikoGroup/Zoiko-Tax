@@ -2,6 +2,8 @@ package app_test
 
 import (
 	"context"
+	"encoding/json"
+	"os"
 	"sync"
 	"testing"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/identity"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/obligation"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/taxation"
 	"github.com/zoikogroup/zoikotax/backend/internal/port"
 )
 
@@ -179,5 +182,122 @@ func TestResponsibilityIsReadByTheDecisionsReaders(t *testing.T) {
 	unknown := id.NewDecisionID(uuid.MustParse("01920000-0000-7000-8000-0000000000ff"))
 	if _, err := h.svc.Responsibility(as(security.RoleAuditor), unknown); !errs.IsCategory(err, errs.CategoryNotFound) {
 		t.Fatalf("an unknown decision: %v", err)
+	}
+}
+
+// precedenceHarness serves the training pack with its seller-collects
+// assignment rewritten as a marketplace facilitator rule for collection and
+// a reseller rule for reporting: the intermediary when the document names
+// one, otherwise the seller.
+func precedenceHarness(t *testing.T) (*harness, *memResponsibility) {
+	t.Helper()
+	raw, err := os.ReadFile(trainingPack + "/taxation.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var profile map[string]any
+	if err := json.Unmarshal(raw, &profile); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, r := range profile["responsibility"].([]any) {
+		decl := r.(map[string]any)
+		if decl["id"] == "seller-collects" {
+			decl["collection"], decl["reporting"] = "MARKETPLACE|SELLER", "RESELLER|SELLER"
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("the training profile has no seller-collects assignment")
+	}
+	edited, err := json.Marshal(profile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h, repo := responsibilityHarness(t)
+	b := trainingBundleWith(t, edited)
+	h.holder.Publish(b)
+	h.library.Add(b)
+	return h, repo
+}
+
+// sellerCollected commits doc and returns the levies decided under the
+// rewritten seller-collects assignment.
+func sellerCollected(t *testing.T, h *harness, doc *taxation.Document) []obligation.LevyResponsibility {
+	t.Helper()
+	s, err := h.svc.Commit(as(security.RoleOperator), documentCommit("prec-1", doc))
+	if err != nil || s.Status != 201 || s.ResultRef == nil {
+		t.Fatalf("commit: %v %d %s", err, s.Status, s.Body)
+	}
+	levies, err := h.svc.Responsibility(as(security.RoleAuditor), *s.ResultRef)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []obligation.LevyResponsibility
+	for _, l := range levies {
+		if l.Decision.RuleID == "seller-collects" {
+			out = append(out, l)
+		}
+	}
+	if len(out) == 0 {
+		t.Fatal("no levy was decided under seller-collects")
+	}
+	return out
+}
+
+func holder(t *testing.T, l obligation.LevyResponsibility, r obligation.Role) obligation.Assignment {
+	t.Helper()
+	a, ok := l.Decision.Assignment(r)
+	if !ok {
+		t.Fatalf("%s has no %s", l.Component, r)
+	}
+	return a
+}
+
+func TestPrecedenceFallsBackToTheSellerWithNoIntermediary(t *testing.T) {
+	h, _ := precedenceHarness(t)
+	for _, l := range sellerCollected(t, h, sectionSeven(t, "40.00")) {
+		for _, r := range []obligation.Role{obligation.RoleCollection, obligation.RoleReporting} {
+			if a := holder(t, l, r); a.Statutory == nil || a.Statutory.Kind != obligation.PartySeller {
+				t.Fatalf("%s: %s held by %+v, want the seller", l.Component, r, a.Statutory)
+			}
+		}
+	}
+}
+
+func TestAMarketplaceOnTheDocumentCollects(t *testing.T) {
+	h, _ := precedenceHarness(t)
+	doc := sectionSeven(t, "40.00")
+	doc.Intermediaries = []taxation.Intermediary{{Kind: taxation.PartyMarketplace, ID: "MKT-1"}}
+	for _, l := range sellerCollected(t, h, doc) {
+		if a := holder(t, l, obligation.RoleCollection); a.Statutory == nil ||
+			a.Statutory.Kind != obligation.PartyMarketplace || a.Statutory.Ref != "MKT-1" {
+			t.Fatalf("%s: collection held by %+v, want the marketplace", l.Component, a.Statutory)
+		}
+		// Only collection names the marketplace; reporting still falls to
+		// the seller, and the decision is RESOLVED.
+		if a := holder(t, l, obligation.RoleReporting); a.Statutory == nil || a.Statutory.Kind != obligation.PartySeller {
+			t.Fatalf("%s: reporting held by %+v, want the seller", l.Component, a.Statutory)
+		}
+		if l.Decision.Status != obligation.ResponsibilityResolved {
+			t.Fatalf("%s is %s", l.Component, l.Decision.Status)
+		}
+	}
+}
+
+func TestTwoResellersConflictRatherThanOneBeingPicked(t *testing.T) {
+	h, _ := precedenceHarness(t)
+	doc := sectionSeven(t, "40.00")
+	doc.Intermediaries = []taxation.Intermediary{
+		{Kind: taxation.PartyReseller, ID: "RES-1"}, {Kind: taxation.PartyReseller, ID: "RES-2"},
+	}
+	for _, l := range sellerCollected(t, h, doc) {
+		a := holder(t, l, obligation.RoleReporting)
+		if a.Status != obligation.ResponsibilityConflicted || a.Statutory != nil {
+			t.Fatalf("%s: reporting is %s held by %+v, want CONFLICTED naming nobody", l.Component, a.Status, a.Statutory)
+		}
+		if l.Decision.Status != obligation.ResponsibilityConflicted {
+			t.Fatalf("%s is %s, want CONFLICTED", l.Component, l.Decision.Status)
+		}
 	}
 }

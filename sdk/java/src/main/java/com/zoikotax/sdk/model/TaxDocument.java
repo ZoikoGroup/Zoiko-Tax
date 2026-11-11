@@ -25,6 +25,7 @@ import com.zoikotax.sdk.model.ExemptionCertificate;
 import com.zoikotax.sdk.model.PriceMode;
 import com.zoikotax.sdk.model.SitusEvidenceItem;
 import com.zoikotax.sdk.model.TaxDocumentType;
+import com.zoikotax.sdk.model.TaxIntermediary;
 import com.zoikotax.sdk.model.TaxLine;
 import com.zoikotax.sdk.model.TaxParty;
 import java.util.ArrayList;
@@ -42,6 +43,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
   TaxDocument.JSON_PROPERTY_PRICE_MODE,
   TaxDocument.JSON_PROPERTY_SELLER,
   TaxDocument.JSON_PROPERTY_CUSTOMER,
+  TaxDocument.JSON_PROPERTY_INTERMEDIARIES,
   TaxDocument.JSON_PROPERTY_EVIDENCE,
   TaxDocument.JSON_PROPERTY_CERTIFICATES,
   TaxDocument.JSON_PROPERTY_LINES
@@ -67,6 +69,10 @@ public class TaxDocument {
   public static final String JSON_PROPERTY_CUSTOMER = "customer";
   @jakarta.annotation.Nonnull
   private TaxParty customer;
+
+  public static final String JSON_PROPERTY_INTERMEDIARIES = "intermediaries";
+  @jakarta.annotation.Nullable
+  private List<TaxIntermediary> intermediaries;
 
   public static final String JSON_PROPERTY_EVIDENCE = "evidence";
   @jakarta.annotation.Nullable
@@ -203,6 +209,38 @@ public class TaxDocument {
   }
 
 
+  public TaxDocument intermediaries(@jakarta.annotation.Nullable List<TaxIntermediary> intermediaries) {
+    this.intermediaries = intermediaries;
+    return this;
+  }
+
+  public TaxDocument addIntermediariesItem(TaxIntermediary intermediariesItem) {
+    if (this.intermediaries == null) {
+      this.intermediaries = new ArrayList<>();
+    }
+    this.intermediaries.add(intermediariesItem);
+    return this;
+  }
+
+  /**
+   * The other parties to the supply — a marketplace, wholesaler, reseller or the end user of a business customer&#39;s service — so a levy&#39;s responsibility can fall on them (ZTAX-OBL-REQ-0020). They do not change what is owed, only who holds each role for it. Each party is named once. 
+   * @return intermediaries
+   */
+  @jakarta.annotation.Nullable
+  @JsonProperty(value = JSON_PROPERTY_INTERMEDIARIES, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public List<TaxIntermediary> getIntermediaries() {
+    return intermediaries;
+  }
+
+
+  @JsonProperty(value = JSON_PROPERTY_INTERMEDIARIES, required = false)
+  @JsonInclude(value = JsonInclude.Include.USE_DEFAULTS)
+  public void setIntermediaries(@jakarta.annotation.Nullable List<TaxIntermediary> intermediaries) {
+    this.intermediaries = intermediaries;
+  }
+
+
   public TaxDocument evidence(@jakarta.annotation.Nullable List<SitusEvidenceItem> evidence) {
     this.evidence = evidence;
     return this;
@@ -316,6 +354,7 @@ public class TaxDocument {
         Objects.equals(this.priceMode, taxDocument.priceMode) &&
         Objects.equals(this.seller, taxDocument.seller) &&
         Objects.equals(this.customer, taxDocument.customer) &&
+        Objects.equals(this.intermediaries, taxDocument.intermediaries) &&
         Objects.equals(this.evidence, taxDocument.evidence) &&
         Objects.equals(this.certificates, taxDocument.certificates) &&
         Objects.equals(this.lines, taxDocument.lines);
@@ -323,7 +362,7 @@ public class TaxDocument {
 
   @Override
   public int hashCode() {
-    return Objects.hash(type, currency, priceMode, seller, customer, evidence, certificates, lines);
+    return Objects.hash(type, currency, priceMode, seller, customer, intermediaries, evidence, certificates, lines);
   }
 
   @Override
@@ -335,6 +374,7 @@ public class TaxDocument {
     sb.append("    priceMode: ").append(toIndentedString(priceMode)).append("\n");
     sb.append("    seller: ").append(toIndentedString(seller)).append("\n");
     sb.append("    customer: ").append(toIndentedString(customer)).append("\n");
+    sb.append("    intermediaries: ").append(toIndentedString(intermediaries)).append("\n");
     sb.append("    evidence: ").append(toIndentedString(evidence)).append("\n");
     sb.append("    certificates: ").append(toIndentedString(certificates)).append("\n");
     sb.append("    lines: ").append(toIndentedString(lines)).append("\n");

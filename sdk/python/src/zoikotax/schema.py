@@ -595,6 +595,15 @@ class TaxParty(TypedDict):
     vat: NotRequired[VatIdentification]
 
 
+class TaxIntermediary(TypedDict):
+    """
+    A party to the supply besides the seller and the customer.
+    """
+
+    kind: Literal['MARKETPLACE', 'WHOLESALER', 'RESELLER', 'END_USER']
+    id: PartyReference
+
+
 class SitusEvidenceItem(TypedDict):
     """
     One typed, attributed signal about where the supply took place (JUR-001 §3.1).
@@ -652,7 +661,15 @@ customer: disclosed, neither charged nor remitted by the seller.
 """
 
 
-ResponsibleParty: TypeAlias = Literal['SELLER', 'BUYER', 'NONE']
+ResponsibleParty: TypeAlias = str
+"""
+Who the content places a role on: `NONE`, one party kind, or several
+separated by `|` in precedence order, the first present on the
+document holding the role. `MARKETPLACE|SELLER` is the marketplace
+when there is one, otherwise the seller. The resolved holder is in
+`GET /v1/decisions/{decisionId}/responsibility`.
+
+"""
 
 
 class ResponsibilityAssignment(TypedDict):
@@ -3172,6 +3189,15 @@ class TaxDocument(TypedDict):
     priceMode: PriceMode
     seller: TaxParty
     customer: TaxParty
+    intermediaries: NotRequired[list[TaxIntermediary]]
+    """
+    The other parties to the supply — a marketplace, wholesaler,
+    reseller or the end user of a business customer's service — so a
+    levy's responsibility can fall on them (ZTAX-OBL-REQ-0020). They
+    do not change what is owed, only who holds each role for it. Each
+    party is named once.
+
+    """
     evidence: NotRequired[list[SitusEvidenceItem]]
     certificates: NotRequired[list[ExemptionCertificate]]
     lines: list[TaxLine]

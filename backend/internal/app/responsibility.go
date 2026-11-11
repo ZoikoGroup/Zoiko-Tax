@@ -125,32 +125,57 @@ func responsibilityRule(c taxation.ComponentResult, b *rule.Bundle) (obligation.
 		{obligation.RoleEconomicBearer, r.EconomicBearer},
 	} {
 		rr := obligation.RoleRule{Role: role.role}
-		switch role.party {
-		case taxation.PartySeller:
-			rr.Candidates = []obligation.PartyKind{obligation.PartySeller}
-		case taxation.PartyBuyer:
-			rr.Candidates = []obligation.PartyKind{obligation.PartyBuyer}
-		case taxation.PartyNone:
-			rr.NoParty = true
-		default:
-			// The profile refuses anything else when it loads, so this is a
-			// result that did not come from loaded content.
+		kinds, err := taxation.RoleCandidates(role.party)
+		if err != nil {
+			// The profile refuses this when it loads, so this is a result
+			// that did not come from loaded content.
 			return obligation.ResponsibilityRule{}, errs.New(errs.CategoryInternal, errs.ReasonInternal,
 				fmt.Sprintf("Levy %s assigns %s to %q.", c.ID, role.role, role.party))
+		}
+		if kinds == nil {
+			rr.NoParty = true
+		}
+		for _, k := range kinds {
+			rr.Candidates = append(rr.Candidates, partyKind(k))
 		}
 		out.Roles = append(out.Roles, rr)
 	}
 	return out, nil
 }
 
+// partyKind maps a content party kind to the resolver's. The two vocabularies
+// are spelled alike; the map keeps them from drifting silently.
+func partyKind(k string) obligation.PartyKind {
+	switch k {
+	case taxation.PartySeller:
+		return obligation.PartySeller
+	case taxation.PartyBuyer:
+		return obligation.PartyBuyer
+	case taxation.PartyMarketplace:
+		return obligation.PartyMarketplace
+	case taxation.PartyWholesaler:
+		return obligation.PartyWholesaler
+	case taxation.PartyReseller:
+		return obligation.PartyReseller
+	case taxation.PartyEndUser:
+		return obligation.PartyEndUser
+	}
+	// RoleCandidates and Document.Validate admit nothing else.
+	return obligation.PartyKind(k)
+}
+
 // documentParties are the parties a document names, as facts. The seller is
 // the tenant's legal entity issuing it; the customer is whoever the document
-// is addressed to, named by the caller's own reference when it gives one.
+// is addressed to; each intermediary is named by the caller's own reference.
 func documentParties(le identity.LegalEntity, doc taxation.Document) []obligation.Party {
-	return []obligation.Party{
+	out := []obligation.Party{
 		{Kind: obligation.PartySeller, LegalEntity: le.ID, Ref: doc.Seller.ID},
 		{Kind: obligation.PartyBuyer, Ref: doc.Customer.ID},
 	}
+	for _, p := range doc.Intermediaries {
+		out = append(out, obligation.Party{Kind: partyKind(p.Kind), Ref: p.ID})
+	}
+	return out
 }
 
 // Responsibility reads the levy responsibility recorded with a decision.

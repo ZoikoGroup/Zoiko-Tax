@@ -37,6 +37,9 @@ func taxDocument(in gen.TaxDocument) (*taxation.Document, error) {
 		Type: string(in.Type), Currency: cur, PriceMode: string(in.PriceMode),
 		Seller: taxParty(in.Seller), Customer: taxParty(in.Customer),
 	}
+	for _, p := range in.Intermediaries {
+		d.Intermediaries = append(d.Intermediaries, taxation.Intermediary{Kind: string(p.Kind), ID: p.ID})
+	}
 	var err error
 	if d.Evidence, err = situsEvidence("document.evidence", in.Evidence); err != nil {
 		return nil, err

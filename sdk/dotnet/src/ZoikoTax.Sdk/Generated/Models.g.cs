@@ -1444,6 +1444,25 @@ namespace ZoikoTax.Sdk
     }
 
     /// <summary>
+    /// A party to the supply besides the seller and the customer.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TaxIntermediary
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("kind")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<TaxIntermediaryKind>))]
+        public TaxIntermediaryKind Kind { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.StringLength(128, MinimumLength = 1)]
+        public string Id { get; set; } = default!;
+
+    }
+
+    /// <summary>
     /// One typed, attributed signal about where the supply took place (JUR-001 §3.1).
     /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -1624,6 +1643,18 @@ namespace ZoikoTax.Sdk
         [System.ComponentModel.DataAnnotations.Required]
         public TaxParty Customer { get; set; } = new TaxParty();
 
+        /// <summary>
+        /// The other parties to the supply — a marketplace, wholesaler,
+        /// <br/>reseller or the end user of a business customer's service — so a
+        /// <br/>levy's responsibility can fall on them (ZTAX-OBL-REQ-0020). They
+        /// <br/>do not change what is owed, only who holds each role for it. Each
+        /// <br/>party is named once.
+        /// <br/>
+        /// </summary>
+        [System.Text.Json.Serialization.JsonPropertyName("intermediaries")]
+        [System.ComponentModel.DataAnnotations.MaxLength(8)]
+        public System.Collections.Generic.ICollection<TaxIntermediary>? Intermediaries { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("evidence")]
         public System.Collections.Generic.ICollection<SitusEvidenceItem>? Evidence { get; set; } = default!;
 
@@ -1688,21 +1719,6 @@ namespace ZoikoTax.Sdk
 
     }
 
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum ResponsibleParty
-    {
-
-        [System.Runtime.Serialization.EnumMember(Value = @"SELLER")]
-        SELLER = 0,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"BUYER")]
-        BUYER = 1,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"NONE")]
-        NONE = 2,
-
-    }
-
     /// <summary>
     /// The five roles, each answered separately (ZTAX-OBL-REQ-0002 to -0006).
     /// </summary>
@@ -1717,28 +1733,28 @@ namespace ZoikoTax.Sdk
 
         [System.Text.Json.Serialization.JsonPropertyName("incidence")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ResponsibleParty>))]
-        public ResponsibleParty Incidence { get; set; } = default!;
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(NONE|(SELLER|BUYER|MARKETPLACE|WHOLESALER|RESELLER|END_USER)([|](SELLER|BUYER|MARKETPLACE|WHOLESALER|RESELLER|END_USER))*)$")]
+        public string Incidence { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("collection")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ResponsibleParty>))]
-        public ResponsibleParty Collection { get; set; } = default!;
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(NONE|(SELLER|BUYER|MARKETPLACE|WHOLESALER|RESELLER|END_USER)([|](SELLER|BUYER|MARKETPLACE|WHOLESALER|RESELLER|END_USER))*)$")]
+        public string Collection { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("reporting")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ResponsibleParty>))]
-        public ResponsibleParty Reporting { get; set; } = default!;
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(NONE|(SELLER|BUYER|MARKETPLACE|WHOLESALER|RESELLER|END_USER)([|](SELLER|BUYER|MARKETPLACE|WHOLESALER|RESELLER|END_USER))*)$")]
+        public string Reporting { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("remittance")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ResponsibleParty>))]
-        public ResponsibleParty Remittance { get; set; } = default!;
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(NONE|(SELLER|BUYER|MARKETPLACE|WHOLESALER|RESELLER|END_USER)([|](SELLER|BUYER|MARKETPLACE|WHOLESALER|RESELLER|END_USER))*)$")]
+        public string Remittance { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("economicBearer")]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<ResponsibleParty>))]
-        public ResponsibleParty EconomicBearer { get; set; } = default!;
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^(NONE|(SELLER|BUYER|MARKETPLACE|WHOLESALER|RESELLER|END_USER)([|](SELLER|BUYER|MARKETPLACE|WHOLESALER|RESELLER|END_USER))*)$")]
+        public string EconomicBearer { get; set; } = default!;
 
     }
 
@@ -9314,6 +9330,24 @@ namespace ZoikoTax.Sdk
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         [System.ComponentModel.DataAnnotations.StringLength(2000, MinimumLength = 1)]
         public string Note { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.7.1.0 (NJsonSchema v11.6.1.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum TaxIntermediaryKind
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"MARKETPLACE")]
+        MARKETPLACE = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"WHOLESALER")]
+        WHOLESALER = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"RESELLER")]
+        RESELLER = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"END_USER")]
+        END_USER = 3,
 
     }
 

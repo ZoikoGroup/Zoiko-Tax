@@ -21,7 +21,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.zoikotax.sdk.model.ResponsibleParty;
 import java.util.Arrays;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
@@ -45,23 +44,23 @@ public class ResponsibilityAssignment {
 
   public static final String JSON_PROPERTY_INCIDENCE = "incidence";
   @jakarta.annotation.Nonnull
-  private ResponsibleParty incidence;
+  private String incidence;
 
   public static final String JSON_PROPERTY_COLLECTION = "collection";
   @jakarta.annotation.Nonnull
-  private ResponsibleParty collection;
+  private String collection;
 
   public static final String JSON_PROPERTY_REPORTING = "reporting";
   @jakarta.annotation.Nonnull
-  private ResponsibleParty reporting;
+  private String reporting;
 
   public static final String JSON_PROPERTY_REMITTANCE = "remittance";
   @jakarta.annotation.Nonnull
-  private ResponsibleParty remittance;
+  private String remittance;
 
   public static final String JSON_PROPERTY_ECONOMIC_BEARER = "economicBearer";
   @jakarta.annotation.Nonnull
-  private ResponsibleParty economicBearer;
+  private String economicBearer;
 
   public ResponsibilityAssignment() { 
   }
@@ -90,122 +89,122 @@ public class ResponsibilityAssignment {
   }
 
 
-  public ResponsibilityAssignment incidence(@jakarta.annotation.Nonnull ResponsibleParty incidence) {
+  public ResponsibilityAssignment incidence(@jakarta.annotation.Nonnull String incidence) {
     this.incidence = incidence;
     return this;
   }
 
   /**
-   * Get incidence
+   * Who the content places a role on: &#x60;NONE&#x60;, one party kind, or several separated by &#x60;|&#x60; in precedence order, the first present on the document holding the role. &#x60;MARKETPLACE|SELLER&#x60; is the marketplace when there is one, otherwise the seller. The resolved holder is in &#x60;GET /v1/decisions/{decisionId}/responsibility&#x60;. 
    * @return incidence
    */
   @jakarta.annotation.Nonnull
   @JsonProperty(value = JSON_PROPERTY_INCIDENCE, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public ResponsibleParty getIncidence() {
+  public String getIncidence() {
     return incidence;
   }
 
 
   @JsonProperty(value = JSON_PROPERTY_INCIDENCE, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setIncidence(@jakarta.annotation.Nonnull ResponsibleParty incidence) {
+  public void setIncidence(@jakarta.annotation.Nonnull String incidence) {
     this.incidence = incidence;
   }
 
 
-  public ResponsibilityAssignment collection(@jakarta.annotation.Nonnull ResponsibleParty collection) {
+  public ResponsibilityAssignment collection(@jakarta.annotation.Nonnull String collection) {
     this.collection = collection;
     return this;
   }
 
   /**
-   * Get collection
+   * Who the content places a role on: &#x60;NONE&#x60;, one party kind, or several separated by &#x60;|&#x60; in precedence order, the first present on the document holding the role. &#x60;MARKETPLACE|SELLER&#x60; is the marketplace when there is one, otherwise the seller. The resolved holder is in &#x60;GET /v1/decisions/{decisionId}/responsibility&#x60;. 
    * @return collection
    */
   @jakarta.annotation.Nonnull
   @JsonProperty(value = JSON_PROPERTY_COLLECTION, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public ResponsibleParty getCollection() {
+  public String getCollection() {
     return collection;
   }
 
 
   @JsonProperty(value = JSON_PROPERTY_COLLECTION, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setCollection(@jakarta.annotation.Nonnull ResponsibleParty collection) {
+  public void setCollection(@jakarta.annotation.Nonnull String collection) {
     this.collection = collection;
   }
 
 
-  public ResponsibilityAssignment reporting(@jakarta.annotation.Nonnull ResponsibleParty reporting) {
+  public ResponsibilityAssignment reporting(@jakarta.annotation.Nonnull String reporting) {
     this.reporting = reporting;
     return this;
   }
 
   /**
-   * Get reporting
+   * Who the content places a role on: &#x60;NONE&#x60;, one party kind, or several separated by &#x60;|&#x60; in precedence order, the first present on the document holding the role. &#x60;MARKETPLACE|SELLER&#x60; is the marketplace when there is one, otherwise the seller. The resolved holder is in &#x60;GET /v1/decisions/{decisionId}/responsibility&#x60;. 
    * @return reporting
    */
   @jakarta.annotation.Nonnull
   @JsonProperty(value = JSON_PROPERTY_REPORTING, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public ResponsibleParty getReporting() {
+  public String getReporting() {
     return reporting;
   }
 
 
   @JsonProperty(value = JSON_PROPERTY_REPORTING, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setReporting(@jakarta.annotation.Nonnull ResponsibleParty reporting) {
+  public void setReporting(@jakarta.annotation.Nonnull String reporting) {
     this.reporting = reporting;
   }
 
 
-  public ResponsibilityAssignment remittance(@jakarta.annotation.Nonnull ResponsibleParty remittance) {
+  public ResponsibilityAssignment remittance(@jakarta.annotation.Nonnull String remittance) {
     this.remittance = remittance;
     return this;
   }
 
   /**
-   * Get remittance
+   * Who the content places a role on: &#x60;NONE&#x60;, one party kind, or several separated by &#x60;|&#x60; in precedence order, the first present on the document holding the role. &#x60;MARKETPLACE|SELLER&#x60; is the marketplace when there is one, otherwise the seller. The resolved holder is in &#x60;GET /v1/decisions/{decisionId}/responsibility&#x60;. 
    * @return remittance
    */
   @jakarta.annotation.Nonnull
   @JsonProperty(value = JSON_PROPERTY_REMITTANCE, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public ResponsibleParty getRemittance() {
+  public String getRemittance() {
     return remittance;
   }
 
 
   @JsonProperty(value = JSON_PROPERTY_REMITTANCE, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setRemittance(@jakarta.annotation.Nonnull ResponsibleParty remittance) {
+  public void setRemittance(@jakarta.annotation.Nonnull String remittance) {
     this.remittance = remittance;
   }
 
 
-  public ResponsibilityAssignment economicBearer(@jakarta.annotation.Nonnull ResponsibleParty economicBearer) {
+  public ResponsibilityAssignment economicBearer(@jakarta.annotation.Nonnull String economicBearer) {
     this.economicBearer = economicBearer;
     return this;
   }
 
   /**
-   * Get economicBearer
+   * Who the content places a role on: &#x60;NONE&#x60;, one party kind, or several separated by &#x60;|&#x60; in precedence order, the first present on the document holding the role. &#x60;MARKETPLACE|SELLER&#x60; is the marketplace when there is one, otherwise the seller. The resolved holder is in &#x60;GET /v1/decisions/{decisionId}/responsibility&#x60;. 
    * @return economicBearer
    */
   @jakarta.annotation.Nonnull
   @JsonProperty(value = JSON_PROPERTY_ECONOMIC_BEARER, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public ResponsibleParty getEconomicBearer() {
+  public String getEconomicBearer() {
     return economicBearer;
   }
 
 
   @JsonProperty(value = JSON_PROPERTY_ECONOMIC_BEARER, required = true)
   @JsonInclude(value = JsonInclude.Include.ALWAYS)
-  public void setEconomicBearer(@jakarta.annotation.Nonnull ResponsibleParty economicBearer) {
+  public void setEconomicBearer(@jakarta.annotation.Nonnull String economicBearer) {
     this.economicBearer = economicBearer;
   }
 
