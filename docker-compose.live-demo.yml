@@ -51,6 +51,7 @@ services:
       - ./intelligence/tools:/app/tools:ro
       - ./intelligence/config/registry.live-demo.json:/etc/ztax/ai/registry.json:ro
       - ./intelligence/config/prompt_profiles.live-demo.json:/etc/ztax/ai/prompt_profiles.json:ro
+      - ./intelligence/config/approved_ontology.live-demo.json:/etc/ztax/ai/approved_ontology.json:ro
     entrypoint:
       - sh
       - -c
@@ -64,3 +65,4 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY}
       GROQ_MODEL: ${GROQ_MODEL}
       ZTAX_GATEWAY_PROMPT_PROFILES: /etc/ztax/ai/prompt_profiles.json
+      ZTAX_ONTOLOGY_APPROVED_LIST: /etc/ztax/ai/approved_ontology.json

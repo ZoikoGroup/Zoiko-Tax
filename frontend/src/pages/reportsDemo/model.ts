@@ -402,3 +402,73 @@ export function parseExplainReply(json: unknown): ExplainReply | null {
     throw e
   }
 }
+
+// ---------------------------------------------------------------------------
+// the classify reply (POST /demo/classify)
+// ---------------------------------------------------------------------------
+
+export interface ClassifyReply {
+  readonly outcome: string        // kept as raw string; outcomes.ts maps it
+  readonly evidence_id: string | null
+  readonly verdict: string
+  readonly reason_code: string
+  readonly list_version: string | null
+  readonly confidence_calibrated: boolean
+  readonly proposed_code: string | undefined
+  readonly synthetic: boolean | undefined
+}
+
+function optBool(r: Rec, key: string): boolean | undefined {
+  const v = r[key]
+  return typeof v === 'boolean' ? v : undefined
+}
+
+function optNullStr(r: Rec, key: string): string | null {
+  const v = r[key]
+  if (v === null || v === undefined) return null
+  if (typeof v === 'string') return v
+  return null
+}
+
+function decodeClassifyReply(json: unknown): ClassifyReply {
+  const r = rec(json, 'classify_reply')
+  // Required string fields
+  const outcome = str(r, 'outcome', 'classify_reply')
+  const verdict = str(r, 'verdict', 'classify_reply')
+  const reason_code = str(r, 'reason_code', 'classify_reply')
+  // Required but nullable
+  const evidence_id = optNullStr(r, 'evidence_id')
+  const list_version = optNullStr(r, 'list_version')
+  // Validate required fields exist (throws ShapeError if missing)
+  if (!('evidence_id' in r)) throw new ShapeError('classify_reply.evidence_id: missing')
+  if (!('list_version' in r)) throw new ShapeError('classify_reply.list_version: missing')
+  if (!('confidence_calibrated' in r)) throw new ShapeError('classify_reply.confidence_calibrated: missing')
+  const cc = r.confidence_calibrated
+  if (typeof cc !== 'boolean') throw new ShapeError('classify_reply.confidence_calibrated: not a boolean')
+  return {
+    outcome,
+    evidence_id,
+    verdict,
+    reason_code,
+    list_version,
+    confidence_calibrated: cc,
+    proposed_code: optStr(r, 'proposed_code'),
+    synthetic: optBool(r, 'synthetic'),
+  }
+}
+
+/**
+ * The classify reply, or null if the body is structurally invalid (not an
+ * object or missing required fields). Unlike parseExplainReply, an unknown
+ * outcome string is NOT an error here — outcomes.ts handles it.
+ */
+export function parseClassifyReply(json: unknown): ClassifyReply | null {
+  try {
+    return decodeClassifyReply(json)
+  } catch (e) {
+    if (e instanceof ShapeError) {
+      return null
+    }
+    throw e
+  }
+}

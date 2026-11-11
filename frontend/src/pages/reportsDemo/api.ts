@@ -1,6 +1,6 @@
 /** The page's two calls to the demo AI service, decoded. See platform/demoAi.ts. */
 import { demoAiRequest } from '../../platform/demoAi'
-import { parseExplainReply, parseFixture, type ExplainReply, type ExplainTarget, type Fixture } from './model'
+import { parseClassifyReply, parseExplainReply, parseFixture, type ClassifyReply, type ExplainReply, type ExplainTarget, type Fixture } from './model'
 
 export type FixtureResult = { readonly ok: true; readonly fixture: Fixture } | { readonly ok: false }
 
@@ -29,5 +29,41 @@ export async function requestExplain(
     return res.reason === 'aborted' ? { status: 'aborted' } : { status: 'unavailable' }
   }
   const reply = parseExplainReply(res.body)
+  return reply === null ? { status: 'unavailable' } : { status: 'reply', reply }
+}
+
+/**
+ * Request limits of POST /demo/classify, in characters. They must match
+ * _SUBJECT_REF_MAX and _DESCRIPTION_MAX in intelligence/tools/report_ai_http.py.
+ */
+export const SUBJECT_REF_MAX = 512
+export const DESCRIPTION_MAX = 1000
+
+export type ClassifyResult =
+  | { readonly status: 'reply'; readonly reply: ClassifyReply }
+  | { readonly status: 'rejected' }
+  | { readonly status: 'unavailable' }
+  | { readonly status: 'timeout' }
+  | { readonly status: 'aborted' }
+
+/**
+ * POST /demo/classify. 'timeout' is the platform timer (DEMO_AI_TIMEOUT_MS) firing;
+ * 'rejected' is a non-2xx answer such as the fixed HTTP 400 for bad input.
+ */
+export async function requestClassify(
+  params: { readonly subjectRef: string; readonly description: string },
+  signal: AbortSignal,
+): Promise<ClassifyResult> {
+  const res = await demoAiRequest('/demo/classify', {
+    body: { subject_ref: params.subjectRef, description: params.description },
+    signal,
+  })
+  if (!res.ok) {
+    if (res.reason === 'aborted') return { status: 'aborted' }
+    if (res.reason === 'timeout') return { status: 'timeout' }
+    if (res.reason === 'rejected') return { status: 'rejected' }
+    return { status: 'unavailable' }
+  }
+  const reply = parseClassifyReply(res.body)
   return reply === null ? { status: 'unavailable' } : { status: 'reply', reply }
 }

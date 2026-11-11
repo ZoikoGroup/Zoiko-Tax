@@ -203,6 +203,7 @@ def test_verdict_and_reason_lists_are_fixed() -> None:
         "GUARD_ONTOLOGY_UNKNOWN",
         "GUARD_ONTOLOGY_NOT_YET_EFFECTIVE",
         "GUARD_ONTOLOGY_EXPIRED",
+        "GUARD_ONTOLOGY_NOT_CONFIGURED",
     }
 
 

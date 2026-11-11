@@ -298,3 +298,93 @@
 .rd-cited-row-table {
   width: 100%;
 }
+
+/* ---------------------------------------------------------------------------
+   ClassifyPanel (rd-cl-* classes)
+   --------------------------------------------------------------------------- */
+
+.rd-cl-panel {
+  margin-top: 24px;
+}
+
+.rd-cl-data-note {
+  margin: 6px 0 12px;
+  font-size: 12px;
+  color: #7c2d12;
+  font-weight: 600;
+}
+
+.rd-cl-form {
+  margin-bottom: 16px;
+}
+
+.rd-cl-textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.rd-cl-output {
+  min-height: 2em;
+}
+
+/* Result cards */
+.rd-cl-result {
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-top: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.rd-cl-result--pass {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.rd-cl-result--caution {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.rd-cl-result--neutral {
+  border-color: #d1d5db;
+  background: #f9fafb;
+}
+
+.rd-cl-result-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.rd-cl-headline {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px;
+  display: block;
+}
+
+.rd-cl-result-head .rd-cl-headline {
+  margin: 0;
+}
+
+.rd-cl-code {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  margin: 6px 0 4px;
+  word-break: break-all;
+}
+
+.rd-cl-body {
+  font-size: 13px;
+  color: #374151;
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
+.rd-cl-synthetic-badge {
+  flex-shrink: 0;
+}

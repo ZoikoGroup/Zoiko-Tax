@@ -462,6 +462,11 @@ def test_sentinel_not_in_exception_text(caplog: pytest.LogCaptureFixture) -> Non
     """A bad file containing the sentinel string must not appear anywhere in
     the exception text, str(), repr(), or any log record captured during
     the load attempt.
+
+    Covers all three leak paths the reviewer flagged:
+    - Sentinel in a value (original test).
+    - Sentinel in a key name (new: unknown-key error must not echo key names).
+    - __context__ is None (new: raise-inside-except must not chain JSONDecodeError).
     """
     bad_payload = json.dumps(
         {
@@ -487,11 +492,33 @@ def test_sentinel_not_in_exception_text(caplog: pytest.LogCaptureFixture) -> Non
             f"sentinel appeared in log record: {record.getMessage()!r}"
         )
 
-    # Chained exception must also not carry the sentinel.
+    # __context__ must be None: raise-inside-except chains JSONDecodeError whose
+    # .doc attribute holds the full payload. The fix raises outside the except block.
+    assert exc.__context__ is None, (
+        "exc.__context__ must be None to prevent JSONDecodeError/.doc leakage"
+    )
     if exc.__cause__ is not None:
         assert _SENTINEL not in str(exc.__cause__)
-    if exc.__context__ is not None and not exc.__suppress_context__:
-        assert _SENTINEL not in str(exc.__context__)
+
+
+def test_sentinel_in_key_name_not_echoed(caplog: pytest.LogCaptureFixture) -> None:
+    """An unknown key whose name contains the sentinel must not appear in
+    the exception message (key names must not be echoed on unknown-key errors).
+    """
+    bad_payload = json.dumps(
+        {
+            "list_version": "fixture-v1",
+            f"{_SENTINEL}_bad_key": "value",
+            "approved": [{"code": _FIXTURE_CODE, "effective_from": "2024-01-01"}],
+        }
+    )
+
+    with caplog.at_level(logging.DEBUG), pytest.raises(OntologyGuardError) as exc_info:
+        load_approved_list(bad_payload)
+
+    exc = exc_info.value
+    assert _SENTINEL not in str(exc), "unknown key name must not be echoed in exception"
+    assert exc.__context__ is None, "__context__ must be None"
 
 
 # ---------------------------------------------------------------------------
