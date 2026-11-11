@@ -3516,7 +3516,7 @@ class Decision(TypedDict):
 class LevyResponsibility(TypedDict):
     """
     The five-role responsibility decision for one levy on one item of a
-    committed decision (ZTAX-ENG-007 §29). Immutable: a correction is a
+    committed decision (ZTAX-OBL-001). Immutable: a correction is a
     new decision with its own.
 
     """
