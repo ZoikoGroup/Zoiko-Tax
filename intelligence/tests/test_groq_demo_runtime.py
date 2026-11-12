@@ -543,3 +543,99 @@ def test_run_without_a_stub_would_use_urlopen(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _guard)
     with pytest.raises(AssertionError, match="real network call"):
         runtime.run(_ROUTE, _make_call())
+
+
+# ---------------------------------------------------------------------------
+# Token usage (K2): counts only, never fatal, fake bodies only
+# ---------------------------------------------------------------------------
+
+
+def _body_with_usage(usage: object, content: str = "ontology:demo-class") -> bytes:
+    doc: dict[str, Any] = {"choices": [{"message": {"content": content}}]}
+    if usage is not _ABSENT:
+        doc["usage"] = usage
+    return json.dumps(doc).encode()
+
+
+_ABSENT = object()
+
+
+def _run_with_body(monkeypatch: pytest.MonkeyPatch, body: bytes) -> Any:
+    monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
+    monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
+    runtime = GroqDemoRuntime()
+
+    def _fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        return _FakeHTTPResponse(body)
+
+    monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
+    return runtime.run(_ROUTE, _make_call())
+
+
+def test_a_well_formed_reply_carries_the_providers_token_counts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    body = _body_with_usage({"prompt_tokens": 812, "completion_tokens": 14, "total_tokens": 826})
+    result = _run_with_body(monkeypatch, body)
+    assert result.proposed_code == "ontology:demo-class"
+    assert result.input_tokens == 812
+    assert result.output_tokens == 14
+
+
+def test_a_reply_with_no_usage_gives_no_counts_and_still_succeeds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    result = _run_with_body(monkeypatch, _body_with_usage(_ABSENT))
+    assert result.proposed_code == "ontology:demo-class"
+    assert result.input_tokens is None
+    assert result.output_tokens is None
+
+
+_BAD_USAGE: list[object] = [
+    {"prompt_tokens": -3, "completion_tokens": -1},
+    {"prompt_tokens": True, "completion_tokens": False},
+    {"prompt_tokens": 1.5, "completion_tokens": 2.0},
+    {"prompt_tokens": "812", "completion_tokens": "14"},
+    {"prompt_tokens": 10**30, "completion_tokens": 10**30},
+    {"prompt_tokens": None, "completion_tokens": None},
+    {},
+    [],
+    "usage",
+    7,
+    None,
+]
+
+
+@pytest.mark.parametrize("usage", _BAD_USAGE, ids=[repr(u) for u in _BAD_USAGE])
+def test_a_reply_with_bad_usage_gives_no_counts_and_still_succeeds(
+    monkeypatch: pytest.MonkeyPatch, usage: object
+) -> None:
+    result = _run_with_body(monkeypatch, _body_with_usage(usage))
+    assert result.proposed_code == "ontology:demo-class"
+    assert result.input_tokens is None
+    assert result.output_tokens is None
+
+
+def test_one_good_and_one_bad_usage_field_keeps_the_good_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    body = _body_with_usage({"prompt_tokens": 40, "completion_tokens": "many"})
+    result = _run_with_body(monkeypatch, body)
+    assert result.input_tokens == 40
+    assert result.output_tokens is None
+
+
+def test_usage_counts_helper_never_raises_on_odd_documents() -> None:
+    usage_counts = groq_demo_runtime.usage_counts
+    odd_docs: list[object] = [
+        None,
+        1,
+        "x",
+        [],
+        {},
+        {"usage": None},
+        {"usage": {"prompt_tokens": {}}},
+    ]
+    for doc in odd_docs:
+        assert usage_counts(doc) == (None, None)
+    assert usage_counts({"usage": {"prompt_tokens": 5, "completion_tokens": 6}}) == (5, 6)

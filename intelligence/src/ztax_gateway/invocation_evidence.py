@@ -106,6 +106,7 @@ import re
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal
 from enum import StrEnum
 from typing import Final
  
@@ -118,6 +119,7 @@ __all__: list[str] = [
     "InvocationEvidenceError",
     "InvocationEvidenceRecord",
     "InvocationOutcome",
+    "TokenPricing",
     "ToolCallRecord",
     "UsageMetrics",
 ]
@@ -379,6 +381,36 @@ class UsageMetrics:
             "total_tokens": self.total_tokens,
             "monetary_cost_usd": self.monetary_cost_usd,
         }
+ 
+ 
+@dataclass(frozen=True, slots=True)
+class TokenPricing:
+    """Explicitly configured price per 1,000 tokens, in US dollars.
+
+    There is no default and no built-in price: an operator who wants a cost in the
+    evidence record supplies both numbers, and without them the cost stays 0.0.
+    """
+
+    input_usd_per_1k: float
+    output_usd_per_1k: float
+
+    def __post_init__(self) -> None:
+        for name, value in (
+            ("input_usd_per_1k", self.input_usd_per_1k),
+            ("output_usd_per_1k", self.output_usd_per_1k),
+        ):
+            if type(value) not in (int, float) or not (0.0 <= value < float("inf")):
+                raise InvocationEvidenceError(
+                    f"invocation_evidence: TokenPricing.{name} must be a finite number >= 0"
+                )
+
+    def cost_usd(self, input_tokens: int, output_tokens: int) -> float:
+        """Cost of one call. Decimal arithmetic, so 0.1 + 0.2 style noise cannot creep in."""
+        total = (
+            Decimal(input_tokens) * Decimal(repr(self.input_usd_per_1k))
+            + Decimal(output_tokens) * Decimal(repr(self.output_usd_per_1k))
+        ) / Decimal(1000)
+        return float(total)
  
  
 # ---------------------------------------------------------------------------
