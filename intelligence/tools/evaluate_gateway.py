@@ -1109,9 +1109,10 @@ def main(argv: list[str] | None = None) -> int:
         from ztax_gateway.ontology_guard import OntologyGuardError, load_approved_list
 
         try:
-            approved_list = load_approved_list(args.approved_list)
-        except (OntologyGuardError, OSError) as exc:
-            print(f"error: could not load approved list: {exc}", file=sys.stderr)
+            payload = args.approved_list.read_bytes()
+            approved_list = load_approved_list(payload)
+        except (OntologyGuardError, OSError, UnicodeDecodeError):
+            print("error: could not load approved list", file=sys.stderr)
             return 1
 
     # Build gateway and evaluator
@@ -1124,6 +1125,25 @@ def main(argv: list[str] | None = None) -> int:
         approved_list=approved_list,
         as_of=as_of_date,
     )
+
+    # Pre-check eligibility to give actionable errors before evaluate_store()
+    from ztax_gateway.gold_set_file import Origin, ReviewStatus
+
+    _reviewed = [c for c in gsf.cases if c.review_status == ReviewStatus.REVIEWED]
+    if not _reviewed:
+        print(
+            "error: the gold set has no REVIEWED cases (draft files cannot be evaluated)",
+            file=sys.stderr,
+        )
+        return 1
+    if not args.allow_synthetic and all(
+        c.origin == Origin.SYNTHETIC for c in _reviewed
+    ):
+        print(
+            "error: all REVIEWED cases are SYNTHETIC; pass --allow-synthetic for a pipeline check",
+            file=sys.stderr,
+        )
+        return 1
 
     # Run evaluation
     try:

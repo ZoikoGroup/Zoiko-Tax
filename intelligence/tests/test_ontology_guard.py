@@ -16,7 +16,7 @@ check_code verdicts:
 - EXPIRED: as_of one day after effective_to
 - Marker-prefixed code "# ontology:..." -> UNKNOWN (markers NOT stripped)
 - Wrong case "ONTOLOGY:..." -> UNKNOWN
-- Surrounding whitespace on code is stripped (str.strip only)
+- Surrounding whitespace on code is NOT stripped (exact match required)
 - Non-date as_of raises OntologyGuardError
 - Integer as_of raises OntologyGuardError
 
@@ -195,11 +195,24 @@ def test_check_code_wrong_case_is_unknown() -> None:
     assert check_code(wrong_case, date(2025, 1, 1), lst) is GuardVerdict.UNKNOWN
 
 
-def test_check_code_strips_surrounding_whitespace() -> None:
-    """Surrounding whitespace on the code argument is stripped via str.strip()."""
+def test_check_code_padded_with_spaces_is_unknown() -> None:
+    """Leading/trailing spaces are NOT stripped — padded code must return UNKNOWN."""
     lst = _default_list()
     with_spaces = f"  {_FIXTURE_CODE}  "
-    assert check_code(with_spaces, date(2025, 1, 1), lst) is GuardVerdict.ALLOWED
+    assert check_code(with_spaces, date(2025, 1, 1), lst) is GuardVerdict.UNKNOWN
+
+
+def test_check_code_trailing_newline_is_unknown() -> None:
+    """A code with a trailing newline is NOT stripped — must return UNKNOWN."""
+    lst = _default_list()
+    with_newline = f"{_FIXTURE_CODE}\n"
+    assert check_code(with_newline, date(2025, 1, 1), lst) is GuardVerdict.UNKNOWN
+
+
+def test_check_code_exact_match_is_allowed() -> None:
+    """The exact code (no extra whitespace) is still ALLOWED as before."""
+    lst = _default_list()
+    assert check_code(_FIXTURE_CODE, date(2025, 1, 1), lst) is GuardVerdict.ALLOWED
 
 
 def test_check_code_non_date_string_as_of_raises() -> None:

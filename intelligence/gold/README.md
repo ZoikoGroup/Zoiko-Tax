@@ -131,3 +131,47 @@ If you have questions about the ontology class identifiers or the file format,
 contact the engineering team. Do not change the `case_id` values or the file
 name — these are used by the CI pipeline to track which cases have been
 evaluated.
+
+---
+
+## Checking a gold file
+
+The `tools/gold_set_status.py` script reports facts about a gold-set file.
+It is strictly read-only: it never edits the gold file, never marks anything
+as REVIEWED, never approves a case, and never defines thresholds or scores.
+
+### Status mode (always active)
+
+```bash
+python tools/gold_set_status.py --gold gold/classification.v0.draft.json
+```
+
+Prints case counts by review status and origin, the number of distinct
+expected class values, counts per class, and a single READINESS line that
+says whether any case is currently eligible as evaluation evidence.
+
+### Coverage mode (requires --approved-list and --as-of together)
+
+```bash
+python tools/gold_set_status.py \
+  --gold gold/classification.v0.draft.json \
+  --approved-list config/approved_ontology.live-demo.json \
+  --as-of 2026-01-01
+```
+
+Shows which approved codes have no gold case, which have no REVIEWED case,
+and how the gold expected-class values distribute across the guard verdicts
+(ALLOWED, UNKNOWN, NOT_YET_EFFECTIVE, EXPIRED).
+
+### Review-sheet mode (requires --review-sheet)
+
+```bash
+python tools/gold_set_status.py \
+  --gold gold/classification.v0.draft.json \
+  --review-sheet /tmp/review_sheet.csv
+```
+
+Writes a 12-column CSV worksheet for the telecom-tax specialist.
+The last five columns (reviewer_decision, reviewer_name, reviewed_on,
+source_ref, reviewer_comments) are left empty for the reviewer to fill in.
+Use `--force` to overwrite an existing output file.

@@ -64,6 +64,8 @@ is available. Three statuses are used:
 - The approved ontology list (`config/approved_ontology.live-demo.json`) is synthetic; the real list needs Decision D-05 (`tools/report_ai_http.py`).
 - The approved-list check runs only on `POST /demo/classify` (`tools/report_ai_http.py`); the Go-to-gRPC classification path (`backend/internal/app/classification.go`) gets only the `ontology:` format check (`backend/internal/app/classification.go`, test `TestProposalGoesToReviewWhenTheAIPlaneCannotHelp` in `backend/internal/app/classification_test.go`).
 - The check-event sink is the logging sink; there is no file-based sink yet (`src/ztax_gateway/server.py`).
+- The evaluation harness (`tools/evaluate_gateway.py`): `--approved-list` requires `--as-of`; the list is read as bytes; failures print one fixed message; two eligibility pre-check messages guard all-draft and all-synthetic stores; synthetic runs produce `evidence_grade == "PIPELINE_CHECK"` (`tests/test_evaluate_gateway.py`).
+- The gold-set status tool (`tools/gold_set_status.py`) is read-only: status, coverage (requires `--approved-list` and `--as-of`), and review-sheet export (`--review-sheet`, `--force` to overwrite) (`tests/test_gold_set_status.py`).
 
 ## F. Open decisions (from the project team, not verifiable from code)
 

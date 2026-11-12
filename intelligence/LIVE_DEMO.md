@@ -176,9 +176,15 @@ environment:
 ### Invocation and response shapes
 
 ```bash
+# Passes (voice mobile is on the demo approved list):
 curl -X POST http://127.0.0.1:18090/demo/classify \
   -H 'Content-Type: application/json' \
-  -d '{"subject_ref": "sku:PLAN-PRE-VOICE-500", "description": "Prepaid voice bundle, 500 minutes, no data included"}'
+  -d '{"subject_ref": "sku:DEMO-VOICE-PLAN", "description": "Mobile voice calling subscription for mobile phones (synthetic demo)"}'
+
+# Set aside (5G plan code not on the synthetic list → ABSTAIN):
+curl -X POST http://127.0.0.1:18090/demo/classify \
+  -H 'Content-Type: application/json' \
+  -d '{"subject_ref": "sku:DEMO-PLAN-5G-UNLIMITED", "description": "Unlimited 5G mobile plan with 20 GB mobile hotspot and international roaming (synthetic demo data)"}'
 ```
 
 The four response shapes are (all have the same seven keys, plus `proposed_code` on `PROPOSED` only):
@@ -209,6 +215,13 @@ The four response shapes are (all have the same seven keys, plus `proposed_code`
      "synthetic": true
    }
    ```
+
+   > **Exact-match rule:** `check_code` requires the code string to be exactly
+   > as it appears in the approved list. A code with leading spaces, a trailing
+   > newline or tab returns `ABSTAIN / GUARD_ONTOLOGY_UNKNOWN`. Callers must
+   > strip whitespace before the check; the guard never strips for them.
+   > (Regression tests: `tests/test_ontology_guard.py::test_check_code_padded_with_spaces_is_unknown`
+   > and `test_check_code_trailing_newline_is_unknown`.)
 
 3. **`NOT_CONFIGURED`** (`ZTAX_ONTOLOGY_APPROVED_LIST` is unset):
    ```json
@@ -266,6 +279,8 @@ The four response shapes are (all have the same seven keys, plus `proposed_code`
 | `REFUSED` | From `governance.py`: `AI_UNKNOWN_USE_CASE`, `AI_USE_CASE_SUSPENDED`, `AI_KILL_SWITCH_ENGAGED`, `AI_AUTHORITY_REFUSED`, `AI_RISK_TIER_EXCEEDED`, `AI_RESIDENCY_REFUSED`, `AI_MALFORMED_CONTEXT`, `AI_DATA_CLASS_REFUSED`. From `server.py`: `AI_GATEWAY_UNAVAILABLE`, `AI_GATEWAY_NOT_CONFIGURED`. |
 
 `REFUSED` passes the Gateway's reason through, so this set may grow. A client should treat an unknown `reason_code` as a refusal, not as an error. `AI_GATEWAY_NOT_CONFIGURED` (the model runtime is not configured) is a different thing from the `NOT_CONFIGURED` outcome (no approved list).
+
+> **Outcome names are not final.** The lead has not yet confirmed the AIGOV-001 §11 vocabulary. No set of outcome or reason names should be treated as approved.
 
 ### Evidence record vs answer-checked event
 
