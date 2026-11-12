@@ -101,6 +101,22 @@ def token_count(value: object) -> int | None:
     return value
 
 
+# A JSON integer with more digits than this is not a token count. Python refuses to
+# convert a number past 4300 digits (a ValueError), which would fail a whole good reply;
+# the hook below turns any long integer into -1 instead (token_count rejects it).
+_MAX_JSON_INT_CHARS = 18
+
+
+def json_int(text: str) -> int:
+    """``parse_int`` hook for ``json.loads`` on a provider reply.
+
+    Returns the ordinary int for a number of up to 18 characters and -1 for a longer one,
+    so a huge integer anywhere in a reply cannot make parsing fail. ``token_count`` rejects
+    -1, so a huge count is read as "the provider gave nothing".
+    """
+    return int(text) if len(text) <= _MAX_JSON_INT_CHARS else -1
+
+
 class ModelRuntime(Protocol):
     """Runs one permitted call against the routed model."""
 

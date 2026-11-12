@@ -17,6 +17,7 @@ import importlib.util
 import json
 import logging
 import urllib.error
+from dataclasses import replace
 from io import BytesIO
 from pathlib import Path
 from types import ModuleType
@@ -639,3 +640,83 @@ def test_usage_counts_helper_never_raises_on_odd_documents() -> None:
     for doc in odd_docs:
         assert usage_counts(doc) == (None, None)
     assert usage_counts({"usage": {"prompt_tokens": 5, "completion_tokens": 6}}) == (5, 6)
+
+
+# ---------------------------------------------------------------------------
+# Review fixes: nesting, huge integers, any ValueError from json.loads
+# ---------------------------------------------------------------------------
+
+_GROQ_SHAPE = "groq demo runtime: provider response was not shaped like a chat completion"
+_GROQ_GOOD_PREFIX = b'{"choices":[{"message":{"content":"ontology:demo-class"}}],'
+_GROQ_DIGITS = b"9" * 5000
+
+
+def _expect_groq_unavailable(
+    monkeypatch: pytest.MonkeyPatch, body: bytes
+) -> RuntimeUnavailableError:
+    with pytest.raises(RuntimeUnavailableError) as exc:
+        _run_with_body(monkeypatch, body)
+    return exc.value
+
+
+_GROQ_NESTED = {
+    "nested-whole-reply": b"[" * 100_000,
+    "nested-usage": _GROQ_GOOD_PREFIX + b'"usage":' + b"[" * 100_000 + b"]" * 100_000 + b"}",
+}
+
+
+@pytest.mark.parametrize("body", _GROQ_NESTED.values(), ids=list(_GROQ_NESTED))
+def test_groq_a_deeply_nested_reply_is_unavailable_not_a_raw_recursion_error(
+    monkeypatch: pytest.MonkeyPatch, body: bytes
+) -> None:
+    assert str(_expect_groq_unavailable(monkeypatch, body)) == _GROQ_SHAPE
+
+
+def test_groq_a_deeply_nested_explain_reply_is_not_in_the_required_shape(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
+    monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
+    body = json.dumps({"choices": [{"message": {"content": "[" * 100_000}}]}).encode()
+
+    def _fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        return _FakeHTTPResponse(body)
+
+    monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
+    base = _make_call(Kind.EXTRACTION)
+    call = replace(base, governance=replace(base.governance, use_case="explain-report-figure"))
+    with pytest.raises(RuntimeUnavailableError) as exc:
+        GroqDemoRuntime().run(_ROUTE, call)
+    assert str(exc.value) == "groq demo runtime: provider reply was not in the required shape"
+
+
+def test_groq_a_5000_digit_prompt_token_count_does_not_fail_a_good_call(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    body = (
+        _GROQ_GOOD_PREFIX
+        + b'"usage":{"prompt_tokens":'
+        + _GROQ_DIGITS
+        + b',"completion_tokens":1}}'
+    )
+    result = _run_with_body(monkeypatch, body)
+    assert result.proposed_code == "ontology:demo-class"
+    assert result.input_tokens is None
+    assert result.output_tokens == 1
+
+
+def test_groq_a_5000_digit_number_elsewhere_does_not_break_parsing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    body = _GROQ_GOOD_PREFIX + b'"created":' + _GROQ_DIGITS + b',"usage":{"prompt_tokens":5}}'
+    result = _run_with_body(monkeypatch, body)
+    assert result.proposed_code == "ontology:demo-class"
+    assert result.input_tokens == 5
+
+
+def test_groq_a_value_error_that_is_not_a_json_decode_error_is_unavailable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Invalid UTF-8 raises UnicodeDecodeError (a ValueError), not JSONDecodeError.
+    body = b'{"choices":[{"message":{"content":"\x80"}}]}'
+    assert str(_expect_groq_unavailable(monkeypatch, body)) == _GROQ_SHAPE

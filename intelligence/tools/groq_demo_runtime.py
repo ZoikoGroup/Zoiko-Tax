@@ -44,6 +44,7 @@ from ztax_gateway.runtime import (
     Route,
     RoutingTable,
     RuntimeUnavailableError,
+    json_int,
     token_count,
 )
 from ztax_gateway.wire import Call, Kind
@@ -428,11 +429,11 @@ class GroqDemoRuntime:
             ) from exc
 
         try:
-            doc = json.loads(raw)
+            doc = json.loads(raw, parse_int=json_int)
             content = doc["choices"][0]["message"]["content"]
             if not isinstance(content, str):
                 raise TypeError("content is not a string")
-        except (json.JSONDecodeError, KeyError, IndexError, TypeError) as exc:
+        except (ValueError, RecursionError, KeyError, IndexError, TypeError) as exc:
             log.debug("reply not chat-completion shaped; reply starts: %r", _snippet(raw))
             raise RuntimeUnavailableError(
                 "groq demo runtime: provider response was not shaped like a chat completion"
@@ -444,7 +445,7 @@ class GroqDemoRuntime:
 
         try:
             result = _result_from_content(call, content)
-        except ValueError as exc:
+        except (ValueError, RecursionError) as exc:
             log.debug("reply rejected (%s); reply starts: %r", exc, _snippet(raw))
             raise RuntimeUnavailableError(
                 "groq demo runtime: provider reply was not in the required shape"

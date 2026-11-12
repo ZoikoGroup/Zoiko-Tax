@@ -102,6 +102,7 @@ Design rules (all enforced here; no exceptions, no overrides)
 from __future__ import annotations
  
 import hashlib
+import math
 import re
 import uuid
 from dataclasses import dataclass
@@ -114,6 +115,7 @@ from .governance import UseCaseRegistry, authorise
 from .provenance import AuthorityOutcome, Provenance
  
 __all__: list[str] = [
+    "MAX_PRICE_USD_PER_1K",
     "GuardrailResult",
     "InvocationEvidenceBuilder",
     "InvocationEvidenceError",
@@ -366,6 +368,14 @@ class UsageMetrics:
                 f"invocation_evidence: monetary_cost_usd must be >= 0.0, "
                 f"got {self.monetary_cost_usd!r}"
             )
+        try:
+            finite = math.isfinite(self.monetary_cost_usd)
+        except (OverflowError, TypeError):  # an int too large for a float
+            finite = False
+        if not finite:
+            raise InvocationEvidenceError(
+                "invocation_evidence: monetary_cost_usd must be a finite number"
+            )
  
     @property
     def total_tokens(self) -> int:
@@ -383,6 +393,11 @@ class UsageMetrics:
         }
  
  
+# Upper bound for a configured price. With token counts capped at 10,000,000 the
+# cost of one call stays far below the largest float.
+MAX_PRICE_USD_PER_1K: Final = 10_000
+
+
 @dataclass(frozen=True, slots=True)
 class TokenPricing:
     """Explicitly configured price per 1,000 tokens, in US dollars.
@@ -399,9 +414,12 @@ class TokenPricing:
             ("input_usd_per_1k", self.input_usd_per_1k),
             ("output_usd_per_1k", self.output_usd_per_1k),
         ):
-            if type(value) not in (int, float) or not (0.0 <= value < float("inf")):
+            # NaN fails the range test, and an int is compared as an int, so a huge one
+            # is refused without ever being converted to a float.
+            if type(value) not in (int, float) or not (0 <= value <= MAX_PRICE_USD_PER_1K):
                 raise InvocationEvidenceError(
-                    f"invocation_evidence: TokenPricing.{name} must be a finite number >= 0"
+                    f"invocation_evidence: TokenPricing.{name} must be a finite number "
+                    f"from 0 to {MAX_PRICE_USD_PER_1K} USD per 1,000 tokens"
                 )
 
     def cost_usd(self, input_tokens: int, output_tokens: int) -> float:

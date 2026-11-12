@@ -11,6 +11,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import math
 from collections.abc import Iterator
 from typing import Any
 
@@ -22,6 +23,7 @@ from ztax_gateway.invocation_evidence import (
     InvocationEvidenceError,
     InvocationEvidenceRecord,
     TokenPricing,
+    UsageMetrics,
 )
 from ztax_gateway.provenance import AuthorityOutcome, RiskTier
 from ztax_gateway.runtime import MAX_TOKEN_COUNT, Result, Route, RoutingTable, token_count
@@ -264,3 +266,51 @@ def test_no_prompt_or_answer_text_appears_in_the_record_or_the_logs(
     for text in (stored, logged):
         assert PROMPT_MARK not in text
         assert ANSWER_MARK not in text
+
+
+# ---------------------------------------------------------------------------
+# Review fixes: price bounds and a finite cost
+# ---------------------------------------------------------------------------
+
+
+def test_the_largest_allowed_price_is_accepted_and_cost_stays_finite() -> None:
+    pricing = TokenPricing(input_usd_per_1k=10_000, output_usd_per_1k=10_000)
+    cost = pricing.cost_usd(MAX_TOKEN_COUNT, MAX_TOKEN_COUNT)
+    assert cost == 2 * 10_000 * (MAX_TOKEN_COUNT // 1000)
+    assert math.isfinite(cost)
+    usage = UsageMetrics(
+        input_tokens=MAX_TOKEN_COUNT,
+        output_tokens=MAX_TOKEN_COUNT,
+        monetary_cost_usd=cost,
+    )
+    json.dumps(usage.as_dict(), allow_nan=False)
+
+
+_OVER_BOUND_PRICES: list[Any] = [
+    10_000.01,
+    10_001,
+    1e308,
+    10**400,
+    float("inf"),
+    float("nan"),
+    True,
+]
+
+
+@pytest.mark.parametrize(
+    "price", _OVER_BOUND_PRICES, ids=[repr(p)[:20] for p in _OVER_BOUND_PRICES]
+)
+def test_a_price_above_the_bound_or_not_finite_is_refused_without_overflow(price: Any) -> None:
+    with pytest.raises(InvocationEvidenceError):
+        TokenPricing(input_usd_per_1k=price, output_usd_per_1k=1.0)
+    with pytest.raises(InvocationEvidenceError):
+        TokenPricing(input_usd_per_1k=1.0, output_usd_per_1k=price)
+
+
+_BAD_COSTS: list[Any] = [float("nan"), float("inf"), float("-inf"), 10**400]
+
+
+@pytest.mark.parametrize("cost", _BAD_COSTS, ids=[repr(c)[:20] for c in _BAD_COSTS])
+def test_usage_metrics_refuses_a_non_finite_cost(cost: Any) -> None:
+    with pytest.raises(InvocationEvidenceError):
+        UsageMetrics(monetary_cost_usd=cost)
