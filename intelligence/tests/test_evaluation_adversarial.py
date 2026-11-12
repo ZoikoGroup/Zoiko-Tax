@@ -295,6 +295,51 @@ def test_release_gate_passes_with_builtin_suite() -> None:
     assert len(results) == 5
 
 
+def test_bare_release_gate_runs_all_21_cases_and_passes() -> None:
+    """A bare ReleaseGate() is bound to the full suite: 21 unique cases, all passing."""
+    gate = ReleaseGate()
+    assert len(gate.suite) == 21
+    ids = [c.case_id for c in gate.suite]
+    assert len(set(ids)) == 21
+    results = gate.check()
+    assert len(results) == 21
+    assert all(r.passed for r in results)
+
+
+def test_release_gate_with_explicit_builtin_suite_still_has_five_cases() -> None:
+    gate = ReleaseGate(suite=BUILT_IN_SUITE)
+    assert len(gate.suite) == 5
+    assert len(gate.check()) == 5
+
+
+def test_a_failing_case_in_a_bare_default_gate_lists_every_failing_case() -> None:
+    """Failing cases are listed together, not only the first, with the default suite."""
+
+    def _no_raise() -> None:
+        return None
+
+    bad = [
+        AdversarialCase(
+            case_id=f"BAD-{i}",
+            description="no raise",
+            layer=AdversarialLayer.GOVERNANCE,
+            expected_refusal=GovernanceRefusal.AUTHORITY_REFUSED,
+            trigger=_no_raise,
+        )
+        for i in range(2)
+    ]
+    gate = ReleaseGate()
+    # Append two failing cases to the default suite; the other 21 still pass.
+    gate.suite = [*gate.suite, *bad]
+    with pytest.raises(ReleaseGateError) as exc:
+        gate.check()
+    assert [r.case_id for r in exc.value.failed] == ["BAD-0", "BAD-1"]
+    message = str(exc.value)
+    assert "BAD-0" in message
+    assert "BAD-1" in message
+    assert len(exc.value.results) == 23
+
+
 def test_release_gate_check_returns_results_on_success() -> None:
     def _trigger() -> None:
         raise GovernanceRefusedError(GovernanceRefusal.AUTHORITY_REFUSED, "ok")
