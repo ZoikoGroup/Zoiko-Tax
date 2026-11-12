@@ -58,6 +58,7 @@ from .invocation_evidence import (
     InvocationEvidenceBuilder,
     InvocationEvidenceRecord,
     InvocationOutcome,
+    TokenPricing,
     UsageMetrics,
 )
 from .production_gates import PromptProfileRegistry
@@ -72,6 +73,7 @@ from .runtime import (
     UnconfiguredRuntime,
     UnroutedUseCaseError,
     check_result,
+    token_count,
 )
 from .service import guarded
 from .wire import Call, Reply, WireError, decode_call, encode_reply
@@ -141,12 +143,20 @@ def _monotonic_ns() -> int:
 
 
 class _CallTiming:
-    """Whole milliseconds the runtime call took, set when it ends however it ends."""
+    """What one runtime call left behind for the evidence record.
 
-    __slots__ = ("ms",)
+    ``ms`` is the whole milliseconds the call took, set when it ends however it ends.
+    ``input_tokens`` and ``output_tokens`` are the provider's counts, set only after
+    a result came back and only when each is a valid count; None otherwise. Counts
+    only: no text from the result is ever kept here.
+    """
+
+    __slots__ = ("input_tokens", "ms", "output_tokens")
 
     def __init__(self) -> None:
         self.ms = 0
+        self.input_tokens: int | None = None
+        self.output_tokens: int | None = None
 
 
 class _UnexpectedRuntimeError(Exception):
@@ -189,6 +199,7 @@ class Gateway:
         prompt_profile_registry: PromptProfileRegistry | None = None,
         check_event_sink: CheckEventSink | None = None,
         runtime_timeout_seconds: float | None = None,
+        token_pricing: TokenPricing | None = None,
     ) -> None:
         if not region or not ai_train_version:
             raise ValueError("gateway: a Gateway names its region and its AI train version")
@@ -212,6 +223,8 @@ class Gateway:
         # None keeps the runtime call synchronous on the caller's thread. When set,
         # the call runs in a daemon worker thread bounded by ``_runtime_slots``.
         self._runtime_timeout = runtime_timeout_seconds
+        # Explicit per-1,000-token prices, or None: with None the cost stays 0.0.
+        self._token_pricing = token_pricing
         self._runtime_slots = threading.BoundedSemaphore(RUNTIME_MAX_IN_FLIGHT)
         self._kill_lock = threading.Lock()
         self._kill_digest: str | None = None
@@ -404,7 +417,12 @@ class Gateway:
         # Successful invocation: seal a PROPOSE record (the authority-derived
         # default) and write it to the sink before encode_reply is called.
         invocation_id = self._seal_success(
-            provenance, call.input, reply, latency_ms=timing.ms
+            provenance,
+            call.input,
+            reply,
+            latency_ms=timing.ms,
+            input_tokens=timing.input_tokens,
+            output_tokens=timing.output_tokens,
         )
         return encode_reply(reply), invocation_id
 
@@ -573,6 +591,10 @@ class Gateway:
                 if timing is not None:
                     timing.ms = max(0, (_monotonic_ns() - started) // _NS_PER_MS)
             check_result(call.kind, result)
+            if timing is not None:
+                # Counts only, each checked here too: a runtime may return anything.
+                timing.input_tokens = token_count(result.input_tokens)
+                timing.output_tokens = token_count(result.output_tokens)
             return Reply(
                 model_profile=route.model_profile,
                 provider_profile=route.provider_profile,
@@ -601,7 +623,14 @@ class Gateway:
     # ------------------------------------------------------------------
 
     def _seal_success(
-        self, provenance: Provenance, input_bytes: bytes, reply: Reply, *, latency_ms: int = 0
+        self,
+        provenance: Provenance,
+        input_bytes: bytes,
+        reply: Reply,
+        *,
+        latency_ms: int = 0,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
     ) -> str:
         """Build and write a successful-invocation evidence record.
 
@@ -629,9 +658,21 @@ class Gateway:
         reply_bytes = encode_reply(reply)
         builder.set_output(reply_bytes)
         builder.add_guardrail(GuardrailResult("governance.authority", "PASS"))
-        # Only latency is measured here. Tokens and cost stay zero: no provider
-        # telemetry reaches the Gateway yet.
-        builder.set_usage(UsageMetrics(latency_ms=latency_ms))
+        # Latency is measured here. Tokens are the provider's own counts when it gave
+        # valid ones, else 0. Cost is computed only when prices were configured and
+        # both counts are present, else 0.0: no price is ever assumed.
+        cost = 0.0
+        pricing = self._token_pricing
+        if pricing is not None and input_tokens is not None and output_tokens is not None:
+            cost = pricing.cost_usd(input_tokens, output_tokens)
+        builder.set_usage(
+            UsageMetrics(
+                latency_ms=latency_ms,
+                input_tokens=input_tokens or 0,
+                output_tokens=output_tokens or 0,
+                monetary_cost_usd=cost,
+            )
+        )
         # WP5 Part A: resolve the route's prompt label to a PromptProfile and
         # set the content hash on the builder.  No registry or no matching
         # profile: leave the hash None and log one warning; never fail the call.

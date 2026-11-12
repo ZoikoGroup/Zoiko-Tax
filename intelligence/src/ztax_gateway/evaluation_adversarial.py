@@ -16,7 +16,7 @@ which are the two enforcement points the suite exists to stress-test.
 :class:`~ztax_gateway.server.Gateway` with fake runtimes (prompt injection, tool
 forgery, cross-tenant leakage, exfiltration, caller-sent text, runtime failures).
 :data:`BUILT_IN_SUITE` keeps its five cases; :data:`FULL_ADVERSARIAL_SUITE` is
-both together.
+both together, and it is what a bare :class:`ReleaseGate` runs.
 
 Structure
 ---------
@@ -1377,7 +1377,8 @@ RED_TEAM_SUITE: tuple[AdversarialCase, ...] = (
 )
 
 # The five built-in cases and the red-team cases together: what a release gate for the
-# Gateway should run. BUILT_IN_SUITE alone keeps its five cases.
+# Gateway should run, and the default suite of ReleaseGate. BUILT_IN_SUITE alone keeps
+# its five cases.
 FULL_ADVERSARIAL_SUITE: tuple[AdversarialCase, ...] = (*BUILT_IN_SUITE, *RED_TEAM_SUITE)
 
 
@@ -1530,14 +1531,20 @@ class ReleaseGate:
     with the full result list.  A release train that catches this error and
     continues is violating ADR-0006 §2.5.
 
+    A bare ``ReleaseGate()`` is bound to :data:`FULL_ADVERSARIAL_SUITE`, all 21
+    cases (ADV-001 to ADV-021).  Pass ``suite=BUILT_IN_SUITE`` for the five
+    built-in cases alone, or any other sequence of cases.
+
     Example::
 
-        gate = ReleaseGate(suite=BUILT_IN_SUITE)
-        gate.check()   # raises ReleaseGateError if any case fails
+        gate = ReleaseGate()   # all 21 cases
+        gate.check()           # raises ReleaseGateError if any case fails
+
+        ReleaseGate(suite=BUILT_IN_SUITE).check()   # the five built-in cases only
     """
 
     suite: tuple[AdversarialCase, ...] | list[AdversarialCase] = field(
-        default_factory=lambda: list(BUILT_IN_SUITE)
+        default_factory=lambda: list(FULL_ADVERSARIAL_SUITE)
     )
     _runner: AdversarialRunner = field(
         default_factory=AdversarialRunner, init=False, repr=False

@@ -77,6 +77,44 @@ class Result:
     fields: dict[str, str] | None = None
     proposed_code: str = ""
     confidence: str = ""
+    # Token counts the provider reported, or None when it reported nothing. A runtime
+    # that has no counts leaves both None. The Gateway re-checks them (token_count).
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+
+
+# Largest token count taken as real. A provider cannot have consumed more than this in
+# one call; anything above is malformed and treated as "provider gave nothing".
+MAX_TOKEN_COUNT = 10_000_000
+
+
+def token_count(value: object) -> int | None:
+    """Return *value* if it is a non-negative whole number, else None.
+
+    Booleans, floats, strings, negative numbers and numbers above
+    ``MAX_TOKEN_COUNT`` are not counts. Never raises, whatever *value* is.
+    """
+    if type(value) is not int:  # excludes bool and every int subclass
+        return None
+    if value < 0 or value > MAX_TOKEN_COUNT:
+        return None
+    return value
+
+
+# A JSON integer with more digits than this is not a token count. Python refuses to
+# convert a number past 4300 digits (a ValueError), which would fail a whole good reply;
+# the hook below turns any long integer into -1 instead (token_count rejects it).
+_MAX_JSON_INT_CHARS = 18
+
+
+def json_int(text: str) -> int:
+    """``parse_int`` hook for ``json.loads`` on a provider reply.
+
+    Returns the ordinary int for a number of up to 18 characters and -1 for a longer one,
+    so a huge integer anywhere in a reply cannot make parsing fail. ``token_count`` rejects
+    -1, so a huge count is read as "the provider gave nothing".
+    """
+    return int(text) if len(text) <= _MAX_JSON_INT_CHARS else -1
 
 
 class ModelRuntime(Protocol):

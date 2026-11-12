@@ -102,10 +102,12 @@ Design rules (all enforced here; no exceptions, no overrides)
 from __future__ import annotations
  
 import hashlib
+import math
 import re
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal
 from enum import StrEnum
 from typing import Final
  
@@ -113,11 +115,13 @@ from .governance import UseCaseRegistry, authorise
 from .provenance import AuthorityOutcome, Provenance
  
 __all__: list[str] = [
+    "MAX_PRICE_USD_PER_1K",
     "GuardrailResult",
     "InvocationEvidenceBuilder",
     "InvocationEvidenceError",
     "InvocationEvidenceRecord",
     "InvocationOutcome",
+    "TokenPricing",
     "ToolCallRecord",
     "UsageMetrics",
 ]
@@ -364,6 +368,14 @@ class UsageMetrics:
                 f"invocation_evidence: monetary_cost_usd must be >= 0.0, "
                 f"got {self.monetary_cost_usd!r}"
             )
+        try:
+            finite = math.isfinite(self.monetary_cost_usd)
+        except (OverflowError, TypeError):  # an int too large for a float
+            finite = False
+        if not finite:
+            raise InvocationEvidenceError(
+                "invocation_evidence: monetary_cost_usd must be a finite number"
+            )
  
     @property
     def total_tokens(self) -> int:
@@ -379,6 +391,44 @@ class UsageMetrics:
             "total_tokens": self.total_tokens,
             "monetary_cost_usd": self.monetary_cost_usd,
         }
+ 
+ 
+# Upper bound for a configured price. With token counts capped at 10,000,000 the
+# cost of one call stays far below the largest float.
+MAX_PRICE_USD_PER_1K: Final = 10_000
+
+
+@dataclass(frozen=True, slots=True)
+class TokenPricing:
+    """Explicitly configured price per 1,000 tokens, in US dollars.
+
+    There is no default and no built-in price: an operator who wants a cost in the
+    evidence record supplies both numbers, and without them the cost stays 0.0.
+    """
+
+    input_usd_per_1k: float
+    output_usd_per_1k: float
+
+    def __post_init__(self) -> None:
+        for name, value in (
+            ("input_usd_per_1k", self.input_usd_per_1k),
+            ("output_usd_per_1k", self.output_usd_per_1k),
+        ):
+            # NaN fails the range test, and an int is compared as an int, so a huge one
+            # is refused without ever being converted to a float.
+            if type(value) not in (int, float) or not (0 <= value <= MAX_PRICE_USD_PER_1K):
+                raise InvocationEvidenceError(
+                    f"invocation_evidence: TokenPricing.{name} must be a finite number "
+                    f"from 0 to {MAX_PRICE_USD_PER_1K} USD per 1,000 tokens"
+                )
+
+    def cost_usd(self, input_tokens: int, output_tokens: int) -> float:
+        """Cost of one call. Decimal arithmetic, so 0.1 + 0.2 style noise cannot creep in."""
+        total = (
+            Decimal(input_tokens) * Decimal(repr(self.input_usd_per_1k))
+            + Decimal(output_tokens) * Decimal(repr(self.output_usd_per_1k))
+        ) / Decimal(1000)
+        return float(total)
  
  
 # ---------------------------------------------------------------------------
