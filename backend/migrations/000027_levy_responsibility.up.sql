@@ -1,4 +1,4 @@
--- Levy responsibility (ZTAX-ENG-007 §29; G-018).
+-- Levy responsibility (ZTAX-OBL-001).
 --
 -- One row per levy of a committed tax decision: the five-role decision of
 -- who the law places the levy on, who collects, reports and remits it, and

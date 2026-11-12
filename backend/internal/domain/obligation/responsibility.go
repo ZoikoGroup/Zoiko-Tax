@@ -332,7 +332,7 @@ func validateRule(rule ResponsibilityRule) error {
 }
 
 // LevyResponsibility is the responsibility decision for one levy on one item
-// of one committed tax decision (ZTAX-ENG-007 §29): who owes it, collects
+// of one committed tax decision (ZTAX-OBL-001): who owes it, collects
 // it, reports it, remits it and pays for it, decided from the parties the
 // document names. It is a record of its own beside the tax decision rather
 // than a field inside it, so it can be read, reviewed and handed to an

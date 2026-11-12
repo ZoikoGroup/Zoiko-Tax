@@ -1005,7 +1005,7 @@ export interface paths {
          * Who owes, collects, reports, remits and bears each levy of a decision
          * @description `OPERATOR`, `ANALYST` or `AUDITOR`. For each levy on each item of a
          *     committed document decision, the five-role responsibility decision
-         *     recorded with it (ZTAX-ENG-007 §29): statutory incidence, collection,
+         *     recorded with it (ZTAX-OBL-001): statutory incidence, collection,
          *     reporting, remittance and economic burden, each resolved against the
          *     parties the document names. A role whose party is absent or
          *     contested is `AMBIGUOUS` or `CONFLICTED`, never a default to the
@@ -3903,7 +3903,7 @@ export interface components {
         /**
          * LevyResponsibility
          * @description The five-role responsibility decision for one levy on one item of a
-         *     committed decision (ZTAX-ENG-007 §29). Immutable: a correction is a
+         *     committed decision (ZTAX-OBL-001). Immutable: a correction is a
          *     new decision with its own.
          */
         LevyResponsibility: {
