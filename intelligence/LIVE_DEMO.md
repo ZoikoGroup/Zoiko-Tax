@@ -280,6 +280,8 @@ The four response shapes are (all have the same seven keys, plus `proposed_code`
 
 `REFUSED` passes the Gateway's reason through, so this set may grow. A client should treat an unknown `reason_code` as a refusal, not as an error. `AI_GATEWAY_NOT_CONFIGURED` (the model runtime is not configured) is a different thing from the `NOT_CONFIGURED` outcome (no approved list).
 
+> **Outcome names are not final.** The lead has not yet confirmed the AIGOV-001 §11 vocabulary. No set of outcome or reason names should be treated as approved.
+
 ### Evidence record vs answer-checked event
 
 Two separate records are logged:
