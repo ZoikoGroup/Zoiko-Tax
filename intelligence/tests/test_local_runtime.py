@@ -365,10 +365,14 @@ _BAD_ENDPOINTS = [
     "http://127.0.0.1:notaport",
     "http://127.0.0.1:9/a b",
     "http://127.0.0.1:9/a\nb",
+    "http://" + "a" * 70 + ".example:9",  # an IDNA label over 63 characters
+    "http://a..b:9",  # an empty IDNA label
 ]
 
 
-@pytest.mark.parametrize("endpoint", _BAD_ENDPOINTS, ids=[f"bad-{i}" for i in range(13)])
+@pytest.mark.parametrize(
+    "endpoint", _BAD_ENDPOINTS, ids=[f"bad-{i}" for i in range(len(_BAD_ENDPOINTS))]
+)
 def test_an_unacceptable_endpoint_is_refused_with_fixed_text(
     monkeypatch: pytest.MonkeyPatch, endpoint: str
 ) -> None:
@@ -550,3 +554,113 @@ def test_importing_the_package_does_not_import_local_runtime() -> None:
         [sys.executable, "-c", code], cwd=_ROOT, capture_output=True, text=True, check=True
     )
     assert out.stdout.strip() == "False"
+
+
+# ---------------------------------------------------------------------------
+# Review fixes: nesting, huge integers, IDNA hosts, 3xx labels
+# ---------------------------------------------------------------------------
+
+_SHAPE = "local runtime: provider response was not shaped like a chat completion"
+_REQUIRED_SHAPE = "local runtime: provider reply was not in the required shape"
+_DIGITS = b"9" * 5000
+_GOOD_PREFIX = b'{"choices":[{"message":{"content":"ontology:demo/class"}}],'
+
+
+def _assert_clean(err: BaseException) -> None:
+    assert err.__cause__ is None
+    assert err.__context__ is None
+
+
+_NESTED_REPLIES = {
+    "nested-whole-reply": b"[" * 100_000,
+    "nested-usage": _GOOD_PREFIX + b'"usage":' + b"[" * 100_000 + b"]" * 100_000 + b"}",
+}
+
+
+@pytest.mark.parametrize("body", _NESTED_REPLIES.values(), ids=list(_NESTED_REPLIES))
+def test_a_deeply_nested_reply_is_unavailable_not_a_raw_recursion_error(
+    monkeypatch: pytest.MonkeyPatch, body: bytes
+) -> None:
+    err = _expect_unavailable(monkeypatch, _Plan(body=body))
+    assert str(err) == _SHAPE
+    _assert_clean(err)
+
+
+def test_a_deeply_nested_explain_reply_is_not_in_the_required_shape(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    doc = {"choices": [{"message": {"content": "[" * 100_000}}]}
+    err = _expect_unavailable(
+        monkeypatch,
+        _Plan(body=_body(doc)),
+        kind=Kind.EXTRACTION,
+        use_case="explain-report-figure",
+    )
+    assert str(err) == _REQUIRED_SHAPE
+    _assert_clean(err)
+
+
+def test_a_5000_digit_prompt_token_count_does_not_fail_a_good_call(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    body = _GOOD_PREFIX + b'"usage":{"prompt_tokens":' + _DIGITS + b',"completion_tokens":1}}'
+    with _server(_Plan(body=body)) as (url, _):
+        result = _runtime(monkeypatch, url).run(_ROUTE, _call())
+    assert result.proposed_code == "ontology:demo/class"
+    assert result.input_tokens is None
+    assert result.output_tokens == 1
+
+
+def test_a_5000_digit_number_elsewhere_does_not_break_parsing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    body = _GOOD_PREFIX + b'"created":' + _DIGITS + b',"usage":{"prompt_tokens":5}}'
+    with _server(_Plan(body=body)) as (url, _):
+        result = _runtime(monkeypatch, url).run(_ROUTE, _call())
+    assert result.proposed_code == "ontology:demo/class"
+    assert result.input_tokens == 5
+
+
+def test_an_eighteen_digit_count_is_read_as_an_ordinary_number_and_then_range_checked(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # 18 digits parses as an int and is then rejected by the cap; it still does not fail the call.
+    body = _GOOD_PREFIX + b'"usage":{"prompt_tokens":123456789012345678,"completion_tokens":2}}'
+    with _server(_Plan(body=body)) as (url, _):
+        result = _runtime(monkeypatch, url).run(_ROUTE, _call())
+    assert result.input_tokens is None
+    assert result.output_tokens == 2
+
+
+def test_a_unicode_error_from_the_opener_is_a_fixed_network_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _Opener:
+        def open(self, request: object, timeout: float) -> object:
+            raise UnicodeEncodeError("idna", f"{ADDR_MARK}.example", 0, 5, "label too long")
+
+    monkeypatch.setenv(ENDPOINT_ENV, f"http://{ADDR_MARK}.example:9")
+    monkeypatch.setenv(MODEL_ENV, _MODEL)
+    runtime = LocalModelRuntime()
+    monkeypatch.setattr(local_runtime, "_opener", lambda: _Opener())
+    with pytest.raises(RuntimeUnavailableError) as exc:
+        runtime.run(_ROUTE, _call(text=PROMPT_MARK))
+    assert str(exc.value) == "local runtime: network error"
+    assert ADDR_MARK not in str(exc.value) + repr(exc.value)
+    _assert_clean(exc.value)
+
+
+@pytest.mark.parametrize("code", [301, 302, 303, 307, 308])
+def test_a_real_redirect_status_gets_the_redirect_text(
+    monkeypatch: pytest.MonkeyPatch, code: int
+) -> None:
+    err = _expect_unavailable(monkeypatch, _Plan(status=code, location="/elsewhere"))
+    assert str(err) == "local runtime: the server answered with a redirect, which is refused"
+
+
+@pytest.mark.parametrize("code", [300, 304, 305])
+def test_another_3xx_status_gets_the_normal_http_status_text(
+    monkeypatch: pytest.MonkeyPatch, code: int
+) -> None:
+    err = _expect_unavailable(monkeypatch, _Plan(status=code))
+    assert str(err) == f"local runtime: provider returned HTTP {code}"

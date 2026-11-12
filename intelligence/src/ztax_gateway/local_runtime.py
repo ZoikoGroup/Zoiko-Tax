@@ -36,7 +36,7 @@ import urllib.request
 from email.message import Message
 from typing import IO, Final
 
-from .runtime import Result, Route, RuntimeUnavailableError, token_count
+from .runtime import Result, Route, RuntimeUnavailableError, json_int, token_count
 from .wire import Call, Kind
 
 __all__: list[str] = [
@@ -61,6 +61,10 @@ _MAX_REPLY_BYTES = 1_048_576
 
 _USER_AGENT = "ztax-local-runtime/1.0"
 _COMPLETIONS_PATH = "/v1/chat/completions"
+
+# The only statuses a redirect handler follows by default; this runtime refuses them.
+# Any other 3xx (300, 304, 305, ...) is reported with the normal HTTP-status text.
+_REDIRECT_STATUSES: Final = frozenset({301, 302, 303, 307, 308})
 
 # Mirrors production_registries.py's _MODEL_VERSION_ALIASES (REQ-0027) and the Groq
 # runtime's list: a model name that floats is not a model that was actually reviewed.
@@ -127,6 +131,12 @@ def _validated_base_url(endpoint: str) -> str:
         raise LocalRuntimeConfigError(_ERR_ENDPOINT)
     if not parts.hostname:
         raise LocalRuntimeConfigError(_ERR_ENDPOINT)
+    # The host must be encodable by the idna codec the socket layer uses: a label over 63
+    # characters or an empty label ("a..b") would otherwise fail later, inside a connect.
+    try:
+        parts.hostname.encode("idna")
+    except UnicodeError:
+        raise LocalRuntimeConfigError(_ERR_ENDPOINT) from None
     # No userinfo: "user:password@host" or "user@host".
     if "@" in parts.netloc or parts.username is not None or parts.password is not None:
         raise LocalRuntimeConfigError(_ERR_ENDPOINT)
@@ -328,13 +338,14 @@ class LocalModelRuntime:
             with _opener().open(request, timeout=_TIMEOUT_SECONDS) as response:
                 raw = response.read(_MAX_REPLY_BYTES + 1)
         except urllib.error.HTTPError as exc:
-            failure = _FAIL_REDIRECT if 300 <= exc.code < 400 else _fail_http(exc.code)
+            failure = _FAIL_REDIRECT if exc.code in _REDIRECT_STATUSES else _fail_http(exc.code)
             exc.close()
         except urllib.error.URLError:
             failure = _FAIL_NETWORK
         except TimeoutError:
             failure = _FAIL_TIMEOUT
-        except (OSError, http.client.HTTPException):
+        except (OSError, http.client.HTTPException, UnicodeError):
+            # UnicodeError: a host the idna codec rejects at connect time. Not an OSError.
             failure = _FAIL_NETWORK
         if failure is not None:
             log.debug(failure)
@@ -346,13 +357,13 @@ class LocalModelRuntime:
         content = ""
         doc: object = None
         try:
-            doc = json.loads(raw)
+            doc = json.loads(raw, parse_int=json_int)
             if not isinstance(doc, dict):
                 raise TypeError
             content = doc["choices"][0]["message"]["content"]
             if not isinstance(content, str):
                 raise TypeError
-        except (ValueError, KeyError, IndexError, TypeError):
+        except (ValueError, RecursionError, KeyError, IndexError, TypeError):
             failure = _FAIL_SHAPE
         if failure is None and not content.strip():
             failure = _FAIL_EMPTY
@@ -360,7 +371,7 @@ class LocalModelRuntime:
         if failure is None:
             try:
                 result = _result_from_content(call, content)
-            except ValueError:
+            except (ValueError, RecursionError):
                 failure = _FAIL_REQUIRED_SHAPE
         if failure is not None or result is None:
             log.debug(failure or _FAIL_REQUIRED_SHAPE)
