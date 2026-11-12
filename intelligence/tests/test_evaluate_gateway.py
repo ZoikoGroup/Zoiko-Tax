@@ -27,6 +27,7 @@ import ast
 import json
 import sys
 import typing
+from collections.abc import Mapping
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -1268,3 +1269,269 @@ class TestReportSha256:
         assert sha_original == sha_tampered, (
             "started_at must be excluded from report_sha256 computation"
         )
+
+
+# ---------------------------------------------------------------------------
+# Fix 1: --approved-list reads bytes, handles errors, never leaks content
+# ---------------------------------------------------------------------------
+
+# Minimal valid approved-list JSON used by Fix-1 tests.
+_VALID_APPROVED_LIST_JSON = json.dumps(
+    {
+        "list_version": "2026-01-01",
+        "approved": [
+            {
+                "code": "ontology:Telecom/Voice/Mobile",
+                "effective_from": "2024-01-01",
+            }
+        ],
+    }
+)
+
+# Minimal REVIEWED+SYNTHETIC gold file payload used by several tests.
+_REVIEWED_SYNTHETIC_CASE = {
+    "case_id": "TC-FIX1-001",
+    "sku_description": "mobile voice plan",
+    "expected_class": "ontology:Telecom/Voice/Mobile",
+    "notes": "",
+    "origin": "SYNTHETIC",
+    "author": "test",
+    "review_status": "REVIEWED",
+    "reviewer": "r@test",
+    "reviewed_on": "2026-01-01",
+    "source_ref": "",
+}
+
+_REVIEWED_SYNTHETIC_GOLD = {
+    "name": "fix1-test",
+    "version": "0.1.0",
+    "domain": "test",
+    "purpose": "fix1 approved-list test",
+    "cases": [_REVIEWED_SYNTHETIC_CASE],
+}
+
+
+def _write_gold(
+    tmp_path: Path, payload: Mapping[str, object], name: str = "test.gold.json"
+) -> Path:
+    """Write a scratch gold file into tmp_path and return its path."""
+    p = tmp_path / name
+    p.write_text(json.dumps(payload), encoding="utf-8")
+    return p
+
+
+class TestApprovedListFix:
+    """Fix 1: --approved-list must be read as bytes before passing to load_approved_list."""
+
+    def test_valid_approved_list_exits_zero(self, tmp_path: Path) -> None:
+        """A syntactically correct approved list + --as-of exits 0."""
+        gold = _write_gold(tmp_path, _REVIEWED_SYNTHETIC_GOLD)
+        approved = tmp_path / "approved.json"
+        approved.write_text(_VALID_APPROVED_LIST_JSON, encoding="utf-8")
+
+        rc = eg.main(
+            [
+                "--gold", str(gold),
+                "--allow-synthetic",
+                "--approved-list", str(approved),
+                "--as-of", "2026-06-01",
+            ]
+        )
+        assert rc == 0
+
+    def test_missing_approved_list_prints_fixed_message(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """A path that does not exist prints the exact fixed message, exits non-zero."""
+        gold = _write_gold(tmp_path, _REVIEWED_SYNTHETIC_GOLD)
+        missing = tmp_path / "no_such_file.json"
+
+        rc = eg.main(
+            [
+                "--gold", str(gold),
+                "--allow-synthetic",
+                "--approved-list", str(missing),
+                "--as-of", "2026-06-01",
+            ]
+        )
+
+        assert rc != 0
+        err = capsys.readouterr().err
+        assert "error: could not load approved list" in err
+        assert "Traceback" not in err
+
+    def test_invalid_utf8_approved_list_prints_fixed_message(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """A file with invalid UTF-8 bytes prints the exact fixed message, exits non-zero."""
+        gold = _write_gold(tmp_path, _REVIEWED_SYNTHETIC_GOLD)
+        bad = tmp_path / "bad_utf8.json"
+        bad.write_bytes(b"\xff\xfe{invalid utf-8}")
+
+        rc = eg.main(
+            [
+                "--gold", str(gold),
+                "--allow-synthetic",
+                "--approved-list", str(bad),
+                "--as-of", "2026-06-01",
+            ]
+        )
+
+        assert rc != 0
+        err = capsys.readouterr().err
+        assert "error: could not load approved list" in err
+        assert "Traceback" not in err
+
+    def test_malformed_json_approved_list_prints_fixed_message(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """A syntactically invalid JSON file prints the exact fixed message, exits non-zero."""
+        gold = _write_gold(tmp_path, _REVIEWED_SYNTHETIC_GOLD)
+        bad = tmp_path / "malformed.json"
+        bad.write_text("{ this is not json !!!", encoding="utf-8")
+
+        rc = eg.main(
+            [
+                "--gold", str(gold),
+                "--allow-synthetic",
+                "--approved-list", str(bad),
+                "--as-of", "2026-06-01",
+            ]
+        )
+
+        assert rc != 0
+        err = capsys.readouterr().err
+        assert "error: could not load approved list" in err
+        assert "Traceback" not in err
+
+    def test_sentinel_never_leaks_from_approved_list(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Content placed inside the approved-list file must never appear in stdout or stderr."""
+        sentinel = "SENTINEL-APPROVED-LIST-CONTENT-7x9q"
+        gold = _write_gold(tmp_path, _REVIEWED_SYNTHETIC_GOLD)
+        bad = tmp_path / "sentinel.json"
+        # Embed sentinel in an otherwise malformed file
+        bad.write_text(f'{{ "{sentinel}": true }}', encoding="utf-8")
+
+        rc = eg.main(
+            [
+                "--gold", str(gold),
+                "--allow-synthetic",
+                "--approved-list", str(bad),
+                "--as-of", "2026-06-01",
+            ]
+        )
+
+        assert rc != 0
+        captured = capsys.readouterr()
+        assert sentinel not in captured.out
+        assert sentinel not in captured.err
+
+    def test_no_traceback_on_missing_file(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """The fixed message contains no Python traceback text on a missing-file error."""
+        gold = _write_gold(tmp_path, _REVIEWED_SYNTHETIC_GOLD)
+
+        rc = eg.main(
+            [
+                "--gold", str(gold),
+                "--allow-synthetic",
+                "--approved-list", str(tmp_path / "ghost.json"),
+                "--as-of", "2026-06-01",
+            ]
+        )
+
+        assert rc != 0
+        captured = capsys.readouterr()
+        assert "Traceback" not in captured.out
+        assert "Traceback" not in captured.err
+
+
+# ---------------------------------------------------------------------------
+# Fix 2: pre-evaluate eligibility check gives actionable error messages
+# ---------------------------------------------------------------------------
+
+_DRAFT_CASE = {
+    "case_id": "TC-DRAFT-001",
+    "sku_description": "some sku",
+    "expected_class": "ontology:Telecom/Voice/Mobile",
+    "notes": "",
+    "origin": "SOURCE_DERIVED",
+    "author": "test",
+    "review_status": "DRAFT",
+    "reviewer": "",
+    "reviewed_on": "",
+    "source_ref": "ref-001",
+}
+
+_ALL_DRAFT_GOLD = {
+    "name": "draft-only-test",
+    "version": "0.1.0",
+    "domain": "test",
+    "purpose": "draft-only gold file",
+    "cases": [_DRAFT_CASE],
+}
+
+_REVIEWED_SYNTHETIC_GOLD_FIX2 = {
+    "name": "reviewed-synthetic-test",
+    "version": "0.1.0",
+    "domain": "test",
+    "purpose": "all-reviewed-synthetic gold file",
+    "cases": [_REVIEWED_SYNTHETIC_CASE],
+}
+
+
+class TestEligibilityPreCheckFix:
+    """Fix 2: actionable messages when no cases would reach evaluate_store()."""
+
+    def test_all_draft_prints_no_reviewed_message(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """An all-DRAFT gold file prints the REVIEWED-cases fixed message and exits 1."""
+        gold = _write_gold(tmp_path, _ALL_DRAFT_GOLD, "draft.gold.json")
+
+        rc = eg.main(["--gold", str(gold)])
+
+        assert rc == 1
+        err = capsys.readouterr().err
+        assert "error: the gold set has no REVIEWED cases" in err
+        assert "draft files cannot be evaluated" in err
+        assert "Traceback" not in err
+
+    def test_reviewed_synthetic_without_flag_prints_synthetic_message(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """REVIEWED+SYNTHETIC cases without --allow-synthetic print the SYNTHETIC message."""
+        gold = _write_gold(tmp_path, _REVIEWED_SYNTHETIC_GOLD_FIX2, "syn.gold.json")
+
+        rc = eg.main(["--gold", str(gold)])
+
+        assert rc == 1
+        err = capsys.readouterr().err
+        assert "error: all REVIEWED cases are SYNTHETIC" in err
+        assert "--allow-synthetic" in err
+        assert "Traceback" not in err
+
+    def test_reviewed_synthetic_with_flag_runs_to_completion(
+        self, tmp_path: Path
+    ) -> None:
+        """REVIEWED+SYNTHETIC cases WITH --allow-synthetic run to completion.
+
+        evidence_grade must be PIPELINE_CHECK.
+        """
+        gold = _write_gold(tmp_path, _REVIEWED_SYNTHETIC_GOLD_FIX2, "syn_ok.gold.json")
+        out = tmp_path / "report.json"
+
+        rc = eg.main(
+            [
+                "--gold", str(gold),
+                "--allow-synthetic",
+                "--out", str(out),
+            ]
+        )
+
+        assert rc == 0
+        report = json.loads(out.read_text(encoding="utf-8"))
+        assert report.get("evidence_grade") == "PIPELINE_CHECK"

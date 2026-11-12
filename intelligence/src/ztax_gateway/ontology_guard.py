@@ -423,10 +423,14 @@ def check_code(
 ) -> GuardVerdict:
     """Check whether *code* is approved and effective on *as_of*.
 
-    The lookup uses an **exact, case-sensitive** match on ``code.strip()``.
-    ATX heading markers are **not** stripped: a code that starts with ``"#"``
-    after stripping returns ``GuardVerdict.UNKNOWN``.  Callers holding a raw
-    ``Chunk.heading`` must call :func:`strip_heading_marker` first.
+    The lookup uses an **exact, case-sensitive** match.  No whitespace is
+    stripped from *code* before the lookup: a code with leading or trailing
+    spaces or newlines is **not** in the index and returns
+    ``GuardVerdict.UNKNOWN``.  ATX heading markers are **not** stripped: a
+    code that starts with ``"#"`` returns ``GuardVerdict.UNKNOWN``.  Callers
+    holding a raw ``Chunk.heading`` must call :func:`strip_heading_marker`
+    first; callers with user or model input must strip whitespace themselves
+    before calling this function.
 
     The effective window is **inclusive on both ends**:
     ``entry.effective_from <= as_of <= entry.effective_to``.
@@ -459,11 +463,10 @@ def check_code(
             "ontology_guard: check_code requires a datetime.date for 'as_of'"
         ) from None
 
-    normalised = code.strip()
-    if not normalised or normalised.startswith("#"):
+    if not code or code.startswith("#"):
         return GuardVerdict.UNKNOWN
 
-    entry = approved_list._index.get(normalised)
+    entry = approved_list._index.get(code)
 
     if entry is None:
         return GuardVerdict.UNKNOWN
