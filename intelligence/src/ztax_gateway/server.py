@@ -211,7 +211,8 @@ class Gateway:
         self._region = region
         self._train = ai_train_version
         # Ch.17 §21: default to the structured-log sink; callers may inject
-        # InMemoryEvidenceSink in tests for direct record assertions.
+        # InMemoryEvidenceSink in tests for direct record assertions. The optional file
+        # sink is chosen by gateway_factory.build_gateway, never here.
         self._evidence_sink: EvidenceSink = evidence_sink or LoggingEvidenceSink()
         # WP5: optional registry for resolving prompt labels to PromptProfile hashes.
         self._prompt_registry: PromptProfileRegistry | None = prompt_profile_registry

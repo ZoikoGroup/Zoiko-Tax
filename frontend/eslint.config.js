@@ -103,6 +103,19 @@ export default tseslint.config(
   },
 
   {
+    // The Node test files and their runner: plain JavaScript, outside the app project.
+    files: ['tests/**/*.mjs'],
+    ...tseslint.configs.disableTypeChecked,
+    languageOptions: {
+      parserOptions: { project: null },
+      globals: {
+        process: 'readonly', Response: 'readonly', ReadableStream: 'readonly', DOMException: 'readonly',
+        AbortController: 'readonly', TextEncoder: 'readonly', setImmediate: 'readonly', setTimeout: 'readonly',
+      },
+    },
+  },
+
+  {
     files: ['*.config.{js,ts}'],
     ...tseslint.configs.disableTypeChecked,
   },
