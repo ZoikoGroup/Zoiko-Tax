@@ -15,7 +15,9 @@ Usage
 from __future__ import annotations
 
 import argparse
+import contextlib
 import csv
+import os
 import sys
 from collections import Counter
 from datetime import date
@@ -25,6 +27,8 @@ from pathlib import Path
 # Spreadsheet-injection prefix characters (CSV safety)
 # ---------------------------------------------------------------------------
 _INJECTION_PREFIXES: tuple[str, ...] = ("=", "+", "-", "@")
+# Control characters that always trigger escaping (even before any formula).
+_INJECTION_CONTROLS: tuple[str, ...] = ("\t", "\r", "\n")
 
 # Review-sheet column headers
 _SHEET_COLUMNS: list[str] = [
@@ -53,8 +57,27 @@ _EMPTY_COLUMNS: int = 5
 
 
 def _safe_cell(text: str) -> str:
-    """Prefix any cell that starts with an injection character with ``'``."""
-    stripped = text.lstrip()
+    """Prefix any cell that starts with an injection character with ``'``.
+
+    Triggers escaping when the cell:
+    - already starts with ``'`` → no change (never double-escape)
+    - starts with a control character (TAB, CR, LF) → prefix ``'``
+    - starts with ``=``, ``+``, ``-``, or ``@`` → prefix ``'``
+    - starts with one or more plain spaces followed by ``=``, ``+``, ``-``,
+      or ``@`` → prefix ``'`` (strip spaces first to find the formula char)
+
+    Plain text, empty strings, and already-escaped cells are returned unchanged.
+    """
+    if not text:
+        return text
+    # Never double-escape.
+    if text[0] == "'":
+        return text
+    # Leading control character — always escape.
+    if text[0] in _INJECTION_CONTROLS:
+        return "'" + text
+    # Leading injection character (after removing leading spaces only).
+    stripped = text.lstrip(" ")
     if stripped and stripped[0] in _INJECTION_PREFIXES:
         return "'" + text
     return text
@@ -271,6 +294,28 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 1
+
+    # Guard: --review-sheet must not resolve to the same file as an input.
+    if args.review_sheet is not None:
+        _sheet = Path(args.review_sheet).resolve()
+        _inputs: list[Path] = [Path(args.gold).resolve()]
+        if args.approved_list is not None:
+            _inputs.append(Path(args.approved_list).resolve())
+        for _inp in _inputs:
+            _collision = False
+            # Normalised-string comparison (case-folded on Windows).
+            if str(_sheet).lower() == str(_inp).lower():
+                _collision = True
+            # samefile comparison when both paths exist on disk.
+            if not _collision and _sheet.exists() and _inp.exists():
+                with contextlib.suppress(OSError):
+                    _collision = os.path.samefile(_sheet, _inp)
+            if _collision:
+                print(
+                    "error: the review sheet path must not be an input file",
+                    file=sys.stderr,
+                )
+                return 1
 
     # Parse as_of date
     as_of_date: date | None = None

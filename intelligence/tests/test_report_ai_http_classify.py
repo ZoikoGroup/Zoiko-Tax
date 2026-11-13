@@ -1068,3 +1068,51 @@ def test_the_handler_fallback_has_the_same_key_set(
     assert doc["synthetic"] is True
     assert doc["list_version"] == (_APPROVED_LIST.list_version if with_list else None)
     assert "FALLBACK_BOOM_MARKER_DO_NOT_ECHO" not in json.dumps(doc)
+
+
+# ---------------------------------------------------------------------------
+# Item 3: startup test — huge integer in approved list gives fixed message
+# ---------------------------------------------------------------------------
+
+
+class TestStartupHugeIntInApprovedList:
+    """report_ai_http.main() with a huge integer in the approved list file must
+    print the fixed stderr message and return exit code 2, never a traceback."""
+
+    def test_huge_int_gives_fixed_message(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        # Write a file containing a huge integer — triggers ValueError in json.loads.
+        bad = tmp_path / "huge.json"
+        bad.write_bytes(b"[" + b"9" * 5000 + b"]")
+
+        # Point the env var at the bad file.
+        monkeypatch.setenv("ZTAX_ONTOLOGY_APPROVED_LIST", str(bad))
+
+        import unittest.mock as _mock
+
+        # Patch GroqDemoRuntime and build_gateway so they don't fail early.
+        fake_runtime = _mock.MagicMock()
+        monkeypatch.setattr(report_ai_http, "GroqDemoRuntime", lambda: fake_runtime)
+        monkeypatch.setattr(report_ai_http, "build_gateway", lambda *a, **kw: _mock.MagicMock())
+
+        # Patch serve_live_demo._env (accessed via the already-loaded module reference
+        # inside report_ai_http) to return non-empty strings.
+        _sdemo = _MODULES["serve_live_demo"]
+        monkeypatch.setattr(_sdemo, "_env", lambda key: "dummy-value")
+
+        # Patch report_fixture.generate_fixture so it doesn't blow up.
+        _rf = _MODULES["report_fixture"]
+        monkeypatch.setattr(_rf, "generate_fixture", lambda: {})
+
+        rc = report_ai_http.main()
+
+        err = capsys.readouterr().err
+        assert rc == 2
+        assert "report_ai_http: approved ontology list: invalid or unreadable" in err
+        assert "Traceback" not in err
+        assert "ValueError" not in err
+        assert "RecursionError" not in err

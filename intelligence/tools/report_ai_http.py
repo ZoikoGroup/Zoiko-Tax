@@ -450,7 +450,7 @@ def classify(
         )
 
     reply = json.loads(reply_bytes)
-    proposed_code: str = reply.get("proposed_code", "").strip()
+    proposed_code: str = reply.get("proposed_code", "")
 
     verdict, reason_code = apply_ontology_guard(proposed_code, as_of, approved_list)
 

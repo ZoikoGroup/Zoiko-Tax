@@ -111,6 +111,21 @@ class ToolBrokerRefusedError(Exception):
         self.context = dict(context or {})
 
 
+# Refusal details are fixed text.  A detail is copied into the caller's error, the
+# INFO log and (through the transport) the audit trail, so it never repeats anything
+# the caller sent: not the tool id, not the region, nothing from an error message
+# built from the request.  The detail that names a catalog-owned tool id, an enum
+# value (action class) or a scope label stays where it is.
+DETAIL_KILL_SWITCH_ENGAGED = "the kill switch is engaged for this tool"
+DETAIL_UNKNOWN_TOOL = "the tool is not a registered tool"
+DETAIL_TOOL_SUSPENDED = "the tool is suspended"
+DETAIL_MALFORMED_CONTEXT = "the tool broker context is malformed"
+
+# What stands in for a tool id the catalog does not know, in a refusal context
+# and in the log: that id is whatever the caller sent.
+UNREGISTERED_TOOL = "unregistered"
+
+
 # ---------------------------------------------------------------------------
 # Core data structures (all frozen — no in-place mutation after construction)
 # ---------------------------------------------------------------------------
@@ -325,18 +340,27 @@ def authorise(catalog: ToolCatalog, provenance: ToolProvenance) -> ToolProfile:
     8. Idempotency token (MUTATE and COMMIT).
     9. Budget.
     """
+    malformed = False
     try:
         provenance.validate()
-    except ValueError as exc:
-        raise ToolBrokerRefusedError(Refusal.MALFORMED_CONTEXT, str(exc)) from exc
+    except ValueError:
+        malformed = True
+    if malformed:
+        # Raised after the except block: no __context__, and the validation
+        # message (which can quote a field of the request) goes nowhere.
+        raise ToolBrokerRefusedError(
+            Refusal.MALFORMED_CONTEXT, DETAIL_MALFORMED_CONTEXT,
+        )
 
     context = provenance.redacted()
+    if catalog.get(provenance.tool_id) is None:
+        context["tool_id"] = UNREGISTERED_TOOL
 
     # 1. Kill switch — global first so a global kill never reports "unknown tool".
     if catalog.is_killed(provenance.tool_id):
         raise ToolBrokerRefusedError(
             Refusal.KILL_SWITCH_ENGAGED,
-            f"the kill switch is engaged for {provenance.tool_id!r}",
+            DETAIL_KILL_SWITCH_ENGAGED,
             context,
         )
 
@@ -345,7 +369,7 @@ def authorise(catalog: ToolCatalog, provenance: ToolProvenance) -> ToolProfile:
     if tool is None:
         raise ToolBrokerRefusedError(
             Refusal.UNKNOWN_TOOL,
-            f"{provenance.tool_id!r} is not a registered tool",
+            DETAIL_UNKNOWN_TOOL,
             context,
         )
 
@@ -353,7 +377,7 @@ def authorise(catalog: ToolCatalog, provenance: ToolProvenance) -> ToolProfile:
     if tool.suspended:
         raise ToolBrokerRefusedError(
             Refusal.TOOL_SUSPENDED,
-            f"{provenance.tool_id!r} is suspended",
+            DETAIL_TOOL_SUSPENDED,
             context,
         )
 

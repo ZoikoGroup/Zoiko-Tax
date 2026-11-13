@@ -652,3 +652,33 @@ def test_probe_loader_error_never_contains_json_decode_message() -> None:
     assert "Expecting" not in msg
     assert "JSONDecodeError" not in msg
     assert exc_info.value.__cause__ is None
+
+
+# ---------------------------------------------------------------------------
+# Item 3: ValueError and RecursionError in load_approved_list
+# ---------------------------------------------------------------------------
+
+
+class TestLoaderValueErrorRecursion:
+    """load_approved_list must catch ValueError and RecursionError and raise
+    OntologyGuardError with the fixed message and no chained context."""
+
+    def test_huge_integer_raises_module_error(self) -> None:
+        # A 5000-digit integer literal causes json.loads to raise ValueError.
+        payload = b"[" + b"9" * 5000 + b"]"
+        sentinel = "SENTINEL_HUGE_INT_OG"
+        with pytest.raises(OntologyGuardError) as exc_info:
+            load_approved_list(payload)
+        err = exc_info.value
+        assert str(err) == "ontology_guard: payload is not valid JSON"
+        assert err.__context__ is None
+        assert sentinel not in str(err)
+
+    def test_deep_nesting_raises_module_error(self) -> None:
+        # Deeply nested JSON causes RecursionError in json.loads.
+        payload = b"[" * 100_000
+        with pytest.raises(OntologyGuardError) as exc_info:
+            load_approved_list(payload)
+        err = exc_info.value
+        assert str(err) == "ontology_guard: payload is not valid JSON"
+        assert err.__context__ is None

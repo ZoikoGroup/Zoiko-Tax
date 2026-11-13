@@ -10,12 +10,14 @@ Design rules
 * The check function is **pure and deterministic**: given the same arguments
   it always returns the same verdict.
 * ``check_code`` performs an **exact, case-sensitive** match on the code
-  string after nothing but ``str.strip()``.  It does **not** strip Markdown
+  string with **no whitespace stripping**.  It does **not** strip Markdown
   ATX heading markers (``#``): a code that starts with ``"#"`` is
-  ``UNKNOWN``.  Callers that hold a raw ``Chunk.heading`` value must call
-  :func:`strip_heading_marker` before passing the code to :func:`check_code`.
-* ``strip_heading_marker`` is a separate, explicit helper.  It is not called
-  inside :func:`check_code`.
+  ``UNKNOWN``.  Callers must pass the string exactly as it will be used.
+  Those holding a raw ``Chunk.heading`` value must call
+  :func:`strip_heading_marker` before passing the code to :func:`check_code`;
+  callers with user or model input must strip whitespace themselves.
+* ``strip_heading_marker`` is a separate, explicit helper.  It is **not**
+  called inside :func:`check_code`.
 * ``as_of`` is **required** in :func:`check_code`.  The function never
   defaults to the current date and never reads the clock anywhere.
 * Fail-closed: an unrecognised, expired or not-yet-effective code is *not*
@@ -353,10 +355,15 @@ def load_approved_list(payload: str | bytes) -> ApprovedOntologyList:
         ) from None
 
     _json_error: str | None = None
+    _json_overflow: bool = False
     try:
         data = json.loads(payload)
     except json.JSONDecodeError:
         _json_error = "ontology_guard: payload is not valid JSON"
+    except (ValueError, RecursionError):
+        _json_overflow = True
+    if _json_overflow:
+        raise OntologyGuardError("ontology_guard: payload is not valid JSON") from None
     if _json_error is not None:
         raise OntologyGuardError(_json_error) from None
 

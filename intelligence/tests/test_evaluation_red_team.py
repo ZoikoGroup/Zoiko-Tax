@@ -226,14 +226,6 @@ def test_the_gateway_itself_does_not_redact_model_output() -> None:
     assert marker not in rig.records_text()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "known defect: tool_broker.authorise repeats the tool id the caller or model named in "
-        "its refusal detail and context (the governance check had the same defect until the "
-        "fixed-text change). Remove this marker when the broker uses fixed text."
-    ),
-)
 def test_a_broker_refusal_does_not_repeat_the_forged_tool_name() -> None:
     sentinel = "RT-FORGED-NAME-IN-DETAIL-f3"
     catalog = ToolCatalog(
