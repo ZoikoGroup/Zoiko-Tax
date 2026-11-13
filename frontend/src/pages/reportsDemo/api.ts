@@ -42,6 +42,7 @@ export const DESCRIPTION_MAX = 1000
 export type ClassifyResult =
   | { readonly status: 'reply'; readonly reply: ClassifyReply }
   | { readonly status: 'rejected' }
+  | { readonly status: 'not_found' }
   | { readonly status: 'service' }
   | { readonly status: 'network' }
   | { readonly status: 'unreadable' }
@@ -50,10 +51,13 @@ export type ClassifyResult =
 
 /** The one status the route uses for input it will not take (fixed 400 bodies). */
 const HTTP_BAD_INPUT = 400
+/** The route is missing: another service on the port, or an older demo service without /demo/classify. */
+const HTTP_NOT_FOUND = 404
 
 /**
  * POST /demo/classify. Each ending is its own status: 'rejected' is the 400 for bad
- * input only; any other non-2xx answer is 'service' (the service is failing, not the
+ * input only; 404 is 'not_found' (the service has no such route, retrying cannot help);
+ * any other non-2xx answer is 'service' (the service is failing, not the
  * input); 'network' is no answer at all; 'timeout' is the platform timer
  * (DEMO_AI_TIMEOUT_MS) firing; 'unreadable' is a 2xx body that is not a classify reply.
  */
@@ -69,7 +73,10 @@ export async function requestClassify(
     if (res.reason === 'aborted') return { status: 'aborted' }
     if (res.reason === 'timeout') return { status: 'timeout' }
     if (res.reason === 'unreadable') return { status: 'unreadable' }
-    if (res.reason === 'http') return { status: res.status === HTTP_BAD_INPUT ? 'rejected' : 'service' }
+    if (res.reason === 'http') {
+      if (res.status === HTTP_BAD_INPUT) return { status: 'rejected' }
+      return { status: res.status === HTTP_NOT_FOUND ? 'not_found' : 'service' }
+    }
     return { status: 'network' }
   }
   const reply = parseClassifyReply(res.body)

@@ -22,7 +22,7 @@ import { DEMO_AI_TIMEOUT_MS } from '../../platform/demoAi'
 import type { ClassifyReply } from './model'
 
 /** Ways a request can end without a reply this page can use. */
-export type FailureKind = 'rejected' | 'timeout' | 'network' | 'service' | 'unreadable'
+export type FailureKind = 'rejected' | 'not_found' | 'timeout' | 'network' | 'service' | 'unreadable'
 
 export type ViewKind =
   | 'proposed'
@@ -53,11 +53,26 @@ const HEADLINES: Readonly<Record<ViewKind, string>> = {
   not_configured: 'Not configured',
   needs_review: 'Result could not be interpreted',
   rejected: 'Request not accepted',
+  not_found: 'Route not found on the AI service',
   timeout: 'Taking too long',
   network: 'AI service not reachable',
   service: 'AI service could not answer',
   unreadable: 'Reply could not be read',
 }
+
+// Fixed labels and notes the panel shows around a view. The panel holds no text of its own.
+export const BUSY_LABEL = 'Classifying…'
+export const SUBMIT_LABEL = 'Classify'
+export const RETRY_LABEL = 'Try again'
+export const DATA_NOTE = 'Synthetic data only. Do not enter real customer data.'
+export const SYNTHETIC_BADGE = 'Synthetic demo data'
+export const SYNTHETIC_ONLY_NOTE = 'Synthetic demo data only.'
+/** Shown before and after the list version: "<BEFORE> <version><AFTER>". */
+export const LIST_NOTE_BEFORE = 'Synthetic demo. Checked against the SYNTHETIC list'
+export const LIST_NOTE_AFTER = '. This is not the approved ontology list (pending D-05).'
+export const EVIDENCE_LABEL = 'Evidence:'
+export const EVIDENCE_MISSING = 'Evidence id not available'
+export const CONFIDENCE_NOTE = 'Confidence: not calibrated'
 
 const TIMEOUT_SECONDS = Math.round(DEMO_AI_TIMEOUT_MS / 1000)
 const UNAFFECTED = 'Deterministic processing is unaffected.'
@@ -107,6 +122,8 @@ const GATEWAY_NOT_CONFIGURED = 'AI_GATEWAY_NOT_CONFIGURED'
 const FAILURE_SENTENCES: Readonly<Record<FailureKind, string>> = {
   rejected:
     'The service did not accept the request. Check that both fields are filled and not too long, shorten them if needed, then press Classify.',
+  not_found:
+    'The AI service does not have this route. Ask whoever runs the demo to check that the service is up to date.',
   timeout: `The AI service did not answer within ${String(TIMEOUT_SECONDS)} seconds. It may still finish in the background. Try again. ${ASK_A_REVIEWER} ${UNAFFECTED}`,
   network: `This page could not reach the AI service. Check that the demo service is running and that your connection works, then try again. ${UNAFFECTED}`,
   service: `The AI service reported a problem and did not answer. Try again in a moment. ${ASK_A_REVIEWER} ${UNAFFECTED}`,

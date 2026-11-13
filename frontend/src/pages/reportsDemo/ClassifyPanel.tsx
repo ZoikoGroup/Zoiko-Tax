@@ -3,7 +3,7 @@
  *
  * States: idle, busy, and one ending: a reply (proposed, set aside, blocked, not
  * configured, could not be interpreted, service problem) or a failure (input not
- * accepted, timeout, not reachable, service error, unreadable reply).
+ * accepted, route missing, timeout, not reachable, service error, unreadable reply).
  *
  * It switches on `kind` from outcomes.ts and never on a wire string, and it holds
  * no sentence of its own: every text comes from outcomes.ts. Nothing the server
@@ -18,7 +18,22 @@ import { Id } from '../../ui/kit'
 import { DESCRIPTION_MAX, SUBJECT_REF_MAX } from './api'
 import { createClassifyRunner, type ClassifyEnding, type ClassifyRunner } from './classifyRun'
 import type { ClassifyReply } from './model'
-import { viewOf, viewOfFailure, type ClassifyView } from './outcomes'
+import {
+  BUSY_LABEL,
+  CONFIDENCE_NOTE,
+  DATA_NOTE,
+  EVIDENCE_LABEL,
+  EVIDENCE_MISSING,
+  LIST_NOTE_AFTER,
+  LIST_NOTE_BEFORE,
+  RETRY_LABEL,
+  SUBMIT_LABEL,
+  SYNTHETIC_BADGE,
+  SYNTHETIC_ONLY_NOTE,
+  viewOf,
+  viewOfFailure,
+  type ClassifyView,
+} from './outcomes'
 
 // ---------------------------------------------------------------------------
 // Prefill text (synthetic demo data)
@@ -46,21 +61,21 @@ const toneOf = (view: ClassifyView): 'pass' | 'caution' | 'neutral' => {
 const SyntheticNote = ({ view, listVersion }: { view: ClassifyView; listVersion: string | null }) =>
   view.listChecked && listVersion !== null ? (
     <p className="rd-cl-body rd-muted">
-      Synthetic demo. Checked against the SYNTHETIC list <span className="mono">{listVersion}</span>.
-      This is not the approved ontology list (pending D-05).
+      {LIST_NOTE_BEFORE} <span className="mono">{listVersion}</span>
+      {LIST_NOTE_AFTER}
     </p>
   ) : (
-    <p className="rd-cl-body rd-muted">Synthetic demo data only.</p>
+    <p className="rd-cl-body rd-muted">{SYNTHETIC_ONLY_NOTE}</p>
   )
 
 const EvidenceLine = ({ evidenceId }: { evidenceId: string | null }) => (
   <p className="rd-cl-body rd-muted">
     {evidenceId !== null ? (
       <>
-        Evidence: <Id value={evidenceId} />
+        {EVIDENCE_LABEL} <Id value={evidenceId} />
       </>
     ) : (
-      'Evidence id not available'
+      EVIDENCE_MISSING
     )}
   </p>
 )
@@ -79,16 +94,16 @@ const ResultView = ({
     <div className={`rd-cl-result rd-cl-result--${toneOf(view)}`}>
       <div className="rd-cl-result-head">
         <span className="rd-cl-headline">{view.headline}</span>
-        <span className="rd-badge rd-cl-synthetic-badge">Synthetic demo data</span>
+        <span className="rd-badge rd-cl-synthetic-badge">{SYNTHETIC_BADGE}</span>
       </div>
       {view.code !== null ? <p className="rd-cl-code mono">{view.code}</p> : null}
       <p className="rd-cl-body">{view.sentence}</p>
       <SyntheticNote view={view} listVersion={reply === null ? null : reply.list_version} />
-      {view.kind === 'proposed' ? <p className="rd-cl-body rd-muted">Confidence: not calibrated</p> : null}
+      {view.kind === 'proposed' ? <p className="rd-cl-body rd-muted">{CONFIDENCE_NOTE}</p> : null}
       {showsEvidence ? <EvidenceLine evidenceId={reply.evidence_id} /> : null}
       {view.canRetry ? (
         <button type="button" className="ztax-btn-quiet" onClick={onRetry}>
-          Try again
+          {RETRY_LABEL}
         </button>
       ) : null}
     </div>
@@ -117,7 +132,7 @@ export const ClassifyPanel = () => {
   )
 
   /**
-   * Sends the current form values. Used by the form and by "Try again" (manual retry
+   * Sends the current form values. Used by the form and by the retry button (manual retry
    * only). While a request is in flight this sends nothing: two quick submits make one.
    */
   const run = () => {
@@ -140,7 +155,7 @@ export const ClassifyPanel = () => {
         Classification with approved-list check (demo)
       </h2>
       <p className="rd-cl-data-note ztax-note" role="note">
-        Synthetic data only. Do not enter real customer data.
+        {DATA_NOTE}
       </p>
 
       <form className="ztax-form rd-cl-form" onSubmit={submit}>
@@ -178,7 +193,7 @@ export const ClassifyPanel = () => {
 
         <div className="ztax-form-actions">
           <button type="submit" className="ztax-btn-copper" disabled={isBusy}>
-            {isBusy ? 'Classifying…' : 'Classify'}
+            {isBusy ? BUSY_LABEL : SUBMIT_LABEL}
           </button>
         </div>
       </form>

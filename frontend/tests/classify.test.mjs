@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { afterEach, describe, mock, test } from 'node:test'
 
 import { DEMO_AI_TIMEOUT_MS } from '../src/platform/demoAi.ts'
 import { requestClassify } from '../src/pages/reportsDemo/api.ts'
 import { createClassifyRunner } from '../src/pages/reportsDemo/classifyRun.ts'
-import { viewOf, viewOfFailure } from '../src/pages/reportsDemo/outcomes.ts'
+import * as outcomes from '../src/pages/reportsDemo/outcomes.ts'
+
+const { viewOf, viewOfFailure } = outcomes
 
 const KEYS = (o = {}) => ({
   outcome: 'PROPOSED', verdict: 'PASS', reason_code: 'CHECKS_PASSED', evidence_id: 'evid-1',
@@ -12,7 +16,7 @@ const KEYS = (o = {}) => ({
   proposed_code: 'ontology:telecom/voice/mobile', ...o,
 })
 const PARAMS = { subjectRef: 'sku:DEMO-1', description: 'synthetic demo text' }
-const FAILURES = ['rejected', 'timeout', 'network', 'service', 'unreadable']
+const FAILURES = ['rejected', 'not_found', 'timeout', 'network', 'service', 'unreadable']
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
 const tick = () => new Promise((r) => setImmediate(r))
 
@@ -50,7 +54,7 @@ describe('texts (outcomes.ts)', () => {
   })
 
   test('only a service that may answer next time offers a retry', () => {
-    for (const f of FAILURES) assert.equal(viewOfFailure(f).canRetry, f !== 'rejected', f)
+    for (const f of FAILURES) assert.equal(viewOfFailure(f).canRetry, f !== 'rejected' && f !== 'not_found', f)
     assert.equal(viewOf(KEYS({ outcome: 'SOMETHING_NEW' })).canRetry, false)
     assert.equal(viewOf(KEYS({ outcome: 'REFUSED', verdict: 'BLOCK', reason_code: 'AI_KILL_SWITCH_ENGAGED' })).canRetry, false)
     assert.equal(viewOf(KEYS()).canRetry, false)
@@ -70,6 +74,13 @@ describe('texts (outcomes.ts)', () => {
     const v = viewOf(KEYS({ outcome: 'REFUSED', verdict: 'BLOCK', reason_code: 'AI_GATEWAY_NOT_CONFIGURED' }))
     assert.equal(v.kind, 'not_configured')
     assert.match(v.sentence, /AI model is not set up/)
+  })
+
+  test('a missing route says so, offers no retry and sends the person to whoever runs the demo', () => {
+    const v = viewOfFailure('not_found')
+    assert.equal(v.headline, 'Route not found on the AI service')
+    assert.equal(v.sentence, 'The AI service does not have this route. Ask whoever runs the demo to check that the service is up to date.')
+    assert.equal(v.canRetry, false)
   })
 
   test('the timeout text names the real limit', () => {
@@ -96,7 +107,12 @@ describe('what the service sent (api.ts, demoAi.ts)', () => {
     assert.equal((await run()).status, 'rejected')
   })
 
-  for (const status of [404, 413, 500, 502, 503]) {
+  test('HTTP 404 is its own ending: the service has no such route', async () => {
+    fakeFetch(() => Promise.resolve(json(404, { error: 'not found' })))
+    assert.equal((await run()).status, 'not_found')
+  })
+
+  for (const status of [401, 403, 413, 429, 500, 502, 503]) {
     test(`HTTP ${String(status)} is a service problem, not a rejected input`, async () => {
       fakeFetch(() => Promise.resolve(json(status, { error: 'x' })))
       assert.equal((await run()).status, 'service')
@@ -281,6 +297,17 @@ describe('one request at a time (classifyRun.ts)', () => {
     assert.equal(endings[0].kind, 'reply')
   })
 
+  test('an aborted result that we did not cancel ends as a network failure', async () => {
+    const { calls, send } = held()
+    const runner = createClassifyRunner(send)
+    const endings = []
+    runner.start(PARAMS, (e) => endings.push(e))
+    calls[0].resolve({ status: 'aborted' })
+    await tick()
+    assert.deepEqual(endings, [{ kind: 'failure', failure: 'network' }])
+    assert.equal(runner.busy(), false)
+  })
+
   test('a send that throws does not leave the runner stuck busy', async () => {
     const runner = createClassifyRunner(() => Promise.reject(new Error('boom')))
     const endings = []
@@ -288,5 +315,42 @@ describe('one request at a time (classifyRun.ts)', () => {
     await tick()
     assert.equal(runner.busy(), false)
     assert.deepEqual(endings, [{ kind: 'failure', failure: 'unreadable' }])
+  })
+})
+
+describe('the panel holds no text of its own (ClassifyPanel.tsx)', () => {
+  // `npm test` runs from frontend/, where the sources live.
+  const source = readFileSync(join(process.cwd(), 'src', 'pages', 'reportsDemo', 'ClassifyPanel.tsx'), 'utf8')
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, '')
+  const NAMES = [
+    'BUSY_LABEL', 'SUBMIT_LABEL', 'RETRY_LABEL', 'DATA_NOTE', 'SYNTHETIC_BADGE', 'SYNTHETIC_ONLY_NOTE',
+    'LIST_NOTE_BEFORE', 'LIST_NOTE_AFTER', 'EVIDENCE_LABEL', 'EVIDENCE_MISSING', 'CONFIDENCE_NOTE',
+  ]
+
+  test('every label and note is a named constant from outcomes.ts with a fixed value', () => {
+    for (const name of NAMES) assert.equal(typeof outcomes[name], 'string', name)
+    assert.equal(outcomes.RETRY_LABEL, 'Try again')
+    assert.equal(outcomes.BUSY_LABEL, 'Classifying…')
+    assert.equal(outcomes.CONFIDENCE_NOTE, 'Confidence: not calibrated')
+    assert.equal(outcomes.EVIDENCE_MISSING, 'Evidence id not available')
+  })
+
+  test('the panel uses each constant and writes none of their text itself', () => {
+    const afterImports = code.slice(code.indexOf("from './outcomes'"))
+    for (const name of NAMES) {
+      assert.ok(afterImports.split(/[^A-Z_]/).includes(name), `${name} is not used`)
+      const text = outcomes[name].replace(/^\. /, '').replace(/:$/, '')
+      // A short label such as "Classify" is also a prefix of code names, so it is looked for as a literal.
+      const written = [`'${text}'`, `"${text}"`, `>${text}`, `${text}<`, `\n${text}`].some((x) => code.includes(x)) ||
+        (text.length > 12 && code.includes(text))
+      assert.ok(!written, `${name} text is written in the panel`)
+    }
+  })
+
+  test('no sentence is written between tags (only the heading and two field labels remain)', () => {
+    const between = [...code.matchAll(/>([^<>{}]*[A-Za-z]{3,}[^<>{}]*)</g)].map((m) => m[1].trim()).filter(Boolean)
+    const allowed = ['Classification with approved-list check (demo)', 'Subject reference', 'Description']
+    // `&&` marks a code fragment the pattern caught (an arrow function's `>`), not text.
+    assert.deepEqual(between.filter((t) => !t.includes('&&') && !allowed.includes(t)), [])
   })
 })
