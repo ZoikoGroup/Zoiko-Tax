@@ -37,8 +37,7 @@ from typing import Any, Final, NoReturn
 
 import grpc
 
-from .evidence_file_sink import default_evidence_sink
-from .evidence_sink import EvidenceSink
+from .evidence_sink import EvidenceSink, LoggingEvidenceSink
 from .fake_runtime import FakeRuntime
 from .governance import (
     UNREGISTERED_USE_CASE,
@@ -212,10 +211,9 @@ class Gateway:
         self._region = region
         self._train = ai_train_version
         # Ch.17 §21: default to the structured-log sink; callers may inject
-        # InMemoryEvidenceSink in tests for direct record assertions. With
-        # ZTAX_EVIDENCE_FILE_PATH set, the default also appends each record to that file
-        # (evidence_file_sink.py); with it unset the default is the logging sink alone.
-        self._evidence_sink: EvidenceSink = evidence_sink or default_evidence_sink()
+        # InMemoryEvidenceSink in tests for direct record assertions. The optional file
+        # sink is chosen by gateway_factory.build_gateway, never here.
+        self._evidence_sink: EvidenceSink = evidence_sink or LoggingEvidenceSink()
         # WP5: optional registry for resolving prompt labels to PromptProfile hashes.
         self._prompt_registry: PromptProfileRegistry | None = prompt_profile_registry
         # WP5: sink for AnswerCheckedEvents; defaults to the logging sink.

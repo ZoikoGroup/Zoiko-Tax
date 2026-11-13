@@ -20,6 +20,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Final
 
+from .evidence_file_sink import EvidenceFileConfigError, default_evidence_sink
 from .governance import UseCaseRegistry
 from .invocation_check_event import LoggingCheckEventSink
 from .production_gates import PromptProfileRegistry
@@ -83,12 +84,20 @@ def build_gateway(
     if verify is not None:
         verify(registry, routes)
 
+    # Optional file copy of every evidence record (ZTAX_EVIDENCE_FILE_PATH). Off unless set.
+    # A path that is set and not usable stops start-up with the sink's own fixed text.
+    try:
+        evidence_sink = default_evidence_sink()
+    except EvidenceFileConfigError as exc:
+        raise GatewayFactoryError(str(exc)) from None
+
     return Gateway(
         registry,
         routes,
         runtime,
         region,
         train,
+        evidence_sink=evidence_sink,
         kill_state_path=config_path,
         prompt_profile_registry=profiles,
         check_event_sink=LoggingCheckEventSink(),
