@@ -59,13 +59,14 @@ is available. Three statuses are used:
 - ZTAX-CLS-001 (Telecom Product Ontology) is registered as a DRAFT in `docs/register.yaml`; no plain-text or Markdown spec exists under `docs/specs/`. The registered document is a binary DOCX; `ontology_alignment.py` requires a Markdown input and cannot read it. No alignment run has been completed and no match count is available.
 - Go-side behaviour for T4 is not checked from this folder.
 - Fixed: an error the Gateway does not name now leaves one BLOCK record (AI_GATEWAY_UNAVAILABLE, fixed detail, no exception text).
-- `usage.latency_ms` is set on every record of a call that reached the runtime; tokens and cost are unpopulated: no provider telemetry.
+- `usage.latency_ms` is set on every record of a call that reached the runtime; tokens and cost remain unpopulated (zero) only for runtimes reporting no counts. Hosted-API runtimes parse prompt and completion tokens into UsageMetrics, and TokenPricing calculates USD cost subject to explicit price ceilings (tests/test_token_usage.py).
 - Refusal details for kill switch, unknown or suspended use case, region and malformed context are fixed text; an unknown id is logged and recorded as `unregistered`. Data-class refusal details still name the PRIV-001 class, because existing tests assert it.
 - The approved ontology list (`config/approved_ontology.live-demo.json`) is synthetic; the real approved ontology list (decision D-05 in the Intelligence Completion Plan, which is not stored in this repository) is needed for `tools/report_ai_http.py`.
 - The approved-list check runs only on `POST /demo/classify` (`tools/report_ai_http.py`); the Go-to-gRPC classification path (`backend/internal/app/classification.go`) gets only the `ontology:` format check (`backend/internal/app/classification.go`, test `TestProposalGoesToReviewWhenTheAIPlaneCannotHelp` in `backend/internal/app/classification_test.go`).
 - The check-event sink is the logging sink; there is no file-based sink yet (`src/ztax_gateway/server.py`).
-- The evaluation harness (`tools/evaluate_gateway.py`): `--approved-list` requires `--as-of`; the list is read as bytes; failures print one fixed message; two eligibility pre-check messages guard all-draft and all-synthetic stores; synthetic runs produce `evidence_grade == "PIPELINE_CHECK"` (`tests/test_evaluate_gateway.py`).
-- The gold-set status tool (`tools/gold_set_status.py`) is read-only: status, coverage (requires `--approved-list` and `--as-of`), and review-sheet export (`--review-sheet`, `--force` to overwrite) (`tests/test_gold_set_status.py`).
+- The evaluation harness (`tools/evaluate_gateway.py`): `--approved-list` requires `--as-of`; the list is read as bytes; failures print one fixed message; two eligibility pre-check messages guard all-draft and all-synthetic stores; synthetic runs produce `evidence_grade == "PIPELINE_CHECK"` (`tests/test_evaluate_gateway.py`); the real draft gold file cannot be evaluated because it has no REVIEWED case.
+- The gold-set status tool (`tools/gold_set_status.py`) is read-only: status, coverage (requires `--approved-list` and `--as-of`), and review-sheet export (`--review-sheet`; never overwrites an input file) (`tests/test_gold_set_status.py`).
+- LocalModelRuntime (`src/ztax_gateway/local_runtime.py`, `ZTAX_LOCAL_RUNTIME_ENDPOINT`, `ZTAX_LOCAL_RUNTIME_MODEL`) is not wired into `server.py` or gateway factory; ReleaseGate defaults to full ADV-001..ADV-021 suite (`src/ztax_gateway/evaluation_adversarial.py`).
 
 ## F. Open decisions (from the project team, not verifiable from code)
 
