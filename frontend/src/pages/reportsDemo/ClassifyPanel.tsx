@@ -1,22 +1,24 @@
 /**
  * ClassifyPanel — "Classification with approved-list check (demo)" panel.
  *
- * States: idle, busy, reply (proposed, set aside, blocked, not configured, could
- * not be interpreted), rejected input, timeout, unavailable.
+ * States: idle, busy, and one ending: a reply (proposed, set aside, blocked, not
+ * configured, could not be interpreted, service problem) or a failure (input not
+ * accepted, timeout, not reachable, service error, unreadable reply).
  *
- * It switches on `kind` from outcomes.ts and never on a wire string, and it shows
- * only fixed text: nothing the server sends is displayed except the proposed code
- * of a passed reply, the list version and the evidence id.
+ * It switches on `kind` from outcomes.ts and never on a wire string, and it holds
+ * no sentence of its own: every text comes from outcomes.ts. Nothing the server
+ * sends is displayed except the proposed code of a passed reply, the list version
+ * and the evidence id. One request at a time is enforced by classifyRun.ts.
  *
  * DEMO ONLY. Synthetic data only. Never computes a real fiscal determination.
  */
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 
-import { DEMO_AI_TIMEOUT_MS } from '../../platform/demoAi'
 import { Id } from '../../ui/kit'
-import { DESCRIPTION_MAX, requestClassify, SUBJECT_REF_MAX, type ClassifyResult } from './api'
+import { DESCRIPTION_MAX, SUBJECT_REF_MAX } from './api'
+import { createClassifyRunner, type ClassifyEnding, type ClassifyRunner } from './classifyRun'
 import type { ClassifyReply } from './model'
-import { viewOf, type ClassifyView } from './outcomes'
+import { viewOf, viewOfFailure, type ClassifyView } from './outcomes'
 
 // ---------------------------------------------------------------------------
 // Prefill text (synthetic demo data)
@@ -26,15 +28,10 @@ const PREFILL_SUBJECT_REF = 'sku:DEMO-PLAN-5G-UNLIMITED'
 const PREFILL_DESCRIPTION =
   'Unlimited 5G mobile plan with 20 GB mobile hotspot and international roaming (synthetic demo data)'
 
-const TIMEOUT_SECONDS = Math.round(DEMO_AI_TIMEOUT_MS / 1000)
-
 type ClassifyState =
   | { readonly kind: 'idle' }
   | { readonly kind: 'busy' }
-  | { readonly kind: 'rejected' }
-  | { readonly kind: 'timeout' }
-  | { readonly kind: 'unavailable' }
-  | { readonly kind: 'reply'; readonly reply: ClassifyReply }
+  | { readonly kind: 'ended'; readonly ending: ClassifyEnding }
 
 // ---------------------------------------------------------------------------
 // Result view
@@ -68,9 +65,16 @@ const EvidenceLine = ({ evidenceId }: { evidenceId: string | null }) => (
   </p>
 )
 
-const ReplyView = ({ reply }: { reply: ClassifyReply }) => {
-  const view = viewOf(reply)
-  const showsEvidence = view.kind === 'proposed' || view.kind === 'abstain'
+const ResultView = ({
+  view,
+  reply,
+  onRetry,
+}: {
+  view: ClassifyView
+  reply: ClassifyReply | null
+  onRetry: () => void
+}) => {
+  const showsEvidence = reply !== null && (view.kind === 'proposed' || view.kind === 'abstain')
   return (
     <div className={`rd-cl-result rd-cl-result--${toneOf(view)}`}>
       <div className="rd-cl-result-head">
@@ -79,9 +83,14 @@ const ReplyView = ({ reply }: { reply: ClassifyReply }) => {
       </div>
       {view.code !== null ? <p className="rd-cl-code mono">{view.code}</p> : null}
       <p className="rd-cl-body">{view.sentence}</p>
-      <SyntheticNote view={view} listVersion={reply.list_version} />
+      <SyntheticNote view={view} listVersion={reply === null ? null : reply.list_version} />
       {view.kind === 'proposed' ? <p className="rd-cl-body rd-muted">Confidence: not calibrated</p> : null}
       {showsEvidence ? <EvidenceLine evidenceId={reply.evidence_id} /> : null}
+      {view.canRetry ? (
+        <button type="button" className="ztax-btn-quiet" onClick={onRetry}>
+          Try again
+        </button>
+      ) : null}
     </div>
   )
 }
@@ -94,48 +103,30 @@ export const ClassifyPanel = () => {
   const [subjectRef, setSubjectRef] = useState(PREFILL_SUBJECT_REF)
   const [description, setDescription] = useState(PREFILL_DESCRIPTION)
   const [state, setState] = useState<ClassifyState>({ kind: 'idle' })
-  const inFlight = useRef<AbortController | null>(null)
+  const runner = useRef<ClassifyRunner | null>(null)
+  runner.current ??= createClassifyRunner()
 
   const isBusy = state.kind === 'busy'
 
   // Leaving the page cancels the request that is still waiting.
   useEffect(
     () => () => {
-      inFlight.current?.abort()
+      runner.current?.cancel()
     },
     [],
   )
 
-  /** Sends the current form values. Used by the form and by "Try again" (manual retry only). */
+  /**
+   * Sends the current form values. Used by the form and by "Try again" (manual retry
+   * only). While a request is in flight this sends nothing: two quick submits make one.
+   */
   const run = () => {
-    // Abort any in-flight request before starting a new one
-    inFlight.current?.abort()
-    const controller = new AbortController()
-    inFlight.current = controller
+    // A refused start (one is already in flight) leaves the state as it is: already busy.
+    runner.current?.start(
+      { subjectRef: subjectRef.trim(), description: description.trim() },
+      (ending) => { setState({ kind: 'ended', ending }) },
+    )
     setState({ kind: 'busy' })
-
-    void requestClassify({ subjectRef: subjectRef.trim(), description: description.trim() }, controller.signal)
-      .then((result: ClassifyResult) => {
-        // Discard the result if this request was superseded or the page was left
-        if (controller.signal.aborted) return
-        switch (result.status) {
-          case 'reply':
-            setState({ kind: 'reply', reply: result.reply })
-            break
-          case 'rejected':
-            setState({ kind: 'rejected' })
-            break
-          case 'timeout':
-            setState({ kind: 'timeout' })
-            break
-          case 'unavailable':
-            setState({ kind: 'unavailable' })
-            break
-          case 'aborted':
-            // Superseded — do nothing
-            break
-        }
-      })
   }
 
   const submit = (e: FormEvent) => {
@@ -194,32 +185,13 @@ export const ClassifyPanel = () => {
 
       {/* The one live region of the panel. Nothing inside it carries its own role. */}
       <div className="rd-cl-output" aria-live="polite" aria-atomic="true">
-        {state.kind === 'rejected' ? (
-          <p className="ztax-error-note rd-cl-result">
-            The request was not accepted. Check the fields and try again.
-          </p>
+        {state.kind === 'ended' ? (
+          state.ending.kind === 'reply' ? (
+            <ResultView view={viewOf(state.ending.reply)} reply={state.ending.reply} onRetry={run} />
+          ) : (
+            <ResultView view={viewOfFailure(state.ending.failure)} reply={null} onRetry={run} />
+          )
         ) : null}
-
-        {state.kind === 'timeout' ? (
-          <div className="rd-cl-result rd-cl-result--neutral">
-            <p className="rd-cl-body">
-              The AI service is taking longer than expected (over {TIMEOUT_SECONDS} seconds). It may
-              still finish in the background. You can try again. Deterministic processing is
-              unaffected.
-            </p>
-            <button type="button" className="ztax-btn-quiet" onClick={run}>
-              Try again
-            </button>
-          </div>
-        ) : null}
-
-        {state.kind === 'unavailable' ? (
-          <p className="ztax-error-note rd-cl-result">
-            The AI service is unavailable. Deterministic processing is unaffected.
-          </p>
-        ) : null}
-
-        {state.kind === 'reply' ? <ReplyView reply={state.reply} /> : null}
       </div>
     </section>
   )
