@@ -455,3 +455,236 @@ class TestReviewSheet:
         gs.main(["--gold", str(gold), "--review-sheet", str(out_csv)])
 
         assert gold.read_bytes() == original_bytes, "Gold file must be byte-for-byte unchanged"
+
+
+# ---------------------------------------------------------------------------
+# 9. Item 1: Review sheet must not overwrite an input file
+# ---------------------------------------------------------------------------
+
+
+class TestReviewSheetCannotOverwriteInput:
+    """The review sheet path must never resolve to the same file as --gold or
+    --approved-list, even with --force.  The check runs before any I/O."""
+
+    def _approved(self, tmp_path: Path) -> Path:
+        p = tmp_path / "approved.json"
+        p.write_text(_VALID_APPROVED_LIST, encoding="utf-8")
+        return p
+
+    def test_same_path_as_gold_is_refused(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        gold = _gold(tmp_path, [_case()])
+        original = gold.read_bytes()
+
+        rc = gs.main(["--gold", str(gold), "--review-sheet", str(gold)])
+
+        assert rc != 0
+        err = capsys.readouterr().err
+        assert "error: the review sheet path must not be an input file" in err
+        assert gold.read_bytes() == original, "gold file must be byte-for-byte unchanged"
+
+    def test_relative_variant_is_refused(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        # Create gold at tmp_path / "sub" / "gold.json"; reference it via "sub/../gold.json"
+        sub = tmp_path / "sub"
+        sub.mkdir()
+        gold = _gold(sub, [_case()], name="gold.json")
+        original = gold.read_bytes()
+        relative_ref = str(sub / ".." / "sub" / "gold.json")
+
+        rc = gs.main(["--gold", str(gold), "--review-sheet", relative_ref])
+
+        assert rc != 0
+        err = capsys.readouterr().err
+        assert "error: the review sheet path must not be an input file" in err
+        assert gold.read_bytes() == original
+
+    @pytest.mark.skipif(
+        __import__("sys").platform != "win32",
+        reason="Case-folding collision test is Windows-only",
+    )
+    def test_different_case_on_windows_is_refused(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        gold = _gold(tmp_path, [_case()], name="gold.json")
+        original = gold.read_bytes()
+        # Same path with different letter casing
+        upper_ref = str(gold).replace("gold.json", "Gold.Json")
+
+        rc = gs.main(["--gold", str(gold), "--review-sheet", upper_ref])
+
+        assert rc != 0
+        err = capsys.readouterr().err
+        assert "error: the review sheet path must not be an input file" in err
+        assert gold.read_bytes() == original
+
+    def test_same_path_with_force_is_still_refused(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        gold = _gold(tmp_path, [_case()])
+        original = gold.read_bytes()
+
+        rc = gs.main(["--gold", str(gold), "--review-sheet", str(gold), "--force"])
+
+        assert rc != 0
+        err = capsys.readouterr().err
+        assert "error: the review sheet path must not be an input file" in err
+        assert gold.read_bytes() == original
+
+    def test_different_output_path_still_works(self, tmp_path: Path) -> None:
+        gold = _gold(tmp_path, [_case()])
+        out_csv = tmp_path / "sheet.csv"
+
+        rc = gs.main(["--gold", str(gold), "--review-sheet", str(out_csv)])
+
+        assert rc == 0
+        assert out_csv.exists()
+
+    def test_same_as_approved_list_is_refused(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        gold = _gold(tmp_path, [_case()])
+        approved = self._approved(tmp_path)
+        original = approved.read_bytes()
+
+        rc = gs.main(
+            [
+                "--gold", str(gold),
+                "--approved-list", str(approved),
+                "--as-of", _AS_OF,
+                "--review-sheet", str(approved),
+            ]
+        )
+
+        assert rc != 0
+        err = capsys.readouterr().err
+        assert "error: the review sheet path must not be an input file" in err
+        assert approved.read_bytes() == original
+
+
+# ---------------------------------------------------------------------------
+# 10. Item 2: Expanded CSV formula-injection escaping
+# ---------------------------------------------------------------------------
+
+
+class TestSafeCellExpanded:
+    """_safe_cell escapes tab, CR, LF, and leading-space-then-formula inputs."""
+
+    def _c(self, text: str) -> str:
+        result: str = gs._safe_cell(text)
+        return result
+
+    # --- standard injection prefixes ---
+    def test_equals_sign_escaped(self) -> None:
+        assert self._c("=1+1") == "'=1+1"
+
+    def test_plus_sign_escaped(self) -> None:
+        assert self._c("+1") == "'+1"
+
+    def test_minus_sign_escaped(self) -> None:
+        assert self._c("-1") == "'-1"
+
+    def test_at_sign_escaped(self) -> None:
+        assert self._c("@SUM(A1)") == "'@SUM(A1)"
+
+    # --- tab triggers ---
+    def test_tab_then_formula_escaped(self) -> None:
+        assert self._c("\t=1") == "'\t=1"
+
+    def test_tab_then_text_escaped(self) -> None:
+        # Leading tab alone triggers escaping
+        assert self._c("\tabc") == "'\tabc"
+
+    # --- carriage-return triggers ---
+    def test_cr_then_formula_escaped(self) -> None:
+        assert self._c("\r=1") == "'\r=1"
+
+    def test_cr_then_text_escaped(self) -> None:
+        assert self._c("\rabc") == "'\rabc"
+
+    # --- newline triggers ---
+    def test_lf_then_formula_escaped(self) -> None:
+        assert self._c("\n=1") == "'\n=1"
+
+    # --- leading spaces + formula ---
+    def test_one_space_then_equals_escaped(self) -> None:
+        assert self._c(" =1+1") == "' =1+1"
+
+    def test_two_spaces_then_at_escaped(self) -> None:
+        assert self._c("  @x") == "'  @x"
+
+    # --- no escaping needed ---
+    def test_normal_text_unchanged(self) -> None:
+        assert self._c("hello world") == "hello world"
+
+    def test_empty_string_unchanged(self) -> None:
+        assert self._c("") == ""
+
+    def test_already_quoted_cell_unchanged(self) -> None:
+        assert self._c("'=already") == "'=already"
+
+    # --- Item 3 CLI-level: huge number and deep nesting in approved list ---
+
+
+class TestLoaderValueErrorCLI:
+    """CLI-level: huge integers and deep nesting give a fixed message, no traceback."""
+
+    def test_huge_int_in_approved_list_gives_fixed_message(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        gold = _gold(tmp_path, [_case()])
+        bad = tmp_path / "huge.json"
+        bad.write_bytes(b"[" + b"9" * 5000 + b"]")
+
+        rc = gs.main(
+            ["--gold", str(gold), "--approved-list", str(bad), "--as-of", _AS_OF]
+        )
+
+        assert rc != 0
+        err = capsys.readouterr().err
+        assert "error: could not load approved list" in err
+        assert "Traceback" not in err
+
+    def test_deep_nesting_in_approved_list_gives_fixed_message(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        gold = _gold(tmp_path, [_case()])
+        bad = tmp_path / "deep.json"
+        bad.write_bytes(b"[" * 100_000)
+
+        rc = gs.main(
+            ["--gold", str(gold), "--approved-list", str(bad), "--as-of", _AS_OF]
+        )
+
+        assert rc != 0
+        err = capsys.readouterr().err
+        assert "error: could not load approved list" in err
+        assert "Traceback" not in err
+
+    def test_huge_int_in_gold_gives_fixed_message(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        bad_gold = tmp_path / "huge_gold.json"
+        bad_gold.write_text("[" + "9" * 5000 + "]", encoding="utf-8")
+
+        rc = gs.main(["--gold", str(bad_gold)])
+
+        assert rc != 0
+        err = capsys.readouterr().err
+        assert "error: could not load gold set" in err
+        assert "Traceback" not in err
+
+    def test_deep_nesting_in_gold_gives_fixed_message(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        bad_gold = tmp_path / "deep_gold.json"
+        bad_gold.write_bytes(b"[" * 100_000)
+
+        rc = gs.main(["--gold", str(bad_gold)])
+
+        assert rc != 0
+        err = capsys.readouterr().err
+        assert "error: could not load gold set" in err
+        assert "Traceback" not in err

@@ -1535,3 +1535,87 @@ class TestEligibilityPreCheckFix:
         assert rc == 0
         report = json.loads(out.read_text(encoding="utf-8"))
         assert report.get("evidence_grade") == "PIPELINE_CHECK"
+
+
+# ---------------------------------------------------------------------------
+# Item 3: CLI-level — huge integers and deep nesting in loaders
+# ---------------------------------------------------------------------------
+
+
+class TestLoaderValueErrorCLI:
+    """evaluate_gateway CLI: huge integers and deep nesting give a fixed message,
+    no traceback."""
+
+    def test_huge_int_in_approved_list_no_traceback(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        import json as _json
+        gold_data = {
+            "name": "test",
+            "version": "0.1",
+            "domain": "test",
+            "purpose": "test",
+            "cases": [
+                {
+                    "case_id": "TC-001",
+                    "sku_description": "mobile voice",
+                    "expected_class": "ontology:telecom/voice/mobile",
+                    "notes": "",
+                    "origin": "SYNTHETIC",
+                    "author": "eng",
+                    "review_status": "DRAFT",
+                    "reviewer": "",
+                    "reviewed_on": "",
+                    "source_ref": "",
+                }
+            ],
+        }
+        gold = tmp_path / "gold.json"
+        gold.write_text(_json.dumps(gold_data), encoding="utf-8")
+        bad_al = tmp_path / "huge_al.json"
+        bad_al.write_bytes(b"[" + b"9" * 5000 + b"]")
+
+        rc = eg.main(["--gold", str(gold), "--approved-list", str(bad_al), "--as-of", "2026-01-01"])
+
+        assert rc != 0
+        err = capsys.readouterr().err
+        assert "Traceback" not in err
+        assert "error" in err.lower() or "could not" in err.lower()
+
+    def test_deep_nesting_in_approved_list_no_traceback(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        import json as _json
+        gold_data = {
+            "name": "test", "version": "0.1", "domain": "test", "purpose": "test",
+            "cases": [
+                {
+                    "case_id": "TC-001", "sku_description": "mobile voice",
+                    "expected_class": "ontology:telecom/voice/mobile", "notes": "",
+                    "origin": "SYNTHETIC", "author": "eng", "review_status": "DRAFT",
+                    "reviewer": "", "reviewed_on": "", "source_ref": "",
+                }
+            ],
+        }
+        gold = tmp_path / "gold.json"
+        gold.write_text(_json.dumps(gold_data), encoding="utf-8")
+        bad_al = tmp_path / "deep_al.json"
+        bad_al.write_bytes(b"[" * 100_000)
+
+        rc = eg.main(["--gold", str(gold), "--approved-list", str(bad_al), "--as-of", "2026-01-01"])
+
+        assert rc != 0
+        err = capsys.readouterr().err
+        assert "Traceback" not in err
+
+    def test_huge_int_in_gold_no_traceback(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        bad_gold = tmp_path / "huge_gold.json"
+        bad_gold.write_text("[" + "9" * 5000 + "]", encoding="utf-8")
+
+        rc = eg.main(["--gold", str(bad_gold)])
+
+        assert rc != 0
+        err = capsys.readouterr().err
+        assert "Traceback" not in err

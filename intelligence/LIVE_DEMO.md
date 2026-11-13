@@ -147,6 +147,7 @@ The ontology guard then checks the proposal against the approved list:
   marker (`#`) ends as **`ABSTAIN`** with the corresponding reason code
   (`GUARD_ONTOLOGY_UNKNOWN`, `GUARD_ONTOLOGY_EXPIRED`, or `GUARD_ONTOLOGY_NOT_YET_EFFECTIVE`).
 - On `ABSTAIN`, the response **never returns the rejected code** or any model text.
+- The demo route strips leading and trailing whitespace from the model's proposed code before passing it to the guard; the guard itself requires an exact match and the returned code is the stripped, checked code.
 
 ### Approved list configuration
 
@@ -154,7 +155,7 @@ The guard reads the approved list path from the **`ZTAX_ONTOLOGY_APPROVED_LIST`*
 variable. A synthetic demo list is provided at
 [`intelligence/config/approved_ontology.live-demo.json`](config/approved_ontology.live-demo.json)
 (`list_version: "synthetic-demo-v0"`). **The list is synthetic** (8 telecom codes for demonstration;
-the authoritative list awaits Decision D-05) and **confidence is not calibrated** (`confidence_calibrated: false`).
+the authoritative list awaits the real approved ontology list (decision D-05 in the Intelligence Completion Plan, which is not stored in this repository) and **confidence is not calibrated** (`confidence_calibrated: false`).
 
 The list is mounted read-only into the container, and `ZTAX_ONTOLOGY_APPROVED_LIST` is set to the
 mounted path, both in `docker-compose.live-demo.yml` (service `ztax-model-gateway`):

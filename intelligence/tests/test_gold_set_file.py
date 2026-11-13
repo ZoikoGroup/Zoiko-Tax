@@ -622,3 +622,33 @@ def test_load_gold_set_file_oversize_rejected(tmp_path: Path) -> None:
     p.write_bytes(b"x" * (1024 * 1024 + 1))
     with pytest.raises(GoldSetFileError, match="1 MiB"):
         load_gold_set_file(p)
+
+
+# ---------------------------------------------------------------------------
+# Item 3: ValueError and RecursionError in parse_gold_set
+# ---------------------------------------------------------------------------
+
+
+class TestParserValueErrorRecursion:
+    """parse_gold_set must catch ValueError and RecursionError and raise
+    GoldSetFileError with the fixed message and no chained context."""
+
+    def test_huge_integer_raises_module_error(self) -> None:
+        # A 5000-digit integer literal causes json.loads to raise ValueError.
+        sentinel = "SENTINEL_GOLD_HUGE"
+        text = "[" + "9" * 5000 + "]"
+        with pytest.raises(GoldSetFileError) as exc_info:
+            parse_gold_set(text)
+        err = exc_info.value
+        assert str(err) == "gold-set file is not valid JSON"
+        assert err.__context__ is None
+        assert sentinel not in str(err)
+
+    def test_deep_nesting_raises_module_error(self) -> None:
+        # Deeply nested JSON causes RecursionError in json.loads.
+        text = "[" * 100_000
+        with pytest.raises(GoldSetFileError) as exc_info:
+            parse_gold_set(text)
+        err = exc_info.value
+        assert str(err) == "gold-set file is not valid JSON"
+        assert err.__context__ is None
