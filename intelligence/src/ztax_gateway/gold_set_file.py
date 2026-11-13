@@ -388,10 +388,20 @@ def parse_gold_set(text: str) -> GoldSetFile:
                 f"gold-set file contains the JSON constant {token!r}, which is not permitted"
             )
 
+    _json_decode_err: json.JSONDecodeError | None = None
+    _json_overflow: bool = False
     try:
         raw = json.loads(text)
     except json.JSONDecodeError as exc:
-        raise GoldSetFileError(f"gold-set file is not valid JSON: {exc}") from exc
+        _json_decode_err = exc
+    except (ValueError, RecursionError):
+        _json_overflow = True
+    if _json_overflow:
+        raise GoldSetFileError("gold-set file is not valid JSON") from None
+    if _json_decode_err is not None:
+        raise GoldSetFileError(
+            f"gold-set file is not valid JSON: {_json_decode_err}"
+        ) from _json_decode_err
 
     if not isinstance(raw, dict):
         raise GoldSetFileError("gold-set file must be a JSON object at the top level")

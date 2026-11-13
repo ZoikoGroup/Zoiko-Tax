@@ -452,3 +452,113 @@ def test_agent_audit_omits_optional_none_fields() -> None:
     assert "payload_hash" not in d
     assert "reviewer_id" not in d
     assert "detail" not in d
+
+
+# ---------------------------------------------------------------------------
+# Refusal detail never leaks forged caller-supplied values
+# ---------------------------------------------------------------------------
+
+_SENTINEL = "FORGED_TOOL_9f3a"
+
+
+def _assert_no_leak(
+    exc: ToolBrokerRefusedError,
+    sentinel: str,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Assert the sentinel does not appear anywhere in the error or logs."""
+    assert sentinel not in str(exc), "sentinel leaked into str(exc)"
+    assert sentinel not in repr(exc), "sentinel leaked into repr(exc)"
+    assert sentinel not in exc.detail, "sentinel leaked into exc.detail"
+    for val in exc.context.values():
+        assert sentinel not in val, f"sentinel leaked into context value {val!r}"
+    for record in caplog.records:
+        assert sentinel not in record.getMessage(), "sentinel leaked into log message"
+        for val in vars(record).values():
+            if isinstance(val, str) and sentinel in val:
+                raise AssertionError(
+                    f"sentinel leaked into log extra: {val!r}"
+                )
+
+
+def test_unknown_tool_never_leaks_forged_name(caplog: pytest.LogCaptureFixture) -> None:
+    """A forged tool_id must not appear in the UNKNOWN_TOOL refusal."""
+    import logging
+
+    caplog.set_level(logging.DEBUG)
+    cat = catalog()
+    prov = replace(BASE_PROVENANCE, tool_id=f"forged-{_SENTINEL}")
+    with pytest.raises(ToolBrokerRefusedError) as exc:
+        guarded(cat, prov, lambda t: t.tool_id)
+    assert exc.value.refusal is Refusal.UNKNOWN_TOOL
+    _assert_no_leak(exc.value, _SENTINEL, caplog)
+
+
+def test_per_tool_kill_switch_never_leaks_forged_name(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Per-tool kill switch with an unregistered forged name."""
+    import logging
+
+    caplog.set_level(logging.DEBUG)
+    forged_id = f"forged-{_SENTINEL}"
+    cat = catalog()
+    cat.kill(forged_id)
+    prov = replace(BASE_PROVENANCE, tool_id=forged_id)
+    with pytest.raises(ToolBrokerRefusedError) as exc:
+        guarded(cat, prov, lambda t: t.tool_id)
+    assert exc.value.refusal is Refusal.KILL_SWITCH_ENGAGED
+    _assert_no_leak(exc.value, _SENTINEL, caplog)
+
+
+def test_global_kill_switch_never_leaks_forged_name(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Global kill switch with an unregistered forged name."""
+    import logging
+
+    caplog.set_level(logging.DEBUG)
+    cat = catalog()
+    cat.engage_global_kill()
+    prov = replace(BASE_PROVENANCE, tool_id=f"forged-{_SENTINEL}")
+    with pytest.raises(ToolBrokerRefusedError) as exc:
+        guarded(cat, prov, lambda t: t.tool_id)
+    assert exc.value.refusal is Refusal.KILL_SWITCH_ENGAGED
+    _assert_no_leak(exc.value, _SENTINEL, caplog)
+    cat.release_global_kill()
+
+
+def test_malformed_context_never_leaks(caplog: pytest.LogCaptureFixture) -> None:
+    """MALFORMED_CONTEXT must not chain the original exception."""
+    import logging
+
+    caplog.set_level(logging.DEBUG)
+    prov = replace(BASE_PROVENANCE, tool_id=f"forged-{_SENTINEL}", caller_id="")
+    with pytest.raises(ToolBrokerRefusedError) as exc:
+        guarded(catalog(), prov, lambda t: t.tool_id)
+    assert exc.value.refusal is Refusal.MALFORMED_CONTEXT
+    assert exc.value.__context__ is None, "__context__ must be None"
+    assert exc.value.__cause__ is None, "__cause__ must be None"
+    _assert_no_leak(exc.value, _SENTINEL, caplog)
+
+
+def test_suspended_tool_never_leaks(caplog: pytest.LogCaptureFixture) -> None:
+    """A suspended registered tool must not leak the tool_id into the detail."""
+    import logging
+
+    caplog.set_level(logging.DEBUG)
+    # The tool is registered: its tool_id is a catalog-owned value, so it may
+    # appear in context.  What must NOT happen is the detail echoing it.
+    suspended_tool = replace(
+        BASE_TOOL,
+        tool_id="suspended-tool-checked",
+        suspended=True,
+    )
+    cat = catalog(suspended_tool)
+    prov = replace(BASE_PROVENANCE, tool_id="suspended-tool-checked")
+    with pytest.raises(ToolBrokerRefusedError) as exc:
+        guarded(cat, prov, lambda t: t.tool_id)
+    assert exc.value.refusal is Refusal.TOOL_SUSPENDED
+    # Detail must be the fixed constant — no tool_id in it.
+    assert "suspended-tool-checked" not in exc.value.detail
+    assert exc.value.detail == "the tool is suspended"

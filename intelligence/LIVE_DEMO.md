@@ -147,6 +147,7 @@ The ontology guard then checks the proposal against the approved list:
   marker (`#`) ends as **`ABSTAIN`** with the corresponding reason code
   (`GUARD_ONTOLOGY_UNKNOWN`, `GUARD_ONTOLOGY_EXPIRED`, or `GUARD_ONTOLOGY_NOT_YET_EFFECTIVE`).
 - On `ABSTAIN`, the response **never returns the rejected code** or any model text.
+- The demo route strips leading and trailing whitespace from the model's proposed code before passing it to the guard; the guard itself requires an exact match and the returned code is the stripped, checked code.
 
 ### Approved list configuration
 
@@ -154,7 +155,7 @@ The guard reads the approved list path from the **`ZTAX_ONTOLOGY_APPROVED_LIST`*
 variable. A synthetic demo list is provided at
 [`intelligence/config/approved_ontology.live-demo.json`](config/approved_ontology.live-demo.json)
 (`list_version: "synthetic-demo-v0"`). **The list is synthetic** (8 telecom codes for demonstration;
-the authoritative list awaits Decision D-05) and **confidence is not calibrated** (`confidence_calibrated: false`).
+the authoritative list awaits the real approved ontology list (decision D-05 in the Intelligence Completion Plan, which is not stored in this repository) and **confidence is not calibrated** (`confidence_calibrated: false`).
 
 The list is mounted read-only into the container, and `ZTAX_ONTOLOGY_APPROVED_LIST` is set to the
 mounted path, both in `docker-compose.live-demo.yml` (service `ztax-model-gateway`):
@@ -222,6 +223,12 @@ The four response shapes are (all have the same seven keys, plus `proposed_code`
    > strip whitespace before the check; the guard never strips for them.
    > (Regression tests: `tests/test_ontology_guard.py::test_check_code_padded_with_spaces_is_unknown`
    > and `test_check_code_trailing_newline_is_unknown`.)
+   >
+   > **Loader validation and error safety:** `load_approved_list` (`src/ztax_gateway/ontology_guard.py`)
+   > validates the JSON payload structure before any check runs. If the list is malformed, has unknown keys,
+   > or contains huge-number or deeply nested input (`ValueError`, `RecursionError`), it raises `OntologyGuardError`
+   > with the fixed message `"ontology_guard: payload is not valid JSON"` raised with `from None` so no
+   > internal exception or caller text is chained.
 
 3. **`NOT_CONFIGURED`** (`ZTAX_ONTOLOGY_APPROVED_LIST` is unset):
    ```json
@@ -268,6 +275,7 @@ The four response shapes are (all have the same seven keys, plus `proposed_code`
 
 - **404** `{"error": "not found"}` for any other path. The 32 KiB body limit and the Content-Length rule also apply to `POST /demo/explain`.
 - **Limits:** 32 KiB request body, 512 characters for `subject_ref`, 1000 characters for `description`.
+- **Unexpected runtime errors:** Any unhandled exception during `POST /demo/classify` or `POST /demo/explain` returns HTTP 200 with a fixed refusal (`REFUSED` with `reason_code: "AI_GATEWAY_UNAVAILABLE"` for classify; `REVIEW_REQUIRED` with `reason: "AI_GATEWAY_UNAVAILABLE"` for explain). The server logs only the exception class name (`type(exc).__name__`), never exception details, stack traces or payload data.
 
 ### Reason codes the frontend can meet
 
@@ -309,11 +317,7 @@ change. Use synthetic text only. Never publish or forward port 18090.
 4. **Rejected input.** Clear a field and submit (the browser blocks it), then send a request that is
    too long with curl. In the page, a rejected request shows "The request was not accepted. Check the
    fields and try again." and no server text.
-5. **Slow service.** The page waits for `DEMO_AI_TIMEOUT_MS` (30 seconds), then shows the timeout text
-   with a "Try again" button. Pressing it sends the form again. There is no automatic retry. The
-   address the page calls is the constant `DEMO_AI_BASE_URL` in `frontend/src/platform/demoAi.ts`, so
-   a stand-in service has to answer on `127.0.0.1:18090` (with the real one stopped) and allow the
-   origin `http://localhost:13000`.
+5. **Slow service.** The page waits for `DEMO_AI_TIMEOUT_MS` (30 seconds), while the gateway enforces a 45-second deadline per model call (`GATEWAY_RUNTIME_TIMEOUT_SECONDS`). When a call exceeds 30 seconds, the frontend shows the timeout text with a "Try again" button. Pressing it resubmits the form; there is no automatic retry. The address the page calls is the constant `DEMO_AI_BASE_URL` in `frontend/src/platform/demoAi.ts`, so a stand-in service has to answer on `127.0.0.1:18090` (with the real one stopped) and allow the origin `http://localhost:13000`.
 6. **Unknown outcome.** With a stand-in service that answers `{"outcome": "SOMETHING_NEW", ...}` and
    valid other fields, the page shows "Result could not be interpreted" and no error.
 7. **Keyboard only.** Tab to the two fields and the button, press Enter to submit, and tab to
@@ -330,8 +334,8 @@ This script maps the five demonstration capabilities to what is operational in t
 | **1. Classify** | Submit item description on the Intelligence UI page or via `POST /demo/classify`. | • **Main page (Go gRPC path):** Runs format check only (`ontology:*`). UI disclaimer *"whether that code is a real ontology node is not verified here"* is correct.<br>• **HTTP endpoint (`/demo/classify`):** Runs the approved-list check against `config/approved_ontology.live-demo.json`; returns `PROPOSED` or `ABSTAIN`. |
 | **2. Explain** | Open Reports (demo) page and click Explain on any row. | `report_ai_http.py` (`POST /demo/explain`) runs `explanation_guard`. Checks model reply against cited row IDs, numbers, and statuses; returns `EXPLAINED` or `ABSTAINED`. |
 | **3. Kill switch** | Edit `intelligence/config/registry.live-demo.json` in place to add a use case to `"killed"` or set `"global_kill": true`. | Python gateway re-reads flags on the next request without container restart (`Gateway._refresh_kill_state`). Call is immediately refused with `KILL_SWITCH_ENGAGED` / `REVIEW_REQUIRED` (explain route). The classify route answers `REFUSED` with `AI_KILL_SWITCH_ENGAGED`. |
-| **4. Evidence & events** | Inspect container logs (`docker compose logs ztax-model-gateway`). | Every model invocation seals a tamper-evident `PROPOSE` record (`ztax_gateway.evidence`) with prompt hash and latency. Answer checks append a linked `AnswerCheckedEvent` naming the invocation ID. |
-| **5. Governed fallback** | Cause a model failure, timeout (>45s), or format error. | The UI never crashes with an unhandled exception. It degrades gracefully to human review (`AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`, `AI_GATEWAY_UNAVAILABLE`, `REVIEW_REQUIRED`), proving fail-closed governance. The classify route answers `REFUSED` with `AI_GATEWAY_UNAVAILABLE`. |
+| **4. Evidence & events** | Inspect container logs (`docker compose logs ztax-model-gateway`). | Every model invocation seals a tamper-evident `PROPOSE` record (`ztax_gateway.evidence`) with prompt hash, latency, and token metrics (`UsageMetrics`, with `prompt_tokens` and `completion_tokens` captured from hosted providers; zero when unreported). `TokenPricing` calculates cost in USD with price caps. Answer checks append a linked `AnswerCheckedEvent` naming the invocation ID. |
+| **5. Governed fallback** | Cause a model failure, timeout (>45s), or format error. | The UI never crashes with an unhandled exception. It degrades gracefully to human review (`AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`, `AI_GATEWAY_UNAVAILABLE`, `REVIEW_REQUIRED`), proving fail-closed governance. The classify route answers `REFUSED` with `AI_GATEWAY_UNAVAILABLE`. Release gates run the full 21-case adversarial suite (`ADV-001` through `ADV-021`) by default. |
 
 ## Fallback: no frontend, no Docker
 
@@ -347,6 +351,12 @@ python tools/step10_demo.py      # NO model at all -- the boundary claims on the
 `live_demo.py` loads `config/registry.live-demo.json` and labels its routes with
 your `GROQ_MODEL`, so its provenance names the real model. `step10_demo.py`
 only runs the existing Python and Go test suites; no live model is connected.
+
+## Evaluation harness and gold-set tools
+
+- **`tools/evaluate_gateway.py`**: Runs evaluation against a gold set. The `--approved-list` flag requires `--as-of`; the approved list is read as raw bytes; failures print one fixed message. Two eligibility pre-checks guard against evaluating all-draft or all-synthetic stores. Synthetic runs produce `evidence_grade == "PIPELINE_CHECK"`. The draft gold file cannot be evaluated in automated pipelines because it contains no `REVIEWED` cases (`tests/test_evaluate_gateway.py`).
+- **`tools/gold_set_status.py`**: Read-only tool reporting benchmark case status and coverage. Exporting review sheets (`--review-sheet`) includes write-protection that prevents overwriting any input gold-set file (`tests/test_gold_set_status.py`).
+- **`LocalModelRuntime` (known gap)**: `src/ztax_gateway/local_runtime.py` provides an OpenAI-compatible runtime skeleton (`ZTAX_LOCAL_RUNTIME_ENDPOINT`, `ZTAX_LOCAL_RUNTIME_MODEL`), but is not yet wired into `server.py` or the gateway factory (`tests/test_local_runtime.py`).
 
 ## Prompt profiles
 
