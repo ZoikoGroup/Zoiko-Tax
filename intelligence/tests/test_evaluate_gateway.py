@@ -1926,3 +1926,53 @@ class TestLocalRuntime:
         assert rc == 1
         assert "REVIEWED" in err or "reviewed" in err.lower()
         assert len(requests_received) == 0  # server never called
+
+    # -- live_calls metadata in reports ------------------------------------
+
+    def test_local_runtime_report_has_live_calls_true(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Report for --runtime local must have live_calls=True in runtime metadata."""
+        gold = self._write_gold(tmp_path)
+        out_json = tmp_path / "report.json"
+        base_url: str
+        with _local_fake_server(body=_GOOD_COMPLETION) as base_url:
+            monkeypatch.setenv("ZTAX_LOCAL_RUNTIME_ENDPOINT", base_url)
+            monkeypatch.setenv("ZTAX_LOCAL_RUNTIME_MODEL", _LOCAL_MODEL)
+            rc = eg.main(
+                [
+                    "--gold",
+                    str(gold),
+                    "--runtime",
+                    "local",
+                    "--allow-synthetic",
+                    "--out",
+                    str(out_json),
+                ]
+            )
+        assert rc == 0
+        payload = json.loads(out_json.read_text(encoding="utf-8"))
+        assert payload["runtime"]["kind"] == "local"
+        assert payload["runtime"]["live_calls"] is True
+
+    def test_fake_runtime_report_has_live_calls_false(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Report for --runtime fake must have live_calls=False in runtime metadata."""
+        gold = self._write_gold(tmp_path)
+        out_json = tmp_path / "report.json"
+        rc = eg.main(
+            [
+                "--gold",
+                str(gold),
+                "--runtime",
+                "fake",
+                "--allow-synthetic",
+                "--out",
+                str(out_json),
+            ]
+        )
+        assert rc == 0
+        payload = json.loads(out_json.read_text(encoding="utf-8"))
+        assert payload["runtime"]["kind"] == "fake"
+        assert payload["runtime"]["live_calls"] is False

@@ -1,4 +1,4 @@
-"""Gateway-path evaluation harness (offline, fake runtimes only).
+"""Gateway-path evaluation harness (offline fake or local runtimes).
 
 Sends each gold-set case through the classification-review use case of a
 Gateway instance backed by a given ModelRuntime, scores the replies, and
@@ -161,7 +161,7 @@ class GatewayRunReport:
 
     # New: static metadata fields (Gap 1 & 2)
     evaluator_version: str           # constant string; bump on harness changes
-    live_calls: bool                 # always False for fake runtimes
+    live_calls: bool                 # False for fake runtimes, True for local
     inference_settings: None         # None when runtime does not expose them
 
     # New: prompt hashes seen across the run (Gap 5)
@@ -877,7 +877,7 @@ class GatewayEvaluator:
             ai_train_version=ai_train_version,
             runtime_kind=runtime_kind,
             evaluator_version=EVALUATOR_VERSION,
-            live_calls=False,
+            live_calls=(runtime_kind == "local"),
             inference_settings=None,
             prompt_content_hashes=prompt_content_hashes,
             evidence_grade=evidence_grade,
@@ -1030,7 +1030,7 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = argparse.ArgumentParser(
         prog="evaluate_gateway",
-        description="Gateway-path evaluation harness (fake runtimes only).",
+        description="Gateway-path evaluation harness (fake or local runtimes).",
     )
     parser.add_argument(
         "--gold",
