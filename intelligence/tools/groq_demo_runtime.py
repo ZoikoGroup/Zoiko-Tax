@@ -36,6 +36,7 @@ import os
 import urllib.error
 import urllib.request
 from dataclasses import replace
+from pathlib import Path
 
 from ztax_gateway.governance import UseCaseRegistry
 from ztax_gateway.production_gates import PromptProfileRegistry
@@ -96,31 +97,11 @@ _MAX_TOKENS = 64
 _LOG_SNIPPET_CHARS = 120
 
 # The real grammar the Go backend enforces for a proposed ontology node
-# (backend/internal/domain/classification/classification.go, OntologyID.Validate):
-# the string must start with "ontology:" and name something after it. That
-# function does not check the proposal against any enumerated list of real
-# nodes -- intelligence/src never gets a say either (check_result in
-# runtime.py only requires a non-empty proposed_code). The one real node
-# registry in this codebase (backend/internal/domain/ontology.Ontology) is
-# built only in test code (ontology_test.go, golden_test.go) from the golden
-# fixture backend/testdata/golden/classification/launch-corpus.json; nothing
-# wires it into a running service. So there is no live, authoritative list of
-# allowed ids this prompt could truthfully hand the model -- see
-# LIVE_DEMO.md for the rest of this finding. This line states the one real,
-# checkable constraint instead of a fabricated list.
-_ONTOLOGY_GRAMMAR_HINT = (
-    'A valid code has the exact form "ontology:<path>" (for example '
-    '"ontology:telecom/voice/mobile") -- the prefix "ontology:" followed by '
-    "a non-empty, lowercase, slash-separated path naming the product or "
-    "service family. Reply with the code alone, nothing else."
-)
+# (backend/internal/domain/classification/classification.go, OntologyID.Validate)
+# is stated only in the shipped profile file (prompt_profiles.live-demo.json);
+# this module no longer holds a copy. See the profile file for the rationale.
 
 _SYSTEM_PROMPTS: dict[Kind, str] = {
-    Kind.CLASSIFICATION_PROPOSAL: (
-        "You are a DEMO ONLY classification assistant with no authority over "
-        "any real decision. Given a product or service description, propose "
-        f"one ontology classification code. {_ONTOLOGY_GRAMMAR_HINT}"
-    ),
     Kind.EXTRACTION: (
         "You are a DEMO ONLY extraction assistant with no authority over any "
         "real decision. Reply concisely with the extracted information only."
@@ -143,20 +124,48 @@ _REPORT_EXPLANATION_USE_CASES: frozenset[str] = frozenset(
 # A JSON reply needs more headroom than a short code or phrase.
 _REPORT_EXPLANATION_MAX_TOKENS = 220
 
-_REPORT_EXPLANATION_SYSTEM_PROMPT = (
-    "You are a DEMO ONLY report-explanation assistant with no authority over any "
-    "real decision and no tax authority. You are given a JSON array of rows from a "
-    'synthetic reporting fixture; each row has an "id". Restate only the values and '
-    "labels given in the rows. Do not calculate anything. Never introduce a total, "
-    "subtotal, equivalent, average, difference or any other number that is not a "
-    "given row field. Do not describe what a figure also shows unless a given field "
-    "says so. Do not give causes or reasons for a figure. Give no tax advice. "
-    "Write two or three short sentences. If the given rows cannot support an "
-    'answer, set "abstain" to true and say why in "reason". Reply with JSON only, '
-    "with exactly these keys and no others: "
-    '{"explanation": "<string>", "cited_ids": ["<row id>", ...], "abstain": <bool>, '
-    '"reason": "<string, may be empty>"}.'
+# ---------------------------------------------------------------------------
+# Profile IDs used in the bare (no-registry) fallback path.
+# ---------------------------------------------------------------------------
+
+_PROFILE_CLASSIFICATION = "prompt:classification-review-v1"
+_PROFILE_EXPLAIN = "prompt:explain-report-figure-v1"
+
+# Loaded lazily and cached: the shipped profile file, found relative to this
+# module's directory (intelligence/config/prompt_profiles.live-demo.json).
+_SHIPPED_PROFILE_PATH = (
+    Path(__file__).resolve().parent.parent / "config" / "prompt_profiles.live-demo.json"
 )
+_LOADED_PROFILES: PromptProfileRegistry | None = None
+
+_ERR_NO_SHIPPED_FILE = (
+    "groq demo runtime: the shipped prompt-profile file could not be loaded"
+)
+
+
+def _shipped_profiles() -> PromptProfileRegistry:
+    """Return the PromptProfileRegistry loaded from the shipped config file.
+
+    Raises GroqDemoConfigError with ONE fixed message if the file cannot be
+    loaded. The error carries no path, no file content and no exception text.
+    __cause__ and __context__ are None (raised outside the except block).
+    Loaded once and cached thereafter.
+    """
+    global _LOADED_PROFILES
+    if _LOADED_PROFILES is not None:
+        return _LOADED_PROFILES
+    from ztax_gateway.prompt_profile_file import load_prompt_profiles
+
+    _failed = False
+    try:
+        result = load_prompt_profiles(_SHIPPED_PROFILE_PATH)
+    except Exception:
+        _failed = True
+        result = None  # type: ignore[assignment]
+    if _failed:
+        raise GroqDemoConfigError(_ERR_NO_SHIPPED_FILE)
+    _LOADED_PROFILES = result
+    return _LOADED_PROFILES
 
 
 # With a prompt registry, a route that sends the generic per-kind prompt may
@@ -209,9 +218,18 @@ def system_prompt_for(use_case_id: str, kind: Kind) -> str:
 
     The three report-explanation use cases send one prompt whatever the kind;
     every other use case sends the generic prompt for its kind.
+    Uses the shipped profile file as the single source for classification and
+    explain prompts. EXTRACTION and SUGGESTION prompts stay in _SYSTEM_PROMPTS.
     """
+    profiles = _shipped_profiles()
     if use_case_id in _REPORT_EXPLANATION_USE_CASES:
-        return _REPORT_EXPLANATION_SYSTEM_PROMPT
+        profile = profiles.get(_PROFILE_EXPLAIN)
+        if profile is not None:
+            return profile.system_prompt
+    elif kind == Kind.CLASSIFICATION_PROPOSAL:
+        profile = profiles.get(_PROFILE_CLASSIFICATION)
+        if profile is not None:
+            return profile.system_prompt
     return _SYSTEM_PROMPTS[kind]
 
 
@@ -227,14 +245,24 @@ def permitted_kinds(use_case_id: str) -> tuple[Kind, ...]:
     return (_PINNED_KIND,)
 
 
-def build_request(model: str, api_key: str, call: Call) -> urllib.request.Request:
+def build_request(
+    model: str, api_key: str, call: Call, *, system_prompt: str | None = None
+) -> urllib.request.Request:
     """Build the HTTPS request for one call. Pure -- makes no network call.
 
     The request body pins ``model`` exactly as given (no alias resolution on
     the wire either). The API key appears only in the Authorization header
     of the returned Request object, never in a log or print statement.
+
+    ``system_prompt``: when given, overrides the prompt resolved from the
+    shipped profile file. The existing three-argument call still works
+    and resolves the prompt from the shipped file (single source).
     """
-    system = system_prompt_for(call.governance.use_case, call.kind)
+    system = (
+        system_prompt
+        if system_prompt is not None
+        else system_prompt_for(call.governance.use_case, call.kind)
+    )
     if call.governance.use_case in _REPORT_EXPLANATION_USE_CASES:
         max_tokens = _REPORT_EXPLANATION_MAX_TOKENS
     else:
@@ -407,7 +435,12 @@ class GroqDemoRuntime:
                 raise RuntimeUnavailableError(_NO_PROFILE)
             if call.kind not in permitted_kinds(call.governance.use_case):
                 raise RuntimeUnavailableError(_KIND_REFUSED)
-        request = build_request(self._model, self._api_key, call)
+            # With a registry, use the profile's system_prompt as the single source.
+            profile = self._prompts.get(route.prompt_profile)
+            profile_prompt = profile.system_prompt if profile is not None else None
+        else:
+            profile_prompt = None
+        request = build_request(self._model, self._api_key, call, system_prompt=profile_prompt)
         try:
             with urllib.request.urlopen(request, timeout=_TIMEOUT_SECONDS) as response:
                 raw = response.read()

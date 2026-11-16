@@ -25,9 +25,33 @@ from typing import Any
 
 import pytest
 
+from ztax_gateway.prompt_profile_file import load_prompt_profiles
 from ztax_gateway.provenance import AuthorityOutcome, RiskTier
 from ztax_gateway.runtime import Route, RuntimeUnavailableError
 from ztax_gateway.wire import Call, Governance, Kind
+
+# ---------------------------------------------------------------------------
+# Profile file — the single source for classification and explain prompts.
+# ---------------------------------------------------------------------------
+
+_PROFILES_PATH = (
+    Path(__file__).resolve().parent.parent / "config" / "prompt_profiles.live-demo.json"
+)
+_PROFILE_CLASSIFICATION = "prompt:classification-review-v1"
+_PROFILE_EXPLAIN = "prompt:explain-report-figure-v1"
+
+
+def _classification_prompt() -> str:
+    profile = load_prompt_profiles(_PROFILES_PATH).get(_PROFILE_CLASSIFICATION)
+    assert profile is not None
+    return profile.system_prompt
+
+
+def _explain_prompt() -> str:
+    profile = load_prompt_profiles(_PROFILES_PATH).get(_PROFILE_EXPLAIN)
+    assert profile is not None
+    return profile.system_prompt
+
 
 # ---------------------------------------------------------------------------
 # Load tools/groq_demo_runtime.py by path (not on pythonpath).
@@ -176,7 +200,7 @@ def test_classification_prompt_states_the_real_ontology_grammar_not_a_fabricated
     a non-empty path) -- it must not claim to hand over a closed list of
     real node ids, because no such list is reachable from either half of
     the Gateway (see the module-level comment by _ONTOLOGY_GRAMMAR_HINT)."""
-    system_prompt = groq_demo_runtime._SYSTEM_PROMPTS[Kind.CLASSIFICATION_PROPOSAL]
+    system_prompt = _classification_prompt()
     call = _make_call()
     request = build_request(_FAKE_MODEL, _FAKE_KEY, call)
     body = json.loads(request.data)
@@ -207,14 +231,14 @@ def _report_call(use_case: str) -> Call:
 
 
 def _report_prompt() -> str:
-    prompt: str = groq_demo_runtime._REPORT_EXPLANATION_SYSTEM_PROMPT
+    prompt: str = _explain_prompt()
     return " ".join(prompt.split())  # unwrap the source's line breaks
 
 
 @pytest.mark.parametrize("use_case", _REPORT_USE_CASES)
 def test_every_report_use_case_is_sent_the_report_explanation_prompt(use_case: str) -> None:
     body = json.loads(build_request(_FAKE_MODEL, _FAKE_KEY, _report_call(use_case)).data)
-    assert body["messages"][0]["content"] == groq_demo_runtime._REPORT_EXPLANATION_SYSTEM_PROMPT
+    assert body["messages"][0]["content"] == _explain_prompt()
     assert body["messages"][1]["content"] == '[{"id": "FIG-001", "value": "1.00"}]'
     assert body["max_tokens"] == 220
 
@@ -254,7 +278,7 @@ def test_report_prompt_keeps_the_abstain_path_and_the_exact_json_shape() -> None
 def test_classification_prompt_is_unchanged_by_the_report_prompt() -> None:
     body = json.loads(build_request(_FAKE_MODEL, _FAKE_KEY, _make_call()).data)
     system = body["messages"][0]["content"]
-    assert system == groq_demo_runtime._SYSTEM_PROMPTS[Kind.CLASSIFICATION_PROPOSAL]
+    assert system == _classification_prompt()
     assert body["max_tokens"] == 64
 
 
@@ -720,3 +744,109 @@ def test_groq_a_value_error_that_is_not_a_json_decode_error_is_unavailable(
     # Invalid UTF-8 raises UnicodeDecodeError (a ValueError), not JSONDecodeError.
     body = b'{"choices":[{"message":{"content":"\x80"}}]}'
     assert str(_expect_groq_unavailable(monkeypatch, body)) == _GROQ_SHAPE
+
+
+# ---------------------------------------------------------------------------
+# S3 single-source proofs and bare-path failure tests
+# ---------------------------------------------------------------------------
+
+
+def test_single_source_proof_changed_word_in_tmp_profile_propagates(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Single-source proof 1: a copy of the profile file with ONE changed word
+    in the classification prompt causes the runtime to send that changed text,
+    and the request body SHA-256 equals the modified profile's content_hash.
+    """
+    import hashlib as _hashlib
+
+    from ztax_gateway.prompt_profile_file import load_prompt_profiles
+
+    # Read the real profile and alter one word.
+    real_profiles = load_prompt_profiles(_PROFILES_PATH)
+    real_cls = real_profiles.get("prompt:classification-review-v1")
+    assert real_cls is not None
+    original_text = real_cls.system_prompt
+    modified_text = original_text.replace("DEMO ONLY", "DEMO-MODIFIED-ONLY", 1)
+    assert modified_text != original_text
+
+    explain_profile = real_profiles.get("prompt:explain-report-figure-v1")
+    assert explain_profile is not None
+
+    # Compute the SHA-256 of the modified text (what the profile would record).
+    modified_hash = _hashlib.sha256(modified_text.encode("utf-8")).hexdigest()
+
+    # Write a modified profile JSON to tmp_path.
+    modified_profiles_json = json.dumps(
+        {
+            "profiles": [
+                {
+                    "profile_id": "prompt:classification-review-v1",
+                    "owner": "test",
+                    "version": "1.0.0-modified",
+                    "system_prompt": modified_text,
+                    "max_risk_tier": "T2",
+                    "authority_ceiling": "A1",
+                    "safety_rules": [],
+                },
+                {
+                    "profile_id": "prompt:explain-report-figure-v1",
+                    "owner": "test",
+                    "version": "1.0.0",
+                    "system_prompt": explain_profile.system_prompt,
+                    "max_risk_tier": "T1",
+                    "authority_ceiling": "A1",
+                    "safety_rules": [],
+                },
+            ]
+        }
+    )
+    modified_path = tmp_path / "prompt_profiles.modified.json"
+    modified_path.write_text(modified_profiles_json, encoding="utf-8")
+
+    # Patch the runtime's shipped-file path and clear the cache.
+    monkeypatch.setattr(groq_demo_runtime, "_SHIPPED_PROFILE_PATH", modified_path)
+    monkeypatch.setattr(groq_demo_runtime, "_LOADED_PROFILES", None)
+
+    # Build a request (bare path, no registry) and check the sent prompt.
+    call = _make_call()
+    request = build_request(_FAKE_MODEL, _FAKE_KEY, call)
+    body = json.loads(request.data)
+    sent_system = body["messages"][0]["content"]
+
+    assert sent_system == modified_text
+    assert _hashlib.sha256(sent_system.encode("utf-8")).hexdigest() == modified_hash
+
+
+def test_single_source_proof_no_prompt_string_in_runtime_module_source() -> None:
+    """Single-source proof 2: the runtime module source contains neither
+    'ontology:<path>' nor 'report-explanation assistant', confirming that the
+    prompt text is gone from code.
+    """
+    source = _MODULE_PATH.read_text(encoding="utf-8")
+    assert "ontology:<path>" not in source
+    assert "report-explanation assistant" not in source
+
+
+def test_bare_path_failure_missing_file_gives_fixed_message_no_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Bare-path failure: missing shipped file → GroqDemoConfigError with ONE
+    fixed message; the path, file content, and exception text never appear.
+    """
+    missing = Path("/nonexistent/path/prompt_profiles.live-demo.json")
+    monkeypatch.setattr(groq_demo_runtime, "_SHIPPED_PROFILE_PATH", missing)
+    monkeypatch.setattr(groq_demo_runtime, "_LOADED_PROFILES", None)
+
+    with pytest.raises(groq_demo_runtime.GroqDemoConfigError) as exc_info:
+        # Trigger the bare-path load by calling system_prompt_for.
+        groq_demo_runtime.system_prompt_for("classification-review", Kind.CLASSIFICATION_PROPOSAL)
+
+    err = str(exc_info.value)
+    assert err == "groq demo runtime: the shipped prompt-profile file could not be loaded"
+    # Path and exception details must not appear.
+    assert "nonexistent" not in err
+    assert str(missing) not in err
+    # __cause__ and __context__ must be None (raised outside the except block).
+    assert exc_info.value.__cause__ is None
+    assert exc_info.value.__context__ is None
