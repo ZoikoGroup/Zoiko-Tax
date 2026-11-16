@@ -688,3 +688,155 @@ class TestLoaderValueErrorCLI:
         err = capsys.readouterr().err
         assert "error: could not load gold set" in err
         assert "Traceback" not in err
+
+
+# ---------------------------------------------------------------------------
+# 11. Slot file: status on the shipped assistant.v0.slots.json
+# ---------------------------------------------------------------------------
+
+_GOLD_DIR = Path(__file__).resolve().parent.parent / "gold"
+_SLOT_FILE = _GOLD_DIR / "assistant.v0.slots.json"
+
+
+def _slot_file(tmp_path: Path, *, slots: list[dict[str, str]] | None = None) -> Path:
+    """Write a scratch slot JSON file and return its path."""
+    p = tmp_path / "test.slots.json"
+    _slots = slots if slots is not None else [
+        {"slot_id": "ASST-001", "status": "EMPTY"}
+    ]
+    payload = {
+        "name": "test-slots",
+        "version": "0.1.0",
+        "domain": "test",
+        "purpose": "test",
+        "declared_slots": len(_slots),
+        "slots": _slots,
+    }
+    p.write_text(json.dumps(payload), encoding="utf-8")
+    return p
+
+
+class TestSlotFileStatus:
+    def test_shipped_slot_file_total_54(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        rc = gs.main(["--gold", str(_SLOT_FILE)])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "total slots : 54" in out
+
+    def test_shipped_slot_file_empty_54(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        rc = gs.main(["--gold", str(_SLOT_FILE)])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "EMPTY       : 54" in out
+
+    def test_shipped_slot_file_reviewed_0(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        rc = gs.main(["--gold", str(_SLOT_FILE)])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "REVIEWED    : 0" in out
+
+    def test_shipped_slot_file_readiness_not_usable(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        rc = gs.main(["--gold", str(_SLOT_FILE)])
+        assert rc == 0
+        out = capsys.readouterr().out
+        assert "READINESS: not usable as evaluation evidence" in out
+
+    def test_shipped_slot_file_exits_0(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        rc = gs.main(["--gold", str(_SLOT_FILE)])
+        assert rc == 0
+
+
+# ---------------------------------------------------------------------------
+# 12. Slot file: --approved-list gives fixed error and returns 1
+# ---------------------------------------------------------------------------
+
+
+class TestSlotFileApprovedList:
+    def test_approved_list_with_slot_file_returns_1(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        sf = _slot_file(tmp_path)
+        dummy_al = tmp_path / "al.json"
+        dummy_al.write_text(
+            json.dumps({"list_version": "2026-01-01", "approved": []}),
+            encoding="utf-8",
+        )
+        rc = gs.main(
+            ["--gold", str(sf), "--approved-list", str(dummy_al), "--as-of", "2026-01-01"]
+        )
+        assert rc == 1
+        err = capsys.readouterr().err
+        assert "coverage and review sheets apply to case files only" in err
+
+    def test_review_sheet_with_slot_file_returns_1(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        sf = _slot_file(tmp_path)
+        out_csv = tmp_path / "sheet.csv"
+        rc = gs.main(["--gold", str(sf), "--review-sheet", str(out_csv)])
+        assert rc == 1
+        err = capsys.readouterr().err
+        assert "coverage and review sheets apply to case files only" in err
+
+
+# ---------------------------------------------------------------------------
+# 13. Slot file: broken slot file gives fixed error and returns 1
+# ---------------------------------------------------------------------------
+
+
+class TestBrokenSlotFile:
+    def test_broken_slot_file_returns_1(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        # A file with "slots" key but invalid schema (status is not EMPTY).
+        bad = tmp_path / "bad.slots.json"
+        bad.write_text(
+            json.dumps(
+                {
+                    "name": "x",
+                    "version": "1",
+                    "domain": "d",
+                    "purpose": "p",
+                    "declared_slots": 1,
+                    "slots": [{"slot_id": "ASST-001", "status": "REVIEWED"}],
+                }
+            ),
+            encoding="utf-8",
+        )
+        rc = gs.main(["--gold", str(bad)])
+        assert rc == 1
+        err = capsys.readouterr().err
+        assert "error: could not load slot file" in err
+
+    def test_broken_slot_file_no_file_content_in_output(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        sentinel = "SENTINEL_UNIQUE_XJ9Q"
+        bad = tmp_path / "bad2.slots.json"
+        bad.write_text(
+            json.dumps(
+                {
+                    "name": sentinel,
+                    "version": "1",
+                    "domain": "d",
+                    "purpose": "p",
+                    "declared_slots": 1,
+                    "slots": [{"slot_id": "ASST-001", "status": sentinel}],
+                }
+            ),
+            encoding="utf-8",
+        )
+        gs.main(["--gold", str(bad)])
+        captured = capsys.readouterr()
+        assert sentinel not in captured.out
+        assert sentinel not in captured.err
