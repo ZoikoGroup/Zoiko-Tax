@@ -60,6 +60,7 @@ from .invocation_evidence import (
     InvocationOutcome,
     TokenPricing,
     UsageMetrics,
+    _new_invocation_id,
 )
 from .production_gates import PromptProfileRegistry
 from .provenance import AuthorityOutcome, Provenance, RiskTier
@@ -84,6 +85,11 @@ SERVICE = "ztax.gateway.v1.ModelGateway"
 METHOD = "Invoke"
 FULL_METHOD = f"/{SERVICE}/{METHOD}"
 REASON_KEY = "ztax-reason"
+# Trailing metadata that names the evidence record a call left behind: the
+# ``ai_invocation_id`` of the PROPOSE or BLOCK record. It is set only when that record
+# was written. It is a random UUID4 hex string and carries nothing from the caller. The
+# reply body does not change; a client that ignores trailers sees the same bytes.
+INVOCATION_ID_KEY = "ztax-invocation-id"
 
 # The transport's own reason codes. Their Go twins are registered in
 # backend/internal/adapter/gateway (ReasonGatewayNotConfigured,
@@ -126,6 +132,23 @@ class GatewayError(Exception):
     code: grpc.StatusCode
     reason: str
     detail: str
+    # The ``ai_invocation_id`` of the evidence record written for this call. None when no
+    # record exists: a call that could not be decoded, or a sink that failed to write.
+    invocation_id: str | None = None
+
+
+class RecordedId:
+    """Receives the id of the evidence record a call wrote, whatever way the call ends.
+
+    ``invoke_with_id`` fills it for every path that wrote a record, including the one
+    where it re-raises the runtime's own error (which cannot carry an id). ``value``
+    stays None while no record has been written.
+    """
+
+    __slots__ = ("value",)
+
+    def __init__(self) -> None:
+        self.value: str | None = None
 
 
 _REFUSAL_STATUS = {r: grpc.StatusCode.PERMISSION_DENIED for r in Refusal}
@@ -294,14 +317,22 @@ class Gateway:
             )
         return call
 
-    def invoke_with_id(self, data: bytes) -> tuple[bytes, str | None]:
+    def invoke_with_id(
+        self, data: bytes, *, recorded: RecordedId | None = None
+    ) -> tuple[bytes, str | None]:
         """Run one call and also return the ``ai_invocation_id`` for check events.
 
-        Returns ``(reply_bytes, invocation_id)``.  ``invocation_id`` is ``None``
-        when the call is refused or killed before reaching the runtime.  Each
-        call's id is local to that call; this method is safe to call concurrently.
+        Returns ``(reply_bytes, invocation_id)``. A call that does not succeed raises, and
+        the id of the BLOCK record it left behind is on ``GatewayError.invocation_id``
+        (and in ``recorded``, which also covers the runtime's own error that is re-raised
+        as it is). The id is made once, right after the call is decoded, and is the id of
+        the record that is written. When no record exists (a call that cannot be
+        decoded, or a sink that failed to write) there is no id. Each call's id is local
+        to that call; this method is safe to call concurrently.
         """
         call = self._decode(data)
+        ledger = recorded if recorded is not None else RecordedId()
+        invocation_id = _new_invocation_id()
 
         g = call.governance
         route: Route | None
@@ -335,15 +366,17 @@ class Gateway:
             # ADR-0006 §2.8: residency is per cell. A call from another cell's
             # region has reached the wrong Gateway, whatever the use case
             # permits. The detail is fixed text: it names neither region.
-            self._seal_block(
+            ledger.value = self._seal_block(
                 replace(refusal_provenance, region=self._region),
                 call.input,
                 refusal_code=Refusal.RESIDENCY_REFUSED.value,
+                invocation_id=invocation_id,
             )
             raise GatewayError(
                 grpc.StatusCode.PERMISSION_DENIED,
                 Refusal.RESIDENCY_REFUSED.value,
                 DETAIL_RESIDENCY_REFUSED,
+                ledger.value,
             )
 
         timing = _CallTiming()
@@ -370,13 +403,14 @@ class Gateway:
             caller_err = GatewayError(
                 _REFUSAL_STATUS[refusal.refusal], refusal.refusal.value, refusal.detail
             )
-            self._seal_block(
+            ledger.value = self._seal_block(
                 refusal_provenance,
                 call.input,
                 refusal_code=refusal.refusal.value,
                 original_error=caller_err,
+                invocation_id=invocation_id,
             )
-            raise caller_err from refusal
+            raise _with_id(caller_err, ledger.value) from refusal
         except RuntimeNotConfiguredError:
             # Gap 1: the cell has no approved runtime.
             not_configured = True
@@ -385,31 +419,38 @@ class Gateway:
             # cannot serve.
             no_route = True
         except RuntimeUnavailableError as exc:
-            self._seal_block(
+            ledger.value = self._seal_block(
                 provenance,
                 call.input,
                 refusal_code=REASON_UNAVAILABLE,
                 latency_ms=timing.ms,
+                invocation_id=invocation_id,
             )
             raise GatewayError(
-                grpc.StatusCode.UNAVAILABLE, REASON_UNAVAILABLE, DETAIL_RUNTIME_UNAVAILABLE
+                grpc.StatusCode.UNAVAILABLE,
+                REASON_UNAVAILABLE,
+                DETAIL_RUNTIME_UNAVAILABLE,
+                ledger.value,
             ) from exc
         except _UnexpectedRuntimeError as failure:
             # ADR-0006 §2.7: the crossing is evidenced even when the runtime fails in a
             # way nobody named. Handled after the try statement.
             unexpected = failure.original
         if not_configured or no_route:
-            self._refuse_not_configured(provenance, call, no_route=no_route)
+            self._refuse_not_configured(
+                provenance, call, ledger, invocation_id, no_route=no_route
+            )
         if unexpected is not None:
             # One BLOCK record, the same shape as the runtime-unavailable one (verdict
             # AI_GATEWAY_UNAVAILABLE) with a fixed detail and no exception text. If the
             # sink fails here the failure is logged and the error below is unchanged.
-            self._seal_block(
+            ledger.value = self._seal_block(
                 provenance,
                 call.input,
                 refusal_code=REASON_UNAVAILABLE,
                 detail=RECORD_DETAIL_UNEXPECTED_ERROR,
                 latency_ms=timing.ms,
+                invocation_id=invocation_id,
             )
             # The caller sees exactly what it saw before this record existed: the
             # original error (the transport turns it into UNAVAILABLE / "internal error").
@@ -417,18 +458,25 @@ class Gateway:
 
         # Successful invocation: seal a PROPOSE record (the authority-derived
         # default) and write it to the sink before encode_reply is called.
-        invocation_id = self._seal_success(
+        ledger.value = self._seal_success(
             provenance,
             call.input,
             reply,
             latency_ms=timing.ms,
             input_tokens=timing.input_tokens,
             output_tokens=timing.output_tokens,
+            invocation_id=invocation_id,
         )
-        return encode_reply(reply), invocation_id
+        return encode_reply(reply), ledger.value
 
     def _refuse_not_configured(
-        self, provenance: Provenance, call: Call, *, no_route: bool
+        self,
+        provenance: Provenance,
+        call: Call,
+        ledger: RecordedId,
+        invocation_id: str,
+        *,
+        no_route: bool,
     ) -> NoReturn:
         """Seal a BLOCK record, then raise UNIMPLEMENTED / AI_GATEWAY_NOT_CONFIGURED.
 
@@ -445,13 +493,14 @@ class Gateway:
         caller_err = GatewayError(
             grpc.StatusCode.UNIMPLEMENTED, REASON_NOT_CONFIGURED, DETAIL_NOT_CONFIGURED
         )
-        self._seal_block(
+        ledger.value = self._seal_block(
             provenance,
             call.input,
             refusal_code=REASON_NOT_CONFIGURED,
             original_error=caller_err,
+            invocation_id=invocation_id,
         )
-        raise caller_err
+        raise _with_id(caller_err, ledger.value)
 
     def _refresh_kill_state(self) -> None:
         """Bring the registry's kill state in line with the registry file.
@@ -632,6 +681,7 @@ class Gateway:
         latency_ms: int = 0,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
+        invocation_id: str | None = None,
     ) -> str:
         """Build and write a successful-invocation evidence record.
 
@@ -645,13 +695,15 @@ class Gateway:
         must not claim a prompt was used when it was not.
 
         Returns the ``ai_invocation_id`` of the sealed record so the caller can
-        emit a linked check event without touching shared state.
+        emit a linked check event without touching shared state. When the sink fails
+        the record does not exist and this raises instead: no id is ever returned for it.
         """
         outcome = InvocationOutcome.from_authority_outcome(provenance.authority_outcome)
         builder = InvocationEvidenceBuilder(
             provenance=provenance,
             invocation_outcome=outcome,
             registry=self._registry,
+            ai_invocation_id=invocation_id,
         )
         builder.set_input(input_bytes)
         # Serialise the reply to bytes for the output hash; this is the same
@@ -699,8 +751,12 @@ class Gateway:
         original_error: GatewayError | None = None,
         detail: str = "",
         latency_ms: int = 0,
-    ) -> None:
+        invocation_id: str | None = None,
+    ) -> str | None:
         """Build and write a BLOCK evidence record for a governance refusal.
+
+        Returns the ``ai_invocation_id`` of the record, or None when the sink failed and
+        the record does not exist.
 
         A BLOCK record has no output hash (rule 5: a blocked invocation
         produced no output).  The builder skips the governance gate for BLOCK
@@ -718,6 +774,7 @@ class Gateway:
             provenance=provenance,
             invocation_outcome=InvocationOutcome.BLOCK,
             registry=self._registry,
+            ai_invocation_id=invocation_id,
         )
         builder.set_input(input_bytes)
         builder.add_guardrail(GuardrailResult("governance.authority", refusal_code, detail))
@@ -725,15 +782,16 @@ class Gateway:
         # it keeps the zero default. Tokens and cost are never populated here.
         builder.set_usage(UsageMetrics(latency_ms=latency_ms))
         record = builder.build()
-        self._write_sink_block(record, original_error=original_error)
+        written = self._write_sink_block(record, original_error=original_error)
+        return record.ai_invocation_id if written else None
 
     def _write_sink_block(
         self,
         record: InvocationEvidenceRecord,
         *,
         original_error: GatewayError | None,
-    ) -> None:
-        """Write a BLOCK record to the sink.
+    ) -> bool:
+        """Write a BLOCK record to the sink. Returns True when it was written.
 
         Gap 4: if the sink raises while recording a refusal or a runtime
         failure, the caller's error must not be replaced.  Log the sink
@@ -761,6 +819,7 @@ class Gateway:
             raise original_error from None
         # residency / runtime-failure paths: the caller raises after us,
         # so simply return; the caller raises the right error.
+        return not failed
 
     def _write_sink(self, record: InvocationEvidenceRecord) -> None:
         """Write a PERMIT record to the sink.
@@ -803,8 +862,16 @@ def _valid_timeout(value: object) -> bool:
         return False
 
 
+def _with_id(err: GatewayError, invocation_id: str | None) -> GatewayError:
+    """``err`` with the id of the record written for it; ``err`` itself when none was."""
+    return err if invocation_id is None else replace(err, invocation_id=invocation_id)
+
+
 def _abort(context: grpc.ServicerContext, err: GatewayError) -> NoReturn:
-    context.set_trailing_metadata(((REASON_KEY, err.reason),))
+    trailer = [(REASON_KEY, err.reason)]
+    if err.invocation_id is not None:
+        trailer.append((INVOCATION_ID_KEY, err.invocation_id))
+    context.set_trailing_metadata(tuple(trailer))
     context.abort(err.code, err.detail)
     raise AssertionError("unreachable: abort raises")
 
@@ -814,16 +881,25 @@ def handler(gateway: Gateway) -> grpc.GenericRpcHandler:
     raw JSON bytes; the codec is ``wire``."""
 
     def invoke(request: bytes, context: grpc.ServicerContext) -> bytes:
+        recorded = RecordedId()
         try:
-            return gateway.invoke(request)
+            reply, invocation_id = gateway.invoke_with_id(request, recorded=recorded)
         except GatewayError as err:
             _abort(context, err)
         except Exception as exc:
             log.error("gateway: unhandled error", extra={"error_type": type(exc).__name__})
             _abort(
                 context,
-                GatewayError(grpc.StatusCode.UNAVAILABLE, REASON_UNAVAILABLE, "internal error"),
+                GatewayError(
+                    grpc.StatusCode.UNAVAILABLE,
+                    REASON_UNAVAILABLE,
+                    "internal error",
+                    recorded.value,
+                ),
             )
+        if invocation_id is not None:
+            context.set_trailing_metadata(((INVOCATION_ID_KEY, invocation_id),))
+        return reply
 
     return grpc.method_handlers_generic_handler(
         SERVICE, {METHOD: grpc.unary_unary_rpc_method_handler(invoke)}
