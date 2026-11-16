@@ -522,3 +522,14 @@ def test_a_client_that_ignores_trailers_decodes_the_same_reply_bytes() -> None:
     trailer = dict(rpc.trailing_metadata() or ())
     assert trailer[INVOCATION_ID_KEY] == sink.records[-1].ai_invocation_id
     assert trailer[INVOCATION_ID_KEY] not in body.decode("utf-8")
+
+
+def test_a_reused_recorded_slot_never_keeps_the_previous_calls_id() -> None:
+    gateway, _ = _rig(_Runtime())
+    slot = RecordedId()
+    _, first = gateway.invoke_with_id(_call(), recorded=slot)
+    assert first is not None
+    assert slot.value == first
+    with pytest.raises(GatewayError):
+        gateway.invoke_with_id(b"not json", recorded=slot)  # no record for this call
+    assert slot.value is None

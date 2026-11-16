@@ -330,6 +330,8 @@ class Gateway:
         decoded, or a sink that failed to write) there is no id. Each call's id is local
         to that call; this method is safe to call concurrently.
         """
+        if recorded is not None:
+            recorded.value = None  # a reused slot never keeps the previous call's id
         call = self._decode(data)
         ledger = recorded if recorded is not None else RecordedId()
         invocation_id = _new_invocation_id()

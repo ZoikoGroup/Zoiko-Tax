@@ -71,6 +71,10 @@ _TOTAL_SECONDS: float = 30
 # How much of the reply one read takes. Small enough that the total is checked often.
 _READ_CHUNK_BYTES = 65_536
 
+# The shortest time a read is given when the total is almost over (a socket timeout of 0
+# would mean "do not wait at all").
+_MIN_READ_SECONDS = 0.001
+
 # A reply larger than this is not a chat completion this runtime will read.
 _MAX_REPLY_BYTES = 1_048_576
 
@@ -108,6 +112,7 @@ _FAIL_TOO_LARGE: Final = "local runtime: provider reply was too large"
 _FAIL_SHAPE: Final = "local runtime: provider response was not shaped like a chat completion"
 _FAIL_EMPTY: Final = "local runtime: provider returned an empty reply"
 _FAIL_REQUIRED_SHAPE: Final = "local runtime: provider reply was not in the required shape"
+_FAIL_NO_TIMER: Final = "local runtime: the time limit could not be started"
 
 
 def _fail_http(status: int) -> str:
@@ -311,6 +316,11 @@ def _monotonic() -> float:
     return time.monotonic()
 
 
+class _TimerStartError(Exception):
+    """The thread for the time limit could not be started. No text: the caller reports a
+    fixed one."""
+
+
 class _Deadline:
     """The total time budget of one request.
 
@@ -318,18 +328,26 @@ class _Deadline:
     ends a read that is blocked: at the deadline it shuts the connection's socket down, so
     the blocked read returns at once instead of waiting for its own per-read timeout.
     ``expired`` is set before the shutdown, so whoever sees the failure can tell why.
+
+    The socket is the one the connection kept for itself (see ``_DeadlineConnection``): the
+    opener drops its own reference as soon as the headers are in, long before the body.
+    Before each read the socket's timeout is cut to what is left, so a read that the
+    shutdown somehow missed still ends at the total.
     """
 
     def __init__(self, total: float) -> None:
         self._end = _monotonic() + total
         self.expired = threading.Event()
         self._lock = threading.Lock()
-        self._connection: http.client.HTTPConnection | None = None
+        self._sock: socket.socket | None = None
         self._timer = threading.Timer(total, self._fire)
         self._timer.daemon = True
 
     def start(self) -> None:
-        self._timer.start()
+        try:
+            self._timer.start()
+        except RuntimeError:
+            raise _TimerStartError from None
 
     def stop(self) -> None:
         self._timer.cancel()
@@ -340,11 +358,21 @@ class _Deadline:
     def over(self) -> bool:
         return self.expired.is_set() or self.remaining() <= 0
 
-    def attach(self, connection: http.client.HTTPConnection) -> None:
+    def guard(self, sock: socket.socket) -> None:
+        """Take the connected socket (the TLS-wrapped one for https) under this deadline."""
         with self._lock:
-            self._connection = connection
+            self._sock = sock
         if self.expired.is_set():
             self._abort()
+
+    def limit_next_read(self) -> None:
+        """Give the next read no more than what is left of the total."""
+        with self._lock:
+            sock = self._sock
+        if sock is not None:
+            seconds = max(min(_TIMEOUT_SECONDS, self.remaining()), _MIN_READ_SECONDS)
+            with contextlib.suppress(OSError):
+                sock.settimeout(seconds)
 
     def _fire(self) -> None:
         self.expired.set()
@@ -352,12 +380,13 @@ class _Deadline:
 
     def _abort(self) -> None:
         with self._lock:
-            connection = self._connection
-        sock = connection.sock if connection is not None else None
+            sock = self._sock
         if sock is not None:
-            # shutdown (not close) wakes a read that is blocked in another thread.
+            # shutdown (not close) wakes a read that is blocked in another thread. The
+            # plain socket method is used on purpose: SSLSocket.shutdown would also drop
+            # the SSL object, and a read that is about to start would then raise.
             with contextlib.suppress(OSError):
-                sock.shutdown(socket.SHUT_RDWR)
+                socket.socket.shutdown(sock, socket.SHUT_RDWR)
 
 
 class _DeadlineRequest(urllib.request.Request):
@@ -374,7 +403,6 @@ class _DeadlineConnection(http.client.HTTPConnection):
     def __init__(self, *args: Any, deadline: _Deadline, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._deadline = deadline
-        deadline.attach(self)
 
     def connect(self) -> None:
         remaining = self._deadline.remaining()
@@ -384,6 +412,10 @@ class _DeadlineConnection(http.client.HTTPConnection):
         # and never more than the per-read limit.
         self.timeout = min(_TIMEOUT_SECONDS, remaining)
         super().connect()
+        # The opener sets ``self.sock`` to None as soon as the headers are in. The deadline
+        # keeps its own reference (the TLS-wrapped socket for https) for the whole body.
+        if self.sock is not None:
+            self._deadline.guard(self.sock)
 
 
 class _DeadlineHTTPSConnection(_DeadlineConnection, http.client.HTTPSConnection):
@@ -415,6 +447,7 @@ def _read_within(response: http.client.HTTPResponse, deadline: _Deadline) -> byt
     while size < limit:
         if deadline.over():
             raise TimeoutError
+        deadline.limit_next_read()
         chunk = response.read1(min(_READ_CHUNK_BYTES, limit - size))
         if not chunk:
             # An end of reply that the deadline's shutdown caused is not a complete reply.
@@ -476,10 +509,12 @@ class LocalModelRuntime:
         # error carries no __cause__ or __context__ (those can hold the address).
         failure: str | None = None
         raw = b""
-        deadline.start()
         try:
+            deadline.start()
             with _opener().open(request, timeout=_TIMEOUT_SECONDS) as response:
                 raw = _read_within(response, deadline)
+        except _TimerStartError:
+            failure = _FAIL_NO_TIMER  # nothing was sent
         except urllib.error.HTTPError as exc:
             failure = _FAIL_REDIRECT if exc.code in _REDIRECT_STATUSES else _fail_http(exc.code)
             exc.close()
@@ -491,6 +526,13 @@ class LocalModelRuntime:
             # UnicodeError: a host the idna codec rejects at connect time. Not an OSError.
             # Past the total, the shutdown that ended the read is what raised: a timeout.
             failure = _FAIL_TIMEOUT if deadline.over() else _FAIL_NETWORK
+        except ValueError:
+            # A read on a socket the deadline shut down can raise ValueError (a TLS socket
+            # whose SSL object is gone). Past the total that is the timeout; any other
+            # ValueError is not ours to hide.
+            if not deadline.over():
+                raise
+            failure = _FAIL_TIMEOUT
         finally:
             deadline.stop()
         if failure is not None:

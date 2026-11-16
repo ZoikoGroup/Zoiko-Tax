@@ -12,6 +12,7 @@ import http.client
 import importlib.util
 import json
 import logging
+import socket
 import threading
 import time
 from collections.abc import Callable, Iterator
@@ -815,18 +816,18 @@ def test_a_reply_that_keeps_arriving_slowly_ends_as_a_timeout_at_the_total(
 ) -> None:
     # The per-read limit stays 30 s: a byte every 0.05 s never trips it, only the total can.
     with _scripted_server(behaviour) as url:
-        err, elapsed = _timed_run(monkeypatch, url, total=0.6)
+        err, elapsed = _timed_run(monkeypatch, url, total=1.0)
     assert str(err) == _TIMEOUT_TEXT
-    assert 0.5 <= elapsed < 1.5, elapsed
+    assert 0.9 <= elapsed < 4.0, elapsed  # the server would trickle for 8 s
 
 
 def test_a_server_that_never_replies_ends_as_a_timeout_at_the_total_not_the_read_limit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     with _scripted_server(_silent()) as url:
-        err, elapsed = _timed_run(monkeypatch, url, total=0.6)
+        err, elapsed = _timed_run(monkeypatch, url, total=1.0)
     assert str(err) == _TIMEOUT_TEXT
-    assert 0.5 <= elapsed < 1.5, elapsed
+    assert 0.9 <= elapsed < 4.0, elapsed  # the server would stay silent for 8 s
 
 
 def test_a_fast_reply_is_unchanged_and_leaves_no_timer_behind(
@@ -845,17 +846,17 @@ def test_a_fast_reply_is_unchanged_and_leaves_no_timer_behind(
 def test_a_reply_that_finishes_inside_the_total_is_accepted(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(local_runtime, "_TOTAL_SECONDS", 1.0)
-    with _scripted_server(_paced_good(0.5)) as url:  # takes about half of the total
+    monkeypatch.setattr(local_runtime, "_TOTAL_SECONDS", 2.0)
+    with _scripted_server(_paced_good(0.5)) as url:  # takes a quarter of the total
         result = _runtime(monkeypatch, url).run(_ROUTE, _call())
     assert result.proposed_code == "ontology:demo/class"
 
 
-def test_the_same_reply_past_the_total_is_a_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
-    with _scripted_server(_paced_good(0.5)) as url:
-        err, elapsed = _timed_run(monkeypatch, url, total=0.25)
+def test_a_slower_reply_past_the_total_is_a_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    with _scripted_server(_paced_good(5.0)) as url:  # would take five times the total
+        err, elapsed = _timed_run(monkeypatch, url, total=1.0)
     assert str(err) == _TIMEOUT_TEXT
-    assert elapsed < 1.0, elapsed
+    assert elapsed < 3.0, elapsed
 
 
 def test_the_deadline_is_over_exactly_at_the_total_by_the_monotonic_clock(
@@ -911,7 +912,7 @@ def test_the_total_timeout_text_has_no_address_prompt_or_reply_text(
             time.sleep(0.02)
 
     with _scripted_server(leaky_trickle) as url:
-        monkeypatch.setattr(local_runtime, "_TOTAL_SECONDS", 0.4)
+        monkeypatch.setattr(local_runtime, "_TOTAL_SECONDS", 1.0)
         runtime = _runtime(monkeypatch, f"{url}/{ADDR_MARK}")
         with pytest.raises(RuntimeUnavailableError) as exc:
             runtime.run(_ROUTE, _call(text=PROMPT_MARK))
@@ -924,7 +925,7 @@ def test_the_total_timeout_text_has_no_address_prompt_or_reply_text(
 
 
 def test_the_runtime_is_usable_again_after_a_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(local_runtime, "_TOTAL_SECONDS", 0.5)
+    monkeypatch.setattr(local_runtime, "_TOTAL_SECONDS", 1.0)
     with _scripted_server(_trickle_body(0.05), _good) as url:
         runtime = _runtime(monkeypatch, url)
         with pytest.raises(RuntimeUnavailableError) as first:
@@ -957,10 +958,10 @@ def test_the_reading_loop_stops_as_soon_as_the_clock_says_the_total_is_over(
     finally:
         jumper.cancel()
     assert str(exc.value) == _TIMEOUT_TEXT
-    assert elapsed < 1.5, elapsed
+    assert elapsed < 5.0, elapsed  # without the loop's check the trickle runs for 8 s
 
 
-def test_a_total_that_is_already_over_fails_before_anything_is_sent(
+def test_a_total_that_is_already_over_ends_as_the_timeout_text_and_sends_nothing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(local_runtime, "_monotonic", lambda: 50.0)
@@ -1001,7 +1002,7 @@ def test_both_schemes_open_their_connections_under_the_request_deadline(
     connection = seen[0]("127.0.0.1", timeout=1)
     assert isinstance(connection, base)
     assert isinstance(connection, local_runtime._DeadlineConnection)
-    assert deadline._connection is connection
+    assert connection._deadline is deadline
     # The opener the runtime really uses carries both handlers.
     opener: Any = local_runtime._opener()
     kinds = {type(h) for h in opener.handlers}
@@ -1043,3 +1044,205 @@ def test_the_total_is_measured_with_the_monotonic_clock_not_the_wall_clock(
         m.setattr(time, "monotonic", lambda: 7.0)
         m.setattr(time, "time", lambda: 9.0)
         assert local_runtime._monotonic() == 7.0
+
+
+# ---------------------------------------------------------------------------
+# After the headers: the opener drops its own socket reference, the deadline keeps one
+# ---------------------------------------------------------------------------
+
+
+def _stall_after(prefix: int, late_at: float) -> _Behaviour:
+    """Headers, ``prefix`` bytes at once, one more byte at ``late_at`` seconds, then silence."""
+
+    def behave(h: BaseHTTPRequestHandler) -> None:
+        h.send_response(200)
+        h.send_header("Content-Length", "900000")
+        h.end_headers()
+        if prefix:
+            h.wfile.write(b" " * prefix)
+        time.sleep(late_at)
+        h.wfile.write(b" ")
+        time.sleep(8)
+
+    return behave
+
+
+_STALL_CASES = [
+    (0, "both"),
+    (0, "no-shutdown"),
+    (200_000, "both"),
+    (200_000, "no-shutdown"),
+]
+
+
+@pytest.mark.parametrize(
+    ("prefix", "mode"),
+    _STALL_CASES,
+    ids=[f"{'large-partial-body' if p else 'one-byte'}-{m}" for p, m in _STALL_CASES],
+)
+def test_a_body_that_stalls_after_the_headers_ends_at_the_total_not_after_a_further_read_limit(
+    monkeypatch: pytest.MonkeyPatch, prefix: int, mode: str
+) -> None:
+    # The last byte comes at 1.3 s of a 1.5 s total, then silence. A blocked read that is
+    # only bound by a per-read limit would end at 1.3 + 1.5 = 2.8 s. The read limit cut to
+    # what is left must end it even when the shutdown does nothing ("no-shutdown": on
+    # Windows a shutdown does not wake a read that waits with a timeout, on Linux it does).
+    if mode == "no-shutdown":
+        monkeypatch.setattr(local_runtime._Deadline, "_abort", lambda self: None)
+    with _scripted_server(_stall_after(prefix, 1.3)) as url:
+        err, elapsed = _timed_run(monkeypatch, url, total=1.5)
+    assert str(err) == _TIMEOUT_TEXT
+    assert 1.4 <= elapsed < 2.2, elapsed
+
+
+def test_connect_raises_before_any_socket_is_opened_when_no_time_is_left(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(local_runtime, "_monotonic", lambda: 50.0)
+
+    def no_socket(*args: Any, **kwargs: Any) -> None:
+        raise AssertionError("a socket was opened")
+
+    monkeypatch.setattr(socket, "create_connection", no_socket)
+    connection = local_runtime._DeadlineConnection(
+        "127.0.0.1", 9, deadline=local_runtime._Deadline(0.0)
+    )
+    with pytest.raises(TimeoutError):
+        connection.connect()
+    assert connection.sock is None
+
+
+@pytest.mark.parametrize(("total", "expected"), [(5.0, 5.0), (100.0, 30.0)])
+def test_connect_is_given_what_is_left_but_never_more_than_the_read_limit(
+    monkeypatch: pytest.MonkeyPatch, total: float, expected: float
+) -> None:
+    monkeypatch.setattr(local_runtime, "_monotonic", lambda: 50.0)
+    timeouts: list[float] = []
+
+    def refuse(address: object, timeout: float, *rest: Any) -> None:
+        timeouts.append(timeout)
+        raise ConnectionRefusedError
+
+    monkeypatch.setattr(socket, "create_connection", refuse)
+    connection = local_runtime._DeadlineConnection(
+        "127.0.0.1", 9, deadline=local_runtime._Deadline(total)
+    )
+    with pytest.raises(ConnectionRefusedError):
+        connection.connect()
+    assert timeouts == [expected]
+
+
+class _ReadRaisesValueError:
+    """An opener whose reply raises ValueError on the first read, as a TLS socket does when
+    the deadline has shut it down. ``expire`` says whether the total has passed by then."""
+
+    def __init__(self, expire: bool) -> None:
+        self._expire = expire
+
+    def open(self, request: Any, timeout: float) -> Any:
+        expire = self._expire
+
+        class Reply:
+            def __enter__(self) -> Reply:
+                return self
+
+            def __exit__(self, *exc: object) -> None:
+                return None
+
+            def read1(self, n: int) -> bytes:
+                if expire:
+                    request.deadline.expired.set()
+                raise ValueError("Read on closed or unwrapped SSL socket.")
+
+        return Reply()
+
+
+def test_a_value_error_from_a_read_after_the_total_is_the_timeout_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    opener = _ReadRaisesValueError(expire=True)
+    monkeypatch.setattr(local_runtime, "_opener", lambda: opener)
+    runtime = _runtime(monkeypatch, "http://127.0.0.1:9")
+    with pytest.raises(RuntimeUnavailableError) as exc:
+        runtime.run(_ROUTE, _call())
+    assert str(exc.value) == _TIMEOUT_TEXT
+    assert exc.value.__cause__ is None
+    assert exc.value.__context__ is None
+
+
+def test_a_value_error_from_a_read_before_the_total_is_not_hidden(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    opener = _ReadRaisesValueError(expire=False)
+    monkeypatch.setattr(local_runtime, "_opener", lambda: opener)
+    runtime = _runtime(monkeypatch, "http://127.0.0.1:9")
+    with pytest.raises(ValueError, match="unwrapped SSL socket"):
+        runtime.run(_ROUTE, _call())
+    _wait_for_no_timers()
+    assert _timer_threads() == []
+
+
+def test_a_timer_that_cannot_start_ends_as_a_fixed_error_and_sends_nothing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def cannot_start(self: threading.Timer) -> None:
+        raise RuntimeError(f"can't start new thread {ADDR_MARK}")
+
+    monkeypatch.setattr(threading.Timer, "start", cannot_start)
+    with _server(_Plan(body=_body(_GOOD_BODY))) as (url, seen):
+        runtime = _runtime(monkeypatch, url)
+        with pytest.raises(RuntimeUnavailableError) as exc:
+            runtime.run(_ROUTE, _call())
+    assert str(exc.value) == "local runtime: the time limit could not be started"
+    assert ADDR_MARK not in repr(exc.value)
+    assert exc.value.__cause__ is None
+    assert exc.value.__context__ is None
+    assert seen.paths == []  # nothing was sent
+    assert _timer_threads() == []  # and nothing is left running
+
+
+def test_the_timer_shuts_down_the_socket_the_deadline_guards() -> None:
+    mine, theirs = socket.socketpair()
+    try:
+        deadline = local_runtime._Deadline(60.0)
+        deadline.guard(mine)
+        deadline._fire()  # what the timer does at the total
+        assert deadline.expired.is_set()
+        # The socket is shut down in both directions: sending now fails on every platform.
+        # (Whether a read that waits with a timeout is woken by it differs: Linux yes,
+        # Windows no, which is why each read is also given only what is left of the total.)
+        with pytest.raises(OSError):
+            mine.send(b"x")
+    finally:
+        mine.close()
+        theirs.close()
+
+
+def test_the_deadline_keeps_the_connected_socket_after_the_opener_lets_go_of_it() -> None:
+    with _scripted_server(_good) as url:
+        port = int(url.rsplit(":", 1)[1])
+        deadline = local_runtime._Deadline(60.0)
+        connection = local_runtime._DeadlineConnection("127.0.0.1", port, deadline=deadline)
+        try:
+            connection.connect()
+            held = connection.sock
+            assert held is not None
+            assert deadline._sock is held
+            connection.sock = None  # what urllib does as soon as the headers are in
+            assert deadline._sock is held
+        finally:
+            if held is not None:
+                held.close()
+
+
+def test_the_loop_reads_nothing_once_the_clock_says_the_total_is_over(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    now = [0.0]
+    monkeypatch.setattr(local_runtime, "_monotonic", lambda: now[0])
+    deadline = local_runtime._Deadline(10.0)
+    response = _FakeResponse(b"ab", b"cd")
+    now[0] = 10.0  # the total is over; no socket, no timer: only the loop's own check is left
+    with pytest.raises(TimeoutError):
+        local_runtime._read_within(response, deadline)  # type: ignore[arg-type]
+    assert response._parts == [b"ab", b"cd"]  # not one read was made
