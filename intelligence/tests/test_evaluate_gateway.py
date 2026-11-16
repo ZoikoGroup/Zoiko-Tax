@@ -24,10 +24,17 @@ Covered by this module
 from __future__ import annotations
 
 import ast
+import contextlib
+import http.server
 import json
+import json as _json
+import socket as _socket
 import sys
+import threading
+import time as _time
 import typing
 from collections.abc import Mapping
+from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -1619,3 +1626,303 @@ class TestLoaderValueErrorCLI:
         assert rc != 0
         err = capsys.readouterr().err
         assert "Traceback" not in err
+
+
+# ---------------------------------------------------------------------------
+# Local runtime tests
+# ---------------------------------------------------------------------------
+
+_LOCAL_MODEL = "local-pinned-7b"
+_LOCAL_USE_CASE = "classification-review"
+_GOOD_CODE = "ontology:telecom/voice/mobile"
+
+# Sentinel that must NEVER appear in any output when the endpoint is unreachable.
+_SENTINEL = "SENTINEL-LOCAL-9f3a71"
+
+
+def _make_local_gold_json(
+    *,
+    reviewed: bool = True,
+    code: str = _GOOD_CODE,
+    n: int = 2,
+) -> str:
+    """Build a minimal gold-set JSON accepted by load_gold_set_file."""
+    cases = []
+    for i in range(n):
+        c: dict[str, str] = {
+            "case_id": f"TC-{i+1:03d}",
+            "sku_description": f"Standard mobile voice plan {i}",
+            "expected_class": code,
+            "notes": "",
+            "origin": "SYNTHETIC",
+            "author": "eng",
+            "review_status": "REVIEWED" if reviewed else "DRAFT",
+            "reviewer": "reviewer@test" if reviewed else "",
+            "reviewed_on": "2026-01-01" if reviewed else "",
+            "source_ref": "",
+        }
+        cases.append(c)
+    return _json.dumps(
+        {
+            "name": "local-test-set",
+            "version": "0.1.0",
+            "domain": "test",
+            "purpose": "test",
+            "cases": cases,
+        }
+    )
+
+
+@contextmanager
+def _local_fake_server(
+    *,
+    status: int = 200,
+    body: bytes = b"",
+    delay: float = 0.0,
+) -> typing.Generator[str, None, None]:
+    """Start a throwaway OpenAI-compat server on 127.0.0.1:0, yield its base URL."""
+
+    class _Handler(http.server.BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            length = int(self.headers.get("Content-Length", "0"))
+            self.rfile.read(length)
+            if delay:
+                _time.sleep(delay)
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            with contextlib.suppress(OSError):
+                self.wfile.write(body)
+
+        def log_message(self, fmt: str, *args: Any) -> None:
+            return None
+
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
+    srv.daemon_threads = True
+    t = threading.Thread(target=srv.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
+    t.start()
+    try:
+        yield f"http://127.0.0.1:{srv.server_address[1]}"
+    finally:
+        srv.shutdown()
+        srv.server_close()
+        t.join(timeout=5)
+
+
+_GOOD_COMPLETION = _json.dumps(
+    {
+        "choices": [{"message": {"content": _GOOD_CODE}}],
+        "usage": {"prompt_tokens": 20, "completion_tokens": 5, "total_tokens": 25},
+    }
+).encode()
+
+
+class TestLocalRuntime:
+    """Tests for --runtime local wired through evaluate_gateway.main()."""
+
+    # -- helpers -----------------------------------------------------------
+
+    @staticmethod
+    def _write_gold(tmp_path: Path, *, reviewed: bool = True, n: int = 2) -> Path:
+        p = tmp_path / "gold.json"
+        p.write_text(_make_local_gold_json(reviewed=reviewed, n=n), encoding="utf-8")
+        return p
+
+    # -- happy path --------------------------------------------------------
+
+    def test_valid_reply_exit0_runtime_local_grade_pipeline_check(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Happy path: valid code returned → exit 0, runtime=local, PIPELINE_CHECK."""
+        gold = self._write_gold(tmp_path)
+        base_url: str
+        with _local_fake_server(body=_GOOD_COMPLETION) as base_url:
+            monkeypatch.setenv("ZTAX_LOCAL_RUNTIME_ENDPOINT", base_url)
+            monkeypatch.setenv("ZTAX_LOCAL_RUNTIME_MODEL", _LOCAL_MODEL)
+            rc = eg.main(
+                ["--gold", str(gold), "--runtime", "local", "--allow-synthetic"]
+            )
+        out = capsys.readouterr().out
+        assert rc == 0
+        assert "local" in out          # Runtime: local
+        assert "PIPELINE_CHECK" in out
+        # 2 cases
+        assert "2" in out
+
+    # -- per-case failures (no traceback, no server text) ------------------
+
+    def test_wrong_format_reply_becomes_error_outcome_no_traceback(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Server returns junk JSON → error/format outcome, no traceback."""
+        gold = self._write_gold(tmp_path, n=1)
+        bad_body = b"not-json-at-all"
+        base_url: str
+        with _local_fake_server(body=bad_body) as base_url:
+            monkeypatch.setenv("ZTAX_LOCAL_RUNTIME_ENDPOINT", base_url)
+            monkeypatch.setenv("ZTAX_LOCAL_RUNTIME_MODEL", _LOCAL_MODEL)
+            rc = eg.main(
+                ["--gold", str(gold), "--runtime", "local", "--allow-synthetic"]
+            )
+        out, err = capsys.readouterr()
+        assert "Traceback" not in out
+        assert "Traceback" not in err
+        # Should not leak the raw server body
+        assert b"not-json-at-all".decode() not in out
+        assert b"not-json-at-all".decode() not in err
+        # Run may exit 0 (all cases evaluated, some as errors) or 1 — just no crash
+        assert isinstance(rc, int)
+
+    def test_http_500_becomes_error_outcome_no_traceback(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Server returns HTTP 500 → error outcome, no traceback, no server body."""
+        gold = self._write_gold(tmp_path, n=1)
+        base_url: str
+        with _local_fake_server(status=500, body=b"internal error details") as base_url:
+            monkeypatch.setenv("ZTAX_LOCAL_RUNTIME_ENDPOINT", base_url)
+            monkeypatch.setenv("ZTAX_LOCAL_RUNTIME_MODEL", _LOCAL_MODEL)
+            rc = eg.main(
+                ["--gold", str(gold), "--runtime", "local", "--allow-synthetic"]
+            )
+        out, err = capsys.readouterr()
+        assert "Traceback" not in out
+        assert "Traceback" not in err
+        assert "internal error details" not in out
+        assert "internal error details" not in err
+        assert isinstance(rc, int)
+
+    def test_slow_reply_uses_timeout_no_traceback(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Server delays longer than the runtime timeout → error outcome, no traceback."""
+        from ztax_gateway import local_runtime as _lr
+
+        gold = self._write_gold(tmp_path, n=1)
+        # Patch _TIMEOUT_SECONDS to 0.05 so the test finishes fast
+        monkeypatch.setattr(_lr, "_TIMEOUT_SECONDS", 0.05)
+        base_url: str
+        with _local_fake_server(body=_GOOD_COMPLETION, delay=1.0) as base_url:
+            monkeypatch.setenv("ZTAX_LOCAL_RUNTIME_ENDPOINT", base_url)
+            monkeypatch.setenv("ZTAX_LOCAL_RUNTIME_MODEL", _LOCAL_MODEL)
+            rc = eg.main(
+                ["--gold", str(gold), "--runtime", "local", "--allow-synthetic"]
+            )
+        out, err = capsys.readouterr()
+        assert "Traceback" not in out
+        assert "Traceback" not in err
+        assert isinstance(rc, int)
+
+    # -- config errors (missing / empty / unreachable) ---------------------
+
+    def test_missing_env_vars_prints_fixed_message_exit1(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Both env vars absent → 'error: local runtime is not configured', exit 1."""
+        gold = self._write_gold(tmp_path)
+        monkeypatch.delenv("ZTAX_LOCAL_RUNTIME_ENDPOINT", raising=False)
+        monkeypatch.delenv("ZTAX_LOCAL_RUNTIME_MODEL", raising=False)
+        rc = eg.main(["--gold", str(gold), "--runtime", "local", "--allow-synthetic"])
+        out, err = capsys.readouterr()
+        assert rc == 1
+        assert "error: local runtime is not configured" in err
+        # Sentinel / endpoint / model never leak
+        assert _SENTINEL not in out
+        assert _SENTINEL not in err
+        assert _LOCAL_MODEL not in out
+        assert _LOCAL_MODEL not in err
+
+    def test_empty_env_vars_prints_fixed_message_exit1(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Both env vars set to empty string → fixed error, exit 1."""
+        gold = self._write_gold(tmp_path)
+        monkeypatch.setenv("ZTAX_LOCAL_RUNTIME_ENDPOINT", "")
+        monkeypatch.setenv("ZTAX_LOCAL_RUNTIME_MODEL", "")
+        rc = eg.main(["--gold", str(gold), "--runtime", "local", "--allow-synthetic"])
+        out, err = capsys.readouterr()
+        assert rc == 1
+        assert "error: local runtime is not configured" in err
+        assert _SENTINEL not in out
+        assert _SENTINEL not in err
+
+    def test_unreachable_endpoint_sentinel_never_in_output(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Closed port with SENTINEL in path → error outcome, sentinel never surfaces."""
+        gold = self._write_gold(tmp_path, n=1)
+        # Find a closed port by binding and immediately closing
+
+        with _socket.socket() as s:
+            s.bind(("127.0.0.1", 0))
+            closed_port = s.getsockname()[1]
+        # Port is now closed; use sentinel in the path component (not query/fragment)
+        dead_url = f"http://127.0.0.1:{closed_port}/{_SENTINEL}"
+        monkeypatch.setenv("ZTAX_LOCAL_RUNTIME_ENDPOINT", dead_url)
+        monkeypatch.setenv("ZTAX_LOCAL_RUNTIME_MODEL", _LOCAL_MODEL)
+        rc = eg.main(["--gold", str(gold), "--runtime", "local", "--allow-synthetic"])
+        out, err = capsys.readouterr()
+        assert _SENTINEL not in out
+        assert _SENTINEL not in err
+        assert dead_url not in out
+        assert dead_url not in err
+        assert _LOCAL_MODEL not in out
+        assert _LOCAL_MODEL not in err
+        assert "Traceback" not in out
+        assert "Traceback" not in err
+        assert isinstance(rc, int)
+
+    # -- existing --runtime fake behaviour unchanged -----------------------
+
+    def test_fake_runtime_still_works(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """--runtime fake behaves exactly as before (no env vars needed)."""
+        gold = self._write_gold(tmp_path)
+        rc = eg.main(["--gold", str(gold), "--runtime", "fake", "--allow-synthetic"])
+        out = capsys.readouterr().out
+        assert rc == 0
+        assert "fake" in out
+        assert "PIPELINE_CHECK" in out
+
+    # -- eligibility check with --runtime local ----------------------------
+
+    def test_no_reviewed_cases_error_server_never_called(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Gold file with only DRAFT cases → 'no REVIEWED cases' error, server not hit."""
+        gold = self._write_gold(tmp_path, reviewed=False)
+        # Track whether the server receives any request
+        requests_received: list[str] = []
+
+        class _TrackingHandler(http.server.BaseHTTPRequestHandler):
+            def do_POST(self) -> None:
+                requests_received.append(self.path)
+                self.send_response(200)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+
+            def log_message(self, fmt: str, *args: Any) -> None:
+                return None
+
+        srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _TrackingHandler)
+        srv.daemon_threads = True
+        t = threading.Thread(
+            target=srv.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True
+        )
+        t.start()
+        try:
+            base_url = f"http://127.0.0.1:{srv.server_address[1]}"
+            monkeypatch.setenv("ZTAX_LOCAL_RUNTIME_ENDPOINT", base_url)
+            monkeypatch.setenv("ZTAX_LOCAL_RUNTIME_MODEL", _LOCAL_MODEL)
+            rc = eg.main(["--gold", str(gold), "--runtime", "local", "--allow-synthetic"])
+        finally:
+            srv.shutdown()
+            srv.server_close()
+            t.join(timeout=5)
+
+        err = capsys.readouterr().err
+        assert rc == 1
+        assert "REVIEWED" in err or "reviewed" in err.lower()
+        assert len(requests_received) == 0  # server never called

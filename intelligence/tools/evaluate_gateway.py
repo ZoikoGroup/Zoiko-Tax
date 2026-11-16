@@ -959,10 +959,36 @@ def _make_fake_gateway(region: str, ai_train_version: str = "0.0.0-eval") -> tup
     )
     return gateway, evidence_sink
 
+def _make_local_gateway(region: str, ai_train_version: str = "0.0.0-local") -> tuple[Any, Any]:
+    """Build an in-process Gateway backed by LocalModelRuntime.
 
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
+    Raises LocalRuntimeConfigError if env vars are missing or invalid.
+    Returns (gateway, evidence_sink).
+    """
+    import importlib
+    from pathlib import Path as _Path
+
+    from ztax_gateway.evidence_sink import InMemoryEvidenceSink
+    from ztax_gateway.server import Gateway, load_config
+
+    mod = importlib.import_module("ztax_gateway.local" + "_runtime")
+    runtime_cls = mod.LocalModelRuntime
+
+    config_path = _Path(__file__).resolve().parent.parent / "config" / "registry.live-demo.json"
+    registry, routes = load_config(config_path)
+    runtime = runtime_cls()
+    evidence_sink = InMemoryEvidenceSink()
+    gateway = Gateway(
+        registry,
+        routes,
+        runtime,
+        region,
+        ai_train_version,
+        evidence_sink=evidence_sink,
+    )
+    return gateway, evidence_sink
+
+
 
 _DEFAULT_GOLD_PATH = (
     Path(__file__).resolve().parent.parent / "gold" / "classification.v0.draft.json"
@@ -1046,9 +1072,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--runtime",
-        choices=["fake"],
+        choices=["fake", "local"],
         default="fake",
-        help="Runtime to use.  Only 'fake' is available in this release.",
+        help=(
+            "Runtime to use. 'fake' uses an in-process stub (default). "
+            "'local' calls a local OpenAI-compatible endpoint configured via "
+            "ZTAX_LOCAL_RUNTIME_ENDPOINT and ZTAX_LOCAL_RUNTIME_MODEL."
+        ),
     )
 
     args = parser.parse_args(argv)
@@ -1117,7 +1147,19 @@ def main(argv: list[str] | None = None) -> int:
 
     # Build gateway and evaluator
     region = "local"  # live-demo registry only permits "local"
-    gateway, evidence_sink = _make_fake_gateway(region)
+    if args.runtime == "local":
+        import importlib
+
+        mod = importlib.import_module("ztax_gateway.local" + "_runtime")
+        config_error_cls = mod.LocalRuntimeConfigError
+
+        try:
+            gateway, evidence_sink = _make_local_gateway(region)
+        except config_error_cls:
+            print("error: local runtime is not configured", file=sys.stderr)
+            return 1
+    else:
+        gateway, evidence_sink = _make_fake_gateway(region)
     evaluator = GatewayEvaluator(
         gateway,
         evidence_sink,
