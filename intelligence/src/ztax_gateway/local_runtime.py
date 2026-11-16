@@ -26,15 +26,20 @@ not edited by this change, so the small helpers are duplicated here;
 
 from __future__ import annotations
 
+import contextlib
+import functools
 import http.client
 import json
 import logging
 import os
+import socket
+import threading
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from email.message import Message
-from typing import IO, Final
+from typing import IO, Any, Final
 
 from .runtime import Result, Route, RuntimeUnavailableError, json_int, token_count
 from .wire import Call, Kind
@@ -52,9 +57,19 @@ log = logging.getLogger("ztax_gateway.local_runtime")
 ENDPOINT_ENV: Final = "ZTAX_LOCAL_RUNTIME_ENDPOINT"
 MODEL_ENV: Final = "ZTAX_LOCAL_RUNTIME_MODEL"
 
-# Per-request limit, like the Groq runtime. The Gateway's own 45 second deadline stays
-# as it is and sits above this.
+# Per-read limit (connect and each read), like the Groq runtime. It is the second guard:
+# the total below is what ends a reply that keeps arriving slowly. The Gateway's own
+# 45 second deadline stays as it is and sits above both.
 _TIMEOUT_SECONDS = 30
+
+# The TOTAL time one request may take, from the start of the connect to the last byte of
+# the reply, measured with a monotonic clock. A server that sends a byte every few seconds
+# never trips the per-read limit; it ends here, with the same fixed timeout text. Private
+# on purpose: a test patches it, nothing configures it.
+_TOTAL_SECONDS: float = 30
+
+# How much of the reply one read takes. Small enough that the total is checked often.
+_READ_CHUNK_BYTES = 65_536
 
 # A reply larger than this is not a chat completion this runtime will read.
 _MAX_REPLY_BYTES = 1_048_576
@@ -291,6 +306,126 @@ def _usage_counts(doc: object) -> tuple[int | None, int | None]:
 # ---------------------------------------------------------------------------
 
 
+def _monotonic() -> float:
+    """The clock the total time is measured with. A function, so a test can replace it."""
+    return time.monotonic()
+
+
+class _Deadline:
+    """The total time budget of one request.
+
+    ``over()`` is the cheap check the reading loop makes between reads. The timer is what
+    ends a read that is blocked: at the deadline it shuts the connection's socket down, so
+    the blocked read returns at once instead of waiting for its own per-read timeout.
+    ``expired`` is set before the shutdown, so whoever sees the failure can tell why.
+    """
+
+    def __init__(self, total: float) -> None:
+        self._end = _monotonic() + total
+        self.expired = threading.Event()
+        self._lock = threading.Lock()
+        self._connection: http.client.HTTPConnection | None = None
+        self._timer = threading.Timer(total, self._fire)
+        self._timer.daemon = True
+
+    def start(self) -> None:
+        self._timer.start()
+
+    def stop(self) -> None:
+        self._timer.cancel()
+
+    def remaining(self) -> float:
+        return self._end - _monotonic()
+
+    def over(self) -> bool:
+        return self.expired.is_set() or self.remaining() <= 0
+
+    def attach(self, connection: http.client.HTTPConnection) -> None:
+        with self._lock:
+            self._connection = connection
+        if self.expired.is_set():
+            self._abort()
+
+    def _fire(self) -> None:
+        self.expired.set()
+        self._abort()
+
+    def _abort(self) -> None:
+        with self._lock:
+            connection = self._connection
+        sock = connection.sock if connection is not None else None
+        if sock is not None:
+            # shutdown (not close) wakes a read that is blocked in another thread.
+            with contextlib.suppress(OSError):
+                sock.shutdown(socket.SHUT_RDWR)
+
+
+class _DeadlineRequest(urllib.request.Request):
+    """A request that carries the deadline it must finish within."""
+
+    def __init__(self, url: str, *, deadline: _Deadline, **kwargs: Any) -> None:
+        super().__init__(url, **kwargs)
+        self.deadline = deadline
+
+
+class _DeadlineConnection(http.client.HTTPConnection):
+    """Connects within what is left of the total, and registers with the deadline."""
+
+    def __init__(self, *args: Any, deadline: _Deadline, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._deadline = deadline
+        deadline.attach(self)
+
+    def connect(self) -> None:
+        remaining = self._deadline.remaining()
+        if remaining <= 0:
+            raise TimeoutError
+        # The connect (and the TLS handshake that follows it) takes at most what is left,
+        # and never more than the per-read limit.
+        self.timeout = min(_TIMEOUT_SECONDS, remaining)
+        super().connect()
+
+
+class _DeadlineHTTPSConnection(_DeadlineConnection, http.client.HTTPSConnection):
+    """The https twin of ``_DeadlineConnection``."""
+
+
+class _DeadlineHTTPHandler(urllib.request.HTTPHandler):
+    def http_open(self, req: urllib.request.Request) -> http.client.HTTPResponse:
+        if isinstance(req, _DeadlineRequest):
+            return self.do_open(functools.partial(_DeadlineConnection, deadline=req.deadline), req)
+        return self.do_open(http.client.HTTPConnection, req)
+
+
+class _DeadlineHTTPSHandler(urllib.request.HTTPSHandler):
+    def https_open(self, req: urllib.request.Request) -> http.client.HTTPResponse:
+        if isinstance(req, _DeadlineRequest):
+            return self.do_open(
+                functools.partial(_DeadlineHTTPSConnection, deadline=req.deadline), req
+            )
+        return self.do_open(http.client.HTTPSConnection, req)
+
+
+def _read_within(response: http.client.HTTPResponse, deadline: _Deadline) -> bytes:
+    """Read the reply (one byte more than the cap, so the caller can tell it was too big),
+    and stop as soon as the total time is over. Raises TimeoutError then."""
+    chunks: list[bytes] = []
+    size = 0
+    limit = _MAX_REPLY_BYTES + 1
+    while size < limit:
+        if deadline.over():
+            raise TimeoutError
+        chunk = response.read1(min(_READ_CHUNK_BYTES, limit - size))
+        if not chunk:
+            # An end of reply that the deadline's shutdown caused is not a complete reply.
+            if deadline.expired.is_set():
+                raise TimeoutError
+            break
+        chunks.append(chunk)
+        size += len(chunk)
+    return b"".join(chunks)
+
+
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     """Refuses every redirect: the 3xx reply surfaces as an HTTPError instead."""
 
@@ -309,7 +444,12 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 def _opener() -> urllib.request.OpenerDirector:
     # No redirects, and no proxy picked up from the environment: this runtime talks to
     # the one endpoint it was configured with, directly.
-    return urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect())
+    return urllib.request.build_opener(
+        urllib.request.ProxyHandler({}),
+        _NoRedirect(),
+        _DeadlineHTTPHandler(),
+        _DeadlineHTTPSHandler(),
+    )
 
 
 class LocalModelRuntime:
@@ -323,30 +463,36 @@ class LocalModelRuntime:
         """Run one permitted call. Raises RuntimeUnavailableError (fixed text) on every
         failure; never provider output, never the endpoint address."""
         payload = json.dumps(build_payload(self._model, call)).encode("utf-8")
-        request = urllib.request.Request(
+        deadline = _Deadline(_TOTAL_SECONDS)
+        request = _DeadlineRequest(
             self._base_url + _COMPLETIONS_PATH,
             data=payload,
             method="POST",
             headers={"Content-Type": "application/json", "User-Agent": _USER_AGENT},
+            deadline=deadline,
         )
 
         # Failures are recorded in ``failure`` and raised after the try statement, so the
         # error carries no __cause__ or __context__ (those can hold the address).
         failure: str | None = None
         raw = b""
+        deadline.start()
         try:
             with _opener().open(request, timeout=_TIMEOUT_SECONDS) as response:
-                raw = response.read(_MAX_REPLY_BYTES + 1)
+                raw = _read_within(response, deadline)
         except urllib.error.HTTPError as exc:
             failure = _FAIL_REDIRECT if exc.code in _REDIRECT_STATUSES else _fail_http(exc.code)
             exc.close()
         except urllib.error.URLError:
-            failure = _FAIL_NETWORK
+            failure = _FAIL_TIMEOUT if deadline.over() else _FAIL_NETWORK
         except TimeoutError:
             failure = _FAIL_TIMEOUT
         except (OSError, http.client.HTTPException, UnicodeError):
             # UnicodeError: a host the idna codec rejects at connect time. Not an OSError.
-            failure = _FAIL_NETWORK
+            # Past the total, the shutdown that ended the read is what raised: a timeout.
+            failure = _FAIL_TIMEOUT if deadline.over() else _FAIL_NETWORK
+        finally:
+            deadline.stop()
         if failure is not None:
             log.debug(failure)
             raise RuntimeUnavailableError(failure)
