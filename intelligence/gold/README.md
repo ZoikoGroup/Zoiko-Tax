@@ -134,11 +134,60 @@ evaluated.
 
 ---
 
+## Assistant slot file and draft thresholds
+
+### Where the 54 comes from
+
+The number 54 comes from the weekly plan (S2) and the CTO Directive
+("assistant 54-case fixture structure"). These documents require the structure
+to exist before the actual catalogue is supplied.
+
+### Why no cases exist yet
+
+Assistant Document 06 defines the official UAT catalogue. That document was
+**never supplied to engineering**. ADD01 section 9 states the catalogue must
+be retrieved and version-pinned before any pass rate is reported.
+
+### What the slot file contains
+
+`gold/assistant.v0.slots.json` holds 54 slots (`ASST-001` to `ASST-054`).
+Each slot has exactly two fields: a `slot_id` and a `status` of `"EMPTY"`.
+No slot holds a case. There is no test input, no expected answer, no reviewer,
+and no date. All 54 slots count as **EMPTY** and the reviewed count is **0**.
+
+The harness (`tools/evaluate_gateway.py`) loads gold files via
+`parse_gold_set`, which requires a `"cases"` key. The slot file uses `"slots"`
+instead, so `parse_gold_set` correctly rejects it and the harness stays at
+verdict `NOT_EVALUATED` until a real catalogue is pinned.
+
+### Status tool — slot mode
+
+Running `python tools/gold_set_status.py --gold gold/assistant.v0.slots.json`
+prints: file name and version, total slots, EMPTY count, REVIEWED 0, and a
+READINESS line stating the file is not usable as evaluation evidence because
+no case exists. The `--approved-list` and `--review-sheet` options return a
+fixed error and exit 1 for slot files.
+
+### Draft thresholds
+
+`gold/thresholds.v0.draft.json` is **status DRAFT**. Every metric value is
+`null`. AIGOV-001 forbids a universal accuracy figure without a named owner, a
+signed approval, and a pinned catalogue. No code reads this file; there is no
+loader, no import, and no harness change. The thresholds file stays unused
+until a named owner signs the `approval` block.
+
+---
+
 ## Checking a gold file
 
 The `tools/gold_set_status.py` script reports facts about a gold-set file.
 It is strictly read-only: it never edits the gold file, never marks anything
 as REVIEWED, never approves a case, and never defines thresholds or scores.
+
+When the `--gold` file is a **slot file** (top-level key `"slots"` present),
+the tool prints total slots, EMPTY count, REVIEWED 0, and a READINESS line
+saying the file is not usable as evaluation evidence. The `--approved-list`
+and `--review-sheet` options return an error for slot files.
 
 ### Status mode (always active)
 

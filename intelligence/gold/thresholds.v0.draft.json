@@ -1,0 +1,94 @@
+{
+  "name": "ztax-gateway-thresholds",
+  "version": "0.1.0",
+  "status": "DRAFT",
+  "purpose": "Draft release thresholds for the ZoikoTax gateway evaluation profiles. Status is DRAFT. All metric values are null because AIGOV-001 forbids a universal accuracy figure without a named owner, a signed approval, and a pinned catalogue. No code reads this file. This file stays unused until a named owner signs the approval block below.",
+  "approval": {
+    "signed_by": null,
+    "signed_on": null
+  },
+  "profiles": [
+    {
+      "profile_id": "classification-review",
+      "description": "Thresholds for the classification gold set (gold/classification.v0.draft.json).",
+      "gold_set": "gold/classification.v0.draft.json",
+      "metrics": [
+        {
+          "metric": "accuracy_all",
+          "slice": "all",
+          "comparison": "at_least",
+          "value": null,
+          "basis": "ZTAX-ENG-RESET-001 section 20; thresholds to be set by named owner after catalogue is reviewed and pinned."
+        },
+        {
+          "metric": "accuracy_proposed",
+          "slice": "proposed_only",
+          "comparison": "at_least",
+          "value": null,
+          "basis": "ZTAX-ENG-RESET-001 section 20; thresholds to be set by named owner after catalogue is reviewed and pinned."
+        },
+        {
+          "metric": "coverage",
+          "slice": "all",
+          "comparison": "at_least",
+          "value": null,
+          "basis": "ADD01 section 9; coverage numerator/denominator to be agreed by named owner."
+        }
+      ]
+    },
+    {
+      "profile_id": "assistant",
+      "description": "Thresholds for the assistant 54-slot fixture (gold/assistant.v0.slots.json). All values are null. The catalogue (assistant Document 06) was never supplied. ADD01 section 9 lists six coverage groups whose release requirements are reproduced below as text only. AIGOV-001 forbids a universal accuracy figure; no document supplies any numeric threshold.",
+      "gold_set": "gold/assistant.v0.slots.json",
+      "coverage_groups_add01_s9": [
+        {
+          "group": "1 - Core VAT classification",
+          "release_requirement": "Must meet the release bar defined in ADD01 section 9 once the catalogue is pinned. No numeric threshold is set here."
+        },
+        {
+          "group": "2 - Reduced and zero-rate edge cases",
+          "release_requirement": "Must meet the release bar defined in ADD01 section 9 once the catalogue is pinned. No numeric threshold is set here."
+        },
+        {
+          "group": "3 - Exempt supply boundaries",
+          "release_requirement": "Must meet the release bar defined in ADD01 section 9 once the catalogue is pinned. No numeric threshold is set here."
+        },
+        {
+          "group": "4 - Mixed-supply and composite-supply scenarios",
+          "release_requirement": "Must meet the release bar defined in ADD01 section 9 once the catalogue is pinned. No numeric threshold is set here."
+        },
+        {
+          "group": "5 - Cross-border and place-of-supply",
+          "release_requirement": "Must meet the release bar defined in ADD01 section 9 once the catalogue is pinned. No numeric threshold is set here."
+        },
+        {
+          "group": "6 - Adversarial and prompt-injection resistance",
+          "release_requirement": "Must meet the release bar defined in ADD01 section 9 once the catalogue is pinned. No numeric threshold is set here."
+        }
+      ],
+      "metrics": [
+        {
+          "metric": "accuracy_all",
+          "slice": "all",
+          "comparison": "at_least",
+          "value": null,
+          "basis": "ADD01 section 9; AIGOV-001 forbids a universal accuracy figure. Value stays null until the catalogue is pinned and a named owner signs."
+        },
+        {
+          "metric": "accuracy_proposed",
+          "slice": "proposed_only",
+          "comparison": "at_least",
+          "value": null,
+          "basis": "ADD01 section 9; value stays null until the catalogue is pinned and a named owner signs."
+        },
+        {
+          "metric": "coverage",
+          "slice": "all",
+          "comparison": "at_least",
+          "value": null,
+          "basis": "ADD01 section 9; coverage numerator/denominator to be agreed once the catalogue is pinned."
+        }
+      ]
+    }
+  ]
+}

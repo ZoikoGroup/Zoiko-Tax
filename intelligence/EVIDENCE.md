@@ -134,26 +134,12 @@ outcome; a refused or killed call emits none. Production gRPC emission remains u
 
 ---
 
-## I. Prompt content hash (Decision D-09 / ZTAX-AI-CONF-ADD01)
+## I. Prompt hash (D-09) and Telemetry (K1, K2, K11)
 
-`InvocationEvidenceRecord` carries an optional `prompt_content_hash` (lowercase SHA-256
-hex of `system_prompt`). Format is validated by the record and normalised (lowercased)
-by the builder; omitted when unset.
+`InvocationEvidenceRecord` carries an optional `prompt_content_hash` (lowercase SHA-256 hex of `system_prompt`), normalised by the builder and omitted when unset. `Gateway.invoke()` sets the prompt hash only when a `PromptProfileRegistry` is injected and the call reaches the runtime (`tests/test_observability.py::test_model_ops_labels_do_not_include_prompt_content_hash`).
 
-**Status:** `Gateway.invoke()` sets the prompt hash only when a `PromptProfileRegistry` is
-injected AND the call reaches the runtime; blocked, refused or killed calls keep the hash
-empty. The two live demo servers (`tools/serve_live_demo.py`, `tools/report_ai_http.py`) load prompt profiles at startup (`ZTAX_GATEWAY_PROMPT_PROFILES`), so their records carry the hash: SHA-256 of the profile's `system_prompt`, computed from the text and never read from the file, checked at startup against the text the runtime sends. `server.py` main (fake runtime) injects nothing and carries no hash on purpose. The check-event sink is still the logging sink; the optional file sink (off unless `ZTAX_EVIDENCE_FILE_PATH` is set, chosen by `build_gateway`) applies to evidence records only. With a registry, `classification-review` accepts only `CLASSIFICATION_PROPOSAL`; other kinds are refused before any request is built (BLOCK record, no hash).
+**Telemetry and Governance Additions:**
+- **Token usage and cost (K2):** `UsageMetrics` records `input_tokens`, `output_tokens`, `latency_ms`, and `monetary_cost_usd` in evidence (`src/ztax_gateway/invocation_evidence.py::UsageMetrics`). Cost calculation uses fixed decimal pricing (`tests/test_token_usage.py`).
+- **Tenant ID validation (K1):** Wire requests require a valid UUID `governance.tenant_id`, rejecting missing or non-UUID values before the model runtime (`src/ztax_gateway/wire.py`, `tests/test_gateway_contract.py`).
+- **Invocation ID correlation (K11):** Each invocation generates a UUID `ai_invocation_id` recorded in evidence and check events (`src/ztax_gateway/invocation_evidence.py`, `src/ztax_gateway/server.py::Gateway`, `tests/test_evaluate_gateway.py::TestInvocationIds`). Outbound calls enforce gRPC deadlines (`src/ztax_gateway/server.py`).
 
-**Known gap (wire kind):** the registry and the Gateway do not restrict which wire kind a use case may receive; the runtime guard is demo-only. An allowed-kinds field per use case needs a registry contract decision.
-
-**Demo-path resilience:** If the check-event sink raises when `record_answer_check` is
-called, `report_ai_http.py` catches the exception, logs a fixed WARNING
-(`check_event_write_failed reason=CHECK_EVENT_WRITE_FAILED`) without echoing the exception
-text, and still returns the explanation reply. Demo only; production paths are unaffected.
-
-**Kill flags live on demo servers:** `tools/report_ai_http.py` and `tools/serve_live_demo.py`
-now pass `kill_state_path` to `Gateway`, so the demo servers re-read `killed` and
-`global_kill` before every call without a container restart (same as `server.py`).
-
-**Scope:** Covers `system_prompt` only. Never added to `observability.py` labels
-(`tests/test_observability.py::test_model_ops_labels_do_not_include_prompt_content_hash`).

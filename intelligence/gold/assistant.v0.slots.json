@@ -1,0 +1,225 @@
+{
+  "name": "assistant-slots",
+  "version": "0.1.0",
+  "domain": "assistant",
+  "purpose": "Placeholder structure for the assistant 54-case UAT fixture. The 54 slots come from the weekly plan (S2) and the CTO Directive (\"assistant 54-case fixture structure\"). Assistant Document 06, which defines the actual catalogue, was never supplied to engineering. ADD01 section 9 requires the catalogue to be retrieved and version-pinned before any pass rate is reported. No slot holds a case: each slot contains only an id and a status. Slots are EMPTY placeholders and count as 0 reviewed. No slot represents evidence, test input, expected answer, or any real case.",
+  "declared_slots": 54,
+  "slots": [
+    {
+      "slot_id": "ASST-001",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-002",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-003",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-004",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-005",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-006",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-007",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-008",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-009",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-010",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-011",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-012",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-013",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-014",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-015",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-016",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-017",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-018",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-019",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-020",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-021",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-022",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-023",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-024",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-025",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-026",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-027",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-028",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-029",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-030",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-031",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-032",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-033",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-034",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-035",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-036",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-037",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-038",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-039",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-040",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-041",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-042",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-043",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-044",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-045",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-046",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-047",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-048",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-049",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-050",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-051",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-052",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-053",
+      "status": "EMPTY"
+    },
+    {
+      "slot_id": "ASST-054",
+      "status": "EMPTY"
+    }
+  ]
+}

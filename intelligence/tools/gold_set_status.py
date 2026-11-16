@@ -329,6 +329,54 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 1
 
+    # Peek at the top-level keys to decide whether this is a slot file.
+    _is_slot_file = False
+    try:
+        _peek_bytes = Path(args.gold).read_bytes()
+        _peek_text = _peek_bytes.decode("utf-8", errors="replace")
+        import json as _json
+
+        _peek_obj = _json.loads(_peek_text)
+        if isinstance(_peek_obj, dict) and "slots" in _peek_obj:
+            _is_slot_file = True
+    except Exception:
+        pass  # fall through; the real loader will give the proper error
+
+    if _is_slot_file:
+        # --- SLOT FILE PATH ---
+        from ztax_gateway.gold_slots_file import (
+            GoldSlotsFileError,
+            load_gold_slots_file,
+        )
+
+        try:
+            gsf_slots = load_gold_slots_file(args.gold)
+        except (GoldSlotsFileError, OSError):
+            print("error: could not load slot file", file=sys.stderr)
+            return 1
+
+        # --approved-list and --review-sheet do not apply to slot files.
+        if args.approved_list is not None or args.review_sheet is not None:
+            print(
+                "error: coverage and review sheets apply to case files only",
+                file=sys.stderr,
+            )
+            return 1
+
+        s = gsf_slots.summary()
+        print(f"slot file: {gsf_slots.name!r} version {gsf_slots.version}")
+        print(f"  total slots : {s['total']}")
+        print(f"  EMPTY       : {s['empty']}")
+        print(f"  REVIEWED    : {s['reviewed']}")
+        print()
+        print(
+            "READINESS: not usable as evaluation evidence"
+            " (no case exists; slot file is a placeholder structure only)"
+        )
+        return 0
+
+    # --- CASE FILE PATH ---
+
     # Load gold set
     try:
         from ztax_gateway.gold_set_file import GoldSetFileError, load_gold_set_file

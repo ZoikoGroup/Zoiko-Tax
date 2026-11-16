@@ -1,0 +1,27 @@
+{
+  "status": "DRAFT",
+  "purpose": "Draft model profile for self-hosted model runtime (model choice pending). Suspended; not for production use.",
+  "model_profile_id": "model:self-hosted-draft",
+  "owner": null,
+  "version": null,
+  "provider_profile_id": null,
+  "model_id": null,
+  "model_version": null,
+  "hosting": null,
+  "context_window_tokens": null,
+  "max_output_tokens": null,
+  "modalities": null,
+  "tool_capable": null,
+  "permitted_regions": null,
+  "permitted_data_classes": null,
+  "terms_ref": null,
+  "known_limitations": null,
+  "deprecation_date": null,
+  "suspended": true,
+  "draft_extras": {
+    "weights_sha256": null,
+    "weights_scan_result": null,
+    "licence_name": null,
+    "licence_url": null
+  }
+}

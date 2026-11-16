@@ -1,0 +1,26 @@
+{
+  "status": "DRAFT",
+  "purpose": "Draft provider profile for self-hosted model runtime (model choice pending). Suspended; not for production use.",
+  "provider_profile_id": "provider:self-hosted-draft",
+  "owner": null,
+  "version": null,
+  "legal_entity": null,
+  "dpa_ref": null,
+  "security_assurance": null,
+  "permitted_regions": null,
+  "subprocessors": null,
+  "retention_days": null,
+  "zero_data_retention": null,
+  "trains_on_customer_data": null,
+  "deprecation_notice_days": null,
+  "outage_terms_ref": null,
+  "audit_assurance_ref": null,
+  "api_hosts": null,
+  "suspended": true,
+  "draft_extras": {
+    "weights_sha256": null,
+    "weights_scan_result": null,
+    "licence_name": null,
+    "licence_url": null
+  }
+}
