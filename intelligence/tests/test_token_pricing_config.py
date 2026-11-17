@@ -116,12 +116,100 @@ def test_the_edges_of_the_valid_range_are_accepted(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.parametrize("value", ["0.5", "2"])  # two values, so none can be hard-coded
 @pytest.mark.parametrize("name", [ENV_TOKEN_PRICE_INPUT, ENV_TOKEN_PRICE_OUTPUT])
-def test_only_one_variable_set_is_refused(monkeypatch: pytest.MonkeyPatch, name: str) -> None:
-    monkeypatch.setenv(name, "0.5")
+def test_only_one_variable_set_is_refused(
+    monkeypatch: pytest.MonkeyPatch, name: str, value: str
+) -> None:
+    monkeypatch.setenv(name, value)
     with pytest.raises(GatewayFactoryError) as info:
         _build()
     assert str(info.value) == _TOGETHER
+
+
+def _bad_number(name: str) -> str:
+    return f"{name} must be a number from 0 to {MAX_PRICE_USD_PER_1K} (USD per 1,000 tokens)"
+
+
+# Empty counts as set. The text is the one the code gives today for each case.
+_EMPTY_CASES: list[tuple[str, str | None, str | None, str]] = [
+    ("input empty, output unset", "", None, _TOGETHER),
+    ("input unset, output empty", None, "", _TOGETHER),
+    ("both empty", "", "", _bad_number(ENV_TOKEN_PRICE_INPUT)),
+    ("input empty, output valid", "", "1", _bad_number(ENV_TOKEN_PRICE_INPUT)),
+    ("input valid, output empty", "1", "", _bad_number(ENV_TOKEN_PRICE_OUTPUT)),
+]
+
+
+@pytest.mark.parametrize(
+    ("inp", "out", "text"),
+    [c[1:] for c in _EMPTY_CASES],
+    ids=[c[0] for c in _EMPTY_CASES],
+)
+def test_an_empty_value_counts_as_set_and_is_refused(
+    monkeypatch: pytest.MonkeyPatch, inp: str | None, out: str | None, text: str
+) -> None:
+    if inp is not None:
+        monkeypatch.setenv(ENV_TOKEN_PRICE_INPUT, inp)
+    if out is not None:
+        monkeypatch.setenv(ENV_TOKEN_PRICE_OUTPUT, out)
+    with pytest.raises(GatewayFactoryError) as info:
+        _build()
+    assert str(info.value) == text
+
+
+# ---------------------------------------------------------------------------
+# A bad price stops start-up before the runtime is built
+# ---------------------------------------------------------------------------
+
+_NO_BUILD_CASES: list[tuple[str, str | None, str | None]] = [
+    ("only input set", "0.5", None),
+    ("only output set", None, "0.5"),
+    ("not a number", "abc", "1"),
+    ("nan", "nan", "1"),
+    ("inf", "1", "inf"),
+    ("negative", "-1", "1"),
+    ("above the maximum", "1", str(MAX_PRICE_USD_PER_1K + 1)),
+    ("empty", "", "1"),
+    ("both empty", "", ""),
+]
+
+
+@pytest.mark.parametrize(
+    ("inp", "out"),
+    [c[1:] for c in _NO_BUILD_CASES],
+    ids=[c[0] for c in _NO_BUILD_CASES],
+)
+def test_a_bad_price_never_builds_the_runtime(
+    monkeypatch: pytest.MonkeyPatch, inp: str | None, out: str | None
+) -> None:
+    if inp is not None:
+        monkeypatch.setenv(ENV_TOKEN_PRICE_INPUT, inp)
+    if out is not None:
+        monkeypatch.setenv(ENV_TOKEN_PRICE_OUTPUT, out)
+    calls: list[PromptProfileRegistry] = []
+
+    def runtime_factory(profiles: PromptProfileRegistry) -> _Runtime:
+        calls.append(profiles)
+        pytest.fail("the runtime was built although the price is bad")
+
+    with pytest.raises(GatewayFactoryError):
+        build_gateway(_REGISTRY, "local", "0.0.0-test", runtime_factory=runtime_factory)
+    assert calls == []
+
+
+def test_a_good_price_does_build_the_runtime(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The guard above must not pass just because the runtime is never built at all.
+    monkeypatch.setenv(ENV_TOKEN_PRICE_INPUT, "0.5")
+    monkeypatch.setenv(ENV_TOKEN_PRICE_OUTPUT, "1.5")
+    calls: list[PromptProfileRegistry] = []
+
+    def runtime_factory(profiles: PromptProfileRegistry) -> _Runtime:
+        calls.append(profiles)
+        return _Runtime()
+
+    build_gateway(_REGISTRY, "local", "0.0.0-test", runtime_factory=runtime_factory)
+    assert len(calls) == 1
 
 
 _BAD = [

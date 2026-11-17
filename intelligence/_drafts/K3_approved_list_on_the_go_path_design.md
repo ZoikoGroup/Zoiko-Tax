@@ -9,7 +9,7 @@
 
 ## 1. The problem
 
-The approved-list guard runs only on `POST /demo/classify` (`tools/report_ai_http.py:455`, `EVIDENCE.md:65`). The Go path (`backend/internal/app/classification.go`) checks only that the code starts with `ontology:` and has something after it (`classification.go:119`, `backend/internal/domain/classification/classification.go:35-38`). So a well-formed but wrong code, for example `ontology:telecom/made-up/node`, goes to the reviewer as a normal proposal (`classification.go:122`). The Go test has no case for it (`classification_test.go:78-110`).
+The approved-list guard runs only on `POST /demo/classify` (`tools/report_ai_http.py:455`, `EVIDENCE.md:65`). The Go path (`backend/internal/app/classification.go`) checks only that the code starts with `ontology:` and has something after it (`classification.go:119`, `backend/internal/domain/classification/classification.go:35-38`). So a well-formed but wrong code, for example `ontology:telecom/made-up/node`, goes to the reviewer as a normal proposal (`classification.go:122`). No Go test has a case for it. The only wrong-code cases are `#ontology:telecom/voice/mobile` and `GST-DIGITAL-SERVICE` (`backend/internal/app/classification_test.go:91-92`, `backend/internal/transport/http/classification_test.go:345,357`). Both fail the format check, not a list check.
 
 ## 2. Facts
 
@@ -38,6 +38,8 @@ The approved-list guard runs only on `POST /demo/classify` (`tools/report_ai_htt
 1. Raise `RuntimeUnavailableError`. Go then shows review required, but with the label `AI_GATEWAY_UNAVAILABLE`. That mislabels a rejected code as an outage, and the retry hint in that reason text is wrong.
 2. Raise a new `GatewayError` reason. Go's `fromStatus` does not know it and returns an internal error (`grpc.go:~228-234`). `Propose` would then fail the request, not send it to review. This needs a Go change too.
 
+**Circuit breaker risk (both ways).** Go counts `Unavailable` and `Internal` errors against its circuit breaker (`backend/internal/adapter/gateway/gateway.go:401-406`). Five failures in a row open it for 30 s (`backend/internal/adapter/gateway/breaker.go:8-15`). While it is open, every AI call is refused without reaching the gateway (`gateway.go:303-308`). Way 1 gives `Unavailable` and way 2 gives `Internal`, so both count. In plain words: five unapproved codes in a row would make all classification calls fail for 30 s, for every caller, not only the one with the bad code. Policy, validation and not-configured errors do not count (`gateway.go:398-406`). A rejected code would need a Go change to be one of those.
+
 **Reply shape.** Unchanged if we use way 1. A new field needs a contract change (schema line 7).
 
 **Evidence.** A BLOCK record with a fixed reason and no code (`server.py:~422-428` pattern), plus an `AnswerCheckedEvent` with the existing `GUARD_ONTOLOGY_*` reasons (`invocation_check_event.py:75-78`).
@@ -64,7 +66,7 @@ The approved-list guard runs only on `POST /demo/classify` (`tools/report_ai_htt
 Do A, with the list required. Reason: the gateway already has the guard, the list loader, the check event and the evidence record, and Go does not have a list. The same list file then guards both routes.
 
 Order:
-1. Agree the not-approved outcome with the Go owner. Way 1 is a stop-gap; a clean review reason needs a Go change.
+1. Agree the not-approved outcome with the Go owner. Way 1 is a stop-gap; a clean review reason needs a Go change. Do not use the stop-gap unless the breaker is handled first (see section 3), for example by a Go change that keeps this outcome out of the breaker count.
 2. Load the list at start-up in `gateway_factory.py`, closed on missing or bad.
 3. Add the hook with an injected date.
 4. Add the Go review reason later, if the owner agrees.
@@ -78,13 +80,18 @@ Tests:
 - The error text, log line and evidence record never hold the list content or the proposed code.
 - The other kinds (suggestion, extraction) are not checked.
 
+Risks of this suggestion:
+1. **Breaker lock-out.** Five unapproved codes in a row open the Go breaker for 30 s and all classification calls fail (section 3). The stop-gap must not ship until this is handled.
+2. **Wrong label.** A rejected code shows as `AI_GATEWAY_UNAVAILABLE` with a retry hint (section 3, way 1).
+3. **Required list.** A missing or bad list stops the gateway at start-up (question 3). The real list is not in this repository (`EVIDENCE.md:64`).
+
 ## 7. Questions for the domain owner
 
-1. Is the approved list (decision D-05) a gateway file, or should Go own it? (one name)
+1. Who owns the approved list (decision D-05): the gateway side or the Go side? (answer "gateway" or "Go", plus one name)
 2. May a code not on the list reach a reviewer as "review required" with the reason shown? (yes or no)
 3. If the list is missing at start-up, may the gateway refuse to start? (yes or no)
 4. Is "today, UTC" the right as-of date? (yes or no)
-5. Is a stop-gap using `AI_GATEWAY_UNAVAILABLE` for a rejected code acceptable until Go adds a reason? (yes or no)
+5. Is a stop-gap using `AI_GATEWAY_UNAVAILABLE` for a rejected code acceptable until Go adds a reason, given that five rejected codes in a row would open the Go breaker and fail all classification calls for 30 s? (yes or no)
 6. Who owns a new Go reason in `degraded.go`? (one name)
 7. Does the real list differ in format from the synthetic `config/approved_ontology.live-demo.json`? (yes or no)
 
