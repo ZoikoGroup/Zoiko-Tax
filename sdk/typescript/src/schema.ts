@@ -2552,6 +2552,165 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/contributions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The source event explorer
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Provider contributions, newest first, in any status: a quarantined event
+         *     is listed with its hold, never hidden. A provider contribution is the
+         *     operator's own obligation on its eligible revenue; recovery charged to end
+         *     users is not the contribution payable and is not listed here
+         *     (UAT-OBL-032, -033).
+         */
+        get: operations["listContributions"];
+        put?: never;
+        /**
+         * Record a provider contribution from one source event
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Records the contribution base one source event carries — a BSS invoice,
+         *     rated usage, a revenue-recognition adjustment, a licence-activity event or
+         *     a manual certified schedule — with its eligibility: classification, situs,
+         *     eligible and excluded base, the reason for any exclusion and the rule
+         *     version that decided it. Amounts are canonical decimal strings in the
+         *     event's one currency, added exactly by the cell (UAT-OBL-034). The member
+         *     legal entity defaults to the tenant's default entity.
+         *
+         *     **Idempotent on the source event and version**, not on an
+         *     `Idempotency-Key`: the source system already names each event, and that
+         *     name is the record's identity. The same payload again returns the record
+         *     already made with `200`; a different payload under the same key is
+         *     `409 SOURCE_EVENT_CONFLICT`, and the first record stands (UAT-OBL-026).
+         *     A correction is a new version, or a reversal.
+         *
+         *     A reversal names the source event it reverses in `reverses` and carries
+         *     negative bases; it is a contribution of its own, never an edit, and an
+         *     original is reversed at most once (`409 ALREADY_EXISTS`) and by no more
+         *     than it contributed (UAT-OBL-027). A reversal whose original is not yet
+         *     recorded is accepted, and its period is `DATA_INCOMPLETE` until the
+         *     original arrives. An event recorded after its period has ended is
+         *     flagged as an `amendment`.
+         */
+        post: operations["recordContribution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contributions/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A period's control totals
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Control totals per member legal entity, regime and currency: accepted and
+         *     quarantined counts, the exact eligible and excluded totals with reversals
+         *     included as negatives, and the period contribution digest — the canonical
+         *     digest of the sorted immutable hashes of the accepted events, so it does
+         *     not depend on arrival order. Quarantined events are counted, never summed.
+         *     A group is `DATA_INCOMPLETE` while an event is quarantined or a reversal
+         *     names an original the ledger does not hold.
+         *
+         *     These totals are the provider's contribution base. They are not, and are
+         *     never reconciled as, the recovery charged to customers (UAT-OBL-033).
+         */
+        get: operations["getContributionSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contributions/{contributionId}/trace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Drill from a contribution to its source, history and links
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     One contribution with its source event, classified component and
+         *     eligibility, its status history, and its links: the original it reverses
+         *     when the ledger holds it, and the reversal of it when one is recorded.
+         *     `originalMissing` is true for a reversal whose original has not arrived.
+         */
+        get: operations["getContributionTrace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contributions/{contributionId}/quarantine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hold an incorrect import out of the control totals
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Holds an accepted contribution out of the control totals, with its
+         *     reason. Nothing is deleted: the contribution stays listed with its hold,
+         *     its period is `DATA_INCOMPLETE`, and a release puts it back. Only an
+         *     accepted contribution is quarantined (`409 STATE_TRANSITION_INVALID`).
+         */
+        post: operations["quarantineContribution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contributions/{contributionId}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Return a quarantined contribution to the control totals
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     Releases a quarantined contribution, with its reason, back into the
+         *     control totals. Four eyes: the person who quarantined it cannot release
+         *     it (`403 MAKER_CHECKER`). Only a quarantined contribution is released
+         *     (`409 STATE_TRANSITION_INVALID`).
+         */
+        post: operations["releaseContribution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/shadow/comparators": {
         parameters: {
             query?: never;
@@ -6047,6 +6206,198 @@ export interface components {
             reason: components["schemas"]["PaymentNote"];
         };
         /**
+         * ContributionId
+         * Format: uuid
+         * @example 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ContributionId: string;
+        /**
+         * ContributionRegime
+         * @description The fund a provider contribution is owed to — the US Universal Service Fund through USAC, Canada's CRTC National Contribution Fund, or another.
+         * @enum {string}
+         */
+        ContributionRegime: "US_USF" | "CA_CRTC_NCF" | "OTHER";
+        /**
+         * ContributionSourceType
+         * @description The kind of record a source event is (OBL-06).
+         * @enum {string}
+         */
+        ContributionSourceType: "BSS_INVOICE" | "RATED_USAGE" | "REVENUE_RECOGNITION_ADJUSTMENT" | "LICENCE_ACTIVITY" | "MANUAL_CERTIFIED_SCHEDULE";
+        /**
+         * ContributionStatus
+         * @description Where a contribution stands. Only ACCEPTED counts in the control totals; QUARANTINED is held, never deleted.
+         * @enum {string}
+         */
+        ContributionStatus: "ACCEPTED" | "QUARANTINED";
+        /**
+         * ContributionEventKind
+         * @description What happened to a contribution. Every one is appended; none edits.
+         * @enum {string}
+         */
+        ContributionEventKind: "RECORDED" | "QUARANTINED" | "RELEASED";
+        /**
+         * ContributionIncompleteReason
+         * @description Why a group's control totals are DATA_INCOMPLETE — a held import, or a reversal of an original the ledger does not hold.
+         * @enum {string}
+         */
+        ContributionIncompleteReason: "QUARANTINED_EVENTS" | "UNRESOLVED_REVERSAL";
+        /**
+         * ContributionAmount
+         * @description A provider's contribution base, or a quantity, in canonical decimal string
+         *     form — never a JSON number, and never computed by a client
+         *     (UAT-OBL-034). Scale is significant. An operator's own revenue
+         *     aggregate, not a consumer amount, so it carries no personal data
+         *     (UAT-OBL-025).
+         * @example 1250.00
+         */
+        ContributionAmount: string;
+        /**
+         * ContributionRef
+         * @description A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+         * @example INV-2026-000123
+         */
+        ContributionRef: string;
+        /**
+         * ContributionReason
+         * @description Why a contribution was quarantined or released, in the words of the person who did it.
+         * @example The September billing extract was imported twice under new file ids
+         */
+        ContributionReason: string;
+        /**
+         * ContributionSourceKey
+         * @description A source event and its version — the natural key a contribution is recorded under.
+         */
+        ContributionSourceKey: {
+            sourceEventId: components["schemas"]["ContributionRef"];
+            /** Format: int32 */
+            sourceVersion: number;
+        };
+        /** ContributionStatusEvent */
+        ContributionStatusEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["ContributionEventKind"];
+            status: components["schemas"]["ContributionStatus"];
+            reason?: components["schemas"]["ContributionReason"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /**
+         * ProviderContribution
+         * @description One ContributionEvent: the contribution base a source event carries, with
+         *     its eligibility and its immutable hash. The provider's own obligation on
+         *     its eligible revenue — never the recovery charged to customers.
+         */
+        ProviderContribution: {
+            id: components["schemas"]["ContributionId"];
+            sourceEventId: components["schemas"]["ContributionRef"];
+            /** Format: int32 */
+            sourceVersion: number;
+            sourceType: components["schemas"]["ContributionSourceType"];
+            /** @description The checksum of the import file the event came in. */
+            sourceChecksum?: string;
+            regime: components["schemas"]["ContributionRegime"];
+            period: components["schemas"]["LegalPeriod"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            obligationId?: components["schemas"]["ObligationId"];
+            classificationRef: components["schemas"]["ContributionRef"];
+            situsRef: components["schemas"]["ContributionRef"];
+            sourceRef: components["schemas"]["ContributionRef"];
+            componentRef?: components["schemas"]["ContributionRef"];
+            ruleVersion: components["schemas"]["ContributionRef"];
+            currency: components["schemas"]["CurrencyCode"];
+            eligibleBase: components["schemas"]["ContributionAmount"];
+            excludedBase: components["schemas"]["ContributionAmount"];
+            /** @description Why revenue is excluded from the base, by rule. Present whenever excludedBase is not zero. */
+            exclusionReason?: string;
+            quantity?: components["schemas"]["ContributionAmount"];
+            quantityUnit?: string;
+            reverses?: components["schemas"]["ContributionSourceKey"];
+            /** @description Recorded after its period had ended — a late event, counted in its own period. */
+            amendment: boolean;
+            immutableHash: components["schemas"]["Digest"];
+            status: components["schemas"]["ContributionStatus"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+            history: components["schemas"]["ContributionStatusEvent"][];
+        };
+        /** ProviderContributionList */
+        ProviderContributionList: {
+            contributions: components["schemas"]["ProviderContribution"][];
+        };
+        /** ContributionRequest */
+        ContributionRequest: {
+            sourceEventId: components["schemas"]["ContributionRef"];
+            /** Format: int32 */
+            sourceVersion: number;
+            sourceType: components["schemas"]["ContributionSourceType"];
+            /** @description The checksum of the import file the event came in, when it came in one. */
+            sourceChecksum?: string;
+            regime: components["schemas"]["ContributionRegime"];
+            period: components["schemas"]["LegalPeriod"];
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            obligationId?: components["schemas"]["ObligationId"];
+            classificationRef: components["schemas"]["ContributionRef"];
+            situsRef: components["schemas"]["ContributionRef"];
+            sourceRef: components["schemas"]["ContributionRef"];
+            componentRef?: components["schemas"]["ContributionRef"];
+            ruleVersion: components["schemas"]["ContributionRef"];
+            currency: components["schemas"]["CurrencyCode"];
+            eligibleBase: components["schemas"]["ContributionAmount"];
+            excludedBase?: components["schemas"]["ContributionAmount"];
+            /** @description Why revenue is excluded from the base. Required when excludedBase is not zero. */
+            exclusionReason?: string;
+            quantity?: components["schemas"]["ContributionAmount"];
+            quantityUnit?: string;
+            reverses?: components["schemas"]["ContributionSourceKey"];
+        };
+        /** ContributionTransitionRequest */
+        ContributionTransitionRequest: {
+            reason: components["schemas"]["ContributionReason"];
+        };
+        /** ContributionTrace */
+        ContributionTrace: {
+            contribution: components["schemas"]["ProviderContribution"];
+            original?: components["schemas"]["ProviderContribution"];
+            reversal?: components["schemas"]["ProviderContribution"];
+            /** @description The contribution is a reversal and the ledger does not hold its original. */
+            originalMissing: boolean;
+        };
+        /**
+         * ContributionPeriodTotals
+         * @description One member entity's control totals for one regime and currency. Currencies are never added together.
+         */
+        ContributionPeriodTotals: {
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            regime: components["schemas"]["ContributionRegime"];
+            currency: components["schemas"]["CurrencyCode"];
+            /** @enum {string} */
+            status: "COMPLETE" | "DATA_INCOMPLETE";
+            incompleteReasons: components["schemas"]["ContributionIncompleteReason"][];
+            /** Format: int32 */
+            acceptedCount: number;
+            /** Format: int32 */
+            quarantinedCount: number;
+            /** Format: int32 */
+            reversalCount: number;
+            /** Format: int32 */
+            amendmentCount: number;
+            eligibleTotal: components["schemas"]["ContributionAmount"];
+            excludedTotal: components["schemas"]["ContributionAmount"];
+            reversedTotal: components["schemas"]["ContributionAmount"];
+            periodDigest: components["schemas"]["Digest"];
+            sourceChecksums: string[];
+        };
+        /** ContributionSummary */
+        ContributionSummary: {
+            period: components["schemas"]["LegalPeriod"];
+            /** @description Some group is DATA_INCOMPLETE. */
+            dataIncomplete: boolean;
+            groups: components["schemas"]["ContributionPeriodTotals"][];
+        };
+        /**
          * ComparatorId
          * Format: uuid
          * @example 01920b40-1a2b-7c3d-8e4f-5a6b7c8d9e01
@@ -6745,6 +7096,11 @@ export interface components {
          * @example 01920b30-1a2b-7c3d-8e4f-5a6b7c8d9e01
          */
         RemittanceId: components["schemas"]["RemittanceId"];
+        /**
+         * @description The provider contribution identifier.
+         * @example 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ContributionId: components["schemas"]["ContributionId"];
         /**
          * @description The shadow run identifier.
          * @example 01920b50-1a2b-7c3d-8e4f-5a6b7c8d9e01
@@ -10301,6 +10657,240 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Remittance"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listContributions: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only contributions of this period.
+                 * @example 2026-09
+                 */
+                period?: components["schemas"]["LegalPeriod"];
+                /**
+                 * @description Only contributions to this fund.
+                 * @example US_USF
+                 */
+                regime?: components["schemas"]["ContributionRegime"];
+                /**
+                 * @description Only contributions in this status.
+                 * @example QUARANTINED
+                 */
+                status?: components["schemas"]["ContributionStatus"];
+                /**
+                 * @description Only contributions of this member legal entity.
+                 * @example 01920a4c-0000-7000-8000-00000000e001
+                 */
+                legalEntityId?: components["schemas"]["LegalEntityId"];
+                /**
+                 * @description Only contributions from this kind of source.
+                 * @example BSS_INVOICE
+                 */
+                sourceType?: components["schemas"]["ContributionSourceType"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The contributions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderContributionList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordContribution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContributionRequest"];
+            };
+        };
+        responses: {
+            /** @description The contribution this source event and version already recorded, with the same payload. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderContribution"];
+                };
+            };
+            /** @description The contribution, recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderContribution"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getContributionSummary: {
+        parameters: {
+            query: {
+                /**
+                 * @description The period, YYYY-MM.
+                 * @example 2026-09
+                 */
+                period: components["schemas"]["LegalPeriod"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The period's control totals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContributionSummary"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getContributionTrace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The provider contribution identifier.
+                 * @example 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                contributionId: components["parameters"]["ContributionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The contribution and its links. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContributionTrace"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    quarantineContribution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The provider contribution identifier.
+                 * @example 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                contributionId: components["parameters"]["ContributionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContributionTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description The contribution, quarantined. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderContribution"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    releaseContribution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The provider contribution identifier.
+                 * @example 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                contributionId: components["parameters"]["ContributionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContributionTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description The contribution, accepted again. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderContribution"];
                 };
             };
             400: components["responses"]["Validation"];

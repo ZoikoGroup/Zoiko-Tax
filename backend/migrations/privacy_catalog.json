@@ -2545,6 +2545,145 @@
         "note": "The person who prepared, reviewed, approved, submitted or recorded the step."
       }
     },
+    "provider_contribution": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "contribution_id": {
+        "class": "P0"
+      },
+      "source_event_id": {
+        "class": "P0",
+        "note": "An identifier in the provider's own billing, usage or GL system."
+      },
+      "source_version": {
+        "class": "P0"
+      },
+      "source_type": {
+        "class": "P0"
+      },
+      "source_checksum": {
+        "class": "P0",
+        "note": "The checksum of the import file the event came in."
+      },
+      "regime": {
+        "class": "P0"
+      },
+      "period": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "obligation_id": {
+        "class": "P0"
+      },
+      "classification_ref": {
+        "class": "P0"
+      },
+      "situs_ref": {
+        "class": "P0"
+      },
+      "source_ref": {
+        "class": "P0",
+        "note": "An invoice, usage or GL reference in the provider's systems; never a customer identity."
+      },
+      "component_ref": {
+        "class": "P0"
+      },
+      "rule_version": {
+        "class": "P0"
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "eligible_base": {
+        "class": "P0",
+        "note": "The provider's own revenue base for a fund contribution: an operator aggregate, not a consumer amount (UAT-OBL-025)."
+      },
+      "excluded_base": {
+        "class": "P0",
+        "note": "The provider's own revenue excluded from the base: an operator aggregate (UAT-OBL-025)."
+      },
+      "exclusion_reason": {
+        "class": "P0",
+        "note": "Why revenue is excluded, by rule; not narrative about a person."
+      },
+      "quantity": {
+        "class": "P0"
+      },
+      "quantity_unit": {
+        "class": "P0"
+      },
+      "reverses_source_event_id": {
+        "class": "P0"
+      },
+      "reverses_source_version": {
+        "class": "P0"
+      },
+      "amendment": {
+        "class": "P0"
+      },
+      "immutable_hash": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the contribution."
+      }
+    },
+    "provider_contribution_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "contribution_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "status_after": {
+        "class": "P0"
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by the person who quarantined or released the event."
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who quarantined or released the contribution."
+      }
+    },
     "remittance_beneficiary": {
       "tenant_id": {
         "class": "P0"

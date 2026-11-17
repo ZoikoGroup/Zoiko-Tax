@@ -45,6 +45,7 @@ export type View =
   | 'system-health'
   | 'activity'
   | 'filing-remittance'
+  | 'contributions'
 
 /** A screen: a view, and the tab inside it when the view has tabs. */
 export interface NavTarget {
@@ -115,7 +116,7 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
   {
     id: 'obligations', label: 'Obligations', icon: <IconFileText />, children: [
       { id: 'obligations.register', label: 'Obligation Register', target: at('obligations', 'register') },
-      { id: 'obligations.contributions', label: 'Provider Contributions' },
+      { id: 'obligations.contributions', label: 'Provider Contributions', target: at('contributions') },
       { id: 'obligations.calendar', label: 'Compliance Calendar', target: at('obligations', 'calendar') },
       { id: 'obligations.workpapers', label: 'Regulatory Workpapers' },
       { id: 'obligations.exceptions', label: 'Obligation Exceptions', target: at('obligations', 'exceptions') },

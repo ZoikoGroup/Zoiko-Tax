@@ -300,3 +300,38 @@ test("the listings put their filters in the query and nothing else", async () =>
     assert.equal(c.init.headers["Idempotency-Key"], undefined);
   }
 });
+
+test("the contribution calls send amounts as strings and no Idempotency-Key", async () => {
+  const { fetch, calls } = stub(json(201, { id: "01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01" }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+
+  await client.recordContribution({
+    sourceEventId: "BSS-INV-1",
+    sourceVersion: 1,
+    sourceType: "BSS_INVOICE",
+    regime: "US_USF",
+    period: "2026-09",
+    classificationRef: "usf:interstate-telecom",
+    situsRef: "US",
+    sourceRef: "INV-1",
+    ruleVersion: "usf-499a@2026.1",
+    currency: "USD",
+    eligibleBase: "1250.00",
+  });
+  await client.listContributions({ period: "2026-09", status: "QUARANTINED" });
+  await client.getContributionSummary("2026-09");
+  await client.getContributionTrace("01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01");
+  await client.quarantineContribution("01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01", { reason: "imported twice" });
+  await client.releaseContribution("01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01", { reason: "checked" });
+
+  assert.deepEqual(calls.map((c) => `${c.init.method} ${c.url}`), [
+    "POST /api/v1/contributions",
+    "GET /api/v1/contributions?period=2026-09&status=QUARANTINED",
+    "GET /api/v1/contributions/summary?period=2026-09",
+    "GET /api/v1/contributions/01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01/trace",
+    "POST /api/v1/contributions/01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01/quarantine",
+    "POST /api/v1/contributions/01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01/release",
+  ]);
+  assert.equal(JSON.parse(calls[0].init.body).eligibleBase, "1250.00");
+  for (const c of calls) assert.equal(c.init.headers["Idempotency-Key"], undefined);
+});

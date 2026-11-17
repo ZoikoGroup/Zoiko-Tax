@@ -183,6 +183,42 @@
     },
     {
       "method": "GET",
+      "path": "/v1/contributions",
+      "operationId": "listContributions",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/contributions",
+      "operationId": "recordContribution",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/contributions/{contributionId}/quarantine",
+      "operationId": "quarantineContribution",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/contributions/{contributionId}/release",
+      "operationId": "releaseContribution",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/contributions/{contributionId}/trace",
+      "operationId": "getContributionTrace",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/contributions/summary",
+      "operationId": "getContributionSummary",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/coverage",
       "operationId": "getCoverage",
       "public": false

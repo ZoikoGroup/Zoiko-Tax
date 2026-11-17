@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:aadfe8af64fd89c8cc79ecaefc426d862af2b74c2219e7c34a675d23209c150b`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:80a94d3784a6b4230431118bcb18af2e8eb4c1c478da8207e1bc527421a7ce72`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -6919,6 +6919,513 @@
           ]
         },
         {
+          "name": "POST /v1/contributions — Record a provider contribution from one source event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceEventId\": \"BSS-INV-2026-09-000123\",\n  \"sourceVersion\": 1,\n  \"sourceType\": \"BSS_INVOICE\",\n  \"sourceChecksum\": \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n  \"regime\": \"US_USF\",\n  \"period\": \"2026-09\",\n  \"classificationRef\": \"usf:interstate-telecom\",\n  \"situsRef\": \"US\",\n  \"sourceRef\": \"INV-2026-000123\",\n  \"componentRef\": \"line:1/voice-interstate\",\n  \"ruleVersion\": \"usf-499a@2026.1\",\n  \"currency\": \"USD\",\n  \"eligibleBase\": \"1250.00\",\n  \"excludedBase\": \"250.00\",\n  \"exclusionReason\": \"International-only revenue, outside the contribution base\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/contributions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "contributions"
+              ]
+            },
+            "description": "Record a provider contribution from one source event\n\n`OPERATOR`, signed in as themselves.\n\nRecords the contribution base one source event carries — a BSS invoice,\nrated usage, a revenue-recognition adjustment, a licence-activity event or\na manual certified schedule — with its eligibility: classification, situs,\neligible and excluded base, the reason for any exclusion and the rule\nversion that decided it. Amounts are canonical decimal strings in the\nevent's one currency, added exactly by the cell (UAT-OBL-034). The member\nlegal entity defaults to the tenant's default entity.\n\n**Idempotent on the source event and version**, not on an\n`Idempotency-Key`: the source system already names each event, and that\nname is the record's identity. The same payload again returns the record\nalready made with `200`; a different payload under the same key is\n`409 SOURCE_EVENT_CONFLICT`, and the first record stands (UAT-OBL-026).\nA correction is a new version, or a reversal.\n\nA reversal names the source event it reverses in `reverses` and carries\nnegative bases; it is a contribution of its own, never an edit, and an\noriginal is reversed at most once (`409 ALREADY_EXISTS`) and by no more\nthan it contributed (UAT-OBL-027). A reversal whose original is not yet\nrecorded is accepted, and its period is `DATA_INCOMPLETE` until the\noriginal arrives. An event recorded after its period has ended is\nflagged as an `amendment`."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/contributions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "contributions"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"sourceEventId\": \"BSS-INV-2026-09-000123\",\n  \"sourceVersion\": 1,\n  \"sourceType\": \"BSS_INVOICE\",\n  \"sourceChecksum\": \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n  \"regime\": \"US_USF\",\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"classificationRef\": \"usf:interstate-telecom\",\n  \"situsRef\": \"US\",\n  \"sourceRef\": \"INV-2026-000123\",\n  \"componentRef\": \"line:1/voice-interstate\",\n  \"ruleVersion\": \"usf-499a@2026.1\",\n  \"currency\": \"USD\",\n  \"eligibleBase\": \"1250.00\",\n  \"excludedBase\": \"250.00\",\n  \"exclusionReason\": \"International-only revenue, outside the contribution base\",\n  \"amendment\": false,\n  \"immutableHash\": \"zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c\",\n  \"status\": \"ACCEPTED\",\n  \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n  \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"RECORDED\",\n      \"status\": \"ACCEPTED\",\n      \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/contributions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "contributions"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"sourceEventId\": \"BSS-INV-2026-09-000123\",\n  \"sourceVersion\": 1,\n  \"sourceType\": \"BSS_INVOICE\",\n  \"sourceChecksum\": \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n  \"regime\": \"US_USF\",\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"classificationRef\": \"usf:interstate-telecom\",\n  \"situsRef\": \"US\",\n  \"sourceRef\": \"INV-2026-000123\",\n  \"componentRef\": \"line:1/voice-interstate\",\n  \"ruleVersion\": \"usf-499a@2026.1\",\n  \"currency\": \"USD\",\n  \"eligibleBase\": \"1250.00\",\n  \"excludedBase\": \"250.00\",\n  \"exclusionReason\": \"International-only revenue, outside the contribution base\",\n  \"amendment\": false,\n  \"immutableHash\": \"zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c\",\n  \"status\": \"ACCEPTED\",\n  \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n  \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"RECORDED\",\n      \"status\": \"ACCEPTED\",\n      \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordContribution returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test('UAT-OBL-026 — a source event is one contribution: recorded, or the one already recorded', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "  pm.expect(pm.response.json().immutableHash).to.match(/^zt1:[0-9a-f]{64}$/);",
+                  "});",
+                  "pm.collectionVariables.set('contributionId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/contributions — The source event explorer",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/contributions?period={{period}}&regime={{regime}}&status={{status}}&legalEntityId={{legalEntityId}}&sourceType={{sourceType}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "contributions"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "{{period}}",
+                  "description": "Only contributions of this period."
+                },
+                {
+                  "key": "regime",
+                  "value": "{{regime}}",
+                  "description": "Only contributions to this fund."
+                },
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only contributions in this status."
+                },
+                {
+                  "key": "legalEntityId",
+                  "value": "{{legalEntityId}}",
+                  "description": "Only contributions of this member legal entity."
+                },
+                {
+                  "key": "sourceType",
+                  "value": "{{sourceType}}",
+                  "description": "Only contributions from this kind of source."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The source event explorer\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nProvider contributions, newest first, in any status: a quarantined event\nis listed with its hold, never hidden. A provider contribution is the\noperator's own obligation on its eligible revenue; recovery charged to end\nusers is not the contribution payable and is not listed here\n(UAT-OBL-032, -033)."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/contributions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "contributions"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"contributions\": [\n    {\n      \"id\": \"01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"sourceEventId\": \"BSS-INV-2026-09-000123\",\n      \"sourceVersion\": 1,\n      \"sourceType\": \"BSS_INVOICE\",\n      \"sourceChecksum\": \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n      \"regime\": \"US_USF\",\n      \"period\": \"2026-09\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"classificationRef\": \"usf:interstate-telecom\",\n      \"situsRef\": \"US\",\n      \"sourceRef\": \"INV-2026-000123\",\n      \"componentRef\": \"line:1/voice-interstate\",\n      \"ruleVersion\": \"usf-499a@2026.1\",\n      \"currency\": \"USD\",\n      \"eligibleBase\": \"1250.00\",\n      \"excludedBase\": \"250.00\",\n      \"exclusionReason\": \"International-only revenue, outside the contribution base\",\n      \"amendment\": false,\n      \"immutableHash\": \"zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c\",\n      \"status\": \"QUARANTINED\",\n      \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"RECORDED\",\n          \"status\": \"ACCEPTED\",\n          \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 2,\n          \"kind\": \"QUARANTINED\",\n          \"status\": \"QUARANTINED\",\n          \"reason\": \"The September billing extract was imported twice under new file ids\",\n          \"recordedAt\": \"2026-10-03T08:30:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listContributions returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/contributions/{contributionId}/trace — Drill from a contribution to its source, history and links",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/contributions/{{contributionId}}/trace",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "contributions",
+                "{{contributionId}}",
+                "trace"
+              ]
+            },
+            "description": "Drill from a contribution to its source, history and links\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nOne contribution with its source event, classified component and\neligibility, its status history, and its links: the original it reverses\nwhen the ledger holds it, and the reversal of it when one is recorded.\n`originalMissing` is true for a reversal whose original has not arrived."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/contributions/{{contributionId}}/trace",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "contributions",
+                    "{{contributionId}}",
+                    "trace"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"originalMissing\": false,\n  \"contribution\": {\n    \"id\": \"01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n    \"sourceEventId\": \"BSS-INV-2026-09-000123\",\n    \"sourceVersion\": 1,\n    \"sourceType\": \"BSS_INVOICE\",\n    \"sourceChecksum\": \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n    \"regime\": \"US_USF\",\n    \"period\": \"2026-09\",\n    \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n    \"classificationRef\": \"usf:interstate-telecom\",\n    \"situsRef\": \"US\",\n    \"sourceRef\": \"INV-2026-000123\",\n    \"componentRef\": \"line:1/voice-interstate\",\n    \"ruleVersion\": \"usf-499a@2026.1\",\n    \"currency\": \"USD\",\n    \"eligibleBase\": \"1250.00\",\n    \"excludedBase\": \"250.00\",\n    \"exclusionReason\": \"International-only revenue, outside the contribution base\",\n    \"amendment\": false,\n    \"immutableHash\": \"zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c\",\n    \"status\": \"ACCEPTED\",\n    \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n    \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n    \"history\": [\n      {\n        \"seq\": 1,\n        \"kind\": \"RECORDED\",\n        \"status\": \"ACCEPTED\",\n        \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n        \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n      }\n    ]\n  },\n  \"reversal\": {\n    \"id\": \"01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e02\",\n    \"sourceEventId\": \"BSS-CRN-2026-10-000017\",\n    \"sourceVersion\": 1,\n    \"sourceType\": \"BSS_INVOICE\",\n    \"regime\": \"US_USF\",\n    \"period\": \"2026-10\",\n    \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n    \"classificationRef\": \"usf:interstate-telecom\",\n    \"situsRef\": \"US\",\n    \"sourceRef\": \"CRN-2026-000017\",\n    \"ruleVersion\": \"usf-499a@2026.1\",\n    \"currency\": \"USD\",\n    \"eligibleBase\": \"-1250.00\",\n    \"excludedBase\": \"-250.00\",\n    \"exclusionReason\": \"Reverses the international-only part of the original\",\n    \"reverses\": {\n      \"sourceEventId\": \"BSS-INV-2026-09-000123\",\n      \"sourceVersion\": 1\n    },\n    \"amendment\": false,\n    \"immutableHash\": \"zt1:0b2d4f6a8c1e3b5d7f9a0c2e4b6d8f1a3c5e7b9d0f2a4c6e8b1d3f5a7c9e0b2d\",\n    \"status\": \"ACCEPTED\",\n    \"recordedAt\": \"2026-10-20T11:00:00.000000Z\",\n    \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n    \"history\": [\n      {\n        \"seq\": 1,\n        \"kind\": \"RECORDED\",\n        \"status\": \"ACCEPTED\",\n        \"recordedAt\": \"2026-10-20T11:00:00.000000Z\",\n        \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n      }\n    ]\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getContributionTrace returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/contributions/summary — A period's control totals",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/contributions/summary?period={{period}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "contributions",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "{{period}}",
+                  "description": "The period, YYYY-MM."
+                }
+              ]
+            },
+            "description": "A period's control totals\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nControl totals per member legal entity, regime and currency: accepted and\nquarantined counts, the exact eligible and excluded totals with reversals\nincluded as negatives, and the period contribution digest — the canonical\ndigest of the sorted immutable hashes of the accepted events, so it does\nnot depend on arrival order. Quarantined events are counted, never summed.\nA group is `DATA_INCOMPLETE` while an event is quarantined or a reversal\nnames an original the ledger does not hold.\n\nThese totals are the provider's contribution base. They are not, and are\nnever reconciled as, the recovery charged to customers (UAT-OBL-033)."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/contributions/summary",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "contributions",
+                    "summary"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"period\": \"2026-09\",\n  \"dataIncomplete\": true,\n  \"groups\": [\n    {\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"regime\": \"US_USF\",\n      \"currency\": \"USD\",\n      \"status\": \"DATA_INCOMPLETE\",\n      \"incompleteReasons\": [\n        \"QUARANTINED_EVENTS\"\n      ],\n      \"acceptedCount\": 41,\n      \"quarantinedCount\": 1,\n      \"reversalCount\": 2,\n      \"amendmentCount\": 0,\n      \"eligibleTotal\": \"48210.75\",\n      \"excludedTotal\": \"3120.00\",\n      \"reversedTotal\": \"-640.00\",\n      \"periodDigest\": \"zt1:3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e\",\n      \"sourceChecksums\": [\n        \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getContributionSummary returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/contributions/{contributionId}/quarantine — Hold an incorrect import out of the control totals",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"The September billing extract was imported twice under new file ids\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/contributions/{{contributionId}}/quarantine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "contributions",
+                "{{contributionId}}",
+                "quarantine"
+              ]
+            },
+            "description": "Hold an incorrect import out of the control totals\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nHolds an accepted contribution out of the control totals, with its\nreason. Nothing is deleted: the contribution stays listed with its hold,\nits period is `DATA_INCOMPLETE`, and a release puts it back. Only an\naccepted contribution is quarantined (`409 STATE_TRANSITION_INVALID`)."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/contributions/{{contributionId}}/quarantine",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "contributions",
+                    "{{contributionId}}",
+                    "quarantine"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"sourceEventId\": \"BSS-INV-2026-09-000123\",\n  \"sourceVersion\": 1,\n  \"sourceType\": \"BSS_INVOICE\",\n  \"sourceChecksum\": \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n  \"regime\": \"US_USF\",\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"classificationRef\": \"usf:interstate-telecom\",\n  \"situsRef\": \"US\",\n  \"sourceRef\": \"INV-2026-000123\",\n  \"componentRef\": \"line:1/voice-interstate\",\n  \"ruleVersion\": \"usf-499a@2026.1\",\n  \"currency\": \"USD\",\n  \"eligibleBase\": \"1250.00\",\n  \"excludedBase\": \"250.00\",\n  \"exclusionReason\": \"International-only revenue, outside the contribution base\",\n  \"amendment\": false,\n  \"immutableHash\": \"zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c\",\n  \"status\": \"QUARANTINED\",\n  \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n  \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"RECORDED\",\n      \"status\": \"ACCEPTED\",\n      \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"QUARANTINED\",\n      \"status\": \"QUARANTINED\",\n      \"reason\": \"The September billing extract was imported twice under new file ids\",\n      \"recordedAt\": \"2026-10-03T08:30:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('quarantineContribution returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/contributions/{contributionId}/release — Return a quarantined contribution to the control totals",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Checked against the billing extract; the events are distinct\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/contributions/{{contributionId}}/release",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "contributions",
+                "{{contributionId}}",
+                "release"
+              ]
+            },
+            "description": "Return a quarantined contribution to the control totals\n\n`ANALYST`, signed in as themselves.\n\nReleases a quarantined contribution, with its reason, back into the\ncontrol totals. Four eyes: the person who quarantined it cannot release\nit (`403 MAKER_CHECKER`). Only a quarantined contribution is released\n(`409 STATE_TRANSITION_INVALID`)."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/contributions/{{contributionId}}/release",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "contributions",
+                    "{{contributionId}}",
+                    "release"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"sourceEventId\": \"BSS-INV-2026-09-000123\",\n  \"sourceVersion\": 1,\n  \"sourceType\": \"BSS_INVOICE\",\n  \"sourceChecksum\": \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n  \"regime\": \"US_USF\",\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"classificationRef\": \"usf:interstate-telecom\",\n  \"situsRef\": \"US\",\n  \"sourceRef\": \"INV-2026-000123\",\n  \"componentRef\": \"line:1/voice-interstate\",\n  \"ruleVersion\": \"usf-499a@2026.1\",\n  \"currency\": \"USD\",\n  \"eligibleBase\": \"1250.00\",\n  \"excludedBase\": \"250.00\",\n  \"exclusionReason\": \"International-only revenue, outside the contribution base\",\n  \"amendment\": false,\n  \"immutableHash\": \"zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c\",\n  \"status\": \"ACCEPTED\",\n  \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n  \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"RECORDED\",\n      \"status\": \"ACCEPTED\",\n      \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('releaseContribution returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "POST /v1/shadow/comparators — Record a comparator profile",
           "request": {
             "method": "POST",
@@ -10643,6 +11150,26 @@
       "type": "string"
     },
     {
+      "key": "contributionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "regime",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sourceType",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "legalEntityId",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "webhookId",
       "value": "",
       "type": "string"
@@ -10704,7 +11231,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:aadfe8af64fd89c8cc79ecaefc426d862af2b74c2219e7c34a675d23209c150b",
+      "value": "sha256:80a94d3784a6b4230431118bcb18af2e8eb4c1c478da8207e1bc527421a7ce72",
       "type": "string"
     }
   ]

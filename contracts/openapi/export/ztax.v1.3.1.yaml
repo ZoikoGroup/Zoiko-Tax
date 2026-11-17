@@ -102,6 +102,8 @@ tags:
     description: Compliance packages that turn an obligation into a filing — preparation, independent review, exact-version approval, submission and the authority's answer. TRANSMITTING is not FILED.
   - name: remittance
     description: Payee master data and payment instructions for accepted returns. ZoikoTax instructs the customer's own provider and never holds funds; submitted is not settled.
+  - name: contributions
+    description: Provider contributions — the operator's own contributions to USF, CRTC NCF and similar funds, assessed on its eligible revenue. Never the recovery charged to customers. Source events recorded once, reversed by new events, quarantined without deletion, and totalled exactly per period.
   - name: shadow
     description: Shadow assurance — another engine's results compared with ZoikoTax's decisions, component by component. Non-impact; matching a comparator is not verified correctness.
   - name: migration
@@ -7551,6 +7553,588 @@ paths:
           $ref: "#/components/responses/Internal"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/contributions:
+    get:
+      operationId: listContributions
+      tags:
+        - contributions
+      summary: The source event explorer
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        Provider contributions, newest first, in any status: a quarantined event
+        is listed with its hold, never hidden. A provider contribution is the
+        operator's own obligation on its eligible revenue; recovery charged to end
+        users is not the contribution payable and is not listed here
+        (UAT-OBL-032, -033).
+      parameters:
+        - name: period
+          in: query
+          required: false
+          description: Only contributions of this period.
+          schema:
+            $ref: "#/components/schemas/LegalPeriod"
+          example: 2026-09
+        - name: regime
+          in: query
+          required: false
+          description: Only contributions to this fund.
+          schema:
+            $ref: "#/components/schemas/ContributionRegime"
+          example: US_USF
+        - name: status
+          in: query
+          required: false
+          description: Only contributions in this status.
+          schema:
+            $ref: "#/components/schemas/ContributionStatus"
+          example: QUARANTINED
+        - name: legalEntityId
+          in: query
+          required: false
+          description: Only contributions of this member legal entity.
+          schema:
+            $ref: "#/components/schemas/LegalEntityId"
+          example: 01920a4c-0000-7000-8000-00000000e001
+        - name: sourceType
+          in: query
+          required: false
+          description: Only contributions from this kind of source.
+          schema:
+            $ref: "#/components/schemas/ContributionSourceType"
+          example: BSS_INVOICE
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The contributions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderContributionList"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    contributions:
+                      - id: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        sourceEventId: BSS-INV-2026-09-000123
+                        sourceVersion: 1
+                        sourceType: BSS_INVOICE
+                        sourceChecksum: sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                        regime: US_USF
+                        period: 2026-09
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        classificationRef: usf:interstate-telecom
+                        situsRef: US
+                        sourceRef: INV-2026-000123
+                        componentRef: line:1/voice-interstate
+                        ruleVersion: usf-499a@2026.1
+                        currency: USD
+                        eligibleBase: "1250.00"
+                        excludedBase: "250.00"
+                        exclusionReason: International-only revenue, outside the contribution base
+                        amendment: false
+                        immutableHash: zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c
+                        status: QUARANTINED
+                        recordedAt: 2026-10-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                        history:
+                          - seq: 1
+                            kind: RECORDED
+                            status: ACCEPTED
+                            recordedAt: 2026-10-02T09:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                          - seq: 2
+                            kind: QUARANTINED
+                            status: QUARANTINED
+                            reason: The September billing extract was imported twice under new file ids
+                            recordedAt: 2026-10-03T08:30:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: recordContribution
+      tags:
+        - contributions
+      summary: Record a provider contribution from one source event
+      description: |
+        `OPERATOR`, signed in as themselves.
+
+        Records the contribution base one source event carries — a BSS invoice,
+        rated usage, a revenue-recognition adjustment, a licence-activity event or
+        a manual certified schedule — with its eligibility: classification, situs,
+        eligible and excluded base, the reason for any exclusion and the rule
+        version that decided it. Amounts are canonical decimal strings in the
+        event's one currency, added exactly by the cell (UAT-OBL-034). The member
+        legal entity defaults to the tenant's default entity.
+
+        **Idempotent on the source event and version**, not on an
+        `Idempotency-Key`: the source system already names each event, and that
+        name is the record's identity. The same payload again returns the record
+        already made with `200`; a different payload under the same key is
+        `409 SOURCE_EVENT_CONFLICT`, and the first record stands (UAT-OBL-026).
+        A correction is a new version, or a reversal.
+
+        A reversal names the source event it reverses in `reverses` and carries
+        negative bases; it is a contribution of its own, never an edit, and an
+        original is reversed at most once (`409 ALREADY_EXISTS`) and by no more
+        than it contributed (UAT-OBL-027). A reversal whose original is not yet
+        recorded is accepted, and its period is `DATA_INCOMPLETE` until the
+        original arrives. An event recorded after its period has ended is
+        flagged as an `amendment`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContributionRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  sourceEventId: BSS-INV-2026-09-000123
+                  sourceVersion: 1
+                  sourceType: BSS_INVOICE
+                  sourceChecksum: sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                  regime: US_USF
+                  period: 2026-09
+                  classificationRef: usf:interstate-telecom
+                  situsRef: US
+                  sourceRef: INV-2026-000123
+                  componentRef: line:1/voice-interstate
+                  ruleVersion: usf-499a@2026.1
+                  currency: USD
+                  eligibleBase: "1250.00"
+                  excludedBase: "250.00"
+                  exclusionReason: International-only revenue, outside the contribution base
+      responses:
+        "200":
+          description: The contribution this source event and version already recorded, with the same payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderContribution"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    sourceEventId: BSS-INV-2026-09-000123
+                    sourceVersion: 1
+                    sourceType: BSS_INVOICE
+                    sourceChecksum: sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                    regime: US_USF
+                    period: 2026-09
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    classificationRef: usf:interstate-telecom
+                    situsRef: US
+                    sourceRef: INV-2026-000123
+                    componentRef: line:1/voice-interstate
+                    ruleVersion: usf-499a@2026.1
+                    currency: USD
+                    eligibleBase: "1250.00"
+                    excludedBase: "250.00"
+                    exclusionReason: International-only revenue, outside the contribution base
+                    amendment: false
+                    immutableHash: zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c
+                    status: ACCEPTED
+                    recordedAt: 2026-10-02T09:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - seq: 1
+                        kind: RECORDED
+                        status: ACCEPTED
+                        recordedAt: 2026-10-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "201":
+          description: The contribution, recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderContribution"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    sourceEventId: BSS-INV-2026-09-000123
+                    sourceVersion: 1
+                    sourceType: BSS_INVOICE
+                    sourceChecksum: sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                    regime: US_USF
+                    period: 2026-09
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    classificationRef: usf:interstate-telecom
+                    situsRef: US
+                    sourceRef: INV-2026-000123
+                    componentRef: line:1/voice-interstate
+                    ruleVersion: usf-499a@2026.1
+                    currency: USD
+                    eligibleBase: "1250.00"
+                    excludedBase: "250.00"
+                    exclusionReason: International-only revenue, outside the contribution base
+                    amendment: false
+                    immutableHash: zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c
+                    status: ACCEPTED
+                    recordedAt: 2026-10-02T09:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - seq: 1
+                        kind: RECORDED
+                        status: ACCEPTED
+                        recordedAt: 2026-10-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/contributions/summary:
+    get:
+      operationId: getContributionSummary
+      tags:
+        - contributions
+      summary: A period's control totals
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        Control totals per member legal entity, regime and currency: accepted and
+        quarantined counts, the exact eligible and excluded totals with reversals
+        included as negatives, and the period contribution digest — the canonical
+        digest of the sorted immutable hashes of the accepted events, so it does
+        not depend on arrival order. Quarantined events are counted, never summed.
+        A group is `DATA_INCOMPLETE` while an event is quarantined or a reversal
+        names an original the ledger does not hold.
+
+        These totals are the provider's contribution base. They are not, and are
+        never reconciled as, the recovery charged to customers (UAT-OBL-033).
+      parameters:
+        - name: period
+          in: query
+          required: true
+          description: The period, YYYY-MM.
+          schema:
+            $ref: "#/components/schemas/LegalPeriod"
+          example: 2026-09
+      responses:
+        "200":
+          description: The period's control totals.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContributionSummary"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    period: 2026-09
+                    dataIncomplete: true
+                    groups:
+                      - legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        regime: US_USF
+                        currency: USD
+                        status: DATA_INCOMPLETE
+                        incompleteReasons:
+                          - QUARANTINED_EVENTS
+                        acceptedCount: 41
+                        quarantinedCount: 1
+                        reversalCount: 2
+                        amendmentCount: 0
+                        eligibleTotal: "48210.75"
+                        excludedTotal: "3120.00"
+                        reversedTotal: "-640.00"
+                        periodDigest: zt1:3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e
+                        sourceChecksums:
+                          - sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/contributions/{contributionId}/trace:
+    get:
+      operationId: getContributionTrace
+      tags:
+        - contributions
+      summary: Drill from a contribution to its source, history and links
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        One contribution with its source event, classified component and
+        eligibility, its status history, and its links: the original it reverses
+        when the ledger holds it, and the reversal of it when one is recorded.
+        `originalMissing` is true for a reversal whose original has not arrived.
+      parameters:
+        - $ref: "#/components/parameters/ContributionId"
+      responses:
+        "200":
+          description: The contribution and its links.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContributionTrace"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    originalMissing: false
+                    contribution:
+                      id: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                      sourceEventId: BSS-INV-2026-09-000123
+                      sourceVersion: 1
+                      sourceType: BSS_INVOICE
+                      sourceChecksum: sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                      regime: US_USF
+                      period: 2026-09
+                      legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                      classificationRef: usf:interstate-telecom
+                      situsRef: US
+                      sourceRef: INV-2026-000123
+                      componentRef: line:1/voice-interstate
+                      ruleVersion: usf-499a@2026.1
+                      currency: USD
+                      eligibleBase: "1250.00"
+                      excludedBase: "250.00"
+                      exclusionReason: International-only revenue, outside the contribution base
+                      amendment: false
+                      immutableHash: zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c
+                      status: ACCEPTED
+                      recordedAt: 2026-10-02T09:00:00.000000Z
+                      recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      history:
+                        - seq: 1
+                          kind: RECORDED
+                          status: ACCEPTED
+                          recordedAt: 2026-10-02T09:00:00.000000Z
+                          recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    reversal:
+                      id: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e02
+                      sourceEventId: BSS-CRN-2026-10-000017
+                      sourceVersion: 1
+                      sourceType: BSS_INVOICE
+                      regime: US_USF
+                      period: 2026-10
+                      legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                      classificationRef: usf:interstate-telecom
+                      situsRef: US
+                      sourceRef: CRN-2026-000017
+                      ruleVersion: usf-499a@2026.1
+                      currency: USD
+                      eligibleBase: "-1250.00"
+                      excludedBase: "-250.00"
+                      exclusionReason: Reverses the international-only part of the original
+                      reverses:
+                        sourceEventId: BSS-INV-2026-09-000123
+                        sourceVersion: 1
+                      amendment: false
+                      immutableHash: zt1:0b2d4f6a8c1e3b5d7f9a0c2e4b6d8f1a3c5e7b9d0f2a4c6e8b1d3f5a7c9e0b2d
+                      status: ACCEPTED
+                      recordedAt: 2026-10-20T11:00:00.000000Z
+                      recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      history:
+                        - seq: 1
+                          kind: RECORDED
+                          status: ACCEPTED
+                          recordedAt: 2026-10-20T11:00:00.000000Z
+                          recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/contributions/{contributionId}/quarantine:
+    post:
+      operationId: quarantineContribution
+      tags:
+        - contributions
+      summary: Hold an incorrect import out of the control totals
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Holds an accepted contribution out of the control totals, with its
+        reason. Nothing is deleted: the contribution stays listed with its hold,
+        its period is `DATA_INCOMPLETE`, and a release puts it back. Only an
+        accepted contribution is quarantined (`409 STATE_TRANSITION_INVALID`).
+      parameters:
+        - $ref: "#/components/parameters/ContributionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContributionTransitionRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  reason: The September billing extract was imported twice under new file ids
+      responses:
+        "200":
+          description: The contribution, quarantined.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderContribution"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    sourceEventId: BSS-INV-2026-09-000123
+                    sourceVersion: 1
+                    sourceType: BSS_INVOICE
+                    sourceChecksum: sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                    regime: US_USF
+                    period: 2026-09
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    classificationRef: usf:interstate-telecom
+                    situsRef: US
+                    sourceRef: INV-2026-000123
+                    componentRef: line:1/voice-interstate
+                    ruleVersion: usf-499a@2026.1
+                    currency: USD
+                    eligibleBase: "1250.00"
+                    excludedBase: "250.00"
+                    exclusionReason: International-only revenue, outside the contribution base
+                    amendment: false
+                    immutableHash: zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c
+                    status: QUARANTINED
+                    recordedAt: 2026-10-02T09:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - seq: 1
+                        kind: RECORDED
+                        status: ACCEPTED
+                        recordedAt: 2026-10-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: QUARANTINED
+                        status: QUARANTINED
+                        reason: The September billing extract was imported twice under new file ids
+                        recordedAt: 2026-10-03T08:30:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/contributions/{contributionId}/release:
+    post:
+      operationId: releaseContribution
+      tags:
+        - contributions
+      summary: Return a quarantined contribution to the control totals
+      description: |
+        `ANALYST`, signed in as themselves.
+
+        Releases a quarantined contribution, with its reason, back into the
+        control totals. Four eyes: the person who quarantined it cannot release
+        it (`403 MAKER_CHECKER`). Only a quarantined contribution is released
+        (`409 STATE_TRANSITION_INVALID`).
+      parameters:
+        - $ref: "#/components/parameters/ContributionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContributionTransitionRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  reason: Checked against the billing extract; the events are distinct
+      responses:
+        "200":
+          description: The contribution, accepted again.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderContribution"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    sourceEventId: BSS-INV-2026-09-000123
+                    sourceVersion: 1
+                    sourceType: BSS_INVOICE
+                    sourceChecksum: sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                    regime: US_USF
+                    period: 2026-09
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    classificationRef: usf:interstate-telecom
+                    situsRef: US
+                    sourceRef: INV-2026-000123
+                    componentRef: line:1/voice-interstate
+                    ruleVersion: usf-499a@2026.1
+                    currency: USD
+                    eligibleBase: "1250.00"
+                    excludedBase: "250.00"
+                    exclusionReason: International-only revenue, outside the contribution base
+                    amendment: false
+                    immutableHash: zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c
+                    status: ACCEPTED
+                    recordedAt: 2026-10-02T09:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - seq: 1
+                        kind: RECORDED
+                        status: ACCEPTED
+                        recordedAt: 2026-10-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/shadow/comparators:
     get:
       operationId: listComparators
@@ -8776,6 +9360,14 @@ components:
       schema:
         $ref: "#/components/schemas/RemittanceId"
       example: 01920b30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+    ContributionId:
+      name: contributionId
+      in: path
+      required: true
+      description: The provider contribution identifier.
+      schema:
+        $ref: "#/components/schemas/ContributionId"
+      example: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
     ShadowRunId:
       name: shadowRunId
       in: path
@@ -16620,6 +17212,470 @@ components:
       properties:
         reason:
           $ref: "#/components/schemas/PaymentNote"
+    ContributionId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ContributionId
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+    ContributionRegime:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ContributionRegime
+      description: The fund a provider contribution is owed to — the US Universal Service Fund through USAC, Canada's CRTC National Contribution Fund, or another.
+      enum:
+        - US_USF
+        - CA_CRTC_NCF
+        - OTHER
+    ContributionSourceType:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ContributionSourceType
+      description: The kind of record a source event is (OBL-06).
+      enum:
+        - BSS_INVOICE
+        - RATED_USAGE
+        - REVENUE_RECOGNITION_ADJUSTMENT
+        - LICENCE_ACTIVITY
+        - MANUAL_CERTIFIED_SCHEDULE
+    ContributionStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ContributionStatus
+      description: Where a contribution stands. Only ACCEPTED counts in the control totals; QUARANTINED is held, never deleted.
+      enum:
+        - ACCEPTED
+        - QUARANTINED
+    ContributionEventKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ContributionEventKind
+      description: What happened to a contribution. Every one is appended; none edits.
+      enum:
+        - RECORDED
+        - QUARANTINED
+        - RELEASED
+    ContributionIncompleteReason:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ContributionIncompleteReason
+      description: Why a group's control totals are DATA_INCOMPLETE — a held import, or a reversal of an original the ledger does not hold.
+      enum:
+        - QUARANTINED_EVENTS
+        - UNRESOLVED_REVERSAL
+    ContributionAmount:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ContributionAmount
+      description: |
+        A provider's contribution base, or a quantity, in canonical decimal string
+        form — never a JSON number, and never computed by a client
+        (UAT-OBL-034). Scale is significant. An operator's own revenue
+        aggregate, not a consumer amount, so it carries no personal data
+        (UAT-OBL-025).
+      pattern: ^-?(0|[1-9][0-9]*)(\.[0-9]+)?$
+      maxLength: 64
+      example: "1250.00"
+    ContributionRef:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ContributionRef
+      description: A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+      minLength: 1
+      maxLength: 200
+      example: INV-2026-000123
+    ContributionReason:
+      x-ztax-privacy:
+        class: P2
+        purposes:
+          - PURP-FILE
+          - PURP-EVID
+        retention: RET-EVIDENCE
+        redaction: REDACT
+        aiAllowed: NONE
+      type: string
+      title: ContributionReason
+      description: Why a contribution was quarantined or released, in the words of the person who did it.
+      minLength: 1
+      maxLength: 2000
+      example: The September billing extract was imported twice under new file ids
+    ContributionSourceKey:
+      type: object
+      title: ContributionSourceKey
+      description: A source event and its version — the natural key a contribution is recorded under.
+      additionalProperties: false
+      required:
+        - sourceEventId
+        - sourceVersion
+      properties:
+        sourceEventId:
+          $ref: "#/components/schemas/ContributionRef"
+        sourceVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+    ContributionStatusEvent:
+      type: object
+      title: ContributionStatusEvent
+      additionalProperties: false
+      required:
+        - seq
+        - kind
+        - status
+        - recordedAt
+        - recordedBy
+      properties:
+        seq:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        kind:
+          $ref: "#/components/schemas/ContributionEventKind"
+        status:
+          $ref: "#/components/schemas/ContributionStatus"
+        reason:
+          $ref: "#/components/schemas/ContributionReason"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+    ProviderContribution:
+      type: object
+      title: ProviderContribution
+      description: |
+        One ContributionEvent: the contribution base a source event carries, with
+        its eligibility and its immutable hash. The provider's own obligation on
+        its eligible revenue — never the recovery charged to customers.
+      additionalProperties: false
+      required:
+        - id
+        - sourceEventId
+        - sourceVersion
+        - sourceType
+        - regime
+        - period
+        - legalEntityId
+        - classificationRef
+        - situsRef
+        - sourceRef
+        - ruleVersion
+        - currency
+        - eligibleBase
+        - excludedBase
+        - amendment
+        - immutableHash
+        - status
+        - recordedAt
+        - recordedBy
+        - history
+      properties:
+        id:
+          $ref: "#/components/schemas/ContributionId"
+        sourceEventId:
+          $ref: "#/components/schemas/ContributionRef"
+        sourceVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        sourceType:
+          $ref: "#/components/schemas/ContributionSourceType"
+        sourceChecksum:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The checksum of the import file the event came in.
+        regime:
+          $ref: "#/components/schemas/ContributionRegime"
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        obligationId:
+          $ref: "#/components/schemas/ObligationId"
+        classificationRef:
+          $ref: "#/components/schemas/ContributionRef"
+        situsRef:
+          $ref: "#/components/schemas/ContributionRef"
+        sourceRef:
+          $ref: "#/components/schemas/ContributionRef"
+        componentRef:
+          $ref: "#/components/schemas/ContributionRef"
+        ruleVersion:
+          $ref: "#/components/schemas/ContributionRef"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        eligibleBase:
+          $ref: "#/components/schemas/ContributionAmount"
+        excludedBase:
+          $ref: "#/components/schemas/ContributionAmount"
+        exclusionReason:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: Why revenue is excluded from the base, by rule. Present whenever excludedBase is not zero.
+        quantity:
+          $ref: "#/components/schemas/ContributionAmount"
+        quantityUnit:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        reverses:
+          $ref: "#/components/schemas/ContributionSourceKey"
+        amendment:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: Recorded after its period had ended — a late event, counted in its own period.
+        immutableHash:
+          $ref: "#/components/schemas/Digest"
+        status:
+          $ref: "#/components/schemas/ContributionStatus"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContributionStatusEvent"
+    ProviderContributionList:
+      type: object
+      title: ProviderContributionList
+      additionalProperties: false
+      required:
+        - contributions
+      properties:
+        contributions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProviderContribution"
+    ContributionRequest:
+      type: object
+      title: ContributionRequest
+      additionalProperties: false
+      required:
+        - sourceEventId
+        - sourceVersion
+        - sourceType
+        - regime
+        - period
+        - classificationRef
+        - situsRef
+        - sourceRef
+        - ruleVersion
+        - currency
+        - eligibleBase
+      properties:
+        sourceEventId:
+          $ref: "#/components/schemas/ContributionRef"
+        sourceVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        sourceType:
+          $ref: "#/components/schemas/ContributionSourceType"
+        sourceChecksum:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          maxLength: 200
+          description: The checksum of the import file the event came in, when it came in one.
+        regime:
+          $ref: "#/components/schemas/ContributionRegime"
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        obligationId:
+          $ref: "#/components/schemas/ObligationId"
+        classificationRef:
+          $ref: "#/components/schemas/ContributionRef"
+        situsRef:
+          $ref: "#/components/schemas/ContributionRef"
+        sourceRef:
+          $ref: "#/components/schemas/ContributionRef"
+        componentRef:
+          $ref: "#/components/schemas/ContributionRef"
+        ruleVersion:
+          $ref: "#/components/schemas/ContributionRef"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        eligibleBase:
+          $ref: "#/components/schemas/ContributionAmount"
+        excludedBase:
+          $ref: "#/components/schemas/ContributionAmount"
+        exclusionReason:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          maxLength: 2000
+          description: Why revenue is excluded from the base. Required when excludedBase is not zero.
+        quantity:
+          $ref: "#/components/schemas/ContributionAmount"
+        quantityUnit:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          maxLength: 32
+        reverses:
+          $ref: "#/components/schemas/ContributionSourceKey"
+    ContributionTransitionRequest:
+      type: object
+      title: ContributionTransitionRequest
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          $ref: "#/components/schemas/ContributionReason"
+    ContributionTrace:
+      type: object
+      title: ContributionTrace
+      additionalProperties: false
+      required:
+        - contribution
+        - originalMissing
+      properties:
+        contribution:
+          $ref: "#/components/schemas/ProviderContribution"
+        original:
+          $ref: "#/components/schemas/ProviderContribution"
+        reversal:
+          $ref: "#/components/schemas/ProviderContribution"
+        originalMissing:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: The contribution is a reversal and the ledger does not hold its original.
+    ContributionPeriodTotals:
+      type: object
+      title: ContributionPeriodTotals
+      description: One member entity's control totals for one regime and currency. Currencies are never added together.
+      additionalProperties: false
+      required:
+        - legalEntityId
+        - regime
+        - currency
+        - status
+        - incompleteReasons
+        - acceptedCount
+        - quarantinedCount
+        - reversalCount
+        - amendmentCount
+        - eligibleTotal
+        - excludedTotal
+        - reversedTotal
+        - periodDigest
+        - sourceChecksums
+      properties:
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        regime:
+          $ref: "#/components/schemas/ContributionRegime"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        status:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - COMPLETE
+            - DATA_INCOMPLETE
+        incompleteReasons:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContributionIncompleteReason"
+        acceptedCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        quarantinedCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        reversalCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        amendmentCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        eligibleTotal:
+          $ref: "#/components/schemas/ContributionAmount"
+        excludedTotal:
+          $ref: "#/components/schemas/ContributionAmount"
+        reversedTotal:
+          $ref: "#/components/schemas/ContributionAmount"
+        periodDigest:
+          $ref: "#/components/schemas/Digest"
+        sourceChecksums:
+          x-ztax-privacy:
+            class: P0
+          type: array
+          items:
+            type: string
+    ContributionSummary:
+      type: object
+      title: ContributionSummary
+      additionalProperties: false
+      required:
+        - period
+        - dataIncomplete
+        - groups
+      properties:
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+        dataIncomplete:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: Some group is DATA_INCOMPLETE.
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContributionPeriodTotals"
     ComparatorId:
       x-ztax-privacy:
         class: P0
