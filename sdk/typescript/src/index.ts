@@ -68,6 +68,26 @@ export type MoneyValue = components["schemas"]["MoneyValue"];
 /** A schema of the contract by name: `S<"Obligation">`. */
 export type S<K extends keyof components["schemas"]> = components["schemas"][K];
 
+/** The register filters of `listNotices`. Amounts are decimal strings, never numbers. */
+export interface NoticeListParams {
+  type?: string;
+  status?: string;
+  authority?: string;
+  legalEntityId?: string;
+  authorityReference?: string;
+  receivedFrom?: string;
+  receivedTo?: string;
+  period?: string;
+  amountMin?: string;
+  amountMax?: string;
+  currency?: string;
+  attachmentSha256?: string;
+  authenticity?: string;
+  urgent?: boolean;
+  includeClosed?: boolean;
+  limit?: number;
+}
+
 /**
  * A failed request.
  *
@@ -713,6 +733,133 @@ export class ZoikoTaxClient {
     return this.#send<S<"Remittance">>("POST", `/v1/remittances/${encodeURIComponent(remittanceId)}/cancellation`, body, signal);
   }
 
+  // --- provider contributions ------------------------------------------------
+  /** List provider contributions, newest first, in any status. `GET /v1/contributions`. */
+  listContributions(
+    params: { period?: string; regime?: string; status?: string; legalEntityId?: string; sourceType?: string; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"ProviderContributionList">>> {
+    return this.#send<S<"ProviderContributionList">>("GET", `/v1/contributions${query(params)}`, undefined, signal);
+  }
+
+  /**
+   * Record a contribution from one source event; `200` returns the one this
+   * source event and version already recorded. Idempotent on the source key,
+   * not on an Idempotency-Key. `POST /v1/contributions`.
+   */
+  recordContribution(body: S<"ContributionRequest">, signal?: AbortSignal): Promise<Result<S<"ProviderContribution">>> {
+    return this.#send<S<"ProviderContribution">>("POST", `/v1/contributions`, body, signal);
+  }
+
+  /** A period's control totals. `GET /v1/contributions/summary`. */
+  getContributionSummary(period: string, signal?: AbortSignal): Promise<Result<S<"ContributionSummary">>> {
+    return this.#send<S<"ContributionSummary">>("GET", `/v1/contributions/summary${query({ period })}`, undefined, signal);
+  }
+
+  /** A contribution with its history and links. `GET /v1/contributions/{contributionId}/trace`. */
+  getContributionTrace(contributionId: string, signal?: AbortSignal): Promise<Result<S<"ContributionTrace">>> {
+    return this.#send<S<"ContributionTrace">>("GET", `/v1/contributions/${encodeURIComponent(contributionId)}/trace`, undefined, signal);
+  }
+
+  /** Quarantine a contribution. `POST /v1/contributions/{contributionId}/quarantine`. */
+  quarantineContribution(contributionId: string, body: S<"ContributionTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"ProviderContribution">>> {
+    return this.#send<S<"ProviderContribution">>("POST", `/v1/contributions/${encodeURIComponent(contributionId)}/quarantine`, body, signal);
+  }
+
+  /** Release a quarantined contribution. `POST /v1/contributions/{contributionId}/release`. */
+  releaseContribution(contributionId: string, body: S<"ContributionTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"ProviderContribution">>> {
+    return this.#send<S<"ProviderContribution">>("POST", `/v1/contributions/${encodeURIComponent(contributionId)}/release`, body, signal);
+  }
+
+  // --- regulatory notices ---------------------------------------------------
+  /**
+   * List the regulatory notice register, in working order. `GET /v1/notices`.
+   * Amount bounds are decimal strings compared on the server, in `currency`.
+   */
+  listNotices(params: NoticeListParams = {}, signal?: AbortSignal): Promise<Result<S<"NoticeList">>> {
+    const { urgent, includeClosed, ...rest } = params;
+    return this.#send<S<"NoticeList">>("GET", `/v1/notices${query({
+      ...rest,
+      urgent: urgent === undefined ? undefined : String(urgent),
+      includeClosed: includeClosed === undefined ? undefined : String(includeClosed),
+    })}`, undefined, signal);
+  }
+
+  /** Register a notice as received. `POST /v1/notices`. */
+  createNotice(body: S<"CreateNoticeRequest">, signal?: AbortSignal): Promise<Result<S<"Notice">>> {
+    return this.#send<S<"Notice">>("POST", `/v1/notices`, body, signal);
+  }
+
+  /** Get notice. `GET /v1/notices/{noticeId}`. */
+  getNotice(noticeId: string, signal?: AbortSignal): Promise<Result<S<"Notice">>> {
+    return this.#send<S<"Notice">>("GET", `/v1/notices/${encodeURIComponent(noticeId)}`, undefined, signal);
+  }
+
+  /** The statutory deadline ledger. `GET /v1/notices/{noticeId}/deadlines`. */
+  getNoticeDeadlines(noticeId: string, signal?: AbortSignal): Promise<Result<S<"NoticeDeadlineLedger">>> {
+    return this.#send<S<"NoticeDeadlineLedger">>("GET", `/v1/notices/${encodeURIComponent(noticeId)}/deadlines`, undefined, signal);
+  }
+
+  /** Confirm or extend the statutory deadline. `POST /v1/notices/{noticeId}/deadlines`. */
+  recordNoticeDeadline(noticeId: string, body: S<"NoticeDeadlineRequest">, signal?: AbortSignal): Promise<Result<S<"Notice">>> {
+    return this.#send<S<"Notice">>("POST", `/v1/notices/${encodeURIComponent(noticeId)}/deadlines`, body, signal);
+  }
+
+  /** Move a notice through review, or close it. `POST /v1/notices/{noticeId}/transitions`. */
+  transitionNotice(noticeId: string, body: S<"NoticeTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"Notice">>> {
+    return this.#send<S<"Notice">>("POST", `/v1/notices/${encodeURIComponent(noticeId)}/transitions`, body, signal);
+  }
+
+  /** Record authenticity. `POST /v1/notices/{noticeId}/authenticity`. */
+  recordNoticeAuthenticity(noticeId: string, body: S<"NoticeAuthenticityRequest">, signal?: AbortSignal): Promise<Result<S<"Notice">>> {
+    return this.#send<S<"Notice">>("POST", `/v1/notices/${encodeURIComponent(noticeId)}/authenticity`, body, signal);
+  }
+
+  /** Escalate to legal. `POST /v1/notices/{noticeId}/escalations`. */
+  escalateNotice(noticeId: string, body: S<"NoticeEscalationRequest">, signal?: AbortSignal): Promise<Result<S<"Notice">>> {
+    return this.#send<S<"Notice">>("POST", `/v1/notices/${encodeURIComponent(noticeId)}/escalations`, body, signal);
+  }
+
+  /** Resolve the recipient legal entity. `POST /v1/notices/{noticeId}/entity`. */
+  resolveNoticeEntity(noticeId: string, body: S<"NoticeEntityRequest">, signal?: AbortSignal): Promise<Result<S<"Notice">>> {
+    return this.#send<S<"Notice">>("POST", `/v1/notices/${encodeURIComponent(noticeId)}/entity`, body, signal);
+  }
+
+  /** Assign the deadline owner and SLA. `POST /v1/notices/{noticeId}/owner`. */
+  assignNoticeOwner(noticeId: string, body: S<"NoticeOwnerRequest">, signal?: AbortSignal): Promise<Result<S<"Notice">>> {
+    return this.#send<S<"Notice">>("POST", `/v1/notices/${encodeURIComponent(noticeId)}/owner`, body, signal);
+  }
+
+  /** Record a document by its SHA-256; nothing is uploaded. `POST /v1/notices/{noticeId}/attachments`. */
+  recordNoticeAttachment(noticeId: string, body: S<"NoticeAttachmentRequest">, signal?: AbortSignal): Promise<Result<S<"Notice">>> {
+    return this.#send<S<"Notice">>("POST", `/v1/notices/${encodeURIComponent(noticeId)}/attachments`, body, signal);
+  }
+
+  /** Prepare a response package. `POST /v1/notices/{noticeId}/response-packages`. */
+  prepareNoticeResponse(noticeId: string, body: S<"NoticeResponsePackageRequest">, signal?: AbortSignal): Promise<Result<S<"Notice">>> {
+    return this.#send<S<"Notice">>("POST", `/v1/notices/${encodeURIComponent(noticeId)}/response-packages`, body, signal);
+  }
+
+  /** Approve the response package (four-eye). `POST /v1/notices/{noticeId}/response-approval`. */
+  approveNoticeResponse(noticeId: string, body: S<"NoticeApprovalRequest">, signal?: AbortSignal): Promise<Result<S<"Notice">>> {
+    return this.#send<S<"Notice">>("POST", `/v1/notices/${encodeURIComponent(noticeId)}/response-approval`, body, signal);
+  }
+
+  /** Record the authority receipt of the response. `POST /v1/notices/{noticeId}/submission`. */
+  recordNoticeSubmission(noticeId: string, body: S<"NoticeSubmissionRequest">, signal?: AbortSignal): Promise<Result<S<"Notice">>> {
+    return this.#send<S<"Notice">>("POST", `/v1/notices/${encodeURIComponent(noticeId)}/submission`, body, signal);
+  }
+
+  /** Record what the authority decided. `POST /v1/notices/{noticeId}/outcome`. */
+  recordNoticeOutcome(noticeId: string, body: S<"NoticeOutcomeRequest">, signal?: AbortSignal): Promise<Result<S<"Notice">>> {
+    return this.#send<S<"Notice">>("POST", `/v1/notices/${encodeURIComponent(noticeId)}/outcome`, body, signal);
+  }
+
+  /** Lodge an appeal against the outcome. `POST /v1/notices/{noticeId}/appeal`. */
+  lodgeNoticeAppeal(noticeId: string, body: S<"NoticeAppealRequest">, signal?: AbortSignal): Promise<Result<S<"Notice">>> {
+    return this.#send<S<"Notice">>("POST", `/v1/notices/${encodeURIComponent(noticeId)}/appeal`, body, signal);
+  }
+
   // --- shadow ----------------------------------------------------------------
   /** List comparator profiles. `GET /v1/shadow/comparators`. */
   listComparators(signal?: AbortSignal): Promise<Result<S<"ComparatorList">>> {
@@ -742,6 +889,44 @@ export class ZoikoTaxClient {
   /** Move a discrepancy's investigation. `POST /v1/shadow/discrepancies/{discrepancyId}/transitions`. */
   moveDiscrepancy(discrepancyId: string, body: S<"DiscrepancyTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"Discrepancy">>> {
     return this.#send<S<"Discrepancy">>("POST", `/v1/shadow/discrepancies/${encodeURIComponent(discrepancyId)}/transitions`, body, signal);
+  }
+
+  // --- support ---------------------------------------------------------------
+  /** The support triage queue, soonest due first. `GET /v1/support/cases`. */
+  listSupportCases(
+    params: {
+      type?: string;
+      severity?: string;
+      status?: string;
+      product?: string;
+      legalEntityId?: string;
+      fiscalPeriod?: string;
+      assignee?: string;
+      unassigned?: boolean;
+      slaClock?: string;
+      statutoryClock?: string;
+      limit?: number;
+    } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"SupportCaseList">>> {
+    const { unassigned, ...rest } = params;
+    const q = { ...rest, unassigned: unassigned === undefined ? undefined : String(unassigned) };
+    return this.#send<S<"SupportCaseList">>("GET", `/v1/support/cases${query(q)}`, undefined, signal);
+  }
+
+  /** Open a support case. `POST /v1/support/cases`. */
+  openSupportCase(body: S<"SupportCaseRequest">, signal?: AbortSignal): Promise<Result<S<"SupportCase">>> {
+    return this.#send<S<"SupportCase">>("POST", `/v1/support/cases`, body, signal);
+  }
+
+  /** Get a support case, its clocks and its history. `GET /v1/support/cases/{caseId}`. */
+  getSupportCase(caseId: string, signal?: AbortSignal): Promise<Result<S<"SupportCase">>> {
+    return this.#send<S<"SupportCase">>("GET", `/v1/support/cases/${encodeURIComponent(caseId)}`, undefined, signal);
+  }
+
+  /** Take one action on a support case. `POST /v1/support/cases/{caseId}/actions`. */
+  actOnSupportCase(caseId: string, body: S<"SupportCaseActionRequest">, signal?: AbortSignal): Promise<Result<S<"SupportCase">>> {
+    return this.#send<S<"SupportCase">>("POST", `/v1/support/cases/${encodeURIComponent(caseId)}/actions`, body, signal);
   }
 
   // --- migration -------------------------------------------------------------

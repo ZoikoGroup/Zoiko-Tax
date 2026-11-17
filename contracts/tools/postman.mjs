@@ -99,7 +99,7 @@ const FOLDERS = [
   {
     name: "04 · Administration",
     description:
-      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked. Then payee master data: `createBeneficiary` records an authority's payee details and captures `beneficiaryId`; the same administrator verifying them is refused with `MAKER_CHECKER` (ZTAX-REM-REQ-0014), and the version is suspended. Then a migration: `createMigrationProgram` creates a program for 2025 and captures `migrationProgramId`; a snapshot of two historical results is registered, a mapping that names only one of their legacy codes is recorded, and `executeMigrationRun` converts the snapshot AS_KNOWN — one record converts, the other raises an `UNMAPPED_CODE` exception, captured into `migrationExceptionId`, and the monetary reconciliation does not pass. The exception is accepted as a known residual and the cutover moves to `PRECHECK`.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
+      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked. Then payee master data: `createBeneficiary` records an authority's payee details and captures `beneficiaryId`; the same administrator verifying them is refused with `MAKER_CHECKER` (ZTAX-REM-REQ-0014), and the version is suspended. Then support: `openSupportCase` opens a LEGAL case and captures `caseId`; the queue and the case are read, and `actOnSupportCase` verifies the requester, which moves the case to `VERIFIED` as one more event in its history. Then a migration: `createMigrationProgram` creates a program for 2025 and captures `migrationProgramId`; a snapshot of two historical results is registered, a mapping that names only one of their legacy codes is recorded, and `executeMigrationRun` converts the snapshot AS_KNOWN — one record converts, the other raises an `UNMAPPED_CODE` exception, captured into `migrationExceptionId`, and the monetary reconciliation does not pass. The exception is accepted as a known residual and the cutover moves to `PRECHECK`.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
     operations: [
       "listUsers",
       "createUser",
@@ -140,6 +140,10 @@ const FOLDERS = [
       "createBeneficiary",
       "verifyBeneficiary",
       "suspendBeneficiary",
+      "openSupportCase",
+      "listSupportCases",
+      "getSupportCase",
+      "actOnSupportCase",
       "listMigrationPrograms",
       "createMigrationProgram",
       "registerMigrationSnapshot",
@@ -201,8 +205,14 @@ const FOLDERS = [
       "createCompliancePackage", "getCompliancePackage", "listCompliancePackages", "prepareCompliancePackage",
       "reviewCompliancePackage", "approveCompliancePackage", "submitCompliancePackage",
       "acknowledgeCompliancePackage", "resolveCompliancePackage", "cancelCompliancePackage",
+      "createNotice", "getNotice", "listNotices", "transitionNotice", "recordNoticeAttachment",
+      "recordNoticeAuthenticity", "escalateNotice", "resolveNoticeEntity", "assignNoticeOwner",
+      "recordNoticeDeadline", "getNoticeDeadlines", "prepareNoticeResponse", "approveNoticeResponse",
+      "recordNoticeSubmission", "recordNoticeOutcome", "lodgeNoticeAppeal",
       "listRemittances", "createRemittance", "getRemittance", "approveRemittance", "submitRemittance",
       "recordRemittanceStatus", "resolveRemittance", "returnRemittance", "cancelRemittance",
+      "recordContribution", "listContributions", "getContributionTrace", "getContributionSummary",
+      "quarantineContribution", "releaseContribution",
       "createComparator", "listComparators", "executeShadowRun", "listShadowRuns", "getShadowRun", "moveDiscrepancy",
       "issueDocument", "getDocument", "correctDocument", "getDocumentLineage", "listDocuments",
       "adjustTransaction", "refundTransaction", "getRefund", "reportRefund", "listRefunds", "proposeClassification",
@@ -283,6 +293,8 @@ const VALUE_VARIABLES = {
   "01920b74-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{migrationExceptionId}}",
   // The beneficiary examples' id: the payee version folder 04 just recorded.
   "01920b20-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{beneficiaryId}}",
+  // The regulatory notice examples' id: the notice folder 06 just registered.
+  "01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{noticeId}}",
   // The compliance package examples' id: the package folder 06 just made.
   "01920b10-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{packageId}}",
   // The seal examples' id: the seal folder 04 just made.
@@ -442,6 +454,29 @@ const OPERATION_TESTS = {
     "  });",
     "}",
   ],
+  createNotice: [
+    "pm.test('SUP-08 — a notice with no resolved recipient goes straight to legal review', function () {",
+    "  pm.response.to.have.status(201);",
+    "  const n = pm.response.json();",
+    "  pm.expect(n.status).to.eql('LEGAL_REVIEW');",
+    "  pm.expect(n.statutoryDeadline.original.dueDate).to.eql('2026-10-31');",
+    "});",
+    "pm.collectionVariables.set('noticeId', pm.response.json().id);",
+  ],
+  recordNoticeDeadline: [
+    "pm.test('T18-17 — an evidenced extension moves the deadline and keeps the original', function () {",
+    "  pm.response.to.have.status(200);",
+    "  const n = pm.response.json();",
+    "  pm.expect(n.statutoryDeadline.current.dueDate).to.eql('2026-11-30');",
+    "  pm.expect(n.statutoryDeadline.original.dueDate).to.eql('2026-10-31');",
+    "});",
+  ],
+  approveNoticeResponse: [
+    "pm.test('the person who prepared the response cannot approve it', function () {",
+    "  pm.response.to.have.status(403);",
+    "  pm.expect(pm.response.json().ztx_reason_code).to.eql('SEGREGATION_OF_DUTIES');",
+    "});",
+  ],
   createBeneficiary: [
     "pm.test('ZTAX-REM-REQ-0012 — a payee version is recorded unverified', function () {",
     "  pm.response.to.have.status(201);",
@@ -449,11 +484,34 @@ const OPERATION_TESTS = {
     "});",
     "pm.collectionVariables.set('beneficiaryId', pm.response.json().id);",
   ],
+  openSupportCase: [
+    "pm.test('Doc 18 W16 — a case opens NEW, with its support SLA and statutory clock kept apart', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().status).to.eql('NEW');",
+    "  pm.expect(pm.response.json().clocks).to.have.property('slaDueAt');",
+    "  pm.expect(pm.response.json().clocks.statutory).to.eql('NONE');",
+    "});",
+    "pm.collectionVariables.set('caseId', pm.response.json().id);",
+  ],
+  actOnSupportCase: [
+    "pm.test('Doc 18 W16 — every act is one more event in the case history', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().status).to.eql('VERIFIED');",
+    "  pm.expect(pm.response.json().history.length).to.eql(2);",
+    "});",
+  ],
   verifyBeneficiary: [
     "pm.test('ZTAX-REM-REQ-0014 — the author of payee details cannot verify them', function () {",
     "  pm.response.to.have.status(403);",
     "  pm.expect(pm.response.json().ztx_reason_code).to.eql('MAKER_CHECKER');",
     "});",
+  ],
+  recordContribution: [
+    "pm.test('UAT-OBL-026 — a source event is one contribution: recorded, or the one already recorded', function () {",
+    "  pm.expect([200, 201]).to.include(pm.response.code);",
+    "  pm.expect(pm.response.json().immutableHash).to.match(/^zt1:[0-9a-f]{64}$/);",
+    "});",
+    "pm.collectionVariables.set('contributionId', pm.response.json().id);",
   ],
   createRemittance: [
     "pm.test('ZTAX-REM-REQ-0005 — only an accepted return is paid', function () {",
@@ -895,6 +953,16 @@ const ACCEPTED_OUTCOMES = {
   acknowledgeCompliancePackage: ["409"],
   resolveCompliancePackage: ["409"],
   cancelCompliancePackage: ["409"],
+  // Folder 06 registers a notice with no resolved recipient, so it starts in
+  // legal review (SUP-08) and the review transition is out of order; the
+  // example legal entity is not the tenant's; one OPERATOR prepares and
+  // cannot approve its own response, so nothing after approval is in order.
+  transitionNotice: ["409"],
+  resolveNoticeEntity: ["400"],
+  approveNoticeResponse: ["403"],
+  recordNoticeSubmission: ["409"],
+  recordNoticeOutcome: ["409"],
+  lodgeNoticeAppeal: ["409"],
   // The administrator who records a payee version cannot verify it
   // (ZTAX-REM-REQ-0014). Folder 06's return is never accepted by an
   // authority, so there is nothing to pay, and no payment to act on.
@@ -907,6 +975,11 @@ const ACCEPTED_OUTCOMES = {
   resolveRemittance: ["404"],
   returnRemittance: ["404"],
   cancelRemittance: ["404"],
+  // The example source event is recorded once and replayed on later runs,
+  // which find it quarantined by the first. Folder 06 runs as an OPERATOR,
+  // and only an ANALYST other than the quarantiner releases.
+  quarantineContribution: ["409"],
+  releaseContribution: ["403"],
   moveDiscrepancy: ["404"],
 };
 
@@ -1203,6 +1276,7 @@ function variables(overlay, contractDigest, local) {
     { key: "obligationId", value: "", type: "string" },
     { key: "refundId", value: "", type: "string" },
     { key: "packageId", value: "", type: "string" },
+    { key: "noticeId", value: "", type: "string" },
     { key: "beneficiaryId", value: "", type: "string" },
     { key: "comparatorId", value: "", type: "string" },
     { key: "migrationProgramId", value: "", type: "string" },
@@ -1217,6 +1291,12 @@ function variables(overlay, contractDigest, local) {
     // No folder makes a payment, so the payment reads and actions name one
     // that does not exist, and answer 404.
     { key: "remittanceId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
+    // Captured by recordContribution; the listing filters are empty so it
+    // lists everything.
+    { key: "contributionId", value: "", type: "string" },
+    { key: "regime", value: "", type: "string" },
+    { key: "sourceType", value: "", type: "string" },
+    { key: "legalEntityId", value: "", type: "string" },
     { key: "webhookId", value: "", type: "string" },
     { key: "jobId", value: "", type: "string" },
     { key: "sealId", value: "", type: "string" },
@@ -1231,6 +1311,17 @@ function variables(overlay, contractDigest, local) {
     { key: "itemId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
     { key: "holdId", value: "", type: "string" },
     { key: "authorizationId", value: "", type: "string" },
+    // Captured by `openSupportCase`. The queue's filters are empty, so it
+    // lists every case.
+    { key: "caseId", value: "", type: "string" },
+    { key: "type", value: "", type: "string" },
+    { key: "severity", value: "", type: "string" },
+    { key: "product", value: "", type: "string" },
+    { key: "fiscalPeriod", value: "", type: "string" },
+    { key: "assignee", value: "", type: "string" },
+    { key: "unassigned", value: "", type: "string" },
+    { key: "slaClock", value: "", type: "string" },
+    { key: "statutoryClock", value: "", type: "string" },
     // Minted once per run by `07`, and reused by the requests that must share it.
     { key: "reusedKey", value: "", type: "string" },
 

@@ -2552,6 +2552,644 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/support/cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The support triage queue
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The most recently opened cases, filtered, with open cases first and the
+         *     soonest due first: the earlier of the support SLA and any statutory
+         *     deadline, which takes precedence when it falls first (SUP-06). Closed
+         *     cases follow, newest first. Each case carries both clocks, separately.
+         */
+        get: operations["listSupportCases"];
+        put?: never;
+        /**
+         * Open a support case
+         * @description `ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Opens the case `NEW`. The support SLA starts now and is due after the
+         *     severity's target — S1 four hours, S2 one day, S3 three days, S4 seven
+         *     days — measured to the first customer response. A statutory deadline,
+         *     when the request has one, is recorded beside it and never merged into
+         *     it (SUP-06).
+         *
+         *     The decision, document, obligation and remittance a case names are
+         *     read-only references. Nothing a case does changes them, and support
+         *     cannot refund, file, pay or edit a rule (SUP-03, SUP-04, SUP-11).
+         */
+        post: operations["openSupportCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/support/cases/{caseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One support case, its clocks and its history
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The case as its history folds now: the current classification, the
+         *     actions its status allows, the closure guard's inputs, and both clocks
+         *     read as of now. Reading changes nothing.
+         */
+        get: operations["getSupportCase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/support/cases/{caseId}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take one action on a support case
+         * @description `ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Every action appends one event to the case's single audited history;
+         *     nothing is edited. `VERIFY` moves `NEW` to `VERIFIED`. `TRIAGE`
+         *     classifies the case and moves it to `TRIAGED`, or to
+         *     `TRIAGE_INCOMPLETE` with the facts requested when the contract, the
+         *     impacted period or the seller is missing (SUP-02). `START_REVIEW` and
+         *     `ESCALATE` move it to `IN_REVIEW`; `RESPOND` records the customer
+         *     response, `RESOLVE` follows it, and `CLOSE` ends the case.
+         *     `REOPEN` takes a resolved or closed case back to `IN_REVIEW`, linked to
+         *     the event it reverses (SUP-07). `ASSIGN`, `REQUEST_EVIDENCE`,
+         *     `ADD_EVIDENCE`, `SIGN_OFF`, `NOTE` and `REQUEST_LEGAL_HOLD` change no
+         *     status; a legal hold request is recorded for an administrator, and
+         *     places no hold.
+         *
+         *     `CLOSE` needs a customer response since the last reopening, or
+         *     `409 STATE_TRANSITION_INVALID` (SUP-14). A case that is, or was ever,
+         *     `LEGAL` or `TAX_SPECIALIST` also needs a sign-off since the last
+         *     reopening by someone other than its opener, or `409 SIGN_OFF_REQUIRED`;
+         *     the opener's own sign-off is `403 SEGREGATION_OF_DUTIES` (T18-18).
+         *
+         *     Neither clock is reset: a raised severity can bring the SLA due time
+         *     earlier, measured from opening, and a statutory deadline once recorded
+         *     is never changed by support (SUP-07). An action the status does not
+         *     allow is `409 STATE_TRANSITION_INVALID`.
+         */
+        post: operations["actOnSupportCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contributions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The source event explorer
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Provider contributions, newest first, in any status: a quarantined event
+         *     is listed with its hold, never hidden. A provider contribution is the
+         *     operator's own obligation on its eligible revenue; recovery charged to end
+         *     users is not the contribution payable and is not listed here
+         *     (UAT-OBL-032, -033).
+         */
+        get: operations["listContributions"];
+        put?: never;
+        /**
+         * Record a provider contribution from one source event
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Records the contribution base one source event carries — a BSS invoice,
+         *     rated usage, a revenue-recognition adjustment, a licence-activity event or
+         *     a manual certified schedule — with its eligibility: classification, situs,
+         *     eligible and excluded base, the reason for any exclusion and the rule
+         *     version that decided it. Amounts are canonical decimal strings in the
+         *     event's one currency, added exactly by the cell (UAT-OBL-034). The member
+         *     legal entity defaults to the tenant's default entity.
+         *
+         *     **Idempotent on the source event and version**, not on an
+         *     `Idempotency-Key`: the source system already names each event, and that
+         *     name is the record's identity. The same payload again returns the record
+         *     already made with `200`; a different payload under the same key is
+         *     `409 SOURCE_EVENT_CONFLICT`, and the first record stands (UAT-OBL-026).
+         *     A correction is a new version, or a reversal.
+         *
+         *     A reversal names the source event it reverses in `reverses` and carries
+         *     negative bases; it is a contribution of its own, never an edit, and an
+         *     original is reversed at most once (`409 ALREADY_EXISTS`) and by no more
+         *     than it contributed (UAT-OBL-027). A reversal whose original is not yet
+         *     recorded is accepted, and its period is `DATA_INCOMPLETE` until the
+         *     original arrives. An event recorded after its period has ended is
+         *     flagged as an `amendment`.
+         */
+        post: operations["recordContribution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contributions/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A period's control totals
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Control totals per member legal entity, regime and currency: accepted and
+         *     quarantined counts, the exact eligible and excluded totals with reversals
+         *     included as negatives, and the period contribution digest — the canonical
+         *     digest of the sorted immutable hashes of the accepted events, so it does
+         *     not depend on arrival order. Quarantined events are counted, never summed.
+         *     A group is `DATA_INCOMPLETE` while an event is quarantined or a reversal
+         *     names an original the ledger does not hold.
+         *
+         *     These totals are the provider's contribution base. They are not, and are
+         *     never reconciled as, the recovery charged to customers (UAT-OBL-033).
+         */
+        get: operations["getContributionSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contributions/{contributionId}/trace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Drill from a contribution to its source, history and links
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     One contribution with its source event, classified component and
+         *     eligibility, its status history, and its links: the original it reverses
+         *     when the ledger holds it, and the reversal of it when one is recorded.
+         *     `originalMissing` is true for a reversal whose original has not arrived.
+         */
+        get: operations["getContributionTrace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contributions/{contributionId}/quarantine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hold an incorrect import out of the control totals
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Holds an accepted contribution out of the control totals, with its
+         *     reason. Nothing is deleted: the contribution stays listed with its hold,
+         *     its period is `DATA_INCOMPLETE`, and a release puts it back. Only an
+         *     accepted contribution is quarantined (`409 STATE_TRANSITION_INVALID`).
+         */
+        post: operations["quarantineContribution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/contributions/{contributionId}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Return a quarantined contribution to the control totals
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     Releases a quarantined contribution, with its reason, back into the
+         *     control totals. Four eyes: the person who quarantined it cannot release
+         *     it (`403 MAKER_CHECKER`). Only a quarantined contribution is released
+         *     (`409 STATE_TRANSITION_INVALID`).
+         */
+        post: operations["releaseContribution"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The regulatory notice register
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. Every notice, assessment,
+         *     audit, appeal and information request registered, in working order:
+         *     unknown statutory deadlines first, then the soonest deadline in force;
+         *     closed notices only when asked for. Each carries the flags that need
+         *     attention now — an unknown or unverified deadline, unresolved
+         *     authenticity or recipient (an urgent legal review: W17, SUP-05,
+         *     SUP-08), a deadline soon or passed, a breached internal SLA.
+         */
+        get: operations["listNotices"];
+        put?: never;
+        /**
+         * Register a notice as received
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Registers a notice, assessment, audit, appeal or information request
+         *     with its authority, recipient, the authority's reference and the
+         *     statutory deadline as received — its date in the authority's calendar,
+         *     timezone, source and whether anyone verified it. Not a support due
+         *     date. An unknown or unverified deadline is flagged for urgent legal
+         *     review (W17). A notice with no legal entity, or one marked ambiguous,
+         *     goes straight to `LEGAL_REVIEW` and nothing answers it automatically
+         *     (SUP-08). Links are references only; registering a notice changes no
+         *     return, ledger or rule.
+         */
+        post: operations["createNotice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notices/{noticeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One notice, its deadline ledger, SLA clock and history
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. The statutory deadline in
+         *     force beside the original as received, every confirmation and
+         *     extension with its evidence, the separate internal SLA clock, the
+         *     recorded documents, the history, and the actions the status admits.
+         */
+        get: operations["getNotice"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notices/{noticeId}/deadlines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The statutory deadline ledger
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. The original deadline as
+         *     received, then every confirmation, extension and appeal deadline in
+         *     order, each with its evidence. The original is never rewritten
+         *     (T18-17).
+         */
+        get: operations["getNoticeDeadlines"];
+        put?: never;
+        /**
+         * Confirm or extend the statutory deadline
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     A `CONFIRMATION` verifies the deadline in force, or establishes an
+         *     unknown one; it never moves a known date (`409 NOTICE_DEADLINE_UNVERIFIED`).
+         *     An `EXTENSION` moves the date later: it needs a verified deadline to
+         *     extend (W17 — no fabricated extension), the grant verified, evidence,
+         *     and the authority's reference or a recorded document. The ledger keeps
+         *     the original; the internal SLA is unaffected (T18-17).
+         */
+        post: operations["recordNoticeDeadline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notices/{noticeId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move a notice through review, or close it
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     `AUTHENTICITY_REVIEW` from `RECEIVED`; `LEGAL_REVIEW` from
+         *     `AUTHENTICITY_REVIEW` once authenticity is verified (otherwise
+         *     `403 NOTICE_LEGAL_VALIDATION_REQUIRED`: escalate instead, SUP-05),
+         *     from `APPEAL`, or from `RESPONSE_APPROVED` with a reason; `CLOSED`
+         *     from `OUTCOME_RECORDED`, or from `LEGAL_REVIEW` on a documented
+         *     escalation (`403 NOTICE_CLOSURE_BLOCKED` otherwise). Nothing leaves
+         *     `CLOSED`, and no move resets the statutory clock (T18-17). Approval,
+         *     submission, outcome and appeal are their own actions.
+         */
+        post: operations["transitionNotice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notices/{noticeId}/authenticity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record whether the notice is authentic
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records `VERIFIED`, `UNVERIFIABLE` or `NOT_AUTHENTIC` with how it was
+         *     established. Anything but `VERIFIED` escalates to legal validation in
+         *     the same act and voids an approved answer; nothing is accepted as
+         *     genuine that is not (SUP-05).
+         */
+        post: operations["recordNoticeAuthenticity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notices/{noticeId}/escalations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Escalate a notice to legal
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Sends the notice to legal with the question asked. From `RECEIVED` or
+         *     `AUTHENTICITY_REVIEW` it moves to `LEGAL_REVIEW`. Evidence — counsel's
+         *     reference, a memo — makes it a documented escalation, which is what a
+         *     disposition without an authority outcome rests on.
+         */
+        post: operations["escalateNotice"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notices/{noticeId}/entity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve the recipient legal entity
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records which of the tenant's legal entities the notice is addressed
+         *     to, with how that was established (SUP-08). Until it is resolved no
+         *     answer is approved.
+         */
+        post: operations["resolveNoticeEntity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notices/{noticeId}/owner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assign the deadline owner and internal SLA
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Names the person who owns the deadline, and our internal SLA target.
+         *     The SLA is a separate clock: it never moves the statutory deadline
+         *     (T18-17).
+         */
+        post: operations["assignNoticeOwner"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notices/{noticeId}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a document as evidence
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records a document by its SHA-256, file name and media type. The
+         *     document is not uploaded or stored here; the digest is what later
+         *     evidence cites. A digest already recorded is `409 ALREADY_EXISTS`.
+         */
+        post: operations["recordNoticeAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notices/{noticeId}/response-packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Prepare a response package
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records a new response package version in `LEGAL_REVIEW`. From
+         *     `RESPONSE_APPROVED` it supersedes the approved version and returns the
+         *     notice to `LEGAL_REVIEW`; the deadline is untouched.
+         */
+        post: operations["prepareNoticeResponse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notices/{noticeId}/response-approval": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve the response package (four-eye)
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Approves the response package version named. The approver is never
+         *     the person who prepared it: `403 SEGREGATION_OF_DUTIES`. The notice's
+         *     authenticity is verified and its recipient resolved, or
+         *     `403 NOTICE_LEGAL_VALIDATION_REQUIRED` (SUP-05, SUP-08).
+         */
+        post: operations["approveNoticeResponse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notices/{noticeId}/submission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the response's receipt by the authority
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records that the approved response reached the authority. It needs
+         *     the authority's submission receipt reference.
+         */
+        post: operations["recordNoticeSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notices/{noticeId}/outcome": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record what the authority decided
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records the authority's decision on a submitted response or an
+         *     appeal, with its receipt or decision reference and the decision as
+         *     received. `settled: true` needs `AUTHORITY_CONFIRMED` or
+         *     `PAYMENT_SETTLED`; a pending payment instruction settles nothing
+         *     (`403 NOTICE_SETTLEMENT_UNPROVEN`, T18-20). The amount is recorded as
+         *     stated; nothing is posted.
+         */
+        post: operations["recordNoticeOutcome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/notices/{noticeId}/appeal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Lodge an appeal against the outcome
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Opens the appeal branch after a recorded outcome. An appeal with a
+         *     hearing still to come keeps the matter open with its next deadline,
+         *     which is then required (SUP-16). The appeal deadline is a new ledger
+         *     entry; the original and every extension stay.
+         */
+        post: operations["lodgeNoticeAppeal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/shadow/comparators": {
         parameters: {
             query?: never;
@@ -6047,6 +6685,802 @@ export interface components {
             reason: components["schemas"]["PaymentNote"];
         };
         /**
+         * SupportCaseId
+         * Format: uuid
+         * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        SupportCaseId: string;
+        /**
+         * SupportUserId
+         * Format: uuid
+         * @description A person in the tenant who opened, owns or acted on a case.
+         * @example 01920a4c-0000-7000-8000-0000000000a2
+         */
+        SupportUserId: string;
+        /**
+         * SupportCaseType
+         * @description What a case is about. It routes the case and grants nothing; `LEGAL` and `TAX_SPECIALIST` cases close only after an independent sign-off (T18-18).
+         * @enum {string}
+         */
+        SupportCaseType: "COVERAGE_ENTITLEMENT" | "INVOICE_EXPLANATION" | "TAX_SPECIALIST" | "FILING" | "REMITTANCE" | "SECURITY" | "LEGAL";
+        /**
+         * SupportSeverity
+         * @description How badly the customer is affected. It sets the support SLA — S1 4 hours, S2 24 hours, S3 72 hours, S4 7 days to the first customer response.
+         * @enum {string}
+         */
+        SupportSeverity: "S1" | "S2" | "S3" | "S4";
+        /**
+         * SupportCaseStatus
+         * @description NEW → VERIFIED → TRIAGED → IN_REVIEW → RESPONDED → RESOLVED → CLOSED.
+         *     TRIAGE_INCOMPLETE is a case lacking its contract, period or seller
+         *     facts (SUP-02). A resolved or closed case may be reopened to IN_REVIEW
+         *     (SUP-07).
+         * @enum {string}
+         */
+        SupportCaseStatus: "NEW" | "VERIFIED" | "TRIAGE_INCOMPLETE" | "TRIAGED" | "IN_REVIEW" | "RESPONDED" | "RESOLVED" | "CLOSED";
+        /**
+         * SupportCaseAction
+         * @description An act on a case. `OPENED` is recorded by opening the case and is never requested.
+         * @enum {string}
+         */
+        SupportCaseAction: "OPENED" | "VERIFY" | "TRIAGE" | "ASSIGN" | "REQUEST_EVIDENCE" | "ADD_EVIDENCE" | "START_REVIEW" | "ESCALATE" | "RESPOND" | "RESOLVE" | "SIGN_OFF" | "CLOSE" | "REOPEN" | "NOTE" | "REQUEST_LEGAL_HOLD";
+        /**
+         * SupportEscalationTarget
+         * @description Who an escalated case is routed to. Routing hands the case to people with authority; it gives support none.
+         * @enum {string}
+         */
+        SupportEscalationTarget: "TAX_SPECIALIST" | "LEGAL" | "SECURITY" | "FINANCE_OPERATIONS" | "ENGINEERING";
+        /**
+         * SupportFact
+         * @description A fact triage needs before a case can be worked (SUP-02). `SELLER` is met by a legal entity or a seller reference.
+         * @enum {string}
+         */
+        SupportFact: "CONTRACT" | "FISCAL_PERIOD" | "SELLER";
+        /**
+         * SupportClockState
+         * @description Where one clock stands now. The support SLA is ON_TRACK, AT_RISK (a
+         *     quarter of its window or less left), BREACHED, or MET (answered in
+         *     time). A statutory deadline is NONE, ON_TRACK, AT_RISK (72 hours or
+         *     less left) or PASSED.
+         * @enum {string}
+         */
+        SupportClockState: "NONE" | "ON_TRACK" | "AT_RISK" | "BREACHED" | "MET" | "PASSED";
+        /**
+         * SupportNote
+         * @description Free text from the person acting — a response to the customer, a request, a sign-off or a note.
+         */
+        SupportNote: string;
+        /**
+         * SupportReference
+         * @description A customer's own reference — a contract number, a seller — as the customer gave it.
+         */
+        SupportReference: string;
+        /**
+         * SupportEvidenceReference
+         * @description A reference to evidence — a hash or a document identifier — never the evidence itself.
+         */
+        SupportEvidenceReference: string;
+        /**
+         * SupportProduct
+         * @description The product line a request concerns.
+         */
+        SupportProduct: string;
+        /**
+         * SupportCaseReferences
+         * @description What the case is about, by identifier. Read-only references; nothing a case does changes them (SUP-03, SUP-04, SUP-11).
+         */
+        SupportCaseReferences: {
+            decisionId?: components["schemas"]["DecisionId"];
+            documentId?: components["schemas"]["DocumentId"];
+            obligationId?: components["schemas"]["ObligationId"];
+            remittanceId?: components["schemas"]["RemittanceId"];
+        };
+        /**
+         * SupportCaseClocks
+         * @description The case's two clocks, kept apart (SUP-06). Neither is reset by reopening or editing the case (SUP-07).
+         */
+        SupportCaseClocks: {
+            slaDueAt: components["schemas"]["Timestamp"];
+            sla: components["schemas"]["SupportClockState"];
+            firstResponseAt?: components["schemas"]["Timestamp"];
+            statutoryDueAt?: components["schemas"]["Timestamp"];
+            statutory: components["schemas"]["SupportClockState"];
+            /** @description The statutory deadline falls before the SLA's due time, so it is the time the case must beat. */
+            statutoryPrecedes: boolean;
+            dueAt: components["schemas"]["Timestamp"];
+        };
+        /**
+         * SupportCaseEvent
+         * @description One act on a case. Each carries only what it changed.
+         */
+        SupportCaseEvent: {
+            /** Format: int32 */
+            seq: number;
+            action: components["schemas"]["SupportCaseAction"];
+            status: components["schemas"]["SupportCaseStatus"];
+            note?: components["schemas"]["SupportNote"];
+            type?: components["schemas"]["SupportCaseType"];
+            severity?: components["schemas"]["SupportSeverity"];
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            fiscalPeriod?: components["schemas"]["LegalPeriod"];
+            contractRef?: components["schemas"]["SupportReference"];
+            sellerRef?: components["schemas"]["SupportReference"];
+            statutoryDueAt?: components["schemas"]["Timestamp"];
+            slaDueAt?: components["schemas"]["Timestamp"];
+            assignee?: components["schemas"]["SupportUserId"];
+            escalateTo?: components["schemas"]["SupportEscalationTarget"];
+            evidence?: components["schemas"]["SupportEvidenceReference"][];
+            missingFacts?: components["schemas"]["SupportFact"][];
+            /**
+             * Format: int32
+             * @description The sequence number of the resolution or closure this reopening reverses.
+             */
+            reopens?: number;
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["SupportUserId"];
+        };
+        /**
+         * SupportCase
+         * @description A support case, folded from its history. Not a fiscal record.
+         */
+        SupportCase: {
+            id: components["schemas"]["SupportCaseId"];
+            type: components["schemas"]["SupportCaseType"];
+            openedType: components["schemas"]["SupportCaseType"];
+            severity: components["schemas"]["SupportSeverity"];
+            subject: string;
+            description: string;
+            product?: components["schemas"]["SupportProduct"];
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            fiscalPeriod?: components["schemas"]["LegalPeriod"];
+            contractRef?: components["schemas"]["SupportReference"];
+            sellerRef?: components["schemas"]["SupportReference"];
+            references: components["schemas"]["SupportCaseReferences"];
+            assignee?: components["schemas"]["SupportUserId"];
+            evidence: components["schemas"]["SupportEvidenceReference"][];
+            status: components["schemas"]["SupportCaseStatus"];
+            escalatedTo?: components["schemas"]["SupportEscalationTarget"];
+            /** @description What the latest incomplete triage asked for. Empty once triage is complete. */
+            missingFacts: components["schemas"]["SupportFact"][];
+            clocks: components["schemas"]["SupportCaseClocks"];
+            /** @description The actions the case's status allows now. `CLOSE` is listed only once its guards pass; the server checks every guard again when an action is taken. */
+            actions: components["schemas"]["SupportCaseAction"][];
+            /** @description The case is, or was ever, LEGAL or TAX_SPECIALIST, so it closes only after an independent sign-off (T18-18). */
+            signOffRequired: boolean;
+            /** @description Someone other than the opener has signed off since the last reopening. */
+            signedOff: boolean;
+            /** @description A customer response has been recorded since the last reopening (SUP-14). */
+            responded: boolean;
+            openedAt: components["schemas"]["Timestamp"];
+            openedBy: components["schemas"]["SupportUserId"];
+            history: components["schemas"]["SupportCaseEvent"][];
+        };
+        /** SupportCaseList */
+        SupportCaseList: {
+            cases: components["schemas"]["SupportCase"][];
+        };
+        /** SupportCaseRequest */
+        SupportCaseRequest: {
+            type: components["schemas"]["SupportCaseType"];
+            severity: components["schemas"]["SupportSeverity"];
+            subject: string;
+            description: string;
+            product?: components["schemas"]["SupportProduct"];
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            fiscalPeriod?: components["schemas"]["LegalPeriod"];
+            contractRef?: components["schemas"]["SupportReference"];
+            sellerRef?: components["schemas"]["SupportReference"];
+            references?: components["schemas"]["SupportCaseReferences"];
+            statutoryDueAt?: components["schemas"]["Timestamp"];
+            assignee?: components["schemas"]["SupportUserId"];
+            evidence?: components["schemas"]["SupportEvidenceReference"][];
+        };
+        /**
+         * SupportCaseActionRequest
+         * @description One action. `note` is required for RESPOND, SIGN_OFF, REOPEN, ESCALATE,
+         *     REQUEST_EVIDENCE, NOTE and REQUEST_LEGAL_HOLD; `assignee` for ASSIGN;
+         *     `escalateTo` for ESCALATE; `evidence` for ADD_EVIDENCE. The
+         *     classification fields are read by TRIAGE only, and only what is
+         *     supplied changes.
+         */
+        SupportCaseActionRequest: {
+            action: components["schemas"]["SupportCaseAction"];
+            note?: components["schemas"]["SupportNote"];
+            type?: components["schemas"]["SupportCaseType"];
+            severity?: components["schemas"]["SupportSeverity"];
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            fiscalPeriod?: components["schemas"]["LegalPeriod"];
+            contractRef?: components["schemas"]["SupportReference"];
+            sellerRef?: components["schemas"]["SupportReference"];
+            statutoryDueAt?: components["schemas"]["Timestamp"];
+            assignee?: components["schemas"]["SupportUserId"];
+            escalateTo?: components["schemas"]["SupportEscalationTarget"];
+            evidence?: components["schemas"]["SupportEvidenceReference"][];
+        };
+        /**
+         * ContributionId
+         * Format: uuid
+         * @example 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ContributionId: string;
+        /**
+         * ContributionRegime
+         * @description The fund a provider contribution is owed to — the US Universal Service Fund through USAC, Canada's CRTC National Contribution Fund, or another.
+         * @enum {string}
+         */
+        ContributionRegime: "US_USF" | "CA_CRTC_NCF" | "OTHER";
+        /**
+         * ContributionSourceType
+         * @description The kind of record a source event is (OBL-06).
+         * @enum {string}
+         */
+        ContributionSourceType: "BSS_INVOICE" | "RATED_USAGE" | "REVENUE_RECOGNITION_ADJUSTMENT" | "LICENCE_ACTIVITY" | "MANUAL_CERTIFIED_SCHEDULE";
+        /**
+         * ContributionStatus
+         * @description Where a contribution stands. Only ACCEPTED counts in the control totals; QUARANTINED is held, never deleted.
+         * @enum {string}
+         */
+        ContributionStatus: "ACCEPTED" | "QUARANTINED";
+        /**
+         * ContributionEventKind
+         * @description What happened to a contribution. Every one is appended; none edits.
+         * @enum {string}
+         */
+        ContributionEventKind: "RECORDED" | "QUARANTINED" | "RELEASED";
+        /**
+         * ContributionIncompleteReason
+         * @description Why a group's control totals are DATA_INCOMPLETE — a held import, or a reversal of an original the ledger does not hold.
+         * @enum {string}
+         */
+        ContributionIncompleteReason: "QUARANTINED_EVENTS" | "UNRESOLVED_REVERSAL";
+        /**
+         * ContributionAmount
+         * @description A provider's contribution base, or a quantity, in canonical decimal string
+         *     form — never a JSON number, and never computed by a client
+         *     (UAT-OBL-034). Scale is significant. An operator's own revenue
+         *     aggregate, not a consumer amount, so it carries no personal data
+         *     (UAT-OBL-025).
+         * @example 1250.00
+         */
+        ContributionAmount: string;
+        /**
+         * ContributionRef
+         * @description A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+         * @example INV-2026-000123
+         */
+        ContributionRef: string;
+        /**
+         * ContributionReason
+         * @description Why a contribution was quarantined or released, in the words of the person who did it.
+         * @example The September billing extract was imported twice under new file ids
+         */
+        ContributionReason: string;
+        /**
+         * ContributionSourceKey
+         * @description A source event and its version — the natural key a contribution is recorded under.
+         */
+        ContributionSourceKey: {
+            sourceEventId: components["schemas"]["ContributionRef"];
+            /** Format: int32 */
+            sourceVersion: number;
+        };
+        /** ContributionStatusEvent */
+        ContributionStatusEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["ContributionEventKind"];
+            status: components["schemas"]["ContributionStatus"];
+            reason?: components["schemas"]["ContributionReason"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /**
+         * ProviderContribution
+         * @description One ContributionEvent: the contribution base a source event carries, with
+         *     its eligibility and its immutable hash. The provider's own obligation on
+         *     its eligible revenue — never the recovery charged to customers.
+         */
+        ProviderContribution: {
+            id: components["schemas"]["ContributionId"];
+            sourceEventId: components["schemas"]["ContributionRef"];
+            /** Format: int32 */
+            sourceVersion: number;
+            sourceType: components["schemas"]["ContributionSourceType"];
+            /** @description The checksum of the import file the event came in. */
+            sourceChecksum?: string;
+            regime: components["schemas"]["ContributionRegime"];
+            period: components["schemas"]["LegalPeriod"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            obligationId?: components["schemas"]["ObligationId"];
+            classificationRef: components["schemas"]["ContributionRef"];
+            situsRef: components["schemas"]["ContributionRef"];
+            sourceRef: components["schemas"]["ContributionRef"];
+            componentRef?: components["schemas"]["ContributionRef"];
+            ruleVersion: components["schemas"]["ContributionRef"];
+            currency: components["schemas"]["CurrencyCode"];
+            eligibleBase: components["schemas"]["ContributionAmount"];
+            excludedBase: components["schemas"]["ContributionAmount"];
+            /** @description Why revenue is excluded from the base, by rule. Present whenever excludedBase is not zero. */
+            exclusionReason?: string;
+            quantity?: components["schemas"]["ContributionAmount"];
+            quantityUnit?: string;
+            reverses?: components["schemas"]["ContributionSourceKey"];
+            /** @description Recorded after its period had ended — a late event, counted in its own period. */
+            amendment: boolean;
+            immutableHash: components["schemas"]["Digest"];
+            status: components["schemas"]["ContributionStatus"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+            history: components["schemas"]["ContributionStatusEvent"][];
+        };
+        /** ProviderContributionList */
+        ProviderContributionList: {
+            contributions: components["schemas"]["ProviderContribution"][];
+        };
+        /** ContributionRequest */
+        ContributionRequest: {
+            sourceEventId: components["schemas"]["ContributionRef"];
+            /** Format: int32 */
+            sourceVersion: number;
+            sourceType: components["schemas"]["ContributionSourceType"];
+            /** @description The checksum of the import file the event came in, when it came in one. */
+            sourceChecksum?: string;
+            regime: components["schemas"]["ContributionRegime"];
+            period: components["schemas"]["LegalPeriod"];
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            obligationId?: components["schemas"]["ObligationId"];
+            classificationRef: components["schemas"]["ContributionRef"];
+            situsRef: components["schemas"]["ContributionRef"];
+            sourceRef: components["schemas"]["ContributionRef"];
+            componentRef?: components["schemas"]["ContributionRef"];
+            ruleVersion: components["schemas"]["ContributionRef"];
+            currency: components["schemas"]["CurrencyCode"];
+            eligibleBase: components["schemas"]["ContributionAmount"];
+            excludedBase?: components["schemas"]["ContributionAmount"];
+            /** @description Why revenue is excluded from the base. Required when excludedBase is not zero. */
+            exclusionReason?: string;
+            quantity?: components["schemas"]["ContributionAmount"];
+            quantityUnit?: string;
+            reverses?: components["schemas"]["ContributionSourceKey"];
+        };
+        /** ContributionTransitionRequest */
+        ContributionTransitionRequest: {
+            reason: components["schemas"]["ContributionReason"];
+        };
+        /** ContributionTrace */
+        ContributionTrace: {
+            contribution: components["schemas"]["ProviderContribution"];
+            original?: components["schemas"]["ProviderContribution"];
+            reversal?: components["schemas"]["ProviderContribution"];
+            /** @description The contribution is a reversal and the ledger does not hold its original. */
+            originalMissing: boolean;
+        };
+        /**
+         * ContributionPeriodTotals
+         * @description One member entity's control totals for one regime and currency. Currencies are never added together.
+         */
+        ContributionPeriodTotals: {
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            regime: components["schemas"]["ContributionRegime"];
+            currency: components["schemas"]["CurrencyCode"];
+            /** @enum {string} */
+            status: "COMPLETE" | "DATA_INCOMPLETE";
+            incompleteReasons: components["schemas"]["ContributionIncompleteReason"][];
+            /** Format: int32 */
+            acceptedCount: number;
+            /** Format: int32 */
+            quarantinedCount: number;
+            /** Format: int32 */
+            reversalCount: number;
+            /** Format: int32 */
+            amendmentCount: number;
+            eligibleTotal: components["schemas"]["ContributionAmount"];
+            excludedTotal: components["schemas"]["ContributionAmount"];
+            reversedTotal: components["schemas"]["ContributionAmount"];
+            periodDigest: components["schemas"]["Digest"];
+            sourceChecksums: string[];
+        };
+        /** ContributionSummary */
+        ContributionSummary: {
+            period: components["schemas"]["LegalPeriod"];
+            /** @description Some group is DATA_INCOMPLETE. */
+            dataIncomplete: boolean;
+            groups: components["schemas"]["ContributionPeriodTotals"][];
+        };
+        /**
+         * NoticeId
+         * Format: uuid
+         * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        NoticeId: string;
+        /**
+         * NoticeType
+         * @description What the authority sent.
+         * @enum {string}
+         */
+        NoticeType: "NOTICE" | "ASSESSMENT" | "AUDIT" | "APPEAL" | "INFORMATION_REQUEST";
+        /**
+         * NoticeStatus
+         * @description Where the matter stands. RECEIVED → AUTHENTICITY_REVIEW → LEGAL_REVIEW →
+         *     RESPONSE_APPROVED → SUBMITTED → OUTCOME_RECORDED, with APPEAL as the
+         *     branch after an outcome. CLOSED is terminal; nothing reopens it.
+         * @enum {string}
+         */
+        NoticeStatus: "RECEIVED" | "AUTHENTICITY_REVIEW" | "LEGAL_REVIEW" | "RESPONSE_APPROVED" | "SUBMITTED" | "OUTCOME_RECORDED" | "APPEAL" | "CLOSED";
+        /**
+         * NoticeAuthenticity
+         * @description What has been established about whether the authority sent the notice. Only VERIFIED admits an approved answer (SUP-05).
+         * @enum {string}
+         */
+        NoticeAuthenticity: "UNKNOWN" | "VERIFIED" | "UNVERIFIABLE" | "NOT_AUTHENTIC";
+        /**
+         * NoticeDeadlineSource
+         * @description Where a statutory deadline came from. ESTIMATED and UNKNOWN are never verified.
+         * @enum {string}
+         */
+        NoticeDeadlineSource: "STATED_ON_NOTICE" | "STATUTE" | "AUTHORITY_CONFIRMATION" | "AUTHORITY_PORTAL" | "ESTIMATED" | "UNKNOWN";
+        /**
+         * NoticeDeadlineKind
+         * @description What a deadline ledger entry records. ORIGINAL is the intake's and is
+         *     never rewritten; CONFIRMATION verifies or establishes the date without
+         *     moving it; EXTENSION moves it later on the authority's evidence;
+         *     APPEAL is the next deadline an appeal opens.
+         * @enum {string}
+         */
+        NoticeDeadlineKind: "ORIGINAL" | "CONFIRMATION" | "EXTENSION" | "APPEAL";
+        /**
+         * NoticeOutcome
+         * @description What the authority decided.
+         * @enum {string}
+         */
+        NoticeOutcome: "ACCEPTED" | "ADJUSTED" | "REJECTED" | "WITHDRAWN";
+        /**
+         * NoticeSettlement
+         * @description The evidence a claim of settlement rests on. A pending payment instruction is never settlement (T18-20).
+         * @enum {string}
+         */
+        NoticeSettlement: "AUTHORITY_CONFIRMED" | "PAYMENT_SETTLED" | "PAYMENT_INSTRUCTION_PENDING";
+        /**
+         * NoticeEscalationReason
+         * @description Why a notice went to legal.
+         * @enum {string}
+         */
+        NoticeEscalationReason: "DEADLINE_UNVERIFIED" | "AUTHENTICITY_UNRESOLVED" | "ENTITY_UNRESOLVED" | "LEGAL_JUDGEMENT";
+        /**
+         * NoticeLinkKind
+         * @description The kind of record a link references. Every link is a read-only reference.
+         * @enum {string}
+         */
+        NoticeLinkKind: "RETURN" | "SUBMISSION_RECEIPT" | "PAYMENT" | "LEDGER_ENTRY" | "RULE_VERSION" | "CORRESPONDENCE" | "OBLIGATION" | "DECISION";
+        /**
+         * NoticeEventKind
+         * @description What an event records.
+         * @enum {string}
+         */
+        NoticeEventKind: "RECEIVED" | "TRANSITIONED" | "AUTHENTICITY_RECORDED" | "LEGAL_ESCALATED" | "ENTITY_RESOLVED" | "OWNER_ASSIGNED" | "ATTACHMENT_RECORDED" | "DEADLINE_RECORDED" | "RESPONSE_PREPARED" | "RESPONSE_APPROVED" | "SUBMITTED" | "OUTCOME_RECORDED" | "APPEAL_LODGED" | "CLOSED";
+        /**
+         * NoticeFlag
+         * @description Something about a notice that needs attention now. URGENT_LEGAL_REVIEW
+         *     accompanies an unknown or unverified deadline (W17), unresolved or
+         *     disputed authenticity (SUP-05) and an unresolved recipient (SUP-08).
+         *     STATUTORY_OVERDUE and SLA_BREACHED are separate facts.
+         * @enum {string}
+         */
+        NoticeFlag: "DEADLINE_UNKNOWN" | "DEADLINE_UNVERIFIED" | "AUTHENTICITY_UNVERIFIED" | "AUTHENTICITY_DISPUTED" | "ENTITY_UNRESOLVED" | "DEADLINE_SOON" | "STATUTORY_OVERDUE" | "SLA_BREACHED" | "LEGAL_ESCALATED" | "URGENT_LEGAL_REVIEW" | "HEARING_SCHEDULED";
+        /**
+         * NoticeAction
+         * @description An action the notice's status admits. Each still applies its own guards when taken.
+         * @enum {string}
+         */
+        NoticeAction: "START_AUTHENTICITY_REVIEW" | "MOVE_TO_LEGAL_REVIEW" | "RECORD_AUTHENTICITY" | "ESCALATE" | "RESOLVE_ENTITY" | "ASSIGN_OWNER" | "RECORD_ATTACHMENT" | "RECORD_DEADLINE" | "PREPARE_RESPONSE" | "APPROVE_RESPONSE" | "RECORD_SUBMISSION" | "RECORD_OUTCOME" | "LODGE_APPEAL" | "CLOSE";
+        /**
+         * NoticeJurisdiction
+         * @description An ISO 3166-1 country or ISO 3166-2 subdivision code.
+         * @example DE
+         */
+        NoticeJurisdiction: string;
+        /**
+         * NoticeText
+         * @description Free text from the person recording an act on a notice.
+         */
+        NoticeText: string;
+        /**
+         * NoticeEvidence
+         * @description How a deadline, authenticity, recipient or outcome was established, or the authority's response as received.
+         */
+        NoticeEvidence: string;
+        /**
+         * NoticeTimezone
+         * @description The authority's IANA timezone, in which a due date ends.
+         * @example Europe/Berlin
+         */
+        NoticeTimezone: string;
+        /**
+         * Sha256Hex
+         * @description A document's SHA-256, lowercase hex. The document itself is not stored.
+         * @example 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+         */
+        Sha256Hex: string;
+        /**
+         * NoticeFilename
+         * @description A recorded document's file name, as given. It may name a person.
+         */
+        NoticeFilename: string;
+        /**
+         * NoticeMediaType
+         * @description A recorded document's media type.
+         * @example application/pdf
+         */
+        NoticeMediaType: string;
+        /**
+         * NoticeQueryFlag
+         * @description A yes-or-no filter.
+         */
+        NoticeQueryFlag: boolean;
+        /**
+         * NoticeLink
+         * @description A reference to a record elsewhere, by its identifier. Read-only.
+         */
+        NoticeLink: {
+            kind: components["schemas"]["NoticeLinkKind"];
+            reference: string;
+        };
+        /**
+         * NoticeDeadline
+         * @description A statutory deadline: a civil date in the authority's calendar, the
+         *     last instant of that day there, its source and whether it was
+         *     verified. No `dueDate` is a deadline nobody knows yet.
+         */
+        NoticeDeadline: {
+            kind: components["schemas"]["NoticeDeadlineKind"];
+            dueDate?: components["schemas"]["CivilDate"];
+            dueAt?: components["schemas"]["Timestamp"];
+            timezone: components["schemas"]["NoticeTimezone"];
+            source: components["schemas"]["NoticeDeadlineSource"];
+            verified: boolean;
+        };
+        /**
+         * NoticeDeadlineInput
+         * @description A deadline as stated. Without `dueDate` the source is UNKNOWN and it is unverified.
+         */
+        NoticeDeadlineInput: {
+            dueDate?: components["schemas"]["CivilDate"];
+            timezone: components["schemas"]["NoticeTimezone"];
+            source: components["schemas"]["NoticeDeadlineSource"];
+            verified: boolean;
+        };
+        /**
+         * NoticeDeadlineEntry
+         * @description One row of the deadline ledger, with who recorded it and on what evidence.
+         */
+        NoticeDeadlineEntry: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["NoticeDeadlineKind"];
+            dueDate?: components["schemas"]["CivilDate"];
+            dueAt?: components["schemas"]["Timestamp"];
+            timezone: components["schemas"]["NoticeTimezone"];
+            source: components["schemas"]["NoticeDeadlineSource"];
+            verified: boolean;
+            evidence?: components["schemas"]["NoticeEvidence"];
+            authorityReference?: components["schemas"]["AuthorityReference"];
+            attachmentSha256?: components["schemas"]["Sha256Hex"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /** NoticeDeadlineLedger */
+        NoticeDeadlineLedger: {
+            noticeId: components["schemas"]["NoticeId"];
+            original: components["schemas"]["NoticeDeadline"];
+            current: components["schemas"]["NoticeDeadline"];
+            /** @description The deadline in force has passed with the response not yet submitted. */
+            overdue: boolean;
+            entries: components["schemas"]["NoticeDeadlineEntry"][];
+        };
+        /**
+         * NoticeAttachment
+         * @description A document recorded as evidence, by digest. Nothing is uploaded.
+         */
+        NoticeAttachment: {
+            sha256: components["schemas"]["Sha256Hex"];
+            filename: components["schemas"]["NoticeFilename"];
+            mediaType: components["schemas"]["NoticeMediaType"];
+            note?: components["schemas"]["NoticeText"];
+            recordedAt?: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy?: string;
+        };
+        /** NoticeEvent */
+        NoticeEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["NoticeEventKind"];
+            status: components["schemas"]["NoticeStatus"];
+            note?: components["schemas"]["NoticeText"];
+            evidence?: components["schemas"]["NoticeEvidence"];
+            authorityReference?: components["schemas"]["AuthorityReference"];
+            deadline?: components["schemas"]["NoticeDeadline"];
+            authenticity?: components["schemas"]["NoticeAuthenticity"];
+            escalationReason?: components["schemas"]["NoticeEscalationReason"];
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            /** Format: uuid */
+            ownerId?: string;
+            slaDue?: components["schemas"]["Timestamp"];
+            attachment?: components["schemas"]["NoticeAttachment"];
+            /** Format: int32 */
+            responseVersion?: number;
+            responseSha256?: components["schemas"]["Sha256Hex"];
+            outcome?: components["schemas"]["NoticeOutcome"];
+            outcomeAmount?: components["schemas"]["MoneyValue"];
+            settled?: boolean;
+            settlement?: components["schemas"]["NoticeSettlement"];
+            hearingDate?: components["schemas"]["CivilDate"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /**
+         * Notice
+         * @description A regulatory notice as of `asOf`: the header as received, its
+         *     statutory deadline ledger beside the separate internal SLA clock, the
+         *     recorded documents, its history, and what needs attention.
+         */
+        Notice: {
+            id: components["schemas"]["NoticeId"];
+            type: components["schemas"]["NoticeType"];
+            authority: components["schemas"]["AuthorityCode"];
+            jurisdiction: components["schemas"]["NoticeJurisdiction"];
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            /** @description The intake marked the recipient ambiguous. */
+            entityAmbiguous: boolean;
+            /** @description The recipient legal entity is known. False sends the notice to legal review (SUP-08). */
+            entityResolved: boolean;
+            resolvedLegalEntityId?: components["schemas"]["LegalEntityId"];
+            authorityReference: components["schemas"]["AuthorityReference"];
+            receivedAt: components["schemas"]["Timestamp"];
+            periodStart?: components["schemas"]["CivilDate"];
+            periodEnd?: components["schemas"]["CivilDate"];
+            amount?: components["schemas"]["MoneyValue"];
+            /** @description A related support or legal case, as given. */
+            linkedCaseId?: string;
+            links: components["schemas"]["NoticeLink"][];
+            status: components["schemas"]["NoticeStatus"];
+            authenticity: components["schemas"]["NoticeAuthenticity"];
+            /** @description The notice has been escalated to legal. */
+            escalated: boolean;
+            flags: components["schemas"]["NoticeFlag"][];
+            urgentLegalReview: boolean;
+            statutoryDeadline: {
+                original: components["schemas"]["NoticeDeadline"];
+                current: components["schemas"]["NoticeDeadline"];
+            };
+            /** @description Our internal clock. It never moves the statutory deadline. */
+            sla: {
+                /** Format: uuid */
+                ownerId?: string;
+                dueAt?: components["schemas"]["Timestamp"];
+                breached: boolean;
+            };
+            deadlines: components["schemas"]["NoticeDeadlineEntry"][];
+            attachments: components["schemas"]["NoticeAttachment"][];
+            allowedActions: components["schemas"]["NoticeAction"][];
+            asOf: components["schemas"]["Timestamp"];
+            createdAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            createdBy: string;
+            history: components["schemas"]["NoticeEvent"][];
+        };
+        /** NoticeList */
+        NoticeList: {
+            notices: components["schemas"]["Notice"][];
+        };
+        /** CreateNoticeRequest */
+        CreateNoticeRequest: {
+            type: components["schemas"]["NoticeType"];
+            authority: components["schemas"]["AuthorityCode"];
+            jurisdiction: components["schemas"]["NoticeJurisdiction"];
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            /** @description The notice could be addressed to more than one of the tenant's legal entities. */
+            entityAmbiguous?: boolean;
+            authorityReference: components["schemas"]["AuthorityReference"];
+            receivedAt: components["schemas"]["Timestamp"];
+            periodStart?: components["schemas"]["CivilDate"];
+            periodEnd?: components["schemas"]["CivilDate"];
+            amount?: components["schemas"]["MoneyValue"];
+            linkedCaseId?: string;
+            links?: components["schemas"]["NoticeLink"][];
+            deadline: components["schemas"]["NoticeDeadlineInput"];
+            deadlineEvidence?: components["schemas"]["NoticeEvidence"];
+            /** Format: uuid */
+            ownerId?: string;
+            slaDue?: components["schemas"]["Timestamp"];
+            note?: components["schemas"]["NoticeText"];
+        };
+        /** NoticeTransitionRequest */
+        NoticeTransitionRequest: {
+            to: components["schemas"]["NoticeStatus"];
+            note?: components["schemas"]["NoticeText"];
+        };
+        /** NoticeAuthenticityRequest */
+        NoticeAuthenticityRequest: {
+            authenticity: components["schemas"]["NoticeAuthenticity"];
+            evidence: components["schemas"]["NoticeEvidence"];
+        };
+        /** NoticeEscalationRequest */
+        NoticeEscalationRequest: {
+            reason: components["schemas"]["NoticeEscalationReason"];
+            note: components["schemas"]["NoticeText"];
+            evidence?: components["schemas"]["NoticeEvidence"];
+        };
+        /** NoticeEntityRequest */
+        NoticeEntityRequest: {
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            evidence: components["schemas"]["NoticeEvidence"];
+        };
+        /** NoticeOwnerRequest */
+        NoticeOwnerRequest: {
+            /** Format: uuid */
+            ownerId: string;
+            slaDue?: components["schemas"]["Timestamp"];
+            note?: components["schemas"]["NoticeText"];
+        };
+        /** NoticeAttachmentRequest */
+        NoticeAttachmentRequest: {
+            sha256: components["schemas"]["Sha256Hex"];
+            filename: components["schemas"]["NoticeFilename"];
+            mediaType: components["schemas"]["NoticeMediaType"];
+            note?: components["schemas"]["NoticeText"];
+        };
+        /** NoticeDeadlineRequest */
+        NoticeDeadlineRequest: {
+            kind: components["schemas"]["NoticeDeadlineKind"];
+            dueDate: components["schemas"]["CivilDate"];
+            timezone: components["schemas"]["NoticeTimezone"];
+            source: components["schemas"]["NoticeDeadlineSource"];
+            verified: boolean;
+            evidence: components["schemas"]["NoticeEvidence"];
+            authorityReference?: components["schemas"]["AuthorityReference"];
+            attachmentSha256?: components["schemas"]["Sha256Hex"];
+        };
+        /** NoticeResponsePackageRequest */
+        NoticeResponsePackageRequest: {
+            summary: components["schemas"]["NoticeText"];
+            sha256?: components["schemas"]["Sha256Hex"];
+        };
+        /** NoticeApprovalRequest */
+        NoticeApprovalRequest: {
+            /** Format: int32 */
+            version: number;
+            note?: components["schemas"]["NoticeText"];
+        };
+        /** NoticeSubmissionRequest */
+        NoticeSubmissionRequest: {
+            authorityReceiptReference: components["schemas"]["AuthorityReference"];
+            evidence?: components["schemas"]["NoticeEvidence"];
+            note?: components["schemas"]["NoticeText"];
+        };
+        /** NoticeOutcomeRequest */
+        NoticeOutcomeRequest: {
+            outcome: components["schemas"]["NoticeOutcome"];
+            authorityReceiptReference: components["schemas"]["AuthorityReference"];
+            evidence: components["schemas"]["NoticeEvidence"];
+            note?: components["schemas"]["NoticeText"];
+            amount?: components["schemas"]["MoneyValue"];
+            settled?: boolean;
+            settlement?: components["schemas"]["NoticeSettlement"];
+        };
+        /** NoticeAppealRequest */
+        NoticeAppealRequest: {
+            nextDeadline: components["schemas"]["NoticeDeadlineInput"];
+            hearingDate?: components["schemas"]["CivilDate"];
+            evidence: components["schemas"]["NoticeEvidence"];
+            authorityReference?: components["schemas"]["AuthorityReference"];
+            note?: components["schemas"]["NoticeText"];
+        };
+        /**
          * ComparatorId
          * Format: uuid
          * @example 01920b40-1a2b-7c3d-8e4f-5a6b7c8d9e01
@@ -6705,6 +8139,15 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /** @description The notice as it stands now. */
+        NoticeResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Notice"];
+            };
+        };
     };
     parameters: {
         /**
@@ -6736,6 +8179,11 @@ export interface components {
          */
         CompliancePackageId: components["schemas"]["CompliancePackageId"];
         /**
+         * @description The regulatory notice identifier.
+         * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        NoticeId: components["schemas"]["NoticeId"];
+        /**
          * @description The payee version identifier.
          * @example 01920b20-1a2b-7c3d-8e4f-5a6b7c8d9e01
          */
@@ -6745,6 +8193,16 @@ export interface components {
          * @example 01920b30-1a2b-7c3d-8e4f-5a6b7c8d9e01
          */
         RemittanceId: components["schemas"]["RemittanceId"];
+        /**
+         * @description The support case identifier.
+         * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        SupportCaseId: components["schemas"]["SupportCaseId"];
+        /**
+         * @description The provider contribution identifier.
+         * @example 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ContributionId: components["schemas"]["ContributionId"];
         /**
          * @description The shadow run identifier.
          * @example 01920b50-1a2b-7c3d-8e4f-5a6b7c8d9e01
@@ -10303,6 +11761,953 @@ export interface operations {
                     "application/json": components["schemas"]["Remittance"];
                 };
             };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listSupportCases: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only cases of this type.
+                 * @example LEGAL
+                 */
+                type?: components["schemas"]["SupportCaseType"];
+                /**
+                 * @description Only cases of this severity.
+                 * @example S1
+                 */
+                severity?: components["schemas"]["SupportSeverity"];
+                /**
+                 * @description Only cases in this status.
+                 * @example TRIAGE_INCOMPLETE
+                 */
+                status?: components["schemas"]["SupportCaseStatus"];
+                /**
+                 * @description Only cases about this product, compared without regard to case.
+                 * @example Telecom VAT
+                 */
+                product?: components["schemas"]["SupportProduct"];
+                /**
+                 * @description Only cases about this customer legal entity.
+                 * @example 01920a4c-0000-7000-8000-00000000e001
+                 */
+                legalEntityId?: components["schemas"]["LegalEntityId"];
+                /**
+                 * @description Only cases about this impacted fiscal period.
+                 * @example 2026-09
+                 */
+                fiscalPeriod?: components["schemas"]["LegalPeriod"];
+                /**
+                 * @description Only cases this person owns.
+                 * @example 01920a4c-0000-7000-8000-0000000000a2
+                 */
+                assignee?: components["schemas"]["SupportUserId"];
+                /**
+                 * @description Only cases nobody owns.
+                 * @example true
+                 */
+                unassigned?: boolean;
+                /**
+                 * @description Only cases whose support SLA stands here.
+                 * @example AT_RISK
+                 */
+                slaClock?: components["schemas"]["SupportClockState"];
+                /**
+                 * @description Only cases whose statutory deadline stands here; `NONE` is cases with no statutory deadline.
+                 * @example AT_RISK
+                 */
+                statutoryClock?: components["schemas"]["SupportClockState"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The queue. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    openSupportCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportCaseRequest"];
+            };
+        };
+        responses: {
+            /** @description The case, opened. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCase"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getSupportCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The support case identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                caseId: components["parameters"]["SupportCaseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The case. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCase"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    actOnSupportCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The support case identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                caseId: components["parameters"]["SupportCaseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportCaseActionRequest"];
+            };
+        };
+        responses: {
+            /** @description The case as it stands now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCase"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listContributions: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only contributions of this period.
+                 * @example 2026-09
+                 */
+                period?: components["schemas"]["LegalPeriod"];
+                /**
+                 * @description Only contributions to this fund.
+                 * @example US_USF
+                 */
+                regime?: components["schemas"]["ContributionRegime"];
+                /**
+                 * @description Only contributions in this status.
+                 * @example QUARANTINED
+                 */
+                status?: components["schemas"]["ContributionStatus"];
+                /**
+                 * @description Only contributions of this member legal entity.
+                 * @example 01920a4c-0000-7000-8000-00000000e001
+                 */
+                legalEntityId?: components["schemas"]["LegalEntityId"];
+                /**
+                 * @description Only contributions from this kind of source.
+                 * @example BSS_INVOICE
+                 */
+                sourceType?: components["schemas"]["ContributionSourceType"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The contributions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderContributionList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordContribution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContributionRequest"];
+            };
+        };
+        responses: {
+            /** @description The contribution this source event and version already recorded, with the same payload. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderContribution"];
+                };
+            };
+            /** @description The contribution, recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderContribution"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getContributionSummary: {
+        parameters: {
+            query: {
+                /**
+                 * @description The period, YYYY-MM.
+                 * @example 2026-09
+                 */
+                period: components["schemas"]["LegalPeriod"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The period's control totals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContributionSummary"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getContributionTrace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The provider contribution identifier.
+                 * @example 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                contributionId: components["parameters"]["ContributionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The contribution and its links. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContributionTrace"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    quarantineContribution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The provider contribution identifier.
+                 * @example 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                contributionId: components["parameters"]["ContributionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContributionTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description The contribution, quarantined. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderContribution"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    releaseContribution: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The provider contribution identifier.
+                 * @example 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                contributionId: components["parameters"]["ContributionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContributionTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description The contribution, accepted again. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderContribution"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listNotices: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only notices of this type.
+                 * @example ASSESSMENT
+                 */
+                type?: components["schemas"]["NoticeType"];
+                /**
+                 * @description Only notices in this status.
+                 * @example LEGAL_REVIEW
+                 */
+                status?: components["schemas"]["NoticeStatus"];
+                /**
+                 * @description Only notices from this authority (case-insensitive).
+                 * @example DE-BZST
+                 */
+                authority?: components["schemas"]["AuthorityCode"];
+                /**
+                 * @description Only notices addressed to this legal entity
+                 * @example 01920a4c-0000-7000-8000-00000000e001
+                 */
+                legalEntityId?: components["schemas"]["LegalEntityId"];
+                /**
+                 * @description Only notices whose authority reference contains this text.
+                 * @example ST-2026
+                 */
+                authorityReference?: components["schemas"]["AuthorityReference"];
+                /**
+                 * @description Only notices received at or after this instant.
+                 * @example 2026-10-01T00:00:00.000000Z
+                 */
+                receivedFrom?: components["schemas"]["Timestamp"];
+                /**
+                 * @description Only notices received at or before this instant.
+                 * @example 2026-10-31T23:59:59.999999Z
+                 */
+                receivedTo?: components["schemas"]["Timestamp"];
+                /**
+                 * @description Only notices whose period contains this date.
+                 * @example 2026-08-15
+                 */
+                period?: components["schemas"]["CivilDate"];
+                /**
+                 * @description Only notices stating at least this amount
+                 * @example 1000.00
+                 */
+                amountMin?: components["schemas"]["Decimal"];
+                /**
+                 * @description Only notices stating at most this amount
+                 * @example 50000.00
+                 */
+                amountMax?: components["schemas"]["Decimal"];
+                /**
+                 * @description The currency `amountMin` and `amountMax` are in. Required with either.
+                 * @example EUR
+                 */
+                currency?: components["schemas"]["CurrencyCode"];
+                /**
+                 * @description Only notices with a document of this SHA-256 recorded.
+                 * @example 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                 */
+                attachmentSha256?: components["schemas"]["Sha256Hex"];
+                /**
+                 * @description Only notices whose authenticity is this.
+                 * @example UNKNOWN
+                 */
+                authenticity?: components["schemas"]["NoticeAuthenticity"];
+                /**
+                 * @description Only notices flagged for urgent legal review.
+                 * @example true
+                 */
+                urgent?: components["schemas"]["NoticeQueryFlag"];
+                /**
+                 * @description Include closed notices when no status is asked for.
+                 * @example false
+                 */
+                includeClosed?: components["schemas"]["NoticeQueryFlag"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The notices, in working order. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createNotice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateNoticeRequest"];
+            };
+        };
+        responses: {
+            201: components["responses"]["NoticeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getNotice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory notice identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                noticeId: components["parameters"]["NoticeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["NoticeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getNoticeDeadlines: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory notice identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                noticeId: components["parameters"]["NoticeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The ledger. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticeDeadlineLedger"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordNoticeDeadline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory notice identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                noticeId: components["parameters"]["NoticeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticeDeadlineRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["NoticeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    transitionNotice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory notice identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                noticeId: components["parameters"]["NoticeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticeTransitionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["NoticeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordNoticeAuthenticity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory notice identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                noticeId: components["parameters"]["NoticeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticeAuthenticityRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["NoticeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    escalateNotice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory notice identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                noticeId: components["parameters"]["NoticeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticeEscalationRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["NoticeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    resolveNoticeEntity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory notice identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                noticeId: components["parameters"]["NoticeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticeEntityRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["NoticeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    assignNoticeOwner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory notice identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                noticeId: components["parameters"]["NoticeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticeOwnerRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["NoticeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordNoticeAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory notice identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                noticeId: components["parameters"]["NoticeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticeAttachmentRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["NoticeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    prepareNoticeResponse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory notice identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                noticeId: components["parameters"]["NoticeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticeResponsePackageRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["NoticeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    approveNoticeResponse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory notice identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                noticeId: components["parameters"]["NoticeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticeApprovalRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["NoticeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordNoticeSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory notice identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                noticeId: components["parameters"]["NoticeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticeSubmissionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["NoticeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordNoticeOutcome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory notice identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                noticeId: components["parameters"]["NoticeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticeOutcomeRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["NoticeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    lodgeNoticeAppeal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory notice identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                noticeId: components["parameters"]["NoticeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoticeAppealRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["NoticeResult"];
             400: components["responses"]["Validation"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];

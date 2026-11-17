@@ -126,6 +126,14 @@ type Router struct {
 	// commits assess.
 	Remittance *app.RemittanceService
 
+	// Contributions serves provider contributions: the source event
+	// explorer, quarantine and release, and a period's control totals.
+	Contributions *app.ProviderContributionService
+
+	// Notices serves regulatory notice and appeal intake (W17). It needs
+	// only the store, so it is served wherever the store is.
+	Notices *app.NoticeService
+
 	// Shadow serves shadow assurance: comparator profiles, comparison runs
 	// and their discrepancies. Nil when the cell has no evidence store to
 	// read committed results from.
@@ -134,6 +142,10 @@ type Router struct {
 	// Migration serves migration programs: snapshots, mappings, AS_KNOWN
 	// runs, exceptions and the cutover state machine.
 	Migration *app.MigrationService
+
+	// Support serves the customer support triage queue. It reads and writes
+	// support cases only, so it is served wherever the store is.
+	Support *app.SupportService
 
 	// Dashboard serves the Tax Command Center. It reads what was recorded
 	// and needs no content, so it is served wherever the store is.
@@ -342,6 +354,34 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/remittances/{remittanceId}/resolution", false, []security.Role{operator}}, rt.handleResolveRemittance},
 		{Route{"POST", "/v1/remittances/{remittanceId}/return", false, []security.Role{operator}}, rt.handleReturnRemittance},
 		{Route{"POST", "/v1/remittances/{remittanceId}/cancellation", false, []security.Role{operator}}, rt.handleCancelRemittance},
+		// Provider contributions (OBL-06): OPERATOR records, OPERATOR or
+		// ANALYST quarantines, an ANALYST other than the quarantiner releases
+		// (the service compares the people). ADMIN reads no fiscal record.
+		{Route{"GET", "/v1/contributions", false, []security.Role{operator, analyst, auditor}}, rt.handleListContributions},
+		{Route{"POST", "/v1/contributions", false, []security.Role{operator}}, rt.handleRecordContribution},
+		{Route{"GET", "/v1/contributions/summary", false, []security.Role{operator, analyst, auditor}}, rt.handleContributionSummary},
+		{Route{"GET", "/v1/contributions/{contributionId}/trace", false, []security.Role{operator, analyst, auditor}}, rt.handleContributionTrace},
+		{Route{"POST", "/v1/contributions/{contributionId}/quarantine", false, []security.Role{operator, analyst}}, rt.handleQuarantineContribution},
+		{Route{"POST", "/v1/contributions/{contributionId}/release", false, []security.Role{analyst}}, rt.handleReleaseContribution},
+		// Regulatory notices (W17, G-052): OPERATOR and ANALYST register and
+		// work them; ADMIN and AUDITOR read. The four-eye approval compares
+		// the preparer and approver as people in the service.
+		{Route{"GET", "/v1/notices", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListNotices},
+		{Route{"POST", "/v1/notices", false, []security.Role{operator, analyst}}, rt.handleCreateNotice},
+		{Route{"GET", "/v1/notices/{noticeId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetNotice},
+		{Route{"GET", "/v1/notices/{noticeId}/deadlines", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetNoticeDeadlines},
+		{Route{"POST", "/v1/notices/{noticeId}/deadlines", false, []security.Role{operator, analyst}}, rt.handleRecordNoticeDeadline},
+		{Route{"POST", "/v1/notices/{noticeId}/transitions", false, []security.Role{operator, analyst}}, rt.handleTransitionNotice},
+		{Route{"POST", "/v1/notices/{noticeId}/authenticity", false, []security.Role{operator, analyst}}, rt.handleRecordNoticeAuthenticity},
+		{Route{"POST", "/v1/notices/{noticeId}/escalations", false, []security.Role{operator, analyst}}, rt.handleEscalateNotice},
+		{Route{"POST", "/v1/notices/{noticeId}/entity", false, []security.Role{operator, analyst}}, rt.handleResolveNoticeEntity},
+		{Route{"POST", "/v1/notices/{noticeId}/owner", false, []security.Role{operator, analyst}}, rt.handleAssignNoticeOwner},
+		{Route{"POST", "/v1/notices/{noticeId}/attachments", false, []security.Role{operator, analyst}}, rt.handleRecordNoticeAttachment},
+		{Route{"POST", "/v1/notices/{noticeId}/response-packages", false, []security.Role{operator, analyst}}, rt.handlePrepareNoticeResponse},
+		{Route{"POST", "/v1/notices/{noticeId}/response-approval", false, []security.Role{operator, analyst}}, rt.handleApproveNoticeResponse},
+		{Route{"POST", "/v1/notices/{noticeId}/submission", false, []security.Role{operator, analyst}}, rt.handleRecordNoticeSubmission},
+		{Route{"POST", "/v1/notices/{noticeId}/outcome", false, []security.Role{operator, analyst}}, rt.handleRecordNoticeOutcome},
+		{Route{"POST", "/v1/notices/{noticeId}/appeal", false, []security.Role{operator, analyst}}, rt.handleLodgeNoticeAppeal},
 		// Shadow: non-impact reads of committed decisions, compared with
 		// another engine's results (ZTAX-SHD-001).
 		{Route{"GET", "/v1/shadow/comparators", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListComparators},
@@ -361,6 +401,14 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/migrations/programs/{migrationProgramId}/cutover", false, []security.Role{admin, operator}}, rt.handleMoveMigrationCutover},
 		{Route{"GET", "/v1/migrations/runs/{migrationRunId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetMigrationRun},
 		{Route{"POST", "/v1/migrations/exceptions/{migrationExceptionId}/decision", false, []security.Role{admin, operator, analyst}}, rt.handleDecideMigrationException},
+
+		// Support cases (Doc 18 W16): not fiscal, so ADMIN works them with
+		// OPERATOR and ANALYST; AUDITOR reads. Sign-off is four-eye, compared
+		// as people in the service (T18-18).
+		{Route{"GET", "/v1/support/cases", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListSupportCases},
+		{Route{"POST", "/v1/support/cases", false, []security.Role{admin, operator, analyst}}, rt.handleOpenSupportCase},
+		{Route{"GET", "/v1/support/cases/{caseId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetSupportCase},
+		{Route{"POST", "/v1/support/cases/{caseId}/actions", false, []security.Role{admin, operator, analyst}}, rt.handleActOnSupportCase},
 
 		// The Tax Command Center: read-only aggregates. ADMIN is not on it,
 		// for the reason it is on no fiscal read above.

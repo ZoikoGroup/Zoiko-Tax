@@ -300,3 +300,89 @@ test("the listings put their filters in the query and nothing else", async () =>
     assert.equal(c.init.headers["Idempotency-Key"], undefined);
   }
 });
+
+test("support cases: the queue's filters, a case and an action", async () => {
+  const { fetch, calls } = stub(json(200, { cases: [] }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+
+  await client.listSupportCases({ type: "LEGAL", slaClock: "AT_RISK", unassigned: true, limit: 10 });
+  await client.listSupportCases();
+  await client.getSupportCase("a/b");
+  await client.openSupportCase({ type: "FILING", severity: "S2", subject: "s", description: "d" });
+  await client.actOnSupportCase("c1", { action: "VERIFY" });
+
+  assert.deepEqual(calls.map((c) => [c.init.method, c.url]), [
+    ["GET", "/api/v1/support/cases?type=LEGAL&slaClock=AT_RISK&limit=10&unassigned=true"],
+    ["GET", "/api/v1/support/cases"],
+    ["GET", "/api/v1/support/cases/a%2Fb"],
+    ["POST", "/api/v1/support/cases"],
+    ["POST", "/api/v1/support/cases/c1/actions"],
+  ]);
+  assert.deepEqual(JSON.parse(calls[4].init.body), { action: "VERIFY" });
+});
+
+test("the contribution calls send amounts as strings and no Idempotency-Key", async () => {
+  const { fetch, calls } = stub(json(201, { id: "01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01" }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+
+  await client.recordContribution({
+    sourceEventId: "BSS-INV-1",
+    sourceVersion: 1,
+    sourceType: "BSS_INVOICE",
+    regime: "US_USF",
+    period: "2026-09",
+    classificationRef: "usf:interstate-telecom",
+    situsRef: "US",
+    sourceRef: "INV-1",
+    ruleVersion: "usf-499a@2026.1",
+    currency: "USD",
+    eligibleBase: "1250.00",
+  });
+  await client.listContributions({ period: "2026-09", status: "QUARANTINED" });
+  await client.getContributionSummary("2026-09");
+  await client.getContributionTrace("01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01");
+  await client.quarantineContribution("01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01", { reason: "imported twice" });
+  await client.releaseContribution("01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01", { reason: "checked" });
+
+  assert.deepEqual(calls.map((c) => `${c.init.method} ${c.url}`), [
+    "POST /api/v1/contributions",
+    "GET /api/v1/contributions?period=2026-09&status=QUARANTINED",
+    "GET /api/v1/contributions/summary?period=2026-09",
+    "GET /api/v1/contributions/01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01/trace",
+    "POST /api/v1/contributions/01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01/quarantine",
+    "POST /api/v1/contributions/01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01/release",
+  ]);
+  assert.equal(JSON.parse(calls[0].init.body).eligibleBase, "1250.00");
+  for (const c of calls) assert.equal(c.init.headers["Idempotency-Key"], undefined);
+});
+
+test("regulatory notices: register filters in the query, actions on the notice's path", async () => {
+  const calls = [];
+  const fetch = async (url, init) => {
+    calls.push({ url, init });
+    return json(200, { notices: [] });
+  };
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+
+  await client.listNotices({ authority: "DE-BZST", amountMin: "1000.00", currency: "EUR", urgent: true, limit: 5 });
+  await client.listNotices();
+  await client.getNotice("01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01");
+  await client.getNoticeDeadlines("01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01");
+  await client.recordNoticeDeadline("01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01", {
+    kind: "EXTENSION", dueDate: "2026-11-30", timezone: "Europe/Berlin", source: "AUTHORITY_CONFIRMATION",
+    verified: true, evidence: "Extension letter", authorityReference: "EXT-1",
+  });
+  await client.approveNoticeResponse("01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01", { version: 1 });
+
+  assert.deepEqual(calls.map((c) => `${c.init.method} ${c.url}`), [
+    "GET /api/v1/notices?authority=DE-BZST&amountMin=1000.00&currency=EUR&limit=5&urgent=true",
+    "GET /api/v1/notices",
+    "GET /api/v1/notices/01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01",
+    "GET /api/v1/notices/01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01/deadlines",
+    "POST /api/v1/notices/01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01/deadlines",
+    "POST /api/v1/notices/01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01/response-approval",
+  ]);
+  // The due date travels as the civil date it was given, never as an instant.
+  assert.equal(JSON.parse(calls[4].init.body).dueDate, "2026-11-30");
+  assert.deepEqual(JSON.parse(calls[5].init.body), { version: 1 });
+});

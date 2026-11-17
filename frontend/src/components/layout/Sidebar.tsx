@@ -45,6 +45,9 @@ export type View =
   | 'system-health'
   | 'activity'
   | 'filing-remittance'
+  | 'cases'
+  | 'contributions'
+  | 'notices'
 
 /** A screen: a view, and the tab inside it when the view has tabs. */
 export interface NavTarget {
@@ -98,8 +101,8 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
       { id: 'actions.tasks', label: 'My Tasks', target: at('actions', 'tasks') },
       { id: 'actions.exceptions', label: 'Tax Exceptions', target: at('actions', 'exceptions') },
       { id: 'actions.approvals', label: 'Pending Approvals', target: at('actions', 'approvals') },
-      { id: 'actions.notices', label: 'Regulatory Notices' },
-      { id: 'actions.cases', label: 'Support Cases' },
+      { id: 'actions.notices', label: 'Regulatory Notices', target: at('notices') },
+      { id: 'actions.cases', label: 'Support Cases', target: at('cases') },
     ],
   },
   {
@@ -115,7 +118,7 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
   {
     id: 'obligations', label: 'Obligations', icon: <IconFileText />, children: [
       { id: 'obligations.register', label: 'Obligation Register', target: at('obligations', 'register') },
-      { id: 'obligations.contributions', label: 'Provider Contributions' },
+      { id: 'obligations.contributions', label: 'Provider Contributions', target: at('contributions') },
       { id: 'obligations.calendar', label: 'Compliance Calendar', target: at('obligations', 'calendar') },
       { id: 'obligations.workpapers', label: 'Regulatory Workpapers' },
       { id: 'obligations.exceptions', label: 'Obligation Exceptions', target: at('obligations', 'exceptions') },

@@ -14,6 +14,7 @@ import { FilingRemittancePage } from './pages/FilingRemittancePage'
 import { SystemHealthPage } from './pages/SystemHealthPage'
 import { HomePage } from './home/HomePage'
 import { CompliancePage } from './pages/CompliancePage'
+import { ContributionsPage } from './pages/ContributionsPage'
 import { ContentPage } from './pages/ContentPage'
 import { DeterminePage } from './pages/DeterminePage'
 import { DocumentsPage } from './pages/DocumentsPage'
@@ -23,10 +24,12 @@ import { LocationsPage } from './pages/LocationsPage'
 import { MigrationPage } from './pages/MigrationPage'
 import { ObligationsPage } from './pages/ObligationsPage'
 import { ReconcilePage } from './pages/ReconcilePage'
+import { RegulatoryNoticesPage } from './pages/RegulatoryNoticesPage'
 import { RemittancePage } from './pages/RemittancePage'
 import { ReportsDemoPage } from './pages/ReportsDemoPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { ShadowPage } from './pages/ShadowPage'
+import { SupportCasesPage } from './pages/SupportCasesPage'
 import type { PageProps } from './pages/types'
 import { CellHealth } from './platform/CellHealth'
 import { ztax } from './platform/client'
@@ -166,6 +169,8 @@ export function App() {
             return <ReconcilePage {...page} />
           case 'remittance':
             return <RemittancePage {...page} />
+          case 'cases':
+            return <SupportCasesPage {...page} />
           case 'shadow':
             return <ShadowPage {...page} />
           case 'migration':
@@ -190,6 +195,10 @@ export function App() {
             return <ActivityPage {...page} />
           case 'filing-remittance':
             return <FilingRemittancePage {...page} />
+          case 'contributions':
+            return <ContributionsPage {...page} />
+          case 'notices':
+            return <RegulatoryNoticesPage {...page} />
           case 'dashboard':
             return <HomePage {...page} capabilities={capabilities} />
         }

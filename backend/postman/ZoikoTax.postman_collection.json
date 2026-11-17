@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:aadfe8af64fd89c8cc79ecaefc426d862af2b74c2219e7c34a675d23209c150b`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:25dc95ef25b2b622c8740ddac58a36ab5a32617989d2515240b1107b781e15bb`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -438,7 +438,7 @@
     },
     {
       "name": "04 · Administration",
-      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked. Then payee master data: `createBeneficiary` records an authority's payee details and captures `beneficiaryId`; the same administrator verifying them is refused with `MAKER_CHECKER` (ZTAX-REM-REQ-0014), and the version is suspended. Then a migration: `createMigrationProgram` creates a program for 2025 and captures `migrationProgramId`; a snapshot of two historical results is registered, a mapping that names only one of their legacy codes is recorded, and `executeMigrationRun` converts the snapshot AS_KNOWN — one record converts, the other raises an `UNMAPPED_CODE` exception, captured into `migrationExceptionId`, and the monetary reconciliation does not pass. The exception is accepted as a known residual and the cutover moves to `PRECHECK`.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
+      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked. Then payee master data: `createBeneficiary` records an authority's payee details and captures `beneficiaryId`; the same administrator verifying them is refused with `MAKER_CHECKER` (ZTAX-REM-REQ-0014), and the version is suspended. Then support: `openSupportCase` opens a LEGAL case and captures `caseId`; the queue and the case are read, and `actOnSupportCase` verifies the requester, which moves the case to `VERIFIED` as one more event in its history. Then a migration: `createMigrationProgram` creates a program for 2025 and captures `migrationProgramId`; a snapshot of two historical results is registered, a mapping that names only one of their legacy codes is recorded, and `executeMigrationRun` converts the snapshot AS_KNOWN — one record converts, the other raises an `UNMAPPED_CODE` exception, captured into `migrationExceptionId`, and the monetary reconciliation does not pass. The exception is accepted as a known residual and the cutover moves to `PRECHECK`.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
       "item": [
         {
           "name": "GET /v1/admin/users — List the tenant's users",
@@ -3280,6 +3280,371 @@
                 "exec": [
                   "pm.test('suspendBeneficiary returns a status the contract declares', function () {",
                   "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/support/cases — Open a support case",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"LEGAL\",\n  \"severity\": \"S2\",\n  \"subject\": \"Letter from the tax authority about September VAT\",\n  \"description\": \"The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.\",\n  \"product\": \"Telecom VAT\",\n  \"references\": {\n    \"decisionId\": \"{{decisionId}}\"\n  },\n  \"evidence\": [\n    \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/support/cases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "support",
+                "cases"
+              ]
+            },
+            "description": "Open a support case\n\n`ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.\n\nOpens the case `NEW`. The support SLA starts now and is due after the\nseverity's target — S1 four hours, S2 one day, S3 three days, S4 seven\ndays — measured to the first customer response. A statutory deadline,\nwhen the request has one, is recorded beside it and never merged into\nit (SUP-06).\n\nThe decision, document, obligation and remittance a case names are\nread-only references. Nothing a case does changes them, and support\ncannot refund, file, pay or edit a rule (SUP-03, SUP-04, SUP-11)."
+          },
+          "response": [
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/support/cases",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "support",
+                    "cases"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"type\": \"LEGAL\",\n  \"openedType\": \"LEGAL\",\n  \"severity\": \"S2\",\n  \"subject\": \"Letter from the tax authority about September VAT\",\n  \"description\": \"The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.\",\n  \"product\": {\n    \"Telecom VAT references\": {\n      \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n    },\n    \"evidence\": [\n      \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"\n    ],\n    \"status\": \"NEW\",\n    \"missingFacts\": [],\n    \"clocks\": {\n      \"slaDueAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"sla\": \"ON_TRACK\",\n      \"statutory\": \"NONE\",\n      \"statutoryPrecedes\": false,\n      \"dueAt\": \"2026-10-02T09:00:00.000000Z\"\n    },\n    \"actions\": [\n      \"VERIFY\",\n      \"ASSIGN\",\n      \"REQUEST_EVIDENCE\",\n      \"ADD_EVIDENCE\",\n      \"NOTE\",\n      \"REQUEST_LEGAL_HOLD\"\n    ],\n    \"signOffRequired\": true,\n    \"signedOff\": false,\n    \"responded\": false,\n    \"openedAt\": \"2026-10-01T09:00:00.000000Z\",\n    \"openedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n    \"history\": [\n      {\n        \"seq\": 1,\n        \"action\": \"OPENED\",\n        \"status\": \"NEW\",\n        \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n        \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n      }\n    ]\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('openSupportCase returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('Doc 18 W16 — a case opens NEW, with its support SLA and statutory clock kept apart', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().status).to.eql('NEW');",
+                  "  pm.expect(pm.response.json().clocks).to.have.property('slaDueAt');",
+                  "  pm.expect(pm.response.json().clocks.statutory).to.eql('NONE');",
+                  "});",
+                  "pm.collectionVariables.set('caseId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/support/cases — The support triage queue",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/support/cases?type={{type}}&severity={{severity}}&status={{status}}&product={{product}}&legalEntityId={{legalEntityId}}&fiscalPeriod={{fiscalPeriod}}&assignee={{assignee}}&unassigned={{unassigned}}&slaClock={{slaClock}}&statutoryClock={{statutoryClock}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "support",
+                "cases"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "{{type}}",
+                  "description": "Only cases of this type."
+                },
+                {
+                  "key": "severity",
+                  "value": "{{severity}}",
+                  "description": "Only cases of this severity."
+                },
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only cases in this status."
+                },
+                {
+                  "key": "product",
+                  "value": "{{product}}",
+                  "description": "Only cases about this product, compared without regard to case."
+                },
+                {
+                  "key": "legalEntityId",
+                  "value": "{{legalEntityId}}",
+                  "description": "Only cases about this customer legal entity."
+                },
+                {
+                  "key": "fiscalPeriod",
+                  "value": "{{fiscalPeriod}}",
+                  "description": "Only cases about this impacted fiscal period."
+                },
+                {
+                  "key": "assignee",
+                  "value": "{{assignee}}",
+                  "description": "Only cases this person owns."
+                },
+                {
+                  "key": "unassigned",
+                  "value": "{{unassigned}}",
+                  "description": "Only cases nobody owns."
+                },
+                {
+                  "key": "slaClock",
+                  "value": "{{slaClock}}",
+                  "description": "Only cases whose support SLA stands here."
+                },
+                {
+                  "key": "statutoryClock",
+                  "value": "{{statutoryClock}}",
+                  "description": "Only cases whose statutory deadline stands here; `NONE` is cases with no statutory deadline."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The support triage queue\n\n`ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.\n\nThe most recently opened cases, filtered, with open cases first and the\nsoonest due first: the earlier of the support SLA and any statutory\ndeadline, which takes precedence when it falls first (SUP-06). Closed\ncases follow, newest first. Each case carries both clocks, separately."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/support/cases",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "support",
+                    "cases"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"cases\": [\n    {\n      \"id\": \"01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"type\": \"LEGAL\",\n      \"openedType\": \"LEGAL\",\n      \"severity\": \"S2\",\n      \"subject\": \"Letter from the tax authority about September VAT\",\n      \"description\": \"The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.\",\n      \"product\": \"Telecom VAT\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"fiscalPeriod\": \"2026-09\",\n      \"contractRef\": \"MSA-2026-014\",\n      \"references\": {\n        \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n      },\n      \"evidence\": [\n        \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"\n      ],\n      \"status\": \"TRIAGED\",\n      \"missingFacts\": [],\n      \"clocks\": {\n        \"slaDueAt\": \"2026-10-02T09:00:00.000000Z\",\n        \"sla\": \"ON_TRACK\",\n        \"statutoryDueAt\": \"2026-10-01T17:00:00.000000Z\",\n        \"statutory\": \"AT_RISK\",\n        \"statutoryPrecedes\": true,\n        \"dueAt\": \"2026-10-01T17:00:00.000000Z\"\n      },\n      \"actions\": [\n        \"ASSIGN\",\n        \"REQUEST_EVIDENCE\",\n        \"ADD_EVIDENCE\",\n        \"START_REVIEW\",\n        \"ESCALATE\",\n        \"NOTE\",\n        \"REQUEST_LEGAL_HOLD\"\n      ],\n      \"signOffRequired\": true,\n      \"signedOff\": false,\n      \"responded\": false,\n      \"openedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"openedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"action\": \"OPENED\",\n          \"status\": \"NEW\",\n          \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 2,\n          \"action\": \"VERIFY\",\n          \"status\": \"VERIFIED\",\n          \"note\": \"Caller confirmed as the customer's named tax contact\",\n          \"recordedAt\": \"2026-10-01T09:05:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        },\n        {\n          \"seq\": 3,\n          \"action\": \"TRIAGE\",\n          \"status\": \"TRIAGED\",\n          \"fiscalPeriod\": \"2026-09\",\n          \"contractRef\": \"MSA-2026-014\",\n          \"statutoryDueAt\": \"2026-10-01T17:00:00.000000Z\",\n          \"recordedAt\": \"2026-10-01T09:10:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listSupportCases returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/support/cases/{caseId} — One support case, its clocks and its history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/support/cases/{{caseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "support",
+                "cases",
+                "{{caseId}}"
+              ]
+            },
+            "description": "One support case, its clocks and its history\n\n`ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.\n\nThe case as its history folds now: the current classification, the\nactions its status allows, the closure guard's inputs, and both clocks\nread as of now. Reading changes nothing."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/support/cases/{{caseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "support",
+                    "cases",
+                    "{{caseId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"type\": \"LEGAL\",\n  \"openedType\": \"LEGAL\",\n  \"severity\": \"S2\",\n  \"subject\": \"Letter from the tax authority about September VAT\",\n  \"description\": \"The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.\",\n  \"product\": \"Telecom VAT\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"fiscalPeriod\": \"2026-09\",\n  \"contractRef\": \"MSA-2026-014\",\n  \"references\": {\n    \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n  },\n  \"evidence\": [\n    \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"\n  ],\n  \"status\": \"TRIAGED\",\n  \"missingFacts\": [],\n  \"clocks\": {\n    \"slaDueAt\": \"2026-10-02T09:00:00.000000Z\",\n    \"sla\": \"ON_TRACK\",\n    \"statutoryDueAt\": \"2026-10-01T17:00:00.000000Z\",\n    \"statutory\": \"AT_RISK\",\n    \"statutoryPrecedes\": true,\n    \"dueAt\": \"2026-10-01T17:00:00.000000Z\"\n  },\n  \"actions\": [\n    \"ASSIGN\",\n    \"REQUEST_EVIDENCE\",\n    \"ADD_EVIDENCE\",\n    \"START_REVIEW\",\n    \"ESCALATE\",\n    \"NOTE\",\n    \"REQUEST_LEGAL_HOLD\"\n  ],\n  \"signOffRequired\": true,\n  \"signedOff\": false,\n  \"responded\": false,\n  \"openedAt\": \"2026-10-01T09:00:00.000000Z\",\n  \"openedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"action\": \"OPENED\",\n      \"status\": \"NEW\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"action\": \"VERIFY\",\n      \"status\": \"VERIFIED\",\n      \"note\": \"Caller confirmed as the customer's named tax contact\",\n      \"recordedAt\": \"2026-10-01T09:05:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 3,\n      \"action\": \"TRIAGE\",\n      \"status\": \"TRIAGED\",\n      \"fiscalPeriod\": \"2026-09\",\n      \"contractRef\": \"MSA-2026-014\",\n      \"statutoryDueAt\": \"2026-10-01T17:00:00.000000Z\",\n      \"recordedAt\": \"2026-10-01T09:10:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getSupportCase returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/support/cases/{caseId}/actions — Take one action on a support case",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"VERIFY\",\n  \"note\": \"Caller confirmed as the customer's named tax contact\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/support/cases/{{caseId}}/actions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "support",
+                "cases",
+                "{{caseId}}",
+                "actions"
+              ]
+            },
+            "description": "Take one action on a support case\n\n`ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.\n\nEvery action appends one event to the case's single audited history;\nnothing is edited. `VERIFY` moves `NEW` to `VERIFIED`. `TRIAGE`\nclassifies the case and moves it to `TRIAGED`, or to\n`TRIAGE_INCOMPLETE` with the facts requested when the contract, the\nimpacted period or the seller is missing (SUP-02). `START_REVIEW` and\n`ESCALATE` move it to `IN_REVIEW`; `RESPOND` records the customer\nresponse, `RESOLVE` follows it, and `CLOSE` ends the case.\n`REOPEN` takes a resolved or closed case back to `IN_REVIEW`, linked to\nthe event it reverses (SUP-07). `ASSIGN`, `REQUEST_EVIDENCE`,\n`ADD_EVIDENCE`, `SIGN_OFF`, `NOTE` and `REQUEST_LEGAL_HOLD` change no\nstatus; a legal hold request is recorded for an administrator, and\nplaces no hold.\n\n`CLOSE` needs a customer response since the last reopening, or\n`409 STATE_TRANSITION_INVALID` (SUP-14). A case that is, or was ever,\n`LEGAL` or `TAX_SPECIALIST` also needs a sign-off since the last\nreopening by someone other than its opener, or `409 SIGN_OFF_REQUIRED`;\nthe opener's own sign-off is `403 SEGREGATION_OF_DUTIES` (T18-18).\n\nNeither clock is reset: a raised severity can bring the SLA due time\nearlier, measured from opening, and a statutory deadline once recorded\nis never changed by support (SUP-07). An action the status does not\nallow is `409 STATE_TRANSITION_INVALID`."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/support/cases/{{caseId}}/actions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "support",
+                    "cases",
+                    "{{caseId}}",
+                    "actions"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"type\": \"LEGAL\",\n  \"openedType\": \"LEGAL\",\n  \"severity\": \"S2\",\n  \"subject\": \"Letter from the tax authority about September VAT\",\n  \"description\": \"The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.\",\n  \"product\": \"Telecom VAT\",\n  \"references\": {\n    \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n  },\n  \"evidence\": [\n    \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"\n  ],\n  \"status\": \"VERIFIED\",\n  \"missingFacts\": [],\n  \"clocks\": {\n    \"slaDueAt\": \"2026-10-02T09:00:00.000000Z\",\n    \"sla\": \"ON_TRACK\",\n    \"statutory\": \"NONE\",\n    \"statutoryPrecedes\": false,\n    \"dueAt\": \"2026-10-02T09:00:00.000000Z\"\n  },\n  \"actions\": [\n    \"TRIAGE\",\n    \"ASSIGN\",\n    \"REQUEST_EVIDENCE\",\n    \"ADD_EVIDENCE\",\n    \"NOTE\",\n    \"REQUEST_LEGAL_HOLD\"\n  ],\n  \"signOffRequired\": true,\n  \"signedOff\": false,\n  \"responded\": false,\n  \"openedAt\": \"2026-10-01T09:00:00.000000Z\",\n  \"openedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"action\": \"OPENED\",\n      \"status\": \"NEW\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"action\": \"VERIFY\",\n      \"status\": \"VERIFIED\",\n      \"note\": \"Caller confirmed as the customer's named tax contact\",\n      \"recordedAt\": \"2026-10-01T09:05:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('actOnSupportCase returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('Doc 18 W16 — every act is one more event in the case history', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('VERIFIED');",
+                  "  pm.expect(pm.response.json().history.length).to.eql(2);",
                   "});"
                 ]
               }
@@ -6184,6 +6549,949 @@
           ]
         },
         {
+          "name": "POST /v1/notices — Register a notice as received",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"ASSESSMENT\",\n  \"authority\": \"DE-BZST\",\n  \"jurisdiction\": \"DE\",\n  \"authorityReference\": \"ST-2026-0042\",\n  \"receivedAt\": \"2026-10-01T09:00:00.000000Z\",\n  \"periodStart\": \"2026-07-01\",\n  \"periodEnd\": \"2026-09-30\",\n  \"amount\": {\n    \"amount\": \"1250.00\",\n    \"currency\": \"EUR\"\n  },\n  \"links\": [\n    {\n      \"kind\": \"RETURN\",\n      \"reference\": \"{{obligationId}}\"\n    }\n  ],\n  \"deadline\": {\n    \"dueDate\": \"2026-10-31\",\n    \"timezone\": \"Europe/Berlin\",\n    \"source\": \"STATED_ON_NOTICE\",\n    \"verified\": true\n  },\n  \"deadlineEvidence\": \"Stated on page 1 of the notice.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/notices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "notices"
+              ]
+            },
+            "description": "Register a notice as received\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nRegisters a notice, assessment, audit, appeal or information request\nwith its authority, recipient, the authority's reference and the\nstatutory deadline as received — its date in the authority's calendar,\ntimezone, source and whether anyone verified it. Not a support due\ndate. An unknown or unverified deadline is flagged for urgent legal\nreview (W17). A notice with no legal entity, or one marked ambiguous,\ngoes straight to `LEGAL_REVIEW` and nothing answers it automatically\n(SUP-08). Links are references only; registering a notice changes no\nreturn, ledger or rule."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('createNotice returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('SUP-08 — a notice with no resolved recipient goes straight to legal review', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  const n = pm.response.json();",
+                  "  pm.expect(n.status).to.eql('LEGAL_REVIEW');",
+                  "  pm.expect(n.statutoryDeadline.original.dueDate).to.eql('2026-10-31');",
+                  "});",
+                  "pm.collectionVariables.set('noticeId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/notices/{noticeId} — One notice, its deadline ledger, SLA clock and history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/notices/{{noticeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "notices",
+                "{{noticeId}}"
+              ]
+            },
+            "description": "One notice, its deadline ledger, SLA clock and history\n\n`ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. The statutory deadline in\nforce beside the original as received, every confirmation and\nextension with its evidence, the separate internal SLA clock, the\nrecorded documents, the history, and the actions the status admits."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getNotice returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/notices — The regulatory notice register",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/notices?type={{type}}&status={{status}}&authority={{authority}}&legalEntityId={{legalEntityId}}&authorityReference={{authorityReference}}&receivedFrom={{receivedFrom}}&receivedTo={{receivedTo}}&period={{period}}&amountMin={{amountMin}}&amountMax={{amountMax}}&currency={{currency}}&attachmentSha256={{attachmentSha256}}&authenticity={{authenticity}}&urgent={{urgent}}&includeClosed={{includeClosed}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "notices"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "{{type}}",
+                  "description": "Only notices of this type."
+                },
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only notices in this status."
+                },
+                {
+                  "key": "authority",
+                  "value": "{{authority}}",
+                  "description": "Only notices from this authority (case-insensitive)."
+                },
+                {
+                  "key": "legalEntityId",
+                  "value": "{{legalEntityId}}",
+                  "description": "Only notices addressed to this legal entity"
+                },
+                {
+                  "key": "authorityReference",
+                  "value": "{{authorityReference}}",
+                  "description": "Only notices whose authority reference contains this text."
+                },
+                {
+                  "key": "receivedFrom",
+                  "value": "{{receivedFrom}}",
+                  "description": "Only notices received at or after this instant."
+                },
+                {
+                  "key": "receivedTo",
+                  "value": "{{receivedTo}}",
+                  "description": "Only notices received at or before this instant."
+                },
+                {
+                  "key": "period",
+                  "value": "{{period}}",
+                  "description": "Only notices whose period contains this date."
+                },
+                {
+                  "key": "amountMin",
+                  "value": "{{amountMin}}",
+                  "description": "Only notices stating at least this amount"
+                },
+                {
+                  "key": "amountMax",
+                  "value": "{{amountMax}}",
+                  "description": "Only notices stating at most this amount"
+                },
+                {
+                  "key": "currency",
+                  "value": "{{currency}}",
+                  "description": "The currency `amountMin` and `amountMax` are in. Required with either."
+                },
+                {
+                  "key": "attachmentSha256",
+                  "value": "{{attachmentSha256}}",
+                  "description": "Only notices with a document of this SHA-256 recorded."
+                },
+                {
+                  "key": "authenticity",
+                  "value": "{{authenticity}}",
+                  "description": "Only notices whose authenticity is this."
+                },
+                {
+                  "key": "urgent",
+                  "value": "{{urgent}}",
+                  "description": "Only notices flagged for urgent legal review."
+                },
+                {
+                  "key": "includeClosed",
+                  "value": "{{includeClosed}}",
+                  "description": "Include closed notices when no status is asked for."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The regulatory notice register\n\n`ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. Every notice, assessment,\naudit, appeal and information request registered, in working order:\nunknown statutory deadlines first, then the soonest deadline in force;\nclosed notices only when asked for. Each carries the flags that need\nattention now — an unknown or unverified deadline, unresolved\nauthenticity or recipient (an urgent legal review: W17, SUP-05,\nSUP-08), a deadline soon or passed, a breached internal SLA."
+          },
+          "response": [
+            {
+              "name": "200 · One assessment in legal review",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/notices",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "notices"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"notices\": [\n    {\n      \"id\": \"01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"type\": \"ASSESSMENT\",\n      \"authority\": \"DE-BZST\",\n      \"jurisdiction\": \"DE\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"entityAmbiguous\": false,\n      \"entityResolved\": true,\n      \"authorityReference\": \"ST-2026-0042\",\n      \"receivedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"periodStart\": \"2026-07-01\",\n      \"periodEnd\": \"2026-09-30\",\n      \"amount\": {\n        \"amount\": \"1250.00\",\n        \"currency\": \"EUR\"\n      },\n      \"links\": [\n        {\n          \"kind\": \"RETURN\",\n          \"reference\": \"01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01\"\n        }\n      ],\n      \"status\": \"LEGAL_REVIEW\",\n      \"authenticity\": \"VERIFIED\",\n      \"escalated\": false,\n      \"flags\": [\n        \"DEADLINE_SOON\"\n      ],\n      \"urgentLegalReview\": false,\n      \"statutoryDeadline\": {\n        \"original\": {\n          \"kind\": \"ORIGINAL\",\n          \"dueDate\": \"2026-10-31\",\n          \"dueAt\": \"2026-10-31T22:59:59.999999Z\",\n          \"timezone\": \"Europe/Berlin\",\n          \"source\": \"STATED_ON_NOTICE\",\n          \"verified\": true\n        },\n        \"current\": {\n          \"kind\": \"ORIGINAL\",\n          \"dueDate\": \"2026-10-31\",\n          \"dueAt\": \"2026-10-31T22:59:59.999999Z\",\n          \"timezone\": \"Europe/Berlin\",\n          \"source\": \"STATED_ON_NOTICE\",\n          \"verified\": true\n        }\n      },\n      \"sla\": {\n        \"ownerId\": \"01920a4c-0000-7000-8000-0000000000a2\",\n        \"dueAt\": \"2026-10-24T17:00:00.000000Z\",\n        \"breached\": false\n      },\n      \"deadlines\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"ORIGINAL\",\n          \"dueDate\": \"2026-10-31\",\n          \"dueAt\": \"2026-10-31T22:59:59.999999Z\",\n          \"timezone\": \"Europe/Berlin\",\n          \"source\": \"STATED_ON_NOTICE\",\n          \"verified\": true,\n          \"evidence\": \"Stated on page 1 of the notice.\",\n          \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        }\n      ],\n      \"attachments\": [],\n      \"allowedActions\": [\n        \"PREPARE_RESPONSE\",\n        \"RECORD_AUTHENTICITY\",\n        \"RESOLVE_ENTITY\",\n        \"RECORD_DEADLINE\",\n        \"ESCALATE\",\n        \"ASSIGN_OWNER\",\n        \"RECORD_ATTACHMENT\",\n        \"CLOSE\"\n      ],\n      \"asOf\": \"2026-10-27T09:00:00.000000Z\",\n      \"createdAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"RECEIVED\",\n          \"status\": \"RECEIVED\",\n          \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listNotices returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/notices/{noticeId}/transitions — Move a notice through review, or close it",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"AUTHENTICITY_REVIEW\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/notices/{{noticeId}}/transitions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "notices",
+                "{{noticeId}}",
+                "transitions"
+              ]
+            },
+            "description": "Move a notice through review, or close it\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\n`AUTHENTICITY_REVIEW` from `RECEIVED`; `LEGAL_REVIEW` from\n`AUTHENTICITY_REVIEW` once authenticity is verified (otherwise\n`403 NOTICE_LEGAL_VALIDATION_REQUIRED`: escalate instead, SUP-05),\nfrom `APPEAL`, or from `RESPONSE_APPROVED` with a reason; `CLOSED`\nfrom `OUTCOME_RECORDED`, or from `LEGAL_REVIEW` on a documented\nescalation (`403 NOTICE_CLOSURE_BLOCKED` otherwise). Nothing leaves\n`CLOSED`, and no move resets the statutory clock (T18-17). Approval,\nsubmission, outcome and appeal are their own actions."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('transitionNotice returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/notices/{noticeId}/attachments — Record a document as evidence",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n  \"filename\": \"assessment-ST-2026-0042.pdf\",\n  \"mediaType\": \"application/pdf\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/notices/{{noticeId}}/attachments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "notices",
+                "{{noticeId}}",
+                "attachments"
+              ]
+            },
+            "description": "Record a document as evidence\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nRecords a document by its SHA-256, file name and media type. The\ndocument is not uploaded or stored here; the digest is what later\nevidence cites. A digest already recorded is `409 ALREADY_EXISTS`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordNoticeAttachment returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/notices/{noticeId}/authenticity — Record whether the notice is authentic",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"authenticity\": \"VERIFIED\",\n  \"evidence\": \"Confirmed by phone on the authority's published number.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/notices/{{noticeId}}/authenticity",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "notices",
+                "{{noticeId}}",
+                "authenticity"
+              ]
+            },
+            "description": "Record whether the notice is authentic\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nRecords `VERIFIED`, `UNVERIFIABLE` or `NOT_AUTHENTIC` with how it was\nestablished. Anything but `VERIFIED` escalates to legal validation in\nthe same act and voids an approved answer; nothing is accepted as\ngenuine that is not (SUP-05)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordNoticeAuthenticity returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/notices/{noticeId}/escalations — Escalate a notice to legal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"DEADLINE_UNVERIFIED\",\n  \"note\": \"The notice gives no response date; legal to confirm the statutory period.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/notices/{{noticeId}}/escalations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "notices",
+                "{{noticeId}}",
+                "escalations"
+              ]
+            },
+            "description": "Escalate a notice to legal\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nSends the notice to legal with the question asked. From `RECEIVED` or\n`AUTHENTICITY_REVIEW` it moves to `LEGAL_REVIEW`. Evidence — counsel's\nreference, a memo — makes it a documented escalation, which is what a\ndisposition without an authority outcome rests on."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('escalateNotice returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/notices/{noticeId}/entity — Resolve the recipient legal entity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"evidence\": \"The tax number on the notice is this entity's.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/notices/{{noticeId}}/entity",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "notices",
+                "{{noticeId}}",
+                "entity"
+              ]
+            },
+            "description": "Resolve the recipient legal entity\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nRecords which of the tenant's legal entities the notice is addressed\nto, with how that was established (SUP-08). Until it is resolved no\nanswer is approved."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('resolveNoticeEntity returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/notices/{noticeId}/owner — Assign the deadline owner and internal SLA",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ownerId\": \"01920a4c-0000-7000-8000-0000000000a2\",\n  \"slaDue\": \"2026-10-24T17:00:00.000000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/notices/{{noticeId}}/owner",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "notices",
+                "{{noticeId}}",
+                "owner"
+              ]
+            },
+            "description": "Assign the deadline owner and internal SLA\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nNames the person who owns the deadline, and our internal SLA target.\nThe SLA is a separate clock: it never moves the statutory deadline\n(T18-17)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('assignNoticeOwner returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/notices/{noticeId}/deadlines — Confirm or extend the statutory deadline",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kind\": \"EXTENSION\",\n  \"dueDate\": \"2026-11-30\",\n  \"timezone\": \"Europe/Berlin\",\n  \"source\": \"AUTHORITY_CONFIRMATION\",\n  \"verified\": true,\n  \"evidence\": \"Extension letter of 20 October.\",\n  \"authorityReference\": \"EXT-2026-77\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/notices/{{noticeId}}/deadlines",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "notices",
+                "{{noticeId}}",
+                "deadlines"
+              ]
+            },
+            "description": "Confirm or extend the statutory deadline\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nA `CONFIRMATION` verifies the deadline in force, or establishes an\nunknown one; it never moves a known date (`409 NOTICE_DEADLINE_UNVERIFIED`).\nAn `EXTENSION` moves the date later: it needs a verified deadline to\nextend (W17 — no fabricated extension), the grant verified, evidence,\nand the authority's reference or a recorded document. The ledger keeps\nthe original; the internal SLA is unaffected (T18-17)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordNoticeDeadline returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('T18-17 — an evidenced extension moves the deadline and keeps the original', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const n = pm.response.json();",
+                  "  pm.expect(n.statutoryDeadline.current.dueDate).to.eql('2026-11-30');",
+                  "  pm.expect(n.statutoryDeadline.original.dueDate).to.eql('2026-10-31');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/notices/{noticeId}/deadlines — The statutory deadline ledger",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/notices/{{noticeId}}/deadlines",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "notices",
+                "{{noticeId}}",
+                "deadlines"
+              ]
+            },
+            "description": "The statutory deadline ledger\n\n`ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. The original deadline as\nreceived, then every confirmation, extension and appeal deadline in\norder, each with its evidence. The original is never rewritten\n(T18-17)."
+          },
+          "response": [
+            {
+              "name": "200 · An original deadline and one extension",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/notices/{{noticeId}}/deadlines",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "notices",
+                    "{{noticeId}}",
+                    "deadlines"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"noticeId\": \"01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"original\": {\n    \"kind\": \"ORIGINAL\",\n    \"dueDate\": \"2026-10-31\",\n    \"dueAt\": \"2026-10-31T22:59:59.999999Z\",\n    \"timezone\": \"Europe/Berlin\",\n    \"source\": \"STATED_ON_NOTICE\",\n    \"verified\": true\n  },\n  \"current\": {\n    \"kind\": \"EXTENSION\",\n    \"dueDate\": \"2026-11-30\",\n    \"dueAt\": \"2026-11-30T22:59:59.999999Z\",\n    \"timezone\": \"Europe/Berlin\",\n    \"source\": \"AUTHORITY_CONFIRMATION\",\n    \"verified\": true\n  },\n  \"overdue\": false,\n  \"entries\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"ORIGINAL\",\n      \"dueDate\": \"2026-10-31\",\n      \"dueAt\": \"2026-10-31T22:59:59.999999Z\",\n      \"timezone\": \"Europe/Berlin\",\n      \"source\": \"STATED_ON_NOTICE\",\n      \"verified\": true,\n      \"evidence\": \"Stated on page 1 of the notice.\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 6,\n      \"kind\": \"EXTENSION\",\n      \"dueDate\": \"2026-11-30\",\n      \"dueAt\": \"2026-11-30T22:59:59.999999Z\",\n      \"timezone\": \"Europe/Berlin\",\n      \"source\": \"AUTHORITY_CONFIRMATION\",\n      \"verified\": true,\n      \"evidence\": \"Extension letter of 20 October.\",\n      \"authorityReference\": \"EXT-2026-77\",\n      \"recordedAt\": \"2026-10-21T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getNoticeDeadlines returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/notices/{noticeId}/response-packages — Prepare a response package",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"summary\": \"Objection to the assessment with the Q3 reconciliation.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/notices/{{noticeId}}/response-packages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "notices",
+                "{{noticeId}}",
+                "response-packages"
+              ]
+            },
+            "description": "Prepare a response package\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nRecords a new response package version in `LEGAL_REVIEW`. From\n`RESPONSE_APPROVED` it supersedes the approved version and returns the\nnotice to `LEGAL_REVIEW`; the deadline is untouched."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('prepareNoticeResponse returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/notices/{noticeId}/response-approval — Approve the response package (four-eye)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/notices/{{noticeId}}/response-approval",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "notices",
+                "{{noticeId}}",
+                "response-approval"
+              ]
+            },
+            "description": "Approve the response package (four-eye)\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nApproves the response package version named. The approver is never\nthe person who prepared it: `403 SEGREGATION_OF_DUTIES`. The notice's\nauthenticity is verified and its recipient resolved, or\n`403 NOTICE_LEGAL_VALIDATION_REQUIRED` (SUP-05, SUP-08)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('approveNoticeResponse returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});",
+                  "pm.test('the person who prepared the response cannot approve it', function () {",
+                  "  pm.response.to.have.status(403);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql('SEGREGATION_OF_DUTIES');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/notices/{noticeId}/submission — Record the response's receipt by the authority",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"authorityReceiptReference\": \"RCPT-2026-10-9981\",\n  \"evidence\": \"Portal confirmation page, saved.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/notices/{{noticeId}}/submission",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "notices",
+                "{{noticeId}}",
+                "submission"
+              ]
+            },
+            "description": "Record the response's receipt by the authority\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nRecords that the approved response reached the authority. It needs\nthe authority's submission receipt reference."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordNoticeSubmission returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/notices/{noticeId}/outcome — Record what the authority decided",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outcome\": \"ADJUSTED\",\n  \"authorityReceiptReference\": \"DEC-2026-311\",\n  \"evidence\": \"Decision letter of 12 November.\",\n  \"amount\": {\n    \"amount\": \"980.00\",\n    \"currency\": \"EUR\"\n  },\n  \"settled\": false,\n  \"settlement\": \"PAYMENT_INSTRUCTION_PENDING\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/notices/{{noticeId}}/outcome",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "notices",
+                "{{noticeId}}",
+                "outcome"
+              ]
+            },
+            "description": "Record what the authority decided\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nRecords the authority's decision on a submitted response or an\nappeal, with its receipt or decision reference and the decision as\nreceived. `settled: true` needs `AUTHORITY_CONFIRMED` or\n`PAYMENT_SETTLED`; a pending payment instruction settles nothing\n(`403 NOTICE_SETTLEMENT_UNPROVEN`, T18-20). The amount is recorded as\nstated; nothing is posted."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordNoticeOutcome returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/notices/{noticeId}/appeal — Lodge an appeal against the outcome",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nextDeadline\": {\n    \"dueDate\": \"2027-01-15\",\n    \"timezone\": \"Europe/Berlin\",\n    \"source\": \"AUTHORITY_CONFIRMATION\",\n    \"verified\": true\n  },\n  \"hearingDate\": \"2027-02-01\",\n  \"evidence\": \"Appeal lodged; acknowledgement letter of 20 November.\",\n  \"authorityReference\": \"APP-2026-18\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/notices/{{noticeId}}/appeal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "notices",
+                "{{noticeId}}",
+                "appeal"
+              ]
+            },
+            "description": "Lodge an appeal against the outcome\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nOpens the appeal branch after a recorded outcome. An appeal with a\nhearing still to come keeps the matter open with its next deadline,\nwhich is then required (SUP-16). The appeal deadline is a new ledger\nentry; the original and every extension stay."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('lodgeNoticeAppeal returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "GET /v1/remittances — The payment queue",
           "request": {
             "method": "GET",
@@ -6912,6 +8220,513 @@
                 "exec": [
                   "pm.test('cancelRemittance returns a status the contract declares', function () {",
                   "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/contributions — Record a provider contribution from one source event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceEventId\": \"BSS-INV-2026-09-000123\",\n  \"sourceVersion\": 1,\n  \"sourceType\": \"BSS_INVOICE\",\n  \"sourceChecksum\": \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n  \"regime\": \"US_USF\",\n  \"period\": \"2026-09\",\n  \"classificationRef\": \"usf:interstate-telecom\",\n  \"situsRef\": \"US\",\n  \"sourceRef\": \"INV-2026-000123\",\n  \"componentRef\": \"line:1/voice-interstate\",\n  \"ruleVersion\": \"usf-499a@2026.1\",\n  \"currency\": \"USD\",\n  \"eligibleBase\": \"1250.00\",\n  \"excludedBase\": \"250.00\",\n  \"exclusionReason\": \"International-only revenue, outside the contribution base\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/contributions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "contributions"
+              ]
+            },
+            "description": "Record a provider contribution from one source event\n\n`OPERATOR`, signed in as themselves.\n\nRecords the contribution base one source event carries — a BSS invoice,\nrated usage, a revenue-recognition adjustment, a licence-activity event or\na manual certified schedule — with its eligibility: classification, situs,\neligible and excluded base, the reason for any exclusion and the rule\nversion that decided it. Amounts are canonical decimal strings in the\nevent's one currency, added exactly by the cell (UAT-OBL-034). The member\nlegal entity defaults to the tenant's default entity.\n\n**Idempotent on the source event and version**, not on an\n`Idempotency-Key`: the source system already names each event, and that\nname is the record's identity. The same payload again returns the record\nalready made with `200`; a different payload under the same key is\n`409 SOURCE_EVENT_CONFLICT`, and the first record stands (UAT-OBL-026).\nA correction is a new version, or a reversal.\n\nA reversal names the source event it reverses in `reverses` and carries\nnegative bases; it is a contribution of its own, never an edit, and an\noriginal is reversed at most once (`409 ALREADY_EXISTS`) and by no more\nthan it contributed (UAT-OBL-027). A reversal whose original is not yet\nrecorded is accepted, and its period is `DATA_INCOMPLETE` until the\noriginal arrives. An event recorded after its period has ended is\nflagged as an `amendment`."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/contributions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "contributions"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"sourceEventId\": \"BSS-INV-2026-09-000123\",\n  \"sourceVersion\": 1,\n  \"sourceType\": \"BSS_INVOICE\",\n  \"sourceChecksum\": \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n  \"regime\": \"US_USF\",\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"classificationRef\": \"usf:interstate-telecom\",\n  \"situsRef\": \"US\",\n  \"sourceRef\": \"INV-2026-000123\",\n  \"componentRef\": \"line:1/voice-interstate\",\n  \"ruleVersion\": \"usf-499a@2026.1\",\n  \"currency\": \"USD\",\n  \"eligibleBase\": \"1250.00\",\n  \"excludedBase\": \"250.00\",\n  \"exclusionReason\": \"International-only revenue, outside the contribution base\",\n  \"amendment\": false,\n  \"immutableHash\": \"zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c\",\n  \"status\": \"ACCEPTED\",\n  \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n  \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"RECORDED\",\n      \"status\": \"ACCEPTED\",\n      \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/contributions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "contributions"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"sourceEventId\": \"BSS-INV-2026-09-000123\",\n  \"sourceVersion\": 1,\n  \"sourceType\": \"BSS_INVOICE\",\n  \"sourceChecksum\": \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n  \"regime\": \"US_USF\",\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"classificationRef\": \"usf:interstate-telecom\",\n  \"situsRef\": \"US\",\n  \"sourceRef\": \"INV-2026-000123\",\n  \"componentRef\": \"line:1/voice-interstate\",\n  \"ruleVersion\": \"usf-499a@2026.1\",\n  \"currency\": \"USD\",\n  \"eligibleBase\": \"1250.00\",\n  \"excludedBase\": \"250.00\",\n  \"exclusionReason\": \"International-only revenue, outside the contribution base\",\n  \"amendment\": false,\n  \"immutableHash\": \"zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c\",\n  \"status\": \"ACCEPTED\",\n  \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n  \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"RECORDED\",\n      \"status\": \"ACCEPTED\",\n      \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordContribution returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test('UAT-OBL-026 — a source event is one contribution: recorded, or the one already recorded', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "  pm.expect(pm.response.json().immutableHash).to.match(/^zt1:[0-9a-f]{64}$/);",
+                  "});",
+                  "pm.collectionVariables.set('contributionId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/contributions — The source event explorer",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/contributions?period={{period}}&regime={{regime}}&status={{status}}&legalEntityId={{legalEntityId}}&sourceType={{sourceType}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "contributions"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "{{period}}",
+                  "description": "Only contributions of this period."
+                },
+                {
+                  "key": "regime",
+                  "value": "{{regime}}",
+                  "description": "Only contributions to this fund."
+                },
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only contributions in this status."
+                },
+                {
+                  "key": "legalEntityId",
+                  "value": "{{legalEntityId}}",
+                  "description": "Only contributions of this member legal entity."
+                },
+                {
+                  "key": "sourceType",
+                  "value": "{{sourceType}}",
+                  "description": "Only contributions from this kind of source."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The source event explorer\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nProvider contributions, newest first, in any status: a quarantined event\nis listed with its hold, never hidden. A provider contribution is the\noperator's own obligation on its eligible revenue; recovery charged to end\nusers is not the contribution payable and is not listed here\n(UAT-OBL-032, -033)."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/contributions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "contributions"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"contributions\": [\n    {\n      \"id\": \"01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"sourceEventId\": \"BSS-INV-2026-09-000123\",\n      \"sourceVersion\": 1,\n      \"sourceType\": \"BSS_INVOICE\",\n      \"sourceChecksum\": \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n      \"regime\": \"US_USF\",\n      \"period\": \"2026-09\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"classificationRef\": \"usf:interstate-telecom\",\n      \"situsRef\": \"US\",\n      \"sourceRef\": \"INV-2026-000123\",\n      \"componentRef\": \"line:1/voice-interstate\",\n      \"ruleVersion\": \"usf-499a@2026.1\",\n      \"currency\": \"USD\",\n      \"eligibleBase\": \"1250.00\",\n      \"excludedBase\": \"250.00\",\n      \"exclusionReason\": \"International-only revenue, outside the contribution base\",\n      \"amendment\": false,\n      \"immutableHash\": \"zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c\",\n      \"status\": \"QUARANTINED\",\n      \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"RECORDED\",\n          \"status\": \"ACCEPTED\",\n          \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 2,\n          \"kind\": \"QUARANTINED\",\n          \"status\": \"QUARANTINED\",\n          \"reason\": \"The September billing extract was imported twice under new file ids\",\n          \"recordedAt\": \"2026-10-03T08:30:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listContributions returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/contributions/{contributionId}/trace — Drill from a contribution to its source, history and links",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/contributions/{{contributionId}}/trace",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "contributions",
+                "{{contributionId}}",
+                "trace"
+              ]
+            },
+            "description": "Drill from a contribution to its source, history and links\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nOne contribution with its source event, classified component and\neligibility, its status history, and its links: the original it reverses\nwhen the ledger holds it, and the reversal of it when one is recorded.\n`originalMissing` is true for a reversal whose original has not arrived."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/contributions/{{contributionId}}/trace",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "contributions",
+                    "{{contributionId}}",
+                    "trace"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"originalMissing\": false,\n  \"contribution\": {\n    \"id\": \"01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n    \"sourceEventId\": \"BSS-INV-2026-09-000123\",\n    \"sourceVersion\": 1,\n    \"sourceType\": \"BSS_INVOICE\",\n    \"sourceChecksum\": \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n    \"regime\": \"US_USF\",\n    \"period\": \"2026-09\",\n    \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n    \"classificationRef\": \"usf:interstate-telecom\",\n    \"situsRef\": \"US\",\n    \"sourceRef\": \"INV-2026-000123\",\n    \"componentRef\": \"line:1/voice-interstate\",\n    \"ruleVersion\": \"usf-499a@2026.1\",\n    \"currency\": \"USD\",\n    \"eligibleBase\": \"1250.00\",\n    \"excludedBase\": \"250.00\",\n    \"exclusionReason\": \"International-only revenue, outside the contribution base\",\n    \"amendment\": false,\n    \"immutableHash\": \"zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c\",\n    \"status\": \"ACCEPTED\",\n    \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n    \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n    \"history\": [\n      {\n        \"seq\": 1,\n        \"kind\": \"RECORDED\",\n        \"status\": \"ACCEPTED\",\n        \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n        \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n      }\n    ]\n  },\n  \"reversal\": {\n    \"id\": \"01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e02\",\n    \"sourceEventId\": \"BSS-CRN-2026-10-000017\",\n    \"sourceVersion\": 1,\n    \"sourceType\": \"BSS_INVOICE\",\n    \"regime\": \"US_USF\",\n    \"period\": \"2026-10\",\n    \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n    \"classificationRef\": \"usf:interstate-telecom\",\n    \"situsRef\": \"US\",\n    \"sourceRef\": \"CRN-2026-000017\",\n    \"ruleVersion\": \"usf-499a@2026.1\",\n    \"currency\": \"USD\",\n    \"eligibleBase\": \"-1250.00\",\n    \"excludedBase\": \"-250.00\",\n    \"exclusionReason\": \"Reverses the international-only part of the original\",\n    \"reverses\": {\n      \"sourceEventId\": \"BSS-INV-2026-09-000123\",\n      \"sourceVersion\": 1\n    },\n    \"amendment\": false,\n    \"immutableHash\": \"zt1:0b2d4f6a8c1e3b5d7f9a0c2e4b6d8f1a3c5e7b9d0f2a4c6e8b1d3f5a7c9e0b2d\",\n    \"status\": \"ACCEPTED\",\n    \"recordedAt\": \"2026-10-20T11:00:00.000000Z\",\n    \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n    \"history\": [\n      {\n        \"seq\": 1,\n        \"kind\": \"RECORDED\",\n        \"status\": \"ACCEPTED\",\n        \"recordedAt\": \"2026-10-20T11:00:00.000000Z\",\n        \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n      }\n    ]\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getContributionTrace returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/contributions/summary — A period's control totals",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/contributions/summary?period={{period}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "contributions",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "{{period}}",
+                  "description": "The period, YYYY-MM."
+                }
+              ]
+            },
+            "description": "A period's control totals\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nControl totals per member legal entity, regime and currency: accepted and\nquarantined counts, the exact eligible and excluded totals with reversals\nincluded as negatives, and the period contribution digest — the canonical\ndigest of the sorted immutable hashes of the accepted events, so it does\nnot depend on arrival order. Quarantined events are counted, never summed.\nA group is `DATA_INCOMPLETE` while an event is quarantined or a reversal\nnames an original the ledger does not hold.\n\nThese totals are the provider's contribution base. They are not, and are\nnever reconciled as, the recovery charged to customers (UAT-OBL-033)."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/contributions/summary",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "contributions",
+                    "summary"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"period\": \"2026-09\",\n  \"dataIncomplete\": true,\n  \"groups\": [\n    {\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"regime\": \"US_USF\",\n      \"currency\": \"USD\",\n      \"status\": \"DATA_INCOMPLETE\",\n      \"incompleteReasons\": [\n        \"QUARANTINED_EVENTS\"\n      ],\n      \"acceptedCount\": 41,\n      \"quarantinedCount\": 1,\n      \"reversalCount\": 2,\n      \"amendmentCount\": 0,\n      \"eligibleTotal\": \"48210.75\",\n      \"excludedTotal\": \"3120.00\",\n      \"reversedTotal\": \"-640.00\",\n      \"periodDigest\": \"zt1:3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e\",\n      \"sourceChecksums\": [\n        \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getContributionSummary returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/contributions/{contributionId}/quarantine — Hold an incorrect import out of the control totals",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"The September billing extract was imported twice under new file ids\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/contributions/{{contributionId}}/quarantine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "contributions",
+                "{{contributionId}}",
+                "quarantine"
+              ]
+            },
+            "description": "Hold an incorrect import out of the control totals\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nHolds an accepted contribution out of the control totals, with its\nreason. Nothing is deleted: the contribution stays listed with its hold,\nits period is `DATA_INCOMPLETE`, and a release puts it back. Only an\naccepted contribution is quarantined (`409 STATE_TRANSITION_INVALID`)."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/contributions/{{contributionId}}/quarantine",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "contributions",
+                    "{{contributionId}}",
+                    "quarantine"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"sourceEventId\": \"BSS-INV-2026-09-000123\",\n  \"sourceVersion\": 1,\n  \"sourceType\": \"BSS_INVOICE\",\n  \"sourceChecksum\": \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n  \"regime\": \"US_USF\",\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"classificationRef\": \"usf:interstate-telecom\",\n  \"situsRef\": \"US\",\n  \"sourceRef\": \"INV-2026-000123\",\n  \"componentRef\": \"line:1/voice-interstate\",\n  \"ruleVersion\": \"usf-499a@2026.1\",\n  \"currency\": \"USD\",\n  \"eligibleBase\": \"1250.00\",\n  \"excludedBase\": \"250.00\",\n  \"exclusionReason\": \"International-only revenue, outside the contribution base\",\n  \"amendment\": false,\n  \"immutableHash\": \"zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c\",\n  \"status\": \"QUARANTINED\",\n  \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n  \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"RECORDED\",\n      \"status\": \"ACCEPTED\",\n      \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"QUARANTINED\",\n      \"status\": \"QUARANTINED\",\n      \"reason\": \"The September billing extract was imported twice under new file ids\",\n      \"recordedAt\": \"2026-10-03T08:30:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('quarantineContribution returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/contributions/{contributionId}/release — Return a quarantined contribution to the control totals",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Checked against the billing extract; the events are distinct\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/contributions/{{contributionId}}/release",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "contributions",
+                "{{contributionId}}",
+                "release"
+              ]
+            },
+            "description": "Return a quarantined contribution to the control totals\n\n`ANALYST`, signed in as themselves.\n\nReleases a quarantined contribution, with its reason, back into the\ncontrol totals. Four eyes: the person who quarantined it cannot release\nit (`403 MAKER_CHECKER`). Only a quarantined contribution is released\n(`409 STATE_TRANSITION_INVALID`)."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/contributions/{{contributionId}}/release",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "contributions",
+                    "{{contributionId}}",
+                    "release"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"sourceEventId\": \"BSS-INV-2026-09-000123\",\n  \"sourceVersion\": 1,\n  \"sourceType\": \"BSS_INVOICE\",\n  \"sourceChecksum\": \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n  \"regime\": \"US_USF\",\n  \"period\": \"2026-09\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"classificationRef\": \"usf:interstate-telecom\",\n  \"situsRef\": \"US\",\n  \"sourceRef\": \"INV-2026-000123\",\n  \"componentRef\": \"line:1/voice-interstate\",\n  \"ruleVersion\": \"usf-499a@2026.1\",\n  \"currency\": \"USD\",\n  \"eligibleBase\": \"1250.00\",\n  \"excludedBase\": \"250.00\",\n  \"exclusionReason\": \"International-only revenue, outside the contribution base\",\n  \"amendment\": false,\n  \"immutableHash\": \"zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c\",\n  \"status\": \"ACCEPTED\",\n  \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n  \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"RECORDED\",\n      \"status\": \"ACCEPTED\",\n      \"recordedAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('releaseContribution returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
                   "});"
                 ]
               }
@@ -10593,6 +12408,11 @@
       "type": "string"
     },
     {
+      "key": "noticeId",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "beneficiaryId",
       "value": "",
       "type": "string"
@@ -10640,6 +12460,26 @@
     {
       "key": "remittanceId",
       "value": "00000000-0000-7000-8000-000000000000",
+      "type": "string"
+    },
+    {
+      "key": "contributionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "regime",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sourceType",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "legalEntityId",
+      "value": "",
       "type": "string"
     },
     {
@@ -10693,6 +12533,51 @@
       "type": "string"
     },
     {
+      "key": "caseId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "type",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "severity",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "product",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "fiscalPeriod",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "assignee",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "unassigned",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "slaClock",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "statutoryClock",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "reusedKey",
       "value": "",
       "type": "string"
@@ -10704,7 +12589,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:aadfe8af64fd89c8cc79ecaefc426d862af2b74c2219e7c34a675d23209c150b",
+      "value": "sha256:25dc95ef25b2b622c8740ddac58a36ab5a32617989d2515240b1107b781e15bb",
       "type": "string"
     }
   ]

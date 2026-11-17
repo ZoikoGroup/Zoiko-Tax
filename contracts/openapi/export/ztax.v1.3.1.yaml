@@ -100,8 +100,14 @@ tags:
     description: The LegalAuthorization matrix, customer authorizations and powers of attorney, and the gate that resolves whether an action may execute. Fails closed.
   - name: compliance
     description: Compliance packages that turn an obligation into a filing — preparation, independent review, exact-version approval, submission and the authority's answer. TRANSMITTING is not FILED.
+  - name: notices
+    description: Regulatory notices, assessments, audits, appeals and information requests — registered with the statutory deadline the authority set, its source and verification, worked through authenticity and legal review to a four-eye approved response, the authority receipt and outcome. Notices reference fiscal records and never change them.
   - name: remittance
     description: Payee master data and payment instructions for accepted returns. ZoikoTax instructs the customer's own provider and never holds funds; submitted is not settled.
+  - name: support
+    description: Customer support cases — triage, routing and response under two separate clocks, the support SLA and any statutory deadline. No tax-rule or financial authority; fiscal records are referenced, never changed.
+  - name: contributions
+    description: Provider contributions — the operator's own contributions to USF, CRTC NCF and similar funds, assessed on its eligible revenue. Never the recovery charged to customers. Source events recorded once, reversed by new events, quarantined without deletion, and totalled exactly per period.
   - name: shadow
     description: Shadow assurance — another engine's results compared with ZoikoTax's decisions, component by component. Non-impact; matching a comparator is not verified correctness.
   - name: migration
@@ -7551,6 +7557,1983 @@ paths:
           $ref: "#/components/responses/Internal"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/support/cases:
+    get:
+      operationId: listSupportCases
+      tags:
+        - support
+      summary: The support triage queue
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        The most recently opened cases, filtered, with open cases first and the
+        soonest due first: the earlier of the support SLA and any statutory
+        deadline, which takes precedence when it falls first (SUP-06). Closed
+        cases follow, newest first. Each case carries both clocks, separately.
+      parameters:
+        - name: type
+          in: query
+          required: false
+          description: Only cases of this type.
+          schema:
+            $ref: "#/components/schemas/SupportCaseType"
+          example: LEGAL
+        - name: severity
+          in: query
+          required: false
+          description: Only cases of this severity.
+          schema:
+            $ref: "#/components/schemas/SupportSeverity"
+          example: S1
+        - name: status
+          in: query
+          required: false
+          description: Only cases in this status.
+          schema:
+            $ref: "#/components/schemas/SupportCaseStatus"
+          example: TRIAGE_INCOMPLETE
+        - name: product
+          in: query
+          required: false
+          description: Only cases about this product, compared without regard to case.
+          schema:
+            $ref: "#/components/schemas/SupportProduct"
+          example: Telecom VAT
+        - name: legalEntityId
+          in: query
+          required: false
+          description: Only cases about this customer legal entity.
+          schema:
+            $ref: "#/components/schemas/LegalEntityId"
+          example: 01920a4c-0000-7000-8000-00000000e001
+        - name: fiscalPeriod
+          in: query
+          required: false
+          description: Only cases about this impacted fiscal period.
+          schema:
+            $ref: "#/components/schemas/LegalPeriod"
+          example: 2026-09
+        - name: assignee
+          in: query
+          required: false
+          description: Only cases this person owns.
+          schema:
+            $ref: "#/components/schemas/SupportUserId"
+          example: 01920a4c-0000-7000-8000-0000000000a2
+        - name: unassigned
+          in: query
+          required: false
+          description: Only cases nobody owns.
+          schema:
+            type: boolean
+          example: true
+        - name: slaClock
+          in: query
+          required: false
+          description: Only cases whose support SLA stands here.
+          schema:
+            $ref: "#/components/schemas/SupportClockState"
+          example: AT_RISK
+        - name: statutoryClock
+          in: query
+          required: false
+          description: Only cases whose statutory deadline stands here; `NONE` is cases with no statutory deadline.
+          schema:
+            $ref: "#/components/schemas/SupportClockState"
+          example: AT_RISK
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The queue.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCaseList"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    cases:
+                      - id: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        type: LEGAL
+                        openedType: LEGAL
+                        severity: S2
+                        subject: Letter from the tax authority about September VAT
+                        description: The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.
+                        product: Telecom VAT
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        fiscalPeriod: 2026-09
+                        contractRef: MSA-2026-014
+                        references:
+                          decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                        evidence:
+                          - sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                        status: TRIAGED
+                        missingFacts: []
+                        clocks:
+                          slaDueAt: 2026-10-02T09:00:00.000000Z
+                          sla: ON_TRACK
+                          statutoryDueAt: 2026-10-01T17:00:00.000000Z
+                          statutory: AT_RISK
+                          statutoryPrecedes: true
+                          dueAt: 2026-10-01T17:00:00.000000Z
+                        actions:
+                          - ASSIGN
+                          - REQUEST_EVIDENCE
+                          - ADD_EVIDENCE
+                          - START_REVIEW
+                          - ESCALATE
+                          - NOTE
+                          - REQUEST_LEGAL_HOLD
+                        signOffRequired: true
+                        signedOff: false
+                        responded: false
+                        openedAt: 2026-10-01T09:00:00.000000Z
+                        openedBy: 01920a4c-0000-7000-8000-0000000000a1
+                        history:
+                          - seq: 1
+                            action: OPENED
+                            status: NEW
+                            recordedAt: 2026-10-01T09:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                          - seq: 2
+                            action: VERIFY
+                            status: VERIFIED
+                            note: Caller confirmed as the customer's named tax contact
+                            recordedAt: 2026-10-01T09:05:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                          - seq: 3
+                            action: TRIAGE
+                            status: TRIAGED
+                            fiscalPeriod: 2026-09
+                            contractRef: MSA-2026-014
+                            statutoryDueAt: 2026-10-01T17:00:00.000000Z
+                            recordedAt: 2026-10-01T09:10:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: openSupportCase
+      tags:
+        - support
+      summary: Open a support case
+      description: |
+        `ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Opens the case `NEW`. The support SLA starts now and is due after the
+        severity's target — S1 four hours, S2 one day, S3 three days, S4 seven
+        days — measured to the first customer response. A statutory deadline,
+        when the request has one, is recorded beside it and never merged into
+        it (SUP-06).
+
+        The decision, document, obligation and remittance a case names are
+        read-only references. Nothing a case does changes them, and support
+        cannot refund, file, pay or edit a rule (SUP-03, SUP-04, SUP-11).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportCaseRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  type: LEGAL
+                  severity: S2
+                  subject: Letter from the tax authority about September VAT
+                  description: The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.
+                  product: Telecom VAT
+                  references:
+                    decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                  evidence:
+                    - sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+      responses:
+        "201":
+          description: The case, opened.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCase"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    type: LEGAL
+                    openedType: LEGAL
+                    severity: S2
+                    subject: Letter from the tax authority about September VAT
+                    description: The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.
+                    product:
+                      Telecom VAT references:
+                        decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                      evidence:
+                        - sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                      status: NEW
+                      missingFacts: []
+                      clocks:
+                        slaDueAt: 2026-10-02T09:00:00.000000Z
+                        sla: ON_TRACK
+                        statutory: NONE
+                        statutoryPrecedes: false
+                        dueAt: 2026-10-02T09:00:00.000000Z
+                      actions:
+                        - VERIFY
+                        - ASSIGN
+                        - REQUEST_EVIDENCE
+                        - ADD_EVIDENCE
+                        - NOTE
+                        - REQUEST_LEGAL_HOLD
+                      signOffRequired: true
+                      signedOff: false
+                      responded: false
+                      openedAt: 2026-10-01T09:00:00.000000Z
+                      openedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      history:
+                        - seq: 1
+                          action: OPENED
+                          status: NEW
+                          recordedAt: 2026-10-01T09:00:00.000000Z
+                          recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/support/cases/{caseId}:
+    get:
+      operationId: getSupportCase
+      tags:
+        - support
+      summary: One support case, its clocks and its history
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        The case as its history folds now: the current classification, the
+        actions its status allows, the closure guard's inputs, and both clocks
+        read as of now. Reading changes nothing.
+      parameters:
+        - $ref: "#/components/parameters/SupportCaseId"
+      responses:
+        "200":
+          description: The case.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCase"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    type: LEGAL
+                    openedType: LEGAL
+                    severity: S2
+                    subject: Letter from the tax authority about September VAT
+                    description: The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.
+                    product: Telecom VAT
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    fiscalPeriod: 2026-09
+                    contractRef: MSA-2026-014
+                    references:
+                      decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    evidence:
+                      - sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                    status: TRIAGED
+                    missingFacts: []
+                    clocks:
+                      slaDueAt: 2026-10-02T09:00:00.000000Z
+                      sla: ON_TRACK
+                      statutoryDueAt: 2026-10-01T17:00:00.000000Z
+                      statutory: AT_RISK
+                      statutoryPrecedes: true
+                      dueAt: 2026-10-01T17:00:00.000000Z
+                    actions:
+                      - ASSIGN
+                      - REQUEST_EVIDENCE
+                      - ADD_EVIDENCE
+                      - START_REVIEW
+                      - ESCALATE
+                      - NOTE
+                      - REQUEST_LEGAL_HOLD
+                    signOffRequired: true
+                    signedOff: false
+                    responded: false
+                    openedAt: 2026-10-01T09:00:00.000000Z
+                    openedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - seq: 1
+                        action: OPENED
+                        status: NEW
+                        recordedAt: 2026-10-01T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        action: VERIFY
+                        status: VERIFIED
+                        note: Caller confirmed as the customer's named tax contact
+                        recordedAt: 2026-10-01T09:05:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 3
+                        action: TRIAGE
+                        status: TRIAGED
+                        fiscalPeriod: 2026-09
+                        contractRef: MSA-2026-014
+                        statutoryDueAt: 2026-10-01T17:00:00.000000Z
+                        recordedAt: 2026-10-01T09:10:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/support/cases/{caseId}/actions:
+    post:
+      operationId: actOnSupportCase
+      tags:
+        - support
+      summary: Take one action on a support case
+      description: |
+        `ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Every action appends one event to the case's single audited history;
+        nothing is edited. `VERIFY` moves `NEW` to `VERIFIED`. `TRIAGE`
+        classifies the case and moves it to `TRIAGED`, or to
+        `TRIAGE_INCOMPLETE` with the facts requested when the contract, the
+        impacted period or the seller is missing (SUP-02). `START_REVIEW` and
+        `ESCALATE` move it to `IN_REVIEW`; `RESPOND` records the customer
+        response, `RESOLVE` follows it, and `CLOSE` ends the case.
+        `REOPEN` takes a resolved or closed case back to `IN_REVIEW`, linked to
+        the event it reverses (SUP-07). `ASSIGN`, `REQUEST_EVIDENCE`,
+        `ADD_EVIDENCE`, `SIGN_OFF`, `NOTE` and `REQUEST_LEGAL_HOLD` change no
+        status; a legal hold request is recorded for an administrator, and
+        places no hold.
+
+        `CLOSE` needs a customer response since the last reopening, or
+        `409 STATE_TRANSITION_INVALID` (SUP-14). A case that is, or was ever,
+        `LEGAL` or `TAX_SPECIALIST` also needs a sign-off since the last
+        reopening by someone other than its opener, or `409 SIGN_OFF_REQUIRED`;
+        the opener's own sign-off is `403 SEGREGATION_OF_DUTIES` (T18-18).
+
+        Neither clock is reset: a raised severity can bring the SLA due time
+        earlier, measured from opening, and a statutory deadline once recorded
+        is never changed by support (SUP-07). An action the status does not
+        allow is `409 STATE_TRANSITION_INVALID`.
+      parameters:
+        - $ref: "#/components/parameters/SupportCaseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportCaseActionRequest"
+            examples:
+              verify:
+                summary: Verify the requester
+                value:
+                  action: VERIFY
+                  note: Caller confirmed as the customer's named tax contact
+              escalate:
+                summary: Escalate to counsel
+                value:
+                  action: ESCALATE
+                  escalateTo: LEGAL
+                  note: The customer asks how to answer the authority; counsel to review before we respond.
+      responses:
+        "200":
+          description: The case as it stands now.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCase"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    type: LEGAL
+                    openedType: LEGAL
+                    severity: S2
+                    subject: Letter from the tax authority about September VAT
+                    description: The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.
+                    product: Telecom VAT
+                    references:
+                      decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    evidence:
+                      - sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                    status: VERIFIED
+                    missingFacts: []
+                    clocks:
+                      slaDueAt: 2026-10-02T09:00:00.000000Z
+                      sla: ON_TRACK
+                      statutory: NONE
+                      statutoryPrecedes: false
+                      dueAt: 2026-10-02T09:00:00.000000Z
+                    actions:
+                      - TRIAGE
+                      - ASSIGN
+                      - REQUEST_EVIDENCE
+                      - ADD_EVIDENCE
+                      - NOTE
+                      - REQUEST_LEGAL_HOLD
+                    signOffRequired: true
+                    signedOff: false
+                    responded: false
+                    openedAt: 2026-10-01T09:00:00.000000Z
+                    openedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - seq: 1
+                        action: OPENED
+                        status: NEW
+                        recordedAt: 2026-10-01T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        action: VERIFY
+                        status: VERIFIED
+                        note: Caller confirmed as the customer's named tax contact
+                        recordedAt: 2026-10-01T09:05:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/contributions:
+    get:
+      operationId: listContributions
+      tags:
+        - contributions
+      summary: The source event explorer
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        Provider contributions, newest first, in any status: a quarantined event
+        is listed with its hold, never hidden. A provider contribution is the
+        operator's own obligation on its eligible revenue; recovery charged to end
+        users is not the contribution payable and is not listed here
+        (UAT-OBL-032, -033).
+      parameters:
+        - name: period
+          in: query
+          required: false
+          description: Only contributions of this period.
+          schema:
+            $ref: "#/components/schemas/LegalPeriod"
+          example: 2026-09
+        - name: regime
+          in: query
+          required: false
+          description: Only contributions to this fund.
+          schema:
+            $ref: "#/components/schemas/ContributionRegime"
+          example: US_USF
+        - name: status
+          in: query
+          required: false
+          description: Only contributions in this status.
+          schema:
+            $ref: "#/components/schemas/ContributionStatus"
+          example: QUARANTINED
+        - name: legalEntityId
+          in: query
+          required: false
+          description: Only contributions of this member legal entity.
+          schema:
+            $ref: "#/components/schemas/LegalEntityId"
+          example: 01920a4c-0000-7000-8000-00000000e001
+        - name: sourceType
+          in: query
+          required: false
+          description: Only contributions from this kind of source.
+          schema:
+            $ref: "#/components/schemas/ContributionSourceType"
+          example: BSS_INVOICE
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The contributions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderContributionList"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    contributions:
+                      - id: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        sourceEventId: BSS-INV-2026-09-000123
+                        sourceVersion: 1
+                        sourceType: BSS_INVOICE
+                        sourceChecksum: sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                        regime: US_USF
+                        period: 2026-09
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        classificationRef: usf:interstate-telecom
+                        situsRef: US
+                        sourceRef: INV-2026-000123
+                        componentRef: line:1/voice-interstate
+                        ruleVersion: usf-499a@2026.1
+                        currency: USD
+                        eligibleBase: "1250.00"
+                        excludedBase: "250.00"
+                        exclusionReason: International-only revenue, outside the contribution base
+                        amendment: false
+                        immutableHash: zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c
+                        status: QUARANTINED
+                        recordedAt: 2026-10-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                        history:
+                          - seq: 1
+                            kind: RECORDED
+                            status: ACCEPTED
+                            recordedAt: 2026-10-02T09:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                          - seq: 2
+                            kind: QUARANTINED
+                            status: QUARANTINED
+                            reason: The September billing extract was imported twice under new file ids
+                            recordedAt: 2026-10-03T08:30:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: recordContribution
+      tags:
+        - contributions
+      summary: Record a provider contribution from one source event
+      description: |
+        `OPERATOR`, signed in as themselves.
+
+        Records the contribution base one source event carries — a BSS invoice,
+        rated usage, a revenue-recognition adjustment, a licence-activity event or
+        a manual certified schedule — with its eligibility: classification, situs,
+        eligible and excluded base, the reason for any exclusion and the rule
+        version that decided it. Amounts are canonical decimal strings in the
+        event's one currency, added exactly by the cell (UAT-OBL-034). The member
+        legal entity defaults to the tenant's default entity.
+
+        **Idempotent on the source event and version**, not on an
+        `Idempotency-Key`: the source system already names each event, and that
+        name is the record's identity. The same payload again returns the record
+        already made with `200`; a different payload under the same key is
+        `409 SOURCE_EVENT_CONFLICT`, and the first record stands (UAT-OBL-026).
+        A correction is a new version, or a reversal.
+
+        A reversal names the source event it reverses in `reverses` and carries
+        negative bases; it is a contribution of its own, never an edit, and an
+        original is reversed at most once (`409 ALREADY_EXISTS`) and by no more
+        than it contributed (UAT-OBL-027). A reversal whose original is not yet
+        recorded is accepted, and its period is `DATA_INCOMPLETE` until the
+        original arrives. An event recorded after its period has ended is
+        flagged as an `amendment`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContributionRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  sourceEventId: BSS-INV-2026-09-000123
+                  sourceVersion: 1
+                  sourceType: BSS_INVOICE
+                  sourceChecksum: sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                  regime: US_USF
+                  period: 2026-09
+                  classificationRef: usf:interstate-telecom
+                  situsRef: US
+                  sourceRef: INV-2026-000123
+                  componentRef: line:1/voice-interstate
+                  ruleVersion: usf-499a@2026.1
+                  currency: USD
+                  eligibleBase: "1250.00"
+                  excludedBase: "250.00"
+                  exclusionReason: International-only revenue, outside the contribution base
+      responses:
+        "200":
+          description: The contribution this source event and version already recorded, with the same payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderContribution"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    sourceEventId: BSS-INV-2026-09-000123
+                    sourceVersion: 1
+                    sourceType: BSS_INVOICE
+                    sourceChecksum: sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                    regime: US_USF
+                    period: 2026-09
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    classificationRef: usf:interstate-telecom
+                    situsRef: US
+                    sourceRef: INV-2026-000123
+                    componentRef: line:1/voice-interstate
+                    ruleVersion: usf-499a@2026.1
+                    currency: USD
+                    eligibleBase: "1250.00"
+                    excludedBase: "250.00"
+                    exclusionReason: International-only revenue, outside the contribution base
+                    amendment: false
+                    immutableHash: zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c
+                    status: ACCEPTED
+                    recordedAt: 2026-10-02T09:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - seq: 1
+                        kind: RECORDED
+                        status: ACCEPTED
+                        recordedAt: 2026-10-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "201":
+          description: The contribution, recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderContribution"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    sourceEventId: BSS-INV-2026-09-000123
+                    sourceVersion: 1
+                    sourceType: BSS_INVOICE
+                    sourceChecksum: sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                    regime: US_USF
+                    period: 2026-09
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    classificationRef: usf:interstate-telecom
+                    situsRef: US
+                    sourceRef: INV-2026-000123
+                    componentRef: line:1/voice-interstate
+                    ruleVersion: usf-499a@2026.1
+                    currency: USD
+                    eligibleBase: "1250.00"
+                    excludedBase: "250.00"
+                    exclusionReason: International-only revenue, outside the contribution base
+                    amendment: false
+                    immutableHash: zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c
+                    status: ACCEPTED
+                    recordedAt: 2026-10-02T09:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - seq: 1
+                        kind: RECORDED
+                        status: ACCEPTED
+                        recordedAt: 2026-10-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/contributions/summary:
+    get:
+      operationId: getContributionSummary
+      tags:
+        - contributions
+      summary: A period's control totals
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        Control totals per member legal entity, regime and currency: accepted and
+        quarantined counts, the exact eligible and excluded totals with reversals
+        included as negatives, and the period contribution digest — the canonical
+        digest of the sorted immutable hashes of the accepted events, so it does
+        not depend on arrival order. Quarantined events are counted, never summed.
+        A group is `DATA_INCOMPLETE` while an event is quarantined or a reversal
+        names an original the ledger does not hold.
+
+        These totals are the provider's contribution base. They are not, and are
+        never reconciled as, the recovery charged to customers (UAT-OBL-033).
+      parameters:
+        - name: period
+          in: query
+          required: true
+          description: The period, YYYY-MM.
+          schema:
+            $ref: "#/components/schemas/LegalPeriod"
+          example: 2026-09
+      responses:
+        "200":
+          description: The period's control totals.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContributionSummary"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    period: 2026-09
+                    dataIncomplete: true
+                    groups:
+                      - legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        regime: US_USF
+                        currency: USD
+                        status: DATA_INCOMPLETE
+                        incompleteReasons:
+                          - QUARANTINED_EVENTS
+                        acceptedCount: 41
+                        quarantinedCount: 1
+                        reversalCount: 2
+                        amendmentCount: 0
+                        eligibleTotal: "48210.75"
+                        excludedTotal: "3120.00"
+                        reversedTotal: "-640.00"
+                        periodDigest: zt1:3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e
+                        sourceChecksums:
+                          - sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/contributions/{contributionId}/trace:
+    get:
+      operationId: getContributionTrace
+      tags:
+        - contributions
+      summary: Drill from a contribution to its source, history and links
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        One contribution with its source event, classified component and
+        eligibility, its status history, and its links: the original it reverses
+        when the ledger holds it, and the reversal of it when one is recorded.
+        `originalMissing` is true for a reversal whose original has not arrived.
+      parameters:
+        - $ref: "#/components/parameters/ContributionId"
+      responses:
+        "200":
+          description: The contribution and its links.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContributionTrace"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    originalMissing: false
+                    contribution:
+                      id: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                      sourceEventId: BSS-INV-2026-09-000123
+                      sourceVersion: 1
+                      sourceType: BSS_INVOICE
+                      sourceChecksum: sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                      regime: US_USF
+                      period: 2026-09
+                      legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                      classificationRef: usf:interstate-telecom
+                      situsRef: US
+                      sourceRef: INV-2026-000123
+                      componentRef: line:1/voice-interstate
+                      ruleVersion: usf-499a@2026.1
+                      currency: USD
+                      eligibleBase: "1250.00"
+                      excludedBase: "250.00"
+                      exclusionReason: International-only revenue, outside the contribution base
+                      amendment: false
+                      immutableHash: zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c
+                      status: ACCEPTED
+                      recordedAt: 2026-10-02T09:00:00.000000Z
+                      recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      history:
+                        - seq: 1
+                          kind: RECORDED
+                          status: ACCEPTED
+                          recordedAt: 2026-10-02T09:00:00.000000Z
+                          recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    reversal:
+                      id: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e02
+                      sourceEventId: BSS-CRN-2026-10-000017
+                      sourceVersion: 1
+                      sourceType: BSS_INVOICE
+                      regime: US_USF
+                      period: 2026-10
+                      legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                      classificationRef: usf:interstate-telecom
+                      situsRef: US
+                      sourceRef: CRN-2026-000017
+                      ruleVersion: usf-499a@2026.1
+                      currency: USD
+                      eligibleBase: "-1250.00"
+                      excludedBase: "-250.00"
+                      exclusionReason: Reverses the international-only part of the original
+                      reverses:
+                        sourceEventId: BSS-INV-2026-09-000123
+                        sourceVersion: 1
+                      amendment: false
+                      immutableHash: zt1:0b2d4f6a8c1e3b5d7f9a0c2e4b6d8f1a3c5e7b9d0f2a4c6e8b1d3f5a7c9e0b2d
+                      status: ACCEPTED
+                      recordedAt: 2026-10-20T11:00:00.000000Z
+                      recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      history:
+                        - seq: 1
+                          kind: RECORDED
+                          status: ACCEPTED
+                          recordedAt: 2026-10-20T11:00:00.000000Z
+                          recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/contributions/{contributionId}/quarantine:
+    post:
+      operationId: quarantineContribution
+      tags:
+        - contributions
+      summary: Hold an incorrect import out of the control totals
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Holds an accepted contribution out of the control totals, with its
+        reason. Nothing is deleted: the contribution stays listed with its hold,
+        its period is `DATA_INCOMPLETE`, and a release puts it back. Only an
+        accepted contribution is quarantined (`409 STATE_TRANSITION_INVALID`).
+      parameters:
+        - $ref: "#/components/parameters/ContributionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContributionTransitionRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  reason: The September billing extract was imported twice under new file ids
+      responses:
+        "200":
+          description: The contribution, quarantined.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderContribution"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    sourceEventId: BSS-INV-2026-09-000123
+                    sourceVersion: 1
+                    sourceType: BSS_INVOICE
+                    sourceChecksum: sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                    regime: US_USF
+                    period: 2026-09
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    classificationRef: usf:interstate-telecom
+                    situsRef: US
+                    sourceRef: INV-2026-000123
+                    componentRef: line:1/voice-interstate
+                    ruleVersion: usf-499a@2026.1
+                    currency: USD
+                    eligibleBase: "1250.00"
+                    excludedBase: "250.00"
+                    exclusionReason: International-only revenue, outside the contribution base
+                    amendment: false
+                    immutableHash: zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c
+                    status: QUARANTINED
+                    recordedAt: 2026-10-02T09:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - seq: 1
+                        kind: RECORDED
+                        status: ACCEPTED
+                        recordedAt: 2026-10-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: QUARANTINED
+                        status: QUARANTINED
+                        reason: The September billing extract was imported twice under new file ids
+                        recordedAt: 2026-10-03T08:30:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/contributions/{contributionId}/release:
+    post:
+      operationId: releaseContribution
+      tags:
+        - contributions
+      summary: Return a quarantined contribution to the control totals
+      description: |
+        `ANALYST`, signed in as themselves.
+
+        Releases a quarantined contribution, with its reason, back into the
+        control totals. Four eyes: the person who quarantined it cannot release
+        it (`403 MAKER_CHECKER`). Only a quarantined contribution is released
+        (`409 STATE_TRANSITION_INVALID`).
+      parameters:
+        - $ref: "#/components/parameters/ContributionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContributionTransitionRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  reason: Checked against the billing extract; the events are distinct
+      responses:
+        "200":
+          description: The contribution, accepted again.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderContribution"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    sourceEventId: BSS-INV-2026-09-000123
+                    sourceVersion: 1
+                    sourceType: BSS_INVOICE
+                    sourceChecksum: sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                    regime: US_USF
+                    period: 2026-09
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    classificationRef: usf:interstate-telecom
+                    situsRef: US
+                    sourceRef: INV-2026-000123
+                    componentRef: line:1/voice-interstate
+                    ruleVersion: usf-499a@2026.1
+                    currency: USD
+                    eligibleBase: "1250.00"
+                    excludedBase: "250.00"
+                    exclusionReason: International-only revenue, outside the contribution base
+                    amendment: false
+                    immutableHash: zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c
+                    status: ACCEPTED
+                    recordedAt: 2026-10-02T09:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - seq: 1
+                        kind: RECORDED
+                        status: ACCEPTED
+                        recordedAt: 2026-10-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/notices:
+    get:
+      operationId: listNotices
+      tags:
+        - notices
+      summary: The regulatory notice register
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. Every notice, assessment,
+        audit, appeal and information request registered, in working order:
+        unknown statutory deadlines first, then the soonest deadline in force;
+        closed notices only when asked for. Each carries the flags that need
+        attention now — an unknown or unverified deadline, unresolved
+        authenticity or recipient (an urgent legal review: W17, SUP-05,
+        SUP-08), a deadline soon or passed, a breached internal SLA.
+      parameters:
+        - name: type
+          in: query
+          required: false
+          description: Only notices of this type.
+          schema:
+            $ref: "#/components/schemas/NoticeType"
+          example: ASSESSMENT
+        - name: status
+          in: query
+          required: false
+          description: Only notices in this status.
+          schema:
+            $ref: "#/components/schemas/NoticeStatus"
+          example: LEGAL_REVIEW
+        - name: authority
+          in: query
+          required: false
+          description: Only notices from this authority (case-insensitive).
+          schema:
+            $ref: "#/components/schemas/AuthorityCode"
+          example: DE-BZST
+        - name: legalEntityId
+          in: query
+          required: false
+          description: Only notices addressed to this legal entity
+          as resolved.: null
+          schema:
+            $ref: "#/components/schemas/LegalEntityId"
+          example: 01920a4c-0000-7000-8000-00000000e001
+        - name: authorityReference
+          in: query
+          required: false
+          description: Only notices whose authority reference contains this text.
+          schema:
+            $ref: "#/components/schemas/AuthorityReference"
+          example: ST-2026
+        - name: receivedFrom
+          in: query
+          required: false
+          description: Only notices received at or after this instant.
+          schema:
+            $ref: "#/components/schemas/Timestamp"
+          example: 2026-10-01T00:00:00.000000Z
+        - name: receivedTo
+          in: query
+          required: false
+          description: Only notices received at or before this instant.
+          schema:
+            $ref: "#/components/schemas/Timestamp"
+          example: 2026-10-31T23:59:59.999999Z
+        - name: period
+          in: query
+          required: false
+          description: Only notices whose period contains this date.
+          schema:
+            $ref: "#/components/schemas/CivilDate"
+          example: 2026-08-15
+        - name: amountMin
+          in: query
+          required: false
+          description: Only notices stating at least this amount
+          in `currency`. Compared exactly on the server.: null
+          schema:
+            $ref: "#/components/schemas/Decimal"
+          example: "1000.00"
+        - name: amountMax
+          in: query
+          required: false
+          description: Only notices stating at most this amount
+          in `currency`.: null
+          schema:
+            $ref: "#/components/schemas/Decimal"
+          example: "50000.00"
+        - name: currency
+          in: query
+          required: false
+          description: The currency `amountMin` and `amountMax` are in. Required with either.
+          schema:
+            $ref: "#/components/schemas/CurrencyCode"
+          example: EUR
+        - name: attachmentSha256
+          in: query
+          required: false
+          description: Only notices with a document of this SHA-256 recorded.
+          schema:
+            $ref: "#/components/schemas/Sha256Hex"
+          example: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+        - name: authenticity
+          in: query
+          required: false
+          description: Only notices whose authenticity is this.
+          schema:
+            $ref: "#/components/schemas/NoticeAuthenticity"
+          example: UNKNOWN
+        - name: urgent
+          in: query
+          required: false
+          description: Only notices flagged for urgent legal review.
+          schema:
+            $ref: "#/components/schemas/NoticeQueryFlag"
+          example: true
+        - name: includeClosed
+          in: query
+          required: false
+          description: Include closed notices when no status is asked for.
+          schema:
+            $ref: "#/components/schemas/NoticeQueryFlag"
+          example: false
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The notices, in working order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoticeList"
+              examples:
+                default:
+                  summary: One assessment in legal review
+                  value:
+                    notices:
+                      - id: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        type: ASSESSMENT
+                        authority: DE-BZST
+                        jurisdiction: DE
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        entityAmbiguous: false
+                        entityResolved: true
+                        authorityReference: ST-2026-0042
+                        receivedAt: 2026-10-01T09:00:00.000000Z
+                        periodStart: 2026-07-01
+                        periodEnd: 2026-09-30
+                        amount:
+                          amount: "1250.00"
+                          currency: EUR
+                        links:
+                          - kind: RETURN
+                            reference: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                        status: LEGAL_REVIEW
+                        authenticity: VERIFIED
+                        escalated: false
+                        flags:
+                          - DEADLINE_SOON
+                        urgentLegalReview: false
+                        statutoryDeadline:
+                          original:
+                            kind: ORIGINAL
+                            dueDate: 2026-10-31
+                            dueAt: 2026-10-31T22:59:59.999999Z
+                            timezone: Europe/Berlin
+                            source: STATED_ON_NOTICE
+                            verified: true
+                          current:
+                            kind: ORIGINAL
+                            dueDate: 2026-10-31
+                            dueAt: 2026-10-31T22:59:59.999999Z
+                            timezone: Europe/Berlin
+                            source: STATED_ON_NOTICE
+                            verified: true
+                        sla:
+                          ownerId: 01920a4c-0000-7000-8000-0000000000a2
+                          dueAt: 2026-10-24T17:00:00.000000Z
+                          breached: false
+                        deadlines:
+                          - seq: 1
+                            kind: ORIGINAL
+                            dueDate: 2026-10-31
+                            dueAt: 2026-10-31T22:59:59.999999Z
+                            timezone: Europe/Berlin
+                            source: STATED_ON_NOTICE
+                            verified: true
+                            evidence: Stated on page 1 of the notice.
+                            recordedAt: 2026-10-01T09:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                        attachments: []
+                        allowedActions:
+                          - PREPARE_RESPONSE
+                          - RECORD_AUTHENTICITY
+                          - RESOLVE_ENTITY
+                          - RECORD_DEADLINE
+                          - ESCALATE
+                          - ASSIGN_OWNER
+                          - RECORD_ATTACHMENT
+                          - CLOSE
+                        asOf: 2026-10-27T09:00:00.000000Z
+                        createdAt: 2026-10-01T09:00:00.000000Z
+                        createdBy: 01920a4c-0000-7000-8000-0000000000a1
+                        history:
+                          - seq: 1
+                            kind: RECEIVED
+                            status: RECEIVED
+                            recordedAt: 2026-10-01T09:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: createNotice
+      tags:
+        - notices
+      summary: Register a notice as received
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Registers a notice, assessment, audit, appeal or information request
+        with its authority, recipient, the authority's reference and the
+        statutory deadline as received — its date in the authority's calendar,
+        timezone, source and whether anyone verified it. Not a support due
+        date. An unknown or unverified deadline is flagged for urgent legal
+        review (W17). A notice with no legal entity, or one marked ambiguous,
+        goes straight to `LEGAL_REVIEW` and nothing answers it automatically
+        (SUP-08). Links are references only; registering a notice changes no
+        return, ledger or rule.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoticeRequest"
+            examples:
+              default:
+                summary: An assessment with a stated deadline, recipient to be resolved
+                value:
+                  type: ASSESSMENT
+                  authority: DE-BZST
+                  jurisdiction: DE
+                  authorityReference: ST-2026-0042
+                  receivedAt: 2026-10-01T09:00:00.000000Z
+                  periodStart: 2026-07-01
+                  periodEnd: 2026-09-30
+                  amount:
+                    amount: "1250.00"
+                    currency: EUR
+                  links:
+                    - kind: RETURN
+                      reference: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                  deadline:
+                    dueDate: 2026-10-31
+                    timezone: Europe/Berlin
+                    source: STATED_ON_NOTICE
+                    verified: true
+                  deadlineEvidence: Stated on page 1 of the notice.
+      responses:
+        "201":
+          $ref: "#/components/responses/NoticeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/notices/{noticeId}:
+    get:
+      operationId: getNotice
+      tags:
+        - notices
+      summary: One notice, its deadline ledger, SLA clock and history
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. The statutory deadline in
+        force beside the original as received, every confirmation and
+        extension with its evidence, the separate internal SLA clock, the
+        recorded documents, the history, and the actions the status admits.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/notices/{noticeId}/deadlines:
+    get:
+      operationId: getNoticeDeadlines
+      tags:
+        - notices
+      summary: The statutory deadline ledger
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. The original deadline as
+        received, then every confirmation, extension and appeal deadline in
+        order, each with its evidence. The original is never rewritten
+        (T18-17).
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      responses:
+        "200":
+          description: The ledger.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoticeDeadlineLedger"
+              examples:
+                default:
+                  summary: An original deadline and one extension
+                  value:
+                    noticeId: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    original:
+                      kind: ORIGINAL
+                      dueDate: 2026-10-31
+                      dueAt: 2026-10-31T22:59:59.999999Z
+                      timezone: Europe/Berlin
+                      source: STATED_ON_NOTICE
+                      verified: true
+                    current:
+                      kind: EXTENSION
+                      dueDate: 2026-11-30
+                      dueAt: 2026-11-30T22:59:59.999999Z
+                      timezone: Europe/Berlin
+                      source: AUTHORITY_CONFIRMATION
+                      verified: true
+                    overdue: false
+                    entries:
+                      - seq: 1
+                        kind: ORIGINAL
+                        dueDate: 2026-10-31
+                        dueAt: 2026-10-31T22:59:59.999999Z
+                        timezone: Europe/Berlin
+                        source: STATED_ON_NOTICE
+                        verified: true
+                        evidence: Stated on page 1 of the notice.
+                        recordedAt: 2026-10-01T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 6
+                        kind: EXTENSION
+                        dueDate: 2026-11-30
+                        dueAt: 2026-11-30T22:59:59.999999Z
+                        timezone: Europe/Berlin
+                        source: AUTHORITY_CONFIRMATION
+                        verified: true
+                        evidence: Extension letter of 20 October.
+                        authorityReference: EXT-2026-77
+                        recordedAt: 2026-10-21T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: recordNoticeDeadline
+      tags:
+        - notices
+      summary: Confirm or extend the statutory deadline
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        A `CONFIRMATION` verifies the deadline in force, or establishes an
+        unknown one; it never moves a known date (`409 NOTICE_DEADLINE_UNVERIFIED`).
+        An `EXTENSION` moves the date later: it needs a verified deadline to
+        extend (W17 — no fabricated extension), the grant verified, evidence,
+        and the authority's reference or a recorded document. The ledger keeps
+        the original; the internal SLA is unaffected (T18-17).
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeDeadlineRequest"
+            examples:
+              default:
+                summary: An extension granted by letter
+                value:
+                  kind: EXTENSION
+                  dueDate: 2026-11-30
+                  timezone: Europe/Berlin
+                  source: AUTHORITY_CONFIRMATION
+                  verified: true
+                  evidence: Extension letter of 20 October.
+                  authorityReference: EXT-2026-77
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/notices/{noticeId}/transitions:
+    post:
+      operationId: transitionNotice
+      tags:
+        - notices
+      summary: Move a notice through review, or close it
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        `AUTHENTICITY_REVIEW` from `RECEIVED`; `LEGAL_REVIEW` from
+        `AUTHENTICITY_REVIEW` once authenticity is verified (otherwise
+        `403 NOTICE_LEGAL_VALIDATION_REQUIRED`: escalate instead, SUP-05),
+        from `APPEAL`, or from `RESPONSE_APPROVED` with a reason; `CLOSED`
+        from `OUTCOME_RECORDED`, or from `LEGAL_REVIEW` on a documented
+        escalation (`403 NOTICE_CLOSURE_BLOCKED` otherwise). Nothing leaves
+        `CLOSED`, and no move resets the statutory clock (T18-17). Approval,
+        submission, outcome and appeal are their own actions.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeTransitionRequest"
+            examples:
+              default:
+                summary: Start authenticity review
+                value:
+                  to: AUTHENTICITY_REVIEW
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/notices/{noticeId}/authenticity:
+    post:
+      operationId: recordNoticeAuthenticity
+      tags:
+        - notices
+      summary: Record whether the notice is authentic
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Records `VERIFIED`, `UNVERIFIABLE` or `NOT_AUTHENTIC` with how it was
+        established. Anything but `VERIFIED` escalates to legal validation in
+        the same act and voids an approved answer; nothing is accepted as
+        genuine that is not (SUP-05).
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeAuthenticityRequest"
+            examples:
+              default:
+                summary: Verified with the authority
+                value:
+                  authenticity: VERIFIED
+                  evidence: Confirmed by phone on the authority's published number.
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/notices/{noticeId}/escalations:
+    post:
+      operationId: escalateNotice
+      tags:
+        - notices
+      summary: Escalate a notice to legal
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Sends the notice to legal with the question asked. From `RECEIVED` or
+        `AUTHENTICITY_REVIEW` it moves to `LEGAL_REVIEW`. Evidence — counsel's
+        reference, a memo — makes it a documented escalation, which is what a
+        disposition without an authority outcome rests on.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeEscalationRequest"
+            examples:
+              default:
+                summary: Ask legal to verify the deadline
+                value:
+                  reason: DEADLINE_UNVERIFIED
+                  note: The notice gives no response date; legal to confirm the statutory period.
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/notices/{noticeId}/entity:
+    post:
+      operationId: resolveNoticeEntity
+      tags:
+        - notices
+      summary: Resolve the recipient legal entity
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Records which of the tenant's legal entities the notice is addressed
+        to, with how that was established (SUP-08). Until it is resolved no
+        answer is approved.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeEntityRequest"
+            examples:
+              default:
+                summary: Tax number matches
+                value:
+                  legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                  evidence: The tax number on the notice is this entity's.
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/notices/{noticeId}/owner:
+    post:
+      operationId: assignNoticeOwner
+      tags:
+        - notices
+      summary: Assign the deadline owner and internal SLA
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Names the person who owns the deadline, and our internal SLA target.
+        The SLA is a separate clock: it never moves the statutory deadline
+        (T18-17).
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeOwnerRequest"
+            examples:
+              default:
+                summary: Owner with an SLA a week before the deadline
+                value:
+                  ownerId: 01920a4c-0000-7000-8000-0000000000a2
+                  slaDue: 2026-10-24T17:00:00.000000Z
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/notices/{noticeId}/attachments:
+    post:
+      operationId: recordNoticeAttachment
+      tags:
+        - notices
+      summary: Record a document as evidence
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Records a document by its SHA-256, file name and media type. The
+        document is not uploaded or stored here; the digest is what later
+        evidence cites. A digest already recorded is `409 ALREADY_EXISTS`.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeAttachmentRequest"
+            examples:
+              default:
+                summary: The scanned notice
+                value:
+                  sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                  filename: assessment-ST-2026-0042.pdf
+                  mediaType: application/pdf
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/notices/{noticeId}/response-packages:
+    post:
+      operationId: prepareNoticeResponse
+      tags:
+        - notices
+      summary: Prepare a response package
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Records a new response package version in `LEGAL_REVIEW`. From
+        `RESPONSE_APPROVED` it supersedes the approved version and returns the
+        notice to `LEGAL_REVIEW`; the deadline is untouched.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeResponsePackageRequest"
+            examples:
+              default:
+                summary: An objection
+                value:
+                  summary: Objection to the assessment with the Q3 reconciliation.
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/notices/{noticeId}/response-approval:
+    post:
+      operationId: approveNoticeResponse
+      tags:
+        - notices
+      summary: Approve the response package (four-eye)
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Approves the response package version named. The approver is never
+        the person who prepared it: `403 SEGREGATION_OF_DUTIES`. The notice's
+        authenticity is verified and its recipient resolved, or
+        `403 NOTICE_LEGAL_VALIDATION_REQUIRED` (SUP-05, SUP-08).
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeApprovalRequest"
+            examples:
+              default:
+                summary: Approve version 1
+                value:
+                  version: 1
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/notices/{noticeId}/submission:
+    post:
+      operationId: recordNoticeSubmission
+      tags:
+        - notices
+      summary: Record the response's receipt by the authority
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Records that the approved response reached the authority. It needs
+        the authority's submission receipt reference.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeSubmissionRequest"
+            examples:
+              default:
+                summary: Portal receipt
+                value:
+                  authorityReceiptReference: RCPT-2026-10-9981
+                  evidence: Portal confirmation page, saved.
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/notices/{noticeId}/outcome:
+    post:
+      operationId: recordNoticeOutcome
+      tags:
+        - notices
+      summary: Record what the authority decided
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Records the authority's decision on a submitted response or an
+        appeal, with its receipt or decision reference and the decision as
+        received. `settled: true` needs `AUTHORITY_CONFIRMED` or
+        `PAYMENT_SETTLED`; a pending payment instruction settles nothing
+        (`403 NOTICE_SETTLEMENT_UNPROVEN`, T18-20). The amount is recorded as
+        stated; nothing is posted.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeOutcomeRequest"
+            examples:
+              default:
+                summary: Adjusted, payment pending
+                value:
+                  outcome: ADJUSTED
+                  authorityReceiptReference: DEC-2026-311
+                  evidence: Decision letter of 12 November.
+                  amount:
+                    amount: "980.00"
+                    currency: EUR
+                  settled: false
+                  settlement: PAYMENT_INSTRUCTION_PENDING
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/notices/{noticeId}/appeal:
+    post:
+      operationId: lodgeNoticeAppeal
+      tags:
+        - notices
+      summary: Lodge an appeal against the outcome
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Opens the appeal branch after a recorded outcome. An appeal with a
+        hearing still to come keeps the matter open with its next deadline,
+        which is then required (SUP-16). The appeal deadline is a new ledger
+        entry; the original and every extension stay.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeAppealRequest"
+            examples:
+              default:
+                summary: Appeal with a hearing
+                value:
+                  nextDeadline:
+                    dueDate: 2027-01-15
+                    timezone: Europe/Berlin
+                    source: AUTHORITY_CONFIRMATION
+                    verified: true
+                  hearingDate: 2027-02-01
+                  evidence: Appeal lodged; acknowledgement letter of 20 November.
+                  authorityReference: APP-2026-18
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/shadow/comparators:
     get:
       operationId: listComparators
@@ -8760,6 +10743,14 @@ components:
       schema:
         $ref: "#/components/schemas/CompliancePackageId"
       example: 01920b10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+    NoticeId:
+      name: noticeId
+      in: path
+      required: true
+      description: The regulatory notice identifier.
+      schema:
+        $ref: "#/components/schemas/NoticeId"
+      example: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
     BeneficiaryId:
       name: beneficiaryId
       in: path
@@ -8776,6 +10767,22 @@ components:
       schema:
         $ref: "#/components/schemas/RemittanceId"
       example: 01920b30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+    SupportCaseId:
+      name: caseId
+      in: path
+      required: true
+      description: The support case identifier.
+      schema:
+        $ref: "#/components/schemas/SupportCaseId"
+      example: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+    ContributionId:
+      name: contributionId
+      in: path
+      required: true
+      description: The provider contribution identifier.
+      schema:
+        $ref: "#/components/schemas/ContributionId"
+      example: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
     ShadowRunId:
       name: shadowRunId
       in: path
@@ -9138,6 +11145,130 @@ components:
                 ztx_reason_code: RATE_LIMITED
                 ztx_request_id: 01JBQ0S9C3X8Q1H6M2KX5R7F4Q
                 ztx_retryable: true
+    NoticeResult:
+      description: The notice as it stands now.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Notice"
+          examples:
+            default:
+              summary: An assessment in legal review
+              value:
+                id: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                type: ASSESSMENT
+                authority: DE-BZST
+                jurisdiction: DE
+                legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                entityAmbiguous: false
+                entityResolved: true
+                resolvedLegalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                authorityReference: ST-2026-0042
+                receivedAt: 2026-10-01T09:00:00.000000Z
+                periodStart: 2026-07-01
+                periodEnd: 2026-09-30
+                amount:
+                  amount: "1250.00"
+                  currency: EUR
+                links:
+                  - kind: RETURN
+                    reference: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                status: LEGAL_REVIEW
+                authenticity: VERIFIED
+                escalated: false
+                flags: []
+                urgentLegalReview: false
+                statutoryDeadline:
+                  original:
+                    kind: ORIGINAL
+                    dueDate: 2026-10-31
+                    dueAt: 2026-10-31T22:59:59.999999Z
+                    timezone: Europe/Berlin
+                    source: STATED_ON_NOTICE
+                    verified: true
+                  current:
+                    kind: ORIGINAL
+                    dueDate: 2026-10-31
+                    dueAt: 2026-10-31T22:59:59.999999Z
+                    timezone: Europe/Berlin
+                    source: STATED_ON_NOTICE
+                    verified: true
+                sla:
+                  ownerId: 01920a4c-0000-7000-8000-0000000000a2
+                  dueAt: 2026-10-24T17:00:00.000000Z
+                  breached: false
+                deadlines:
+                  - seq: 1
+                    kind: ORIGINAL
+                    dueDate: 2026-10-31
+                    dueAt: 2026-10-31T22:59:59.999999Z
+                    timezone: Europe/Berlin
+                    source: STATED_ON_NOTICE
+                    verified: true
+                    evidence: Stated on page 1 of the notice.
+                    recordedAt: 2026-10-01T09:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                attachments:
+                  - sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                    filename: assessment-ST-2026-0042.pdf
+                    mediaType: application/pdf
+                    recordedAt: 2026-10-01T09:05:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                allowedActions:
+                  - PREPARE_RESPONSE
+                  - RECORD_AUTHENTICITY
+                  - RESOLVE_ENTITY
+                  - RECORD_DEADLINE
+                  - ESCALATE
+                  - ASSIGN_OWNER
+                  - RECORD_ATTACHMENT
+                  - CLOSE
+                asOf: 2026-10-02T09:00:00.000000Z
+                createdAt: 2026-10-01T09:00:00.000000Z
+                createdBy: 01920a4c-0000-7000-8000-0000000000a1
+                history:
+                  - seq: 1
+                    kind: RECEIVED
+                    status: RECEIVED
+                    deadline:
+                      kind: ORIGINAL
+                      dueDate: 2026-10-31
+                      dueAt: 2026-10-31T22:59:59.999999Z
+                      timezone: Europe/Berlin
+                      source: STATED_ON_NOTICE
+                      verified: true
+                    authenticity: UNKNOWN
+                    evidence: Stated on page 1 of the notice.
+                    ownerId: 01920a4c-0000-7000-8000-0000000000a2
+                    slaDue: 2026-10-24T17:00:00.000000Z
+                    recordedAt: 2026-10-01T09:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                  - seq: 2
+                    kind: ATTACHMENT_RECORDED
+                    status: RECEIVED
+                    attachment:
+                      sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                      filename: assessment-ST-2026-0042.pdf
+                      mediaType: application/pdf
+                    recordedAt: 2026-10-01T09:05:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                  - seq: 3
+                    kind: TRANSITIONED
+                    status: AUTHENTICITY_REVIEW
+                    recordedAt: 2026-10-01T10:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                  - seq: 4
+                    kind: AUTHENTICITY_RECORDED
+                    status: AUTHENTICITY_REVIEW
+                    authenticity: VERIFIED
+                    evidence: Confirmed by phone on the authority's published number.
+                    recordedAt: 2026-10-01T11:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                  - seq: 5
+                    kind: TRANSITIONED
+                    status: LEGAL_REVIEW
+                    recordedAt: 2026-10-01T11:05:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
   schemas:
     Problem:
       type: object
@@ -16620,6 +18751,1920 @@ components:
       properties:
         reason:
           $ref: "#/components/schemas/PaymentNote"
+    SupportCaseId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: SupportCaseId
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+    SupportUserId:
+      x-ztax-privacy:
+        class: P1
+        purposes:
+          - PURP-SUPPORT
+          - PURP-SEC
+        retention: RET-OPERATIONAL
+        redaction: NONE
+      type: string
+      title: SupportUserId
+      description: A person in the tenant who opened, owns or acted on a case.
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920a4c-0000-7000-8000-0000000000a2
+    SupportCaseType:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: SupportCaseType
+      description: What a case is about. It routes the case and grants nothing; `LEGAL` and `TAX_SPECIALIST` cases close only after an independent sign-off (T18-18).
+      enum:
+        - COVERAGE_ENTITLEMENT
+        - INVOICE_EXPLANATION
+        - TAX_SPECIALIST
+        - FILING
+        - REMITTANCE
+        - SECURITY
+        - LEGAL
+    SupportSeverity:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: SupportSeverity
+      description: How badly the customer is affected. It sets the support SLA — S1 4 hours, S2 24 hours, S3 72 hours, S4 7 days to the first customer response.
+      enum:
+        - S1
+        - S2
+        - S3
+        - S4
+    SupportCaseStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: SupportCaseStatus
+      description: |
+        NEW → VERIFIED → TRIAGED → IN_REVIEW → RESPONDED → RESOLVED → CLOSED.
+        TRIAGE_INCOMPLETE is a case lacking its contract, period or seller
+        facts (SUP-02). A resolved or closed case may be reopened to IN_REVIEW
+        (SUP-07).
+      enum:
+        - NEW
+        - VERIFIED
+        - TRIAGE_INCOMPLETE
+        - TRIAGED
+        - IN_REVIEW
+        - RESPONDED
+        - RESOLVED
+        - CLOSED
+    SupportCaseAction:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: SupportCaseAction
+      description: An act on a case. `OPENED` is recorded by opening the case and is never requested.
+      enum:
+        - OPENED
+        - VERIFY
+        - TRIAGE
+        - ASSIGN
+        - REQUEST_EVIDENCE
+        - ADD_EVIDENCE
+        - START_REVIEW
+        - ESCALATE
+        - RESPOND
+        - RESOLVE
+        - SIGN_OFF
+        - CLOSE
+        - REOPEN
+        - NOTE
+        - REQUEST_LEGAL_HOLD
+    SupportEscalationTarget:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: SupportEscalationTarget
+      description: Who an escalated case is routed to. Routing hands the case to people with authority; it gives support none.
+      enum:
+        - TAX_SPECIALIST
+        - LEGAL
+        - SECURITY
+        - FINANCE_OPERATIONS
+        - ENGINEERING
+    SupportFact:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: SupportFact
+      description: A fact triage needs before a case can be worked (SUP-02). `SELLER` is met by a legal entity or a seller reference.
+      enum:
+        - CONTRACT
+        - FISCAL_PERIOD
+        - SELLER
+    SupportClockState:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: SupportClockState
+      description: |
+        Where one clock stands now. The support SLA is ON_TRACK, AT_RISK (a
+        quarter of its window or less left), BREACHED, or MET (answered in
+        time). A statutory deadline is NONE, ON_TRACK, AT_RISK (72 hours or
+        less left) or PASSED.
+      enum:
+        - NONE
+        - ON_TRACK
+        - AT_RISK
+        - BREACHED
+        - MET
+        - PASSED
+    SupportNote:
+      x-ztax-privacy:
+        class: P2
+        purposes:
+          - PURP-SUPPORT
+        retention: RET-OPERATIONAL
+        redaction: REDACT
+        aiAllowed: NONE
+      type: string
+      title: SupportNote
+      minLength: 1
+      maxLength: 2000
+      description: Free text from the person acting — a response to the customer, a request, a sign-off or a note.
+    SupportReference:
+      x-ztax-privacy:
+        class: P2
+        purposes:
+          - PURP-SUPPORT
+        retention: RET-OPERATIONAL
+        redaction: REDACT
+        aiAllowed: NONE
+      type: string
+      title: SupportReference
+      minLength: 1
+      maxLength: 200
+      description: A customer's own reference — a contract number, a seller — as the customer gave it.
+    SupportEvidenceReference:
+      x-ztax-privacy:
+        class: P2
+        purposes:
+          - PURP-SUPPORT
+        retention: RET-OPERATIONAL
+        redaction: REDACT
+        aiAllowed: NONE
+      type: string
+      title: SupportEvidenceReference
+      minLength: 1
+      maxLength: 200
+      description: A reference to evidence — a hash or a document identifier — never the evidence itself.
+    SupportProduct:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: SupportProduct
+      minLength: 1
+      maxLength: 200
+      description: The product line a request concerns.
+    SupportCaseReferences:
+      type: object
+      title: SupportCaseReferences
+      description: What the case is about, by identifier. Read-only references; nothing a case does changes them (SUP-03, SUP-04, SUP-11).
+      additionalProperties: false
+      properties:
+        decisionId:
+          $ref: "#/components/schemas/DecisionId"
+        documentId:
+          $ref: "#/components/schemas/DocumentId"
+        obligationId:
+          $ref: "#/components/schemas/ObligationId"
+        remittanceId:
+          $ref: "#/components/schemas/RemittanceId"
+    SupportCaseClocks:
+      type: object
+      title: SupportCaseClocks
+      description: The case's two clocks, kept apart (SUP-06). Neither is reset by reopening or editing the case (SUP-07).
+      additionalProperties: false
+      required:
+        - slaDueAt
+        - sla
+        - statutory
+        - statutoryPrecedes
+        - dueAt
+      properties:
+        slaDueAt:
+          $ref: "#/components/schemas/Timestamp"
+        sla:
+          $ref: "#/components/schemas/SupportClockState"
+        firstResponseAt:
+          $ref: "#/components/schemas/Timestamp"
+        statutoryDueAt:
+          $ref: "#/components/schemas/Timestamp"
+        statutory:
+          $ref: "#/components/schemas/SupportClockState"
+        statutoryPrecedes:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: The statutory deadline falls before the SLA's due time, so it is the time the case must beat.
+        dueAt:
+          $ref: "#/components/schemas/Timestamp"
+    SupportCaseEvent:
+      type: object
+      title: SupportCaseEvent
+      description: One act on a case. Each carries only what it changed.
+      additionalProperties: false
+      required:
+        - seq
+        - action
+        - status
+        - recordedAt
+        - recordedBy
+      properties:
+        seq:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        action:
+          $ref: "#/components/schemas/SupportCaseAction"
+        status:
+          $ref: "#/components/schemas/SupportCaseStatus"
+        note:
+          $ref: "#/components/schemas/SupportNote"
+        type:
+          $ref: "#/components/schemas/SupportCaseType"
+        severity:
+          $ref: "#/components/schemas/SupportSeverity"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        fiscalPeriod:
+          $ref: "#/components/schemas/LegalPeriod"
+        contractRef:
+          $ref: "#/components/schemas/SupportReference"
+        sellerRef:
+          $ref: "#/components/schemas/SupportReference"
+        statutoryDueAt:
+          $ref: "#/components/schemas/Timestamp"
+        slaDueAt:
+          $ref: "#/components/schemas/Timestamp"
+        assignee:
+          $ref: "#/components/schemas/SupportUserId"
+        escalateTo:
+          $ref: "#/components/schemas/SupportEscalationTarget"
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportEvidenceReference"
+        missingFacts:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportFact"
+        reopens:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+          description: The sequence number of the resolution or closure this reopening reverses.
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          $ref: "#/components/schemas/SupportUserId"
+    SupportCase:
+      type: object
+      title: SupportCase
+      description: A support case, folded from its history. Not a fiscal record.
+      additionalProperties: false
+      required:
+        - id
+        - type
+        - openedType
+        - severity
+        - subject
+        - description
+        - references
+        - evidence
+        - status
+        - missingFacts
+        - clocks
+        - actions
+        - signOffRequired
+        - signedOff
+        - responded
+        - openedAt
+        - openedBy
+        - history
+      properties:
+        id:
+          $ref: "#/components/schemas/SupportCaseId"
+        type:
+          $ref: "#/components/schemas/SupportCaseType"
+        openedType:
+          $ref: "#/components/schemas/SupportCaseType"
+        severity:
+          $ref: "#/components/schemas/SupportSeverity"
+        subject:
+          x-ztax-privacy:
+            class: P2
+            purposes:
+              - PURP-SUPPORT
+            retention: RET-OPERATIONAL
+            redaction: REDACT
+            aiAllowed: NONE
+          type: string
+        description:
+          x-ztax-privacy:
+            class: P2
+            purposes:
+              - PURP-SUPPORT
+            retention: RET-OPERATIONAL
+            redaction: REDACT
+            aiAllowed: NONE
+          type: string
+        product:
+          $ref: "#/components/schemas/SupportProduct"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        fiscalPeriod:
+          $ref: "#/components/schemas/LegalPeriod"
+        contractRef:
+          $ref: "#/components/schemas/SupportReference"
+        sellerRef:
+          $ref: "#/components/schemas/SupportReference"
+        references:
+          $ref: "#/components/schemas/SupportCaseReferences"
+        assignee:
+          $ref: "#/components/schemas/SupportUserId"
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportEvidenceReference"
+        status:
+          $ref: "#/components/schemas/SupportCaseStatus"
+        escalatedTo:
+          $ref: "#/components/schemas/SupportEscalationTarget"
+        missingFacts:
+          type: array
+          description: What the latest incomplete triage asked for. Empty once triage is complete.
+          items:
+            $ref: "#/components/schemas/SupportFact"
+        clocks:
+          $ref: "#/components/schemas/SupportCaseClocks"
+        actions:
+          type: array
+          description: The actions the case's status allows now. `CLOSE` is listed only once its guards pass; the server checks every guard again when an action is taken.
+          items:
+            $ref: "#/components/schemas/SupportCaseAction"
+        signOffRequired:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: The case is, or was ever, LEGAL or TAX_SPECIALIST, so it closes only after an independent sign-off (T18-18).
+        signedOff:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: Someone other than the opener has signed off since the last reopening.
+        responded:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: A customer response has been recorded since the last reopening (SUP-14).
+        openedAt:
+          $ref: "#/components/schemas/Timestamp"
+        openedBy:
+          $ref: "#/components/schemas/SupportUserId"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportCaseEvent"
+    SupportCaseList:
+      type: object
+      title: SupportCaseList
+      additionalProperties: false
+      required:
+        - cases
+      properties:
+        cases:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportCase"
+    SupportCaseRequest:
+      type: object
+      title: SupportCaseRequest
+      additionalProperties: false
+      required:
+        - type
+        - severity
+        - subject
+        - description
+      properties:
+        type:
+          $ref: "#/components/schemas/SupportCaseType"
+        severity:
+          $ref: "#/components/schemas/SupportSeverity"
+        subject:
+          x-ztax-privacy:
+            class: P2
+            purposes:
+              - PURP-SUPPORT
+            retention: RET-OPERATIONAL
+            redaction: REDACT
+            aiAllowed: NONE
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          x-ztax-privacy:
+            class: P2
+            purposes:
+              - PURP-SUPPORT
+            retention: RET-OPERATIONAL
+            redaction: REDACT
+            aiAllowed: NONE
+          type: string
+          minLength: 1
+          maxLength: 5000
+        product:
+          $ref: "#/components/schemas/SupportProduct"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        fiscalPeriod:
+          $ref: "#/components/schemas/LegalPeriod"
+        contractRef:
+          $ref: "#/components/schemas/SupportReference"
+        sellerRef:
+          $ref: "#/components/schemas/SupportReference"
+        references:
+          $ref: "#/components/schemas/SupportCaseReferences"
+        statutoryDueAt:
+          $ref: "#/components/schemas/Timestamp"
+        assignee:
+          $ref: "#/components/schemas/SupportUserId"
+        evidence:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/SupportEvidenceReference"
+    SupportCaseActionRequest:
+      type: object
+      title: SupportCaseActionRequest
+      description: |
+        One action. `note` is required for RESPOND, SIGN_OFF, REOPEN, ESCALATE,
+        REQUEST_EVIDENCE, NOTE and REQUEST_LEGAL_HOLD; `assignee` for ASSIGN;
+        `escalateTo` for ESCALATE; `evidence` for ADD_EVIDENCE. The
+        classification fields are read by TRIAGE only, and only what is
+        supplied changes.
+      additionalProperties: false
+      required:
+        - action
+      properties:
+        action:
+          $ref: "#/components/schemas/SupportCaseAction"
+        note:
+          $ref: "#/components/schemas/SupportNote"
+        type:
+          $ref: "#/components/schemas/SupportCaseType"
+        severity:
+          $ref: "#/components/schemas/SupportSeverity"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        fiscalPeriod:
+          $ref: "#/components/schemas/LegalPeriod"
+        contractRef:
+          $ref: "#/components/schemas/SupportReference"
+        sellerRef:
+          $ref: "#/components/schemas/SupportReference"
+        statutoryDueAt:
+          $ref: "#/components/schemas/Timestamp"
+        assignee:
+          $ref: "#/components/schemas/SupportUserId"
+        escalateTo:
+          $ref: "#/components/schemas/SupportEscalationTarget"
+        evidence:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/SupportEvidenceReference"
+    ContributionId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ContributionId
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+    ContributionRegime:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ContributionRegime
+      description: The fund a provider contribution is owed to — the US Universal Service Fund through USAC, Canada's CRTC National Contribution Fund, or another.
+      enum:
+        - US_USF
+        - CA_CRTC_NCF
+        - OTHER
+    ContributionSourceType:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ContributionSourceType
+      description: The kind of record a source event is (OBL-06).
+      enum:
+        - BSS_INVOICE
+        - RATED_USAGE
+        - REVENUE_RECOGNITION_ADJUSTMENT
+        - LICENCE_ACTIVITY
+        - MANUAL_CERTIFIED_SCHEDULE
+    ContributionStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ContributionStatus
+      description: Where a contribution stands. Only ACCEPTED counts in the control totals; QUARANTINED is held, never deleted.
+      enum:
+        - ACCEPTED
+        - QUARANTINED
+    ContributionEventKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ContributionEventKind
+      description: What happened to a contribution. Every one is appended; none edits.
+      enum:
+        - RECORDED
+        - QUARANTINED
+        - RELEASED
+    ContributionIncompleteReason:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ContributionIncompleteReason
+      description: Why a group's control totals are DATA_INCOMPLETE — a held import, or a reversal of an original the ledger does not hold.
+      enum:
+        - QUARANTINED_EVENTS
+        - UNRESOLVED_REVERSAL
+    ContributionAmount:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ContributionAmount
+      description: |
+        A provider's contribution base, or a quantity, in canonical decimal string
+        form — never a JSON number, and never computed by a client
+        (UAT-OBL-034). Scale is significant. An operator's own revenue
+        aggregate, not a consumer amount, so it carries no personal data
+        (UAT-OBL-025).
+      pattern: ^-?(0|[1-9][0-9]*)(\.[0-9]+)?$
+      maxLength: 64
+      example: "1250.00"
+    ContributionRef:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ContributionRef
+      description: A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+      minLength: 1
+      maxLength: 200
+      example: INV-2026-000123
+    ContributionReason:
+      x-ztax-privacy:
+        class: P2
+        purposes:
+          - PURP-FILE
+          - PURP-EVID
+        retention: RET-EVIDENCE
+        redaction: REDACT
+        aiAllowed: NONE
+      type: string
+      title: ContributionReason
+      description: Why a contribution was quarantined or released, in the words of the person who did it.
+      minLength: 1
+      maxLength: 2000
+      example: The September billing extract was imported twice under new file ids
+    ContributionSourceKey:
+      type: object
+      title: ContributionSourceKey
+      description: A source event and its version — the natural key a contribution is recorded under.
+      additionalProperties: false
+      required:
+        - sourceEventId
+        - sourceVersion
+      properties:
+        sourceEventId:
+          $ref: "#/components/schemas/ContributionRef"
+        sourceVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+    ContributionStatusEvent:
+      type: object
+      title: ContributionStatusEvent
+      additionalProperties: false
+      required:
+        - seq
+        - kind
+        - status
+        - recordedAt
+        - recordedBy
+      properties:
+        seq:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        kind:
+          $ref: "#/components/schemas/ContributionEventKind"
+        status:
+          $ref: "#/components/schemas/ContributionStatus"
+        reason:
+          $ref: "#/components/schemas/ContributionReason"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+    ProviderContribution:
+      type: object
+      title: ProviderContribution
+      description: |
+        One ContributionEvent: the contribution base a source event carries, with
+        its eligibility and its immutable hash. The provider's own obligation on
+        its eligible revenue — never the recovery charged to customers.
+      additionalProperties: false
+      required:
+        - id
+        - sourceEventId
+        - sourceVersion
+        - sourceType
+        - regime
+        - period
+        - legalEntityId
+        - classificationRef
+        - situsRef
+        - sourceRef
+        - ruleVersion
+        - currency
+        - eligibleBase
+        - excludedBase
+        - amendment
+        - immutableHash
+        - status
+        - recordedAt
+        - recordedBy
+        - history
+      properties:
+        id:
+          $ref: "#/components/schemas/ContributionId"
+        sourceEventId:
+          $ref: "#/components/schemas/ContributionRef"
+        sourceVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        sourceType:
+          $ref: "#/components/schemas/ContributionSourceType"
+        sourceChecksum:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The checksum of the import file the event came in.
+        regime:
+          $ref: "#/components/schemas/ContributionRegime"
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        obligationId:
+          $ref: "#/components/schemas/ObligationId"
+        classificationRef:
+          $ref: "#/components/schemas/ContributionRef"
+        situsRef:
+          $ref: "#/components/schemas/ContributionRef"
+        sourceRef:
+          $ref: "#/components/schemas/ContributionRef"
+        componentRef:
+          $ref: "#/components/schemas/ContributionRef"
+        ruleVersion:
+          $ref: "#/components/schemas/ContributionRef"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        eligibleBase:
+          $ref: "#/components/schemas/ContributionAmount"
+        excludedBase:
+          $ref: "#/components/schemas/ContributionAmount"
+        exclusionReason:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: Why revenue is excluded from the base, by rule. Present whenever excludedBase is not zero.
+        quantity:
+          $ref: "#/components/schemas/ContributionAmount"
+        quantityUnit:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        reverses:
+          $ref: "#/components/schemas/ContributionSourceKey"
+        amendment:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: Recorded after its period had ended — a late event, counted in its own period.
+        immutableHash:
+          $ref: "#/components/schemas/Digest"
+        status:
+          $ref: "#/components/schemas/ContributionStatus"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContributionStatusEvent"
+    ProviderContributionList:
+      type: object
+      title: ProviderContributionList
+      additionalProperties: false
+      required:
+        - contributions
+      properties:
+        contributions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProviderContribution"
+    ContributionRequest:
+      type: object
+      title: ContributionRequest
+      additionalProperties: false
+      required:
+        - sourceEventId
+        - sourceVersion
+        - sourceType
+        - regime
+        - period
+        - classificationRef
+        - situsRef
+        - sourceRef
+        - ruleVersion
+        - currency
+        - eligibleBase
+      properties:
+        sourceEventId:
+          $ref: "#/components/schemas/ContributionRef"
+        sourceVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        sourceType:
+          $ref: "#/components/schemas/ContributionSourceType"
+        sourceChecksum:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          maxLength: 200
+          description: The checksum of the import file the event came in, when it came in one.
+        regime:
+          $ref: "#/components/schemas/ContributionRegime"
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        obligationId:
+          $ref: "#/components/schemas/ObligationId"
+        classificationRef:
+          $ref: "#/components/schemas/ContributionRef"
+        situsRef:
+          $ref: "#/components/schemas/ContributionRef"
+        sourceRef:
+          $ref: "#/components/schemas/ContributionRef"
+        componentRef:
+          $ref: "#/components/schemas/ContributionRef"
+        ruleVersion:
+          $ref: "#/components/schemas/ContributionRef"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        eligibleBase:
+          $ref: "#/components/schemas/ContributionAmount"
+        excludedBase:
+          $ref: "#/components/schemas/ContributionAmount"
+        exclusionReason:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          maxLength: 2000
+          description: Why revenue is excluded from the base. Required when excludedBase is not zero.
+        quantity:
+          $ref: "#/components/schemas/ContributionAmount"
+        quantityUnit:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          maxLength: 32
+        reverses:
+          $ref: "#/components/schemas/ContributionSourceKey"
+    ContributionTransitionRequest:
+      type: object
+      title: ContributionTransitionRequest
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          $ref: "#/components/schemas/ContributionReason"
+    ContributionTrace:
+      type: object
+      title: ContributionTrace
+      additionalProperties: false
+      required:
+        - contribution
+        - originalMissing
+      properties:
+        contribution:
+          $ref: "#/components/schemas/ProviderContribution"
+        original:
+          $ref: "#/components/schemas/ProviderContribution"
+        reversal:
+          $ref: "#/components/schemas/ProviderContribution"
+        originalMissing:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: The contribution is a reversal and the ledger does not hold its original.
+    ContributionPeriodTotals:
+      type: object
+      title: ContributionPeriodTotals
+      description: One member entity's control totals for one regime and currency. Currencies are never added together.
+      additionalProperties: false
+      required:
+        - legalEntityId
+        - regime
+        - currency
+        - status
+        - incompleteReasons
+        - acceptedCount
+        - quarantinedCount
+        - reversalCount
+        - amendmentCount
+        - eligibleTotal
+        - excludedTotal
+        - reversedTotal
+        - periodDigest
+        - sourceChecksums
+      properties:
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        regime:
+          $ref: "#/components/schemas/ContributionRegime"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        status:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - COMPLETE
+            - DATA_INCOMPLETE
+        incompleteReasons:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContributionIncompleteReason"
+        acceptedCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        quarantinedCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        reversalCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        amendmentCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        eligibleTotal:
+          $ref: "#/components/schemas/ContributionAmount"
+        excludedTotal:
+          $ref: "#/components/schemas/ContributionAmount"
+        reversedTotal:
+          $ref: "#/components/schemas/ContributionAmount"
+        periodDigest:
+          $ref: "#/components/schemas/Digest"
+        sourceChecksums:
+          x-ztax-privacy:
+            class: P0
+          type: array
+          items:
+            type: string
+    ContributionSummary:
+      type: object
+      title: ContributionSummary
+      additionalProperties: false
+      required:
+        - period
+        - dataIncomplete
+        - groups
+      properties:
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+        dataIncomplete:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: Some group is DATA_INCOMPLETE.
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContributionPeriodTotals"
+    NoticeId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: NoticeId
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+    NoticeType:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: NoticeType
+      description: What the authority sent.
+      enum:
+        - NOTICE
+        - ASSESSMENT
+        - AUDIT
+        - APPEAL
+        - INFORMATION_REQUEST
+    NoticeStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: NoticeStatus
+      description: |
+        Where the matter stands. RECEIVED → AUTHENTICITY_REVIEW → LEGAL_REVIEW →
+        RESPONSE_APPROVED → SUBMITTED → OUTCOME_RECORDED, with APPEAL as the
+        branch after an outcome. CLOSED is terminal; nothing reopens it.
+      enum:
+        - RECEIVED
+        - AUTHENTICITY_REVIEW
+        - LEGAL_REVIEW
+        - RESPONSE_APPROVED
+        - SUBMITTED
+        - OUTCOME_RECORDED
+        - APPEAL
+        - CLOSED
+    NoticeAuthenticity:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: NoticeAuthenticity
+      description: What has been established about whether the authority sent the notice. Only VERIFIED admits an approved answer (SUP-05).
+      enum:
+        - UNKNOWN
+        - VERIFIED
+        - UNVERIFIABLE
+        - NOT_AUTHENTIC
+    NoticeDeadlineSource:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: NoticeDeadlineSource
+      description: Where a statutory deadline came from. ESTIMATED and UNKNOWN are never verified.
+      enum:
+        - STATED_ON_NOTICE
+        - STATUTE
+        - AUTHORITY_CONFIRMATION
+        - AUTHORITY_PORTAL
+        - ESTIMATED
+        - UNKNOWN
+    NoticeDeadlineKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: NoticeDeadlineKind
+      description: |
+        What a deadline ledger entry records. ORIGINAL is the intake's and is
+        never rewritten; CONFIRMATION verifies or establishes the date without
+        moving it; EXTENSION moves it later on the authority's evidence;
+        APPEAL is the next deadline an appeal opens.
+      enum:
+        - ORIGINAL
+        - CONFIRMATION
+        - EXTENSION
+        - APPEAL
+    NoticeOutcome:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: NoticeOutcome
+      description: What the authority decided.
+      enum:
+        - ACCEPTED
+        - ADJUSTED
+        - REJECTED
+        - WITHDRAWN
+    NoticeSettlement:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: NoticeSettlement
+      description: The evidence a claim of settlement rests on. A pending payment instruction is never settlement (T18-20).
+      enum:
+        - AUTHORITY_CONFIRMED
+        - PAYMENT_SETTLED
+        - PAYMENT_INSTRUCTION_PENDING
+    NoticeEscalationReason:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: NoticeEscalationReason
+      description: Why a notice went to legal.
+      enum:
+        - DEADLINE_UNVERIFIED
+        - AUTHENTICITY_UNRESOLVED
+        - ENTITY_UNRESOLVED
+        - LEGAL_JUDGEMENT
+    NoticeLinkKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: NoticeLinkKind
+      description: The kind of record a link references. Every link is a read-only reference.
+      enum:
+        - RETURN
+        - SUBMISSION_RECEIPT
+        - PAYMENT
+        - LEDGER_ENTRY
+        - RULE_VERSION
+        - CORRESPONDENCE
+        - OBLIGATION
+        - DECISION
+    NoticeEventKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: NoticeEventKind
+      description: What an event records.
+      enum:
+        - RECEIVED
+        - TRANSITIONED
+        - AUTHENTICITY_RECORDED
+        - LEGAL_ESCALATED
+        - ENTITY_RESOLVED
+        - OWNER_ASSIGNED
+        - ATTACHMENT_RECORDED
+        - DEADLINE_RECORDED
+        - RESPONSE_PREPARED
+        - RESPONSE_APPROVED
+        - SUBMITTED
+        - OUTCOME_RECORDED
+        - APPEAL_LODGED
+        - CLOSED
+    NoticeFlag:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: NoticeFlag
+      description: |
+        Something about a notice that needs attention now. URGENT_LEGAL_REVIEW
+        accompanies an unknown or unverified deadline (W17), unresolved or
+        disputed authenticity (SUP-05) and an unresolved recipient (SUP-08).
+        STATUTORY_OVERDUE and SLA_BREACHED are separate facts.
+      enum:
+        - DEADLINE_UNKNOWN
+        - DEADLINE_UNVERIFIED
+        - AUTHENTICITY_UNVERIFIED
+        - AUTHENTICITY_DISPUTED
+        - ENTITY_UNRESOLVED
+        - DEADLINE_SOON
+        - STATUTORY_OVERDUE
+        - SLA_BREACHED
+        - LEGAL_ESCALATED
+        - URGENT_LEGAL_REVIEW
+        - HEARING_SCHEDULED
+    NoticeAction:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: NoticeAction
+      description: An action the notice's status admits. Each still applies its own guards when taken.
+      enum:
+        - START_AUTHENTICITY_REVIEW
+        - MOVE_TO_LEGAL_REVIEW
+        - RECORD_AUTHENTICITY
+        - ESCALATE
+        - RESOLVE_ENTITY
+        - ASSIGN_OWNER
+        - RECORD_ATTACHMENT
+        - RECORD_DEADLINE
+        - PREPARE_RESPONSE
+        - APPROVE_RESPONSE
+        - RECORD_SUBMISSION
+        - RECORD_OUTCOME
+        - LODGE_APPEAL
+        - CLOSE
+    NoticeJurisdiction:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: NoticeJurisdiction
+      description: An ISO 3166-1 country or ISO 3166-2 subdivision code.
+      pattern: ^[A-Z]{2}(-[A-Z0-9]{1,3})?$
+      example: DE
+    NoticeText:
+      x-ztax-privacy:
+        class: P2
+        purposes:
+          - PURP-LEGAL
+          - PURP-EVID
+        retention: RET-EVIDENCE
+        redaction: REDACT
+        aiAllowed: NONE
+      type: string
+      title: NoticeText
+      minLength: 1
+      maxLength: 2000
+      description: Free text from the person recording an act on a notice.
+    NoticeEvidence:
+      x-ztax-privacy:
+        class: P2
+        purposes:
+          - PURP-LEGAL
+          - PURP-EVID
+        retention: RET-EVIDENCE
+        redaction: REDACT
+        aiAllowed: NONE
+      type: string
+      title: NoticeEvidence
+      minLength: 1
+      maxLength: 20000
+      description: How a deadline, authenticity, recipient or outcome was established, or the authority's response as received.
+    NoticeTimezone:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: NoticeTimezone
+      minLength: 1
+      maxLength: 64
+      description: The authority's IANA timezone, in which a due date ends.
+      example: Europe/Berlin
+    Sha256Hex:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: Sha256Hex
+      description: A document's SHA-256, lowercase hex. The document itself is not stored.
+      pattern: ^[0-9a-f]{64}$
+      example: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+    NoticeFilename:
+      x-ztax-privacy:
+        class: P2
+        purposes:
+          - PURP-LEGAL
+          - PURP-EVID
+        retention: RET-EVIDENCE
+        redaction: REDACT
+        aiAllowed: NONE
+      type: string
+      title: NoticeFilename
+      minLength: 1
+      maxLength: 255
+      description: A recorded document's file name, as given. It may name a person.
+    NoticeMediaType:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: NoticeMediaType
+      description: A recorded document's media type.
+      pattern: ^[a-z0-9][a-z0-9!#$&^_.+-]{0,63}/[a-z0-9][a-z0-9!#$&^_.+-]{0,126}$
+      example: application/pdf
+    NoticeQueryFlag:
+      x-ztax-privacy:
+        class: P0
+      type: boolean
+      title: NoticeQueryFlag
+      description: A yes-or-no filter.
+    NoticeLink:
+      type: object
+      title: NoticeLink
+      description: A reference to a record elsewhere, by its identifier. Read-only.
+      additionalProperties: false
+      required:
+        - kind
+        - reference
+      properties:
+        kind:
+          $ref: "#/components/schemas/NoticeLinkKind"
+        reference:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          minLength: 1
+          maxLength: 200
+    NoticeDeadline:
+      type: object
+      title: NoticeDeadline
+      description: |
+        A statutory deadline: a civil date in the authority's calendar, the
+        last instant of that day there, its source and whether it was
+        verified. No `dueDate` is a deadline nobody knows yet.
+      additionalProperties: false
+      required:
+        - kind
+        - timezone
+        - source
+        - verified
+      properties:
+        kind:
+          $ref: "#/components/schemas/NoticeDeadlineKind"
+        dueDate:
+          $ref: "#/components/schemas/CivilDate"
+        dueAt:
+          $ref: "#/components/schemas/Timestamp"
+        timezone:
+          $ref: "#/components/schemas/NoticeTimezone"
+        source:
+          $ref: "#/components/schemas/NoticeDeadlineSource"
+        verified:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+    NoticeDeadlineInput:
+      type: object
+      title: NoticeDeadlineInput
+      description: A deadline as stated. Without `dueDate` the source is UNKNOWN and it is unverified.
+      additionalProperties: false
+      required:
+        - timezone
+        - source
+        - verified
+      properties:
+        dueDate:
+          $ref: "#/components/schemas/CivilDate"
+        timezone:
+          $ref: "#/components/schemas/NoticeTimezone"
+        source:
+          $ref: "#/components/schemas/NoticeDeadlineSource"
+        verified:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+    NoticeDeadlineEntry:
+      type: object
+      title: NoticeDeadlineEntry
+      description: One row of the deadline ledger, with who recorded it and on what evidence.
+      additionalProperties: false
+      required:
+        - seq
+        - kind
+        - timezone
+        - source
+        - verified
+        - recordedAt
+        - recordedBy
+      properties:
+        seq:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        kind:
+          $ref: "#/components/schemas/NoticeDeadlineKind"
+        dueDate:
+          $ref: "#/components/schemas/CivilDate"
+        dueAt:
+          $ref: "#/components/schemas/Timestamp"
+        timezone:
+          $ref: "#/components/schemas/NoticeTimezone"
+        source:
+          $ref: "#/components/schemas/NoticeDeadlineSource"
+        verified:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+        evidence:
+          $ref: "#/components/schemas/NoticeEvidence"
+        authorityReference:
+          $ref: "#/components/schemas/AuthorityReference"
+        attachmentSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+    NoticeDeadlineLedger:
+      type: object
+      title: NoticeDeadlineLedger
+      additionalProperties: false
+      required:
+        - noticeId
+        - original
+        - current
+        - overdue
+        - entries
+      properties:
+        noticeId:
+          $ref: "#/components/schemas/NoticeId"
+        original:
+          $ref: "#/components/schemas/NoticeDeadline"
+        current:
+          $ref: "#/components/schemas/NoticeDeadline"
+        overdue:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: The deadline in force has passed with the response not yet submitted.
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/NoticeDeadlineEntry"
+    NoticeAttachment:
+      type: object
+      title: NoticeAttachment
+      description: A document recorded as evidence, by digest. Nothing is uploaded.
+      additionalProperties: false
+      required:
+        - sha256
+        - filename
+        - mediaType
+      properties:
+        sha256:
+          $ref: "#/components/schemas/Sha256Hex"
+        filename:
+          $ref: "#/components/schemas/NoticeFilename"
+        mediaType:
+          $ref: "#/components/schemas/NoticeMediaType"
+        note:
+          $ref: "#/components/schemas/NoticeText"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+    NoticeEvent:
+      type: object
+      title: NoticeEvent
+      additionalProperties: false
+      required:
+        - seq
+        - kind
+        - status
+        - recordedAt
+        - recordedBy
+      properties:
+        seq:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        kind:
+          $ref: "#/components/schemas/NoticeEventKind"
+        status:
+          $ref: "#/components/schemas/NoticeStatus"
+        note:
+          $ref: "#/components/schemas/NoticeText"
+        evidence:
+          $ref: "#/components/schemas/NoticeEvidence"
+        authorityReference:
+          $ref: "#/components/schemas/AuthorityReference"
+        deadline:
+          $ref: "#/components/schemas/NoticeDeadline"
+        authenticity:
+          $ref: "#/components/schemas/NoticeAuthenticity"
+        escalationReason:
+          $ref: "#/components/schemas/NoticeEscalationReason"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        ownerId:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+        slaDue:
+          $ref: "#/components/schemas/Timestamp"
+        attachment:
+          $ref: "#/components/schemas/NoticeAttachment"
+        responseVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        responseSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+        outcome:
+          $ref: "#/components/schemas/NoticeOutcome"
+        outcomeAmount:
+          $ref: "#/components/schemas/MoneyValue"
+        settled:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+        settlement:
+          $ref: "#/components/schemas/NoticeSettlement"
+        hearingDate:
+          $ref: "#/components/schemas/CivilDate"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+    Notice:
+      type: object
+      title: Notice
+      description: |
+        A regulatory notice as of `asOf`: the header as received, its
+        statutory deadline ledger beside the separate internal SLA clock, the
+        recorded documents, its history, and what needs attention.
+      additionalProperties: false
+      required:
+        - id
+        - type
+        - authority
+        - jurisdiction
+        - entityAmbiguous
+        - entityResolved
+        - authorityReference
+        - receivedAt
+        - links
+        - status
+        - authenticity
+        - escalated
+        - flags
+        - urgentLegalReview
+        - statutoryDeadline
+        - sla
+        - deadlines
+        - attachments
+        - allowedActions
+        - asOf
+        - createdAt
+        - createdBy
+        - history
+      properties:
+        id:
+          $ref: "#/components/schemas/NoticeId"
+        type:
+          $ref: "#/components/schemas/NoticeType"
+        authority:
+          $ref: "#/components/schemas/AuthorityCode"
+        jurisdiction:
+          $ref: "#/components/schemas/NoticeJurisdiction"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        entityAmbiguous:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: The intake marked the recipient ambiguous.
+        entityResolved:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: The recipient legal entity is known. False sends the notice to legal review (SUP-08).
+        resolvedLegalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        authorityReference:
+          $ref: "#/components/schemas/AuthorityReference"
+        receivedAt:
+          $ref: "#/components/schemas/Timestamp"
+        periodStart:
+          $ref: "#/components/schemas/CivilDate"
+        periodEnd:
+          $ref: "#/components/schemas/CivilDate"
+        amount:
+          $ref: "#/components/schemas/MoneyValue"
+        linkedCaseId:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: A related support or legal case, as given.
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/NoticeLink"
+        status:
+          $ref: "#/components/schemas/NoticeStatus"
+        authenticity:
+          $ref: "#/components/schemas/NoticeAuthenticity"
+        escalated:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: The notice has been escalated to legal.
+        flags:
+          type: array
+          items:
+            $ref: "#/components/schemas/NoticeFlag"
+        urgentLegalReview:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+        statutoryDeadline:
+          type: object
+          additionalProperties: false
+          required:
+            - original
+            - current
+          properties:
+            original:
+              $ref: "#/components/schemas/NoticeDeadline"
+            current:
+              $ref: "#/components/schemas/NoticeDeadline"
+        sla:
+          type: object
+          description: Our internal clock. It never moves the statutory deadline.
+          additionalProperties: false
+          required:
+            - breached
+          properties:
+            ownerId:
+              x-ztax-privacy:
+                class: P1
+                purposes:
+                  - PURP-SEC
+                  - PURP-EVID
+                retention: RET-EVIDENCE
+                redaction: NONE
+              type: string
+              format: uuid
+            dueAt:
+              $ref: "#/components/schemas/Timestamp"
+            breached:
+              x-ztax-privacy:
+                class: P0
+              type: boolean
+        deadlines:
+          type: array
+          items:
+            $ref: "#/components/schemas/NoticeDeadlineEntry"
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/NoticeAttachment"
+        allowedActions:
+          type: array
+          items:
+            $ref: "#/components/schemas/NoticeAction"
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        createdBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/NoticeEvent"
+    NoticeList:
+      type: object
+      title: NoticeList
+      additionalProperties: false
+      required:
+        - notices
+      properties:
+        notices:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notice"
+    CreateNoticeRequest:
+      type: object
+      title: CreateNoticeRequest
+      additionalProperties: false
+      required:
+        - type
+        - authority
+        - jurisdiction
+        - authorityReference
+        - receivedAt
+        - deadline
+      properties:
+        type:
+          $ref: "#/components/schemas/NoticeType"
+        authority:
+          $ref: "#/components/schemas/AuthorityCode"
+        jurisdiction:
+          $ref: "#/components/schemas/NoticeJurisdiction"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        entityAmbiguous:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: The notice could be addressed to more than one of the tenant's legal entities.
+        authorityReference:
+          $ref: "#/components/schemas/AuthorityReference"
+        receivedAt:
+          $ref: "#/components/schemas/Timestamp"
+        periodStart:
+          $ref: "#/components/schemas/CivilDate"
+        periodEnd:
+          $ref: "#/components/schemas/CivilDate"
+        amount:
+          $ref: "#/components/schemas/MoneyValue"
+        linkedCaseId:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          minLength: 1
+          maxLength: 200
+        links:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/NoticeLink"
+        deadline:
+          $ref: "#/components/schemas/NoticeDeadlineInput"
+        deadlineEvidence:
+          $ref: "#/components/schemas/NoticeEvidence"
+        ownerId:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+        slaDue:
+          $ref: "#/components/schemas/Timestamp"
+        note:
+          $ref: "#/components/schemas/NoticeText"
+    NoticeTransitionRequest:
+      type: object
+      title: NoticeTransitionRequest
+      additionalProperties: false
+      required:
+        - to
+      properties:
+        to:
+          $ref: "#/components/schemas/NoticeStatus"
+        note:
+          $ref: "#/components/schemas/NoticeText"
+    NoticeAuthenticityRequest:
+      type: object
+      title: NoticeAuthenticityRequest
+      additionalProperties: false
+      required:
+        - authenticity
+        - evidence
+      properties:
+        authenticity:
+          $ref: "#/components/schemas/NoticeAuthenticity"
+        evidence:
+          $ref: "#/components/schemas/NoticeEvidence"
+    NoticeEscalationRequest:
+      type: object
+      title: NoticeEscalationRequest
+      additionalProperties: false
+      required:
+        - reason
+        - note
+      properties:
+        reason:
+          $ref: "#/components/schemas/NoticeEscalationReason"
+        note:
+          $ref: "#/components/schemas/NoticeText"
+        evidence:
+          $ref: "#/components/schemas/NoticeEvidence"
+    NoticeEntityRequest:
+      type: object
+      title: NoticeEntityRequest
+      additionalProperties: false
+      required:
+        - legalEntityId
+        - evidence
+      properties:
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        evidence:
+          $ref: "#/components/schemas/NoticeEvidence"
+    NoticeOwnerRequest:
+      type: object
+      title: NoticeOwnerRequest
+      additionalProperties: false
+      required:
+        - ownerId
+      properties:
+        ownerId:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+        slaDue:
+          $ref: "#/components/schemas/Timestamp"
+        note:
+          $ref: "#/components/schemas/NoticeText"
+    NoticeAttachmentRequest:
+      type: object
+      title: NoticeAttachmentRequest
+      additionalProperties: false
+      required:
+        - sha256
+        - filename
+        - mediaType
+      properties:
+        sha256:
+          $ref: "#/components/schemas/Sha256Hex"
+        filename:
+          $ref: "#/components/schemas/NoticeFilename"
+        mediaType:
+          $ref: "#/components/schemas/NoticeMediaType"
+        note:
+          $ref: "#/components/schemas/NoticeText"
+    NoticeDeadlineRequest:
+      type: object
+      title: NoticeDeadlineRequest
+      additionalProperties: false
+      required:
+        - kind
+        - dueDate
+        - timezone
+        - source
+        - verified
+        - evidence
+      properties:
+        kind:
+          $ref: "#/components/schemas/NoticeDeadlineKind"
+        dueDate:
+          $ref: "#/components/schemas/CivilDate"
+        timezone:
+          $ref: "#/components/schemas/NoticeTimezone"
+        source:
+          $ref: "#/components/schemas/NoticeDeadlineSource"
+        verified:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+        evidence:
+          $ref: "#/components/schemas/NoticeEvidence"
+        authorityReference:
+          $ref: "#/components/schemas/AuthorityReference"
+        attachmentSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+    NoticeResponsePackageRequest:
+      type: object
+      title: NoticeResponsePackageRequest
+      additionalProperties: false
+      required:
+        - summary
+      properties:
+        summary:
+          $ref: "#/components/schemas/NoticeText"
+        sha256:
+          $ref: "#/components/schemas/Sha256Hex"
+    NoticeApprovalRequest:
+      type: object
+      title: NoticeApprovalRequest
+      additionalProperties: false
+      required:
+        - version
+      properties:
+        version:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        note:
+          $ref: "#/components/schemas/NoticeText"
+    NoticeSubmissionRequest:
+      type: object
+      title: NoticeSubmissionRequest
+      additionalProperties: false
+      required:
+        - authorityReceiptReference
+      properties:
+        authorityReceiptReference:
+          $ref: "#/components/schemas/AuthorityReference"
+        evidence:
+          $ref: "#/components/schemas/NoticeEvidence"
+        note:
+          $ref: "#/components/schemas/NoticeText"
+    NoticeOutcomeRequest:
+      type: object
+      title: NoticeOutcomeRequest
+      additionalProperties: false
+      required:
+        - outcome
+        - authorityReceiptReference
+        - evidence
+      properties:
+        outcome:
+          $ref: "#/components/schemas/NoticeOutcome"
+        authorityReceiptReference:
+          $ref: "#/components/schemas/AuthorityReference"
+        evidence:
+          $ref: "#/components/schemas/NoticeEvidence"
+        note:
+          $ref: "#/components/schemas/NoticeText"
+        amount:
+          $ref: "#/components/schemas/MoneyValue"
+        settled:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+        settlement:
+          $ref: "#/components/schemas/NoticeSettlement"
+    NoticeAppealRequest:
+      type: object
+      title: NoticeAppealRequest
+      additionalProperties: false
+      required:
+        - nextDeadline
+        - evidence
+      properties:
+        nextDeadline:
+          $ref: "#/components/schemas/NoticeDeadlineInput"
+        hearingDate:
+          $ref: "#/components/schemas/CivilDate"
+        evidence:
+          $ref: "#/components/schemas/NoticeEvidence"
+        authorityReference:
+          $ref: "#/components/schemas/AuthorityReference"
+        note:
+          $ref: "#/components/schemas/NoticeText"
     ComparatorId:
       x-ztax-privacy:
         class: P0
