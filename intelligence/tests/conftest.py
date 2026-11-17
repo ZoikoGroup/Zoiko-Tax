@@ -12,9 +12,17 @@ from __future__ import annotations
 import pytest
 
 from ztax_gateway.evidence_file_sink import ENV_BASE_DIR, ENV_PATH
+from ztax_gateway.gateway_factory import ENV_TOKEN_PRICE_INPUT, ENV_TOKEN_PRICE_OUTPUT
 
 
 @pytest.fixture(autouse=True)
 def _evidence_file_setting_is_off(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv(ENV_PATH, raising=False)
     monkeypatch.delenv(ENV_BASE_DIR, raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _token_price_settings_are_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    # A price in the shell would put a cost in every record a factory-built Gateway writes.
+    monkeypatch.delenv(ENV_TOKEN_PRICE_INPUT, raising=False)
+    monkeypatch.delenv(ENV_TOKEN_PRICE_OUTPUT, raising=False)
