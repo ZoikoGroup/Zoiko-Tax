@@ -6,6 +6,7 @@ import { TabBar } from './determine/shared'
 import { useRoutedTab } from './routedTab'
 import type { PageProps } from './types'
 import { CountriesTab } from './locations/CountriesTab'
+import { GapsTab } from './locations/GapsTab'
 import { coverageInstant, today, type Service } from './locations/coverage'
 import { OverviewTab } from './locations/OverviewTab'
 import { TryLocationTab, type Preset } from './locations/TryLocationTab'
@@ -15,13 +16,14 @@ import './determine.css'
 import './locations.css'
 import './locations/overview.css'
 
-type Tab = 'overview' | 'us' | 'countries' | 'try'
+type Tab = 'overview' | 'us' | 'countries' | 'try' | 'gaps'
 
 const TABS: readonly { value: Tab; label: string }[] = [
   { value: 'overview', label: 'Overview' },
   { value: 'us', label: 'United States map' },
   { value: 'countries', label: 'All countries' },
   { value: 'try', label: 'Try a location' },
+  { value: 'gaps', label: 'Coverage intelligence' },
 ]
 
 /**
@@ -29,7 +31,7 @@ const TABS: readonly { value: Tab; label: string }[] = [
  * States by state. Everything here is read from GET /v1/coverage at the date
  * the person picks, so a rate change shows on the day it takes effect.
  */
-export const LocationsPage = ({ route, onTabChange }: PageProps) => {
+export const LocationsPage = ({ period, route, onTabChange }: PageProps) => {
   const [tab, setTab] = useRoutedTab(TABS.map((t) => t.value), 'overview', route, onTabChange)
   const [date, setDate] = useState(today)
   const [preset, setPreset] = useState<Preset | null>(null)
@@ -81,6 +83,9 @@ export const LocationsPage = ({ route, onTabChange }: PageProps) => {
             </div>
             <div className="ztax-tab-panel" hidden={tab !== 'try'}>
               <TryLocationTab coverage={coverage} preset={preset} />
+            </div>
+            <div className="ztax-tab-panel" hidden={tab !== 'gaps'}>
+              {tab === 'gaps' ? <GapsTab coverage={coverage} period={period} /> : null}
             </div>
           </>
         )}

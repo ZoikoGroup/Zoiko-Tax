@@ -337,6 +337,34 @@ export class ZoikoTaxClient {
     });
   }
 
+  /** List decisions, latest recorded first. `GET /v1/decisions`. */
+  listDecisions(
+    params: { businessKey?: string; outcome?: S<"Outcome">; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"DecisionSummaryList">>> {
+    return this.#send<S<"DecisionSummaryList">>("GET", `/v1/decisions${query(params)}`, undefined, signal);
+  }
+
+  /** List refunds, latest requested first. `GET /v1/refunds`. */
+  listRefunds(params: { limit?: number } = {}, signal?: AbortSignal): Promise<Result<S<"RefundList">>> {
+    return this.#send<S<"RefundList">>("GET", `/v1/refunds${query(params)}`, undefined, signal);
+  }
+
+  /** List batch jobs, latest requested first. `GET /v1/jobs`. */
+  listJobs(params: { limit?: number } = {}, signal?: AbortSignal): Promise<Result<S<"JobList">>> {
+    return this.#send<S<"JobList">>("GET", `/v1/jobs${query(params)}`, undefined, signal);
+  }
+
+  /** List fiscal documents, latest committed first. `GET /v1/documents`. */
+  listDocuments(params: { limit?: number } = {}, signal?: AbortSignal): Promise<Result<S<"FiscalDocumentList">>> {
+    return this.#send<S<"FiscalDocumentList">>("GET", `/v1/documents${query(params)}`, undefined, signal);
+  }
+
+  /** List reconciliation runs, latest first. `GET /v1/reconciliations`. */
+  listReconciliations(params: { limit?: number } = {}, signal?: AbortSignal): Promise<Result<S<"ReconciliationRunList">>> {
+    return this.#send<S<"ReconciliationRunList">>("GET", `/v1/reconciliations${query(params)}`, undefined, signal);
+  }
+
   /** Read a recorded decision. */
   getDecision(decisionId: string, signal?: AbortSignal): Promise<Result<Decision>> {
     return this.#send<Decision>("GET", `/v1/decisions/${encodeURIComponent(decisionId)}`, undefined, signal);

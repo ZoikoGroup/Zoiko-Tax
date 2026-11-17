@@ -75,6 +75,11 @@ export class ApiError extends Error {
       this.reasonCode === 'SESSION_REVOKED'
     )
   }
+
+  /** True when the cell refused for want of a role, which is not a fault. */
+  get isForbidden(): boolean {
+    return this.reasonCode === 'FORBIDDEN'
+  }
 }
 
 /** Raised when the cell could not be reached at all, which is not the same as
@@ -198,6 +203,78 @@ export interface Capabilities {
   readonly reasonCodes: readonly string[]
 }
 
+// Webhooks (W2 lane K). Egress configuration, not the fiscal contract: a
+// subscription names a URL and event types, and a delivery names an event by
+// id. The event bodies never pass through here.
+
+/** The event types a subscription may name; there is no wildcard. */
+export const EVENT_TYPES = [
+  'com.zoikotax.decision.committed',
+  'com.zoikotax.decision.corrected',
+  'com.zoikotax.obligation.status-changed',
+  'com.zoikotax.accumulator.threshold-crossed',
+  'com.zoikotax.refund.requested',
+  'com.zoikotax.refund.status-changed',
+  'com.zoikotax.document.committed',
+] as const
+export type EventType = (typeof EVENT_TYPES)[number]
+
+export type WebhookStatus = 'ACTIVE' | 'PAUSED' | 'DISABLED'
+export type DeliveryStatus = 'PENDING' | 'DELIVERED' | 'DEAD'
+
+export interface Webhook {
+  readonly id: string
+  readonly url: string
+  readonly eventTypes: readonly EventType[]
+  readonly description?: string | undefined
+  readonly status: WebhookStatus
+  readonly createdAt: string
+  readonly statusChangedAt: string
+}
+
+/** A signing secret. Returned once, by the response that issued it; this
+ *  client never keeps it anywhere. */
+export interface WebhookSecret {
+  readonly version: number
+  readonly secret: string
+}
+
+export interface WebhookCreated {
+  readonly webhook: Webhook
+  readonly secret: WebhookSecret
+}
+
+export interface WebhookSecretRotation {
+  readonly secret: WebhookSecret
+  readonly previousRetiresAt: string
+}
+
+export interface WebhookDelivery {
+  readonly id: string
+  readonly webhookId: string
+  readonly eventId: string
+  readonly eventType: EventType
+  readonly status: DeliveryStatus
+  readonly attempts: number
+  readonly nextAttemptAt?: string | undefined
+  readonly createdAt: string
+  readonly deliveredAt?: string | undefined
+  readonly replayOf?: string | undefined
+}
+
+export interface WebhookAttempt {
+  readonly attempt: number
+  readonly startedAt: string
+  readonly durationMs: number
+  readonly statusCode?: number | undefined
+  readonly error?: string | undefined
+}
+
+export interface WebhookDeliveryDetail {
+  readonly delivery: WebhookDelivery
+  readonly attempts: readonly WebhookAttempt[]
+}
+
 // ---------------------------------------------------------------------------
 // Operations
 // ---------------------------------------------------------------------------
@@ -266,6 +343,47 @@ export const api = {
 
   listAudit: (): Promise<{ records: AuditRecord[] }> =>
     request<{ records: AuditRecord[] }>('GET', '/v1/admin/audit?limit=100'),
+
+  // Any member of the tenant may read it; no role is needed.
+  getTenant: (): Promise<Tenant> => request<Tenant>('GET', '/v1/admin/tenant'),
+
+  listWebhooks: (): Promise<{ webhooks: Webhook[] }> =>
+    request<{ webhooks: Webhook[] }>('GET', '/v1/webhooks?limit=100'),
+
+  // description is omitted rather than empty, as createUser omits password:
+  // the request schema rejects an unknown or null field outright.
+  createWebhook: (input: {
+    url: string
+    eventTypes: EventType[]
+    description?: string | undefined
+  }): Promise<WebhookCreated> => request<WebhookCreated>('POST', '/v1/webhooks', input),
+
+  getWebhook: (webhookId: string): Promise<Webhook> =>
+    request<Webhook>('GET', `/v1/webhooks/${encodeURIComponent(webhookId)}`),
+
+  setWebhookStatus: (webhookId: string, status: WebhookStatus): Promise<Webhook> =>
+    request<Webhook>('POST', `/v1/webhooks/${encodeURIComponent(webhookId)}/status`, { status }),
+
+  rotateWebhookSecret: (webhookId: string): Promise<WebhookSecretRotation> =>
+    request<WebhookSecretRotation>('POST', `/v1/webhooks/${encodeURIComponent(webhookId)}/secrets:rotate`),
+
+  listWebhookDeliveries: (webhookId: string, status?: DeliveryStatus): Promise<{ deliveries: WebhookDelivery[] }> =>
+    request<{ deliveries: WebhookDelivery[] }>(
+      'GET',
+      `/v1/webhooks/${encodeURIComponent(webhookId)}/deliveries?limit=100${status === undefined ? '' : `&status=${status}`}`,
+    ),
+
+  getWebhookDelivery: (webhookId: string, deliveryId: string): Promise<WebhookDeliveryDetail> =>
+    request<WebhookDeliveryDetail>(
+      'GET',
+      `/v1/webhooks/${encodeURIComponent(webhookId)}/deliveries/${encodeURIComponent(deliveryId)}`,
+    ),
+
+  replayWebhookDelivery: (webhookId: string, deliveryId: string): Promise<WebhookDelivery> =>
+    request<WebhookDelivery>(
+      'POST',
+      `/v1/webhooks/${encodeURIComponent(webhookId)}/deliveries/${encodeURIComponent(deliveryId)}/replay`,
+    ),
 }
 
 /** Renders an unknown thrown value as something safe to show a user. */

@@ -195,6 +195,12 @@
     },
     {
       "method": "GET",
+      "path": "/v1/decisions",
+      "operationId": "listDecisions",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/decisions/{decisionId}",
       "operationId": "getDecision",
       "public": false
@@ -224,6 +230,12 @@
       "public": false
     },
     {
+      "method": "GET",
+      "path": "/v1/documents",
+      "operationId": "listDocuments",
+      "public": false
+    },
+    {
       "method": "POST",
       "path": "/v1/documents",
       "operationId": "issueDocument",
@@ -245,6 +257,12 @@
       "method": "GET",
       "path": "/v1/documents/{documentId}/lineage",
       "operationId": "getDocumentLineage",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/jobs",
+      "operationId": "listJobs",
       "public": false
     },
     {
@@ -398,6 +416,12 @@
       "public": false
     },
     {
+      "method": "GET",
+      "path": "/v1/reconciliations",
+      "operationId": "listReconciliations",
+      "public": false
+    },
+    {
       "method": "POST",
       "path": "/v1/reconciliations",
       "operationId": "runReconciliation",
@@ -413,6 +437,12 @@
       "method": "POST",
       "path": "/v1/reconciliations/{runId}/items/{itemId}/resolution",
       "operationId": "resolveReconciliationItem",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/refunds",
+      "operationId": "listRefunds",
       "public": false
     },
     {

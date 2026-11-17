@@ -21,7 +21,9 @@ import {
   useAction,
   useLoad,
 } from '../ui/kit'
-import { todayUtc } from './determine/shared'
+import { TabBar, todayUtc } from './determine/shared'
+import { useRoutedTab } from './routedTab'
+import { downloadCsv, downloadJson, Tiles } from './workspace'
 import type { PageProps } from './types'
 import './obligations.css'
 
@@ -67,9 +69,426 @@ const pick = <T extends string>(values: readonly T[], v: string, fallback: T): T
 const isStatus = (v: string): v is RemStatus => (STATUSES as readonly string[]).includes(v)
 const words = (s: string) => s.replaceAll('_', ' ')
 
-export const RemittancePage = ({ session }: PageProps) => {
-  const [status, setStatus] = useState<RemStatus | 'ALL'>('ALL')
+type Tab = 'payments' | 'queue' | 'status' | 'settlement' | 'evidence'
+
+const TABS: readonly { value: Tab; label: string }[] = [
+  { value: 'payments', label: 'Payment authorisations' },
+  { value: 'queue', label: 'Remittance queue' },
+  { value: 'status', label: 'Payment status' },
+  { value: 'settlement', label: 'Settlement reconciliation' },
+  { value: 'evidence', label: 'Evidence' },
+]
+
+const SUBTITLE: Record<Tab, string> = {
+  payments: 'Payments of accepted returns, overdue first. Each instruction is approved by someone other than its maker, as an exact hash.',
+  queue: 'Instructions waiting for approval or for release to your provider, earliest due first.',
+  status: 'Instructions released to your provider, and every status the provider reported.',
+  settlement: 'Settled and returned payments against the provider’s or authority’s reference that evidences them.',
+  evidence: 'One payment’s full record: the approved instruction hash, references and every recorded step, downloadable as JSON.',
+}
+
+export const RemittancePage = ({ session, route, onTabChange }: PageProps) => {
+  const [tab, setTab] = useRoutedTab(TABS.map((t) => t.value), 'payments', route, onTabChange)
   const [selected, setSelected] = useState<string | null>(null)
+  const [evidenceId, setEvidenceId] = useState('')
+  const openPayment = (id: string) => {
+    setSelected(id)
+    setTab('payments')
+  }
+  const openEvidence = (id: string) => {
+    setEvidenceId(id)
+    setTab('evidence')
+  }
+  return (
+    <div className="ztax-page">
+      <PageHeader title="Remittance" subtitle={SUBTITLE[tab]} />
+      <p className="ztax-note">
+        Funds posture: <span className="mono">NO_CUSTODY</span>. ZoikoTax prepares and records instructions to your own bank or
+        provider. It never holds, pools or moves your money.
+      </p>
+      <TabBar label="Remittance" tabs={TABS} current={tab} onSelect={setTab} />
+      {tab === 'payments' ? <Payments session={session} selected={selected} setSelected={setSelected} />
+        : tab === 'queue' ? <QueueTab onOpen={openPayment} />
+        : tab === 'status' ? <StatusTab onOpen={openPayment} onEvidence={openEvidence} />
+        : tab === 'settlement' ? <SettlementTab onEvidence={openEvidence} />
+        : <EvidenceTab id={evidenceId} onPick={setEvidenceId} onOpen={openPayment} />}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// remittance queue
+// ---------------------------------------------------------------------------
+
+const byDue = (a: Remittance, b: Remittance) => (a.paymentDue < b.paymentDue ? -1 : a.paymentDue > b.paymentDue ? 1 : 0)
+
+const Payee = ({ r }: { r: Remittance }) => (
+  <>{r.beneficiary.legalName} <span className="mono muted">{r.authority} · {r.paymentReference}</span></>
+)
+
+const Due = ({ r }: { r: Remittance }) => (
+  <>{instant(r.paymentDue)} {r.overdue && !['SETTLED', 'CANCELLED'].includes(r.status) ? <span className="ztax-status ztax-status--bad">overdue</span> : null}</>
+)
+
+const QueueTab = ({ onOpen }: { onOpen: (id: string) => void }) => {
+  const { load, reload } = useLoad((signal) => ztax.listRemittances({ limit: 500 }, signal), [])
+  return (
+    <Loaded load={load}>
+      {(data) => {
+        const queue = data.remittances.filter((r) => r.status === 'APPROVAL_REQUIRED' || r.status === 'APPROVED').sort(byDue)
+        return (
+          <>
+            <Tiles tiles={[
+              { label: 'Awaiting approval', count: queue.filter((r) => r.status === 'APPROVAL_REQUIRED').length, tone: 'warn' },
+              { label: 'Approved, awaiting release', count: queue.filter((r) => r.status === 'APPROVED').length },
+              { label: 'Blocked on readiness', count: queue.filter((r) => !r.ready).length, tone: 'warn' },
+              { label: 'Overdue', count: queue.filter((r) => r.overdue).length, tone: 'bad' },
+            ]} />
+            <Card title={`${queue.length} in the queue`} aside={<button type="button" className="ztax-btn-quiet" onClick={reload}>Refresh</button>}>
+              {queue.length === 0 ? <Empty>Nothing waits for approval or release.</Empty> : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="ztax-action-table">
+                    <thead>
+                      <tr><th>Payee</th><th>Period</th><th>Amount</th><th>Executes</th><th>Due</th><th>Status</th><th>Next step</th><th>Action</th></tr>
+                    </thead>
+                    <tbody>
+                      {queue.map((r) => {
+                        const blocked = r.readiness.filter((c) => !c.ready)
+                        return (
+                          <tr key={r.id}>
+                            <td style={{ paddingRight: 8 }}><Payee r={r} /></td>
+                            <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}>{civilDate(r.periodStart)} – {civilDate(r.periodEnd)}</td>
+                            <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}><Amount amount={r.amount} currency={r.currency} /></td>
+                            <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}>{civilDate(r.executionDate)} · {words(r.mode)}</td>
+                            <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}><Due r={r} /></td>
+                            <td style={{ paddingRight: 8 }}><Status value={r.status} /></td>
+                            <td style={{ paddingRight: 8, color: blocked.length > 0 ? '#b91c1c' : '#6b7280' }}>
+                              {blocked.length > 0 ? `Blocked: ${blocked.map((c) => words(c.dimension)).join(', ')}`
+                                : r.status === 'APPROVAL_REQUIRED' ? 'Approve the exact instruction hash (not its maker)'
+                                : 'Release to your provider, then record the submission'}
+                            </td>
+                            <td><button type="button" className="ztax-table-action-btn" onClick={() => { onOpen(r.id) }}>Open</button></td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          </>
+        )
+      }}
+    </Loaded>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// payment status
+// ---------------------------------------------------------------------------
+
+const IN_FLIGHT: readonly RemStatus[] = ['SUBMITTED', 'ACCEPTED_BY_PROVIDER', 'PROCESSING']
+type StatusGroup = 'ALL' | 'IN_FLIGHT' | 'UNCERTAIN_PAYMENT' | 'SETTLED' | 'FAILED'
+const GROUPS: readonly StatusGroup[] = ['ALL', 'IN_FLIGHT', 'UNCERTAIN_PAYMENT', 'SETTLED', 'FAILED']
+const GROUP_LABEL: Record<StatusGroup, string> = {
+  ALL: 'All released', IN_FLIGHT: 'In flight', UNCERTAIN_PAYMENT: 'Uncertain', SETTLED: 'Settled', FAILED: 'Rejected or returned',
+}
+const groupOf = (s: RemStatus): Exclude<StatusGroup, 'ALL'> | null =>
+  IN_FLIGHT.includes(s) ? 'IN_FLIGHT' : s === 'UNCERTAIN_PAYMENT' ? 'UNCERTAIN_PAYMENT' : s === 'SETTLED' ? 'SETTLED'
+    : s === 'REJECTED' || s === 'RETURNED' ? 'FAILED' : null
+
+const stepText = (s: S<'RemittanceStep'>) =>
+  [s.evidence === undefined ? null : words(s.evidence), s.resolution === undefined ? null : words(s.resolution),
+    s.providerReference === undefined ? null : `ref ${s.providerReference}`, s.note ?? null].filter((x) => x !== null).join(' · ')
+
+const StatusTab = ({ onOpen, onEvidence }: { onOpen: (id: string) => void; onEvidence: (id: string) => void }) => {
+  const [group, setGroup] = useState<StatusGroup>('ALL')
+  const { load, reload } = useLoad((signal) => ztax.listRemittances({ limit: 500 }, signal), [])
+  return (
+    <Loaded load={load}>
+      {(data) => {
+        // A REJECTED instruction that never left (rejected before release) has no submission step; it still belongs here.
+        const released = data.remittances.filter((r) => groupOf(r.status) !== null).sort(byDue)
+        const shown = released.filter((r) => group === 'ALL' || groupOf(r.status) === group)
+        return (
+          <>
+            <Tiles tiles={GROUPS.filter((g) => g !== 'ALL').map((g) => ({
+              label: GROUP_LABEL[g], count: released.filter((r) => groupOf(r.status) === g).length,
+              tone: g === 'SETTLED' ? 'ok' as const : g === 'IN_FLIGHT' ? 'neutral' as const : 'bad' as const,
+            }))} />
+            <Card
+              title={`${shown.length} of ${released.length} released payments`}
+              aside={
+                <div className="ztax-filter-bar">
+                  <Field label="Show">
+                    <select value={group} onChange={(e) => { setGroup(pick(GROUPS, e.target.value, 'ALL')) }}>
+                      {GROUPS.map((g) => <option key={g} value={g}>{GROUP_LABEL[g]}</option>)}
+                    </select>
+                  </Field>
+                  <button type="button" className="ztax-btn-quiet" onClick={reload}>Refresh</button>
+                </div>
+              }
+            >
+              {shown.length === 0 ? <Empty>{released.length === 0 ? 'No payment has been released to a provider yet.' : 'No payment matches this filter.'}</Empty> : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="ztax-action-table">
+                    <thead>
+                      <tr><th>Payee</th><th>Amount</th><th>Submitted</th><th>Status</th><th>Provider history</th><th>Action</th></tr>
+                    </thead>
+                    <tbody>
+                      {shown.map((r) => {
+                        const submitted = r.history.find((s) => s.kind === 'SUBMITTED')
+                        const reports = r.history.filter((s) => s.kind === 'PROVIDER_STATUS' || s.kind === 'UNCERTAIN_RESOLVED' || s.kind === 'RETURNED')
+                        return (
+                          <tr key={r.id} style={{ verticalAlign: 'top' }}>
+                            <td style={{ paddingRight: 8 }}><Payee r={r} /></td>
+                            <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}><Amount amount={r.amount} currency={r.currency} /></td>
+                            <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}>{submitted === undefined ? '—' : instant(submitted.recordedAt)}</td>
+                            <td style={{ paddingRight: 8 }}><Status value={r.status} /></td>
+                            <td style={{ paddingRight: 8 }}>
+                              {reports.length === 0 ? <span className="muted">no provider status recorded yet</span> : (
+                                <ol style={{ margin: 0, paddingLeft: 16 }}>
+                                  {reports.map((s) => (
+                                    <li key={s.seq}>
+                                      <Status value={s.status} /> <span className="muted">{instant(s.recordedAt)}</span>
+                                      {stepText(s) === '' ? null : <div className="mono" style={{ fontSize: 11 }}>{stepText(s)}</div>}
+                                    </li>
+                                  ))}
+                                </ol>
+                              )}
+                            </td>
+                            <td style={{ whiteSpace: 'nowrap' }}>
+                              <button type="button" className="ztax-table-action-btn" onClick={() => { onOpen(r.id) }}>Open</button>{' '}
+                              <button type="button" className="ztax-table-action-btn" onClick={() => { onEvidence(r.id) }}>Evidence</button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          </>
+        )
+      }}
+    </Loaded>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// settlement reconciliation
+// ---------------------------------------------------------------------------
+
+const SettlementTab = ({ onEvidence }: { onEvidence: (id: string) => void }) => {
+  const { load, reload } = useLoad((signal) => ztax.listRemittances({ limit: 500 }, signal), [])
+  return (
+    <Loaded load={load}>
+      {(data) => {
+        const rows = data.remittances.filter((r) => r.status === 'SETTLED' || r.status === 'RETURNED').sort(byDue).map((r) => {
+          const settled = [...r.history].reverse().find((s) => s.status === 'SETTLED')
+          const returned = [...r.history].reverse().find((s) => s.kind === 'RETURNED')
+          return { r, settled, returned, hasRef: settled?.providerReference !== undefined }
+        })
+        const csv = () => {
+          downloadCsv('settlement-reconciliation', ['Payee', 'Authority', 'Payment reference', 'Period start', 'Period end', 'Amount',
+            'Currency', 'Status', 'Settled at', 'Settlement evidence', 'Provider reference', 'Returned at', 'Return reference',
+            'Instruction hash'], rows.map(({ r, settled, returned }) => [r.beneficiary.legalName, r.authority, r.paymentReference,
+            r.periodStart, r.periodEnd, r.amount, r.currency, r.status, settled?.recordedAt ?? '', settled?.evidence ?? '',
+            settled?.providerReference ?? '', returned?.recordedAt ?? '', returned?.providerReference ?? '', r.instructionHash]))
+        }
+        return (
+          <>
+            <Tiles tiles={[
+              { label: 'Settled', count: rows.filter((x) => x.r.status === 'SETTLED').length, tone: 'ok' },
+              { label: 'Settled with a reference', count: rows.filter((x) => x.r.status === 'SETTLED' && x.hasRef).length, tone: 'ok' },
+              { label: 'Settled without a reference', count: rows.filter((x) => x.r.status === 'SETTLED' && !x.hasRef).length, tone: 'warn',
+                note: 'Chase the provider or authority for one' },
+              { label: 'Returned after settlement', count: rows.filter((x) => x.r.status === 'RETURNED').length, tone: 'bad' },
+            ]} />
+            <Card
+              title={`${rows.length} settled or returned`}
+              aside={
+                <div className="ztax-filter-bar">
+                  <button type="button" className="ztax-btn-quiet" onClick={reload}>Refresh</button>
+                  <button type="button" className="ztax-btn-quiet" disabled={rows.length === 0} onClick={csv}>Download CSV</button>
+                </div>
+              }
+            >
+              <p className="ztax-note">
+                A payment is settled only on completion evidence — a bank statement, an authority receipt, provider settlement or a beneficiary
+                credit. This view matches each settlement to the reference that evidences it; amounts are shown as recorded, never recomputed.
+              </p>
+              {rows.length === 0 ? <Empty>No payment has settled yet.</Empty> : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="ztax-action-table">
+                    <thead>
+                      <tr><th>Payee</th><th>Period</th><th>Amount</th><th>Settled</th><th>Evidence</th><th>Reference</th><th>Match</th><th>Return</th><th>Action</th></tr>
+                    </thead>
+                    <tbody>
+                      {rows.map(({ r, settled, returned, hasRef }) => (
+                        <tr key={r.id}>
+                          <td style={{ paddingRight: 8 }}><Payee r={r} /></td>
+                          <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}>{civilDate(r.periodStart)} – {civilDate(r.periodEnd)}</td>
+                          <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}><Amount amount={r.amount} currency={r.currency} /></td>
+                          <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}>{settled === undefined ? '—' : instant(settled.recordedAt)}</td>
+                          <td style={{ paddingRight: 8 }}>{settled?.evidence === undefined ? '—' : words(settled.evidence)}</td>
+                          <td className="mono" style={{ paddingRight: 8 }}>{settled?.providerReference ?? '—'}</td>
+                          <td style={{ paddingRight: 8 }}>
+                            {r.status === 'RETURNED' ? <Status value="RETURNED" /> : hasRef ? <Status value="MATCHED" /> : <Status value="MISSING" />}
+                          </td>
+                          <td style={{ paddingRight: 8 }}>
+                            {returned === undefined ? <span className="muted">—</span> : (
+                              <>{instant(returned.recordedAt)}{returned.providerReference === undefined ? null : <span className="mono muted"> · ref {returned.providerReference}</span>}</>
+                            )}
+                          </td>
+                          <td><button type="button" className="ztax-table-action-btn" onClick={() => { onEvidence(r.id) }}>Evidence</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          </>
+        )
+      }}
+    </Loaded>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// evidence
+// ---------------------------------------------------------------------------
+
+const EvidenceTab = ({ id, onPick, onOpen }: { id: string; onPick: (id: string) => void; onOpen: (id: string) => void }) => {
+  const list = useLoad((signal) => ztax.listRemittances({ limit: 500 }, signal), [])
+  return (
+    <Loaded load={list.load}>
+      {(data) => {
+        const sorted = [...data.remittances].sort(byDue)
+        const chosen = id || (sorted[0]?.id ?? '')
+        return (
+          <>
+            <Card
+              title="Payment"
+              aside={
+                <div className="ztax-filter-bar">
+                  <Field label="Payment">
+                    <select value={chosen} onChange={(e) => { onPick(e.target.value) }}>
+                      {sorted.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.beneficiary.legalName} · {civilDate(r.periodStart)} – {civilDate(r.periodEnd)} · {words(r.status)}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+              }
+            >
+              {sorted.length === 0 ? <Empty>No payment instruction exists yet.</Empty> : null}
+            </Card>
+            {chosen === '' ? null : <EvidenceRecord key={chosen} id={chosen} onOpen={onOpen} />}
+          </>
+        )
+      }}
+    </Loaded>
+  )
+}
+
+const EvidenceRecord = ({ id, onOpen }: { id: string; onOpen: (id: string) => void }) => {
+  const { load } = useLoad((signal) => ztax.getRemittance(id, signal), [id])
+  return (
+    <Loaded load={load}>
+      {(r) => (
+        <>
+          <Columns>
+            <Card
+              title="Instruction"
+              aside={
+                <div className="ztax-filter-bar">
+                  <button type="button" className="ztax-btn-quiet" onClick={() => { onOpen(r.id) }}>Open payment</button>
+                  <button type="button" className="ztax-btn-quiet"
+                    onClick={() => { downloadJson(`remittance-evidence-${r.id}`, r) }}>Download JSON</button>
+                </div>
+              }
+            >
+              <dl className="ztax-kv">
+                <dt>Payment</dt><dd className="mono">{r.id}</dd>
+                <dt>Status</dt><dd><Status value={r.status} /></dd>
+                <dt>Amount</dt><dd><Amount amount={r.amount} currency={r.currency} /></dd>
+                <dt>Obligation</dt><dd className="mono">{r.obligationId} <Status value={r.obligationStatus} /></dd>
+                <dt>Legal entity</dt><dd className="mono">{r.legalEntityId}</dd>
+                <dt>Payee</dt><dd>{r.beneficiary.legalName} <span className="mono muted">{r.beneficiary.id}</span> <Status value={r.beneficiary.state} /></dd>
+                <dt>Payee source</dt><dd>{r.beneficiary.source}</dd>
+                <dt>Funding</dt><dd className="mono">{r.fundingRef}</dd>
+                <dt>Payment reference</dt><dd className="mono">{r.paymentReference}</dd>
+                <dt>Executes</dt><dd>{civilDate(r.executionDate)} · {words(r.mode)}</dd>
+                <dt>Funds posture</dt><dd className="mono">{r.fundsPosture}</dd>
+                <dt>Instruction hash</dt><dd className="mono">{r.instructionHash}</dd>
+                <dt>Replaces</dt><dd className="mono">{r.supersedes ?? '— first instruction'}</dd>
+                <dt>Made</dt><dd>{instant(r.createdAt)} by <Id value={r.createdBy} /></dd>
+              </dl>
+            </Card>
+            <Card title="Payee verification">
+              <table className="ztax-action-table">
+                <thead><tr><th>#</th><th>Event</th><th>Evidence</th><th>By</th><th>When</th></tr></thead>
+                <tbody>
+                  {r.beneficiary.history.map((e) => (
+                    <tr key={e.seq}>
+                      <td className="mono" style={{ paddingRight: 8 }}>{e.seq}</td>
+                      <td style={{ paddingRight: 8 }}><Status value={e.kind} /></td>
+                      <td style={{ paddingRight: 8 }}>{e.evidence ?? '—'}</td>
+                      <td style={{ paddingRight: 8 }}><Id value={e.recordedBy} /></td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{instant(e.recordedAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          </Columns>
+          <Card title={`Recorded steps · ${r.history.length}`}>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="ztax-action-table">
+                <thead>
+                  <tr><th>#</th><th>Step</th><th>Then</th><th>Instruction hash</th><th>Submission</th><th>Evidence · reference</th><th>Raw</th><th>By</th><th>When</th></tr>
+                </thead>
+                <tbody>
+                  {r.history.map((s) => (
+                    <tr key={s.seq} style={{ verticalAlign: 'top' }}>
+                      <td className="mono" style={{ paddingRight: 8 }}>{s.seq}</td>
+                      <td style={{ paddingRight: 8 }}>{words(s.kind)}</td>
+                      <td style={{ paddingRight: 8 }}><Status value={s.status} /></td>
+                      <td style={{ paddingRight: 8 }}><Id value={s.instructionHash} /></td>
+                      <td style={{ paddingRight: 8 }}><Id value={s.submissionId} /></td>
+                      <td style={{ paddingRight: 8 }}>{stepText(s) || '—'}</td>
+                      <td className="mono" style={{ paddingRight: 8, maxWidth: 260, overflowWrap: 'anywhere' }}>
+                        {s.raw === undefined ? '—' : s.raw.length > 160 ? <span title={s.raw}>{s.raw.slice(0, 160)}…</span> : s.raw}
+                      </td>
+                      <td style={{ paddingRight: 8 }}><Id value={s.recordedBy} /></td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{instant(s.recordedAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </>
+      )}
+    </Loaded>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// payment authorisations
+// ---------------------------------------------------------------------------
+
+const Payments = ({ session, selected, setSelected }: {
+  session: PageProps['session']
+  selected: string | null
+  setSelected: (id: string | null) => void
+}) => {
+  const [status, setStatus] = useState<RemStatus | 'ALL'>('ALL')
   const { load, reload } = useLoad(
     (signal) => ztax.listRemittances(status === 'ALL' ? { limit: 500 } : { status, limit: 500 }, signal),
     [status],
@@ -86,17 +505,7 @@ export const RemittancePage = ({ session }: PageProps) => {
   }
 
   return (
-    <div className="ztax-page">
-      <PageHeader
-        title="Remittance"
-        subtitle="Payments of accepted returns, overdue first. Each instruction is approved by someone other than its maker, as an exact hash."
-        actions={<button type="button" className="ztax-btn-quiet" onClick={refresh}>Refresh</button>}
-      />
-      <p className="ztax-note">
-        Funds posture: <span className="mono">NO_CUSTODY</span>. ZoikoTax prepares and records instructions to your own bank or
-        provider. It never holds, pools or moves your money.
-      </p>
-
+    <>
       <Card
         title="Payments"
         aside={
@@ -107,6 +516,7 @@ export const RemittancePage = ({ session }: PageProps) => {
                 {STATUSES.map((s) => <option key={s} value={s}>{words(s)}</option>)}
               </select>
             </Field>
+            <button type="button" className="ztax-btn-quiet" onClick={refresh}>Refresh</button>
           </div>
         }
       >
@@ -172,7 +582,7 @@ export const RemittancePage = ({ session }: PageProps) => {
       ) : null}
 
       <Payees load={payees.load} canKeep={canKeepPayees} canCheck={canCheckPayees} onChanged={payees.reload} />
-    </div>
+    </>
   )
 }
 

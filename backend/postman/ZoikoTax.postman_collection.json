@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:b8c7bf53f9801b1297862c7817005ab3493eed087817fbb21cf99ffebcd5e990`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:aadfe8af64fd89c8cc79ecaefc426d862af2b74c2219e7c34a675d23209c150b`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -4695,6 +4695,87 @@
           ]
         },
         {
+          "name": "GET /v1/decisions — The tenant's recorded decisions, latest first",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/decisions?businessKey={{businessKey}}&outcome={{outcome}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "decisions"
+              ],
+              "query": [
+                {
+                  "key": "businessKey",
+                  "value": "{{businessKey}}",
+                  "description": "Only the versions of this business key."
+                },
+                {
+                  "key": "outcome",
+                  "value": "{{outcome}}",
+                  "description": "Only decisions with this outcome."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The tenant's recorded decisions, latest first\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. Every recorded decision,\ncorrections included, latest recorded first. Each is summarised from\nits index row — no evidence object is opened, so no emitted\ncomponent or amount is listed; `GET /v1/decisions/{decisionId}`\nreturns those. `supersededBy` names the correction that replaced a\ndecision; a decision without one is current."
+          },
+          "response": [
+            {
+              "name": "200 · A decision and the correction that replaced it",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/decisions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "decisions"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"decisions\": [\n    {\n      \"id\": \"01920a4d-1111-7d21-9f40-3c1a2b4d5e6f\",\n      \"businessKey\": \"INV-0001/1\",\n      \"supersedes\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n      \"authoritative\": false,\n      \"outcome\": \"ADVISORY\",\n      \"reasonCode\": \"\",\n      \"eventTime\": \"2026-09-25T10:00:00.000000Z\",\n      \"recordedAt\": \"2026-09-26T08:00:00.000000Z\",\n      \"bundle\": {\n        \"bundleId\": \"eu-vat\",\n        \"digest\": \"zt1:5b8d2c4e6f8a0b1c3d5e7f9a1b3c5d7e9f0a2b4c6d8e0f1a3b5c7d9e1f2a4b6c\",\n        \"irVersion\": 1\n      }\n    },\n    {\n      \"id\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n      \"businessKey\": \"INV-0001/1\",\n      \"supersededBy\": \"01920a4d-1111-7d21-9f40-3c1a2b4d5e6f\",\n      \"authoritative\": false,\n      \"outcome\": \"ADVISORY\",\n      \"reasonCode\": \"\",\n      \"eventTime\": \"2026-09-25T10:00:00.000000Z\",\n      \"recordedAt\": \"2026-09-25T10:00:01.000000Z\",\n      \"bundle\": {\n        \"bundleId\": \"eu-vat\",\n        \"digest\": \"zt1:5b8d2c4e6f8a0b1c3d5e7f9a1b3c5d7e9f0a2b4c6d8e0f1a3b5c7d9e1f2a4b6c\",\n        \"irVersion\": 1\n      }\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listDecisions returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "POST /v1/replay/{decisionId} — Replay a recorded decision and compare it byte for byte",
           "request": {
             "method": "POST",
@@ -7617,6 +7698,77 @@
           ]
         },
         {
+          "name": "GET /v1/documents — The tenant's fiscal documents, latest committed first",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/documents?limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "documents"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The tenant's fiscal documents, latest committed first\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. Each document exactly as\n`GET /v1/documents/{documentId}` returns it — lines, totals and\nstatus history — corrections and cancellations included. The page is\ncapped at 100 whatever `limit` asks for, because each document is\nread in full."
+          },
+          "response": [
+            {
+              "name": "200 · Nothing committed yet",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/documents",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "documents"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"documents\": []\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listDocuments returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "POST /v1/transactions:adjust — Correct a recorded decision under the content that made it",
           "request": {
             "method": "POST",
@@ -7949,6 +8101,77 @@
           ]
         },
         {
+          "name": "GET /v1/refunds — The tenant's refunds, latest requested first",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/refunds?limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "refunds"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The tenant's refunds, latest requested first\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. Each refund exactly as\n`GET /v1/refunds/{refundId}` returns it, history included. The page\nis capped at 100 whatever `limit` asks for, because each refund is\nread in full."
+          },
+          "response": [
+            {
+              "name": "200 · One refund, reported paid",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/refunds",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "refunds"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"refunds\": [\n    {\n      \"id\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"amount\": {\n        \"amount\": \"21.11\",\n        \"currency\": \"EUR\"\n      },\n      \"paymentReference\": \"RF-2026-0001\",\n      \"status\": \"COMPLETED\",\n      \"requestedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"status\": \"REQUESTED\",\n          \"recordedAt\": \"2026-10-01T09:00:00.000000Z\"\n        },\n        {\n          \"seq\": 2,\n          \"status\": \"COMPLETED\",\n          \"outcome\": \"PAID\",\n          \"externalReference\": \"BANK-778812\",\n          \"recordedAt\": \"2026-10-02T09:00:00.000000Z\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listRefunds returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "POST /v1/classifications:propose — Ask the AI plane for an advisory ontology mapping",
           "request": {
             "method": "POST",
@@ -8210,6 +8433,77 @@
                   "    if (it.status === 'SUCCEEDED') { pm.expect(it.decisionId).to.be.a('string'); }",
                   "    if (it.status === 'FAILED') { pm.expect(it.reasonCode).to.be.a('string'); }",
                   "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/jobs — The tenant's batch jobs, latest requested first",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/jobs?limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "jobs"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The tenant's batch jobs, latest requested first\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. Each job's progress without its\nitems — a job may hold a thousand; `GET /v1/jobs/{jobId}` returns\nthem. The page is capped at 100 whatever `limit` asks for."
+          },
+          "response": [
+            {
+              "name": "200 · One completed job",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/jobs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "jobs"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"jobs\": [\n    {\n      \"id\": \"01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"operation\": \"COMMIT\",\n      \"status\": \"COMPLETED\",\n      \"itemCount\": 2,\n      \"succeeded\": 1,\n      \"failed\": 1,\n      \"pending\": 0,\n      \"requestedAt\": \"2026-10-07T09:00:00.000000Z\",\n      \"startedAt\": \"2026-10-07T09:00:01.000000Z\",\n      \"finishedAt\": \"2026-10-07T09:00:02.000000Z\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listJobs returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
                   "});"
                 ]
               }
@@ -8747,6 +9041,77 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('getReconciliation returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/reconciliations — The tenant's reconciliation runs, latest first",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/reconciliations?limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "reconciliations"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The tenant's reconciliation runs, latest first\n\n`OPERATOR`, `ANALYST` or `AUDITOR`. Each run without its items — a\nperiod may compare thousands; `GET /v1/reconciliations/{runId}`\nreturns them. `exceptionCount` is the items not `MATCHED` or\n`TOLERANCE_MATCH`, and `resolvedCount` those with a recorded\nresolution, so a run with open breaks is visible without opening it.\nThe page is capped at 100 whatever `limit` asks for."
+          },
+          "response": [
+            {
+              "name": "200 · September, one break open",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/reconciliations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "reconciliations"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"runs\": [\n    {\n      \"id\": \"01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"period\": \"2026-09\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"ranAt\": \"2026-10-03T09:00:00.000000Z\",\n      \"firstBreak\": \"R1_CALCULATED_TO_DOCUMENT\",\n      \"unavailable\": [\n        \"R2_DOCUMENT_TO_COLLECTION\",\n        \"R4_SUBLEDGER_TO_RETURN\",\n        \"R5_RETURN_TO_REMITTANCE\",\n        \"R6_SUBLEDGER_TO_GL\"\n      ],\n      \"itemCount\": 3,\n      \"exceptionCount\": 1,\n      \"resolvedCount\": 0\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listReconciliations returns a status the contract declares', function () {",
                   "  pm.expect(pm.response.code).to.be.oneOf([200]);",
                   "});"
                 ]
@@ -10339,7 +10704,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:b8c7bf53f9801b1297862c7817005ab3493eed087817fbb21cf99ffebcd5e990",
+      "value": "sha256:aadfe8af64fd89c8cc79ecaefc426d862af2b74c2219e7c34a675d23209c150b",
       "type": "string"
     }
   ]

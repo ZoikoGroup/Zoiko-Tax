@@ -213,6 +213,23 @@ type DecisionRepository interface {
 	// SealLeaves returns the leaves of every decision recorded in
 	// [from, to), in evidence.LeafOrder.
 	SealLeaves(ctx context.Context, from, to time.Time) ([]evidence.SealLeaf, error)
+	// List returns decisions latest recorded first, each with the decision
+	// that supersedes it, if one does. It reads index rows only: a listing
+	// never opens an evidence object.
+	List(ctx context.Context, f DecisionFilter) ([]DecisionListing, error)
+}
+
+// DecisionFilter narrows a decision listing. An empty field does not filter.
+type DecisionFilter struct {
+	BusinessKey string
+	Outcome     evidence.Outcome
+	Limit       int
+}
+
+// DecisionListing is a decision's index row and its successor, if it has one.
+type DecisionListing struct {
+	Record       evidence.Record
+	SupersededBy *id.DecisionID
 }
 
 // ---------------------------------------------------------------------------
@@ -498,6 +515,9 @@ type RefundRepository interface {
 	// ForDecision returns the refunds of one decision, each with its current
 	// event, oldest first.
 	ForDecision(ctx context.Context, decisionID id.DecisionID) ([]RefundState, error)
+	// Recent returns the identifiers of the most recently requested
+	// refunds, latest first.
+	Recent(ctx context.Context, limit int) ([]id.RefundID, error)
 }
 
 // RefundState is a refund and its current event.
@@ -601,6 +621,9 @@ type BatchRepository interface {
 	AppendResult(ctx context.Context, r batch.Result) (bool, error)
 	// Complete marks a job COMPLETED and releases its lease.
 	Complete(ctx context.Context, jobID id.JobID, at time.Time) error
+	// Recent returns the identifiers of the most recently requested jobs,
+	// latest first.
+	Recent(ctx context.Context, limit int) ([]id.JobID, error)
 }
 
 // ---------------------------------------------------------------------------
@@ -645,6 +668,9 @@ type DocumentRepository interface {
 	AppendStatus(ctx context.Context, e document.StatusEvent) error
 	// Lineage returns every document sharing a root, in commit order.
 	Lineage(ctx context.Context, root id.FiscalDocumentID) ([]DocumentRecord, error)
+	// Recent returns the identifiers of the most recently committed
+	// documents, latest first.
+	Recent(ctx context.Context, limit int) ([]id.FiscalDocumentID, error)
 	// CitedBy returns the documents that pin a decision, with each one's
 	// current status.
 	CitedBy(ctx context.Context, decisionID id.DecisionID) ([]DocumentCitation, error)
@@ -727,6 +753,8 @@ type ReconciliationRepository interface {
 	// Resolve records an item's resolution; a second resolution of one item
 	// is refused as a conflict.
 	Resolve(ctx context.Context, r ReconResolution) error
+	// Recent returns the identifiers of the most recent runs, latest first.
+	Recent(ctx context.Context, limit int) ([]id.ReconciliationID, error)
 }
 
 // ---------------------------------------------------------------------------

@@ -42,6 +42,9 @@ export type View =
   | 'locations'
   | 'intelligence'
   | 'admin'
+  | 'system-health'
+  | 'activity'
+  | 'filing-remittance'
 
 /** A screen: a view, and the tab inside it when the view has tabs. */
 export interface NavTarget {
@@ -86,15 +89,15 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
       { id: 'home.overview', label: 'Fiscal Overview', target: at('dashboard') },
       { id: 'home.coverage', label: 'My Coverage', target: at('locations', 'overview') },
       { id: 'home.readiness', label: 'Jurisdiction Readiness', target: at('locations', 'countries') },
-      { id: 'home.health', label: 'System Health' },
-      { id: 'home.activity', label: 'Recent Activity' },
+      { id: 'home.health', label: 'System Health', target: at('system-health') },
+      { id: 'home.activity', label: 'Recent Activity', target: at('activity') },
     ],
   },
   {
     id: 'actions', label: 'Action Center', icon: <IconBell />, children: [
-      { id: 'actions.tasks', label: 'My Tasks', target: at('actions') },
-      { id: 'actions.exceptions', label: 'Tax Exceptions' },
-      { id: 'actions.approvals', label: 'Pending Approvals' },
+      { id: 'actions.tasks', label: 'My Tasks', target: at('actions', 'tasks') },
+      { id: 'actions.exceptions', label: 'Tax Exceptions', target: at('actions', 'exceptions') },
+      { id: 'actions.approvals', label: 'Pending Approvals', target: at('actions', 'approvals') },
       { id: 'actions.notices', label: 'Regulatory Notices' },
       { id: 'actions.cases', label: 'Support Cases' },
     ],
@@ -105,44 +108,44 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
       { id: 'determine.transactions', label: 'Tax Transactions', target: at('determine', 'decision') },
       { id: 'determine.classification', label: 'Service Classification', target: at('intelligence') },
       { id: 'determine.situs', label: 'Situs & Place of Supply', target: at('locations', 'try') },
-      { id: 'determine.liability', label: 'Liability & Recovery' },
+      { id: 'determine.liability', label: 'Liability & Recovery', target: at('determine', 'liability') },
       { id: 'determine.corrections', label: 'Corrections', target: at('determine', 'refunds') },
     ],
   },
   {
     id: 'obligations', label: 'Obligations', icon: <IconFileText />, children: [
-      { id: 'obligations.register', label: 'Obligation Register', target: at('obligations') },
+      { id: 'obligations.register', label: 'Obligation Register', target: at('obligations', 'register') },
       { id: 'obligations.contributions', label: 'Provider Contributions' },
-      { id: 'obligations.calendar', label: 'Compliance Calendar' },
+      { id: 'obligations.calendar', label: 'Compliance Calendar', target: at('obligations', 'calendar') },
       { id: 'obligations.workpapers', label: 'Regulatory Workpapers' },
-      { id: 'obligations.exceptions', label: 'Obligation Exceptions' },
+      { id: 'obligations.exceptions', label: 'Obligation Exceptions', target: at('obligations', 'exceptions') },
     ],
   },
   {
     id: 'compliance', label: 'Compliance', icon: <IconShield />, children: [
-      { id: 'compliance.preparation', label: 'Filing Preparation', target: at('compliance') },
-      { id: 'compliance.returns', label: 'Regulatory Returns' },
-      { id: 'compliance.acks', label: 'Authority Acknowledgements' },
+      { id: 'compliance.preparation', label: 'Filing Preparation', target: at('compliance', 'queue') },
+      { id: 'compliance.returns', label: 'Regulatory Returns', target: at('compliance', 'returns') },
+      { id: 'compliance.acks', label: 'Authority Acknowledgements', target: at('compliance', 'acks') },
       { id: 'compliance.registrations', label: 'Registrations & Exemptions' },
-      { id: 'compliance.status', label: 'Compliance Status' },
+      { id: 'compliance.status', label: 'Compliance Status', target: at('compliance', 'status') },
     ],
   },
   {
     id: 'reconcile', label: 'Reconcile', icon: <IconRotateCw />, children: [
       { id: 'reconcile.subledger', label: 'Tax Control Subledger', target: at('determine', 'subledger') },
-      { id: 'reconcile.billing', label: 'Billing-to-Tax', target: at('reconcile') },
+      { id: 'reconcile.billing', label: 'Billing-to-Tax', target: at('reconcile', 'runs') },
       { id: 'reconcile.erp', label: 'ERP Reconciliation' },
-      { id: 'reconcile.filing', label: 'Filing-to-Remittance' },
-      { id: 'reconcile.variances', label: 'Variances' },
+      { id: 'reconcile.filing', label: 'Filing-to-Remittance', target: at('filing-remittance') },
+      { id: 'reconcile.variances', label: 'Variances', target: at('reconcile', 'variances') },
     ],
   },
   {
     id: 'remittance', label: 'Remittance', icon: <IconCreditCard />, children: [
-      { id: 'remittance.authorisations', label: 'Payment Authorisations', target: at('remittance') },
-      { id: 'remittance.queue', label: 'Remittance Queue' },
-      { id: 'remittance.status', label: 'Payment Status' },
-      { id: 'remittance.settlement', label: 'Settlement Reconciliation' },
-      { id: 'remittance.evidence', label: 'Evidence' },
+      { id: 'remittance.authorisations', label: 'Payment Authorisations', target: at('remittance', 'payments') },
+      { id: 'remittance.queue', label: 'Remittance Queue', target: at('remittance', 'queue') },
+      { id: 'remittance.status', label: 'Payment Status', target: at('remittance', 'status') },
+      { id: 'remittance.settlement', label: 'Settlement Reconciliation', target: at('remittance', 'settlement') },
+      { id: 'remittance.evidence', label: 'Evidence', target: at('remittance', 'evidence') },
     ],
   },
   {
@@ -151,74 +154,74 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
       { id: 'ctc.processing', label: 'Invoice Processing', target: at('documents', 'issue') },
       { id: 'ctc.validation', label: 'Format Validation' },
       { id: 'ctc.submissions', label: 'Authority Submissions' },
-      { id: 'ctc.rejections', label: 'Rejections & Corrections' },
+      { id: 'ctc.rejections', label: 'Rejections & Corrections', target: at('documents', 'corrections') },
       { id: 'ctc.archive', label: 'Fiscal Archive', target: at('documents', 'lookup') },
     ],
   },
   {
     id: 'shadow', label: 'Shadow', icon: <IconEye />, children: [
-      { id: 'shadow.runs', label: 'Comparison Runs', target: at('shadow') },
-      { id: 'shadow.discrepancies', label: 'Tax Discrepancies' },
-      { id: 'shadow.historical', label: 'Historical Comparisons' },
-      { id: 'shadow.assurance', label: 'Assurance Cases' },
-      { id: 'shadow.reports', label: 'Reports' },
+      { id: 'shadow.runs', label: 'Comparison Runs', target: at('shadow', 'runs') },
+      { id: 'shadow.discrepancies', label: 'Tax Discrepancies', target: at('shadow', 'discrepancies') },
+      { id: 'shadow.historical', label: 'Historical Comparisons', target: at('shadow', 'historical') },
+      { id: 'shadow.assurance', label: 'Assurance Cases', target: at('shadow', 'assurance') },
+      { id: 'shadow.reports', label: 'Reports', target: at('shadow', 'reports') },
     ],
   },
   {
     id: 'evidence', label: 'Evidence', icon: <IconArchive />, children: [
       { id: 'evidence.centre', label: 'Evidence Centre', target: at('evidence', 'seals') },
       { id: 'evidence.audit', label: 'Decision Audit Trail', target: at('evidence', 'inclusion') },
-      { id: 'evidence.provenance', label: 'Source Provenance' },
-      { id: 'evidence.replay', label: 'Historical Replay' },
-      { id: 'evidence.exports', label: 'Verified Exports' },
+      { id: 'evidence.provenance', label: 'Source Provenance', target: at('evidence', 'provenance') },
+      { id: 'evidence.replay', label: 'Historical Replay', target: at('evidence', 'replay') },
+      { id: 'evidence.exports', label: 'Verified Exports', target: at('evidence', 'exports') },
     ],
   },
   {
     id: 'intelligence', label: 'Intelligence', icon: <IconSparkles />, children: [
       { id: 'intelligence.feed', label: 'Regulatory Change Feed' },
       { id: 'intelligence.impact', label: 'Tax Impact Analysis' },
-      { id: 'intelligence.coverage', label: 'Coverage Intelligence' },
+      { id: 'intelligence.coverage', label: 'Coverage Intelligence', target: at('locations', 'gaps') },
       { id: 'intelligence.assistant', label: 'AI Assistant', target: at('intelligence') },
       { id: 'intelligence.recommendations', label: 'Review Recommendations' },
     ],
   },
   {
     id: 'content', label: 'Content', icon: <IconDatabase />, children: [
-      { id: 'content.packs', label: 'Jurisdiction Rule Packs', target: at('content') },
-      { id: 'content.codes', label: 'Service & Levy Codes' },
-      { id: 'content.sources', label: 'Legal Source Library' },
+      { id: 'content.packs', label: 'Jurisdiction Rule Packs', target: at('content', 'packs') },
+      { id: 'content.codes', label: 'Service & Levy Codes', target: at('content', 'codes') },
+      { id: 'content.sources', label: 'Legal Source Library', target: at('content', 'sources') },
       { id: 'content.crosswalks', label: 'Vendor Crosswalks' },
       { id: 'content.approvals', label: 'Rule Approvals' },
-      { id: 'content.releases', label: 'Content Releases' },
+      { id: 'content.releases', label: 'Content Releases', target: at('content', 'releases') },
     ],
   },
   {
     id: 'migration', label: 'Migration', icon: <IconGitFork />, children: [
-      { id: 'migration.import', label: 'Data Import', target: at('migration') },
-      { id: 'migration.mapping', label: 'Mapping Validation' },
-      { id: 'migration.parallel', label: 'Parallel Runs' },
-      { id: 'migration.cutover', label: 'Cutover Readiness' },
-      { id: 'migration.rollback', label: 'Rollback & History' },
+      { id: 'migration.import', label: 'Data Import', target: at('migration', 'import') },
+      { id: 'migration.mapping', label: 'Mapping Validation', target: at('migration', 'mapping') },
+      { id: 'migration.parallel', label: 'Parallel Runs', target: at('migration', 'parallel') },
+      { id: 'migration.cutover', label: 'Cutover Readiness', target: at('migration', 'cutover') },
+      { id: 'migration.rollback', label: 'Rollback & History', target: at('migration', 'rollback') },
     ],
   },
   {
     id: 'reports', label: 'Reports', icon: <IconBarChart />, children: [
-      { id: 'reports.liability', label: 'Tax Liability', target: at('reports') },
-      { id: 'reports.obligations', label: 'Regulatory Obligations' },
-      { id: 'reports.filing', label: 'Filing Reports' },
-      { id: 'reports.reconciliation', label: 'Reconciliation' },
+      { id: 'reports.liability', label: 'Tax Liability', target: at('reports', 'payments') },
+      { id: 'reports.obligations', label: 'Regulatory Obligations', target: at('reports', 'obligations') },
+      { id: 'reports.filing', label: 'Filing Reports', target: at('reports', 'filings') },
+      { id: 'reports.reconciliation', label: 'Reconciliation', target: at('reports', 'reconciliation') },
       { id: 'reports.analytics', label: 'Executive Analytics (demo)', target: at('reports-demo') },
-      { id: 'reports.exports', label: 'Audit Exports' },
+      { id: 'reports.exports', label: 'Audit Exports', target: at('reports', 'exports') },
     ],
   },
   {
     id: 'administration', label: 'Administration', icon: <IconSettings />, children: [
-      { id: 'admin.organisation', label: 'Organisation & Legal Entities' },
-      { id: 'admin.users', label: 'Users & Permissions', target: at('admin') },
+      { id: 'admin.organisation', label: 'Organisation & Legal Entities', target: at('admin', 'organisation') },
+      { id: 'admin.users', label: 'Users & Permissions', target: at('admin', 'users') },
       { id: 'admin.entitlements', label: 'Entitlements' },
-      { id: 'admin.integrations', label: 'Integrations & APIs' },
+      { id: 'admin.integrations', label: 'Integrations & APIs', target: at('admin', 'integrations') },
       { id: 'admin.subscriptions', label: 'Subscriptions & Usage' },
-      { id: 'admin.security', label: 'Security Settings' },
+      { id: 'admin.security', label: 'Security Settings', target: at('admin', 'security') },
     ],
   },
 ]

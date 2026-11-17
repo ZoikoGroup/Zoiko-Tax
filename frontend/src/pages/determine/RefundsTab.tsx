@@ -5,6 +5,7 @@ import type { S } from '@zoikotax/sdk'
 import { ztax } from '../../platform/client'
 import { instant } from '../../dashboard/format'
 import { Amount, Card, Field, Id, Loaded, Outcome, Raw, Status, Submit, useAction, useLoad } from '../../ui/kit'
+import { RecentRefunds } from '../recent'
 import { KV } from './shared'
 
 const OUTCOMES: readonly { value: S<'RefundOutcome'>; label: string }[] = [
@@ -37,10 +38,11 @@ export const RefundsTab = ({ id, onOpen, onOpenDecision }: {
           </div>
         </form>
         <p className="muted ztax-note">
-          Refunds are requested from a decision, in the Decision tab. There is no list of refunds; open one by its id.
+          Refunds are requested from a decision, in the Decision tab. Open one below or by its id.
         </p>
       </Card>
       {id === '' ? null : <RefundView key={id} id={id} onOpenDecision={onOpenDecision} />}
+      <RecentRefunds selected={id} onOpen={onOpen} />
     </>
   )
 }

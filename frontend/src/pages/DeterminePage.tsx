@@ -7,18 +7,20 @@ import { periodLabel } from '../dashboard/format'
 import { PageHeader } from '../ui/kit'
 import { BatchTab } from './determine/BatchTab'
 import { DecisionTab } from './determine/DecisionTab'
+import { LiabilityTab } from './determine/LiabilityTab'
 import { QuoteCommitTab } from './determine/QuoteCommitTab'
 import { RefundsTab } from './determine/RefundsTab'
 import { SubledgerTab } from './determine/SubledgerTab'
 import { TabBar } from './determine/shared'
 import './determine.css'
 
-type Tab = 'quote' | 'decision' | 'refunds' | 'subledger' | 'batch'
+type Tab = 'quote' | 'decision' | 'refunds' | 'liability' | 'subledger' | 'batch'
 
 const TABS: readonly { value: Tab; label: string }[] = [
   { value: 'quote', label: 'Quote & commit' },
   { value: 'decision', label: 'Decision' },
   { value: 'refunds', label: 'Refunds' },
+  { value: 'liability', label: 'Liability & recovery' },
   { value: 'subledger', label: 'Subledger' },
   { value: 'batch', label: 'Batch' },
 ]
@@ -55,6 +57,7 @@ export const DeterminePage = ({ period, route, onTabChange }: PageProps) => {
       <div className="ztax-tab-panel" hidden={tab !== 'refunds'}>
         <RefundsTab key={refundId} id={refundId} onOpen={setRefundId} onOpenDecision={openDecision} />
       </div>
+      {tab === 'liability' ? <LiabilityTab onOpenDecision={openDecision} /> : null}
       {tab === 'subledger' ? <SubledgerTab period={period} /> : null}
       <div className="ztax-tab-panel" hidden={tab !== 'batch'}>
         <BatchTab onOpenDecision={openDecision} />

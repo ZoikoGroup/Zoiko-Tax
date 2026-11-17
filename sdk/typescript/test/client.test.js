@@ -192,6 +192,7 @@ test("the fiscal surface is reachable: paths, query strings and idempotency keys
   assert.equal(calls[5].init.method, "POST");
 
   for (const name of [
+    "listDecisions", "listRefunds", "listJobs", "listDocuments", "listReconciliations",
     "adjustTransaction", "getRefund", "reportRefund", "submitBatch", "getJob", "listDecisionJournals", "listDecisionResponsibility",
     "getDecisionInclusion", "getSubledgerBalances", "transitionSubledgerPeriod", "requestPeriodReopen",
     "getObligation", "transitionObligation", "issueDocument", "getDocument", "getDocumentLineage",
@@ -273,4 +274,29 @@ test("unwrap throws the error for callers who prefer exceptions", async () => {
 
 test("a client with no base url is refused at construction", () => {
   assert.throws(() => new ZoikoTaxClient({ baseUrl: "" }), TypeError);
+});
+
+test("the listings put their filters in the query and nothing else", async () => {
+  const { fetch, calls } = stub(json(200, { decisions: [] }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+
+  await client.listDecisions({ businessKey: "INV-1/1", outcome: "ADVISORY", limit: 5 });
+  await client.listDecisions();
+  await client.listRefunds({ limit: 20 });
+  await client.listJobs();
+  await client.listDocuments({ limit: 7 });
+  await client.listReconciliations();
+
+  assert.deepEqual(calls.map((c) => c.url), [
+    "/api/v1/decisions?businessKey=INV-1%2F1&outcome=ADVISORY&limit=5",
+    "/api/v1/decisions",
+    "/api/v1/refunds?limit=20",
+    "/api/v1/jobs",
+    "/api/v1/documents?limit=7",
+    "/api/v1/reconciliations",
+  ]);
+  for (const c of calls) {
+    assert.equal(c.init.method, "GET");
+    assert.equal(c.init.headers["Idempotency-Key"], undefined);
+  }
 });

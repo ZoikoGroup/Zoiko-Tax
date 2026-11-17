@@ -628,6 +628,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The tenant's refunds, latest requested first
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. Each refund exactly as
+         *     `GET /v1/refunds/{refundId}` returns it, history included. The page
+         *     is capped at 100 whatever `limit` asks for, because each refund is
+         *     read in full.
+         */
+        get: operations["listRefunds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/refunds/{refundId}": {
         parameters: {
             query?: never;
@@ -890,6 +913,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The tenant's batch jobs, latest requested first
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. Each job's progress without its
+         *     items — a job may hold a thousand; `GET /v1/jobs/{jobId}` returns
+         *     them. The page is capped at 100 whatever `limit` asks for.
+         */
+        get: operations["listJobs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/jobs/{jobId}": {
         parameters: {
             query?: never;
@@ -906,6 +951,31 @@ export interface paths {
          *     have been refused with.
          */
         get: operations["getJob"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The tenant's recorded decisions, latest first
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. Every recorded decision,
+         *     corrections included, latest recorded first. Each is summarised from
+         *     its index row — no evidence object is opened, so no emitted
+         *     component or amount is listed; `GET /v1/decisions/{decisionId}`
+         *     returns those. `supersededBy` names the correction that replaced a
+         *     decision; a decision without one is current.
+         */
+        get: operations["listDecisions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1150,7 +1220,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * The tenant's fiscal documents, latest committed first
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. Each document exactly as
+         *     `GET /v1/documents/{documentId}` returns it — lines, totals and
+         *     status history — corrections and cancellations included. The page is
+         *     capped at 100 whatever `limit` asks for, because each document is
+         *     read in full.
+         */
+        get: operations["listDocuments"];
         put?: never;
         /**
          * Commit a fiscal document that presents committed decisions
@@ -1392,7 +1470,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * The tenant's reconciliation runs, latest first
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`. Each run without its items — a
+         *     period may compare thousands; `GET /v1/reconciliations/{runId}`
+         *     returns them. `exceptionCount` is the items not `MATCHED` or
+         *     `TOLERANCE_MATCH`, and `resolvedCount` those with a recorded
+         *     resolution, so a run with open breaks is visible without opening it.
+         *     The page is capped at 100 whatever `limit` asks for.
+         */
+        get: operations["listReconciliations"];
         put?: never;
         /**
          * Reconcile a legal period stage by stage
@@ -4191,6 +4278,92 @@ export interface components {
              */
             requestedBy?: string;
             history: components["schemas"]["RefundEvent"][];
+        };
+        /** RefundList */
+        RefundList: {
+            refunds: components["schemas"]["Refund"][];
+        };
+        /**
+         * DecisionSummary
+         * @description A recorded decision as its index row has it: no emitted component and
+         *     no amount. `supersededBy` is present when a correction replaced it.
+         */
+        DecisionSummary: {
+            id: components["schemas"]["DecisionId"];
+            businessKey: components["schemas"]["BusinessKey"];
+            supersedes?: components["schemas"]["DecisionId"];
+            supersededBy?: components["schemas"]["DecisionId"];
+            /** @description Whether this decision may be filed. `false` for every decision before A4. */
+            authoritative: boolean;
+            outcome: components["schemas"]["Outcome"];
+            reasonCode: components["schemas"]["ReasonCode"];
+            eventTime: components["schemas"]["Timestamp"];
+            recordedAt: components["schemas"]["Timestamp"];
+            bundle: components["schemas"]["BundleRef"];
+        };
+        /** DecisionSummaryList */
+        DecisionSummaryList: {
+            decisions: components["schemas"]["DecisionSummary"][];
+        };
+        /** FiscalDocumentList */
+        FiscalDocumentList: {
+            documents: components["schemas"]["FiscalDocument"][];
+        };
+        /**
+         * ReconciliationRunSummary
+         * @description A reconciliation run without its items, with their counts.
+         */
+        ReconciliationRunSummary: {
+            id: components["schemas"]["RunId"];
+            period: components["schemas"]["LegalPeriod"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            ranAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            ranBy?: string;
+            firstBreak?: components["schemas"]["ReconStage"];
+            unavailable: components["schemas"]["ReconStage"][];
+            /** Format: int32 */
+            itemCount: number;
+            /**
+             * Format: int32
+             * @description Items not `MATCHED` or `TOLERANCE_MATCH`.
+             */
+            exceptionCount: number;
+            /**
+             * Format: int32
+             * @description Items with a recorded resolution.
+             */
+            resolvedCount: number;
+        };
+        /** ReconciliationRunList */
+        ReconciliationRunList: {
+            runs: components["schemas"]["ReconciliationRunSummary"][];
+        };
+        /**
+         * JobSummary
+         * @description A batch job's progress, without its items.
+         */
+        JobSummary: {
+            id: components["schemas"]["JobId"];
+            /** @enum {string} */
+            operation: "COMMIT";
+            /** @enum {string} */
+            status: "QUEUED" | "RUNNING" | "COMPLETED";
+            /** Format: int32 */
+            itemCount: number;
+            /** Format: int32 */
+            succeeded: number;
+            /** Format: int32 */
+            failed: number;
+            /** Format: int32 */
+            pending: number;
+            requestedAt: components["schemas"]["Timestamp"];
+            startedAt?: components["schemas"]["Timestamp"];
+            finishedAt?: components["schemas"]["Timestamp"];
+        };
+        /** JobList */
+        JobList: {
+            jobs: components["schemas"]["JobSummary"][];
         };
         /** RefundReportRequest */
         RefundReportRequest: {
@@ -7417,6 +7590,37 @@ export interface operations {
             503: components["responses"]["Unavailable"];
         };
     };
+    listRefunds: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The refunds. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefundList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
     getRefund: {
         parameters: {
             query?: never;
@@ -7814,6 +8018,37 @@ export interface operations {
             503: components["responses"]["Unavailable"];
         };
     };
+    listJobs: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The jobs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
     getJob: {
         parameters: {
             query?: never;
@@ -7842,6 +8077,48 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listDecisions: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only the versions of this business key.
+                 * @example INV-0001/1
+                 */
+                businessKey?: components["schemas"]["BusinessKey"];
+                /**
+                 * @description Only decisions with this outcome.
+                 * @example ADVISORY
+                 */
+                outcome?: components["schemas"]["Outcome"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The decisions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecisionSummaryList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };
@@ -8121,6 +8398,37 @@ export interface operations {
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listDocuments: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The documents. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FiscalDocumentList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };
@@ -8449,6 +8757,37 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listReconciliations: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The runs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconciliationRunList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };

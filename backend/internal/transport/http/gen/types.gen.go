@@ -1320,6 +1320,42 @@ func (e JobItemStatus) Valid() bool {
 	}
 }
 
+// Defines values for JobSummaryOperation.
+const (
+	JobSummaryOperationCOMMIT JobSummaryOperation = "COMMIT"
+)
+
+// Valid indicates whether the value is a known member of the JobSummaryOperation enum.
+func (e JobSummaryOperation) Valid() bool {
+	switch e {
+	case JobSummaryOperationCOMMIT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JobSummaryStatus.
+const (
+	JobSummaryStatusCOMPLETED JobSummaryStatus = "COMPLETED"
+	JobSummaryStatusQUEUED    JobSummaryStatus = "QUEUED"
+	JobSummaryStatusRUNNING   JobSummaryStatus = "RUNNING"
+)
+
+// Valid indicates whether the value is a known member of the JobSummaryStatus enum.
+func (e JobSummaryStatus) Valid() bool {
+	switch e {
+	case JobSummaryStatusCOMPLETED:
+		return true
+	case JobSummaryStatusQUEUED:
+		return true
+	case JobSummaryStatusRUNNING:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for JournalType.
 const (
 	JournalTypeADJUSTMENT       JournalType = "ADJUSTMENT"
@@ -4791,6 +4827,67 @@ type DecisionDigests struct {
 // (ADR-0012 §2.1). Sortable by creation, never recycled.
 type DecisionID = string
 
+// DecisionSummary A recorded decision as its index row has it: no emitted component and
+// no amount. `supersededBy` is present when a correction replaced it.
+type DecisionSummary struct {
+	// Authoritative Whether this decision may be filed. `false` for every decision before A4.
+	Authoritative bool `json:"authoritative"`
+
+	// Bundle The content bundle an evaluation ran against.
+	Bundle BundleRef `json:"bundle"`
+
+	// BusinessKey The caller's stable reference for what is being determined — a line, a
+	// transaction. It is the identity across corrections: every version of a
+	// decision shares it (ADR-0003). Not an identifier this service
+	// interprets.
+	BusinessKey BusinessKey `json:"businessKey"`
+
+	// EventTime RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	EventTime Timestamp `json:"eventTime"`
+
+	// ID A decision identifier: a UUIDv7 in lowercase canonical form
+	// (ADR-0012 §2.1). Sortable by creation, never recycled.
+	ID DecisionID `json:"id"`
+
+	// Outcome What a determination concluded (ADR-0016 §2.1). Only `AUTHORITATIVE`
+	// may be filed, and nothing produces it before A4. The refusals —
+	// `AMBIGUOUS`, `CONFLICTED`, `UNSUPPORTED`, `REVIEW_REQUIRED` — are
+	// outcomes with evidence, not errors: "we do not support this" is a fact
+	// about coverage that is recorded against the transaction.
+	Outcome Outcome `json:"outcome"`
+
+	// ReasonCode A registered code from a closed vocabulary (ADR-0016 §2.4). Codes are
+	// never renumbered, never reused and never redefined; a retired code stops
+	// being emitted and keeps its meaning so historical evidence still
+	// resolves.
+	//
+	// This is the field to branch on. The set this deployment can emit is
+	// reported by `GET /v1/capabilities`; the enum is deliberately not closed
+	// here, because the register grows by addition and a client that rejects
+	// an unrecognised code would break on an additive change (ADR-0010 §2.6).
+	ReasonCode ReasonCode `json:"reasonCode"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// SupersededBy A decision identifier: a UUIDv7 in lowercase canonical form
+	// (ADR-0012 §2.1). Sortable by creation, never recycled.
+	SupersededBy *DecisionID `json:"supersededBy,omitempty"`
+
+	// Supersedes A decision identifier: a UUIDv7 in lowercase canonical form
+	// (ADR-0012 §2.1). Sortable by creation, never recycled.
+	Supersedes *DecisionID `json:"supersedes,omitempty"`
+}
+
+// DecisionSummaryList defines model for DecisionSummaryList.
+type DecisionSummaryList struct {
+	Decisions []DecisionSummary `json:"decisions"`
+}
+
 // DeliveryID One delivery of one event to one webhook.
 type DeliveryID = string
 
@@ -5386,6 +5483,11 @@ type FiscalDocumentStatus string
 // FiscalDocumentType defines model for FiscalDocument.Type.
 type FiscalDocumentType string
 
+// FiscalDocumentList defines model for FiscalDocumentList.
+type FiscalDocumentList struct {
+	Documents []FiscalDocument `json:"documents"`
+}
+
 // FundsPosture defines model for FundsPosture.
 type FundsPosture string
 
@@ -5484,6 +5586,45 @@ type JobItem struct {
 
 // JobItemStatus defines model for JobItem.Status.
 type JobItemStatus string
+
+// JobList defines model for JobList.
+type JobList struct {
+	Jobs []JobSummary `json:"jobs"`
+}
+
+// JobSummary A batch job's progress, without its items.
+type JobSummary struct {
+	Failed int32 `json:"failed"`
+
+	// FinishedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	FinishedAt *Timestamp `json:"finishedAt,omitempty"`
+
+	// ID An asynchronous job. A UUIDv7 in lowercase canonical form.
+	ID        JobID               `json:"id"`
+	ItemCount int32               `json:"itemCount"`
+	Operation JobSummaryOperation `json:"operation"`
+	Pending   int32               `json:"pending"`
+
+	// RequestedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RequestedAt Timestamp `json:"requestedAt"`
+
+	// StartedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	StartedAt *Timestamp       `json:"startedAt,omitempty"`
+	Status    JobSummaryStatus `json:"status"`
+	Succeeded int32            `json:"succeeded"`
+}
+
+// JobSummaryOperation defines model for JobSummary.Operation.
+type JobSummaryOperation string
+
+// JobSummaryStatus defines model for JobSummary.Status.
+type JobSummaryStatus string
 
 // Journal One posted Tax Control Subledger journal. Balanced in its one currency; append-only.
 type Journal struct {
@@ -6652,6 +6793,36 @@ type ReconciliationRun struct {
 	Unavailable []ReconStage `json:"unavailable"`
 }
 
+// ReconciliationRunList defines model for ReconciliationRunList.
+type ReconciliationRunList struct {
+	Runs []ReconciliationRunSummary `json:"runs"`
+}
+
+// ReconciliationRunSummary A reconciliation run without its items, with their counts.
+type ReconciliationRunSummary struct {
+	// ExceptionCount Items not `MATCHED` or `TOLERANCE_MATCH`.
+	ExceptionCount int32       `json:"exceptionCount"`
+	FirstBreak     *ReconStage `json:"firstBreak,omitempty"`
+	ID             RunID       `json:"id"`
+	ItemCount      int32       `json:"itemCount"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod `json:"period"`
+
+	// RanAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RanAt Timestamp `json:"ranAt"`
+	RanBy *string   `json:"ranBy,omitempty"`
+
+	// ResolvedCount Items with a recorded resolution.
+	ResolvedCount int32        `json:"resolvedCount"`
+	Unavailable   []ReconStage `json:"unavailable"`
+}
+
 // Refund A refund of tax a committed decision charged. `status` is the latest
 // event's; `history` is every event, oldest first.
 type Refund struct {
@@ -6712,6 +6883,11 @@ type RefundEvent struct {
 
 // RefundID A refund identifier. A UUIDv7 in lowercase canonical form (ADR-0012 §2.1).
 type RefundID = string
+
+// RefundList defines model for RefundList.
+type RefundList struct {
+	Refunds []Refund `json:"refunds"`
+}
 
 // RefundOutcome What the payment provider reported.
 type RefundOutcome string
@@ -8467,6 +8643,26 @@ type GetDashboardParams struct {
 	Period *LegalPeriod `form:"period,omitempty" json:"period,omitempty"`
 }
 
+// ListDecisionsParams defines parameters for ListDecisions.
+type ListDecisionsParams struct {
+	// BusinessKey Only the versions of this business key.
+	BusinessKey *BusinessKey `form:"businessKey,omitempty" json:"businessKey,omitempty"`
+
+	// Outcome Only decisions with this outcome.
+	Outcome *Outcome `form:"outcome,omitempty" json:"outcome,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListDocumentsParams defines parameters for ListDocuments.
+type ListDocumentsParams struct {
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // IssueDocumentParams defines parameters for IssueDocument.
 type IssueDocumentParams struct {
 	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
@@ -8485,11 +8681,32 @@ type CorrectDocumentParams struct {
 	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
 }
 
+// ListJobsParams defines parameters for ListJobs.
+type ListJobsParams struct {
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // ListObligationsParams defines parameters for ListObligations.
 type ListObligationsParams struct {
 	// Status Only obligations in this effective status.
 	Status *EffectiveObligationStatus `form:"status,omitempty" json:"status,omitempty"`
 
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListReconciliationsParams defines parameters for ListReconciliations.
+type ListReconciliationsParams struct {
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListRefundsParams defines parameters for ListRefunds.
+type ListRefundsParams struct {
 	// Limit Maximum number of items to return. The server caps this independently,
 	// so a larger value is not an error and does not return more.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`

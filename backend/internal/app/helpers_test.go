@@ -285,6 +285,33 @@ func (r *memDecisions) SealLeaves(_ context.Context, from, to time.Time) ([]evid
 	return out, nil
 }
 
+func (r *memDecisions) List(_ context.Context, f port.DecisionFilter) ([]port.DecisionListing, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	successor := map[id.DecisionID]id.DecisionID{}
+	for _, x := range r.rows {
+		if x.Supersedes != nil {
+			successor[*x.Supersedes] = x.DecisionID
+		}
+	}
+	var out []port.DecisionListing
+	for _, x := range r.rows {
+		if (f.BusinessKey != "" && x.BusinessKey != f.BusinessKey) || (f.Outcome != "" && x.Outcome != f.Outcome) {
+			continue
+		}
+		l := port.DecisionListing{Record: x}
+		if s, ok := successor[x.DecisionID]; ok {
+			l.SupersededBy = &s
+		}
+		out = append(out, l)
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].Record.RecordedAt.After(out[j].Record.RecordedAt) })
+	if f.Limit > 0 && len(out) > f.Limit {
+		out = out[:f.Limit]
+	}
+	return out, nil
+}
+
 // rewrite changes a stored row, which the real repository cannot do.
 func (r *memDecisions) rewrite(decisionID id.DecisionID, f func(*evidence.Record)) {
 	r.mu.Lock()
