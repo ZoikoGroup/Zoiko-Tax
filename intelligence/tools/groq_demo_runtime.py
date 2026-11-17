@@ -131,8 +131,10 @@ _REPORT_EXPLANATION_MAX_TOKENS = 220
 _PROFILE_CLASSIFICATION = "prompt:classification-review-v1"
 _PROFILE_EXPLAIN = "prompt:explain-report-figure-v1"
 
-# Loaded lazily and cached: the shipped profile file, found relative to this
-# module's directory (intelligence/config/prompt_profiles.live-demo.json).
+# Loaded lazily and cached: the shipped profile file.  The path is taken from
+# the ZTAX_GATEWAY_PROMPT_PROFILES environment variable when it is set and
+# non-empty; otherwise it falls back to the repo-relative path at
+# intelligence/config/prompt_profiles.live-demo.json.
 _SHIPPED_PROFILE_PATH = (
     Path(__file__).resolve().parent.parent / "config" / "prompt_profiles.live-demo.json"
 )
@@ -146,19 +148,27 @@ _ERR_NO_SHIPPED_FILE = (
 def _shipped_profiles() -> PromptProfileRegistry:
     """Return the PromptProfileRegistry loaded from the shipped config file.
 
-    Raises GroqDemoConfigError with ONE fixed message if the file cannot be
-    loaded. The error carries no path, no file content and no exception text.
-    __cause__ and __context__ are None (raised outside the except block).
-    Loaded once and cached thereafter.
+    The file path is resolved in this order:
+    1. The ZTAX_GATEWAY_PROMPT_PROFILES environment variable (when set and
+       non-empty).
+    2. The repo-relative fallback _SHIPPED_PROFILE_PATH.
+
+    Raises GroqDemoConfigError with ONE fixed message if the chosen file
+    cannot be loaded. The error carries no path, no file content and no
+    exception text. __cause__ and __context__ are None (raised outside the
+    except block). Loaded once and cached thereafter.
     """
     global _LOADED_PROFILES
     if _LOADED_PROFILES is not None:
         return _LOADED_PROFILES
     from ztax_gateway.prompt_profile_file import load_prompt_profiles
 
+    env_path = os.environ.get("ZTAX_GATEWAY_PROMPT_PROFILES", "").strip()
+    profile_path = Path(env_path) if env_path else _SHIPPED_PROFILE_PATH
+
     _failed = False
     try:
-        result = load_prompt_profiles(_SHIPPED_PROFILE_PATH)
+        result = load_prompt_profiles(profile_path)
     except Exception:
         _failed = True
         result = None  # type: ignore[assignment]
