@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 
 import { ZoikoTaxError, type S } from '@zoikotax/sdk'
 
-import { civilDate, instant } from '../dashboard/format'
+import { civilDate, instant, periodLabel } from '../dashboard/format'
 import { ztax } from '../platform/client'
 import {
   Amount,
@@ -21,7 +21,11 @@ import {
   useAction,
   useLoad,
 } from '../ui/kit'
+import { TabBar } from './determine/shared'
+import { useRoutedTab } from './routedTab'
 import type { PageProps } from './types'
+import { Tiles, words } from './workspace'
+import { OBLIGATION_EXCEPTIONS } from './worklists'
 import './obligations.css'
 
 type Obligation = S<'Obligation'>
@@ -41,9 +45,191 @@ const isTarget = (value: string): value is Target => (TARGETS as readonly string
 
 const isConflict = (error: unknown) => error instanceof ZoikoTaxError && error.reasonCode === 'OPTIMISTIC_CONFLICT'
 
-export const ObligationsPage = ({ session }: PageProps) => {
-  const [status, setStatus] = useState<Effective | 'ALL'>('ALL')
+type Tab = 'register' | 'calendar' | 'exceptions'
+
+const TABS: readonly { value: Tab; label: string }[] = [
+  { value: 'register', label: 'Register' },
+  { value: 'calendar', label: 'Compliance calendar' },
+  { value: 'exceptions', label: 'Exceptions' },
+]
+
+export const ObligationsPage = ({ session, period, route, onTabChange }: PageProps) => {
+  const [tab, setTab] = useRoutedTab(TABS.map((t) => t.value), 'register', route, onTabChange)
   const [selected, setSelected] = useState<string | null>(null)
+  const openInRegister = (id: string) => {
+    setSelected(id)
+    setTab('register')
+  }
+
+  return (
+    <div className="ztax-page">
+      <PageHeader
+        title="Obligations"
+        subtitle="Periodic duties owed to each authority, earliest due first. Status is as of today in the authority's calendar."
+      />
+      <TabBar label="Obligations" tabs={TABS} current={tab} onSelect={setTab} />
+      {tab === 'register' ? <Register session={session} selected={selected} setSelected={setSelected} />
+        : tab === 'calendar' ? <Calendar period={period} onOpen={openInRegister} />
+        : <Exceptions onOpen={openInRegister} />}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// calendar
+// ---------------------------------------------------------------------------
+
+const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`)
+
+/** "2026-09" moved by `delta` months, without parsing digits by hand. */
+function shiftMonth(month: string, delta: number): string {
+  const d = new Date(`${month}-01T00:00:00Z`)
+  if (Number.isNaN(d.getTime())) {
+    return month
+  }
+  d.setUTCMonth(d.getUTCMonth() + delta)
+  return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}`
+}
+
+const Calendar = ({ period, onOpen }: { period: string; onOpen: (id: string) => void }) => {
+  const [month, setMonth] = useState(period)
+  const { load, reload } = useLoad((signal) => ztax.listObligations({ limit: 500 }, signal), [])
+
+  return (
+    <Loaded load={load}>
+      {(data) => {
+        const current = data.obligations.filter((o) => o.supersededBy === undefined)
+        const months = [...new Set(current.map((o) => o.dueDate.slice(0, 7)))].sort()
+        const inMonth = current.filter((o) => o.dueDate.startsWith(`${month}-`))
+        const days = [...new Set(inMonth.map((o) => o.dueDate))].sort()
+        const overdue = inMonth.filter((o) => o.effectiveStatus === 'OVERDUE').length
+        const settled = inMonth.filter((o) => ['FILED', 'ACCEPTED', 'PAID', 'CLOSED'].includes(o.effectiveStatus)).length
+        return (
+          <>
+            <Card
+              title={`Due in ${periodLabel(month)}`}
+              aside={
+                <div className="ztax-filter-bar">
+                  <button type="button" className="ztax-btn-quiet" onClick={() => { setMonth(shiftMonth(month, -1)) }}>‹ Previous</button>
+                  <Field label="Month">
+                    <select value={month} onChange={(e) => { setMonth(e.target.value) }}>
+                      {[...new Set([...months, month])].sort().map((m) => (
+                        <option key={m} value={m}>
+                          {periodLabel(m)} ({current.filter((o) => o.dueDate.startsWith(`${m}-`)).length})
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <button type="button" className="ztax-btn-quiet" onClick={() => { setMonth(shiftMonth(month, 1)) }}>Next ›</button>
+                  <button type="button" className="ztax-btn-quiet" onClick={reload}>Refresh</button>
+                </div>
+              }
+            >
+              <p className="ztax-note">
+                {inMonth.length} due · {overdue} overdue · {settled} filed, accepted, paid or closed · {inMonth.length - overdue - settled} still open.
+                Due dates are civil dates in each authority’s own calendar.
+              </p>
+              {days.length === 0 ? <Empty>Nothing falls due in {periodLabel(month)}.</Empty> : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 12 }}>
+                  {days.map((day) => (
+                    <section key={day} aria-label={civilDate(day)}>
+                      <h3 className="ztax-card-title" style={{ marginBottom: 6 }}>{civilDate(day)}</h3>
+                      <table className="ztax-action-table">
+                        <tbody>
+                          {inMonth.filter((o) => o.dueDate === day).map((o) => (
+                            <tr key={o.id}>
+                              <td style={{ fontWeight: 500, color: '#111827', paddingRight: 8 }}>{o.type}</td>
+                              <td className="mono" style={{ paddingRight: 8 }}>{o.jurisdiction} · {o.authority}</td>
+                              <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}>{civilDate(o.periodStart)} – {civilDate(o.periodEnd)}</td>
+                              <td style={{ paddingRight: 8 }}><Status value={o.effectiveStatus} /></td>
+                              <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}><Amount amount={o.assessedAmount} currency={o.currency} /></td>
+                              <td className="muted" style={{ paddingRight: 8 }}>{o.timezone}</td>
+                              <td>
+                                <button type="button" className="ztax-table-action-btn" onClick={() => { onOpen(o.id) }}>Open</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </section>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </>
+        )
+      }}
+    </Loaded>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// exceptions
+// ---------------------------------------------------------------------------
+
+const Exceptions = ({ onOpen }: { onOpen: (id: string) => void }) => {
+  const { load, reload } = useLoad((signal) => ztax.listObligations({ limit: 500 }, signal), [])
+  return (
+    <Loaded load={load}>
+      {(data) => {
+        const rows = data.obligations
+          .filter((o) => o.supersededBy === undefined && OBLIGATION_EXCEPTIONS[o.effectiveStatus] !== undefined)
+          .sort((a, b) => (a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0))
+        const tiles = (Object.keys(OBLIGATION_EXCEPTIONS) as Effective[]).map((s) => ({
+          label: words(s),
+          count: rows.filter((o) => o.effectiveStatus === s).length,
+          tone: s === 'OVERDUE' || s === 'REJECTED' || s === 'UNCERTAIN' ? 'bad' as const : 'warn' as const,
+        }))
+        return (
+          <>
+            <Tiles tiles={tiles} />
+            <Card
+              title={`${rows.length} ${rows.length === 1 ? 'obligation needs' : 'obligations need'} attention`}
+              aside={<button type="button" className="ztax-btn-quiet" onClick={reload}>Refresh</button>}
+            >
+              {rows.length === 0 ? <Empty>No obligation is overdue, rejected, uncertain, or waiting on data or an amendment.</Empty> : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="ztax-action-table">
+                    <thead>
+                      <tr><th>Type</th><th>Authority</th><th>Period</th><th>Due</th><th>Status</th><th>Why</th><th>Assessed</th><th>Action</th></tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((o) => (
+                        <tr key={o.id}>
+                          <td style={{ fontWeight: 500, color: '#111827', paddingRight: 8 }}>{o.type}</td>
+                          <td className="mono" style={{ paddingRight: 8 }}>{o.jurisdiction} · {o.authority}</td>
+                          <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}>{civilDate(o.periodStart)} – {civilDate(o.periodEnd)}</td>
+                          <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}>{civilDate(o.dueDate)}</td>
+                          <td style={{ paddingRight: 8 }}><Status value={o.effectiveStatus} /></td>
+                          <td style={{ paddingRight: 8, color: '#6b7280' }}>{OBLIGATION_EXCEPTIONS[o.effectiveStatus]}</td>
+                          <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}><Amount amount={o.assessedAmount} currency={o.currency} /></td>
+                          <td>
+                            <button type="button" className="ztax-table-action-btn" onClick={() => { onOpen(o.id) }}>Open</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          </>
+        )
+      }}
+    </Loaded>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// register
+// ---------------------------------------------------------------------------
+
+const Register = ({ session, selected, setSelected }: {
+  session: PageProps['session']
+  selected: string | null
+  setSelected: (id: string | null) => void
+}) => {
+  const [status, setStatus] = useState<Effective | 'ALL'>('ALL')
   const { load, reload } = useLoad(
     (signal) => ztax.listObligations(status === 'ALL' ? { limit: 500 } : { status, limit: 500 }, signal),
     [status],
@@ -51,17 +237,7 @@ export const ObligationsPage = ({ session }: PageProps) => {
   const canMove = session.user.roles.includes('OPERATOR')
 
   return (
-    <div className="ztax-page">
-      <PageHeader
-        title="Obligations"
-        subtitle="Periodic duties owed to each authority, earliest due first. Status is as of today in the authority's calendar."
-        actions={
-          <button type="button" className="ztax-btn-quiet" onClick={reload}>
-            Refresh
-          </button>
-        }
-      />
-
+    <>
       <Card
         title="Obligations"
         aside={
@@ -80,6 +256,9 @@ export const ObligationsPage = ({ session }: PageProps) => {
                 ))}
               </select>
             </Field>
+            <button type="button" className="ztax-btn-quiet" onClick={reload}>
+              Refresh
+            </button>
           </div>
         }
       >
@@ -156,7 +335,7 @@ export const ObligationsPage = ({ session }: PageProps) => {
           onClose={() => { setSelected(null) }}
         />
       )}
-    </div>
+    </>
   )
 }
 

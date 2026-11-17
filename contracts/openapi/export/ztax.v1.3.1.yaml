@@ -1510,6 +1510,57 @@ paths:
           $ref: "#/components/responses/Internal"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/refunds:
+    get:
+      operationId: listRefunds
+      tags:
+        - refunds
+      summary: The tenant's refunds, latest requested first
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. Each refund exactly as
+        `GET /v1/refunds/{refundId}` returns it, history included. The page
+        is capped at 100 whatever `limit` asks for, because each refund is
+        read in full.
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The refunds.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefundList"
+              examples:
+                default:
+                  summary: One refund, reported paid
+                  value:
+                    refunds:
+                      - id: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        amount:
+                          amount: "21.11"
+                          currency: EUR
+                        paymentReference: RF-2026-0001
+                        status: COMPLETED
+                        requestedAt: 2026-10-01T09:00:00.000000Z
+                        history:
+                          - seq: 1
+                            status: REQUESTED
+                            recordedAt: 2026-10-01T09:00:00.000000Z
+                          - seq: 2
+                            status: COMPLETED
+                            outcome: PAID
+                            externalReference: BANK-778812
+                            recordedAt: 2026-10-02T09:00:00.000000Z
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/refunds/{refundId}:
     get:
       operationId: getRefund
@@ -2155,6 +2206,48 @@ paths:
           $ref: "#/components/responses/Internal"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/jobs:
+    get:
+      operationId: listJobs
+      tags:
+        - batches
+      summary: The tenant's batch jobs, latest requested first
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. Each job's progress without its
+        items — a job may hold a thousand; `GET /v1/jobs/{jobId}` returns
+        them. The page is capped at 100 whatever `limit` asks for.
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The jobs.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobList"
+              examples:
+                default:
+                  summary: One completed job
+                  value:
+                    jobs:
+                      - id: 01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        operation: COMMIT
+                        status: COMPLETED
+                        itemCount: 2
+                        succeeded: 1
+                        failed: 1
+                        pending: 0
+                        requestedAt: 2026-10-07T09:00:00.000000Z
+                        startedAt: 2026-10-07T09:00:01.000000Z
+                        finishedAt: 2026-10-07T09:00:02.000000Z
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/jobs/{jobId}:
     get:
       operationId: getJob
@@ -2207,6 +2300,81 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/decisions:
+    get:
+      operationId: listDecisions
+      tags:
+        - determination
+      summary: The tenant's recorded decisions, latest first
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. Every recorded decision,
+        corrections included, latest recorded first. Each is summarised from
+        its index row — no evidence object is opened, so no emitted
+        component or amount is listed; `GET /v1/decisions/{decisionId}`
+        returns those. `supersededBy` names the correction that replaced a
+        decision; a decision without one is current.
+      parameters:
+        - name: businessKey
+          in: query
+          required: false
+          description: Only the versions of this business key.
+          schema:
+            $ref: "#/components/schemas/BusinessKey"
+          example: INV-0001/1
+        - name: outcome
+          in: query
+          required: false
+          description: Only decisions with this outcome.
+          schema:
+            $ref: "#/components/schemas/Outcome"
+          example: ADVISORY
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The decisions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DecisionSummaryList"
+              examples:
+                default:
+                  summary: A decision and the correction that replaced it
+                  value:
+                    decisions:
+                      - id: 01920a4d-1111-7d21-9f40-3c1a2b4d5e6f
+                        businessKey: INV-0001/1
+                        supersedes: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                        authoritative: false
+                        outcome: ADVISORY
+                        reasonCode: ""
+                        eventTime: 2026-09-25T10:00:00.000000Z
+                        recordedAt: 2026-09-26T08:00:00.000000Z
+                        bundle:
+                          bundleId: eu-vat
+                          digest: zt1:5b8d2c4e6f8a0b1c3d5e7f9a1b3c5d7e9f0a2b4c6d8e0f1a3b5c7d9e1f2a4b6c
+                          irVersion: 1
+                      - id: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                        businessKey: INV-0001/1
+                        supersededBy: 01920a4d-1111-7d21-9f40-3c1a2b4d5e6f
+                        authoritative: false
+                        outcome: ADVISORY
+                        reasonCode: ""
+                        eventTime: 2026-09-25T10:00:00.000000Z
+                        recordedAt: 2026-09-25T10:00:01.000000Z
+                        bundle:
+                          bundleId: eu-vat
+                          digest: zt1:5b8d2c4e6f8a0b1c3d5e7f9a1b3c5d7e9f0a2b4c6d8e0f1a3b5c7d9e1f2a4b6c
+                          irVersion: 1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/Internal"
         "503":
@@ -2722,6 +2890,39 @@ paths:
         "503":
           $ref: "#/components/responses/Unavailable"
   /v1/documents:
+    get:
+      operationId: listDocuments
+      tags:
+        - documents
+      summary: The tenant's fiscal documents, latest committed first
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. Each document exactly as
+        `GET /v1/documents/{documentId}` returns it — lines, totals and
+        status history — corrections and cancellations included. The page is
+        capped at 100 whatever `limit` asks for, because each document is
+        read in full.
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The documents.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FiscalDocumentList"
+              examples:
+                default:
+                  summary: Nothing committed yet
+                  value:
+                    documents: []
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
     post:
       operationId: issueDocument
       tags:
@@ -3331,6 +3532,53 @@ paths:
         "503":
           $ref: "#/components/responses/Unavailable"
   /v1/reconciliations:
+    get:
+      operationId: listReconciliations
+      tags:
+        - reconciliation
+      summary: The tenant's reconciliation runs, latest first
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`. Each run without its items — a
+        period may compare thousands; `GET /v1/reconciliations/{runId}`
+        returns them. `exceptionCount` is the items not `MATCHED` or
+        `TOLERANCE_MATCH`, and `resolvedCount` those with a recorded
+        resolution, so a run with open breaks is visible without opening it.
+        The page is capped at 100 whatever `limit` asks for.
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The runs.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReconciliationRunList"
+              examples:
+                default:
+                  summary: September, one break open
+                  value:
+                    runs:
+                      - id: 01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        period: 2026-09
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        ranAt: 2026-10-03T09:00:00.000000Z
+                        firstBreak: R1_CALCULATED_TO_DOCUMENT
+                        unavailable:
+                          - R2_DOCUMENT_TO_COLLECTION
+                          - R4_SUBLEDGER_TO_RETURN
+                          - R5_RETURN_TO_REMITTANCE
+                          - R6_SUBLEDGER_TO_GL
+                        itemCount: 3
+                        exceptionCount: 1
+                        resolvedCount: 0
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
     post:
       operationId: runReconciliation
       tags:
@@ -11854,6 +12102,214 @@ components:
           minItems: 1
           items:
             $ref: "#/components/schemas/RefundEvent"
+    RefundList:
+      type: object
+      title: RefundList
+      additionalProperties: false
+      required:
+        - refunds
+      properties:
+        refunds:
+          type: array
+          items:
+            $ref: "#/components/schemas/Refund"
+    DecisionSummary:
+      type: object
+      title: DecisionSummary
+      description: |
+        A recorded decision as its index row has it: no emitted component and
+        no amount. `supersededBy` is present when a correction replaced it.
+      additionalProperties: false
+      required:
+        - id
+        - businessKey
+        - authoritative
+        - outcome
+        - reasonCode
+        - eventTime
+        - recordedAt
+        - bundle
+      properties:
+        id:
+          $ref: "#/components/schemas/DecisionId"
+        businessKey:
+          $ref: "#/components/schemas/BusinessKey"
+        supersedes:
+          $ref: "#/components/schemas/DecisionId"
+        supersededBy:
+          $ref: "#/components/schemas/DecisionId"
+        authoritative:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: Whether this decision may be filed. `false` for every decision before A4.
+        outcome:
+          $ref: "#/components/schemas/Outcome"
+        reasonCode:
+          $ref: "#/components/schemas/ReasonCode"
+        eventTime:
+          $ref: "#/components/schemas/Timestamp"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        bundle:
+          $ref: "#/components/schemas/BundleRef"
+    DecisionSummaryList:
+      type: object
+      title: DecisionSummaryList
+      additionalProperties: false
+      required:
+        - decisions
+      properties:
+        decisions:
+          type: array
+          items:
+            $ref: "#/components/schemas/DecisionSummary"
+    FiscalDocumentList:
+      type: object
+      title: FiscalDocumentList
+      additionalProperties: false
+      required:
+        - documents
+      properties:
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/FiscalDocument"
+    ReconciliationRunSummary:
+      type: object
+      title: ReconciliationRunSummary
+      description: A reconciliation run without its items, with their counts.
+      additionalProperties: false
+      required:
+        - id
+        - period
+        - legalEntityId
+        - ranAt
+        - unavailable
+        - itemCount
+        - exceptionCount
+        - resolvedCount
+      properties:
+        id:
+          $ref: "#/components/schemas/RunId"
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        ranAt:
+          $ref: "#/components/schemas/Timestamp"
+        ranBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+        firstBreak:
+          $ref: "#/components/schemas/ReconStage"
+        unavailable:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReconStage"
+        itemCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+        exceptionCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          description: Items not `MATCHED` or `TOLERANCE_MATCH`.
+        resolvedCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          description: Items with a recorded resolution.
+    ReconciliationRunList:
+      type: object
+      title: ReconciliationRunList
+      additionalProperties: false
+      required:
+        - runs
+      properties:
+        runs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReconciliationRunSummary"
+    JobSummary:
+      type: object
+      title: JobSummary
+      description: A batch job's progress, without its items.
+      additionalProperties: false
+      required:
+        - id
+        - operation
+        - status
+        - itemCount
+        - succeeded
+        - failed
+        - pending
+        - requestedAt
+      properties:
+        id:
+          $ref: "#/components/schemas/JobId"
+        operation:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - COMMIT
+        status:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - QUEUED
+            - RUNNING
+            - COMPLETED
+        itemCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+        succeeded:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+        failed:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+        pending:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+        requestedAt:
+          $ref: "#/components/schemas/Timestamp"
+        startedAt:
+          $ref: "#/components/schemas/Timestamp"
+        finishedAt:
+          $ref: "#/components/schemas/Timestamp"
+    JobList:
+      type: object
+      title: JobList
+      additionalProperties: false
+      required:
+        - jobs
+      properties:
+        jobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/JobSummary"
     RefundReportRequest:
       type: object
       title: RefundReportRequest

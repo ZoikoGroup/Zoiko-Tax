@@ -25,15 +25,41 @@ export interface CellHealth {
 
 const TIMEOUT_MS = 5000
 
-async function probe(path: string): Promise<{ ok: boolean; body: string }> {
+async function probe(path: string): Promise<{ ok: boolean; status: number; body: string }> {
   const controller = new AbortController()
   const timer = setTimeout(() => { controller.abort() }, TIMEOUT_MS)
   try {
     const response = await fetch(path, { signal: controller.signal, headers: { accept: 'application/json' } })
-    return { ok: response.ok, body: (await response.text()).trim() }
+    return { ok: response.ok, status: response.status, body: (await response.text()).trim() }
   } finally {
     clearTimeout(timer)
   }
+}
+
+/** One probe's answer, or the reason there was none. */
+export type ProbeResult =
+  | { readonly answered: true; readonly ok: boolean; readonly status: number; readonly body: string; readonly ms: number }
+  | { readonly answered: false; readonly detail: string; readonly ms: number }
+
+async function timed(path: string): Promise<ProbeResult> {
+  const started = performance.now()
+  try {
+    const r = await probe(path)
+    return { answered: true, ...r, ms: Math.round(performance.now() - started) }
+  } catch (cause) {
+    return {
+      answered: false,
+      detail: cause instanceof Error ? cause.message : 'no response',
+      ms: Math.round(performance.now() - started),
+    }
+  }
+}
+
+/** Liveness and readiness, each as the cell answered it, for the health screen. */
+export async function readProbes(): Promise<{ healthz: ProbeResult; readyz: ProbeResult; checkedAt: string }> {
+  const checkedAt = new Date().toISOString()
+  const [healthz, readyz] = await Promise.all([timed('/api/healthz'), timed('/api/readyz')])
+  return { healthz, readyz, checkedAt }
 }
 
 /**

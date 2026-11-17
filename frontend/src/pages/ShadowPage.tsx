@@ -20,8 +20,20 @@ import {
   useAction,
   useLoad,
 } from '../ui/kit'
+import { TabBar } from './determine/shared'
+import { useRoutedTab } from './routedTab'
 import type { PageProps } from './types'
 import './obligations.css'
+
+type Tab = 'runs' | 'discrepancies' | 'historical' | 'assurance' | 'reports'
+
+const TABS: readonly { value: Tab; label: string }[] = [
+  { value: 'runs', label: 'Comparison runs' },
+  { value: 'discrepancies', label: 'Discrepancies' },
+  { value: 'historical', label: 'Historical' },
+  { value: 'assurance', label: 'Assurance cases' },
+  { value: 'reports', label: 'Reports' },
+]
 
 // Shadow assurance (ZTAX-SHD-001): another engine's results compared with
 // ZoikoTax's committed decisions. Non-impact: nothing here changes a
@@ -70,10 +82,15 @@ const pct = (part: number, whole: number) => {
   return p === null ? '—' : `${p}%`
 }
 
-export const ShadowPage = ({ session }: PageProps) => {
+export const ShadowPage = ({ session, route, onTabChange }: PageProps) => {
+  const [tab, setTab] = useRoutedTab(TABS.map((t) => t.value), 'runs', route, onTabChange)
   const comparators = useLoad((signal) => ztax.listComparators(signal), [])
   const runs = useLoad((signal) => ztax.listShadowRuns({ limit: 100 }, signal), [])
   const [selected, setSelected] = useState<string | null>(null)
+  const openRun = (id: string) => {
+    setSelected(id)
+    setTab('runs')
+  }
   const roles = session.user.roles
   const canRun = roles.includes('ADMIN') || roles.includes('OPERATOR') || roles.includes('ANALYST')
 
@@ -89,6 +106,8 @@ export const ShadowPage = ({ session }: PageProps) => {
         “matches comparator”, never as verified correctness.
       </p>
 
+      <TabBar label="Shadow" tabs={TABS} current={tab} onSelect={setTab} />
+      {tab === 'runs' ? (<>
       <Card title="Runs">
         <Loaded load={runs.load}>
           {(data) => data.runs.length === 0 ? <Empty>No runs yet. Import a comparator’s results below.</Empty> : (
@@ -155,7 +174,261 @@ export const ShadowPage = ({ session }: PageProps) => {
           )}
         </Loaded>
       </Card>
+      </>) : null}
+
+      {tab === 'runs' ? null : (
+        <Loaded load={runs.load}>
+          {(data) => {
+            switch (tab) {
+              case 'discrepancies':
+                return <DiscrepanciesTab runs={data.runs} canMove={canRun} onOpenRun={openRun} onChanged={runs.reload} />
+              case 'historical':
+                return <HistoricalTab runs={data.runs} onOpenRun={openRun} />
+              case 'assurance':
+                return <AssuranceTab runs={data.runs} onOpenRun={openRun} />
+              case 'reports':
+                return <ReportsTab runs={data.runs} />
+            }
+          }}
+        </Loaded>
+      )}
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Discrepancies across runs
+// ---------------------------------------------------------------------------
+
+/** The cell's own rule (domain/shadow State.Open): only RESOLVED and CLOSED are done. */
+const isOpen = (s: DState) => s !== 'RESOLVED' && s !== 'CLOSED'
+
+const DiscrepanciesTab = ({ runs, canMove, onOpenRun, onChanged }: {
+  runs: readonly Run[]; canMove: boolean; onOpenRun: (id: string) => void; onChanged: () => void
+}) => {
+  const [all, setAll] = useState(false)
+  const rows = runs.flatMap((r) => r.discrepancies.map((d) => ({ run: r, d })))
+    .filter(({ d }) => all || isOpen(d.state))
+  return (
+    <Card
+      title={all ? 'All discrepancies' : 'Open discrepancies'}
+      aside={
+        <label className="ztax-field" style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <input type="checkbox" checked={all} onChange={(e) => { setAll(e.target.checked) }} />
+          <span>Include resolved and closed</span>
+        </label>
+      }
+    >
+      <p className="ztax-note">
+        Material differences opened by every run, with each transition recorded against them. A discrepancy is open
+        until it is resolved or closed.
+      </p>
+      {rows.length === 0 ? <Empty>{all ? 'No discrepancy has been opened.' : 'No open discrepancy.'}</Empty> : rows.map(({ run, d }) => (
+        <div key={d.id} style={{ borderTop: '1px solid #e5e7eb', padding: '12px 0' }}>
+          <p>
+            <strong>{run.comparator.name}</strong> · run of {instant(run.createdAt)} · case #{d.caseSeq}{' '}
+            <button type="button" className="ztax-table-action-btn" onClick={() => { onOpenRun(run.id) }}>Open run</button>
+          </p>
+          <details className="ztax-raw">
+            <summary>Transitions ({d.history.length})</summary>
+            <table className="ztax-action-table">
+              <thead><tr><th>#</th><th>State</th><th>Severity</th><th>Root cause</th><th>Note</th><th>By</th><th>When</th></tr></thead>
+              <tbody>
+                {d.history.map((h) => (
+                  <tr key={h.seq}>
+                    <td className="mono" style={{ paddingRight: 8 }}>{h.seq}</td>
+                    <td style={{ paddingRight: 8 }}><Status value={h.state} /></td>
+                    <td style={{ paddingRight: 8 }}>{h.severity ?? '—'}</td>
+                    <td style={{ paddingRight: 8 }}>{h.rootCause === undefined ? '—' : words(h.rootCause)}</td>
+                    <td style={{ paddingRight: 8 }}>{h.note}</td>
+                    <td style={{ paddingRight: 8 }}><Id value={h.recordedBy} /></td>
+                    <td>{instant(h.recordedAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </details>
+          <DiscrepancyRow d={d} caseRef={`case #${d.caseSeq}`} canMove={canMove} onMoved={onChanged} />
+        </div>
+      ))}
+    </Card>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Historical comparisons
+// ---------------------------------------------------------------------------
+
+const HistoricalTab = ({ runs, onOpenRun }: { runs: readonly Run[]; onOpenRun: (id: string) => void }) => {
+  const byComparator = new Map<string, Run[]>()
+  for (const r of runs) {
+    byComparator.set(r.comparator.id, [...(byComparator.get(r.comparator.id) ?? []), r])
+  }
+  if (byComparator.size === 0) {
+    return <Card title="Historical comparisons"><Empty>No runs yet.</Empty></Card>
+  }
+  return (
+    <>
+      {[...byComparator.values()].map((list) => {
+        const first = list[0]
+        if (first === undefined) {
+          return null
+        }
+        // Oldest first, so the history reads forward. Timestamps are canonical
+        // RFC 3339 UTC, so their text order is their time order.
+        const ordered = [...list].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+        return (
+          <Card key={first.comparator.id} title={first.comparator.name} aside={<Claim value={first.comparator.claim} />}>
+            <p className="muted">{words(first.comparator.type)} · {first.comparator.provider} · version {first.comparator.version}</p>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="ztax-action-table">
+                <thead>
+                  <tr><th>When</th><th>Mode</th><th>Window</th><th>Cases</th><th>Matched</th><th>Differing</th><th>Material</th><th>Abs. variance</th><th>Open disc.</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                  {ordered.map((r) => (
+                    <tr key={r.id}>
+                      <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}>{instant(r.createdAt)}</td>
+                      <td style={{ paddingRight: 8 }}>{words(r.mode)}</td>
+                      <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}>{r.windowFrom.slice(0, 10)} – {r.windowTo.slice(0, 10)}</td>
+                      <td style={{ paddingRight: 8 }}>{r.metrics.cases}</td>
+                      <td style={{ paddingRight: 8 }}>{pct(r.metrics.exact + r.metrics.equivalent, r.metrics.cases)}</td>
+                      <td style={{ paddingRight: 8 }}>{r.metrics.differing}</td>
+                      <td style={{ paddingRight: 8 }}>{r.metrics.material === 0 ? '0' : <span className="ztax-status ztax-status--bad">{r.metrics.material}</span>}</td>
+                      <td style={{ paddingRight: 8 }}><Amount amount={r.metrics.absoluteVariance} currency={r.currency} /></td>
+                      <td style={{ paddingRight: 8 }}>{r.discrepancies.filter((d) => isOpen(d.state)).length}</td>
+                      <td><button type="button" className="ztax-table-action-btn" onClick={() => { onOpenRun(r.id) }}>Open</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )
+      })}
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Assurance cases
+// ---------------------------------------------------------------------------
+
+/**
+ * One case per comparator: the evidence its most recent run gives for or
+ * against cutover. The blockers are the cell's; this page lists them and
+ * decides nothing.
+ */
+const AssuranceTab = ({ runs, onOpenRun }: { runs: readonly Run[]; onOpenRun: (id: string) => void }) => {
+  const latest = new Map<string, Run>()
+  for (const r of runs) {
+    const seen = latest.get(r.comparator.id)
+    if (seen === undefined || r.createdAt.localeCompare(seen.createdAt) > 0) {
+      latest.set(r.comparator.id, r)
+    }
+  }
+  if (latest.size === 0) {
+    return <Card title="Assurance cases"><Empty>No runs yet, so there is no assurance evidence.</Empty></Card>
+  }
+  return (
+    <>
+      <p className="ztax-note">
+        Each comparator&apos;s latest run, as evidence for a cutover decision. A case with no blocker is evidence, not
+        an approval: cutover remains a governed decision made in Migration.
+      </p>
+      {[...latest.values()].map((r) => {
+        const open = r.discrepancies.filter((d) => isOpen(d.state))
+        const sev1 = open.filter((d) => d.severity === 'SHD-SEV-1').length
+        return (
+          <Card
+            key={r.comparator.id}
+            title={r.comparator.name}
+            aside={r.cutoverBlockers.length === 0 ? <Status value="READY" /> : <span className="ztax-status ztax-status--bad">{r.cutoverBlockers.length} BLOCKER{r.cutoverBlockers.length === 1 ? '' : 'S'}</span>}
+          >
+            <dl className="ztax-kv">
+              <dt>A match claims</dt><dd><Claim value={r.comparator.claim} /></dd>
+              <dt>Latest run</dt>
+              <dd>{instant(r.createdAt)} · {words(r.mode)} <button type="button" className="ztax-table-action-btn" onClick={() => { onOpenRun(r.id) }}>Open</button></dd>
+              <dt>Cases</dt><dd>{r.metrics.cases} · matched {pct(r.metrics.exact + r.metrics.equivalent, r.metrics.cases)} · material {r.metrics.material}</dd>
+              <dt>Open discrepancies</dt><dd>{open.length}{sev1 === 0 ? '' : ` (${sev1} SHD-SEV-1)`}</dd>
+              <dt>Input hash</dt><dd className="mono" style={{ wordBreak: 'break-all' }}>{r.inputHash}</dd>
+            </dl>
+            {r.cutoverBlockers.length === 0 ? (
+              <p className="ztax-note">No blocker on this run&apos;s evidence.</p>
+            ) : (
+              <ul>{r.cutoverBlockers.map((b) => <li key={b}>{b}</li>)}</ul>
+            )}
+          </Card>
+        )
+      })}
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Reports
+// ---------------------------------------------------------------------------
+
+const csvCell = (s: string) => (/[",\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s)
+
+function downloadCsv(name: string, header: readonly string[], rows: readonly (readonly string[])[]) {
+  const text = [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\n') + '\n'
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${name}-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+const RUN_HEADER = [
+  'run_id', 'created_at', 'comparator', 'comparator_type', 'claim', 'mode', 'window_from', 'window_to', 'currency',
+  'tolerance', 'materiality', 'cases', 'paired', 'exact', 'equivalent', 'differing', 'category', 'unpaired',
+  'uncomparable', 'material', 'compared_value', 'absolute_variance', 'cutover_blockers', 'input_hash',
+] as const
+
+const DISC_HEADER = [
+  'discrepancy_id', 'run_id', 'comparator', 'case_seq', 'state', 'severity', 'root_cause', 'transitions',
+  'last_note', 'last_recorded_at',
+] as const
+
+const ReportsTab = ({ runs }: { runs: readonly Run[] }) => {
+  // Amounts go out as the canonical strings the cell sent; counts as integers.
+  const runRows = runs.map((r) => [
+    r.id, r.createdAt, r.comparator.name, r.comparator.type, r.comparator.claim, r.mode, r.windowFrom, r.windowTo,
+    r.currency, r.tolerance, r.materiality, String(r.metrics.cases), String(r.metrics.paired), String(r.metrics.exact),
+    String(r.metrics.equivalent), String(r.metrics.differing), String(r.metrics.category), String(r.metrics.population),
+    String(r.metrics.uncomparable), String(r.metrics.material), r.metrics.comparedValue, r.metrics.absoluteVariance,
+    r.cutoverBlockers.join(' | '), r.inputHash,
+  ])
+  const discRows = runs.flatMap((r) => r.discrepancies.map((d) => {
+    const last = d.history[d.history.length - 1]
+    return [
+      d.id, r.id, r.comparator.name, String(d.caseSeq), d.state, d.severity, d.rootCause, String(d.history.length),
+      last?.note ?? '', last?.recordedAt ?? '',
+    ]
+  }))
+  return (
+    <Columns>
+      <Card title="Comparison runs">
+        <p className="ztax-note">
+          One row per run: comparator, mode, window, policy, every count and the two value figures exactly as the
+          cell reported them, with the run&apos;s cutover blockers.
+        </p>
+        <p className="muted">{runRows.length} {runRows.length === 1 ? 'run' : 'runs'}</p>
+        <button type="button" className="ztax-btn-copper" disabled={runRows.length === 0}
+          onClick={() => { downloadCsv('shadow-runs', RUN_HEADER, runRows) }}>Download CSV</button>
+      </Card>
+      <Card title="Discrepancies">
+        <p className="ztax-note">
+          One row per discrepancy across every run: state, severity, root cause, how many transitions it has had and
+          the latest note.
+        </p>
+        <p className="muted">{discRows.length} {discRows.length === 1 ? 'discrepancy' : 'discrepancies'}</p>
+        <button type="button" className="ztax-btn-copper" disabled={discRows.length === 0}
+          onClick={() => { downloadCsv('shadow-discrepancies', DISC_HEADER, discRows) }}>Download CSV</button>
+      </Card>
+    </Columns>
   )
 }
 
