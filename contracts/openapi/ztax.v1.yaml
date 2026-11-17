@@ -124,6 +124,8 @@ tags:
     description: Compliance packages that turn an obligation into a filing — preparation, independent review, exact-version approval, submission and the authority's answer. TRANSMITTING is not FILED.
   - name: remittance
     description: Payee master data and payment instructions for accepted returns. ZoikoTax instructs the customer's own provider and never holds funds; submitted is not settled.
+  - name: support
+    description: Customer support cases — triage, routing and response under two separate clocks, the support SLA and any statutory deadline. No tax-rule or financial authority; fiscal records are referenced, never changed.
   - name: shadow
     description: Shadow assurance — another engine's results compared with ZoikoTax's decisions, component by component. Non-impact; matching a comparator is not verified correctness.
   - name: migration
@@ -6062,6 +6064,368 @@ paths:
         "500": { $ref: "#/components/responses/Internal" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
+  /v1/support/cases:
+    get:
+      operationId: listSupportCases
+      tags: [support]
+      summary: The support triage queue
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        The most recently opened cases, filtered, with open cases first and the
+        soonest due first: the earlier of the support SLA and any statutory
+        deadline, which takes precedence when it falls first (SUP-06). Closed
+        cases follow, newest first. Each case carries both clocks, separately.
+      parameters:
+        - name: type
+          in: query
+          required: false
+          description: Only cases of this type.
+          schema: { $ref: "#/components/schemas/SupportCaseType" }
+          example: LEGAL
+        - name: severity
+          in: query
+          required: false
+          description: Only cases of this severity.
+          schema: { $ref: "#/components/schemas/SupportSeverity" }
+          example: S1
+        - name: status
+          in: query
+          required: false
+          description: Only cases in this status.
+          schema: { $ref: "#/components/schemas/SupportCaseStatus" }
+          example: TRIAGE_INCOMPLETE
+        - name: product
+          in: query
+          required: false
+          description: Only cases about this product, compared without regard to case.
+          schema: { $ref: "#/components/schemas/SupportProduct" }
+          example: Telecom VAT
+        - name: legalEntityId
+          in: query
+          required: false
+          description: Only cases about this customer legal entity.
+          schema: { $ref: "#/components/schemas/LegalEntityId" }
+          example: 01920a4c-0000-7000-8000-00000000e001
+        - name: fiscalPeriod
+          in: query
+          required: false
+          description: Only cases about this impacted fiscal period.
+          schema: { $ref: "#/components/schemas/LegalPeriod" }
+          example: "2026-09"
+        - name: assignee
+          in: query
+          required: false
+          description: Only cases this person owns.
+          schema: { $ref: "#/components/schemas/SupportUserId" }
+          example: 01920a4c-0000-7000-8000-0000000000a2
+        - name: unassigned
+          in: query
+          required: false
+          description: Only cases nobody owns.
+          schema:
+            type: boolean
+          example: true
+        - name: slaClock
+          in: query
+          required: false
+          description: Only cases whose support SLA stands here.
+          schema: { $ref: "#/components/schemas/SupportClockState" }
+          example: AT_RISK
+        - name: statutoryClock
+          in: query
+          required: false
+          description: Only cases whose statutory deadline stands here; `NONE` is cases with no statutory deadline.
+          schema: { $ref: "#/components/schemas/SupportClockState" }
+          example: AT_RISK
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The queue.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCaseList"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    cases:
+                      -
+                        id: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        type: LEGAL
+                        openedType: LEGAL
+                        severity: S2
+                        subject: Letter from the tax authority about September VAT
+                        description: The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.
+                        product: Telecom VAT
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        fiscalPeriod: "2026-09"
+                        contractRef: MSA-2026-014
+                        references:
+                          decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                        evidence: ["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"]
+                        status: TRIAGED
+                        missingFacts: []
+                        clocks:
+                          slaDueAt: "2026-10-02T09:00:00.000000Z"
+                          sla: ON_TRACK
+                          statutoryDueAt: "2026-10-01T17:00:00.000000Z"
+                          statutory: AT_RISK
+                          statutoryPrecedes: true
+                          dueAt: "2026-10-01T17:00:00.000000Z"
+                        actions: [ASSIGN, REQUEST_EVIDENCE, ADD_EVIDENCE, START_REVIEW, ESCALATE, NOTE, REQUEST_LEGAL_HOLD]
+                        signOffRequired: true
+                        signedOff: false
+                        responded: false
+                        openedAt: "2026-10-01T09:00:00.000000Z"
+                        openedBy: 01920a4c-0000-7000-8000-0000000000a1
+                        history:
+                          - { seq: 1, action: OPENED, status: NEW, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                          - { seq: 2, action: VERIFY, status: VERIFIED, note: Caller confirmed as the customer's named tax contact, recordedAt: "2026-10-01T09:05:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a2 }
+                          - { seq: 3, action: TRIAGE, status: TRIAGED, fiscalPeriod: "2026-09", contractRef: MSA-2026-014, statutoryDueAt: "2026-10-01T17:00:00.000000Z", recordedAt: "2026-10-01T09:10:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a2 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: openSupportCase
+      tags: [support]
+      summary: Open a support case
+      description: |
+        `ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Opens the case `NEW`. The support SLA starts now and is due after the
+        severity's target — S1 four hours, S2 one day, S3 three days, S4 seven
+        days — measured to the first customer response. A statutory deadline,
+        when the request has one, is recorded beside it and never merged into
+        it (SUP-06).
+
+        The decision, document, obligation and remittance a case names are
+        read-only references. Nothing a case does changes them, and support
+        cannot refund, file, pay or edit a rule (SUP-03, SUP-04, SUP-11).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportCaseRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  type: LEGAL
+                  severity: S2
+                  subject: Letter from the tax authority about September VAT
+                  description: The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.
+                  product: Telecom VAT
+                  references:
+                    decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                  evidence: ["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"]
+      responses:
+        "201":
+          description: The case, opened.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCase"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    type: LEGAL
+                    openedType: LEGAL
+                    severity: S2
+                    subject: Letter from the tax authority about September VAT
+                    description: The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.
+                    product: Telecom VAT
+                      references:
+                      decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    evidence: ["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"]
+                    status: NEW
+                    missingFacts: []
+                    clocks:
+                      slaDueAt: "2026-10-02T09:00:00.000000Z"
+                      sla: ON_TRACK
+                      statutory: NONE
+                      statutoryPrecedes: false
+                      dueAt: "2026-10-02T09:00:00.000000Z"
+                    actions: [VERIFY, ASSIGN, REQUEST_EVIDENCE, ADD_EVIDENCE, NOTE, REQUEST_LEGAL_HOLD]
+                    signOffRequired: true
+                    signedOff: false
+                    responded: false
+                    openedAt: "2026-10-01T09:00:00.000000Z"
+                    openedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - { seq: 1, action: OPENED, status: NEW, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/support/cases/{caseId}:
+    get:
+      operationId: getSupportCase
+      tags: [support]
+      summary: One support case, its clocks and its history
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        The case as its history folds now: the current classification, the
+        actions its status allows, the closure guard's inputs, and both clocks
+        read as of now. Reading changes nothing.
+      parameters:
+        - $ref: "#/components/parameters/SupportCaseId"
+      responses:
+        "200":
+          description: The case.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCase"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    type: LEGAL
+                    openedType: LEGAL
+                    severity: S2
+                    subject: Letter from the tax authority about September VAT
+                    description: The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.
+                    product: Telecom VAT
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    fiscalPeriod: "2026-09"
+                    contractRef: MSA-2026-014
+                    references:
+                      decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    evidence: ["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"]
+                    status: TRIAGED
+                    missingFacts: []
+                    clocks:
+                      slaDueAt: "2026-10-02T09:00:00.000000Z"
+                      sla: ON_TRACK
+                      statutoryDueAt: "2026-10-01T17:00:00.000000Z"
+                      statutory: AT_RISK
+                      statutoryPrecedes: true
+                      dueAt: "2026-10-01T17:00:00.000000Z"
+                    actions: [ASSIGN, REQUEST_EVIDENCE, ADD_EVIDENCE, START_REVIEW, ESCALATE, NOTE, REQUEST_LEGAL_HOLD]
+                    signOffRequired: true
+                    signedOff: false
+                    responded: false
+                    openedAt: "2026-10-01T09:00:00.000000Z"
+                    openedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - { seq: 1, action: OPENED, status: NEW, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                      - { seq: 2, action: VERIFY, status: VERIFIED, note: Caller confirmed as the customer's named tax contact, recordedAt: "2026-10-01T09:05:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a2 }
+                      - { seq: 3, action: TRIAGE, status: TRIAGED, fiscalPeriod: "2026-09", contractRef: MSA-2026-014, statutoryDueAt: "2026-10-01T17:00:00.000000Z", recordedAt: "2026-10-01T09:10:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a2 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/support/cases/{caseId}/actions:
+    post:
+      operationId: actOnSupportCase
+      tags: [support]
+      summary: Take one action on a support case
+      description: |
+        `ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Every action appends one event to the case's single audited history;
+        nothing is edited. `VERIFY` moves `NEW` to `VERIFIED`. `TRIAGE`
+        classifies the case and moves it to `TRIAGED`, or to
+        `TRIAGE_INCOMPLETE` with the facts requested when the contract, the
+        impacted period or the seller is missing (SUP-02). `START_REVIEW` and
+        `ESCALATE` move it to `IN_REVIEW`; `RESPOND` records the customer
+        response, `RESOLVE` follows it, and `CLOSE` ends the case.
+        `REOPEN` takes a resolved or closed case back to `IN_REVIEW`, linked to
+        the event it reverses (SUP-07). `ASSIGN`, `REQUEST_EVIDENCE`,
+        `ADD_EVIDENCE`, `SIGN_OFF`, `NOTE` and `REQUEST_LEGAL_HOLD` change no
+        status; a legal hold request is recorded for an administrator, and
+        places no hold.
+
+        `CLOSE` needs a customer response since the last reopening, or
+        `409 STATE_TRANSITION_INVALID` (SUP-14). A case that is, or was ever,
+        `LEGAL` or `TAX_SPECIALIST` also needs a sign-off since the last
+        reopening by someone other than its opener, or `409 SIGN_OFF_REQUIRED`;
+        the opener's own sign-off is `403 SEGREGATION_OF_DUTIES` (T18-18).
+
+        Neither clock is reset: a raised severity can bring the SLA due time
+        earlier, measured from opening, and a statutory deadline once recorded
+        is never changed by support (SUP-07). An action the status does not
+        allow is `409 STATE_TRANSITION_INVALID`.
+      parameters:
+        - $ref: "#/components/parameters/SupportCaseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportCaseActionRequest"
+            examples:
+              verify:
+                summary: Verify the requester
+                value:
+                  action: VERIFY
+                  note: Caller confirmed as the customer's named tax contact
+              escalate:
+                summary: Escalate to counsel
+                value:
+                  action: ESCALATE
+                  escalateTo: LEGAL
+                  note: The customer asks how to answer the authority; counsel to review before we respond.
+      responses:
+        "200":
+          description: The case as it stands now.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCase"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    type: LEGAL
+                    openedType: LEGAL
+                    severity: S2
+                    subject: Letter from the tax authority about September VAT
+                    description: The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.
+                    product: Telecom VAT
+                    references:
+                      decisionId: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f
+                    evidence: ["sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"]
+                    status: VERIFIED
+                    missingFacts: []
+                    clocks:
+                      slaDueAt: "2026-10-02T09:00:00.000000Z"
+                      sla: ON_TRACK
+                      statutory: NONE
+                      statutoryPrecedes: false
+                      dueAt: "2026-10-02T09:00:00.000000Z"
+                    actions: [TRIAGE, ASSIGN, REQUEST_EVIDENCE, ADD_EVIDENCE, NOTE, REQUEST_LEGAL_HOLD]
+                    signOffRequired: true
+                    signedOff: false
+                    responded: false
+                    openedAt: "2026-10-01T09:00:00.000000Z"
+                    openedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    history:
+                      - { seq: 1, action: OPENED, status: NEW, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                      - { seq: 2, action: VERIFY, status: VERIFIED, note: Caller confirmed as the customer's named tax contact, recordedAt: "2026-10-01T09:05:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a2 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
   /v1/shadow/comparators:
     get:
       operationId: listComparators
@@ -7034,6 +7398,14 @@ components:
       description: The payment instruction identifier.
       schema: { $ref: "#/components/schemas/RemittanceId" }
       example: 01920b30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+
+    SupportCaseId:
+      name: caseId
+      in: path
+      required: true
+      description: The support case identifier.
+      schema: { $ref: "#/components/schemas/SupportCaseId" }
+      example: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
 
     ShadowRunId:
       name: shadowRunId
@@ -12269,6 +12641,306 @@ components:
       required: [reason]
       properties:
         reason: { $ref: "#/components/schemas/PaymentNote" }
+
+    SupportCaseId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SupportCaseId
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+
+    SupportUserId:
+      x-ztax-privacy: { class: P1, purposes: [PURP-SUPPORT, PURP-SEC], retention: RET-OPERATIONAL, redaction: NONE }
+      type: string
+      title: SupportUserId
+      description: A person in the tenant who opened, owns or acted on a case.
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920a4c-0000-7000-8000-0000000000a2
+
+    SupportCaseType:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SupportCaseType
+      description: What a case is about. It routes the case and grants nothing; `LEGAL` and `TAX_SPECIALIST` cases close only after an independent sign-off (T18-18).
+      enum: [COVERAGE_ENTITLEMENT, INVOICE_EXPLANATION, TAX_SPECIALIST, FILING, REMITTANCE, SECURITY, LEGAL]
+
+    SupportSeverity:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SupportSeverity
+      description: How badly the customer is affected. It sets the support SLA — S1 4 hours, S2 24 hours, S3 72 hours, S4 7 days to the first customer response.
+      enum: [S1, S2, S3, S4]
+
+    SupportCaseStatus:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SupportCaseStatus
+      description: |
+        NEW → VERIFIED → TRIAGED → IN_REVIEW → RESPONDED → RESOLVED → CLOSED.
+        TRIAGE_INCOMPLETE is a case lacking its contract, period or seller
+        facts (SUP-02). A resolved or closed case may be reopened to IN_REVIEW
+        (SUP-07).
+      enum: [NEW, VERIFIED, TRIAGE_INCOMPLETE, TRIAGED, IN_REVIEW, RESPONDED, RESOLVED, CLOSED]
+
+    SupportCaseAction:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SupportCaseAction
+      description: An act on a case. `OPENED` is recorded by opening the case and is never requested.
+      enum: [OPENED, VERIFY, TRIAGE, ASSIGN, REQUEST_EVIDENCE, ADD_EVIDENCE, START_REVIEW, ESCALATE, RESPOND, RESOLVE, SIGN_OFF, CLOSE, REOPEN, NOTE, REQUEST_LEGAL_HOLD]
+
+    SupportEscalationTarget:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SupportEscalationTarget
+      description: Who an escalated case is routed to. Routing hands the case to people with authority; it gives support none.
+      enum: [TAX_SPECIALIST, LEGAL, SECURITY, FINANCE_OPERATIONS, ENGINEERING]
+
+    SupportFact:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SupportFact
+      description: A fact triage needs before a case can be worked (SUP-02). `SELLER` is met by a legal entity or a seller reference.
+      enum: [CONTRACT, FISCAL_PERIOD, SELLER]
+
+    SupportClockState:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SupportClockState
+      description: |
+        Where one clock stands now. The support SLA is ON_TRACK, AT_RISK (a
+        quarter of its window or less left), BREACHED, or MET (answered in
+        time). A statutory deadline is NONE, ON_TRACK, AT_RISK (72 hours or
+        less left) or PASSED.
+      enum: [NONE, ON_TRACK, AT_RISK, BREACHED, MET, PASSED]
+
+    SupportNote:
+      x-ztax-privacy: { class: P2, purposes: [PURP-SUPPORT], retention: RET-OPERATIONAL, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: SupportNote
+      minLength: 1
+      maxLength: 2000
+      description: Free text from the person acting — a response to the customer, a request, a sign-off or a note.
+
+    SupportReference:
+      x-ztax-privacy: { class: P2, purposes: [PURP-SUPPORT], retention: RET-OPERATIONAL, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: SupportReference
+      minLength: 1
+      maxLength: 200
+      description: A customer's own reference — a contract number, a seller — as the customer gave it.
+
+    SupportEvidenceReference:
+      x-ztax-privacy: { class: P2, purposes: [PURP-SUPPORT], retention: RET-OPERATIONAL, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: SupportEvidenceReference
+      minLength: 1
+      maxLength: 200
+      description: A reference to evidence — a hash or a document identifier — never the evidence itself.
+
+    SupportProduct:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SupportProduct
+      minLength: 1
+      maxLength: 200
+      description: The product line a request concerns.
+
+    SupportCaseReferences:
+      type: object
+      title: SupportCaseReferences
+      description: What the case is about, by identifier. Read-only references; nothing a case does changes them (SUP-03, SUP-04, SUP-11).
+      additionalProperties: false
+      properties:
+        decisionId: { $ref: "#/components/schemas/DecisionId" }
+        documentId: { $ref: "#/components/schemas/DocumentId" }
+        obligationId: { $ref: "#/components/schemas/ObligationId" }
+        remittanceId: { $ref: "#/components/schemas/RemittanceId" }
+
+    SupportCaseClocks:
+      type: object
+      title: SupportCaseClocks
+      description: The case's two clocks, kept apart (SUP-06). Neither is reset by reopening or editing the case (SUP-07).
+      additionalProperties: false
+      required: [slaDueAt, sla, statutory, statutoryPrecedes, dueAt]
+      properties:
+        slaDueAt: { $ref: "#/components/schemas/Timestamp" }
+        sla: { $ref: "#/components/schemas/SupportClockState" }
+        firstResponseAt: { $ref: "#/components/schemas/Timestamp" }
+        statutoryDueAt: { $ref: "#/components/schemas/Timestamp" }
+        statutory: { $ref: "#/components/schemas/SupportClockState" }
+        statutoryPrecedes:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: The statutory deadline falls before the SLA's due time, so it is the time the case must beat.
+        dueAt: { $ref: "#/components/schemas/Timestamp" }
+
+    SupportCaseEvent:
+      type: object
+      title: SupportCaseEvent
+      description: One act on a case. Each carries only what it changed.
+      additionalProperties: false
+      required: [seq, action, status, recordedAt, recordedBy]
+      properties:
+        seq:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        action: { $ref: "#/components/schemas/SupportCaseAction" }
+        status: { $ref: "#/components/schemas/SupportCaseStatus" }
+        note: { $ref: "#/components/schemas/SupportNote" }
+        type: { $ref: "#/components/schemas/SupportCaseType" }
+        severity: { $ref: "#/components/schemas/SupportSeverity" }
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        fiscalPeriod: { $ref: "#/components/schemas/LegalPeriod" }
+        contractRef: { $ref: "#/components/schemas/SupportReference" }
+        sellerRef: { $ref: "#/components/schemas/SupportReference" }
+        statutoryDueAt: { $ref: "#/components/schemas/Timestamp" }
+        slaDueAt: { $ref: "#/components/schemas/Timestamp" }
+        assignee: { $ref: "#/components/schemas/SupportUserId" }
+        escalateTo: { $ref: "#/components/schemas/SupportEscalationTarget" }
+        evidence:
+          type: array
+          items: { $ref: "#/components/schemas/SupportEvidenceReference" }
+        missingFacts:
+          type: array
+          items: { $ref: "#/components/schemas/SupportFact" }
+        reopens:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+          description: The sequence number of the resolution or closure this reopening reverses.
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy: { $ref: "#/components/schemas/SupportUserId" }
+
+    SupportCase:
+      type: object
+      title: SupportCase
+      description: A support case, folded from its history. Not a fiscal record.
+      additionalProperties: false
+      required: [id, type, openedType, severity, subject, description, references, evidence, status, missingFacts, clocks, actions, signOffRequired, signedOff, responded, openedAt, openedBy, history]
+      properties:
+        id: { $ref: "#/components/schemas/SupportCaseId" }
+        type: { $ref: "#/components/schemas/SupportCaseType" }
+        openedType: { $ref: "#/components/schemas/SupportCaseType" }
+        severity: { $ref: "#/components/schemas/SupportSeverity" }
+        subject:
+          x-ztax-privacy: { class: P2, purposes: [PURP-SUPPORT], retention: RET-OPERATIONAL, redaction: REDACT, aiAllowed: NONE }
+          type: string
+        description:
+          x-ztax-privacy: { class: P2, purposes: [PURP-SUPPORT], retention: RET-OPERATIONAL, redaction: REDACT, aiAllowed: NONE }
+          type: string
+        product: { $ref: "#/components/schemas/SupportProduct" }
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        fiscalPeriod: { $ref: "#/components/schemas/LegalPeriod" }
+        contractRef: { $ref: "#/components/schemas/SupportReference" }
+        sellerRef: { $ref: "#/components/schemas/SupportReference" }
+        references: { $ref: "#/components/schemas/SupportCaseReferences" }
+        assignee: { $ref: "#/components/schemas/SupportUserId" }
+        evidence:
+          type: array
+          items: { $ref: "#/components/schemas/SupportEvidenceReference" }
+        status: { $ref: "#/components/schemas/SupportCaseStatus" }
+        escalatedTo: { $ref: "#/components/schemas/SupportEscalationTarget" }
+        missingFacts:
+          type: array
+          description: What the latest incomplete triage asked for. Empty once triage is complete.
+          items: { $ref: "#/components/schemas/SupportFact" }
+        clocks: { $ref: "#/components/schemas/SupportCaseClocks" }
+        actions:
+          type: array
+          description: The actions the case's status allows now. `CLOSE` is listed only once its guards pass; the server checks every guard again when an action is taken.
+          items: { $ref: "#/components/schemas/SupportCaseAction" }
+        signOffRequired:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: The case is, or was ever, LEGAL or TAX_SPECIALIST, so it closes only after an independent sign-off (T18-18).
+        signedOff:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: Someone other than the opener has signed off since the last reopening.
+        responded:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: A customer response has been recorded since the last reopening (SUP-14).
+        openedAt: { $ref: "#/components/schemas/Timestamp" }
+        openedBy: { $ref: "#/components/schemas/SupportUserId" }
+        history:
+          type: array
+          items: { $ref: "#/components/schemas/SupportCaseEvent" }
+
+    SupportCaseList:
+      type: object
+      title: SupportCaseList
+      additionalProperties: false
+      required: [cases]
+      properties:
+        cases:
+          type: array
+          items: { $ref: "#/components/schemas/SupportCase" }
+
+    SupportCaseRequest:
+      type: object
+      title: SupportCaseRequest
+      additionalProperties: false
+      required: [type, severity, subject, description]
+      properties:
+        type: { $ref: "#/components/schemas/SupportCaseType" }
+        severity: { $ref: "#/components/schemas/SupportSeverity" }
+        subject:
+          x-ztax-privacy: { class: P2, purposes: [PURP-SUPPORT], retention: RET-OPERATIONAL, redaction: REDACT, aiAllowed: NONE }
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          x-ztax-privacy: { class: P2, purposes: [PURP-SUPPORT], retention: RET-OPERATIONAL, redaction: REDACT, aiAllowed: NONE }
+          type: string
+          minLength: 1
+          maxLength: 5000
+        product: { $ref: "#/components/schemas/SupportProduct" }
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        fiscalPeriod: { $ref: "#/components/schemas/LegalPeriod" }
+        contractRef: { $ref: "#/components/schemas/SupportReference" }
+        sellerRef: { $ref: "#/components/schemas/SupportReference" }
+        references: { $ref: "#/components/schemas/SupportCaseReferences" }
+        statutoryDueAt: { $ref: "#/components/schemas/Timestamp" }
+        assignee: { $ref: "#/components/schemas/SupportUserId" }
+        evidence:
+          type: array
+          maxItems: 50
+          items: { $ref: "#/components/schemas/SupportEvidenceReference" }
+
+    SupportCaseActionRequest:
+      type: object
+      title: SupportCaseActionRequest
+      description: |
+        One action. `note` is required for RESPOND, SIGN_OFF, REOPEN, ESCALATE,
+        REQUEST_EVIDENCE, NOTE and REQUEST_LEGAL_HOLD; `assignee` for ASSIGN;
+        `escalateTo` for ESCALATE; `evidence` for ADD_EVIDENCE. The
+        classification fields are read by TRIAGE only, and only what is
+        supplied changes.
+      additionalProperties: false
+      required: [action]
+      properties:
+        action: { $ref: "#/components/schemas/SupportCaseAction" }
+        note: { $ref: "#/components/schemas/SupportNote" }
+        type: { $ref: "#/components/schemas/SupportCaseType" }
+        severity: { $ref: "#/components/schemas/SupportSeverity" }
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        fiscalPeriod: { $ref: "#/components/schemas/LegalPeriod" }
+        contractRef: { $ref: "#/components/schemas/SupportReference" }
+        sellerRef: { $ref: "#/components/schemas/SupportReference" }
+        statutoryDueAt: { $ref: "#/components/schemas/Timestamp" }
+        assignee: { $ref: "#/components/schemas/SupportUserId" }
+        escalateTo: { $ref: "#/components/schemas/SupportEscalationTarget" }
+        evidence:
+          type: array
+          maxItems: 50
+          items: { $ref: "#/components/schemas/SupportEvidenceReference" }
 
     ComparatorId:
       x-ztax-privacy: { class: P0 }

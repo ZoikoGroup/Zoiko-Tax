@@ -3336,6 +3336,239 @@
         "aiAllowed": "NONE",
         "note": "The person who moved the cutover."
       }
+    },
+    "support_case": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "case_id": {
+        "class": "P0"
+      },
+      "case_type": {
+        "class": "P0"
+      },
+      "severity": {
+        "class": "P0"
+      },
+      "subject": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The customer's request in brief. May name people."
+      },
+      "description": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The customer's request as reported. May carry personal data the customer volunteered."
+      },
+      "product": {
+        "class": "P0",
+        "note": "The product line the request concerns."
+      },
+      "legal_entity_id": {
+        "class": "P0",
+        "note": "The customer legal entity the case concerns, by identifier."
+      },
+      "fiscal_period": {
+        "class": "P0"
+      },
+      "contract_ref": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The customer's contract reference, as the customer gave it."
+      },
+      "seller_ref": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The seller the case concerns, when it is not a registered legal entity."
+      },
+      "decision_id": {
+        "class": "P0",
+        "note": "Read-only reference; no foreign key, nothing written through it."
+      },
+      "document_id": {
+        "class": "P0",
+        "note": "Read-only reference; no foreign key, nothing written through it."
+      },
+      "obligation_id": {
+        "class": "P0",
+        "note": "Read-only reference; no foreign key, nothing written through it."
+      },
+      "remittance_id": {
+        "class": "P0",
+        "note": "Read-only reference; no foreign key, nothing written through it."
+      },
+      "statutory_due_at": {
+        "class": "P0"
+      },
+      "sla_due_at": {
+        "class": "P0"
+      },
+      "assignee": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SUPPORT",
+          "PURP-SEC"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who owns the case."
+      },
+      "evidence": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "References to evidence — hashes or document identifiers — never the evidence itself."
+      },
+      "opened_at": {
+        "class": "P0"
+      },
+      "opened_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who opened the case; compared with the signer for four-eye sign-off."
+      }
+    },
+    "support_case_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "case_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "action": {
+        "class": "P0"
+      },
+      "status_after": {
+        "class": "P0"
+      },
+      "note": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "What the person acting recorded: a response, a request, a sign-off or a note."
+      },
+      "case_type": {
+        "class": "P0"
+      },
+      "severity": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0",
+        "note": "The customer legal entity the case concerns, by identifier."
+      },
+      "fiscal_period": {
+        "class": "P0"
+      },
+      "contract_ref": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The customer's contract reference, as the customer gave it."
+      },
+      "seller_ref": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The seller the case concerns, when it is not a registered legal entity."
+      },
+      "statutory_due_at": {
+        "class": "P0"
+      },
+      "sla_due_at": {
+        "class": "P0"
+      },
+      "assignee": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SUPPORT",
+          "PURP-SEC"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who owns the case."
+      },
+      "escalate_to": {
+        "class": "P0"
+      },
+      "evidence": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SUPPORT"
+        ],
+        "retention": "RET-OPERATIONAL",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "References to evidence — hashes or document identifiers — never the evidence itself."
+      },
+      "missing_facts": {
+        "class": "P0",
+        "note": "The facts triage requested."
+      },
+      "reopens_seq": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who acted."
+      }
     }
   }
 }

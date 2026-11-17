@@ -744,6 +744,44 @@ export class ZoikoTaxClient {
     return this.#send<S<"Discrepancy">>("POST", `/v1/shadow/discrepancies/${encodeURIComponent(discrepancyId)}/transitions`, body, signal);
   }
 
+  // --- support ---------------------------------------------------------------
+  /** The support triage queue, soonest due first. `GET /v1/support/cases`. */
+  listSupportCases(
+    params: {
+      type?: string;
+      severity?: string;
+      status?: string;
+      product?: string;
+      legalEntityId?: string;
+      fiscalPeriod?: string;
+      assignee?: string;
+      unassigned?: boolean;
+      slaClock?: string;
+      statutoryClock?: string;
+      limit?: number;
+    } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"SupportCaseList">>> {
+    const { unassigned, ...rest } = params;
+    const q = { ...rest, unassigned: unassigned === undefined ? undefined : String(unassigned) };
+    return this.#send<S<"SupportCaseList">>("GET", `/v1/support/cases${query(q)}`, undefined, signal);
+  }
+
+  /** Open a support case. `POST /v1/support/cases`. */
+  openSupportCase(body: S<"SupportCaseRequest">, signal?: AbortSignal): Promise<Result<S<"SupportCase">>> {
+    return this.#send<S<"SupportCase">>("POST", `/v1/support/cases`, body, signal);
+  }
+
+  /** Get a support case, its clocks and its history. `GET /v1/support/cases/{caseId}`. */
+  getSupportCase(caseId: string, signal?: AbortSignal): Promise<Result<S<"SupportCase">>> {
+    return this.#send<S<"SupportCase">>("GET", `/v1/support/cases/${encodeURIComponent(caseId)}`, undefined, signal);
+  }
+
+  /** Take one action on a support case. `POST /v1/support/cases/{caseId}/actions`. */
+  actOnSupportCase(caseId: string, body: S<"SupportCaseActionRequest">, signal?: AbortSignal): Promise<Result<S<"SupportCase">>> {
+    return this.#send<S<"SupportCase">>("POST", `/v1/support/cases/${encodeURIComponent(caseId)}/actions`, body, signal);
+  }
+
   // --- migration -------------------------------------------------------------
   /** List migration programs. `GET /v1/migrations/programs`. */
   listMigrationPrograms(signal?: AbortSignal): Promise<Result<S<"MigrationProgramList">>> {

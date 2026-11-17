@@ -27,6 +27,7 @@ import { RemittancePage } from './pages/RemittancePage'
 import { ReportsDemoPage } from './pages/ReportsDemoPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { ShadowPage } from './pages/ShadowPage'
+import { SupportCasesPage } from './pages/SupportCasesPage'
 import type { PageProps } from './pages/types'
 import { CellHealth } from './platform/CellHealth'
 import { ztax } from './platform/client'
@@ -166,6 +167,8 @@ export function App() {
             return <ReconcilePage {...page} />
           case 'remittance':
             return <RemittancePage {...page} />
+          case 'cases':
+            return <SupportCasesPage {...page} />
           case 'shadow':
             return <ShadowPage {...page} />
           case 'migration':

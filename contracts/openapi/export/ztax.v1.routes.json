@@ -644,6 +644,30 @@
       "public": false
     },
     {
+      "method": "GET",
+      "path": "/v1/support/cases",
+      "operationId": "listSupportCases",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/support/cases",
+      "operationId": "openSupportCase",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/support/cases/{caseId}",
+      "operationId": "getSupportCase",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/support/cases/{caseId}/actions",
+      "operationId": "actOnSupportCase",
+      "public": false
+    },
+    {
       "method": "POST",
       "path": "/v1/transactions:adjust",
       "operationId": "adjustTransaction",

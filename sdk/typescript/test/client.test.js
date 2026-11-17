@@ -300,3 +300,23 @@ test("the listings put their filters in the query and nothing else", async () =>
     assert.equal(c.init.headers["Idempotency-Key"], undefined);
   }
 });
+
+test("support cases: the queue's filters, a case and an action", async () => {
+  const { fetch, calls } = stub(json(200, { cases: [] }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+
+  await client.listSupportCases({ type: "LEGAL", slaClock: "AT_RISK", unassigned: true, limit: 10 });
+  await client.listSupportCases();
+  await client.getSupportCase("a/b");
+  await client.openSupportCase({ type: "FILING", severity: "S2", subject: "s", description: "d" });
+  await client.actOnSupportCase("c1", { action: "VERIFY" });
+
+  assert.deepEqual(calls.map((c) => [c.init.method, c.url]), [
+    ["GET", "/api/v1/support/cases?type=LEGAL&slaClock=AT_RISK&limit=10&unassigned=true"],
+    ["GET", "/api/v1/support/cases"],
+    ["GET", "/api/v1/support/cases/a%2Fb"],
+    ["POST", "/api/v1/support/cases"],
+    ["POST", "/api/v1/support/cases/c1/actions"],
+  ]);
+  assert.deepEqual(JSON.parse(calls[4].init.body), { action: "VERIFY" });
+});

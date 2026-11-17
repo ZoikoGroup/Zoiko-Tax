@@ -99,7 +99,7 @@ const FOLDERS = [
   {
     name: "04 · Administration",
     description:
-      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked. Then payee master data: `createBeneficiary` records an authority's payee details and captures `beneficiaryId`; the same administrator verifying them is refused with `MAKER_CHECKER` (ZTAX-REM-REQ-0014), and the version is suspended. Then a migration: `createMigrationProgram` creates a program for 2025 and captures `migrationProgramId`; a snapshot of two historical results is registered, a mapping that names only one of their legacy codes is recorded, and `executeMigrationRun` converts the snapshot AS_KNOWN — one record converts, the other raises an `UNMAPPED_CODE` exception, captured into `migrationExceptionId`, and the monetary reconciliation does not pass. The exception is accepted as a known residual and the cutover moves to `PRECHECK`.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
+      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked. Then payee master data: `createBeneficiary` records an authority's payee details and captures `beneficiaryId`; the same administrator verifying them is refused with `MAKER_CHECKER` (ZTAX-REM-REQ-0014), and the version is suspended. Then support: `openSupportCase` opens a LEGAL case and captures `caseId`; the queue and the case are read, and `actOnSupportCase` verifies the requester, which moves the case to `VERIFIED` as one more event in its history. Then a migration: `createMigrationProgram` creates a program for 2025 and captures `migrationProgramId`; a snapshot of two historical results is registered, a mapping that names only one of their legacy codes is recorded, and `executeMigrationRun` converts the snapshot AS_KNOWN — one record converts, the other raises an `UNMAPPED_CODE` exception, captured into `migrationExceptionId`, and the monetary reconciliation does not pass. The exception is accepted as a known residual and the cutover moves to `PRECHECK`.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
     operations: [
       "listUsers",
       "createUser",
@@ -140,6 +140,10 @@ const FOLDERS = [
       "createBeneficiary",
       "verifyBeneficiary",
       "suspendBeneficiary",
+      "openSupportCase",
+      "listSupportCases",
+      "getSupportCase",
+      "actOnSupportCase",
       "listMigrationPrograms",
       "createMigrationProgram",
       "registerMigrationSnapshot",
@@ -448,6 +452,22 @@ const OPERATION_TESTS = {
     "  pm.expect(pm.response.json().state).to.eql('UNVERIFIED');",
     "});",
     "pm.collectionVariables.set('beneficiaryId', pm.response.json().id);",
+  ],
+  openSupportCase: [
+    "pm.test('Doc 18 W16 — a case opens NEW, with its support SLA and statutory clock kept apart', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().status).to.eql('NEW');",
+    "  pm.expect(pm.response.json().clocks).to.have.property('slaDueAt');",
+    "  pm.expect(pm.response.json().clocks.statutory).to.eql('NONE');",
+    "});",
+    "pm.collectionVariables.set('caseId', pm.response.json().id);",
+  ],
+  actOnSupportCase: [
+    "pm.test('Doc 18 W16 — every act is one more event in the case history', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.expect(pm.response.json().status).to.eql('VERIFIED');",
+    "  pm.expect(pm.response.json().history.length).to.eql(2);",
+    "});",
   ],
   verifyBeneficiary: [
     "pm.test('ZTAX-REM-REQ-0014 — the author of payee details cannot verify them', function () {",
@@ -1231,6 +1251,18 @@ function variables(overlay, contractDigest, local) {
     { key: "itemId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
     { key: "holdId", value: "", type: "string" },
     { key: "authorizationId", value: "", type: "string" },
+    // Captured by `openSupportCase`. The queue's filters are empty, so it
+    // lists every case.
+    { key: "caseId", value: "", type: "string" },
+    { key: "type", value: "", type: "string" },
+    { key: "severity", value: "", type: "string" },
+    { key: "product", value: "", type: "string" },
+    { key: "legalEntityId", value: "", type: "string" },
+    { key: "fiscalPeriod", value: "", type: "string" },
+    { key: "assignee", value: "", type: "string" },
+    { key: "unassigned", value: "", type: "string" },
+    { key: "slaClock", value: "", type: "string" },
+    { key: "statutoryClock", value: "", type: "string" },
     // Minted once per run by `07`, and reused by the requests that must share it.
     { key: "reusedKey", value: "", type: "string" },
 
