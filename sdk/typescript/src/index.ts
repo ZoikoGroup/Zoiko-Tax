@@ -713,6 +713,44 @@ export class ZoikoTaxClient {
     return this.#send<S<"Remittance">>("POST", `/v1/remittances/${encodeURIComponent(remittanceId)}/cancellation`, body, signal);
   }
 
+  // --- provider contributions ------------------------------------------------
+  /** List provider contributions, newest first, in any status. `GET /v1/contributions`. */
+  listContributions(
+    params: { period?: string; regime?: string; status?: string; legalEntityId?: string; sourceType?: string; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"ProviderContributionList">>> {
+    return this.#send<S<"ProviderContributionList">>("GET", `/v1/contributions${query(params)}`, undefined, signal);
+  }
+
+  /**
+   * Record a contribution from one source event; `200` returns the one this
+   * source event and version already recorded. Idempotent on the source key,
+   * not on an Idempotency-Key. `POST /v1/contributions`.
+   */
+  recordContribution(body: S<"ContributionRequest">, signal?: AbortSignal): Promise<Result<S<"ProviderContribution">>> {
+    return this.#send<S<"ProviderContribution">>("POST", `/v1/contributions`, body, signal);
+  }
+
+  /** A period's control totals. `GET /v1/contributions/summary`. */
+  getContributionSummary(period: string, signal?: AbortSignal): Promise<Result<S<"ContributionSummary">>> {
+    return this.#send<S<"ContributionSummary">>("GET", `/v1/contributions/summary${query({ period })}`, undefined, signal);
+  }
+
+  /** A contribution with its history and links. `GET /v1/contributions/{contributionId}/trace`. */
+  getContributionTrace(contributionId: string, signal?: AbortSignal): Promise<Result<S<"ContributionTrace">>> {
+    return this.#send<S<"ContributionTrace">>("GET", `/v1/contributions/${encodeURIComponent(contributionId)}/trace`, undefined, signal);
+  }
+
+  /** Quarantine a contribution. `POST /v1/contributions/{contributionId}/quarantine`. */
+  quarantineContribution(contributionId: string, body: S<"ContributionTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"ProviderContribution">>> {
+    return this.#send<S<"ProviderContribution">>("POST", `/v1/contributions/${encodeURIComponent(contributionId)}/quarantine`, body, signal);
+  }
+
+  /** Release a quarantined contribution. `POST /v1/contributions/{contributionId}/release`. */
+  releaseContribution(contributionId: string, body: S<"ContributionTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"ProviderContribution">>> {
+    return this.#send<S<"ProviderContribution">>("POST", `/v1/contributions/${encodeURIComponent(contributionId)}/release`, body, signal);
+  }
+
   // --- shadow ----------------------------------------------------------------
   /** List comparator profiles. `GET /v1/shadow/comparators`. */
   listComparators(signal?: AbortSignal): Promise<Result<S<"ComparatorList">>> {

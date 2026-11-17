@@ -207,6 +207,8 @@ const FOLDERS = [
       "acknowledgeCompliancePackage", "resolveCompliancePackage", "cancelCompliancePackage",
       "listRemittances", "createRemittance", "getRemittance", "approveRemittance", "submitRemittance",
       "recordRemittanceStatus", "resolveRemittance", "returnRemittance", "cancelRemittance",
+      "recordContribution", "listContributions", "getContributionTrace", "getContributionSummary",
+      "quarantineContribution", "releaseContribution",
       "createComparator", "listComparators", "executeShadowRun", "listShadowRuns", "getShadowRun", "moveDiscrepancy",
       "issueDocument", "getDocument", "correctDocument", "getDocumentLineage", "listDocuments",
       "adjustTransaction", "refundTransaction", "getRefund", "reportRefund", "listRefunds", "proposeClassification",
@@ -474,6 +476,13 @@ const OPERATION_TESTS = {
     "  pm.response.to.have.status(403);",
     "  pm.expect(pm.response.json().ztx_reason_code).to.eql('MAKER_CHECKER');",
     "});",
+  ],
+  recordContribution: [
+    "pm.test('UAT-OBL-026 — a source event is one contribution: recorded, or the one already recorded', function () {",
+    "  pm.expect([200, 201]).to.include(pm.response.code);",
+    "  pm.expect(pm.response.json().immutableHash).to.match(/^zt1:[0-9a-f]{64}$/);",
+    "});",
+    "pm.collectionVariables.set('contributionId', pm.response.json().id);",
   ],
   createRemittance: [
     "pm.test('ZTAX-REM-REQ-0005 — only an accepted return is paid', function () {",
@@ -927,6 +936,11 @@ const ACCEPTED_OUTCOMES = {
   resolveRemittance: ["404"],
   returnRemittance: ["404"],
   cancelRemittance: ["404"],
+  // The example source event is recorded once and replayed on later runs,
+  // which find it quarantined by the first. Folder 06 runs as an OPERATOR,
+  // and only an ANALYST other than the quarantiner releases.
+  quarantineContribution: ["409"],
+  releaseContribution: ["403"],
   moveDiscrepancy: ["404"],
 };
 
@@ -1237,6 +1251,12 @@ function variables(overlay, contractDigest, local) {
     // No folder makes a payment, so the payment reads and actions name one
     // that does not exist, and answer 404.
     { key: "remittanceId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
+    // Captured by recordContribution; the listing filters are empty so it
+    // lists everything.
+    { key: "contributionId", value: "", type: "string" },
+    { key: "regime", value: "", type: "string" },
+    { key: "sourceType", value: "", type: "string" },
+    { key: "legalEntityId", value: "", type: "string" },
     { key: "webhookId", value: "", type: "string" },
     { key: "jobId", value: "", type: "string" },
     { key: "sealId", value: "", type: "string" },
@@ -1257,7 +1277,6 @@ function variables(overlay, contractDigest, local) {
     { key: "type", value: "", type: "string" },
     { key: "severity", value: "", type: "string" },
     { key: "product", value: "", type: "string" },
-    { key: "legalEntityId", value: "", type: "string" },
     { key: "fiscalPeriod", value: "", type: "string" },
     { key: "assignee", value: "", type: "string" },
     { key: "unassigned", value: "", type: "string" },

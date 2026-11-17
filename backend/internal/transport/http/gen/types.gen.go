@@ -579,6 +579,129 @@ func (e ComplianceStepKind) Valid() bool {
 	}
 }
 
+// Defines values for ContributionEventKind.
+const (
+	ContributionEventKindQUARANTINED ContributionEventKind = "QUARANTINED"
+	ContributionEventKindRECORDED    ContributionEventKind = "RECORDED"
+	ContributionEventKindRELEASED    ContributionEventKind = "RELEASED"
+)
+
+// Valid indicates whether the value is a known member of the ContributionEventKind enum.
+func (e ContributionEventKind) Valid() bool {
+	switch e {
+	case ContributionEventKindQUARANTINED:
+		return true
+	case ContributionEventKindRECORDED:
+		return true
+	case ContributionEventKindRELEASED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContributionIncompleteReason.
+const (
+	QUARANTINEDEVENTS  ContributionIncompleteReason = "QUARANTINED_EVENTS"
+	UNRESOLVEDREVERSAL ContributionIncompleteReason = "UNRESOLVED_REVERSAL"
+)
+
+// Valid indicates whether the value is a known member of the ContributionIncompleteReason enum.
+func (e ContributionIncompleteReason) Valid() bool {
+	switch e {
+	case QUARANTINEDEVENTS:
+		return true
+	case UNRESOLVEDREVERSAL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContributionPeriodTotalsStatus.
+const (
+	COMPLETE       ContributionPeriodTotalsStatus = "COMPLETE"
+	DATAINCOMPLETE ContributionPeriodTotalsStatus = "DATA_INCOMPLETE"
+)
+
+// Valid indicates whether the value is a known member of the ContributionPeriodTotalsStatus enum.
+func (e ContributionPeriodTotalsStatus) Valid() bool {
+	switch e {
+	case COMPLETE:
+		return true
+	case DATAINCOMPLETE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContributionRegime.
+const (
+	ContributionRegimeCACRTCNCF ContributionRegime = "CA_CRTC_NCF"
+	ContributionRegimeOTHER     ContributionRegime = "OTHER"
+	ContributionRegimeUSUSF     ContributionRegime = "US_USF"
+)
+
+// Valid indicates whether the value is a known member of the ContributionRegime enum.
+func (e ContributionRegime) Valid() bool {
+	switch e {
+	case ContributionRegimeCACRTCNCF:
+		return true
+	case ContributionRegimeOTHER:
+		return true
+	case ContributionRegimeUSUSF:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContributionSourceType.
+const (
+	BSSINVOICE                   ContributionSourceType = "BSS_INVOICE"
+	LICENCEACTIVITY              ContributionSourceType = "LICENCE_ACTIVITY"
+	MANUALCERTIFIEDSCHEDULE      ContributionSourceType = "MANUAL_CERTIFIED_SCHEDULE"
+	RATEDUSAGE                   ContributionSourceType = "RATED_USAGE"
+	REVENUERECOGNITIONADJUSTMENT ContributionSourceType = "REVENUE_RECOGNITION_ADJUSTMENT"
+)
+
+// Valid indicates whether the value is a known member of the ContributionSourceType enum.
+func (e ContributionSourceType) Valid() bool {
+	switch e {
+	case BSSINVOICE:
+		return true
+	case LICENCEACTIVITY:
+		return true
+	case MANUALCERTIFIEDSCHEDULE:
+		return true
+	case RATEDUSAGE:
+		return true
+	case REVENUERECOGNITIONADJUSTMENT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContributionStatus.
+const (
+	ContributionStatusACCEPTED    ContributionStatus = "ACCEPTED"
+	ContributionStatusQUARANTINED ContributionStatus = "QUARANTINED"
+)
+
+// Valid indicates whether the value is a known member of the ContributionStatus enum.
+func (e ContributionStatus) Valid() bool {
+	switch e {
+	case ContributionStatusACCEPTED:
+		return true
+	case ContributionStatusQUARANTINED:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ControlAccount.
 const (
 	CUSTOMERGLBRIDGE      ControlAccount = "CUSTOMER_GL_BRIDGE"
@@ -4314,6 +4437,221 @@ type ContentLabel = string
 // ContentText Text from the active content, such as a source citation. Not interpreted.
 type ContentText = string
 
+// ContributionAmount A provider's contribution base, or a quantity, in canonical decimal string
+// form — never a JSON number, and never computed by a client
+// (UAT-OBL-034). Scale is significant. An operator's own revenue
+// aggregate, not a consumer amount, so it carries no personal data
+// (UAT-OBL-025).
+type ContributionAmount = string
+
+// ContributionEventKind What happened to a contribution. Every one is appended; none edits.
+type ContributionEventKind string
+
+// ContributionID defines model for ContributionId.
+type ContributionID = string
+
+// ContributionIncompleteReason Why a group's control totals are DATA_INCOMPLETE — a held import, or a reversal of an original the ledger does not hold.
+type ContributionIncompleteReason string
+
+// ContributionPeriodTotals One member entity's control totals for one regime and currency. Currencies are never added together.
+type ContributionPeriodTotals struct {
+	AcceptedCount  int32 `json:"acceptedCount"`
+	AmendmentCount int32 `json:"amendmentCount"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// EligibleTotal A provider's contribution base, or a quantity, in canonical decimal string
+	// form — never a JSON number, and never computed by a client
+	// (UAT-OBL-034). Scale is significant. An operator's own revenue
+	// aggregate, not a consumer amount, so it carries no personal data
+	// (UAT-OBL-025).
+	EligibleTotal ContributionAmount `json:"eligibleTotal"`
+
+	// ExcludedTotal A provider's contribution base, or a quantity, in canonical decimal string
+	// form — never a JSON number, and never computed by a client
+	// (UAT-OBL-034). Scale is significant. An operator's own revenue
+	// aggregate, not a consumer amount, so it carries no personal data
+	// (UAT-OBL-025).
+	ExcludedTotal     ContributionAmount             `json:"excludedTotal"`
+	IncompleteReasons []ContributionIncompleteReason `json:"incompleteReasons"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// PeriodDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	PeriodDigest     Digest `json:"periodDigest"`
+	QuarantinedCount int32  `json:"quarantinedCount"`
+
+	// Regime The fund a provider contribution is owed to — the US Universal Service Fund through USAC, Canada's CRTC National Contribution Fund, or another.
+	Regime        ContributionRegime `json:"regime"`
+	ReversalCount int32              `json:"reversalCount"`
+
+	// ReversedTotal A provider's contribution base, or a quantity, in canonical decimal string
+	// form — never a JSON number, and never computed by a client
+	// (UAT-OBL-034). Scale is significant. An operator's own revenue
+	// aggregate, not a consumer amount, so it carries no personal data
+	// (UAT-OBL-025).
+	ReversedTotal   ContributionAmount             `json:"reversedTotal"`
+	SourceChecksums []string                       `json:"sourceChecksums"`
+	Status          ContributionPeriodTotalsStatus `json:"status"`
+}
+
+// ContributionPeriodTotalsStatus defines model for ContributionPeriodTotals.Status.
+type ContributionPeriodTotalsStatus string
+
+// ContributionReason Why a contribution was quarantined or released, in the words of the person who did it.
+type ContributionReason = string
+
+// ContributionRef A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+type ContributionRef = string
+
+// ContributionRegime The fund a provider contribution is owed to — the US Universal Service Fund through USAC, Canada's CRTC National Contribution Fund, or another.
+type ContributionRegime string
+
+// ContributionRequest defines model for ContributionRequest.
+type ContributionRequest struct {
+	// ClassificationRef A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+	ClassificationRef ContributionRef `json:"classificationRef"`
+
+	// ComponentRef A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+	ComponentRef *ContributionRef `json:"componentRef,omitempty"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// EligibleBase A provider's contribution base, or a quantity, in canonical decimal string
+	// form — never a JSON number, and never computed by a client
+	// (UAT-OBL-034). Scale is significant. An operator's own revenue
+	// aggregate, not a consumer amount, so it carries no personal data
+	// (UAT-OBL-025).
+	EligibleBase ContributionAmount `json:"eligibleBase"`
+
+	// ExcludedBase A provider's contribution base, or a quantity, in canonical decimal string
+	// form — never a JSON number, and never computed by a client
+	// (UAT-OBL-034). Scale is significant. An operator's own revenue
+	// aggregate, not a consumer amount, so it carries no personal data
+	// (UAT-OBL-025).
+	ExcludedBase *ContributionAmount `json:"excludedBase,omitempty"`
+
+	// ExclusionReason Why revenue is excluded from the base. Required when excludedBase is not zero.
+	ExclusionReason *string `json:"exclusionReason,omitempty"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID *LegalEntityID `json:"legalEntityId,omitempty"`
+
+	// ObligationID One row of an obligation's history. A UUID in lowercase canonical form.
+	ObligationID *ObligationID `json:"obligationId,omitempty"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod `json:"period"`
+
+	// Quantity A provider's contribution base, or a quantity, in canonical decimal string
+	// form — never a JSON number, and never computed by a client
+	// (UAT-OBL-034). Scale is significant. An operator's own revenue
+	// aggregate, not a consumer amount, so it carries no personal data
+	// (UAT-OBL-025).
+	Quantity     *ContributionAmount `json:"quantity,omitempty"`
+	QuantityUnit *string             `json:"quantityUnit,omitempty"`
+
+	// Regime The fund a provider contribution is owed to — the US Universal Service Fund through USAC, Canada's CRTC National Contribution Fund, or another.
+	Regime ContributionRegime `json:"regime"`
+
+	// Reverses A source event and its version — the natural key a contribution is recorded under.
+	Reverses *ContributionSourceKey `json:"reverses,omitempty"`
+
+	// RuleVersion A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+	RuleVersion ContributionRef `json:"ruleVersion"`
+
+	// SitusRef A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+	SitusRef ContributionRef `json:"situsRef"`
+
+	// SourceChecksum The checksum of the import file the event came in, when it came in one.
+	SourceChecksum *string `json:"sourceChecksum,omitempty"`
+
+	// SourceEventID A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+	SourceEventID ContributionRef `json:"sourceEventId"`
+
+	// SourceRef A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+	SourceRef ContributionRef `json:"sourceRef"`
+
+	// SourceType The kind of record a source event is (OBL-06).
+	SourceType    ContributionSourceType `json:"sourceType"`
+	SourceVersion int32                  `json:"sourceVersion"`
+}
+
+// ContributionSourceKey A source event and its version — the natural key a contribution is recorded under.
+type ContributionSourceKey struct {
+	// SourceEventID A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+	SourceEventID ContributionRef `json:"sourceEventId"`
+	SourceVersion int32           `json:"sourceVersion"`
+}
+
+// ContributionSourceType The kind of record a source event is (OBL-06).
+type ContributionSourceType string
+
+// ContributionStatus Where a contribution stands. Only ACCEPTED counts in the control totals; QUARANTINED is held, never deleted.
+type ContributionStatus string
+
+// ContributionStatusEvent defines model for ContributionStatusEvent.
+type ContributionStatusEvent struct {
+	// Kind What happened to a contribution. Every one is appended; none edits.
+	Kind ContributionEventKind `json:"kind"`
+
+	// Reason Why a contribution was quarantined or released, in the words of the person who did it.
+	Reason *ContributionReason `json:"reason,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+	RecordedBy string    `json:"recordedBy"`
+	Seq        int32     `json:"seq"`
+
+	// Status Where a contribution stands. Only ACCEPTED counts in the control totals; QUARANTINED is held, never deleted.
+	Status ContributionStatus `json:"status"`
+}
+
+// ContributionSummary defines model for ContributionSummary.
+type ContributionSummary struct {
+	// DataIncomplete Some group is DATA_INCOMPLETE.
+	DataIncomplete bool                       `json:"dataIncomplete"`
+	Groups         []ContributionPeriodTotals `json:"groups"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod `json:"period"`
+}
+
+// ContributionTrace defines model for ContributionTrace.
+type ContributionTrace struct {
+	// Contribution One ContributionEvent: the contribution base a source event carries, with
+	// its eligibility and its immutable hash. The provider's own obligation on
+	// its eligible revenue — never the recovery charged to customers.
+	Contribution ProviderContribution `json:"contribution"`
+
+	// Original One ContributionEvent: the contribution base a source event carries, with
+	// its eligibility and its immutable hash. The provider's own obligation on
+	// its eligible revenue — never the recovery charged to customers.
+	Original *ProviderContribution `json:"original,omitempty"`
+
+	// OriginalMissing The contribution is a reversal and the ledger does not hold its original.
+	OriginalMissing bool `json:"originalMissing"`
+
+	// Reversal One ContributionEvent: the contribution base a source event carries, with
+	// its eligibility and its immutable hash. The provider's own obligation on
+	// its eligible revenue — never the recovery charged to customers.
+	Reversal *ProviderContribution `json:"reversal,omitempty"`
+}
+
+// ContributionTransitionRequest defines model for ContributionTransitionRequest.
+type ContributionTransitionRequest struct {
+	// Reason Why a contribution was quarantined or released, in the words of the person who did it.
+	Reason ContributionReason `json:"reason"`
+}
+
 // ControlAccount A Tax Control Subledger control account (ZTAX-FIN-001 §9). Never a customer GL account.
 type ControlAccount string
 
@@ -6814,6 +7152,104 @@ type Problem struct {
 	ZtxTraceID *string `json:"ztx_trace_id,omitempty"`
 }
 
+// ProviderContribution One ContributionEvent: the contribution base a source event carries, with
+// its eligibility and its immutable hash. The provider's own obligation on
+// its eligible revenue — never the recovery charged to customers.
+type ProviderContribution struct {
+	// Amendment Recorded after its period had ended — a late event, counted in its own period.
+	Amendment bool `json:"amendment"`
+
+	// ClassificationRef A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+	ClassificationRef ContributionRef `json:"classificationRef"`
+
+	// ComponentRef A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+	ComponentRef *ContributionRef `json:"componentRef,omitempty"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// EligibleBase A provider's contribution base, or a quantity, in canonical decimal string
+	// form — never a JSON number, and never computed by a client
+	// (UAT-OBL-034). Scale is significant. An operator's own revenue
+	// aggregate, not a consumer amount, so it carries no personal data
+	// (UAT-OBL-025).
+	EligibleBase ContributionAmount `json:"eligibleBase"`
+
+	// ExcludedBase A provider's contribution base, or a quantity, in canonical decimal string
+	// form — never a JSON number, and never computed by a client
+	// (UAT-OBL-034). Scale is significant. An operator's own revenue
+	// aggregate, not a consumer amount, so it carries no personal data
+	// (UAT-OBL-025).
+	ExcludedBase ContributionAmount `json:"excludedBase"`
+
+	// ExclusionReason Why revenue is excluded from the base, by rule. Present whenever excludedBase is not zero.
+	ExclusionReason *string                   `json:"exclusionReason,omitempty"`
+	History         []ContributionStatusEvent `json:"history"`
+	ID              ContributionID            `json:"id"`
+
+	// ImmutableHash A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	ImmutableHash Digest `json:"immutableHash"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// ObligationID One row of an obligation's history. A UUID in lowercase canonical form.
+	ObligationID *ObligationID `json:"obligationId,omitempty"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod `json:"period"`
+
+	// Quantity A provider's contribution base, or a quantity, in canonical decimal string
+	// form — never a JSON number, and never computed by a client
+	// (UAT-OBL-034). Scale is significant. An operator's own revenue
+	// aggregate, not a consumer amount, so it carries no personal data
+	// (UAT-OBL-025).
+	Quantity     *ContributionAmount `json:"quantity,omitempty"`
+	QuantityUnit *string             `json:"quantityUnit,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+	RecordedBy string    `json:"recordedBy"`
+
+	// Regime The fund a provider contribution is owed to — the US Universal Service Fund through USAC, Canada's CRTC National Contribution Fund, or another.
+	Regime ContributionRegime `json:"regime"`
+
+	// Reverses A source event and its version — the natural key a contribution is recorded under.
+	Reverses *ContributionSourceKey `json:"reverses,omitempty"`
+
+	// RuleVersion A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+	RuleVersion ContributionRef `json:"ruleVersion"`
+
+	// SitusRef A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+	SitusRef ContributionRef `json:"situsRef"`
+
+	// SourceChecksum The checksum of the import file the event came in.
+	SourceChecksum *string `json:"sourceChecksum,omitempty"`
+
+	// SourceEventID A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+	SourceEventID ContributionRef `json:"sourceEventId"`
+
+	// SourceRef A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+	SourceRef ContributionRef `json:"sourceRef"`
+
+	// SourceType The kind of record a source event is (OBL-06).
+	SourceType    ContributionSourceType `json:"sourceType"`
+	SourceVersion int32                  `json:"sourceVersion"`
+
+	// Status Where a contribution stands. Only ACCEPTED counts in the control totals; QUARANTINED is held, never deleted.
+	Status ContributionStatus `json:"status"`
+}
+
+// ProviderContributionList defines model for ProviderContributionList.
+type ProviderContributionList struct {
+	Contributions []ProviderContribution `json:"contributions"`
+}
+
 // ProviderReference The provider's, bank's or authority's own reference.
 type ProviderReference = string
 
@@ -9178,6 +9614,34 @@ type ListCompliancePackagesParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// ListContributionsParams defines parameters for ListContributions.
+type ListContributionsParams struct {
+	// Period Only contributions of this period.
+	Period *LegalPeriod `form:"period,omitempty" json:"period,omitempty"`
+
+	// Regime Only contributions to this fund.
+	Regime *ContributionRegime `form:"regime,omitempty" json:"regime,omitempty"`
+
+	// Status Only contributions in this status.
+	Status *ContributionStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// LegalEntityID Only contributions of this member legal entity.
+	LegalEntityID *LegalEntityID `form:"legalEntityId,omitempty" json:"legalEntityId,omitempty"`
+
+	// SourceType Only contributions from this kind of source.
+	SourceType *ContributionSourceType `form:"sourceType,omitempty" json:"sourceType,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetContributionSummaryParams defines parameters for GetContributionSummary.
+type GetContributionSummaryParams struct {
+	// Period The period, YYYY-MM.
+	Period LegalPeriod `form:"period" json:"period"`
+}
+
 // GetCoverageParams defines parameters for GetCoverage.
 type GetCoverageParams struct {
 	// At The instant to report rates at. Defaults to now.
@@ -9417,6 +9881,15 @@ type SubmitCompliancePackageJSONRequestBody = ComplianceSubmissionRequest
 
 // SubmitContactJSONRequestBody defines body for SubmitContact for application/json ContentType.
 type SubmitContactJSONRequestBody = ContactRequest
+
+// RecordContributionJSONRequestBody defines body for RecordContribution for application/json ContentType.
+type RecordContributionJSONRequestBody = ContributionRequest
+
+// QuarantineContributionJSONRequestBody defines body for QuarantineContribution for application/json ContentType.
+type QuarantineContributionJSONRequestBody = ContributionTransitionRequest
+
+// ReleaseContributionJSONRequestBody defines body for ReleaseContribution for application/json ContentType.
+type ReleaseContributionJSONRequestBody = ContributionTransitionRequest
 
 // IssueDocumentJSONRequestBody defines body for IssueDocument for application/json ContentType.
 type IssueDocumentJSONRequestBody = DocumentRequest

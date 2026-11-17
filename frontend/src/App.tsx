@@ -14,6 +14,7 @@ import { FilingRemittancePage } from './pages/FilingRemittancePage'
 import { SystemHealthPage } from './pages/SystemHealthPage'
 import { HomePage } from './home/HomePage'
 import { CompliancePage } from './pages/CompliancePage'
+import { ContributionsPage } from './pages/ContributionsPage'
 import { ContentPage } from './pages/ContentPage'
 import { DeterminePage } from './pages/DeterminePage'
 import { DocumentsPage } from './pages/DocumentsPage'
@@ -193,6 +194,8 @@ export function App() {
             return <ActivityPage {...page} />
           case 'filing-remittance':
             return <FilingRemittancePage {...page} />
+          case 'contributions':
+            return <ContributionsPage {...page} />
           case 'dashboard':
             return <HomePage {...page} capabilities={capabilities} />
         }

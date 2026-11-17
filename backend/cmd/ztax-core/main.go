@@ -172,6 +172,9 @@ func run() error {
 	// Support cases touch nothing fiscal; like migration they are served
 	// wherever the cell's store is.
 	router.Support = app.NewSupportService(store.Support(), store.Audit(), store, clk, ids)
+	// Provider contributions are recorded from the provider's own source
+	// events and read no decision, so they need no content either.
+	router.Contributions = app.NewProviderContributionService(store.ProviderContributions(), store.LegalEntities(), store, clk, ids)
 	if router.Determination != nil {
 		// Compliance packages execute the obligations commits assess, and
 		// move them only on filing evidence, so they are served wherever the

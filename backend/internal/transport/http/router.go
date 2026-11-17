@@ -126,6 +126,10 @@ type Router struct {
 	// commits assess.
 	Remittance *app.RemittanceService
 
+	// Contributions serves provider contributions: the source event
+	// explorer, quarantine and release, and a period's control totals.
+	Contributions *app.ProviderContributionService
+
 	// Shadow serves shadow assurance: comparator profiles, comparison runs
 	// and their discrepancies. Nil when the cell has no evidence store to
 	// read committed results from.
@@ -346,6 +350,15 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/remittances/{remittanceId}/resolution", false, []security.Role{operator}}, rt.handleResolveRemittance},
 		{Route{"POST", "/v1/remittances/{remittanceId}/return", false, []security.Role{operator}}, rt.handleReturnRemittance},
 		{Route{"POST", "/v1/remittances/{remittanceId}/cancellation", false, []security.Role{operator}}, rt.handleCancelRemittance},
+		// Provider contributions (OBL-06): OPERATOR records, OPERATOR or
+		// ANALYST quarantines, an ANALYST other than the quarantiner releases
+		// (the service compares the people). ADMIN reads no fiscal record.
+		{Route{"GET", "/v1/contributions", false, []security.Role{operator, analyst, auditor}}, rt.handleListContributions},
+		{Route{"POST", "/v1/contributions", false, []security.Role{operator}}, rt.handleRecordContribution},
+		{Route{"GET", "/v1/contributions/summary", false, []security.Role{operator, analyst, auditor}}, rt.handleContributionSummary},
+		{Route{"GET", "/v1/contributions/{contributionId}/trace", false, []security.Role{operator, analyst, auditor}}, rt.handleContributionTrace},
+		{Route{"POST", "/v1/contributions/{contributionId}/quarantine", false, []security.Role{operator, analyst}}, rt.handleQuarantineContribution},
+		{Route{"POST", "/v1/contributions/{contributionId}/release", false, []security.Role{analyst}}, rt.handleReleaseContribution},
 		// Shadow: non-impact reads of committed decisions, compared with
 		// another engine's results (ZTAX-SHD-001).
 		{Route{"GET", "/v1/shadow/comparators", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListComparators},
