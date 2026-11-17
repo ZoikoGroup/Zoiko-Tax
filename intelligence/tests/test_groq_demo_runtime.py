@@ -850,3 +850,73 @@ def test_bare_path_failure_missing_file_gives_fixed_message_no_path(
     # __cause__ and __context__ must be None (raised outside the except block).
     assert exc_info.value.__cause__ is None
     assert exc_info.value.__context__ is None
+
+
+# ---------------------------------------------------------------------------
+# ZTAX_GATEWAY_PROMPT_PROFILES environment variable tests (3 tests)
+# ---------------------------------------------------------------------------
+
+_REAL_PROFILE_PATH = (
+    Path(__file__).resolve().parent.parent / "config" / "prompt_profiles.live-demo.json"
+)
+
+
+class TestShippedProfilesEnvVar:
+    """Verify that _shipped_profiles() honours ZTAX_GATEWAY_PROMPT_PROFILES."""
+
+    def test_env_var_set_tools_only_dir(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Env var set, only tools/ copied into tmp_path — prompts load without config/."""
+        import shutil
+
+        # Copy the whole tools/ folder into tmp_path so there is no config/ sibling.
+        tools_src = Path(__file__).resolve().parent.parent / "tools"
+        shutil.copytree(tools_src, tmp_path / "tools")
+
+        # Place the real profile file at an arbitrary location inside tmp_path.
+        profile_dest = tmp_path / "prompt_profiles.json"
+        shutil.copy2(_REAL_PROFILE_PATH, profile_dest)
+
+        # Point the env var to that file and invalidate the module-level cache.
+        monkeypatch.setenv("ZTAX_GATEWAY_PROMPT_PROFILES", str(profile_dest))
+        monkeypatch.setattr(groq_demo_runtime, "_LOADED_PROFILES", None)
+
+        registry = groq_demo_runtime._shipped_profiles()
+        assert registry is not None
+        # Both shipped profiles must be present — loading succeeded without config/.
+        assert registry.get("prompt:classification-review-v1") is not None
+        assert registry.get("prompt:explain-report-figure-v1") is not None
+
+    def test_env_var_set_to_missing_file_raises_fixed_error(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Env var set to a nonexistent file → fixed GroqDemoConfigError, no path leaked."""
+        missing = tmp_path / "does_not_exist.json"
+        monkeypatch.setenv("ZTAX_GATEWAY_PROMPT_PROFILES", str(missing))
+        monkeypatch.setattr(groq_demo_runtime, "_LOADED_PROFILES", None)
+
+        with pytest.raises(groq_demo_runtime.GroqDemoConfigError) as exc_info:
+            groq_demo_runtime._shipped_profiles()
+
+        err = str(exc_info.value)
+        assert err == "groq demo runtime: the shipped prompt-profile file could not be loaded"
+        # Path must not appear in the error message.
+        assert str(missing) not in err
+        assert "does_not_exist" not in err
+        # __cause__ and __context__ must be None (raised outside the except block).
+        assert exc_info.value.__cause__ is None
+        assert exc_info.value.__context__ is None
+
+    def test_env_var_unset_uses_repo_fallback(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Env var absent → _shipped_profiles() falls back to the repo path and succeeds."""
+        monkeypatch.delenv("ZTAX_GATEWAY_PROMPT_PROFILES", raising=False)
+        monkeypatch.setattr(groq_demo_runtime, "_LOADED_PROFILES", None)
+
+        registry = groq_demo_runtime._shipped_profiles()
+        assert registry is not None
+        # Both shipped profiles must be present (repo fallback works).
+        assert registry.get("prompt:classification-review-v1") is not None
+        assert registry.get("prompt:explain-report-figure-v1") is not None
