@@ -130,6 +130,10 @@ type Router struct {
 	// explorer, quarantine and release, and a period's control totals.
 	Contributions *app.ProviderContributionService
 
+	// Notices serves regulatory notice and appeal intake (W17). It needs
+	// only the store, so it is served wherever the store is.
+	Notices *app.NoticeService
+
 	// Shadow serves shadow assurance: comparator profiles, comparison runs
 	// and their discrepancies. Nil when the cell has no evidence store to
 	// read committed results from.
@@ -359,6 +363,25 @@ func (rt *Router) routes() []struct {
 		{Route{"GET", "/v1/contributions/{contributionId}/trace", false, []security.Role{operator, analyst, auditor}}, rt.handleContributionTrace},
 		{Route{"POST", "/v1/contributions/{contributionId}/quarantine", false, []security.Role{operator, analyst}}, rt.handleQuarantineContribution},
 		{Route{"POST", "/v1/contributions/{contributionId}/release", false, []security.Role{analyst}}, rt.handleReleaseContribution},
+		// Regulatory notices (W17, G-052): OPERATOR and ANALYST register and
+		// work them; ADMIN and AUDITOR read. The four-eye approval compares
+		// the preparer and approver as people in the service.
+		{Route{"GET", "/v1/notices", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListNotices},
+		{Route{"POST", "/v1/notices", false, []security.Role{operator, analyst}}, rt.handleCreateNotice},
+		{Route{"GET", "/v1/notices/{noticeId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetNotice},
+		{Route{"GET", "/v1/notices/{noticeId}/deadlines", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetNoticeDeadlines},
+		{Route{"POST", "/v1/notices/{noticeId}/deadlines", false, []security.Role{operator, analyst}}, rt.handleRecordNoticeDeadline},
+		{Route{"POST", "/v1/notices/{noticeId}/transitions", false, []security.Role{operator, analyst}}, rt.handleTransitionNotice},
+		{Route{"POST", "/v1/notices/{noticeId}/authenticity", false, []security.Role{operator, analyst}}, rt.handleRecordNoticeAuthenticity},
+		{Route{"POST", "/v1/notices/{noticeId}/escalations", false, []security.Role{operator, analyst}}, rt.handleEscalateNotice},
+		{Route{"POST", "/v1/notices/{noticeId}/entity", false, []security.Role{operator, analyst}}, rt.handleResolveNoticeEntity},
+		{Route{"POST", "/v1/notices/{noticeId}/owner", false, []security.Role{operator, analyst}}, rt.handleAssignNoticeOwner},
+		{Route{"POST", "/v1/notices/{noticeId}/attachments", false, []security.Role{operator, analyst}}, rt.handleRecordNoticeAttachment},
+		{Route{"POST", "/v1/notices/{noticeId}/response-packages", false, []security.Role{operator, analyst}}, rt.handlePrepareNoticeResponse},
+		{Route{"POST", "/v1/notices/{noticeId}/response-approval", false, []security.Role{operator, analyst}}, rt.handleApproveNoticeResponse},
+		{Route{"POST", "/v1/notices/{noticeId}/submission", false, []security.Role{operator, analyst}}, rt.handleRecordNoticeSubmission},
+		{Route{"POST", "/v1/notices/{noticeId}/outcome", false, []security.Role{operator, analyst}}, rt.handleRecordNoticeOutcome},
+		{Route{"POST", "/v1/notices/{noticeId}/appeal", false, []security.Role{operator, analyst}}, rt.handleLodgeNoticeAppeal},
 		// Shadow: non-impact reads of committed decisions, compared with
 		// another engine's results (ZTAX-SHD-001).
 		{Route{"GET", "/v1/shadow/comparators", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListComparators},

@@ -24,6 +24,7 @@ import { LocationsPage } from './pages/LocationsPage'
 import { MigrationPage } from './pages/MigrationPage'
 import { ObligationsPage } from './pages/ObligationsPage'
 import { ReconcilePage } from './pages/ReconcilePage'
+import { RegulatoryNoticesPage } from './pages/RegulatoryNoticesPage'
 import { RemittancePage } from './pages/RemittancePage'
 import { ReportsDemoPage } from './pages/ReportsDemoPage'
 import { ReportsPage } from './pages/ReportsPage'
@@ -196,6 +197,8 @@ export function App() {
             return <FilingRemittancePage {...page} />
           case 'contributions':
             return <ContributionsPage {...page} />
+          case 'notices':
+            return <RegulatoryNoticesPage {...page} />
           case 'dashboard':
             return <HomePage {...page} capabilities={capabilities} />
         }

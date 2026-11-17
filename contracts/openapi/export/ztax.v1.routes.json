@@ -429,6 +429,102 @@
     },
     {
       "method": "GET",
+      "path": "/v1/notices",
+      "operationId": "listNotices",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notices",
+      "operationId": "createNotice",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notices/{noticeId}",
+      "operationId": "getNotice",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notices/{noticeId}/appeal",
+      "operationId": "lodgeNoticeAppeal",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notices/{noticeId}/attachments",
+      "operationId": "recordNoticeAttachment",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notices/{noticeId}/authenticity",
+      "operationId": "recordNoticeAuthenticity",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/notices/{noticeId}/deadlines",
+      "operationId": "getNoticeDeadlines",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notices/{noticeId}/deadlines",
+      "operationId": "recordNoticeDeadline",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notices/{noticeId}/entity",
+      "operationId": "resolveNoticeEntity",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notices/{noticeId}/escalations",
+      "operationId": "escalateNotice",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notices/{noticeId}/outcome",
+      "operationId": "recordNoticeOutcome",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notices/{noticeId}/owner",
+      "operationId": "assignNoticeOwner",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notices/{noticeId}/response-approval",
+      "operationId": "approveNoticeResponse",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notices/{noticeId}/response-packages",
+      "operationId": "prepareNoticeResponse",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notices/{noticeId}/submission",
+      "operationId": "recordNoticeSubmission",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/notices/{noticeId}/transitions",
+      "operationId": "transitionNotice",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/obligations",
       "operationId": "listObligations",
       "public": false

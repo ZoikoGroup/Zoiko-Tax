@@ -47,6 +47,7 @@ export type View =
   | 'filing-remittance'
   | 'cases'
   | 'contributions'
+  | 'notices'
 
 /** A screen: a view, and the tab inside it when the view has tabs. */
 export interface NavTarget {
@@ -100,7 +101,7 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
       { id: 'actions.tasks', label: 'My Tasks', target: at('actions', 'tasks') },
       { id: 'actions.exceptions', label: 'Tax Exceptions', target: at('actions', 'exceptions') },
       { id: 'actions.approvals', label: 'Pending Approvals', target: at('actions', 'approvals') },
-      { id: 'actions.notices', label: 'Regulatory Notices' },
+      { id: 'actions.notices', label: 'Regulatory Notices', target: at('notices') },
       { id: 'actions.cases', label: 'Support Cases', target: at('cases') },
     ],
   },

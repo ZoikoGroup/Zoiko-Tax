@@ -355,3 +355,34 @@ test("the contribution calls send amounts as strings and no Idempotency-Key", as
   assert.equal(JSON.parse(calls[0].init.body).eligibleBase, "1250.00");
   for (const c of calls) assert.equal(c.init.headers["Idempotency-Key"], undefined);
 });
+
+test("regulatory notices: register filters in the query, actions on the notice's path", async () => {
+  const calls = [];
+  const fetch = async (url, init) => {
+    calls.push({ url, init });
+    return json(200, { notices: [] });
+  };
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+
+  await client.listNotices({ authority: "DE-BZST", amountMin: "1000.00", currency: "EUR", urgent: true, limit: 5 });
+  await client.listNotices();
+  await client.getNotice("01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01");
+  await client.getNoticeDeadlines("01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01");
+  await client.recordNoticeDeadline("01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01", {
+    kind: "EXTENSION", dueDate: "2026-11-30", timezone: "Europe/Berlin", source: "AUTHORITY_CONFIRMATION",
+    verified: true, evidence: "Extension letter", authorityReference: "EXT-1",
+  });
+  await client.approveNoticeResponse("01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01", { version: 1 });
+
+  assert.deepEqual(calls.map((c) => `${c.init.method} ${c.url}`), [
+    "GET /api/v1/notices?authority=DE-BZST&amountMin=1000.00&currency=EUR&limit=5&urgent=true",
+    "GET /api/v1/notices",
+    "GET /api/v1/notices/01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01",
+    "GET /api/v1/notices/01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01/deadlines",
+    "POST /api/v1/notices/01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01/deadlines",
+    "POST /api/v1/notices/01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01/response-approval",
+  ]);
+  // The due date travels as the civil date it was given, never as an instant.
+  assert.equal(JSON.parse(calls[4].init.body).dueDate, "2026-11-30");
+  assert.deepEqual(JSON.parse(calls[5].init.body), { version: 1 });
+});

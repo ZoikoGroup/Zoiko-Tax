@@ -175,6 +175,9 @@ func run() error {
 	// Provider contributions are recorded from the provider's own source
 	// events and read no decision, so they need no content either.
 	router.Contributions = app.NewProviderContributionService(store.ProviderContributions(), store.LegalEntities(), store, clk, ids)
+	// Regulatory notices reference fiscal records and change none; like
+	// migration they need only the store.
+	router.Notices = app.NewNoticeService(store.Notices(), store.LegalEntities(), store, clk, ids)
 	if router.Determination != nil {
 		// Compliance packages execute the obligations commits assess, and
 		// move them only on filing evidence, so they are served wherever the

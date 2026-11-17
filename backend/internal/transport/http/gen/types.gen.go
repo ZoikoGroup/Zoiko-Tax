@@ -1788,6 +1788,405 @@ func (e MigrationType) Valid() bool {
 	}
 }
 
+// Defines values for NoticeAction.
+const (
+	NoticeActionAPPROVERESPONSE         NoticeAction = "APPROVE_RESPONSE"
+	NoticeActionASSIGNOWNER             NoticeAction = "ASSIGN_OWNER"
+	NoticeActionCLOSE                   NoticeAction = "CLOSE"
+	NoticeActionESCALATE                NoticeAction = "ESCALATE"
+	NoticeActionLODGEAPPEAL             NoticeAction = "LODGE_APPEAL"
+	NoticeActionMOVETOLEGALREVIEW       NoticeAction = "MOVE_TO_LEGAL_REVIEW"
+	NoticeActionPREPARERESPONSE         NoticeAction = "PREPARE_RESPONSE"
+	NoticeActionRECORDATTACHMENT        NoticeAction = "RECORD_ATTACHMENT"
+	NoticeActionRECORDAUTHENTICITY      NoticeAction = "RECORD_AUTHENTICITY"
+	NoticeActionRECORDDEADLINE          NoticeAction = "RECORD_DEADLINE"
+	NoticeActionRECORDOUTCOME           NoticeAction = "RECORD_OUTCOME"
+	NoticeActionRECORDSUBMISSION        NoticeAction = "RECORD_SUBMISSION"
+	NoticeActionRESOLVEENTITY           NoticeAction = "RESOLVE_ENTITY"
+	NoticeActionSTARTAUTHENTICITYREVIEW NoticeAction = "START_AUTHENTICITY_REVIEW"
+)
+
+// Valid indicates whether the value is a known member of the NoticeAction enum.
+func (e NoticeAction) Valid() bool {
+	switch e {
+	case NoticeActionAPPROVERESPONSE:
+		return true
+	case NoticeActionASSIGNOWNER:
+		return true
+	case NoticeActionCLOSE:
+		return true
+	case NoticeActionESCALATE:
+		return true
+	case NoticeActionLODGEAPPEAL:
+		return true
+	case NoticeActionMOVETOLEGALREVIEW:
+		return true
+	case NoticeActionPREPARERESPONSE:
+		return true
+	case NoticeActionRECORDATTACHMENT:
+		return true
+	case NoticeActionRECORDAUTHENTICITY:
+		return true
+	case NoticeActionRECORDDEADLINE:
+		return true
+	case NoticeActionRECORDOUTCOME:
+		return true
+	case NoticeActionRECORDSUBMISSION:
+		return true
+	case NoticeActionRESOLVEENTITY:
+		return true
+	case NoticeActionSTARTAUTHENTICITYREVIEW:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeAuthenticity.
+const (
+	NoticeAuthenticityNOTAUTHENTIC NoticeAuthenticity = "NOT_AUTHENTIC"
+	NoticeAuthenticityUNKNOWN      NoticeAuthenticity = "UNKNOWN"
+	NoticeAuthenticityUNVERIFIABLE NoticeAuthenticity = "UNVERIFIABLE"
+	NoticeAuthenticityVERIFIED     NoticeAuthenticity = "VERIFIED"
+)
+
+// Valid indicates whether the value is a known member of the NoticeAuthenticity enum.
+func (e NoticeAuthenticity) Valid() bool {
+	switch e {
+	case NoticeAuthenticityNOTAUTHENTIC:
+		return true
+	case NoticeAuthenticityUNKNOWN:
+		return true
+	case NoticeAuthenticityUNVERIFIABLE:
+		return true
+	case NoticeAuthenticityVERIFIED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeDeadlineKind.
+const (
+	NoticeDeadlineKindAPPEAL       NoticeDeadlineKind = "APPEAL"
+	NoticeDeadlineKindCONFIRMATION NoticeDeadlineKind = "CONFIRMATION"
+	NoticeDeadlineKindEXTENSION    NoticeDeadlineKind = "EXTENSION"
+	NoticeDeadlineKindORIGINAL     NoticeDeadlineKind = "ORIGINAL"
+)
+
+// Valid indicates whether the value is a known member of the NoticeDeadlineKind enum.
+func (e NoticeDeadlineKind) Valid() bool {
+	switch e {
+	case NoticeDeadlineKindAPPEAL:
+		return true
+	case NoticeDeadlineKindCONFIRMATION:
+		return true
+	case NoticeDeadlineKindEXTENSION:
+		return true
+	case NoticeDeadlineKindORIGINAL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeDeadlineSource.
+const (
+	NoticeDeadlineSourceAUTHORITYCONFIRMATION NoticeDeadlineSource = "AUTHORITY_CONFIRMATION"
+	NoticeDeadlineSourceAUTHORITYPORTAL       NoticeDeadlineSource = "AUTHORITY_PORTAL"
+	NoticeDeadlineSourceESTIMATED             NoticeDeadlineSource = "ESTIMATED"
+	NoticeDeadlineSourceSTATEDONNOTICE        NoticeDeadlineSource = "STATED_ON_NOTICE"
+	NoticeDeadlineSourceSTATUTE               NoticeDeadlineSource = "STATUTE"
+	NoticeDeadlineSourceUNKNOWN               NoticeDeadlineSource = "UNKNOWN"
+)
+
+// Valid indicates whether the value is a known member of the NoticeDeadlineSource enum.
+func (e NoticeDeadlineSource) Valid() bool {
+	switch e {
+	case NoticeDeadlineSourceAUTHORITYCONFIRMATION:
+		return true
+	case NoticeDeadlineSourceAUTHORITYPORTAL:
+		return true
+	case NoticeDeadlineSourceESTIMATED:
+		return true
+	case NoticeDeadlineSourceSTATEDONNOTICE:
+		return true
+	case NoticeDeadlineSourceSTATUTE:
+		return true
+	case NoticeDeadlineSourceUNKNOWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeEscalationReason.
+const (
+	NoticeEscalationReasonAUTHENTICITYUNRESOLVED NoticeEscalationReason = "AUTHENTICITY_UNRESOLVED"
+	NoticeEscalationReasonDEADLINEUNVERIFIED     NoticeEscalationReason = "DEADLINE_UNVERIFIED"
+	NoticeEscalationReasonENTITYUNRESOLVED       NoticeEscalationReason = "ENTITY_UNRESOLVED"
+	NoticeEscalationReasonLEGALJUDGEMENT         NoticeEscalationReason = "LEGAL_JUDGEMENT"
+)
+
+// Valid indicates whether the value is a known member of the NoticeEscalationReason enum.
+func (e NoticeEscalationReason) Valid() bool {
+	switch e {
+	case NoticeEscalationReasonAUTHENTICITYUNRESOLVED:
+		return true
+	case NoticeEscalationReasonDEADLINEUNVERIFIED:
+		return true
+	case NoticeEscalationReasonENTITYUNRESOLVED:
+		return true
+	case NoticeEscalationReasonLEGALJUDGEMENT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeEventKind.
+const (
+	NoticeEventKindAPPEALLODGED         NoticeEventKind = "APPEAL_LODGED"
+	NoticeEventKindATTACHMENTRECORDED   NoticeEventKind = "ATTACHMENT_RECORDED"
+	NoticeEventKindAUTHENTICITYRECORDED NoticeEventKind = "AUTHENTICITY_RECORDED"
+	NoticeEventKindCLOSED               NoticeEventKind = "CLOSED"
+	NoticeEventKindDEADLINERECORDED     NoticeEventKind = "DEADLINE_RECORDED"
+	NoticeEventKindENTITYRESOLVED       NoticeEventKind = "ENTITY_RESOLVED"
+	NoticeEventKindLEGALESCALATED       NoticeEventKind = "LEGAL_ESCALATED"
+	NoticeEventKindOUTCOMERECORDED      NoticeEventKind = "OUTCOME_RECORDED"
+	NoticeEventKindOWNERASSIGNED        NoticeEventKind = "OWNER_ASSIGNED"
+	NoticeEventKindRECEIVED             NoticeEventKind = "RECEIVED"
+	NoticeEventKindRESPONSEAPPROVED     NoticeEventKind = "RESPONSE_APPROVED"
+	NoticeEventKindRESPONSEPREPARED     NoticeEventKind = "RESPONSE_PREPARED"
+	NoticeEventKindSUBMITTED            NoticeEventKind = "SUBMITTED"
+	NoticeEventKindTRANSITIONED         NoticeEventKind = "TRANSITIONED"
+)
+
+// Valid indicates whether the value is a known member of the NoticeEventKind enum.
+func (e NoticeEventKind) Valid() bool {
+	switch e {
+	case NoticeEventKindAPPEALLODGED:
+		return true
+	case NoticeEventKindATTACHMENTRECORDED:
+		return true
+	case NoticeEventKindAUTHENTICITYRECORDED:
+		return true
+	case NoticeEventKindCLOSED:
+		return true
+	case NoticeEventKindDEADLINERECORDED:
+		return true
+	case NoticeEventKindENTITYRESOLVED:
+		return true
+	case NoticeEventKindLEGALESCALATED:
+		return true
+	case NoticeEventKindOUTCOMERECORDED:
+		return true
+	case NoticeEventKindOWNERASSIGNED:
+		return true
+	case NoticeEventKindRECEIVED:
+		return true
+	case NoticeEventKindRESPONSEAPPROVED:
+		return true
+	case NoticeEventKindRESPONSEPREPARED:
+		return true
+	case NoticeEventKindSUBMITTED:
+		return true
+	case NoticeEventKindTRANSITIONED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeFlag.
+const (
+	NoticeFlagAUTHENTICITYDISPUTED   NoticeFlag = "AUTHENTICITY_DISPUTED"
+	NoticeFlagAUTHENTICITYUNVERIFIED NoticeFlag = "AUTHENTICITY_UNVERIFIED"
+	NoticeFlagDEADLINESOON           NoticeFlag = "DEADLINE_SOON"
+	NoticeFlagDEADLINEUNKNOWN        NoticeFlag = "DEADLINE_UNKNOWN"
+	NoticeFlagDEADLINEUNVERIFIED     NoticeFlag = "DEADLINE_UNVERIFIED"
+	NoticeFlagENTITYUNRESOLVED       NoticeFlag = "ENTITY_UNRESOLVED"
+	NoticeFlagHEARINGSCHEDULED       NoticeFlag = "HEARING_SCHEDULED"
+	NoticeFlagLEGALESCALATED         NoticeFlag = "LEGAL_ESCALATED"
+	NoticeFlagSLABREACHED            NoticeFlag = "SLA_BREACHED"
+	NoticeFlagSTATUTORYOVERDUE       NoticeFlag = "STATUTORY_OVERDUE"
+	NoticeFlagURGENTLEGALREVIEW      NoticeFlag = "URGENT_LEGAL_REVIEW"
+)
+
+// Valid indicates whether the value is a known member of the NoticeFlag enum.
+func (e NoticeFlag) Valid() bool {
+	switch e {
+	case NoticeFlagAUTHENTICITYDISPUTED:
+		return true
+	case NoticeFlagAUTHENTICITYUNVERIFIED:
+		return true
+	case NoticeFlagDEADLINESOON:
+		return true
+	case NoticeFlagDEADLINEUNKNOWN:
+		return true
+	case NoticeFlagDEADLINEUNVERIFIED:
+		return true
+	case NoticeFlagENTITYUNRESOLVED:
+		return true
+	case NoticeFlagHEARINGSCHEDULED:
+		return true
+	case NoticeFlagLEGALESCALATED:
+		return true
+	case NoticeFlagSLABREACHED:
+		return true
+	case NoticeFlagSTATUTORYOVERDUE:
+		return true
+	case NoticeFlagURGENTLEGALREVIEW:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeLinkKind.
+const (
+	NoticeLinkKindCORRESPONDENCE    NoticeLinkKind = "CORRESPONDENCE"
+	NoticeLinkKindDECISION          NoticeLinkKind = "DECISION"
+	NoticeLinkKindLEDGERENTRY       NoticeLinkKind = "LEDGER_ENTRY"
+	NoticeLinkKindOBLIGATION        NoticeLinkKind = "OBLIGATION"
+	NoticeLinkKindPAYMENT           NoticeLinkKind = "PAYMENT"
+	NoticeLinkKindRETURN            NoticeLinkKind = "RETURN"
+	NoticeLinkKindRULEVERSION       NoticeLinkKind = "RULE_VERSION"
+	NoticeLinkKindSUBMISSIONRECEIPT NoticeLinkKind = "SUBMISSION_RECEIPT"
+)
+
+// Valid indicates whether the value is a known member of the NoticeLinkKind enum.
+func (e NoticeLinkKind) Valid() bool {
+	switch e {
+	case NoticeLinkKindCORRESPONDENCE:
+		return true
+	case NoticeLinkKindDECISION:
+		return true
+	case NoticeLinkKindLEDGERENTRY:
+		return true
+	case NoticeLinkKindOBLIGATION:
+		return true
+	case NoticeLinkKindPAYMENT:
+		return true
+	case NoticeLinkKindRETURN:
+		return true
+	case NoticeLinkKindRULEVERSION:
+		return true
+	case NoticeLinkKindSUBMISSIONRECEIPT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeOutcome.
+const (
+	NoticeOutcomeACCEPTED  NoticeOutcome = "ACCEPTED"
+	NoticeOutcomeADJUSTED  NoticeOutcome = "ADJUSTED"
+	NoticeOutcomeREJECTED  NoticeOutcome = "REJECTED"
+	NoticeOutcomeWITHDRAWN NoticeOutcome = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the NoticeOutcome enum.
+func (e NoticeOutcome) Valid() bool {
+	switch e {
+	case NoticeOutcomeACCEPTED:
+		return true
+	case NoticeOutcomeADJUSTED:
+		return true
+	case NoticeOutcomeREJECTED:
+		return true
+	case NoticeOutcomeWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeSettlement.
+const (
+	AUTHORITYCONFIRMED        NoticeSettlement = "AUTHORITY_CONFIRMED"
+	PAYMENTINSTRUCTIONPENDING NoticeSettlement = "PAYMENT_INSTRUCTION_PENDING"
+	PAYMENTSETTLED            NoticeSettlement = "PAYMENT_SETTLED"
+)
+
+// Valid indicates whether the value is a known member of the NoticeSettlement enum.
+func (e NoticeSettlement) Valid() bool {
+	switch e {
+	case AUTHORITYCONFIRMED:
+		return true
+	case PAYMENTINSTRUCTIONPENDING:
+		return true
+	case PAYMENTSETTLED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeStatus.
+const (
+	NoticeStatusAPPEAL             NoticeStatus = "APPEAL"
+	NoticeStatusAUTHENTICITYREVIEW NoticeStatus = "AUTHENTICITY_REVIEW"
+	NoticeStatusCLOSED             NoticeStatus = "CLOSED"
+	NoticeStatusLEGALREVIEW        NoticeStatus = "LEGAL_REVIEW"
+	NoticeStatusOUTCOMERECORDED    NoticeStatus = "OUTCOME_RECORDED"
+	NoticeStatusRECEIVED           NoticeStatus = "RECEIVED"
+	NoticeStatusRESPONSEAPPROVED   NoticeStatus = "RESPONSE_APPROVED"
+	NoticeStatusSUBMITTED          NoticeStatus = "SUBMITTED"
+)
+
+// Valid indicates whether the value is a known member of the NoticeStatus enum.
+func (e NoticeStatus) Valid() bool {
+	switch e {
+	case NoticeStatusAPPEAL:
+		return true
+	case NoticeStatusAUTHENTICITYREVIEW:
+		return true
+	case NoticeStatusCLOSED:
+		return true
+	case NoticeStatusLEGALREVIEW:
+		return true
+	case NoticeStatusOUTCOMERECORDED:
+		return true
+	case NoticeStatusRECEIVED:
+		return true
+	case NoticeStatusRESPONSEAPPROVED:
+		return true
+	case NoticeStatusSUBMITTED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for NoticeType.
+const (
+	NoticeTypeAPPEAL             NoticeType = "APPEAL"
+	NoticeTypeASSESSMENT         NoticeType = "ASSESSMENT"
+	NoticeTypeAUDIT              NoticeType = "AUDIT"
+	NoticeTypeINFORMATIONREQUEST NoticeType = "INFORMATION_REQUEST"
+	NoticeTypeNOTICE             NoticeType = "NOTICE"
+)
+
+// Valid indicates whether the value is a known member of the NoticeType enum.
+func (e NoticeType) Valid() bool {
+	switch e {
+	case NoticeTypeAPPEAL:
+		return true
+	case NoticeTypeASSESSMENT:
+		return true
+	case NoticeTypeAUDIT:
+		return true
+	case NoticeTypeINFORMATIONREQUEST:
+		return true
+	case NoticeTypeNOTICE:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ObligationDuty.
 const (
 	INFORMATIONRETURN    ObligationDuty = "INFORMATION_RETURN"
@@ -4872,6 +5271,62 @@ type CreateCompliancePackageRequest struct {
 	SubmitTarget *Timestamp `json:"submitTarget,omitempty"`
 }
 
+// CreateNoticeRequest defines model for CreateNoticeRequest.
+type CreateNoticeRequest struct {
+	// Amount An amount and its currency, never one without the other.
+	Amount *MoneyValue `json:"amount,omitempty"`
+
+	// Authority An authority within a country, as the matrix names it.
+	Authority AuthorityCode `json:"authority"`
+
+	// AuthorityReference The authority's own receipt or reference for a submission.
+	AuthorityReference AuthorityReference `json:"authorityReference"`
+
+	// Deadline A deadline as stated. Without `dueDate` the source is UNKNOWN and it is unverified.
+	Deadline NoticeDeadlineInput `json:"deadline"`
+
+	// DeadlineEvidence How a deadline, authenticity, recipient or outcome was established, or the authority's response as received.
+	DeadlineEvidence *NoticeEvidence `json:"deadlineEvidence,omitempty"`
+
+	// EntityAmbiguous The notice could be addressed to more than one of the tenant's legal entities.
+	EntityAmbiguous *bool `json:"entityAmbiguous,omitempty"`
+
+	// Jurisdiction An ISO 3166-1 country or ISO 3166-2 subdivision code.
+	Jurisdiction NoticeJurisdiction `json:"jurisdiction"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID *LegalEntityID `json:"legalEntityId,omitempty"`
+	LinkedCaseID  *string        `json:"linkedCaseId,omitempty"`
+	Links         []NoticeLink   `json:"links,omitempty"`
+
+	// Note Free text from the person recording an act on a notice.
+	Note    *NoticeText `json:"note,omitempty"`
+	OwnerID *string     `json:"ownerId,omitempty"`
+
+	// PeriodEnd A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	PeriodEnd *CivilDate `json:"periodEnd,omitempty"`
+
+	// PeriodStart A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	PeriodStart *CivilDate `json:"periodStart,omitempty"`
+
+	// ReceivedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	ReceivedAt Timestamp `json:"receivedAt"`
+
+	// SLADue RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	SLADue *Timestamp `json:"slaDue,omitempty"`
+
+	// Type What the authority sent.
+	Type NoticeType `json:"type"`
+}
+
 // CreateUserRequest defines model for CreateUserRequest.
 type CreateUserRequest struct {
 	DisplayName string `json:"displayName"`
@@ -6849,6 +7304,556 @@ type MoneyValue struct {
 	Currency CurrencyCode `json:"currency"`
 }
 
+// Notice A regulatory notice as of `asOf`: the header as received, its
+// statutory deadline ledger beside the separate internal SLA clock, the
+// recorded documents, its history, and what needs attention.
+type Notice struct {
+	AllowedActions []NoticeAction `json:"allowedActions"`
+
+	// Amount An amount and its currency, never one without the other.
+	Amount *MoneyValue `json:"amount,omitempty"`
+
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf        Timestamp          `json:"asOf"`
+	Attachments []NoticeAttachment `json:"attachments"`
+
+	// Authenticity What has been established about whether the authority sent the notice. Only VERIFIED admits an approved answer (SUP-05).
+	Authenticity NoticeAuthenticity `json:"authenticity"`
+
+	// Authority An authority within a country, as the matrix names it.
+	Authority AuthorityCode `json:"authority"`
+
+	// AuthorityReference The authority's own receipt or reference for a submission.
+	AuthorityReference AuthorityReference `json:"authorityReference"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp             `json:"createdAt"`
+	CreatedBy string                `json:"createdBy"`
+	Deadlines []NoticeDeadlineEntry `json:"deadlines"`
+
+	// EntityAmbiguous The intake marked the recipient ambiguous.
+	EntityAmbiguous bool `json:"entityAmbiguous"`
+
+	// EntityResolved The recipient legal entity is known. False sends the notice to legal review (SUP-08).
+	EntityResolved bool `json:"entityResolved"`
+
+	// Escalated The notice has been escalated to legal.
+	Escalated bool          `json:"escalated"`
+	Flags     []NoticeFlag  `json:"flags"`
+	History   []NoticeEvent `json:"history"`
+	ID        NoticeID      `json:"id"`
+
+	// Jurisdiction An ISO 3166-1 country or ISO 3166-2 subdivision code.
+	Jurisdiction NoticeJurisdiction `json:"jurisdiction"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID *LegalEntityID `json:"legalEntityId,omitempty"`
+
+	// LinkedCaseID A related support or legal case, as given.
+	LinkedCaseID *string      `json:"linkedCaseId,omitempty"`
+	Links        []NoticeLink `json:"links"`
+
+	// PeriodEnd A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	PeriodEnd *CivilDate `json:"periodEnd,omitempty"`
+
+	// PeriodStart A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	PeriodStart *CivilDate `json:"periodStart,omitempty"`
+
+	// ReceivedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	ReceivedAt Timestamp `json:"receivedAt"`
+
+	// ResolvedLegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	ResolvedLegalEntityID *LegalEntityID `json:"resolvedLegalEntityId,omitempty"`
+
+	// SLA Our internal clock. It never moves the statutory deadline.
+	SLA Notice_SLA `json:"sla"`
+
+	// Status Where the matter stands. RECEIVED → AUTHENTICITY_REVIEW → LEGAL_REVIEW →
+	// RESPONSE_APPROVED → SUBMITTED → OUTCOME_RECORDED, with APPEAL as the
+	// branch after an outcome. CLOSED is terminal; nothing reopens it.
+	Status            NoticeStatus             `json:"status"`
+	StatutoryDeadline Notice_StatutoryDeadline `json:"statutoryDeadline"`
+
+	// Type What the authority sent.
+	Type              NoticeType `json:"type"`
+	UrgentLegalReview bool       `json:"urgentLegalReview"`
+}
+
+// Notice_SLA Our internal clock. It never moves the statutory deadline.
+type Notice_SLA struct {
+	Breached bool `json:"breached"`
+
+	// DueAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	DueAt   *Timestamp `json:"dueAt,omitempty"`
+	OwnerID *string    `json:"ownerId,omitempty"`
+}
+
+// Notice_StatutoryDeadline defines model for Notice.StatutoryDeadline.
+type Notice_StatutoryDeadline struct {
+	// Current A statutory deadline: a civil date in the authority's calendar, the
+	// last instant of that day there, its source and whether it was
+	// verified. No `dueDate` is a deadline nobody knows yet.
+	Current NoticeDeadline `json:"current"`
+
+	// Original A statutory deadline: a civil date in the authority's calendar, the
+	// last instant of that day there, its source and whether it was
+	// verified. No `dueDate` is a deadline nobody knows yet.
+	Original NoticeDeadline `json:"original"`
+}
+
+// NoticeAction An action the notice's status admits. Each still applies its own guards when taken.
+type NoticeAction string
+
+// NoticeAppealRequest defines model for NoticeAppealRequest.
+type NoticeAppealRequest struct {
+	// AuthorityReference The authority's own receipt or reference for a submission.
+	AuthorityReference *AuthorityReference `json:"authorityReference,omitempty"`
+
+	// Evidence How a deadline, authenticity, recipient or outcome was established, or the authority's response as received.
+	Evidence NoticeEvidence `json:"evidence"`
+
+	// HearingDate A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	HearingDate *CivilDate `json:"hearingDate,omitempty"`
+
+	// NextDeadline A deadline as stated. Without `dueDate` the source is UNKNOWN and it is unverified.
+	NextDeadline NoticeDeadlineInput `json:"nextDeadline"`
+
+	// Note Free text from the person recording an act on a notice.
+	Note *NoticeText `json:"note,omitempty"`
+}
+
+// NoticeApprovalRequest defines model for NoticeApprovalRequest.
+type NoticeApprovalRequest struct {
+	// Note Free text from the person recording an act on a notice.
+	Note    *NoticeText `json:"note,omitempty"`
+	Version int32       `json:"version"`
+}
+
+// NoticeAttachment A document recorded as evidence, by digest. Nothing is uploaded.
+type NoticeAttachment struct {
+	// Filename A recorded document's file name, as given. It may name a person.
+	Filename NoticeFilename `json:"filename"`
+
+	// MediaType A recorded document's media type.
+	MediaType NoticeMediaType `json:"mediaType"`
+
+	// Note Free text from the person recording an act on a notice.
+	Note *NoticeText `json:"note,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt *Timestamp `json:"recordedAt,omitempty"`
+	RecordedBy *string    `json:"recordedBy,omitempty"`
+
+	// Sha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	Sha256 Sha256Hex `json:"sha256"`
+}
+
+// NoticeAttachmentRequest defines model for NoticeAttachmentRequest.
+type NoticeAttachmentRequest struct {
+	// Filename A recorded document's file name, as given. It may name a person.
+	Filename NoticeFilename `json:"filename"`
+
+	// MediaType A recorded document's media type.
+	MediaType NoticeMediaType `json:"mediaType"`
+
+	// Note Free text from the person recording an act on a notice.
+	Note *NoticeText `json:"note,omitempty"`
+
+	// Sha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	Sha256 Sha256Hex `json:"sha256"`
+}
+
+// NoticeAuthenticity What has been established about whether the authority sent the notice. Only VERIFIED admits an approved answer (SUP-05).
+type NoticeAuthenticity string
+
+// NoticeAuthenticityRequest defines model for NoticeAuthenticityRequest.
+type NoticeAuthenticityRequest struct {
+	// Authenticity What has been established about whether the authority sent the notice. Only VERIFIED admits an approved answer (SUP-05).
+	Authenticity NoticeAuthenticity `json:"authenticity"`
+
+	// Evidence How a deadline, authenticity, recipient or outcome was established, or the authority's response as received.
+	Evidence NoticeEvidence `json:"evidence"`
+}
+
+// NoticeDeadline A statutory deadline: a civil date in the authority's calendar, the
+// last instant of that day there, its source and whether it was
+// verified. No `dueDate` is a deadline nobody knows yet.
+type NoticeDeadline struct {
+	// DueAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	DueAt *Timestamp `json:"dueAt,omitempty"`
+
+	// DueDate A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	DueDate *CivilDate `json:"dueDate,omitempty"`
+
+	// Kind What a deadline ledger entry records. ORIGINAL is the intake's and is
+	// never rewritten; CONFIRMATION verifies or establishes the date without
+	// moving it; EXTENSION moves it later on the authority's evidence;
+	// APPEAL is the next deadline an appeal opens.
+	Kind NoticeDeadlineKind `json:"kind"`
+
+	// Source Where a statutory deadline came from. ESTIMATED and UNKNOWN are never verified.
+	Source NoticeDeadlineSource `json:"source"`
+
+	// Timezone The authority's IANA timezone, in which a due date ends.
+	Timezone NoticeTimezone `json:"timezone"`
+	Verified bool           `json:"verified"`
+}
+
+// NoticeDeadlineEntry One row of the deadline ledger, with who recorded it and on what evidence.
+type NoticeDeadlineEntry struct {
+	// AttachmentSha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	AttachmentSha256 *Sha256Hex `json:"attachmentSha256,omitempty"`
+
+	// AuthorityReference The authority's own receipt or reference for a submission.
+	AuthorityReference *AuthorityReference `json:"authorityReference,omitempty"`
+
+	// DueAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	DueAt *Timestamp `json:"dueAt,omitempty"`
+
+	// DueDate A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	DueDate *CivilDate `json:"dueDate,omitempty"`
+
+	// Evidence How a deadline, authenticity, recipient or outcome was established, or the authority's response as received.
+	Evidence *NoticeEvidence `json:"evidence,omitempty"`
+
+	// Kind What a deadline ledger entry records. ORIGINAL is the intake's and is
+	// never rewritten; CONFIRMATION verifies or establishes the date without
+	// moving it; EXTENSION moves it later on the authority's evidence;
+	// APPEAL is the next deadline an appeal opens.
+	Kind NoticeDeadlineKind `json:"kind"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+	RecordedBy string    `json:"recordedBy"`
+	Seq        int32     `json:"seq"`
+
+	// Source Where a statutory deadline came from. ESTIMATED and UNKNOWN are never verified.
+	Source NoticeDeadlineSource `json:"source"`
+
+	// Timezone The authority's IANA timezone, in which a due date ends.
+	Timezone NoticeTimezone `json:"timezone"`
+	Verified bool           `json:"verified"`
+}
+
+// NoticeDeadlineInput A deadline as stated. Without `dueDate` the source is UNKNOWN and it is unverified.
+type NoticeDeadlineInput struct {
+	// DueDate A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	DueDate *CivilDate `json:"dueDate,omitempty"`
+
+	// Source Where a statutory deadline came from. ESTIMATED and UNKNOWN are never verified.
+	Source NoticeDeadlineSource `json:"source"`
+
+	// Timezone The authority's IANA timezone, in which a due date ends.
+	Timezone NoticeTimezone `json:"timezone"`
+	Verified bool           `json:"verified"`
+}
+
+// NoticeDeadlineKind What a deadline ledger entry records. ORIGINAL is the intake's and is
+// never rewritten; CONFIRMATION verifies or establishes the date without
+// moving it; EXTENSION moves it later on the authority's evidence;
+// APPEAL is the next deadline an appeal opens.
+type NoticeDeadlineKind string
+
+// NoticeDeadlineLedger defines model for NoticeDeadlineLedger.
+type NoticeDeadlineLedger struct {
+	// Current A statutory deadline: a civil date in the authority's calendar, the
+	// last instant of that day there, its source and whether it was
+	// verified. No `dueDate` is a deadline nobody knows yet.
+	Current  NoticeDeadline        `json:"current"`
+	Entries  []NoticeDeadlineEntry `json:"entries"`
+	NoticeID NoticeID              `json:"noticeId"`
+
+	// Original A statutory deadline: a civil date in the authority's calendar, the
+	// last instant of that day there, its source and whether it was
+	// verified. No `dueDate` is a deadline nobody knows yet.
+	Original NoticeDeadline `json:"original"`
+
+	// Overdue The deadline in force has passed with the response not yet submitted.
+	Overdue bool `json:"overdue"`
+}
+
+// NoticeDeadlineRequest defines model for NoticeDeadlineRequest.
+type NoticeDeadlineRequest struct {
+	// AttachmentSha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	AttachmentSha256 *Sha256Hex `json:"attachmentSha256,omitempty"`
+
+	// AuthorityReference The authority's own receipt or reference for a submission.
+	AuthorityReference *AuthorityReference `json:"authorityReference,omitempty"`
+
+	// DueDate A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	DueDate CivilDate `json:"dueDate"`
+
+	// Evidence How a deadline, authenticity, recipient or outcome was established, or the authority's response as received.
+	Evidence NoticeEvidence `json:"evidence"`
+
+	// Kind What a deadline ledger entry records. ORIGINAL is the intake's and is
+	// never rewritten; CONFIRMATION verifies or establishes the date without
+	// moving it; EXTENSION moves it later on the authority's evidence;
+	// APPEAL is the next deadline an appeal opens.
+	Kind NoticeDeadlineKind `json:"kind"`
+
+	// Source Where a statutory deadline came from. ESTIMATED and UNKNOWN are never verified.
+	Source NoticeDeadlineSource `json:"source"`
+
+	// Timezone The authority's IANA timezone, in which a due date ends.
+	Timezone NoticeTimezone `json:"timezone"`
+	Verified bool           `json:"verified"`
+}
+
+// NoticeDeadlineSource Where a statutory deadline came from. ESTIMATED and UNKNOWN are never verified.
+type NoticeDeadlineSource string
+
+// NoticeEntityRequest defines model for NoticeEntityRequest.
+type NoticeEntityRequest struct {
+	// Evidence How a deadline, authenticity, recipient or outcome was established, or the authority's response as received.
+	Evidence NoticeEvidence `json:"evidence"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+}
+
+// NoticeEscalationReason Why a notice went to legal.
+type NoticeEscalationReason string
+
+// NoticeEscalationRequest defines model for NoticeEscalationRequest.
+type NoticeEscalationRequest struct {
+	// Evidence How a deadline, authenticity, recipient or outcome was established, or the authority's response as received.
+	Evidence *NoticeEvidence `json:"evidence,omitempty"`
+
+	// Note Free text from the person recording an act on a notice.
+	Note NoticeText `json:"note"`
+
+	// Reason Why a notice went to legal.
+	Reason NoticeEscalationReason `json:"reason"`
+}
+
+// NoticeEvent defines model for NoticeEvent.
+type NoticeEvent struct {
+	// Attachment A document recorded as evidence, by digest. Nothing is uploaded.
+	Attachment *NoticeAttachment `json:"attachment,omitempty"`
+
+	// Authenticity What has been established about whether the authority sent the notice. Only VERIFIED admits an approved answer (SUP-05).
+	Authenticity *NoticeAuthenticity `json:"authenticity,omitempty"`
+
+	// AuthorityReference The authority's own receipt or reference for a submission.
+	AuthorityReference *AuthorityReference `json:"authorityReference,omitempty"`
+
+	// Deadline A statutory deadline: a civil date in the authority's calendar, the
+	// last instant of that day there, its source and whether it was
+	// verified. No `dueDate` is a deadline nobody knows yet.
+	Deadline *NoticeDeadline `json:"deadline,omitempty"`
+
+	// EscalationReason Why a notice went to legal.
+	EscalationReason *NoticeEscalationReason `json:"escalationReason,omitempty"`
+
+	// Evidence How a deadline, authenticity, recipient or outcome was established, or the authority's response as received.
+	Evidence *NoticeEvidence `json:"evidence,omitempty"`
+
+	// HearingDate A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	HearingDate *CivilDate `json:"hearingDate,omitempty"`
+
+	// Kind What an event records.
+	Kind NoticeEventKind `json:"kind"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID *LegalEntityID `json:"legalEntityId,omitempty"`
+
+	// Note Free text from the person recording an act on a notice.
+	Note *NoticeText `json:"note,omitempty"`
+
+	// Outcome What the authority decided.
+	Outcome *NoticeOutcome `json:"outcome,omitempty"`
+
+	// OutcomeAmount An amount and its currency, never one without the other.
+	OutcomeAmount *MoneyValue `json:"outcomeAmount,omitempty"`
+	OwnerID       *string     `json:"ownerId,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+	RecordedBy string    `json:"recordedBy"`
+
+	// ResponseSha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	ResponseSha256  *Sha256Hex `json:"responseSha256,omitempty"`
+	ResponseVersion *int32     `json:"responseVersion,omitempty"`
+	Seq             int32      `json:"seq"`
+	Settled         *bool      `json:"settled,omitempty"`
+
+	// Settlement The evidence a claim of settlement rests on. A pending payment instruction is never settlement (T18-20).
+	Settlement *NoticeSettlement `json:"settlement,omitempty"`
+
+	// SLADue RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	SLADue *Timestamp `json:"slaDue,omitempty"`
+
+	// Status Where the matter stands. RECEIVED → AUTHENTICITY_REVIEW → LEGAL_REVIEW →
+	// RESPONSE_APPROVED → SUBMITTED → OUTCOME_RECORDED, with APPEAL as the
+	// branch after an outcome. CLOSED is terminal; nothing reopens it.
+	Status NoticeStatus `json:"status"`
+}
+
+// NoticeEventKind What an event records.
+type NoticeEventKind string
+
+// NoticeEvidence How a deadline, authenticity, recipient or outcome was established, or the authority's response as received.
+type NoticeEvidence = string
+
+// NoticeFilename A recorded document's file name, as given. It may name a person.
+type NoticeFilename = string
+
+// NoticeFlag Something about a notice that needs attention now. URGENT_LEGAL_REVIEW
+// accompanies an unknown or unverified deadline (W17), unresolved or
+// disputed authenticity (SUP-05) and an unresolved recipient (SUP-08).
+// STATUTORY_OVERDUE and SLA_BREACHED are separate facts.
+type NoticeFlag string
+
+// NoticeID defines model for NoticeId.
+type NoticeID = string
+
+// NoticeJurisdiction An ISO 3166-1 country or ISO 3166-2 subdivision code.
+type NoticeJurisdiction = string
+
+// NoticeLink A reference to a record elsewhere, by its identifier. Read-only.
+type NoticeLink struct {
+	// Kind The kind of record a link references. Every link is a read-only reference.
+	Kind      NoticeLinkKind `json:"kind"`
+	Reference string         `json:"reference"`
+}
+
+// NoticeLinkKind The kind of record a link references. Every link is a read-only reference.
+type NoticeLinkKind string
+
+// NoticeList defines model for NoticeList.
+type NoticeList struct {
+	Notices []Notice `json:"notices"`
+}
+
+// NoticeMediaType A recorded document's media type.
+type NoticeMediaType = string
+
+// NoticeOutcome What the authority decided.
+type NoticeOutcome string
+
+// NoticeOutcomeRequest defines model for NoticeOutcomeRequest.
+type NoticeOutcomeRequest struct {
+	// Amount An amount and its currency, never one without the other.
+	Amount *MoneyValue `json:"amount,omitempty"`
+
+	// AuthorityReceiptReference The authority's own receipt or reference for a submission.
+	AuthorityReceiptReference AuthorityReference `json:"authorityReceiptReference"`
+
+	// Evidence How a deadline, authenticity, recipient or outcome was established, or the authority's response as received.
+	Evidence NoticeEvidence `json:"evidence"`
+
+	// Note Free text from the person recording an act on a notice.
+	Note *NoticeText `json:"note,omitempty"`
+
+	// Outcome What the authority decided.
+	Outcome NoticeOutcome `json:"outcome"`
+	Settled *bool         `json:"settled,omitempty"`
+
+	// Settlement The evidence a claim of settlement rests on. A pending payment instruction is never settlement (T18-20).
+	Settlement *NoticeSettlement `json:"settlement,omitempty"`
+}
+
+// NoticeOwnerRequest defines model for NoticeOwnerRequest.
+type NoticeOwnerRequest struct {
+	// Note Free text from the person recording an act on a notice.
+	Note    *NoticeText `json:"note,omitempty"`
+	OwnerID string      `json:"ownerId"`
+
+	// SLADue RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	SLADue *Timestamp `json:"slaDue,omitempty"`
+}
+
+// NoticeQueryFlag A yes-or-no filter.
+type NoticeQueryFlag = bool
+
+// NoticeResponsePackageRequest defines model for NoticeResponsePackageRequest.
+type NoticeResponsePackageRequest struct {
+	// Sha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	Sha256 *Sha256Hex `json:"sha256,omitempty"`
+
+	// Summary Free text from the person recording an act on a notice.
+	Summary NoticeText `json:"summary"`
+}
+
+// NoticeSettlement The evidence a claim of settlement rests on. A pending payment instruction is never settlement (T18-20).
+type NoticeSettlement string
+
+// NoticeStatus Where the matter stands. RECEIVED → AUTHENTICITY_REVIEW → LEGAL_REVIEW →
+// RESPONSE_APPROVED → SUBMITTED → OUTCOME_RECORDED, with APPEAL as the
+// branch after an outcome. CLOSED is terminal; nothing reopens it.
+type NoticeStatus string
+
+// NoticeSubmissionRequest defines model for NoticeSubmissionRequest.
+type NoticeSubmissionRequest struct {
+	// AuthorityReceiptReference The authority's own receipt or reference for a submission.
+	AuthorityReceiptReference AuthorityReference `json:"authorityReceiptReference"`
+
+	// Evidence How a deadline, authenticity, recipient or outcome was established, or the authority's response as received.
+	Evidence *NoticeEvidence `json:"evidence,omitempty"`
+
+	// Note Free text from the person recording an act on a notice.
+	Note *NoticeText `json:"note,omitempty"`
+}
+
+// NoticeText Free text from the person recording an act on a notice.
+type NoticeText = string
+
+// NoticeTimezone The authority's IANA timezone, in which a due date ends.
+type NoticeTimezone = string
+
+// NoticeTransitionRequest defines model for NoticeTransitionRequest.
+type NoticeTransitionRequest struct {
+	// Note Free text from the person recording an act on a notice.
+	Note *NoticeText `json:"note,omitempty"`
+
+	// To Where the matter stands. RECEIVED → AUTHENTICITY_REVIEW → LEGAL_REVIEW →
+	// RESPONSE_APPROVED → SUBMITTED → OUTCOME_RECORDED, with APPEAL as the
+	// branch after an outcome. CLOSED is terminal; nothing reopens it.
+	To NoticeStatus `json:"to"`
+}
+
+// NoticeType What the authority sent.
+type NoticeType string
+
 // Obligation One row of an obligation: a periodic duty owed by a legal entity to an
 // authority, under a pinned definition version and signed content. The
 // dates are civil dates in `timezone`; `periodEnd` is the period's
@@ -8361,6 +9366,9 @@ type SetUserStatusRequest struct {
 	Status UserStatus `json:"status"`
 }
 
+// Sha256Hex A document's SHA-256, lowercase hex. The document itself is not stored.
+type Sha256Hex = string
+
 // ShadowCase defines model for ShadowCase.
 type ShadowCase struct {
 	// CaseRef The business key a comparator result is for.
@@ -9535,6 +10543,11 @@ type Internal = Problem
 // fetched through an audited path.
 type NotFound = Problem
 
+// NoticeResult A regulatory notice as of `asOf`: the header as received, its
+// statutory deadline ledger beside the separate internal SLA clock, the
+// recorded documents, its history, and what needs attention.
+type NoticeResult = Notice
+
 // RateLimited RFC 9457 Problem Details, with the `ztx_` extensions from ADR-0016 §2.5.
 // The extensions carry identifiers rather than data: an error that needs
 // data to be understood names a decision or a request, and the data is
@@ -9694,6 +10707,58 @@ type CorrectDocumentParams struct {
 
 // ListJobsParams defines parameters for ListJobs.
 type ListJobsParams struct {
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListNoticesParams defines parameters for ListNotices.
+type ListNoticesParams struct {
+	// Type Only notices of this type.
+	Type *NoticeType `form:"type,omitempty" json:"type,omitempty"`
+
+	// Status Only notices in this status.
+	Status *NoticeStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Authority Only notices from this authority (case-insensitive).
+	Authority *AuthorityCode `form:"authority,omitempty" json:"authority,omitempty"`
+
+	// LegalEntityID Only notices addressed to this legal entity
+	LegalEntityID *LegalEntityID `form:"legalEntityId,omitempty" json:"legalEntityId,omitempty"`
+
+	// AuthorityReference Only notices whose authority reference contains this text.
+	AuthorityReference *AuthorityReference `form:"authorityReference,omitempty" json:"authorityReference,omitempty"`
+
+	// ReceivedFrom Only notices received at or after this instant.
+	ReceivedFrom *Timestamp `form:"receivedFrom,omitempty" json:"receivedFrom,omitempty"`
+
+	// ReceivedTo Only notices received at or before this instant.
+	ReceivedTo *Timestamp `form:"receivedTo,omitempty" json:"receivedTo,omitempty"`
+
+	// Period Only notices whose period contains this date.
+	Period *CivilDate `form:"period,omitempty" json:"period,omitempty"`
+
+	// AmountMin Only notices stating at least this amount
+	AmountMin *Decimal `form:"amountMin,omitempty" json:"amountMin,omitempty"`
+
+	// AmountMax Only notices stating at most this amount
+	AmountMax *Decimal `form:"amountMax,omitempty" json:"amountMax,omitempty"`
+
+	// Currency The currency `amountMin` and `amountMax` are in. Required with either.
+	Currency *CurrencyCode `form:"currency,omitempty" json:"currency,omitempty"`
+
+	// AttachmentSha256 Only notices with a document of this SHA-256 recorded.
+	AttachmentSha256 *Sha256Hex `form:"attachmentSha256,omitempty" json:"attachmentSha256,omitempty"`
+
+	// Authenticity Only notices whose authenticity is this.
+	Authenticity *NoticeAuthenticity `form:"authenticity,omitempty" json:"authenticity,omitempty"`
+
+	// Urgent Only notices flagged for urgent legal review.
+	Urgent *NoticeQueryFlag `form:"urgent,omitempty" json:"urgent,omitempty"`
+
+	// IncludeClosed Include closed notices when no status is asked for.
+	IncludeClosed *NoticeQueryFlag `form:"includeClosed,omitempty" json:"includeClosed,omitempty"`
+
 	// Limit Maximum number of items to return. The server caps this independently,
 	// so a larger value is not an error and does not return more.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
@@ -9932,6 +10997,45 @@ type ExecuteMigrationRunJSONRequestBody = MigrationRunRequest
 
 // RegisterMigrationSnapshotJSONRequestBody defines body for RegisterMigrationSnapshot for application/json ContentType.
 type RegisterMigrationSnapshotJSONRequestBody = MigrationSnapshotRequest
+
+// CreateNoticeJSONRequestBody defines body for CreateNotice for application/json ContentType.
+type CreateNoticeJSONRequestBody = CreateNoticeRequest
+
+// LodgeNoticeAppealJSONRequestBody defines body for LodgeNoticeAppeal for application/json ContentType.
+type LodgeNoticeAppealJSONRequestBody = NoticeAppealRequest
+
+// RecordNoticeAttachmentJSONRequestBody defines body for RecordNoticeAttachment for application/json ContentType.
+type RecordNoticeAttachmentJSONRequestBody = NoticeAttachmentRequest
+
+// RecordNoticeAuthenticityJSONRequestBody defines body for RecordNoticeAuthenticity for application/json ContentType.
+type RecordNoticeAuthenticityJSONRequestBody = NoticeAuthenticityRequest
+
+// RecordNoticeDeadlineJSONRequestBody defines body for RecordNoticeDeadline for application/json ContentType.
+type RecordNoticeDeadlineJSONRequestBody = NoticeDeadlineRequest
+
+// ResolveNoticeEntityJSONRequestBody defines body for ResolveNoticeEntity for application/json ContentType.
+type ResolveNoticeEntityJSONRequestBody = NoticeEntityRequest
+
+// EscalateNoticeJSONRequestBody defines body for EscalateNotice for application/json ContentType.
+type EscalateNoticeJSONRequestBody = NoticeEscalationRequest
+
+// RecordNoticeOutcomeJSONRequestBody defines body for RecordNoticeOutcome for application/json ContentType.
+type RecordNoticeOutcomeJSONRequestBody = NoticeOutcomeRequest
+
+// AssignNoticeOwnerJSONRequestBody defines body for AssignNoticeOwner for application/json ContentType.
+type AssignNoticeOwnerJSONRequestBody = NoticeOwnerRequest
+
+// ApproveNoticeResponseJSONRequestBody defines body for ApproveNoticeResponse for application/json ContentType.
+type ApproveNoticeResponseJSONRequestBody = NoticeApprovalRequest
+
+// PrepareNoticeResponseJSONRequestBody defines body for PrepareNoticeResponse for application/json ContentType.
+type PrepareNoticeResponseJSONRequestBody = NoticeResponsePackageRequest
+
+// RecordNoticeSubmissionJSONRequestBody defines body for RecordNoticeSubmission for application/json ContentType.
+type RecordNoticeSubmissionJSONRequestBody = NoticeSubmissionRequest
+
+// TransitionNoticeJSONRequestBody defines body for TransitionNotice for application/json ContentType.
+type TransitionNoticeJSONRequestBody = NoticeTransitionRequest
 
 // TransitionObligationJSONRequestBody defines body for TransitionObligation for application/json ContentType.
 type TransitionObligationJSONRequestBody = ObligationTransitionRequest
