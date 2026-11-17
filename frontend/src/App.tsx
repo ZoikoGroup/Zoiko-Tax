@@ -9,6 +9,9 @@ import { DashboardLayout } from './components/layout/DashboardLayout'
 import type { Navigate, Route } from './components/layout/Sidebar'
 import { recentPeriods } from './dashboard/format'
 import { ActionCenterPage } from './pages/ActionCenterPage'
+import { ActivityPage } from './pages/ActivityPage'
+import { FilingRemittancePage } from './pages/FilingRemittancePage'
+import { SystemHealthPage } from './pages/SystemHealthPage'
 import { HomePage } from './home/HomePage'
 import { CompliancePage } from './pages/CompliancePage'
 import { ContentPage } from './pages/ContentPage'
@@ -150,7 +153,7 @@ export function App() {
         const page: PageProps = { session, period, onNavigate: openView, route, onTabChange }
         switch (route.view) {
           case 'admin':
-            return <AdminPanel session={session} onSignOut={signOut} onRefresh={refresh} />
+            return <AdminPanel session={session} onSignOut={signOut} onRefresh={refresh} route={route} onTabChange={onTabChange} />
           case 'actions':
             return <ActionCenterPage {...page} />
           case 'determine':
@@ -168,7 +171,7 @@ export function App() {
           case 'migration':
             return <MigrationPage {...page} />
           case 'reports':
-            return <ReportsPage />
+            return <ReportsPage {...page} />
           case 'reports-demo':
             return <ReportsDemoPage />
           case 'documents':
@@ -181,6 +184,12 @@ export function App() {
             return <LocationsPage {...page} />
           case 'intelligence':
             return <IntelligencePage {...page} />
+          case 'system-health':
+            return <SystemHealthPage />
+          case 'activity':
+            return <ActivityPage {...page} />
+          case 'filing-remittance':
+            return <FilingRemittancePage {...page} />
           case 'dashboard':
             return <HomePage {...page} capabilities={capabilities} />
         }
