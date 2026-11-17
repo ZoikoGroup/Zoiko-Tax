@@ -27,7 +27,7 @@ A release manifest names the one approved combination of model, prompt, checks a
 | approved ontology list version | Version of the code list | `list_version` (`config/approved_ontology.live-demo.json:2`) | partly (synthetic) |
 | signed decisions and signer | D-01, D-05, D-06, D-09, D-10 and who signed | D-01 text and signer not written (`_drafts/S5_hosting_paper_draft.md:13`); D-05 not in the repo (`EVIDENCE.md:64`); D-10 not signed (`_drafts/S7_reviewer_storage_note.md:5`); D-06: NOT FOUND | no |
 | evidence sink setting | File sink on or off | `ENV_PATH` (`evidence_file_sink.py:83`) | partly (an env var, not recorded) |
-| build or commit id | Code that was built | NOT FOUND in `server.py` or `tools/evaluate_gateway.py`; the repo tool takes `--commit` (`docs/tools/build_release_manifest.py:293`) | no |
+| build or commit id | Code that was built | NOT FOUND in `server.py` or `tools/evaluate_gateway.py`; the repo tool takes `--commit` (`docs/tools/build_release_manifest.py:294`) | no |
 | date | When it was approved | `approved_at` (`ai-release-manifest.schema.json:49`) | yes |
 
 The prompt hash and ids are fine as manifest fields: they are hashes and names, not prompt text.
@@ -42,7 +42,7 @@ The prompt hash and ids are fine as manifest fields: they are hashes and names, 
 
 ## 4. Metrics
 
-**Emitted today: NOT FOUND.** `record_signals` derives signals from a record (`observability.py:645`) but no call to it exists in `server.py` or `tools/` (searched `src/` and `tools/`). There is no exporter; the file says one comes later (`observability.py:49-50`). The label rule is already written: no prompt, completion or source text (`observability.py:28-29,169-173`).
+**Emitted today: NOT FOUND.** `record_signals` derives signals from a record (`observability.py:645`) and it is called inside `observability.py` (`ObservabilityPipeline.observe`, `observability.py:830`), but nothing outside `observability.py` calls that class (searched `src/` and `tools/`; `server.py` and `tools/` do not use it). Exporter: NOT FOUND; the file says one comes later (`observability.py:49-50`). The label rule is already written: no prompt, completion or source text (`observability.py:28-29,169-173`).
 
 Suggested metrics. Labels come from fixed sets only.
 
@@ -57,7 +57,7 @@ Suggested metrics. Labels come from fixed sets only.
 | `answer_check_total` | Guard verdicts | `verdict` (`invocation_check_event.py:75-78`) |
 | `tokens_total` | Tokens used | `direction` = input or output (`observability.py:360-375`) |
 
-Never a label: prompt text, answer text, code values, subject refs, tenant ids. The existing label `ai_release_manifest_id` (`observability.py:349`) is allowed.
+Never a label: prompt text, answer text, code values, subject refs. Tenant ids: on hold, see question 5. The existing label `ai_release_manifest_id` (`observability.py:349`) is allowed.
 
 ## 5. When a release is blocked (suggestion)
 
