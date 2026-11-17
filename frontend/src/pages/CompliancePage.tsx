@@ -20,7 +20,9 @@ import {
   useAction,
   useLoad,
 } from '../ui/kit'
-import { toTimestamp } from './determine/shared'
+import { TabBar, toTimestamp } from './determine/shared'
+import { useRoutedTab } from './routedTab'
+import { countBy, downloadCsv, Tiles } from './workspace'
 import type { PageProps } from './types'
 import './obligations.css'
 
@@ -80,9 +82,347 @@ const Overdue = ({ p }: { p: Package }) => (
   </>
 )
 
-export const CompliancePage = ({ session }: PageProps) => {
-  const [status, setStatus] = useState<PackageStatus | 'ALL'>('ALL')
+type Tab = 'queue' | 'returns' | 'acks' | 'status'
+
+const TABS: readonly { value: Tab; label: string }[] = [
+  { value: 'queue', label: 'Filing preparation' },
+  { value: 'returns', label: 'Regulatory returns' },
+  { value: 'acks', label: 'Authority acknowledgements' },
+  { value: 'status', label: 'Compliance status' },
+]
+
+const SUBTITLE: Record<Tab, string> = {
+  queue: "Filings in queue order: priority, then the authority's deadline. Each is prepared, reviewed by someone else, approved as an exact version, then submitted.",
+  returns: 'Every return that has gone to an authority, and where it stands with them.',
+  acks: 'Every answer recorded from an authority — receipts, acceptances, rejections — with its reference, newest first.',
+  status: 'The filing book at a glance: packages by status, deadline breaches, and each authority’s position.',
+}
+
+export const CompliancePage = ({ session, route, onTabChange }: PageProps) => {
+  const [tab, setTab] = useRoutedTab(TABS.map((t) => t.value), 'queue', route, onTabChange)
   const [selected, setSelected] = useState<string | null>(null)
+  const openInQueue = (id: string) => {
+    setSelected(id)
+    setTab('queue')
+  }
+  return (
+    <div className="ztax-page">
+      <PageHeader title="Compliance" subtitle={SUBTITLE[tab]} />
+      <TabBar label="Compliance" tabs={TABS} current={tab} onSelect={setTab} />
+      {tab === 'queue' ? <Queue session={session} selected={selected} setSelected={setSelected} />
+        : tab === 'returns' ? <Returns onOpen={openInQueue} />
+        : tab === 'acks' ? <Acknowledgements onOpen={openInQueue} />
+        : <StatusBoard onOpen={openInQueue} />}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// regulatory returns: submitted and later
+// ---------------------------------------------------------------------------
+
+const SUBMITTED: readonly PackageStatus[] = ['TRANSMITTING', 'UNCERTAIN_SUBMISSION', 'FILED', 'ACCEPTED', 'REJECTED']
+
+const lastStep = (p: Package, kinds: readonly string[]) => [...p.history].reverse().find((s) => kinds.includes(s.kind))
+
+const OpenButton = ({ onClick }: { onClick: () => void }) => (
+  <button type="button" className="ztax-table-action-btn" onClick={onClick}>Open</button>
+)
+
+const Returns = ({ onOpen }: { onOpen: (id: string) => void }) => {
+  const [status, setStatus] = useState<PackageStatus | 'ALL'>('ALL')
+  const { load, reload } = useLoad((signal) => ztax.listCompliancePackages({ limit: 500 }, signal), [])
+  return (
+    <Loaded load={load}>
+      {(data) => {
+        const sent = data.packages.filter((p) => SUBMITTED.includes(p.status))
+        const shown = sent.filter((p) => status === 'ALL' || p.status === status)
+        const csv = () => {
+          downloadCsv('regulatory-returns', ['Return', 'Country', 'Authority', 'Period start', 'Period end', 'Channel', 'Submitted at',
+            'Version', 'Control total', 'Currency', 'Status', 'Last answer', 'Authority reference'], shown.map((p) => {
+            const sub = lastStep(p, ['SUBMISSION_STARTED'])
+            const prep = lastStep(p, ['PREPARED'])
+            const ans = lastStep(p, ['ACKNOWLEDGED', 'UNCERTAIN_RESOLVED'])
+            const ref = [...p.history].reverse().find((s) => s.authorityReference !== undefined)
+            return [p.obligationType, p.filingCountry, p.filingAuthority, p.periodStart, p.periodEnd, p.channel, sub?.recordedAt ?? '',
+              prep?.version === undefined ? '' : String(prep.version), prep?.controlTotal ?? '', prep?.currency ?? '', p.status,
+              ans?.acknowledgement ?? ans?.resolution ?? '', ref?.authorityReference ?? '']
+          }))
+        }
+        return (
+          <>
+            <Tiles tiles={SUBMITTED.map((s) => ({
+              label: words(s), count: sent.filter((p) => p.status === s).length,
+              tone: s === 'ACCEPTED' ? 'ok' as const : s === 'REJECTED' || s === 'UNCERTAIN_SUBMISSION' ? 'bad' as const : 'neutral' as const,
+            }))} />
+            <Card
+              title={`${shown.length} of ${sent.length} submitted returns`}
+              aside={
+                <div className="ztax-filter-bar">
+                  <Field label="Status">
+                    <select value={status} onChange={(e) => { setStatus(isStatus(e.target.value) ? e.target.value : 'ALL') }}>
+                      <option value="ALL">All submitted</option>
+                      {SUBMITTED.map((s) => <option key={s} value={s}>{words(s)}</option>)}
+                    </select>
+                  </Field>
+                  <button type="button" className="ztax-btn-quiet" onClick={reload}>Refresh</button>
+                  <button type="button" className="ztax-btn-quiet" disabled={shown.length === 0} onClick={csv}>Download CSV</button>
+                </div>
+              }
+            >
+              {shown.length === 0 ? <Empty>{sent.length === 0 ? 'No return has been submitted to an authority yet.' : 'No return matches this filter.'}</Empty> : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="ztax-action-table">
+                    <thead>
+                      <tr><th>Return</th><th>Period</th><th>Channel</th><th>Submitted</th><th>Version · total</th><th>Status</th><th>Authority answer</th><th>Action</th></tr>
+                    </thead>
+                    <tbody>
+                      {shown.map((p) => {
+                        const sub = lastStep(p, ['SUBMISSION_STARTED'])
+                        const prep = lastStep(p, ['PREPARED'])
+                        const ans = lastStep(p, ['ACKNOWLEDGED', 'UNCERTAIN_RESOLVED'])
+                        const ref = [...p.history].reverse().find((s) => s.authorityReference !== undefined)
+                        return (
+                          <tr key={p.id}>
+                            <td style={{ fontWeight: 500, color: '#111827', paddingRight: 8 }}>
+                              {p.obligationType} <span className="mono muted">{p.filingCountry} · {p.filingAuthority}</span>
+                            </td>
+                            <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}>{civilDate(p.periodStart)} – {civilDate(p.periodEnd)}</td>
+                            <td style={{ paddingRight: 8 }}>{words(p.channel)}</td>
+                            <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}>{sub === undefined ? '—' : instant(sub.recordedAt)}</td>
+                            <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}>
+                              {prep === undefined ? '—' : <>v{prep.version} · <Amount amount={prep.controlTotal} currency={prep.currency} /></>}
+                            </td>
+                            <td style={{ paddingRight: 8 }}><Status value={p.status} /></td>
+                            <td style={{ paddingRight: 8 }}>
+                              {ans === undefined ? <span className="muted">awaiting answer</span> : words(ans.acknowledgement ?? ans.resolution ?? ans.kind)}
+                              {ref?.authorityReference === undefined ? null : <span className="mono muted"> · ref {ref.authorityReference}</span>}
+                            </td>
+                            <td><OpenButton onClick={() => { onOpen(p.id) }} /></td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          </>
+        )
+      }}
+    </Loaded>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// authority acknowledgements
+// ---------------------------------------------------------------------------
+
+type AckFilter = 'ALL' | 'ACCEPTED' | 'REJECTED' | 'PENDING'
+
+const ackGroup = (answer: string): Exclude<AckFilter, 'ALL'> =>
+  answer.startsWith('ACCEPTED') || answer === 'CONFIRMED_FILED' ? 'ACCEPTED'
+    : answer.startsWith('REJECTED') || answer === 'CONFIRMED_NOT_FILED' || answer === 'DUPLICATE_DETECTED' ? 'REJECTED'
+    : 'PENDING'
+
+const Acknowledgements = ({ onOpen }: { onOpen: (id: string) => void }) => {
+  const [filter, setFilter] = useState<AckFilter>('ALL')
+  const { load, reload } = useLoad((signal) => ztax.listCompliancePackages({ limit: 500 }, signal), [])
+  return (
+    <Loaded load={load}>
+      {(data) => {
+        const answers = data.packages.flatMap((p) => p.history
+          .filter((s) => s.kind === 'ACKNOWLEDGED' || s.kind === 'UNCERTAIN_RESOLVED')
+          .map((s) => ({ p, s, answer: s.acknowledgement ?? s.resolution ?? s.kind })))
+          .sort((a, b) => (a.s.recordedAt < b.s.recordedAt ? 1 : a.s.recordedAt > b.s.recordedAt ? -1 : 0))
+        const shown = answers.filter((a) => filter === 'ALL' || ackGroup(a.answer) === filter)
+        const csv = () => {
+          downloadCsv('authority-acknowledgements', ['Recorded at', 'Return', 'Country', 'Authority', 'Period start', 'Period end', 'Step',
+            'Answer', 'Authority reference', 'Status after', 'Recorded by', 'Evidence'], shown.map(({ p, s, answer }) => [
+            s.recordedAt, p.obligationType, p.filingCountry, p.filingAuthority, p.periodStart, p.periodEnd, s.kind, answer,
+            s.authorityReference ?? '', s.status, s.recordedBy, s.evidence ?? '']))
+        }
+        return (
+          <>
+            <Tiles tiles={[
+              { label: 'Answers recorded', count: answers.length },
+              { label: 'Accepted or confirmed filed', count: answers.filter((a) => ackGroup(a.answer) === 'ACCEPTED').length, tone: 'ok' },
+              { label: 'Rejected or not filed', count: answers.filter((a) => ackGroup(a.answer) === 'REJECTED').length, tone: 'bad' },
+              { label: 'Received, pending or unknown', count: answers.filter((a) => ackGroup(a.answer) === 'PENDING').length, tone: 'warn' },
+              { label: 'Without an authority reference', count: answers.filter((a) => a.s.authorityReference === undefined).length, tone: 'warn',
+                note: 'A rejection or UNKNOWN may have none.' },
+            ]} />
+            <Card
+              title={`${shown.length} of ${answers.length} answers`}
+              aside={
+                <div className="ztax-filter-bar">
+                  <Field label="Answer">
+                    <select value={filter} onChange={(e) => { setFilter(pick<AckFilter>(['ALL', 'ACCEPTED', 'REJECTED', 'PENDING'], e.target.value, 'ALL')) }}>
+                      <option value="ALL">All</option>
+                      <option value="ACCEPTED">Accepted / confirmed filed</option>
+                      <option value="REJECTED">Rejected / not filed</option>
+                      <option value="PENDING">Received / pending / unknown</option>
+                    </select>
+                  </Field>
+                  <button type="button" className="ztax-btn-quiet" onClick={reload}>Refresh</button>
+                  <button type="button" className="ztax-btn-quiet" disabled={shown.length === 0} onClick={csv}>Download CSV</button>
+                </div>
+              }
+            >
+              {shown.length === 0 ? <Empty>{answers.length === 0 ? 'No authority answer has been recorded yet.' : 'No answer matches this filter.'}</Empty> : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="ztax-action-table">
+                    <thead>
+                      <tr><th>When</th><th>Return</th><th>Period</th><th>Answer</th><th>Reference</th><th>Then</th><th>Evidence</th><th>By</th><th>Action</th></tr>
+                    </thead>
+                    <tbody>
+                      {shown.map(({ p, s, answer }) => (
+                        <tr key={`${p.id}-${s.seq}`}>
+                          <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}>{instant(s.recordedAt)}</td>
+                          <td style={{ fontWeight: 500, color: '#111827', paddingRight: 8 }}>
+                            {p.obligationType} <span className="mono muted">{p.filingCountry} · {p.filingAuthority}</span>
+                          </td>
+                          <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}>{civilDate(p.periodStart)} – {civilDate(p.periodEnd)}</td>
+                          <td style={{ paddingRight: 8 }}>
+                            <span className={`ztax-status ztax-status--${ackGroup(answer) === 'ACCEPTED' ? 'ok' : ackGroup(answer) === 'REJECTED' ? 'bad' : 'warn'}`}>
+                              {words(answer)}
+                            </span>
+                            {s.kind === 'UNCERTAIN_RESOLVED' ? <div className="muted" style={{ fontSize: 10 }}>resolution of an uncertain submission</div> : null}
+                          </td>
+                          <td className="mono" style={{ paddingRight: 8 }}>{s.authorityReference ?? '—'}</td>
+                          <td style={{ paddingRight: 8 }}><Status value={s.status} /></td>
+                          <td className="mono" style={{ paddingRight: 8, maxWidth: 280, overflowWrap: 'anywhere' }}>
+                            {s.evidence === undefined ? '—' : s.evidence.length > 120 ? <span title={s.evidence}>{s.evidence.slice(0, 120)}…</span> : s.evidence}
+                          </td>
+                          <td style={{ paddingRight: 8 }}><Id value={s.recordedBy} /></td>
+                          <td><OpenButton onClick={() => { onOpen(p.id) }} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          </>
+        )
+      }}
+    </Loaded>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// compliance status
+// ---------------------------------------------------------------------------
+
+const StatusBoard = ({ onOpen }: { onOpen: (id: string) => void }) => {
+  const { load, reload } = useLoad((signal) => ztax.listCompliancePackages({ limit: 500 }, signal), [])
+  return (
+    <Loaded load={load}>
+      {(data) => {
+        const live = data.packages.filter((p) => p.status !== 'ACCEPTED' && p.status !== 'CANCELLED')
+        const statutory = live.filter((p) => p.overdue.statutory)
+        const internal = live.filter((p) => p.overdue.internal && !p.overdue.statutory)
+        const authorities = countBy(data.packages, (p) => `${p.filingCountry} · ${p.filingAuthority}`)
+        return (
+          <>
+            <Tiles tiles={[
+              { label: 'Packages', count: data.packages.length },
+              { label: 'Still open', count: live.length, note: 'Neither accepted nor cancelled' },
+              { label: 'Statutory deadline missed', count: statutory.length, tone: 'bad' },
+              { label: 'Internal target missed', count: internal.length, tone: 'warn', note: 'Authority deadline still ahead' },
+              { label: 'Blocked on readiness', count: live.filter((p) => !p.ready).length, tone: 'warn' },
+              { label: 'Accepted', count: data.packages.filter((p) => p.status === 'ACCEPTED').length, tone: 'ok' },
+            ]} />
+            <Columns>
+              <Card title="By status" aside={<button type="button" className="ztax-btn-quiet" onClick={reload}>Refresh</button>}>
+                <table className="ztax-action-table">
+                  <tbody>
+                    {STATUSES.map((s) => (
+                      <tr key={s}>
+                        <td style={{ paddingRight: 8 }}><Status value={s} /></td>
+                        <td className="mono" style={{ textAlign: 'right' }}>{data.packages.filter((p) => p.status === s).length}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+              <Card title="By priority">
+                <table className="ztax-action-table">
+                  <tbody>
+                    {Object.keys(PRIORITY_LABEL).map((k) => (
+                      <tr key={k}>
+                        <td style={{ paddingRight: 8 }}><Priority value={k} /></td>
+                        <td className="mono" style={{ textAlign: 'right' }}>{data.packages.filter((p) => p.priority === k).length}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
+            </Columns>
+            <Card title="By authority">
+              {authorities.length === 0 ? <Empty>No compliance packages yet.</Empty> : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="ztax-action-table">
+                    <thead><tr><th>Authority</th><th>Packages</th><th>Open</th><th>Filed / accepted</th><th>Rejected / uncertain</th><th>Statutory missed</th></tr></thead>
+                    <tbody>
+                      {authorities.map(([a, n]) => {
+                        const mine = data.packages.filter((p) => `${p.filingCountry} · ${p.filingAuthority}` === a)
+                        return (
+                          <tr key={a}>
+                            <td className="mono" style={{ paddingRight: 8 }}>{a}</td>
+                            <td className="mono" style={{ paddingRight: 8 }}>{n}</td>
+                            <td className="mono" style={{ paddingRight: 8 }}>{mine.filter((p) => ['READY', 'IN_REVIEW', 'APPROVED', 'TRANSMITTING'].includes(p.status)).length}</td>
+                            <td className="mono" style={{ paddingRight: 8 }}>{mine.filter((p) => p.status === 'FILED' || p.status === 'ACCEPTED').length}</td>
+                            <td className="mono" style={{ paddingRight: 8 }}>{mine.filter((p) => p.status === 'REJECTED' || p.status === 'UNCERTAIN_SUBMISSION').length}</td>
+                            <td className="mono">{mine.filter((p) => p.overdue.statutory && p.status !== 'ACCEPTED' && p.status !== 'CANCELLED').length}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+            <Card title="Deadline breaches">
+              {statutory.length + internal.length === 0 ? <Empty>Every open package is within its deadlines.</Empty> : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="ztax-action-table">
+                    <thead><tr><th>Return</th><th>Period</th><th>Authority deadline</th><th>Breach</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody>
+                      {[...statutory, ...internal].map((p) => (
+                        <tr key={p.id}>
+                          <td style={{ fontWeight: 500, color: '#111827', paddingRight: 8 }}>
+                            {p.obligationType} <span className="mono muted">{p.filingCountry} · {p.filingAuthority}</span>
+                          </td>
+                          <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}>{civilDate(p.periodStart)} – {civilDate(p.periodEnd)}</td>
+                          <td style={{ paddingRight: 8, whiteSpace: 'nowrap' }}>{instant(p.statutoryDue)}</td>
+                          <td style={{ paddingRight: 8 }}><Overdue p={p} /></td>
+                          <td style={{ paddingRight: 8 }}><Status value={p.status} /></td>
+                          <td><OpenButton onClick={() => { onOpen(p.id) }} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          </>
+        )
+      }}
+    </Loaded>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// the queue
+// ---------------------------------------------------------------------------
+
+const Queue = ({ session, selected, setSelected }: {
+  session: PageProps['session']
+  selected: string | null
+  setSelected: (id: string | null) => void
+}) => {
+  const [status, setStatus] = useState<PackageStatus | 'ALL'>('ALL')
   const { load, reload } = useLoad(
     (signal) => ztax.listCompliancePackages(status === 'ALL' ? { limit: 500 } : { status, limit: 500 }, signal),
     [status],
@@ -92,17 +432,7 @@ export const CompliancePage = ({ session }: PageProps) => {
   const canReview = canOperate || roles.includes('ANALYST')
 
   return (
-    <div className="ztax-page">
-      <PageHeader
-        title="Compliance"
-        subtitle="Filings in queue order: priority, then the authority's deadline. Each is prepared, reviewed by someone else, approved as an exact version, then submitted."
-        actions={
-          <button type="button" className="ztax-btn-quiet" onClick={reload}>
-            Refresh
-          </button>
-        }
-      />
-
+    <>
       <Card
         title="Queue"
         aside={
@@ -113,6 +443,9 @@ export const CompliancePage = ({ session }: PageProps) => {
                 {STATUSES.map((s) => <option key={s} value={s}>{words(s)}</option>)}
               </select>
             </Field>
+            <button type="button" className="ztax-btn-quiet" onClick={reload}>
+              Refresh
+            </button>
           </div>
         }
       >
@@ -185,7 +518,7 @@ export const CompliancePage = ({ session }: PageProps) => {
           <p className="ztax-note">Starting a compliance package needs the OPERATOR role.</p>
         </Card>
       )}
-    </div>
+    </>
   )
 }
 

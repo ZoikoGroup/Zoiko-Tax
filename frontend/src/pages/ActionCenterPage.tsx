@@ -6,6 +6,10 @@ import type { View } from '../components/layout/Sidebar'
 import { civilDate, instant, moneyText, periodLabel } from '../dashboard/format'
 import { ztax } from '../platform/client'
 import { Card, Empty, Field, Id, Loaded, PageHeader, useLoad } from '../ui/kit'
+import { TabBar } from './determine/shared'
+import { useRoutedTab } from './routedTab'
+import { listed, WorkTable, type WorkRow } from './workspace'
+import { beneficiaryApprovals, obligationExceptions, packageApprovals, packageExceptions, remittanceApprovals, remittanceExceptions } from './worklists'
 import type { PageProps } from './types'
 import './obligations.css'
 
@@ -39,30 +43,110 @@ const priorityClass = (p: Priority) =>
 const isPriority = (v: string): v is Priority => (PRIORITIES as readonly string[]).includes(v)
 const isKind = (v: string): v is Kind => (KINDS as readonly string[]).includes(v)
 
-export const ActionCenterPage = ({ period, onNavigate }: PageProps) => {
+type Tab = 'tasks' | 'exceptions' | 'approvals'
+
+const TABS: readonly { value: Tab; label: string }[] = [
+  { value: 'tasks', label: 'My tasks' },
+  { value: 'exceptions', label: 'Tax exceptions' },
+  { value: 'approvals', label: 'Pending approvals' },
+]
+
+const SUBTITLE: Record<Tab, string> = {
+  tasks: 'What the record says needs a person, by priority.',
+  exceptions: 'Overdue, rejected, returned and uncertain items across obligations, filings and payments, earliest first.',
+  approvals: 'Filings, payments and payee details waiting for someone other than their maker to review, approve or verify.',
+}
+
+export const ActionCenterPage = ({ period, onNavigate, route, onTabChange }: PageProps) => {
+  const [tab, setTab] = useRoutedTab(TABS.map((t) => t.value), 'tasks', route, onTabChange)
+  const open = (r: WorkRow) => { onNavigate(r.open.view, r.open.tab === undefined ? {} : { tab: r.open.tab }) }
+  return (
+    <div className="ztax-page">
+      <PageHeader title="Action Center" subtitle={SUBTITLE[tab]} />
+      <TabBar label="Action Center" tabs={TABS} current={tab} onSelect={setTab} />
+      {tab === 'tasks' ? <TasksTab period={period} onNavigate={onNavigate} />
+        : tab === 'exceptions' ? <ExceptionsTab onOpen={open} />
+        : <ApprovalsTab onOpen={open} />}
+    </div>
+  )
+}
+
+const ExceptionsTab = ({ onOpen }: { onOpen: (r: WorkRow) => void }) => {
+  const obligations = useLoad((signal) => ztax.listObligations({ limit: 500 }, signal), [])
+  const packages = useLoad((signal) => ztax.listCompliancePackages({ limit: 500 }, signal), [])
+  const remittances = useLoad((signal) => ztax.listRemittances({ limit: 500 }, signal), [])
+  const sources = [
+    listed('Obligations', obligations.load, (d) => obligationExceptions(d.obligations)),
+    listed('Filings', packages.load, (d) => packageExceptions(d.packages)),
+    listed('Payments', remittances.load, (d) => remittanceExceptions(d.remittances)),
+  ]
+  const count = sources.reduce((n, s) => n + (s.load.status === 'ready' ? s.load.data.length : 0), 0)
+  return (
+    <Card
+      title={`${count} ${count === 1 ? 'exception' : 'exceptions'}`}
+      aside={
+        <button type="button" className="ztax-btn-quiet"
+          onClick={() => { obligations.reload(); packages.reload(); remittances.reload() }}>
+          Refresh
+        </button>
+      }
+    >
+      <WorkTable sources={sources} onOpen={onOpen} empty="No obligation, filing or payment is overdue, rejected, returned or uncertain." />
+    </Card>
+  )
+}
+
+const ApprovalsTab = ({ onOpen }: { onOpen: (r: WorkRow) => void }) => {
+  const packages = useLoad((signal) => ztax.listCompliancePackages({ status: 'IN_REVIEW', limit: 500 }, signal), [])
+  const remittances = useLoad((signal) => ztax.listRemittances({ status: 'APPROVAL_REQUIRED', limit: 500 }, signal), [])
+  const payees = useLoad((signal) => ztax.listBeneficiaries(signal), [])
+  const sources = [
+    listed('Filings in review', packages.load, (d) => packageApprovals(d.packages)),
+    listed('Payments awaiting approval', remittances.load, (d) => remittanceApprovals(d.remittances)),
+    listed('Payees awaiting verification', payees.load, (d) => beneficiaryApprovals(d.beneficiaries)),
+  ]
+  const count = sources.reduce((n, s) => n + (s.load.status === 'ready' ? s.load.data.length : 0), 0)
+  return (
+    <>
+      <p className="ztax-note">
+        Four-eyes: the cell refuses an approval or verification by the person who prepared, made or entered the item.
+      </p>
+      <Card
+        title={`${count} waiting`}
+        aside={
+          <button type="button" className="ztax-btn-quiet"
+            onClick={() => { packages.reload(); remittances.reload(); payees.reload() }}>
+            Refresh
+          </button>
+        }
+      >
+        <WorkTable sources={sources} onOpen={onOpen} empty="Nothing is waiting for review, approval or verification." />
+      </Card>
+    </>
+  )
+}
+
+const TasksTab = ({ period, onNavigate }: Pick<PageProps, 'period' | 'onNavigate'>) => {
   const [priority, setPriority] = useState<Priority | 'ALL'>('ALL')
   const [kind, setKind] = useState<Kind | 'ALL'>('ALL')
   const { load, reload } = useLoad((signal) => ztax.getDashboard({ period }, signal), [period])
 
-  const subtitle = load.status === 'ready' ? (
-    <span>
-      {periodLabel(load.data.period)} ·{' '}
-      {PRIORITIES.map((p) => `${load.data.actions.filter((a) => a.priority === p).length} ${p}`).join(' · ')} · read{' '}
-      {instant(load.data.asOf)}
-    </span>
-  ) : undefined
-
   return (
-    <div className="ztax-page">
-      <PageHeader
-        title="Action Center"
-        subtitle={subtitle}
-        actions={
-          <button type="button" className="ztax-btn-quiet" onClick={reload}>
-            Refresh
-          </button>
-        }
-      />
+    <>
+      <div className="ztax-status-line" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <span>
+          {load.status === 'ready' ? (
+            <>
+              {periodLabel(load.data.period)} ·{' '}
+              {PRIORITIES.map((p) => `${load.data.actions.filter((a) => a.priority === p).length} ${p}`).join(' · ')} · read{' '}
+              {instant(load.data.asOf)}
+            </>
+          ) : null}
+        </span>
+        <button type="button" className="ztax-btn-quiet" onClick={reload}>
+          Refresh
+        </button>
+      </div>
       <Loaded load={load}>
         {(d) => {
           const shown = d.actions.filter(
@@ -166,6 +250,6 @@ export const ActionCenterPage = ({ period, onNavigate }: PageProps) => {
           )
         }}
       </Loaded>
-    </div>
+    </>
   )
 }

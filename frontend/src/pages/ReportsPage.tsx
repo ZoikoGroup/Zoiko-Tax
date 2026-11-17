@@ -1,8 +1,11 @@
-import { useState } from 'react'
-
 import { civilDate, instant } from '../dashboard/format'
 import { ztax } from '../platform/client'
 import { Card, Empty, Field, Loaded, PageHeader, Status, useLoad, type Load } from '../ui/kit'
+import { AuditTrail } from './ActivityPage'
+import { PAIR_HEADER, pairFilings, pairRow } from './filingPairs'
+import { useRoutedTab } from './routedTab'
+import type { PageProps } from './types'
+import { both, downloadCsv, hasRole } from './workspace'
 import './obligations.css'
 
 // Reports: read-only registers over what the cell recorded, each
@@ -17,24 +20,17 @@ interface Report {
   readonly rows: readonly Row[]
 }
 
-const REPORTS = ['obligations', 'filings', 'payments', 'shadow', 'migration'] as const
+const REPORTS = ['obligations', 'filings', 'payments', 'reconciliation', 'shadow', 'migration', 'exports'] as const
 type ReportId = (typeof REPORTS)[number]
 const TITLES: Record<ReportId, string> = {
   obligations: 'Obligations register', filings: 'Filing status', payments: 'Payments register',
-  shadow: 'Shadow assurance runs', migration: 'Migration programs',
+  reconciliation: 'Filing-to-payment reconciliation', shadow: 'Shadow assurance runs', migration: 'Migration programs',
+  exports: 'Audit export',
 }
 const isReport = (v: string): v is ReportId => (REPORTS as readonly string[]).includes(v)
 
-const csvCell = (s: string) => (/[",\n]/.test(s) ? `"${s.replaceAll('"', '""')}"` : s)
-
 function download(r: Report) {
-  const text = [r.header, ...r.rows].map((row) => row.map(csvCell).join(',')).join('\n') + '\n'
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }))
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `${r.title.toLowerCase().replaceAll(' ', '-')}-${new Date().toISOString().slice(0, 10)}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
+  downloadCsv(r.title, r.header, r.rows)
 }
 
 /** Counts of a column's values, for the summary line. */
@@ -47,28 +43,53 @@ function tally(rows: readonly Row[], column: number): string {
   return [...counts.entries()].map(([k, n]) => `${k.replaceAll('_', ' ')} ${n}`).join(' · ')
 }
 
-export const ReportsPage = () => {
-  const [which, setWhich] = useState<ReportId>('obligations')
+// Partial until the shell passes every page its props; without a session the audit export reads as not permitted.
+export const ReportsPage = ({ session, route, onTabChange }: Partial<PageProps>) => {
+  const [which, setWhich] = useRoutedTab(REPORTS, 'obligations', route, onTabChange)
+  if (which === 'exports') {
+    return (
+      <div className="ztax-page">
+        <PageHeader title="Reports" subtitle="Audit export: the tenant’s administrative audit trail, downloadable as CSV." />
+        <ReportPicker which={which} onPick={setWhich} />
+        <AuditTrail canRead={session !== undefined && hasRole(session.user.roles, 'ADMIN', 'AUDITOR')} title={TITLES.exports} />
+      </div>
+    )
+  }
   return (
     <div className="ztax-page">
       <PageHeader title="Reports" subtitle="Read-only registers of what the cell recorded. Figures are shown exactly as recorded; download any as CSV." />
       <Card
         title={TITLES[which]}
-        aside={
-          <div className="ztax-filter-bar">
-            <Field label="Report">
-              <select value={which} onChange={(e) => { if (isReport(e.target.value)) setWhich(e.target.value) }}>
-                {REPORTS.map((r) => <option key={r} value={r}>{TITLES[r]}</option>)}
-              </select>
-            </Field>
-          </div>
-        }
+        aside={<ReportPicker which={which} onPick={setWhich} />}
       >
         {which === 'obligations' ? <Obligations /> : which === 'filings' ? <Filings /> : which === 'payments' ? <Payments />
-          : which === 'shadow' ? <Shadow /> : <Migration />}
+          : which === 'reconciliation' ? <Reconciliation /> : which === 'shadow' ? <Shadow /> : <Migration />}
       </Card>
     </div>
   )
+}
+
+const ReportPicker = ({ which, onPick }: { which: ReportId; onPick: (r: ReportId) => void }) => (
+  <div className="ztax-filter-bar">
+    <Field label="Report">
+      <select value={which} onChange={(e) => { if (isReport(e.target.value)) onPick(e.target.value) }}>
+        {REPORTS.map((r) => <option key={r} value={r}>{TITLES[r]}</option>)}
+      </select>
+    </Field>
+  </div>
+)
+
+const Reconciliation = () => {
+  const { load } = useLoad(
+    (signal) => both(ztax.listCompliancePackages({ limit: 500 }, signal), ztax.listRemittances({ limit: 500 }, signal)),
+    [],
+  )
+  return <ReportView load={load} statusColumn={0} build={([packages, remittances]) => ({
+    title: TITLES.reconciliation,
+    note: 'Each filing beside the payment made for it, matched by obligation. "Same figure" is the filed control total and the instructed amount compared as recorded strings, never recomputed.',
+    header: PAIR_HEADER,
+    rows: pairFilings(packages.packages, remittances.remittances).map(pairRow),
+  })} />
 }
 
 function ReportView<T>({ load, build, statusColumn }: { load: Load<T>; build: (data: T) => Report; statusColumn: number }) {
