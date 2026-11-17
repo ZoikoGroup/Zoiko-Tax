@@ -135,6 +135,10 @@ type Router struct {
 	// runs, exceptions and the cutover state machine.
 	Migration *app.MigrationService
 
+	// Support serves the customer support triage queue. It reads and writes
+	// support cases only, so it is served wherever the store is.
+	Support *app.SupportService
+
 	// Dashboard serves the Tax Command Center. It reads what was recorded
 	// and needs no content, so it is served wherever the store is.
 	Dashboard *app.DashboardService
@@ -361,6 +365,14 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/migrations/programs/{migrationProgramId}/cutover", false, []security.Role{admin, operator}}, rt.handleMoveMigrationCutover},
 		{Route{"GET", "/v1/migrations/runs/{migrationRunId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetMigrationRun},
 		{Route{"POST", "/v1/migrations/exceptions/{migrationExceptionId}/decision", false, []security.Role{admin, operator, analyst}}, rt.handleDecideMigrationException},
+
+		// Support cases (Doc 18 W16): not fiscal, so ADMIN works them with
+		// OPERATOR and ANALYST; AUDITOR reads. Sign-off is four-eye, compared
+		// as people in the service (T18-18).
+		{Route{"GET", "/v1/support/cases", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListSupportCases},
+		{Route{"POST", "/v1/support/cases", false, []security.Role{admin, operator, analyst}}, rt.handleOpenSupportCase},
+		{Route{"GET", "/v1/support/cases/{caseId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetSupportCase},
+		{Route{"POST", "/v1/support/cases/{caseId}/actions", false, []security.Role{admin, operator, analyst}}, rt.handleActOnSupportCase},
 
 		// The Tax Command Center: read-only aggregates. ADMIN is not on it,
 		// for the reason it is on no fiscal read above.

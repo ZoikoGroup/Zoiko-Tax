@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:aadfe8af64fd89c8cc79ecaefc426d862af2b74c2219e7c34a675d23209c150b`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:8c7f74912defbc9047e3ffb0a0b0fa701309f6da52ad34c6e09c29275d0fd0cb`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -438,7 +438,7 @@
     },
     {
       "name": "04 · Administration",
-      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked. Then payee master data: `createBeneficiary` records an authority's payee details and captures `beneficiaryId`; the same administrator verifying them is refused with `MAKER_CHECKER` (ZTAX-REM-REQ-0014), and the version is suspended. Then a migration: `createMigrationProgram` creates a program for 2025 and captures `migrationProgramId`; a snapshot of two historical results is registered, a mapping that names only one of their legacy codes is recorded, and `executeMigrationRun` converts the snapshot AS_KNOWN — one record converts, the other raises an `UNMAPPED_CODE` exception, captured into `migrationExceptionId`, and the monetary reconciliation does not pass. The exception is accepted as a known residual and the cutover moves to `PRECHECK`.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
+      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked. Then payee master data: `createBeneficiary` records an authority's payee details and captures `beneficiaryId`; the same administrator verifying them is refused with `MAKER_CHECKER` (ZTAX-REM-REQ-0014), and the version is suspended. Then support: `openSupportCase` opens a LEGAL case and captures `caseId`; the queue and the case are read, and `actOnSupportCase` verifies the requester, which moves the case to `VERIFIED` as one more event in its history. Then a migration: `createMigrationProgram` creates a program for 2025 and captures `migrationProgramId`; a snapshot of two historical results is registered, a mapping that names only one of their legacy codes is recorded, and `executeMigrationRun` converts the snapshot AS_KNOWN — one record converts, the other raises an `UNMAPPED_CODE` exception, captured into `migrationExceptionId`, and the monetary reconciliation does not pass. The exception is accepted as a known residual and the cutover moves to `PRECHECK`.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
       "item": [
         {
           "name": "GET /v1/admin/users — List the tenant's users",
@@ -3280,6 +3280,371 @@
                 "exec": [
                   "pm.test('suspendBeneficiary returns a status the contract declares', function () {",
                   "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/support/cases — Open a support case",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"LEGAL\",\n  \"severity\": \"S2\",\n  \"subject\": \"Letter from the tax authority about September VAT\",\n  \"description\": \"The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.\",\n  \"product\": \"Telecom VAT\",\n  \"references\": {\n    \"decisionId\": \"{{decisionId}}\"\n  },\n  \"evidence\": [\n    \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/support/cases",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "support",
+                "cases"
+              ]
+            },
+            "description": "Open a support case\n\n`ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.\n\nOpens the case `NEW`. The support SLA starts now and is due after the\nseverity's target — S1 four hours, S2 one day, S3 three days, S4 seven\ndays — measured to the first customer response. A statutory deadline,\nwhen the request has one, is recorded beside it and never merged into\nit (SUP-06).\n\nThe decision, document, obligation and remittance a case names are\nread-only references. Nothing a case does changes them, and support\ncannot refund, file, pay or edit a rule (SUP-03, SUP-04, SUP-11)."
+          },
+          "response": [
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/support/cases",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "support",
+                    "cases"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"type\": \"LEGAL\",\n  \"openedType\": \"LEGAL\",\n  \"severity\": \"S2\",\n  \"subject\": \"Letter from the tax authority about September VAT\",\n  \"description\": \"The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.\",\n  \"product\": {\n    \"Telecom VAT references\": {\n      \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n    },\n    \"evidence\": [\n      \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"\n    ],\n    \"status\": \"NEW\",\n    \"missingFacts\": [],\n    \"clocks\": {\n      \"slaDueAt\": \"2026-10-02T09:00:00.000000Z\",\n      \"sla\": \"ON_TRACK\",\n      \"statutory\": \"NONE\",\n      \"statutoryPrecedes\": false,\n      \"dueAt\": \"2026-10-02T09:00:00.000000Z\"\n    },\n    \"actions\": [\n      \"VERIFY\",\n      \"ASSIGN\",\n      \"REQUEST_EVIDENCE\",\n      \"ADD_EVIDENCE\",\n      \"NOTE\",\n      \"REQUEST_LEGAL_HOLD\"\n    ],\n    \"signOffRequired\": true,\n    \"signedOff\": false,\n    \"responded\": false,\n    \"openedAt\": \"2026-10-01T09:00:00.000000Z\",\n    \"openedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n    \"history\": [\n      {\n        \"seq\": 1,\n        \"action\": \"OPENED\",\n        \"status\": \"NEW\",\n        \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n        \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n      }\n    ]\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('openSupportCase returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('Doc 18 W16 — a case opens NEW, with its support SLA and statutory clock kept apart', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().status).to.eql('NEW');",
+                  "  pm.expect(pm.response.json().clocks).to.have.property('slaDueAt');",
+                  "  pm.expect(pm.response.json().clocks.statutory).to.eql('NONE');",
+                  "});",
+                  "pm.collectionVariables.set('caseId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/support/cases — The support triage queue",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/support/cases?type={{type}}&severity={{severity}}&status={{status}}&product={{product}}&legalEntityId={{legalEntityId}}&fiscalPeriod={{fiscalPeriod}}&assignee={{assignee}}&unassigned={{unassigned}}&slaClock={{slaClock}}&statutoryClock={{statutoryClock}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "support",
+                "cases"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "{{type}}",
+                  "description": "Only cases of this type."
+                },
+                {
+                  "key": "severity",
+                  "value": "{{severity}}",
+                  "description": "Only cases of this severity."
+                },
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only cases in this status."
+                },
+                {
+                  "key": "product",
+                  "value": "{{product}}",
+                  "description": "Only cases about this product, compared without regard to case."
+                },
+                {
+                  "key": "legalEntityId",
+                  "value": "{{legalEntityId}}",
+                  "description": "Only cases about this customer legal entity."
+                },
+                {
+                  "key": "fiscalPeriod",
+                  "value": "{{fiscalPeriod}}",
+                  "description": "Only cases about this impacted fiscal period."
+                },
+                {
+                  "key": "assignee",
+                  "value": "{{assignee}}",
+                  "description": "Only cases this person owns."
+                },
+                {
+                  "key": "unassigned",
+                  "value": "{{unassigned}}",
+                  "description": "Only cases nobody owns."
+                },
+                {
+                  "key": "slaClock",
+                  "value": "{{slaClock}}",
+                  "description": "Only cases whose support SLA stands here."
+                },
+                {
+                  "key": "statutoryClock",
+                  "value": "{{statutoryClock}}",
+                  "description": "Only cases whose statutory deadline stands here; `NONE` is cases with no statutory deadline."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The support triage queue\n\n`ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.\n\nThe most recently opened cases, filtered, with open cases first and the\nsoonest due first: the earlier of the support SLA and any statutory\ndeadline, which takes precedence when it falls first (SUP-06). Closed\ncases follow, newest first. Each case carries both clocks, separately."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/support/cases",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "support",
+                    "cases"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"cases\": [\n    {\n      \"id\": \"01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"type\": \"LEGAL\",\n      \"openedType\": \"LEGAL\",\n      \"severity\": \"S2\",\n      \"subject\": \"Letter from the tax authority about September VAT\",\n      \"description\": \"The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.\",\n      \"product\": \"Telecom VAT\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"fiscalPeriod\": \"2026-09\",\n      \"contractRef\": \"MSA-2026-014\",\n      \"references\": {\n        \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n      },\n      \"evidence\": [\n        \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"\n      ],\n      \"status\": \"TRIAGED\",\n      \"missingFacts\": [],\n      \"clocks\": {\n        \"slaDueAt\": \"2026-10-02T09:00:00.000000Z\",\n        \"sla\": \"ON_TRACK\",\n        \"statutoryDueAt\": \"2026-10-01T17:00:00.000000Z\",\n        \"statutory\": \"AT_RISK\",\n        \"statutoryPrecedes\": true,\n        \"dueAt\": \"2026-10-01T17:00:00.000000Z\"\n      },\n      \"actions\": [\n        \"ASSIGN\",\n        \"REQUEST_EVIDENCE\",\n        \"ADD_EVIDENCE\",\n        \"START_REVIEW\",\n        \"ESCALATE\",\n        \"NOTE\",\n        \"REQUEST_LEGAL_HOLD\"\n      ],\n      \"signOffRequired\": true,\n      \"signedOff\": false,\n      \"responded\": false,\n      \"openedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"openedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"action\": \"OPENED\",\n          \"status\": \"NEW\",\n          \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 2,\n          \"action\": \"VERIFY\",\n          \"status\": \"VERIFIED\",\n          \"note\": \"Caller confirmed as the customer's named tax contact\",\n          \"recordedAt\": \"2026-10-01T09:05:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        },\n        {\n          \"seq\": 3,\n          \"action\": \"TRIAGE\",\n          \"status\": \"TRIAGED\",\n          \"fiscalPeriod\": \"2026-09\",\n          \"contractRef\": \"MSA-2026-014\",\n          \"statutoryDueAt\": \"2026-10-01T17:00:00.000000Z\",\n          \"recordedAt\": \"2026-10-01T09:10:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listSupportCases returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/support/cases/{caseId} — One support case, its clocks and its history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/support/cases/{{caseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "support",
+                "cases",
+                "{{caseId}}"
+              ]
+            },
+            "description": "One support case, its clocks and its history\n\n`ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.\n\nThe case as its history folds now: the current classification, the\nactions its status allows, the closure guard's inputs, and both clocks\nread as of now. Reading changes nothing."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/support/cases/{{caseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "support",
+                    "cases",
+                    "{{caseId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"type\": \"LEGAL\",\n  \"openedType\": \"LEGAL\",\n  \"severity\": \"S2\",\n  \"subject\": \"Letter from the tax authority about September VAT\",\n  \"description\": \"The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.\",\n  \"product\": \"Telecom VAT\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"fiscalPeriod\": \"2026-09\",\n  \"contractRef\": \"MSA-2026-014\",\n  \"references\": {\n    \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n  },\n  \"evidence\": [\n    \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"\n  ],\n  \"status\": \"TRIAGED\",\n  \"missingFacts\": [],\n  \"clocks\": {\n    \"slaDueAt\": \"2026-10-02T09:00:00.000000Z\",\n    \"sla\": \"ON_TRACK\",\n    \"statutoryDueAt\": \"2026-10-01T17:00:00.000000Z\",\n    \"statutory\": \"AT_RISK\",\n    \"statutoryPrecedes\": true,\n    \"dueAt\": \"2026-10-01T17:00:00.000000Z\"\n  },\n  \"actions\": [\n    \"ASSIGN\",\n    \"REQUEST_EVIDENCE\",\n    \"ADD_EVIDENCE\",\n    \"START_REVIEW\",\n    \"ESCALATE\",\n    \"NOTE\",\n    \"REQUEST_LEGAL_HOLD\"\n  ],\n  \"signOffRequired\": true,\n  \"signedOff\": false,\n  \"responded\": false,\n  \"openedAt\": \"2026-10-01T09:00:00.000000Z\",\n  \"openedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"action\": \"OPENED\",\n      \"status\": \"NEW\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"action\": \"VERIFY\",\n      \"status\": \"VERIFIED\",\n      \"note\": \"Caller confirmed as the customer's named tax contact\",\n      \"recordedAt\": \"2026-10-01T09:05:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 3,\n      \"action\": \"TRIAGE\",\n      \"status\": \"TRIAGED\",\n      \"fiscalPeriod\": \"2026-09\",\n      \"contractRef\": \"MSA-2026-014\",\n      \"statutoryDueAt\": \"2026-10-01T17:00:00.000000Z\",\n      \"recordedAt\": \"2026-10-01T09:10:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getSupportCase returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/support/cases/{caseId}/actions — Take one action on a support case",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"VERIFY\",\n  \"note\": \"Caller confirmed as the customer's named tax contact\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/support/cases/{{caseId}}/actions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "support",
+                "cases",
+                "{{caseId}}",
+                "actions"
+              ]
+            },
+            "description": "Take one action on a support case\n\n`ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.\n\nEvery action appends one event to the case's single audited history;\nnothing is edited. `VERIFY` moves `NEW` to `VERIFIED`. `TRIAGE`\nclassifies the case and moves it to `TRIAGED`, or to\n`TRIAGE_INCOMPLETE` with the facts requested when the contract, the\nimpacted period or the seller is missing (SUP-02). `START_REVIEW` and\n`ESCALATE` move it to `IN_REVIEW`; `RESPOND` records the customer\nresponse, `RESOLVE` follows it, and `CLOSE` ends the case.\n`REOPEN` takes a resolved or closed case back to `IN_REVIEW`, linked to\nthe event it reverses (SUP-07). `ASSIGN`, `REQUEST_EVIDENCE`,\n`ADD_EVIDENCE`, `SIGN_OFF`, `NOTE` and `REQUEST_LEGAL_HOLD` change no\nstatus; a legal hold request is recorded for an administrator, and\nplaces no hold.\n\n`CLOSE` needs a customer response since the last reopening, or\n`409 STATE_TRANSITION_INVALID` (SUP-14). A case that is, or was ever,\n`LEGAL` or `TAX_SPECIALIST` also needs a sign-off since the last\nreopening by someone other than its opener, or `409 SIGN_OFF_REQUIRED`;\nthe opener's own sign-off is `403 SEGREGATION_OF_DUTIES` (T18-18).\n\nNeither clock is reset: a raised severity can bring the SLA due time\nearlier, measured from opening, and a statutory deadline once recorded\nis never changed by support (SUP-07). An action the status does not\nallow is `409 STATE_TRANSITION_INVALID`."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/support/cases/{{caseId}}/actions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "support",
+                    "cases",
+                    "{{caseId}}",
+                    "actions"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"type\": \"LEGAL\",\n  \"openedType\": \"LEGAL\",\n  \"severity\": \"S2\",\n  \"subject\": \"Letter from the tax authority about September VAT\",\n  \"description\": \"The customer received a letter questioning the reduced rate on invoice INV-1 and asks how to answer it.\",\n  \"product\": \"Telecom VAT\",\n  \"references\": {\n    \"decisionId\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\"\n  },\n  \"evidence\": [\n    \"sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"\n  ],\n  \"status\": \"VERIFIED\",\n  \"missingFacts\": [],\n  \"clocks\": {\n    \"slaDueAt\": \"2026-10-02T09:00:00.000000Z\",\n    \"sla\": \"ON_TRACK\",\n    \"statutory\": \"NONE\",\n    \"statutoryPrecedes\": false,\n    \"dueAt\": \"2026-10-02T09:00:00.000000Z\"\n  },\n  \"actions\": [\n    \"TRIAGE\",\n    \"ASSIGN\",\n    \"REQUEST_EVIDENCE\",\n    \"ADD_EVIDENCE\",\n    \"NOTE\",\n    \"REQUEST_LEGAL_HOLD\"\n  ],\n  \"signOffRequired\": true,\n  \"signedOff\": false,\n  \"responded\": false,\n  \"openedAt\": \"2026-10-01T09:00:00.000000Z\",\n  \"openedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"action\": \"OPENED\",\n      \"status\": \"NEW\",\n      \"recordedAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"action\": \"VERIFY\",\n      \"status\": \"VERIFIED\",\n      \"note\": \"Caller confirmed as the customer's named tax contact\",\n      \"recordedAt\": \"2026-10-01T09:05:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('actOnSupportCase returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('Doc 18 W16 — every act is one more event in the case history', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().status).to.eql('VERIFIED');",
+                  "  pm.expect(pm.response.json().history.length).to.eql(2);",
                   "});"
                 ]
               }
@@ -10693,6 +11058,56 @@
       "type": "string"
     },
     {
+      "key": "caseId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "type",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "severity",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "product",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "legalEntityId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "fiscalPeriod",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "assignee",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "unassigned",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "slaClock",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "statutoryClock",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "reusedKey",
       "value": "",
       "type": "string"
@@ -10704,7 +11119,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:aadfe8af64fd89c8cc79ecaefc426d862af2b74c2219e7c34a675d23209c150b",
+      "value": "sha256:8c7f74912defbc9047e3ffb0a0b0fa701309f6da52ad34c6e09c29275d0fd0cb",
       "type": "string"
     }
   ]

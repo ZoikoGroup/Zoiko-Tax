@@ -482,22 +482,22 @@ func (e ComplianceResolution) Valid() bool {
 
 // Defines values for ComplianceReviewDecision.
 const (
-	ACCEPT          ComplianceReviewDecision = "ACCEPT"
-	ESCALATE        ComplianceReviewDecision = "ESCALATE"
-	REJECT          ComplianceReviewDecision = "REJECT"
-	RETURNFORCHANGE ComplianceReviewDecision = "RETURN_FOR_CHANGE"
+	ComplianceReviewDecisionACCEPT          ComplianceReviewDecision = "ACCEPT"
+	ComplianceReviewDecisionESCALATE        ComplianceReviewDecision = "ESCALATE"
+	ComplianceReviewDecisionREJECT          ComplianceReviewDecision = "REJECT"
+	ComplianceReviewDecisionRETURNFORCHANGE ComplianceReviewDecision = "RETURN_FOR_CHANGE"
 )
 
 // Valid indicates whether the value is a known member of the ComplianceReviewDecision enum.
 func (e ComplianceReviewDecision) Valid() bool {
 	switch e {
-	case ACCEPT:
+	case ComplianceReviewDecisionACCEPT:
 		return true
-	case ESCALATE:
+	case ComplianceReviewDecisionESCALATE:
 		return true
-	case REJECT:
+	case ComplianceReviewDecisionREJECT:
 		return true
-	case RETURNFORCHANGE:
+	case ComplianceReviewDecisionRETURNFORCHANGE:
 		return true
 	default:
 		return false
@@ -3078,6 +3078,234 @@ func (e SitusEvidenceType) Valid() bool {
 	case SERVICEADDRESS:
 		return true
 	case SIMCOUNTRY:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SupportCaseAction.
+const (
+	SupportCaseActionADDEVIDENCE      SupportCaseAction = "ADD_EVIDENCE"
+	SupportCaseActionASSIGN           SupportCaseAction = "ASSIGN"
+	SupportCaseActionCLOSE            SupportCaseAction = "CLOSE"
+	SupportCaseActionESCALATE         SupportCaseAction = "ESCALATE"
+	SupportCaseActionNOTE             SupportCaseAction = "NOTE"
+	SupportCaseActionOPENED           SupportCaseAction = "OPENED"
+	SupportCaseActionREOPEN           SupportCaseAction = "REOPEN"
+	SupportCaseActionREQUESTEVIDENCE  SupportCaseAction = "REQUEST_EVIDENCE"
+	SupportCaseActionREQUESTLEGALHOLD SupportCaseAction = "REQUEST_LEGAL_HOLD"
+	SupportCaseActionRESOLVE          SupportCaseAction = "RESOLVE"
+	SupportCaseActionRESPOND          SupportCaseAction = "RESPOND"
+	SupportCaseActionSIGNOFF          SupportCaseAction = "SIGN_OFF"
+	SupportCaseActionSTARTREVIEW      SupportCaseAction = "START_REVIEW"
+	SupportCaseActionTRIAGE           SupportCaseAction = "TRIAGE"
+	SupportCaseActionVERIFY           SupportCaseAction = "VERIFY"
+)
+
+// Valid indicates whether the value is a known member of the SupportCaseAction enum.
+func (e SupportCaseAction) Valid() bool {
+	switch e {
+	case SupportCaseActionADDEVIDENCE:
+		return true
+	case SupportCaseActionASSIGN:
+		return true
+	case SupportCaseActionCLOSE:
+		return true
+	case SupportCaseActionESCALATE:
+		return true
+	case SupportCaseActionNOTE:
+		return true
+	case SupportCaseActionOPENED:
+		return true
+	case SupportCaseActionREOPEN:
+		return true
+	case SupportCaseActionREQUESTEVIDENCE:
+		return true
+	case SupportCaseActionREQUESTLEGALHOLD:
+		return true
+	case SupportCaseActionRESOLVE:
+		return true
+	case SupportCaseActionRESPOND:
+		return true
+	case SupportCaseActionSIGNOFF:
+		return true
+	case SupportCaseActionSTARTREVIEW:
+		return true
+	case SupportCaseActionTRIAGE:
+		return true
+	case SupportCaseActionVERIFY:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SupportCaseStatus.
+const (
+	SupportCaseStatusCLOSED           SupportCaseStatus = "CLOSED"
+	SupportCaseStatusINREVIEW         SupportCaseStatus = "IN_REVIEW"
+	SupportCaseStatusNEW              SupportCaseStatus = "NEW"
+	SupportCaseStatusRESOLVED         SupportCaseStatus = "RESOLVED"
+	SupportCaseStatusRESPONDED        SupportCaseStatus = "RESPONDED"
+	SupportCaseStatusTRIAGED          SupportCaseStatus = "TRIAGED"
+	SupportCaseStatusTRIAGEINCOMPLETE SupportCaseStatus = "TRIAGE_INCOMPLETE"
+	SupportCaseStatusVERIFIED         SupportCaseStatus = "VERIFIED"
+)
+
+// Valid indicates whether the value is a known member of the SupportCaseStatus enum.
+func (e SupportCaseStatus) Valid() bool {
+	switch e {
+	case SupportCaseStatusCLOSED:
+		return true
+	case SupportCaseStatusINREVIEW:
+		return true
+	case SupportCaseStatusNEW:
+		return true
+	case SupportCaseStatusRESOLVED:
+		return true
+	case SupportCaseStatusRESPONDED:
+		return true
+	case SupportCaseStatusTRIAGED:
+		return true
+	case SupportCaseStatusTRIAGEINCOMPLETE:
+		return true
+	case SupportCaseStatusVERIFIED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SupportCaseType.
+const (
+	SupportCaseTypeCOVERAGEENTITLEMENT SupportCaseType = "COVERAGE_ENTITLEMENT"
+	SupportCaseTypeFILING              SupportCaseType = "FILING"
+	SupportCaseTypeINVOICEEXPLANATION  SupportCaseType = "INVOICE_EXPLANATION"
+	SupportCaseTypeLEGAL               SupportCaseType = "LEGAL"
+	SupportCaseTypeREMITTANCE          SupportCaseType = "REMITTANCE"
+	SupportCaseTypeSECURITY            SupportCaseType = "SECURITY"
+	SupportCaseTypeTAXSPECIALIST       SupportCaseType = "TAX_SPECIALIST"
+)
+
+// Valid indicates whether the value is a known member of the SupportCaseType enum.
+func (e SupportCaseType) Valid() bool {
+	switch e {
+	case SupportCaseTypeCOVERAGEENTITLEMENT:
+		return true
+	case SupportCaseTypeFILING:
+		return true
+	case SupportCaseTypeINVOICEEXPLANATION:
+		return true
+	case SupportCaseTypeLEGAL:
+		return true
+	case SupportCaseTypeREMITTANCE:
+		return true
+	case SupportCaseTypeSECURITY:
+		return true
+	case SupportCaseTypeTAXSPECIALIST:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SupportClockState.
+const (
+	SupportClockStateATRISK   SupportClockState = "AT_RISK"
+	SupportClockStateBREACHED SupportClockState = "BREACHED"
+	SupportClockStateMET      SupportClockState = "MET"
+	SupportClockStateNONE     SupportClockState = "NONE"
+	SupportClockStateONTRACK  SupportClockState = "ON_TRACK"
+	SupportClockStatePASSED   SupportClockState = "PASSED"
+)
+
+// Valid indicates whether the value is a known member of the SupportClockState enum.
+func (e SupportClockState) Valid() bool {
+	switch e {
+	case SupportClockStateATRISK:
+		return true
+	case SupportClockStateBREACHED:
+		return true
+	case SupportClockStateMET:
+		return true
+	case SupportClockStateNONE:
+		return true
+	case SupportClockStateONTRACK:
+		return true
+	case SupportClockStatePASSED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SupportEscalationTarget.
+const (
+	SupportEscalationTargetENGINEERING       SupportEscalationTarget = "ENGINEERING"
+	SupportEscalationTargetFINANCEOPERATIONS SupportEscalationTarget = "FINANCE_OPERATIONS"
+	SupportEscalationTargetLEGAL             SupportEscalationTarget = "LEGAL"
+	SupportEscalationTargetSECURITY          SupportEscalationTarget = "SECURITY"
+	SupportEscalationTargetTAXSPECIALIST     SupportEscalationTarget = "TAX_SPECIALIST"
+)
+
+// Valid indicates whether the value is a known member of the SupportEscalationTarget enum.
+func (e SupportEscalationTarget) Valid() bool {
+	switch e {
+	case SupportEscalationTargetENGINEERING:
+		return true
+	case SupportEscalationTargetFINANCEOPERATIONS:
+		return true
+	case SupportEscalationTargetLEGAL:
+		return true
+	case SupportEscalationTargetSECURITY:
+		return true
+	case SupportEscalationTargetTAXSPECIALIST:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SupportFact.
+const (
+	SupportFactCONTRACT     SupportFact = "CONTRACT"
+	SupportFactFISCALPERIOD SupportFact = "FISCAL_PERIOD"
+	SupportFactSELLER       SupportFact = "SELLER"
+)
+
+// Valid indicates whether the value is a known member of the SupportFact enum.
+func (e SupportFact) Valid() bool {
+	switch e {
+	case SupportFactCONTRACT:
+		return true
+	case SupportFactFISCALPERIOD:
+		return true
+	case SupportFactSELLER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SupportSeverity.
+const (
+	S1 SupportSeverity = "S1"
+	S2 SupportSeverity = "S2"
+	S3 SupportSeverity = "S3"
+	S4 SupportSeverity = "S4"
+)
+
+// Valid indicates whether the value is a known member of the SupportSeverity enum.
+func (e SupportSeverity) Valid() bool {
+	switch e {
+	case S1:
+		return true
+	case S2:
+		return true
+	case S3:
+		return true
+	case S4:
 		return true
 	default:
 		return false
@@ -8055,6 +8283,325 @@ type SubledgerPeriod struct {
 	State  PeriodState `json:"state"`
 }
 
+// SupportCase A support case, folded from its history. Not a fiscal record.
+type SupportCase struct {
+	// Actions The actions the case's status allows now. `CLOSE` is listed only once its guards pass; the server checks every guard again when an action is taken.
+	Actions []SupportCaseAction `json:"actions"`
+
+	// Assignee A person in the tenant who opened, owns or acted on a case.
+	Assignee *SupportUserID `json:"assignee,omitempty"`
+
+	// Clocks The case's two clocks, kept apart (SUP-06). Neither is reset by reopening or editing the case (SUP-07).
+	Clocks SupportCaseClocks `json:"clocks"`
+
+	// ContractRef A customer's own reference — a contract number, a seller — as the customer gave it.
+	ContractRef *SupportReference `json:"contractRef,omitempty"`
+	Description string            `json:"description"`
+
+	// EscalatedTo Who an escalated case is routed to. Routing hands the case to people with authority; it gives support none.
+	EscalatedTo *SupportEscalationTarget   `json:"escalatedTo,omitempty"`
+	Evidence    []SupportEvidenceReference `json:"evidence"`
+
+	// FiscalPeriod A subledger legal period, a month.
+	FiscalPeriod *LegalPeriod       `json:"fiscalPeriod,omitempty"`
+	History      []SupportCaseEvent `json:"history"`
+	ID           SupportCaseID      `json:"id"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID *LegalEntityID `json:"legalEntityId,omitempty"`
+
+	// MissingFacts What the latest incomplete triage asked for. Empty once triage is complete.
+	MissingFacts []SupportFact `json:"missingFacts"`
+
+	// OpenedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	OpenedAt Timestamp `json:"openedAt"`
+
+	// OpenedBy A person in the tenant who opened, owns or acted on a case.
+	OpenedBy SupportUserID `json:"openedBy"`
+
+	// OpenedType What a case is about. It routes the case and grants nothing; `LEGAL` and `TAX_SPECIALIST` cases close only after an independent sign-off (T18-18).
+	OpenedType SupportCaseType `json:"openedType"`
+
+	// Product The product line a request concerns.
+	Product *SupportProduct `json:"product,omitempty"`
+
+	// References What the case is about, by identifier. Read-only references; nothing a case does changes them (SUP-03, SUP-04, SUP-11).
+	References SupportCaseReferences `json:"references"`
+
+	// Responded A customer response has been recorded since the last reopening (SUP-14).
+	Responded bool `json:"responded"`
+
+	// SellerRef A customer's own reference — a contract number, a seller — as the customer gave it.
+	SellerRef *SupportReference `json:"sellerRef,omitempty"`
+
+	// Severity How badly the customer is affected. It sets the support SLA — S1 4 hours, S2 24 hours, S3 72 hours, S4 7 days to the first customer response.
+	Severity SupportSeverity `json:"severity"`
+
+	// SignOffRequired The case is, or was ever, LEGAL or TAX_SPECIALIST, so it closes only after an independent sign-off (T18-18).
+	SignOffRequired bool `json:"signOffRequired"`
+
+	// SignedOff Someone other than the opener has signed off since the last reopening.
+	SignedOff bool `json:"signedOff"`
+
+	// Status NEW → VERIFIED → TRIAGED → IN_REVIEW → RESPONDED → RESOLVED → CLOSED.
+	// TRIAGE_INCOMPLETE is a case lacking its contract, period or seller
+	// facts (SUP-02). A resolved or closed case may be reopened to IN_REVIEW
+	// (SUP-07).
+	Status  SupportCaseStatus `json:"status"`
+	Subject string            `json:"subject"`
+
+	// Type What a case is about. It routes the case and grants nothing; `LEGAL` and `TAX_SPECIALIST` cases close only after an independent sign-off (T18-18).
+	Type SupportCaseType `json:"type"`
+}
+
+// SupportCaseAction An act on a case. `OPENED` is recorded by opening the case and is never requested.
+type SupportCaseAction string
+
+// SupportCaseActionRequest One action. `note` is required for RESPOND, SIGN_OFF, REOPEN, ESCALATE,
+// REQUEST_EVIDENCE, NOTE and REQUEST_LEGAL_HOLD; `assignee` for ASSIGN;
+// `escalateTo` for ESCALATE; `evidence` for ADD_EVIDENCE. The
+// classification fields are read by TRIAGE only, and only what is
+// supplied changes.
+type SupportCaseActionRequest struct {
+	// Action An act on a case. `OPENED` is recorded by opening the case and is never requested.
+	Action SupportCaseAction `json:"action"`
+
+	// Assignee A person in the tenant who opened, owns or acted on a case.
+	Assignee *SupportUserID `json:"assignee,omitempty"`
+
+	// ContractRef A customer's own reference — a contract number, a seller — as the customer gave it.
+	ContractRef *SupportReference `json:"contractRef,omitempty"`
+
+	// EscalateTo Who an escalated case is routed to. Routing hands the case to people with authority; it gives support none.
+	EscalateTo *SupportEscalationTarget   `json:"escalateTo,omitempty"`
+	Evidence   []SupportEvidenceReference `json:"evidence,omitempty"`
+
+	// FiscalPeriod A subledger legal period, a month.
+	FiscalPeriod *LegalPeriod `json:"fiscalPeriod,omitempty"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID *LegalEntityID `json:"legalEntityId,omitempty"`
+
+	// Note Free text from the person acting — a response to the customer, a request, a sign-off or a note.
+	Note *SupportNote `json:"note,omitempty"`
+
+	// SellerRef A customer's own reference — a contract number, a seller — as the customer gave it.
+	SellerRef *SupportReference `json:"sellerRef,omitempty"`
+
+	// Severity How badly the customer is affected. It sets the support SLA — S1 4 hours, S2 24 hours, S3 72 hours, S4 7 days to the first customer response.
+	Severity *SupportSeverity `json:"severity,omitempty"`
+
+	// StatutoryDueAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	StatutoryDueAt *Timestamp `json:"statutoryDueAt,omitempty"`
+
+	// Type What a case is about. It routes the case and grants nothing; `LEGAL` and `TAX_SPECIALIST` cases close only after an independent sign-off (T18-18).
+	Type *SupportCaseType `json:"type,omitempty"`
+}
+
+// SupportCaseClocks The case's two clocks, kept apart (SUP-06). Neither is reset by reopening or editing the case (SUP-07).
+type SupportCaseClocks struct {
+	// DueAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	DueAt Timestamp `json:"dueAt"`
+
+	// FirstResponseAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	FirstResponseAt *Timestamp `json:"firstResponseAt,omitempty"`
+
+	// SLA Where one clock stands now. The support SLA is ON_TRACK, AT_RISK (a
+	// quarter of its window or less left), BREACHED, or MET (answered in
+	// time). A statutory deadline is NONE, ON_TRACK, AT_RISK (72 hours or
+	// less left) or PASSED.
+	SLA SupportClockState `json:"sla"`
+
+	// SLADueAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	SLADueAt Timestamp `json:"slaDueAt"`
+
+	// Statutory Where one clock stands now. The support SLA is ON_TRACK, AT_RISK (a
+	// quarter of its window or less left), BREACHED, or MET (answered in
+	// time). A statutory deadline is NONE, ON_TRACK, AT_RISK (72 hours or
+	// less left) or PASSED.
+	Statutory SupportClockState `json:"statutory"`
+
+	// StatutoryDueAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	StatutoryDueAt *Timestamp `json:"statutoryDueAt,omitempty"`
+
+	// StatutoryPrecedes The statutory deadline falls before the SLA's due time, so it is the time the case must beat.
+	StatutoryPrecedes bool `json:"statutoryPrecedes"`
+}
+
+// SupportCaseEvent One act on a case. Each carries only what it changed.
+type SupportCaseEvent struct {
+	// Action An act on a case. `OPENED` is recorded by opening the case and is never requested.
+	Action SupportCaseAction `json:"action"`
+
+	// Assignee A person in the tenant who opened, owns or acted on a case.
+	Assignee *SupportUserID `json:"assignee,omitempty"`
+
+	// ContractRef A customer's own reference — a contract number, a seller — as the customer gave it.
+	ContractRef *SupportReference `json:"contractRef,omitempty"`
+
+	// EscalateTo Who an escalated case is routed to. Routing hands the case to people with authority; it gives support none.
+	EscalateTo *SupportEscalationTarget   `json:"escalateTo,omitempty"`
+	Evidence   []SupportEvidenceReference `json:"evidence,omitempty"`
+
+	// FiscalPeriod A subledger legal period, a month.
+	FiscalPeriod *LegalPeriod `json:"fiscalPeriod,omitempty"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID *LegalEntityID `json:"legalEntityId,omitempty"`
+	MissingFacts  []SupportFact  `json:"missingFacts,omitempty"`
+
+	// Note Free text from the person acting — a response to the customer, a request, a sign-off or a note.
+	Note *SupportNote `json:"note,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy A person in the tenant who opened, owns or acted on a case.
+	RecordedBy SupportUserID `json:"recordedBy"`
+
+	// Reopens The sequence number of the resolution or closure this reopening reverses.
+	Reopens *int32 `json:"reopens,omitempty"`
+
+	// SellerRef A customer's own reference — a contract number, a seller — as the customer gave it.
+	SellerRef *SupportReference `json:"sellerRef,omitempty"`
+	Seq       int32             `json:"seq"`
+
+	// Severity How badly the customer is affected. It sets the support SLA — S1 4 hours, S2 24 hours, S3 72 hours, S4 7 days to the first customer response.
+	Severity *SupportSeverity `json:"severity,omitempty"`
+
+	// SLADueAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	SLADueAt *Timestamp `json:"slaDueAt,omitempty"`
+
+	// Status NEW → VERIFIED → TRIAGED → IN_REVIEW → RESPONDED → RESOLVED → CLOSED.
+	// TRIAGE_INCOMPLETE is a case lacking its contract, period or seller
+	// facts (SUP-02). A resolved or closed case may be reopened to IN_REVIEW
+	// (SUP-07).
+	Status SupportCaseStatus `json:"status"`
+
+	// StatutoryDueAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	StatutoryDueAt *Timestamp `json:"statutoryDueAt,omitempty"`
+
+	// Type What a case is about. It routes the case and grants nothing; `LEGAL` and `TAX_SPECIALIST` cases close only after an independent sign-off (T18-18).
+	Type *SupportCaseType `json:"type,omitempty"`
+}
+
+// SupportCaseID defines model for SupportCaseId.
+type SupportCaseID = string
+
+// SupportCaseList defines model for SupportCaseList.
+type SupportCaseList struct {
+	Cases []SupportCase `json:"cases"`
+}
+
+// SupportCaseReferences What the case is about, by identifier. Read-only references; nothing a case does changes them (SUP-03, SUP-04, SUP-11).
+type SupportCaseReferences struct {
+	// DecisionID A decision identifier: a UUIDv7 in lowercase canonical form
+	// (ADR-0012 §2.1). Sortable by creation, never recycled.
+	DecisionID *DecisionID `json:"decisionId,omitempty"`
+
+	// DocumentID A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+	DocumentID *DocumentID `json:"documentId,omitempty"`
+
+	// ObligationID One row of an obligation's history. A UUID in lowercase canonical form.
+	ObligationID *ObligationID `json:"obligationId,omitempty"`
+	RemittanceID *RemittanceID `json:"remittanceId,omitempty"`
+}
+
+// SupportCaseRequest defines model for SupportCaseRequest.
+type SupportCaseRequest struct {
+	// Assignee A person in the tenant who opened, owns or acted on a case.
+	Assignee *SupportUserID `json:"assignee,omitempty"`
+
+	// ContractRef A customer's own reference — a contract number, a seller — as the customer gave it.
+	ContractRef *SupportReference          `json:"contractRef,omitempty"`
+	Description string                     `json:"description"`
+	Evidence    []SupportEvidenceReference `json:"evidence,omitempty"`
+
+	// FiscalPeriod A subledger legal period, a month.
+	FiscalPeriod *LegalPeriod `json:"fiscalPeriod,omitempty"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID *LegalEntityID `json:"legalEntityId,omitempty"`
+
+	// Product The product line a request concerns.
+	Product *SupportProduct `json:"product,omitempty"`
+
+	// References What the case is about, by identifier. Read-only references; nothing a case does changes them (SUP-03, SUP-04, SUP-11).
+	References *SupportCaseReferences `json:"references,omitempty"`
+
+	// SellerRef A customer's own reference — a contract number, a seller — as the customer gave it.
+	SellerRef *SupportReference `json:"sellerRef,omitempty"`
+
+	// Severity How badly the customer is affected. It sets the support SLA — S1 4 hours, S2 24 hours, S3 72 hours, S4 7 days to the first customer response.
+	Severity SupportSeverity `json:"severity"`
+
+	// StatutoryDueAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	StatutoryDueAt *Timestamp `json:"statutoryDueAt,omitempty"`
+	Subject        string     `json:"subject"`
+
+	// Type What a case is about. It routes the case and grants nothing; `LEGAL` and `TAX_SPECIALIST` cases close only after an independent sign-off (T18-18).
+	Type SupportCaseType `json:"type"`
+}
+
+// SupportCaseStatus NEW → VERIFIED → TRIAGED → IN_REVIEW → RESPONDED → RESOLVED → CLOSED.
+// TRIAGE_INCOMPLETE is a case lacking its contract, period or seller
+// facts (SUP-02). A resolved or closed case may be reopened to IN_REVIEW
+// (SUP-07).
+type SupportCaseStatus string
+
+// SupportCaseType What a case is about. It routes the case and grants nothing; `LEGAL` and `TAX_SPECIALIST` cases close only after an independent sign-off (T18-18).
+type SupportCaseType string
+
+// SupportClockState Where one clock stands now. The support SLA is ON_TRACK, AT_RISK (a
+// quarter of its window or less left), BREACHED, or MET (answered in
+// time). A statutory deadline is NONE, ON_TRACK, AT_RISK (72 hours or
+// less left) or PASSED.
+type SupportClockState string
+
+// SupportEscalationTarget Who an escalated case is routed to. Routing hands the case to people with authority; it gives support none.
+type SupportEscalationTarget string
+
+// SupportEvidenceReference A reference to evidence — a hash or a document identifier — never the evidence itself.
+type SupportEvidenceReference = string
+
+// SupportFact A fact triage needs before a case can be worked (SUP-02). `SELLER` is met by a legal entity or a seller reference.
+type SupportFact string
+
+// SupportNote Free text from the person acting — a response to the customer, a request, a sign-off or a note.
+type SupportNote = string
+
+// SupportProduct The product line a request concerns.
+type SupportProduct = string
+
+// SupportReference A customer's own reference — a contract number, a seller — as the customer gave it.
+type SupportReference = string
+
+// SupportSeverity How badly the customer is affected. It sets the support SLA — S1 4 hours, S2 24 hours, S3 72 hours, S4 7 days to the first customer response.
+type SupportSeverity string
+
+// SupportUserID A person in the tenant who opened, owns or acted on a case.
+type SupportUserID = string
+
 // TaxComponentResult One charge on one line: its legal base, rate version, jurisdiction,
 // authority, five roles, recoverability, rounding result and source.
 // `charged` is what the customer pays for it.
@@ -8736,6 +9283,43 @@ type ListShadowRunsParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// ListSupportCasesParams defines parameters for ListSupportCases.
+type ListSupportCasesParams struct {
+	// Type Only cases of this type.
+	Type *SupportCaseType `form:"type,omitempty" json:"type,omitempty"`
+
+	// Severity Only cases of this severity.
+	Severity *SupportSeverity `form:"severity,omitempty" json:"severity,omitempty"`
+
+	// Status Only cases in this status.
+	Status *SupportCaseStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Product Only cases about this product, compared without regard to case.
+	Product *SupportProduct `form:"product,omitempty" json:"product,omitempty"`
+
+	// LegalEntityID Only cases about this customer legal entity.
+	LegalEntityID *LegalEntityID `form:"legalEntityId,omitempty" json:"legalEntityId,omitempty"`
+
+	// FiscalPeriod Only cases about this impacted fiscal period.
+	FiscalPeriod *LegalPeriod `form:"fiscalPeriod,omitempty" json:"fiscalPeriod,omitempty"`
+
+	// Assignee Only cases this person owns.
+	Assignee *SupportUserID `form:"assignee,omitempty" json:"assignee,omitempty"`
+
+	// Unassigned Only cases nobody owns.
+	Unassigned *bool `form:"unassigned,omitempty" json:"unassigned,omitempty"`
+
+	// SLAClock Only cases whose support SLA stands here.
+	SLAClock *SupportClockState `form:"slaClock,omitempty" json:"slaClock,omitempty"`
+
+	// StatutoryClock Only cases whose statutory deadline stands here; `NONE` is cases with no statutory deadline.
+	StatutoryClock *SupportClockState `form:"statutoryClock,omitempty" json:"statutoryClock,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // AdjustTransactionParams defines parameters for AdjustTransaction.
 type AdjustTransactionParams struct {
 	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
@@ -8941,6 +9525,12 @@ type RequestPeriodReopenJSONRequestBody = ReopenRequestBody
 
 // TransitionSubledgerPeriodJSONRequestBody defines body for TransitionSubledgerPeriod for application/json ContentType.
 type TransitionSubledgerPeriodJSONRequestBody = PeriodTransitionRequest
+
+// OpenSupportCaseJSONRequestBody defines body for OpenSupportCase for application/json ContentType.
+type OpenSupportCaseJSONRequestBody = SupportCaseRequest
+
+// ActOnSupportCaseJSONRequestBody defines body for ActOnSupportCase for application/json ContentType.
+type ActOnSupportCaseJSONRequestBody = SupportCaseActionRequest
 
 // AdjustTransactionJSONRequestBody defines body for AdjustTransaction for application/json ContentType.
 type AdjustTransactionJSONRequestBody = CommitRequest
