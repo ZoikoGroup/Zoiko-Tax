@@ -2552,6 +2552,113 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/support/cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The support triage queue
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The most recently opened cases, filtered, with open cases first and the
+         *     soonest due first: the earlier of the support SLA and any statutory
+         *     deadline, which takes precedence when it falls first (SUP-06). Closed
+         *     cases follow, newest first. Each case carries both clocks, separately.
+         */
+        get: operations["listSupportCases"];
+        put?: never;
+        /**
+         * Open a support case
+         * @description `ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Opens the case `NEW`. The support SLA starts now and is due after the
+         *     severity's target — S1 four hours, S2 one day, S3 three days, S4 seven
+         *     days — measured to the first customer response. A statutory deadline,
+         *     when the request has one, is recorded beside it and never merged into
+         *     it (SUP-06).
+         *
+         *     The decision, document, obligation and remittance a case names are
+         *     read-only references. Nothing a case does changes them, and support
+         *     cannot refund, file, pay or edit a rule (SUP-03, SUP-04, SUP-11).
+         */
+        post: operations["openSupportCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/support/cases/{caseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One support case, its clocks and its history
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The case as its history folds now: the current classification, the
+         *     actions its status allows, the closure guard's inputs, and both clocks
+         *     read as of now. Reading changes nothing.
+         */
+        get: operations["getSupportCase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/support/cases/{caseId}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take one action on a support case
+         * @description `ADMIN`, `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Every action appends one event to the case's single audited history;
+         *     nothing is edited. `VERIFY` moves `NEW` to `VERIFIED`. `TRIAGE`
+         *     classifies the case and moves it to `TRIAGED`, or to
+         *     `TRIAGE_INCOMPLETE` with the facts requested when the contract, the
+         *     impacted period or the seller is missing (SUP-02). `START_REVIEW` and
+         *     `ESCALATE` move it to `IN_REVIEW`; `RESPOND` records the customer
+         *     response, `RESOLVE` follows it, and `CLOSE` ends the case.
+         *     `REOPEN` takes a resolved or closed case back to `IN_REVIEW`, linked to
+         *     the event it reverses (SUP-07). `ASSIGN`, `REQUEST_EVIDENCE`,
+         *     `ADD_EVIDENCE`, `SIGN_OFF`, `NOTE` and `REQUEST_LEGAL_HOLD` change no
+         *     status; a legal hold request is recorded for an administrator, and
+         *     places no hold.
+         *
+         *     `CLOSE` needs a customer response since the last reopening, or
+         *     `409 STATE_TRANSITION_INVALID` (SUP-14). A case that is, or was ever,
+         *     `LEGAL` or `TAX_SPECIALIST` also needs a sign-off since the last
+         *     reopening by someone other than its opener, or `409 SIGN_OFF_REQUIRED`;
+         *     the opener's own sign-off is `403 SEGREGATION_OF_DUTIES` (T18-18).
+         *
+         *     Neither clock is reset: a raised severity can bring the SLA due time
+         *     earlier, measured from opening, and a statutory deadline once recorded
+         *     is never changed by support (SUP-07). An action the status does not
+         *     allow is `409 STATE_TRANSITION_INVALID`.
+         */
+        post: operations["actOnSupportCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/shadow/comparators": {
         parameters: {
             query?: never;
@@ -6047,6 +6154,219 @@ export interface components {
             reason: components["schemas"]["PaymentNote"];
         };
         /**
+         * SupportCaseId
+         * Format: uuid
+         * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        SupportCaseId: string;
+        /**
+         * SupportUserId
+         * Format: uuid
+         * @description A person in the tenant who opened, owns or acted on a case.
+         * @example 01920a4c-0000-7000-8000-0000000000a2
+         */
+        SupportUserId: string;
+        /**
+         * SupportCaseType
+         * @description What a case is about. It routes the case and grants nothing; `LEGAL` and `TAX_SPECIALIST` cases close only after an independent sign-off (T18-18).
+         * @enum {string}
+         */
+        SupportCaseType: "COVERAGE_ENTITLEMENT" | "INVOICE_EXPLANATION" | "TAX_SPECIALIST" | "FILING" | "REMITTANCE" | "SECURITY" | "LEGAL";
+        /**
+         * SupportSeverity
+         * @description How badly the customer is affected. It sets the support SLA — S1 4 hours, S2 24 hours, S3 72 hours, S4 7 days to the first customer response.
+         * @enum {string}
+         */
+        SupportSeverity: "S1" | "S2" | "S3" | "S4";
+        /**
+         * SupportCaseStatus
+         * @description NEW → VERIFIED → TRIAGED → IN_REVIEW → RESPONDED → RESOLVED → CLOSED.
+         *     TRIAGE_INCOMPLETE is a case lacking its contract, period or seller
+         *     facts (SUP-02). A resolved or closed case may be reopened to IN_REVIEW
+         *     (SUP-07).
+         * @enum {string}
+         */
+        SupportCaseStatus: "NEW" | "VERIFIED" | "TRIAGE_INCOMPLETE" | "TRIAGED" | "IN_REVIEW" | "RESPONDED" | "RESOLVED" | "CLOSED";
+        /**
+         * SupportCaseAction
+         * @description An act on a case. `OPENED` is recorded by opening the case and is never requested.
+         * @enum {string}
+         */
+        SupportCaseAction: "OPENED" | "VERIFY" | "TRIAGE" | "ASSIGN" | "REQUEST_EVIDENCE" | "ADD_EVIDENCE" | "START_REVIEW" | "ESCALATE" | "RESPOND" | "RESOLVE" | "SIGN_OFF" | "CLOSE" | "REOPEN" | "NOTE" | "REQUEST_LEGAL_HOLD";
+        /**
+         * SupportEscalationTarget
+         * @description Who an escalated case is routed to. Routing hands the case to people with authority; it gives support none.
+         * @enum {string}
+         */
+        SupportEscalationTarget: "TAX_SPECIALIST" | "LEGAL" | "SECURITY" | "FINANCE_OPERATIONS" | "ENGINEERING";
+        /**
+         * SupportFact
+         * @description A fact triage needs before a case can be worked (SUP-02). `SELLER` is met by a legal entity or a seller reference.
+         * @enum {string}
+         */
+        SupportFact: "CONTRACT" | "FISCAL_PERIOD" | "SELLER";
+        /**
+         * SupportClockState
+         * @description Where one clock stands now. The support SLA is ON_TRACK, AT_RISK (a
+         *     quarter of its window or less left), BREACHED, or MET (answered in
+         *     time). A statutory deadline is NONE, ON_TRACK, AT_RISK (72 hours or
+         *     less left) or PASSED.
+         * @enum {string}
+         */
+        SupportClockState: "NONE" | "ON_TRACK" | "AT_RISK" | "BREACHED" | "MET" | "PASSED";
+        /**
+         * SupportNote
+         * @description Free text from the person acting — a response to the customer, a request, a sign-off or a note.
+         */
+        SupportNote: string;
+        /**
+         * SupportReference
+         * @description A customer's own reference — a contract number, a seller — as the customer gave it.
+         */
+        SupportReference: string;
+        /**
+         * SupportEvidenceReference
+         * @description A reference to evidence — a hash or a document identifier — never the evidence itself.
+         */
+        SupportEvidenceReference: string;
+        /**
+         * SupportProduct
+         * @description The product line a request concerns.
+         */
+        SupportProduct: string;
+        /**
+         * SupportCaseReferences
+         * @description What the case is about, by identifier. Read-only references; nothing a case does changes them (SUP-03, SUP-04, SUP-11).
+         */
+        SupportCaseReferences: {
+            decisionId?: components["schemas"]["DecisionId"];
+            documentId?: components["schemas"]["DocumentId"];
+            obligationId?: components["schemas"]["ObligationId"];
+            remittanceId?: components["schemas"]["RemittanceId"];
+        };
+        /**
+         * SupportCaseClocks
+         * @description The case's two clocks, kept apart (SUP-06). Neither is reset by reopening or editing the case (SUP-07).
+         */
+        SupportCaseClocks: {
+            slaDueAt: components["schemas"]["Timestamp"];
+            sla: components["schemas"]["SupportClockState"];
+            firstResponseAt?: components["schemas"]["Timestamp"];
+            statutoryDueAt?: components["schemas"]["Timestamp"];
+            statutory: components["schemas"]["SupportClockState"];
+            /** @description The statutory deadline falls before the SLA's due time, so it is the time the case must beat. */
+            statutoryPrecedes: boolean;
+            dueAt: components["schemas"]["Timestamp"];
+        };
+        /**
+         * SupportCaseEvent
+         * @description One act on a case. Each carries only what it changed.
+         */
+        SupportCaseEvent: {
+            /** Format: int32 */
+            seq: number;
+            action: components["schemas"]["SupportCaseAction"];
+            status: components["schemas"]["SupportCaseStatus"];
+            note?: components["schemas"]["SupportNote"];
+            type?: components["schemas"]["SupportCaseType"];
+            severity?: components["schemas"]["SupportSeverity"];
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            fiscalPeriod?: components["schemas"]["LegalPeriod"];
+            contractRef?: components["schemas"]["SupportReference"];
+            sellerRef?: components["schemas"]["SupportReference"];
+            statutoryDueAt?: components["schemas"]["Timestamp"];
+            slaDueAt?: components["schemas"]["Timestamp"];
+            assignee?: components["schemas"]["SupportUserId"];
+            escalateTo?: components["schemas"]["SupportEscalationTarget"];
+            evidence?: components["schemas"]["SupportEvidenceReference"][];
+            missingFacts?: components["schemas"]["SupportFact"][];
+            /**
+             * Format: int32
+             * @description The sequence number of the resolution or closure this reopening reverses.
+             */
+            reopens?: number;
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["SupportUserId"];
+        };
+        /**
+         * SupportCase
+         * @description A support case, folded from its history. Not a fiscal record.
+         */
+        SupportCase: {
+            id: components["schemas"]["SupportCaseId"];
+            type: components["schemas"]["SupportCaseType"];
+            openedType: components["schemas"]["SupportCaseType"];
+            severity: components["schemas"]["SupportSeverity"];
+            subject: string;
+            description: string;
+            product?: components["schemas"]["SupportProduct"];
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            fiscalPeriod?: components["schemas"]["LegalPeriod"];
+            contractRef?: components["schemas"]["SupportReference"];
+            sellerRef?: components["schemas"]["SupportReference"];
+            references: components["schemas"]["SupportCaseReferences"];
+            assignee?: components["schemas"]["SupportUserId"];
+            evidence: components["schemas"]["SupportEvidenceReference"][];
+            status: components["schemas"]["SupportCaseStatus"];
+            escalatedTo?: components["schemas"]["SupportEscalationTarget"];
+            /** @description What the latest incomplete triage asked for. Empty once triage is complete. */
+            missingFacts: components["schemas"]["SupportFact"][];
+            clocks: components["schemas"]["SupportCaseClocks"];
+            /** @description The actions the case's status allows now. `CLOSE` is listed only once its guards pass; the server checks every guard again when an action is taken. */
+            actions: components["schemas"]["SupportCaseAction"][];
+            /** @description The case is, or was ever, LEGAL or TAX_SPECIALIST, so it closes only after an independent sign-off (T18-18). */
+            signOffRequired: boolean;
+            /** @description Someone other than the opener has signed off since the last reopening. */
+            signedOff: boolean;
+            /** @description A customer response has been recorded since the last reopening (SUP-14). */
+            responded: boolean;
+            openedAt: components["schemas"]["Timestamp"];
+            openedBy: components["schemas"]["SupportUserId"];
+            history: components["schemas"]["SupportCaseEvent"][];
+        };
+        /** SupportCaseList */
+        SupportCaseList: {
+            cases: components["schemas"]["SupportCase"][];
+        };
+        /** SupportCaseRequest */
+        SupportCaseRequest: {
+            type: components["schemas"]["SupportCaseType"];
+            severity: components["schemas"]["SupportSeverity"];
+            subject: string;
+            description: string;
+            product?: components["schemas"]["SupportProduct"];
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            fiscalPeriod?: components["schemas"]["LegalPeriod"];
+            contractRef?: components["schemas"]["SupportReference"];
+            sellerRef?: components["schemas"]["SupportReference"];
+            references?: components["schemas"]["SupportCaseReferences"];
+            statutoryDueAt?: components["schemas"]["Timestamp"];
+            assignee?: components["schemas"]["SupportUserId"];
+            evidence?: components["schemas"]["SupportEvidenceReference"][];
+        };
+        /**
+         * SupportCaseActionRequest
+         * @description One action. `note` is required for RESPOND, SIGN_OFF, REOPEN, ESCALATE,
+         *     REQUEST_EVIDENCE, NOTE and REQUEST_LEGAL_HOLD; `assignee` for ASSIGN;
+         *     `escalateTo` for ESCALATE; `evidence` for ADD_EVIDENCE. The
+         *     classification fields are read by TRIAGE only, and only what is
+         *     supplied changes.
+         */
+        SupportCaseActionRequest: {
+            action: components["schemas"]["SupportCaseAction"];
+            note?: components["schemas"]["SupportNote"];
+            type?: components["schemas"]["SupportCaseType"];
+            severity?: components["schemas"]["SupportSeverity"];
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            fiscalPeriod?: components["schemas"]["LegalPeriod"];
+            contractRef?: components["schemas"]["SupportReference"];
+            sellerRef?: components["schemas"]["SupportReference"];
+            statutoryDueAt?: components["schemas"]["Timestamp"];
+            assignee?: components["schemas"]["SupportUserId"];
+            escalateTo?: components["schemas"]["SupportEscalationTarget"];
+            evidence?: components["schemas"]["SupportEvidenceReference"][];
+        };
+        /**
          * ComparatorId
          * Format: uuid
          * @example 01920b40-1a2b-7c3d-8e4f-5a6b7c8d9e01
@@ -6745,6 +7065,11 @@ export interface components {
          * @example 01920b30-1a2b-7c3d-8e4f-5a6b7c8d9e01
          */
         RemittanceId: components["schemas"]["RemittanceId"];
+        /**
+         * @description The support case identifier.
+         * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        SupportCaseId: components["schemas"]["SupportCaseId"];
         /**
          * @description The shadow run identifier.
          * @example 01920b50-1a2b-7c3d-8e4f-5a6b7c8d9e01
@@ -10301,6 +10626,186 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Remittance"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listSupportCases: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only cases of this type.
+                 * @example LEGAL
+                 */
+                type?: components["schemas"]["SupportCaseType"];
+                /**
+                 * @description Only cases of this severity.
+                 * @example S1
+                 */
+                severity?: components["schemas"]["SupportSeverity"];
+                /**
+                 * @description Only cases in this status.
+                 * @example TRIAGE_INCOMPLETE
+                 */
+                status?: components["schemas"]["SupportCaseStatus"];
+                /**
+                 * @description Only cases about this product, compared without regard to case.
+                 * @example Telecom VAT
+                 */
+                product?: components["schemas"]["SupportProduct"];
+                /**
+                 * @description Only cases about this customer legal entity.
+                 * @example 01920a4c-0000-7000-8000-00000000e001
+                 */
+                legalEntityId?: components["schemas"]["LegalEntityId"];
+                /**
+                 * @description Only cases about this impacted fiscal period.
+                 * @example 2026-09
+                 */
+                fiscalPeriod?: components["schemas"]["LegalPeriod"];
+                /**
+                 * @description Only cases this person owns.
+                 * @example 01920a4c-0000-7000-8000-0000000000a2
+                 */
+                assignee?: components["schemas"]["SupportUserId"];
+                /**
+                 * @description Only cases nobody owns.
+                 * @example true
+                 */
+                unassigned?: boolean;
+                /**
+                 * @description Only cases whose support SLA stands here.
+                 * @example AT_RISK
+                 */
+                slaClock?: components["schemas"]["SupportClockState"];
+                /**
+                 * @description Only cases whose statutory deadline stands here; `NONE` is cases with no statutory deadline.
+                 * @example AT_RISK
+                 */
+                statutoryClock?: components["schemas"]["SupportClockState"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The queue. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    openSupportCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportCaseRequest"];
+            };
+        };
+        responses: {
+            /** @description The case, opened. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCase"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getSupportCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The support case identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                caseId: components["parameters"]["SupportCaseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The case. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCase"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    actOnSupportCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The support case identifier.
+                 * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                caseId: components["parameters"]["SupportCaseId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportCaseActionRequest"];
+            };
+        };
+        responses: {
+            /** @description The case as it stands now. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCase"];
                 };
             };
             400: components["responses"]["Validation"];
