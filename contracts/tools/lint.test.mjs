@@ -97,3 +97,16 @@ test("an unknown class fails", () => {
   assert.equal(r.code, 1);
   assert.match(r.out, /privacy class "P9"/);
 });
+
+test("an idempotent write without its key fails, and the read beside it needs none", () => {
+  const from = "      operationId: issueDocument\n";
+  const at = contract.indexOf(from);
+  assert.ok(at > 0, "the contract no longer issues documents; update the test");
+  const key = '        - $ref: "#/components/parameters/IdempotencyKey"\n';
+  const keyAt = contract.indexOf(key, at);
+  assert.ok(keyAt > 0);
+  const r = run(contract.slice(0, keyAt) + contract.slice(keyAt + key.length));
+  assert.equal(r.code, 1);
+  assert.match(r.out, /POST \/v1\/documents\n\s+declares no Idempotency-Key header/);
+  assert.doesNotMatch(r.out, /GET \/v1\/documents\n/);
+});

@@ -54,6 +54,10 @@ const IDEMPOTENT = [
   "/v1/documents/{documentId}/corrections",
 ];
 
+// Methods that change nothing (RFC 9110 §9.2.1). The idempotency rule is
+// about writes.
+const SAFE_METHODS = new Set(["get", "head", "options"]);
+
 // Field names whose value is a fiscal quantity wherever it appears. A `type:
 // number` under any of these is the failure this lint exists for.
 const FISCAL_NAMES =
@@ -189,6 +193,10 @@ function checkIdempotentWrites(doc) {
     const item = doc.paths?.[path];
     if (!item) continue; // Not on this surface yet. It is a list of futures too.
     for (const [method, operation] of methods(item)) {
+      // ADR-0013 makes the writes on these paths idempotent. A read beside
+      // one — `GET /v1/documents` lists what `POST` issues — changes nothing,
+      // so it has nothing to deduplicate and no key to require.
+      if (SAFE_METHODS.has(method)) continue;
       const params = [...(item.parameters ?? []), ...(operation.parameters ?? [])].map((p) => resolve(doc, p));
       const key = params.find((p) => p?.in === "header" && p?.name?.toLowerCase() === "idempotency-key");
       if (!key) {
