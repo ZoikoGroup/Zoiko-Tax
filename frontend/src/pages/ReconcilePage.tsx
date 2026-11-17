@@ -7,6 +7,9 @@ import { ztax } from '../platform/client'
 import { Amount, Card, Empty, Field, Id, Outcome, PageHeader, Status, Submit, useAction } from '../ui/kit'
 import { lines } from './evidence/time'
 import './evidence/pages.css'
+import { TabBar } from './determine/shared'
+import { RecentRuns } from './recent'
+import { useRoutedTab } from './routedTab'
 import type { PageProps } from './types'
 
 type Run = S<'ReconciliationRun'>
@@ -55,7 +58,16 @@ function counts(items: readonly Item[]) {
 
 const PERIOD = /^\d{4}-(0[1-9]|1[0-2])$/
 
-export const ReconcilePage = ({ session, period }: PageProps) => {
+type Tab = 'runs' | 'variances'
+const TABS: readonly { value: Tab; label: string }[] = [
+  { value: 'runs', label: 'All runs' },
+  { value: 'variances', label: 'Variances' },
+]
+
+export const ReconcilePage = ({ session, period, route, onTabChange }: PageProps) => {
+  const [tab, setTab] = useRoutedTab(TABS.map((t) => t.value), 'runs', route, onTabChange)
+  // Bumped when a run is recorded, so the lists read it back.
+  const [listed, setListed] = useState(0)
   const operator = session.user.roles.includes('OPERATOR')
   const [runs, setRuns] = useState<Run[]>([])
   const [selected, setSelected] = useState<string | null>(null)
@@ -71,10 +83,24 @@ export const ReconcilePage = ({ session, period }: PageProps) => {
     setSelected(run.id)
   }
 
+  /** Opens a listed run, reading it in full the first time. */
+  const openListed = (id: string) => {
+    if (runs.some((r) => r.id === id)) {
+      setSelected(id)
+      return
+    }
+    void openAction.run(() => ztax.getReconciliation(id)).then((run) => {
+      if (run !== null) remember(run)
+    })
+  }
+
   const onRun = (e: FormEvent) => {
     e.preventDefault()
     void runAction.run(() => ztax.runReconciliation({ period: target })).then((run) => {
-      if (run !== null) remember(run)
+      if (run !== null) {
+        remember(run)
+        setListed((n) => n + 1)
+      }
     })
   }
 
@@ -138,7 +164,7 @@ export const ReconcilePage = ({ session, period }: PageProps) => {
         <Outcome error={runAction.error} done={null} />
 
         <form className="ztax-form" onSubmit={onOpen} aria-label="Open a run by id">
-          <Field label="Open a run by id" help="There is no list of past runs; a run id comes from its result or the audit trail.">
+          <Field label="Open a run by id" help="Every recorded run is listed below; paste an id to open one directly.">
             <input
               className="mono"
               value={openId}
@@ -154,48 +180,15 @@ export const ReconcilePage = ({ session, period }: PageProps) => {
         <Outcome error={openAction.error} done={null} />
       </Card>
 
-      {runs.length === 0 ? null : (
-        <Card title="Runs in this session" aside={<span className="ztax-timestamp">{runs.length} kept until you leave</span>}>
-          <div className="zp-scroll">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th scope="col">Run</th>
-                  <th scope="col">Period</th>
-                  <th scope="col">Ran at</th>
-                  <th scope="col">First break (R7)</th>
-                  <th scope="col">Items</th>
-                  <th scope="col"><span className="zp-sr-only">Open</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                {runs.map((r) => (
-                  <tr key={r.id} className={r.id === selected ? 'row--current' : undefined}>
-                    <td><Id value={r.id} /></td>
-                    <td>{periodLabel(r.period)}</td>
-                    <td>{instant(r.ranAt)}</td>
-                    <td>{r.firstBreak === undefined ? <span className="tag tag--ok">none</span> : STAGE_LABEL[r.firstBreak]}</td>
-                    <td>{r.items.length}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="ztax-btn-quiet"
-                        aria-pressed={r.id === selected}
-                        onClick={() => { setSelected(r.id) }}
-                      >
-                        {r.id === selected ? 'Showing' : 'Show'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+      <TabBar label="Reconciliation runs" tabs={TABS} current={tab} onSelect={setTab} />
+      {tab === 'runs' ? (
+        <RecentRuns key={listed} title="Recorded runs" selected={selected ?? undefined} onOpen={openListed} />
+      ) : (
+        <RecentRuns key={listed} title="Runs with unresolved variances" exceptionsOnly selected={selected ?? undefined} onOpen={openListed} />
       )}
 
       {current === undefined ? (
-        runs.length === 0 ? <Empty>No run yet in this session. Run one above, or open one by its id.</Empty> : null
+        <Empty>Open a run above to see its items and resolve its exceptions.</Empty>
       ) : (
         <RunView run={current} operator={operator} onResolved={(item) => { replaceItem(current.id, item) }} />
       )}

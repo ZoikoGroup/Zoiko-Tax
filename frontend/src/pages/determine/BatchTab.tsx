@@ -6,6 +6,7 @@ import { ztax } from '../../platform/client'
 import { instant } from '../../dashboard/format'
 import { Card, ErrorNote, Field, Id, Outcome, Raw, Status, Submit, useAction } from '../../ui/kit'
 import { commitBody, emptyLine, LineFields, lineProblem, type LineDraft } from './line'
+import { RecentJobs } from '../recent'
 import { Invalid, KeyNote, useIdempotencyKey } from './shared'
 
 const POLL_MS = 1500
@@ -103,6 +104,7 @@ export const BatchTab = ({ onOpenDecision }: { onOpenDecision: (id: string) => v
         </form>
         {jobId === '' ? null : <JobView key={jobId} id={jobId} onOpenDecision={onOpenDecision} />}
       </Card>
+      <RecentJobs selected={jobId} onOpen={(j) => { setLookup(j); setJobId(j) }} />
     </>
   )
 }

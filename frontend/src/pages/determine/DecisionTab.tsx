@@ -8,6 +8,7 @@ import {
   Amount, Card, Columns, Field, Id, Loaded, Outcome, Raw, Status, Submit, useAction, useLoad,
 } from '../../ui/kit'
 import { DeterminationCard } from '../locations/document'
+import { RecentDecisions } from '../recent'
 import { DecisionFacts } from './QuoteCommitTab'
 import { CURRENCY, EmittedTable, Invalid, isDecimal, isNotFound, KeyNote, KV, useIdempotencyKey } from './shared'
 
@@ -35,6 +36,7 @@ export const DecisionTab = ({ id, onOpen, onOpenRefund }: {
         </form>
       </Card>
       {id === '' ? null : <DecisionView key={id} id={id} onOpenRefund={onOpenRefund} />}
+      <RecentDecisions selected={id} onOpen={onOpen} />
     </>
   )
 }
