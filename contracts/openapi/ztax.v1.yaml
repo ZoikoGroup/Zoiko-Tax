@@ -122,6 +122,8 @@ tags:
     description: The LegalAuthorization matrix, customer authorizations and powers of attorney, and the gate that resolves whether an action may execute. Fails closed.
   - name: compliance
     description: Compliance packages that turn an obligation into a filing — preparation, independent review, exact-version approval, submission and the authority's answer. TRANSMITTING is not FILED.
+  - name: notices
+    description: Regulatory notices, assessments, audits, appeals and information requests — registered with the statutory deadline the authority set, its source and verification, worked through authenticity and legal review to a four-eye approved response, the authority receipt and outcome. Notices reference fiscal records and never change them.
   - name: remittance
     description: Payee master data and payment instructions for accepted returns. ZoikoTax instructs the customer's own provider and never holds funds; submitted is not settled.
   - name: shadow
@@ -6062,6 +6064,643 @@ paths:
         "500": { $ref: "#/components/responses/Internal" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
+  /v1/notices:
+    get:
+      operationId: listNotices
+      tags: [notices]
+      summary: The regulatory notice register
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. Every notice, assessment,
+        audit, appeal and information request registered, in working order:
+        unknown statutory deadlines first, then the soonest deadline in force;
+        closed notices only when asked for. Each carries the flags that need
+        attention now — an unknown or unverified deadline, unresolved
+        authenticity or recipient (an urgent legal review: W17, SUP-05,
+        SUP-08), a deadline soon or passed, a breached internal SLA.
+      parameters:
+        - { name: type, in: query, required: false, description: Only notices of this type., schema: { $ref: "#/components/schemas/NoticeType" }, example: ASSESSMENT }
+        - { name: status, in: query, required: false, description: Only notices in this status., schema: { $ref: "#/components/schemas/NoticeStatus" }, example: LEGAL_REVIEW }
+        - { name: authority, in: query, required: false, description: Only notices from this authority (case-insensitive)., schema: { $ref: "#/components/schemas/AuthorityCode" }, example: DE-BZST }
+        - { name: legalEntityId, in: query, required: false, description: Only notices addressed to this legal entity, as resolved., schema: { $ref: "#/components/schemas/LegalEntityId" }, example: 01920a4c-0000-7000-8000-00000000e001 }
+        - { name: authorityReference, in: query, required: false, description: Only notices whose authority reference contains this text., schema: { $ref: "#/components/schemas/AuthorityReference" }, example: ST-2026 }
+        - { name: receivedFrom, in: query, required: false, description: Only notices received at or after this instant., schema: { $ref: "#/components/schemas/Timestamp" }, example: "2026-10-01T00:00:00.000000Z" }
+        - { name: receivedTo, in: query, required: false, description: Only notices received at or before this instant., schema: { $ref: "#/components/schemas/Timestamp" }, example: "2026-10-31T23:59:59.999999Z" }
+        - { name: period, in: query, required: false, description: Only notices whose period contains this date., schema: { $ref: "#/components/schemas/CivilDate" }, example: "2026-08-15" }
+        - { name: amountMin, in: query, required: false, description: Only notices stating at least this amount, in `currency`. Compared exactly on the server., schema: { $ref: "#/components/schemas/Decimal" }, example: "1000.00" }
+        - { name: amountMax, in: query, required: false, description: Only notices stating at most this amount, in `currency`., schema: { $ref: "#/components/schemas/Decimal" }, example: "50000.00" }
+        - { name: currency, in: query, required: false, description: The currency `amountMin` and `amountMax` are in. Required with either., schema: { $ref: "#/components/schemas/CurrencyCode" }, example: EUR }
+        - { name: attachmentSha256, in: query, required: false, description: Only notices with a document of this SHA-256 recorded., schema: { $ref: "#/components/schemas/Sha256Hex" }, example: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08 }
+        - { name: authenticity, in: query, required: false, description: Only notices whose authenticity is this., schema: { $ref: "#/components/schemas/NoticeAuthenticity" }, example: UNKNOWN }
+        - { name: urgent, in: query, required: false, description: Only notices flagged for urgent legal review., schema: { $ref: "#/components/schemas/NoticeQueryFlag" }, example: true }
+        - { name: includeClosed, in: query, required: false, description: Include closed notices when no status is asked for., schema: { $ref: "#/components/schemas/NoticeQueryFlag" }, example: false }
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The notices, in working order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoticeList"
+              examples:
+                default:
+                  summary: One assessment in legal review
+                  value:
+                    notices:
+                      - id: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        type: ASSESSMENT
+                        authority: DE-BZST
+                        jurisdiction: DE
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        entityAmbiguous: false
+                        entityResolved: true
+                        authorityReference: ST-2026-0042
+                        receivedAt: "2026-10-01T09:00:00.000000Z"
+                        periodStart: "2026-07-01"
+                        periodEnd: "2026-09-30"
+                        amount: { amount: "1250.00", currency: EUR }
+                        links: [{ kind: RETURN, reference: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01 }]
+                        status: LEGAL_REVIEW
+                        authenticity: VERIFIED
+                        escalated: false
+                        flags: [DEADLINE_SOON]
+                        urgentLegalReview: false
+                        statutoryDeadline:
+                          original: { kind: ORIGINAL, dueDate: "2026-10-31", dueAt: "2026-10-31T22:59:59.999999Z", timezone: Europe/Berlin, source: STATED_ON_NOTICE, verified: true }
+                          current: { kind: ORIGINAL, dueDate: "2026-10-31", dueAt: "2026-10-31T22:59:59.999999Z", timezone: Europe/Berlin, source: STATED_ON_NOTICE, verified: true }
+                        sla: { ownerId: 01920a4c-0000-7000-8000-0000000000a2, dueAt: "2026-10-24T17:00:00.000000Z", breached: false }
+                        deadlines:
+                          - { seq: 1, kind: ORIGINAL, dueDate: "2026-10-31", dueAt: "2026-10-31T22:59:59.999999Z", timezone: Europe/Berlin, source: STATED_ON_NOTICE, verified: true, evidence: Stated on page 1 of the notice., recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                        attachments: []
+                        allowedActions: [PREPARE_RESPONSE, RECORD_AUTHENTICITY, RESOLVE_ENTITY, RECORD_DEADLINE, ESCALATE, ASSIGN_OWNER, RECORD_ATTACHMENT, CLOSE]
+                        asOf: "2026-10-27T09:00:00.000000Z"
+                        createdAt: "2026-10-01T09:00:00.000000Z"
+                        createdBy: 01920a4c-0000-7000-8000-0000000000a1
+                        history:
+                          - { seq: 1, kind: RECEIVED, status: RECEIVED, recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: createNotice
+      tags: [notices]
+      summary: Register a notice as received
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Registers a notice, assessment, audit, appeal or information request
+        with its authority, recipient, the authority's reference and the
+        statutory deadline as received — its date in the authority's calendar,
+        timezone, source and whether anyone verified it. Not a support due
+        date. An unknown or unverified deadline is flagged for urgent legal
+        review (W17). A notice with no legal entity, or one marked ambiguous,
+        goes straight to `LEGAL_REVIEW` and nothing answers it automatically
+        (SUP-08). Links are references only; registering a notice changes no
+        return, ledger or rule.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoticeRequest"
+            examples:
+              default:
+                summary: An assessment with a stated deadline, recipient to be resolved
+                value:
+                  type: ASSESSMENT
+                  authority: DE-BZST
+                  jurisdiction: DE
+                  authorityReference: ST-2026-0042
+                  receivedAt: "2026-10-01T09:00:00.000000Z"
+                  periodStart: "2026-07-01"
+                  periodEnd: "2026-09-30"
+                  amount: { amount: "1250.00", currency: EUR }
+                  links: [{ kind: RETURN, reference: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01 }]
+                  deadline: { dueDate: "2026-10-31", timezone: Europe/Berlin, source: STATED_ON_NOTICE, verified: true }
+                  deadlineEvidence: Stated on page 1 of the notice.
+      responses:
+        "201":
+          $ref: "#/components/responses/NoticeResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/notices/{noticeId}:
+    get:
+      operationId: getNotice
+      tags: [notices]
+      summary: One notice, its deadline ledger, SLA clock and history
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. The statutory deadline in
+        force beside the original as received, every confirmation and
+        extension with its evidence, the separate internal SLA clock, the
+        recorded documents, the history, and the actions the status admits.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/notices/{noticeId}/deadlines:
+    get:
+      operationId: getNoticeDeadlines
+      tags: [notices]
+      summary: The statutory deadline ledger
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`. The original deadline as
+        received, then every confirmation, extension and appeal deadline in
+        order, each with its evidence. The original is never rewritten
+        (T18-17).
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      responses:
+        "200":
+          description: The ledger.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoticeDeadlineLedger"
+              examples:
+                default:
+                  summary: An original deadline and one extension
+                  value:
+                    noticeId: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    original: { kind: ORIGINAL, dueDate: "2026-10-31", dueAt: "2026-10-31T22:59:59.999999Z", timezone: Europe/Berlin, source: STATED_ON_NOTICE, verified: true }
+                    current: { kind: EXTENSION, dueDate: "2026-11-30", dueAt: "2026-11-30T22:59:59.999999Z", timezone: Europe/Berlin, source: AUTHORITY_CONFIRMATION, verified: true }
+                    overdue: false
+                    entries:
+                      - { seq: 1, kind: ORIGINAL, dueDate: "2026-10-31", dueAt: "2026-10-31T22:59:59.999999Z", timezone: Europe/Berlin, source: STATED_ON_NOTICE, verified: true, evidence: Stated on page 1 of the notice., recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                      - { seq: 6, kind: EXTENSION, dueDate: "2026-11-30", dueAt: "2026-11-30T22:59:59.999999Z", timezone: Europe/Berlin, source: AUTHORITY_CONFIRMATION, verified: true, evidence: Extension letter of 20 October., authorityReference: EXT-2026-77, recordedAt: "2026-10-21T10:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: recordNoticeDeadline
+      tags: [notices]
+      summary: Confirm or extend the statutory deadline
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        A `CONFIRMATION` verifies the deadline in force, or establishes an
+        unknown one; it never moves a known date (`409 NOTICE_DEADLINE_UNVERIFIED`).
+        An `EXTENSION` moves the date later: it needs a verified deadline to
+        extend (W17 — no fabricated extension), the grant verified, evidence,
+        and the authority's reference or a recorded document. The ledger keeps
+        the original; the internal SLA is unaffected (T18-17).
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeDeadlineRequest"
+            examples:
+              default:
+                summary: An extension granted by letter
+                value:
+                  kind: EXTENSION
+                  dueDate: "2026-11-30"
+                  timezone: Europe/Berlin
+                  source: AUTHORITY_CONFIRMATION
+                  verified: true
+                  evidence: Extension letter of 20 October.
+                  authorityReference: EXT-2026-77
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/notices/{noticeId}/transitions:
+    post:
+      operationId: transitionNotice
+      tags: [notices]
+      summary: Move a notice through review, or close it
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        `AUTHENTICITY_REVIEW` from `RECEIVED`; `LEGAL_REVIEW` from
+        `AUTHENTICITY_REVIEW` once authenticity is verified (otherwise
+        `403 NOTICE_LEGAL_VALIDATION_REQUIRED`: escalate instead, SUP-05),
+        from `APPEAL`, or from `RESPONSE_APPROVED` with a reason; `CLOSED`
+        from `OUTCOME_RECORDED`, or from `LEGAL_REVIEW` on a documented
+        escalation (`403 NOTICE_CLOSURE_BLOCKED` otherwise). Nothing leaves
+        `CLOSED`, and no move resets the statutory clock (T18-17). Approval,
+        submission, outcome and appeal are their own actions.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeTransitionRequest"
+            examples:
+              default:
+                summary: Start authenticity review
+                value:
+                  to: AUTHENTICITY_REVIEW
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/notices/{noticeId}/authenticity:
+    post:
+      operationId: recordNoticeAuthenticity
+      tags: [notices]
+      summary: Record whether the notice is authentic
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Records `VERIFIED`, `UNVERIFIABLE` or `NOT_AUTHENTIC` with how it was
+        established. Anything but `VERIFIED` escalates to legal validation in
+        the same act and voids an approved answer; nothing is accepted as
+        genuine that is not (SUP-05).
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeAuthenticityRequest"
+            examples:
+              default:
+                summary: Verified with the authority
+                value:
+                  authenticity: VERIFIED
+                  evidence: Confirmed by phone on the authority's published number.
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/notices/{noticeId}/escalations:
+    post:
+      operationId: escalateNotice
+      tags: [notices]
+      summary: Escalate a notice to legal
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Sends the notice to legal with the question asked. From `RECEIVED` or
+        `AUTHENTICITY_REVIEW` it moves to `LEGAL_REVIEW`. Evidence — counsel's
+        reference, a memo — makes it a documented escalation, which is what a
+        disposition without an authority outcome rests on.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeEscalationRequest"
+            examples:
+              default:
+                summary: Ask legal to verify the deadline
+                value:
+                  reason: DEADLINE_UNVERIFIED
+                  note: The notice gives no response date; legal to confirm the statutory period.
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/notices/{noticeId}/entity:
+    post:
+      operationId: resolveNoticeEntity
+      tags: [notices]
+      summary: Resolve the recipient legal entity
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Records which of the tenant's legal entities the notice is addressed
+        to, with how that was established (SUP-08). Until it is resolved no
+        answer is approved.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeEntityRequest"
+            examples:
+              default:
+                summary: Tax number matches
+                value:
+                  legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                  evidence: The tax number on the notice is this entity's.
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/notices/{noticeId}/owner:
+    post:
+      operationId: assignNoticeOwner
+      tags: [notices]
+      summary: Assign the deadline owner and internal SLA
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Names the person who owns the deadline, and our internal SLA target.
+        The SLA is a separate clock: it never moves the statutory deadline
+        (T18-17).
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeOwnerRequest"
+            examples:
+              default:
+                summary: Owner with an SLA a week before the deadline
+                value:
+                  ownerId: 01920a4c-0000-7000-8000-0000000000a2
+                  slaDue: "2026-10-24T17:00:00.000000Z"
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/notices/{noticeId}/attachments:
+    post:
+      operationId: recordNoticeAttachment
+      tags: [notices]
+      summary: Record a document as evidence
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Records a document by its SHA-256, file name and media type. The
+        document is not uploaded or stored here; the digest is what later
+        evidence cites. A digest already recorded is `409 ALREADY_EXISTS`.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeAttachmentRequest"
+            examples:
+              default:
+                summary: The scanned notice
+                value:
+                  sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                  filename: assessment-ST-2026-0042.pdf
+                  mediaType: application/pdf
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/notices/{noticeId}/response-packages:
+    post:
+      operationId: prepareNoticeResponse
+      tags: [notices]
+      summary: Prepare a response package
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Records a new response package version in `LEGAL_REVIEW`. From
+        `RESPONSE_APPROVED` it supersedes the approved version and returns the
+        notice to `LEGAL_REVIEW`; the deadline is untouched.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeResponsePackageRequest"
+            examples:
+              default:
+                summary: An objection
+                value:
+                  summary: Objection to the assessment with the Q3 reconciliation.
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/notices/{noticeId}/response-approval:
+    post:
+      operationId: approveNoticeResponse
+      tags: [notices]
+      summary: Approve the response package (four-eye)
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Approves the response package version named. The approver is never
+        the person who prepared it: `403 SEGREGATION_OF_DUTIES`. The notice's
+        authenticity is verified and its recipient resolved, or
+        `403 NOTICE_LEGAL_VALIDATION_REQUIRED` (SUP-05, SUP-08).
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeApprovalRequest"
+            examples:
+              default:
+                summary: Approve version 1
+                value:
+                  version: 1
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/notices/{noticeId}/submission:
+    post:
+      operationId: recordNoticeSubmission
+      tags: [notices]
+      summary: Record the response's receipt by the authority
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Records that the approved response reached the authority. It needs
+        the authority's submission receipt reference.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeSubmissionRequest"
+            examples:
+              default:
+                summary: Portal receipt
+                value:
+                  authorityReceiptReference: RCPT-2026-10-9981
+                  evidence: Portal confirmation page, saved.
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/notices/{noticeId}/outcome:
+    post:
+      operationId: recordNoticeOutcome
+      tags: [notices]
+      summary: Record what the authority decided
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Records the authority's decision on a submitted response or an
+        appeal, with its receipt or decision reference and the decision as
+        received. `settled: true` needs `AUTHORITY_CONFIRMED` or
+        `PAYMENT_SETTLED`; a pending payment instruction settles nothing
+        (`403 NOTICE_SETTLEMENT_UNPROVEN`, T18-20). The amount is recorded as
+        stated; nothing is posted.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeOutcomeRequest"
+            examples:
+              default:
+                summary: Adjusted, payment pending
+                value:
+                  outcome: ADJUSTED
+                  authorityReceiptReference: DEC-2026-311
+                  evidence: Decision letter of 12 November.
+                  amount: { amount: "980.00", currency: EUR }
+                  settled: false
+                  settlement: PAYMENT_INSTRUCTION_PENDING
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/notices/{noticeId}/appeal:
+    post:
+      operationId: lodgeNoticeAppeal
+      tags: [notices]
+      summary: Lodge an appeal against the outcome
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Opens the appeal branch after a recorded outcome. An appeal with a
+        hearing still to come keeps the matter open with its next deadline,
+        which is then required (SUP-16). The appeal deadline is a new ledger
+        entry; the original and every extension stay.
+      parameters:
+        - $ref: "#/components/parameters/NoticeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoticeAppealRequest"
+            examples:
+              default:
+                summary: Appeal with a hearing
+                value:
+                  nextDeadline: { dueDate: "2027-01-15", timezone: Europe/Berlin, source: AUTHORITY_CONFIRMATION, verified: true }
+                  hearingDate: "2027-02-01"
+                  evidence: Appeal lodged; acknowledgement letter of 20 November.
+                  authorityReference: APP-2026-18
+      responses:
+        "200":
+          $ref: "#/components/responses/NoticeResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
   /v1/shadow/comparators:
     get:
       operationId: listComparators
@@ -7019,6 +7658,14 @@ components:
       schema: { $ref: "#/components/schemas/CompliancePackageId" }
       example: 01920b10-1a2b-7c3d-8e4f-5a6b7c8d9e01
 
+    NoticeId:
+      name: noticeId
+      in: path
+      required: true
+      description: The regulatory notice identifier.
+      schema: { $ref: "#/components/schemas/NoticeId" }
+      example: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+
     BeneficiaryId:
       name: beneficiaryId
       in: path
@@ -7388,6 +8035,54 @@ components:
                 ztx_reason_code: RATE_LIMITED
                 ztx_request_id: 01JBQ0S9C3X8Q1H6M2KX5R7F4Q
                 ztx_retryable: true
+
+    NoticeResult:
+      description: The notice as it stands now.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Notice"
+          examples:
+            default:
+              summary: An assessment in legal review
+              value:
+                id: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                type: ASSESSMENT
+                authority: DE-BZST
+                jurisdiction: DE
+                legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                entityAmbiguous: false
+                entityResolved: true
+                resolvedLegalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                authorityReference: ST-2026-0042
+                receivedAt: "2026-10-01T09:00:00.000000Z"
+                periodStart: "2026-07-01"
+                periodEnd: "2026-09-30"
+                amount: { amount: "1250.00", currency: EUR }
+                links: [{ kind: RETURN, reference: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01 }]
+                status: LEGAL_REVIEW
+                authenticity: VERIFIED
+                escalated: false
+                flags: []
+                urgentLegalReview: false
+                statutoryDeadline:
+                  original: { kind: ORIGINAL, dueDate: "2026-10-31", dueAt: "2026-10-31T22:59:59.999999Z", timezone: Europe/Berlin, source: STATED_ON_NOTICE, verified: true }
+                  current: { kind: ORIGINAL, dueDate: "2026-10-31", dueAt: "2026-10-31T22:59:59.999999Z", timezone: Europe/Berlin, source: STATED_ON_NOTICE, verified: true }
+                sla: { ownerId: 01920a4c-0000-7000-8000-0000000000a2, dueAt: "2026-10-24T17:00:00.000000Z", breached: false }
+                deadlines:
+                  - { seq: 1, kind: ORIGINAL, dueDate: "2026-10-31", dueAt: "2026-10-31T22:59:59.999999Z", timezone: Europe/Berlin, source: STATED_ON_NOTICE, verified: true, evidence: Stated on page 1 of the notice., recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                attachments:
+                  - { sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08, filename: assessment-ST-2026-0042.pdf, mediaType: application/pdf, recordedAt: "2026-10-01T09:05:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                allowedActions: [PREPARE_RESPONSE, RECORD_AUTHENTICITY, RESOLVE_ENTITY, RECORD_DEADLINE, ESCALATE, ASSIGN_OWNER, RECORD_ATTACHMENT, CLOSE]
+                asOf: "2026-10-02T09:00:00.000000Z"
+                createdAt: "2026-10-01T09:00:00.000000Z"
+                createdBy: 01920a4c-0000-7000-8000-0000000000a1
+                history:
+                  - { seq: 1, kind: RECEIVED, status: RECEIVED, deadline: { kind: ORIGINAL, dueDate: "2026-10-31", dueAt: "2026-10-31T22:59:59.999999Z", timezone: Europe/Berlin, source: STATED_ON_NOTICE, verified: true }, authenticity: UNKNOWN, evidence: Stated on page 1 of the notice., ownerId: 01920a4c-0000-7000-8000-0000000000a2, slaDue: "2026-10-24T17:00:00.000000Z", recordedAt: "2026-10-01T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                  - { seq: 2, kind: ATTACHMENT_RECORDED, status: RECEIVED, attachment: { sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08, filename: assessment-ST-2026-0042.pdf, mediaType: application/pdf }, recordedAt: "2026-10-01T09:05:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                  - { seq: 3, kind: TRANSITIONED, status: AUTHENTICITY_REVIEW, recordedAt: "2026-10-01T10:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                  - { seq: 4, kind: AUTHENTICITY_RECORDED, status: AUTHENTICITY_REVIEW, authenticity: VERIFIED, evidence: Confirmed by phone on the authority's published number., recordedAt: "2026-10-01T11:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                  - { seq: 5, kind: TRANSITIONED, status: LEGAL_REVIEW, recordedAt: "2026-10-01T11:05:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
 
   schemas:
     Problem:
@@ -12269,6 +12964,602 @@ components:
       required: [reason]
       properties:
         reason: { $ref: "#/components/schemas/PaymentNote" }
+
+    NoticeId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: NoticeId
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+
+    NoticeType:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: NoticeType
+      description: What the authority sent.
+      enum: [NOTICE, ASSESSMENT, AUDIT, APPEAL, INFORMATION_REQUEST]
+
+    NoticeStatus:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: NoticeStatus
+      description: |
+        Where the matter stands. RECEIVED → AUTHENTICITY_REVIEW → LEGAL_REVIEW →
+        RESPONSE_APPROVED → SUBMITTED → OUTCOME_RECORDED, with APPEAL as the
+        branch after an outcome. CLOSED is terminal; nothing reopens it.
+      enum: [RECEIVED, AUTHENTICITY_REVIEW, LEGAL_REVIEW, RESPONSE_APPROVED, SUBMITTED, OUTCOME_RECORDED, APPEAL, CLOSED]
+
+    NoticeAuthenticity:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: NoticeAuthenticity
+      description: What has been established about whether the authority sent the notice. Only VERIFIED admits an approved answer (SUP-05).
+      enum: [UNKNOWN, VERIFIED, UNVERIFIABLE, NOT_AUTHENTIC]
+
+    NoticeDeadlineSource:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: NoticeDeadlineSource
+      description: Where a statutory deadline came from. ESTIMATED and UNKNOWN are never verified.
+      enum: [STATED_ON_NOTICE, STATUTE, AUTHORITY_CONFIRMATION, AUTHORITY_PORTAL, ESTIMATED, UNKNOWN]
+
+    NoticeDeadlineKind:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: NoticeDeadlineKind
+      description: |
+        What a deadline ledger entry records. ORIGINAL is the intake's and is
+        never rewritten; CONFIRMATION verifies or establishes the date without
+        moving it; EXTENSION moves it later on the authority's evidence;
+        APPEAL is the next deadline an appeal opens.
+      enum: [ORIGINAL, CONFIRMATION, EXTENSION, APPEAL]
+
+    NoticeOutcome:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: NoticeOutcome
+      description: What the authority decided.
+      enum: [ACCEPTED, ADJUSTED, REJECTED, WITHDRAWN]
+
+    NoticeSettlement:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: NoticeSettlement
+      description: The evidence a claim of settlement rests on. A pending payment instruction is never settlement (T18-20).
+      enum: [AUTHORITY_CONFIRMED, PAYMENT_SETTLED, PAYMENT_INSTRUCTION_PENDING]
+
+    NoticeEscalationReason:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: NoticeEscalationReason
+      description: Why a notice went to legal.
+      enum: [DEADLINE_UNVERIFIED, AUTHENTICITY_UNRESOLVED, ENTITY_UNRESOLVED, LEGAL_JUDGEMENT]
+
+    NoticeLinkKind:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: NoticeLinkKind
+      description: The kind of record a link references. Every link is a read-only reference.
+      enum: [RETURN, SUBMISSION_RECEIPT, PAYMENT, LEDGER_ENTRY, RULE_VERSION, CORRESPONDENCE, OBLIGATION, DECISION]
+
+    NoticeEventKind:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: NoticeEventKind
+      description: What an event records.
+      enum: [RECEIVED, TRANSITIONED, AUTHENTICITY_RECORDED, LEGAL_ESCALATED, ENTITY_RESOLVED, OWNER_ASSIGNED, ATTACHMENT_RECORDED, DEADLINE_RECORDED, RESPONSE_PREPARED, RESPONSE_APPROVED, SUBMITTED, OUTCOME_RECORDED, APPEAL_LODGED, CLOSED]
+
+    NoticeFlag:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: NoticeFlag
+      description: |
+        Something about a notice that needs attention now. URGENT_LEGAL_REVIEW
+        accompanies an unknown or unverified deadline (W17), unresolved or
+        disputed authenticity (SUP-05) and an unresolved recipient (SUP-08).
+        STATUTORY_OVERDUE and SLA_BREACHED are separate facts.
+      enum: [DEADLINE_UNKNOWN, DEADLINE_UNVERIFIED, AUTHENTICITY_UNVERIFIED, AUTHENTICITY_DISPUTED, ENTITY_UNRESOLVED, DEADLINE_SOON, STATUTORY_OVERDUE, SLA_BREACHED, LEGAL_ESCALATED, URGENT_LEGAL_REVIEW, HEARING_SCHEDULED]
+
+    NoticeAction:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: NoticeAction
+      description: An action the notice's status admits. Each still applies its own guards when taken.
+      enum: [START_AUTHENTICITY_REVIEW, MOVE_TO_LEGAL_REVIEW, RECORD_AUTHENTICITY, ESCALATE, RESOLVE_ENTITY, ASSIGN_OWNER, RECORD_ATTACHMENT, RECORD_DEADLINE, PREPARE_RESPONSE, APPROVE_RESPONSE, RECORD_SUBMISSION, RECORD_OUTCOME, LODGE_APPEAL, CLOSE]
+
+    NoticeJurisdiction:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: NoticeJurisdiction
+      description: An ISO 3166-1 country or ISO 3166-2 subdivision code.
+      pattern: "^[A-Z]{2}(-[A-Z0-9]{1,3})?$"
+      example: DE
+
+    NoticeText:
+      x-ztax-privacy: { class: P2, purposes: [PURP-LEGAL, PURP-EVID], retention: RET-EVIDENCE, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: NoticeText
+      minLength: 1
+      maxLength: 2000
+      description: Free text from the person recording an act on a notice.
+
+    NoticeEvidence:
+      x-ztax-privacy: { class: P2, purposes: [PURP-LEGAL, PURP-EVID], retention: RET-EVIDENCE, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: NoticeEvidence
+      minLength: 1
+      maxLength: 20000
+      description: How a deadline, authenticity, recipient or outcome was established, or the authority's response as received.
+
+    NoticeTimezone:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: NoticeTimezone
+      minLength: 1
+      maxLength: 64
+      description: The authority's IANA timezone, in which a due date ends.
+      example: Europe/Berlin
+
+    Sha256Hex:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: Sha256Hex
+      description: A document's SHA-256, lowercase hex. The document itself is not stored.
+      pattern: "^[0-9a-f]{64}$"
+      example: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+
+    NoticeFilename:
+      x-ztax-privacy: { class: P2, purposes: [PURP-LEGAL, PURP-EVID], retention: RET-EVIDENCE, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: NoticeFilename
+      minLength: 1
+      maxLength: 255
+      description: A recorded document's file name, as given. It may name a person.
+
+    NoticeMediaType:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: NoticeMediaType
+      description: A recorded document's media type.
+      pattern: "^[a-z0-9][a-z0-9!#$&^_.+-]{0,63}/[a-z0-9][a-z0-9!#$&^_.+-]{0,126}$"
+      example: application/pdf
+
+    NoticeQueryFlag:
+      x-ztax-privacy: { class: P0 }
+      type: boolean
+      title: NoticeQueryFlag
+      description: A yes-or-no filter.
+
+    NoticeLink:
+      type: object
+      title: NoticeLink
+      description: A reference to a record elsewhere, by its identifier. Read-only.
+      additionalProperties: false
+      required: [kind, reference]
+      properties:
+        kind: { $ref: "#/components/schemas/NoticeLinkKind" }
+        reference:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          minLength: 1
+          maxLength: 200
+
+    NoticeDeadline:
+      type: object
+      title: NoticeDeadline
+      description: |
+        A statutory deadline: a civil date in the authority's calendar, the
+        last instant of that day there, its source and whether it was
+        verified. No `dueDate` is a deadline nobody knows yet.
+      additionalProperties: false
+      required: [kind, timezone, source, verified]
+      properties:
+        kind: { $ref: "#/components/schemas/NoticeDeadlineKind" }
+        dueDate: { $ref: "#/components/schemas/CivilDate" }
+        dueAt: { $ref: "#/components/schemas/Timestamp" }
+        timezone: { $ref: "#/components/schemas/NoticeTimezone" }
+        source: { $ref: "#/components/schemas/NoticeDeadlineSource" }
+        verified:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+
+    NoticeDeadlineInput:
+      type: object
+      title: NoticeDeadlineInput
+      description: A deadline as stated. Without `dueDate` the source is UNKNOWN and it is unverified.
+      additionalProperties: false
+      required: [timezone, source, verified]
+      properties:
+        dueDate: { $ref: "#/components/schemas/CivilDate" }
+        timezone: { $ref: "#/components/schemas/NoticeTimezone" }
+        source: { $ref: "#/components/schemas/NoticeDeadlineSource" }
+        verified:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+
+    NoticeDeadlineEntry:
+      type: object
+      title: NoticeDeadlineEntry
+      description: One row of the deadline ledger, with who recorded it and on what evidence.
+      additionalProperties: false
+      required: [seq, kind, timezone, source, verified, recordedAt, recordedBy]
+      properties:
+        seq:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        kind: { $ref: "#/components/schemas/NoticeDeadlineKind" }
+        dueDate: { $ref: "#/components/schemas/CivilDate" }
+        dueAt: { $ref: "#/components/schemas/Timestamp" }
+        timezone: { $ref: "#/components/schemas/NoticeTimezone" }
+        source: { $ref: "#/components/schemas/NoticeDeadlineSource" }
+        verified:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+        evidence: { $ref: "#/components/schemas/NoticeEvidence" }
+        authorityReference: { $ref: "#/components/schemas/AuthorityReference" }
+        attachmentSha256: { $ref: "#/components/schemas/Sha256Hex" }
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+
+    NoticeDeadlineLedger:
+      type: object
+      title: NoticeDeadlineLedger
+      additionalProperties: false
+      required: [noticeId, original, current, overdue, entries]
+      properties:
+        noticeId: { $ref: "#/components/schemas/NoticeId" }
+        original: { $ref: "#/components/schemas/NoticeDeadline" }
+        current: { $ref: "#/components/schemas/NoticeDeadline" }
+        overdue:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: The deadline in force has passed with the response not yet submitted.
+        entries:
+          type: array
+          items: { $ref: "#/components/schemas/NoticeDeadlineEntry" }
+
+    NoticeAttachment:
+      type: object
+      title: NoticeAttachment
+      description: A document recorded as evidence, by digest. Nothing is uploaded.
+      additionalProperties: false
+      required: [sha256, filename, mediaType]
+      properties:
+        sha256: { $ref: "#/components/schemas/Sha256Hex" }
+        filename: { $ref: "#/components/schemas/NoticeFilename" }
+        mediaType: { $ref: "#/components/schemas/NoticeMediaType" }
+        note: { $ref: "#/components/schemas/NoticeText" }
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+
+    NoticeEvent:
+      type: object
+      title: NoticeEvent
+      additionalProperties: false
+      required: [seq, kind, status, recordedAt, recordedBy]
+      properties:
+        seq:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        kind: { $ref: "#/components/schemas/NoticeEventKind" }
+        status: { $ref: "#/components/schemas/NoticeStatus" }
+        note: { $ref: "#/components/schemas/NoticeText" }
+        evidence: { $ref: "#/components/schemas/NoticeEvidence" }
+        authorityReference: { $ref: "#/components/schemas/AuthorityReference" }
+        deadline: { $ref: "#/components/schemas/NoticeDeadline" }
+        authenticity: { $ref: "#/components/schemas/NoticeAuthenticity" }
+        escalationReason: { $ref: "#/components/schemas/NoticeEscalationReason" }
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        ownerId:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+        slaDue: { $ref: "#/components/schemas/Timestamp" }
+        attachment: { $ref: "#/components/schemas/NoticeAttachment" }
+        responseVersion:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        responseSha256: { $ref: "#/components/schemas/Sha256Hex" }
+        outcome: { $ref: "#/components/schemas/NoticeOutcome" }
+        outcomeAmount: { $ref: "#/components/schemas/MoneyValue" }
+        settled:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+        settlement: { $ref: "#/components/schemas/NoticeSettlement" }
+        hearingDate: { $ref: "#/components/schemas/CivilDate" }
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+
+    Notice:
+      type: object
+      title: Notice
+      description: |
+        A regulatory notice as of `asOf`: the header as received, its
+        statutory deadline ledger beside the separate internal SLA clock, the
+        recorded documents, its history, and what needs attention.
+      additionalProperties: false
+      required: [id, type, authority, jurisdiction, entityAmbiguous, entityResolved, authorityReference, receivedAt, links, status, authenticity, escalated, flags, urgentLegalReview, statutoryDeadline, sla, deadlines, attachments, allowedActions, asOf, createdAt, createdBy, history]
+      properties:
+        id: { $ref: "#/components/schemas/NoticeId" }
+        type: { $ref: "#/components/schemas/NoticeType" }
+        authority: { $ref: "#/components/schemas/AuthorityCode" }
+        jurisdiction: { $ref: "#/components/schemas/NoticeJurisdiction" }
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        entityAmbiguous:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: The intake marked the recipient ambiguous.
+        entityResolved:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: The recipient legal entity is known. False sends the notice to legal review (SUP-08).
+        resolvedLegalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        authorityReference: { $ref: "#/components/schemas/AuthorityReference" }
+        receivedAt: { $ref: "#/components/schemas/Timestamp" }
+        periodStart: { $ref: "#/components/schemas/CivilDate" }
+        periodEnd: { $ref: "#/components/schemas/CivilDate" }
+        amount: { $ref: "#/components/schemas/MoneyValue" }
+        linkedCaseId:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: A related support or legal case, as given.
+        links:
+          type: array
+          items: { $ref: "#/components/schemas/NoticeLink" }
+        status: { $ref: "#/components/schemas/NoticeStatus" }
+        authenticity: { $ref: "#/components/schemas/NoticeAuthenticity" }
+        escalated:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: The notice has been escalated to legal.
+        flags:
+          type: array
+          items: { $ref: "#/components/schemas/NoticeFlag" }
+        urgentLegalReview:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+        statutoryDeadline:
+          type: object
+          additionalProperties: false
+          required: [original, current]
+          properties:
+            original: { $ref: "#/components/schemas/NoticeDeadline" }
+            current: { $ref: "#/components/schemas/NoticeDeadline" }
+        sla:
+          type: object
+          description: Our internal clock. It never moves the statutory deadline.
+          additionalProperties: false
+          required: [breached]
+          properties:
+            ownerId:
+              x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+              type: string
+              format: uuid
+            dueAt: { $ref: "#/components/schemas/Timestamp" }
+            breached:
+              x-ztax-privacy: { class: P0 }
+              type: boolean
+        deadlines:
+          type: array
+          items: { $ref: "#/components/schemas/NoticeDeadlineEntry" }
+        attachments:
+          type: array
+          items: { $ref: "#/components/schemas/NoticeAttachment" }
+        allowedActions:
+          type: array
+          items: { $ref: "#/components/schemas/NoticeAction" }
+        asOf: { $ref: "#/components/schemas/Timestamp" }
+        createdAt: { $ref: "#/components/schemas/Timestamp" }
+        createdBy:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+        history:
+          type: array
+          items: { $ref: "#/components/schemas/NoticeEvent" }
+
+    NoticeList:
+      type: object
+      title: NoticeList
+      additionalProperties: false
+      required: [notices]
+      properties:
+        notices:
+          type: array
+          items: { $ref: "#/components/schemas/Notice" }
+
+    CreateNoticeRequest:
+      type: object
+      title: CreateNoticeRequest
+      additionalProperties: false
+      required: [type, authority, jurisdiction, authorityReference, receivedAt, deadline]
+      properties:
+        type: { $ref: "#/components/schemas/NoticeType" }
+        authority: { $ref: "#/components/schemas/AuthorityCode" }
+        jurisdiction: { $ref: "#/components/schemas/NoticeJurisdiction" }
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        entityAmbiguous:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: The notice could be addressed to more than one of the tenant's legal entities.
+        authorityReference: { $ref: "#/components/schemas/AuthorityReference" }
+        receivedAt: { $ref: "#/components/schemas/Timestamp" }
+        periodStart: { $ref: "#/components/schemas/CivilDate" }
+        periodEnd: { $ref: "#/components/schemas/CivilDate" }
+        amount: { $ref: "#/components/schemas/MoneyValue" }
+        linkedCaseId:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          minLength: 1
+          maxLength: 200
+        links:
+          type: array
+          maxItems: 50
+          items: { $ref: "#/components/schemas/NoticeLink" }
+        deadline: { $ref: "#/components/schemas/NoticeDeadlineInput" }
+        deadlineEvidence: { $ref: "#/components/schemas/NoticeEvidence" }
+        ownerId:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+        slaDue: { $ref: "#/components/schemas/Timestamp" }
+        note: { $ref: "#/components/schemas/NoticeText" }
+
+    NoticeTransitionRequest:
+      type: object
+      title: NoticeTransitionRequest
+      additionalProperties: false
+      required: [to]
+      properties:
+        to: { $ref: "#/components/schemas/NoticeStatus" }
+        note: { $ref: "#/components/schemas/NoticeText" }
+
+    NoticeAuthenticityRequest:
+      type: object
+      title: NoticeAuthenticityRequest
+      additionalProperties: false
+      required: [authenticity, evidence]
+      properties:
+        authenticity: { $ref: "#/components/schemas/NoticeAuthenticity" }
+        evidence: { $ref: "#/components/schemas/NoticeEvidence" }
+
+    NoticeEscalationRequest:
+      type: object
+      title: NoticeEscalationRequest
+      additionalProperties: false
+      required: [reason, note]
+      properties:
+        reason: { $ref: "#/components/schemas/NoticeEscalationReason" }
+        note: { $ref: "#/components/schemas/NoticeText" }
+        evidence: { $ref: "#/components/schemas/NoticeEvidence" }
+
+    NoticeEntityRequest:
+      type: object
+      title: NoticeEntityRequest
+      additionalProperties: false
+      required: [legalEntityId, evidence]
+      properties:
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        evidence: { $ref: "#/components/schemas/NoticeEvidence" }
+
+    NoticeOwnerRequest:
+      type: object
+      title: NoticeOwnerRequest
+      additionalProperties: false
+      required: [ownerId]
+      properties:
+        ownerId:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+        slaDue: { $ref: "#/components/schemas/Timestamp" }
+        note: { $ref: "#/components/schemas/NoticeText" }
+
+    NoticeAttachmentRequest:
+      type: object
+      title: NoticeAttachmentRequest
+      additionalProperties: false
+      required: [sha256, filename, mediaType]
+      properties:
+        sha256: { $ref: "#/components/schemas/Sha256Hex" }
+        filename: { $ref: "#/components/schemas/NoticeFilename" }
+        mediaType: { $ref: "#/components/schemas/NoticeMediaType" }
+        note: { $ref: "#/components/schemas/NoticeText" }
+
+    NoticeDeadlineRequest:
+      type: object
+      title: NoticeDeadlineRequest
+      additionalProperties: false
+      required: [kind, dueDate, timezone, source, verified, evidence]
+      properties:
+        kind: { $ref: "#/components/schemas/NoticeDeadlineKind" }
+        dueDate: { $ref: "#/components/schemas/CivilDate" }
+        timezone: { $ref: "#/components/schemas/NoticeTimezone" }
+        source: { $ref: "#/components/schemas/NoticeDeadlineSource" }
+        verified:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+        evidence: { $ref: "#/components/schemas/NoticeEvidence" }
+        authorityReference: { $ref: "#/components/schemas/AuthorityReference" }
+        attachmentSha256: { $ref: "#/components/schemas/Sha256Hex" }
+
+    NoticeResponsePackageRequest:
+      type: object
+      title: NoticeResponsePackageRequest
+      additionalProperties: false
+      required: [summary]
+      properties:
+        summary: { $ref: "#/components/schemas/NoticeText" }
+        sha256: { $ref: "#/components/schemas/Sha256Hex" }
+
+    NoticeApprovalRequest:
+      type: object
+      title: NoticeApprovalRequest
+      additionalProperties: false
+      required: [version]
+      properties:
+        version:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        note: { $ref: "#/components/schemas/NoticeText" }
+
+    NoticeSubmissionRequest:
+      type: object
+      title: NoticeSubmissionRequest
+      additionalProperties: false
+      required: [authorityReceiptReference]
+      properties:
+        authorityReceiptReference: { $ref: "#/components/schemas/AuthorityReference" }
+        evidence: { $ref: "#/components/schemas/NoticeEvidence" }
+        note: { $ref: "#/components/schemas/NoticeText" }
+
+    NoticeOutcomeRequest:
+      type: object
+      title: NoticeOutcomeRequest
+      additionalProperties: false
+      required: [outcome, authorityReceiptReference, evidence]
+      properties:
+        outcome: { $ref: "#/components/schemas/NoticeOutcome" }
+        authorityReceiptReference: { $ref: "#/components/schemas/AuthorityReference" }
+        evidence: { $ref: "#/components/schemas/NoticeEvidence" }
+        note: { $ref: "#/components/schemas/NoticeText" }
+        amount: { $ref: "#/components/schemas/MoneyValue" }
+        settled:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+        settlement: { $ref: "#/components/schemas/NoticeSettlement" }
+
+    NoticeAppealRequest:
+      type: object
+      title: NoticeAppealRequest
+      additionalProperties: false
+      required: [nextDeadline, evidence]
+      properties:
+        nextDeadline: { $ref: "#/components/schemas/NoticeDeadlineInput" }
+        hearingDate: { $ref: "#/components/schemas/CivilDate" }
+        evidence: { $ref: "#/components/schemas/NoticeEvidence" }
+        authorityReference: { $ref: "#/components/schemas/AuthorityReference" }
+        note: { $ref: "#/components/schemas/NoticeText" }
 
     ComparatorId:
       x-ztax-privacy: { class: P0 }

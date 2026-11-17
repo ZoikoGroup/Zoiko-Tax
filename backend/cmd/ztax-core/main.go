@@ -169,6 +169,9 @@ func run() error {
 	// Migration converts history into its own tables; it needs no content,
 	// so it is served wherever the cell's store is.
 	router.Migration = app.NewMigrationService(store.Migrations(), store.LegalEntities(), store, clk, ids)
+	// Regulatory notices reference fiscal records and change none; like
+	// migration they need only the store.
+	router.Notices = app.NewNoticeService(store.Notices(), store.LegalEntities(), store, clk, ids)
 	if router.Determination != nil {
 		// Compliance packages execute the obligations commits assess, and
 		// move them only on filing evidence, so they are served wherever the

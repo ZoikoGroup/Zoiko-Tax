@@ -2545,6 +2545,209 @@
         "note": "The person who prepared, reviewed, approved, submitted or recorded the step."
       }
     },
+    "regulatory_notice": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "notice_id": {
+        "class": "P0"
+      },
+      "notice_type": {
+        "class": "P0"
+      },
+      "authority": {
+        "class": "P0"
+      },
+      "jurisdiction": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "entity_ambiguous": {
+        "class": "P0"
+      },
+      "authority_reference": {
+        "class": "P0",
+        "note": "The authority's own reference for the matter, as printed on the notice."
+      },
+      "received_at": {
+        "class": "P0"
+      },
+      "period_start": {
+        "class": "P0"
+      },
+      "period_end": {
+        "class": "P0"
+      },
+      "amount": {
+        "class": "P0",
+        "note": "The figure the notice states for a legal entity, kept as stated; an aggregate, never posted."
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "linked_case_id": {
+        "class": "P0",
+        "note": "An identifier of a related support or legal case, as given."
+      },
+      "links": {
+        "class": "P0",
+        "note": "Identifiers of returns, receipts, payments, ledger entries, rule versions and correspondence the notice relates to. References only."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who registered the notice."
+      }
+    },
+    "regulatory_notice_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "notice_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "status_after": {
+        "class": "P0"
+      },
+      "note": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text from the person recording the event: a review note, an escalation question, a disposition."
+      },
+      "evidence": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "How a deadline, authenticity, recipient or outcome was established, or the authority's response as received."
+      },
+      "authority_ref": {
+        "class": "P0",
+        "note": "The authority's receipt, decision or grant reference."
+      },
+      "deadline_kind": {
+        "class": "P0"
+      },
+      "due_date": {
+        "class": "P0"
+      },
+      "due_timezone": {
+        "class": "P0"
+      },
+      "deadline_source": {
+        "class": "P0"
+      },
+      "deadline_verified": {
+        "class": "P0"
+      },
+      "authenticity": {
+        "class": "P0"
+      },
+      "escalation_reason": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "owner_id": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who owns the notice's deadline."
+      },
+      "sla_due": {
+        "class": "P0"
+      },
+      "attachment_sha256": {
+        "class": "P0",
+        "note": "The SHA-256 of a document recorded as evidence. The document itself is not stored."
+      },
+      "attachment_name": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The file name of a document recorded as evidence, as given; it may name a person."
+      },
+      "attachment_media": {
+        "class": "P0"
+      },
+      "response_version": {
+        "class": "P0"
+      },
+      "response_sha256": {
+        "class": "P0"
+      },
+      "outcome": {
+        "class": "P0"
+      },
+      "outcome_amount": {
+        "class": "P0",
+        "note": "The figure the authority decided for a legal entity, as stated; never posted."
+      },
+      "outcome_currency": {
+        "class": "P0"
+      },
+      "settled": {
+        "class": "P0"
+      },
+      "settlement": {
+        "class": "P0"
+      },
+      "hearing_date": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the event."
+      }
+    },
     "remittance_beneficiary": {
       "tenant_id": {
         "class": "P0"

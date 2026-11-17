@@ -201,6 +201,10 @@ const FOLDERS = [
       "createCompliancePackage", "getCompliancePackage", "listCompliancePackages", "prepareCompliancePackage",
       "reviewCompliancePackage", "approveCompliancePackage", "submitCompliancePackage",
       "acknowledgeCompliancePackage", "resolveCompliancePackage", "cancelCompliancePackage",
+      "createNotice", "getNotice", "listNotices", "transitionNotice", "recordNoticeAttachment",
+      "recordNoticeAuthenticity", "escalateNotice", "resolveNoticeEntity", "assignNoticeOwner",
+      "recordNoticeDeadline", "getNoticeDeadlines", "prepareNoticeResponse", "approveNoticeResponse",
+      "recordNoticeSubmission", "recordNoticeOutcome", "lodgeNoticeAppeal",
       "listRemittances", "createRemittance", "getRemittance", "approveRemittance", "submitRemittance",
       "recordRemittanceStatus", "resolveRemittance", "returnRemittance", "cancelRemittance",
       "createComparator", "listComparators", "executeShadowRun", "listShadowRuns", "getShadowRun", "moveDiscrepancy",
@@ -283,6 +287,8 @@ const VALUE_VARIABLES = {
   "01920b74-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{migrationExceptionId}}",
   // The beneficiary examples' id: the payee version folder 04 just recorded.
   "01920b20-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{beneficiaryId}}",
+  // The regulatory notice examples' id: the notice folder 06 just registered.
+  "01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{noticeId}}",
   // The compliance package examples' id: the package folder 06 just made.
   "01920b10-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{packageId}}",
   // The seal examples' id: the seal folder 04 just made.
@@ -441,6 +447,29 @@ const OPERATION_TESTS = {
     "    pm.expect(pm.response.json().status).to.eql('CANCELLED');",
     "  });",
     "}",
+  ],
+  createNotice: [
+    "pm.test('SUP-08 — a notice with no resolved recipient goes straight to legal review', function () {",
+    "  pm.response.to.have.status(201);",
+    "  const n = pm.response.json();",
+    "  pm.expect(n.status).to.eql('LEGAL_REVIEW');",
+    "  pm.expect(n.statutoryDeadline.original.dueDate).to.eql('2026-10-31');",
+    "});",
+    "pm.collectionVariables.set('noticeId', pm.response.json().id);",
+  ],
+  recordNoticeDeadline: [
+    "pm.test('T18-17 — an evidenced extension moves the deadline and keeps the original', function () {",
+    "  pm.response.to.have.status(200);",
+    "  const n = pm.response.json();",
+    "  pm.expect(n.statutoryDeadline.current.dueDate).to.eql('2026-11-30');",
+    "  pm.expect(n.statutoryDeadline.original.dueDate).to.eql('2026-10-31');",
+    "});",
+  ],
+  approveNoticeResponse: [
+    "pm.test('the person who prepared the response cannot approve it', function () {",
+    "  pm.response.to.have.status(403);",
+    "  pm.expect(pm.response.json().ztx_reason_code).to.eql('SEGREGATION_OF_DUTIES');",
+    "});",
   ],
   createBeneficiary: [
     "pm.test('ZTAX-REM-REQ-0012 — a payee version is recorded unverified', function () {",
@@ -895,6 +924,16 @@ const ACCEPTED_OUTCOMES = {
   acknowledgeCompliancePackage: ["409"],
   resolveCompliancePackage: ["409"],
   cancelCompliancePackage: ["409"],
+  // Folder 06 registers a notice with no resolved recipient, so it starts in
+  // legal review (SUP-08) and the review transition is out of order; the
+  // example legal entity is not the tenant's; one OPERATOR prepares and
+  // cannot approve its own response, so nothing after approval is in order.
+  transitionNotice: ["409"],
+  resolveNoticeEntity: ["400"],
+  approveNoticeResponse: ["403"],
+  recordNoticeSubmission: ["409"],
+  recordNoticeOutcome: ["409"],
+  lodgeNoticeAppeal: ["409"],
   // The administrator who records a payee version cannot verify it
   // (ZTAX-REM-REQ-0014). Folder 06's return is never accepted by an
   // authority, so there is nothing to pay, and no payment to act on.
@@ -1203,6 +1242,7 @@ function variables(overlay, contractDigest, local) {
     { key: "obligationId", value: "", type: "string" },
     { key: "refundId", value: "", type: "string" },
     { key: "packageId", value: "", type: "string" },
+    { key: "noticeId", value: "", type: "string" },
     { key: "beneficiaryId", value: "", type: "string" },
     { key: "comparatorId", value: "", type: "string" },
     { key: "migrationProgramId", value: "", type: "string" },
