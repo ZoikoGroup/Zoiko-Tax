@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
+import type { Route } from '../components/layout/Sidebar'
+import { useRoutedTab } from '../pages/routedTab'
 import {
   ALL_ROLES,
   api,
@@ -11,32 +13,37 @@ import {
   type User,
 } from '../platform/api'
 import { Confirm } from './Confirm'
+import { IntegrationsPanel } from './IntegrationsPanel'
+import { OrganisationPanel } from './OrganisationPanel'
 
 /**
  * The administration workspace.
  *
- * Four surfaces, and they exist because the auth model makes them real: a
- * tenant, its users, their roles, their live sessions, and an append-only
- * record of every change to those. Nothing here presupposes fiscal data, which
- * is why it can be built before W3 lane N chooses the stack for the 38 screens —
- * these are administrative screens, and they are the ones the auth work needs in
- * order to be usable at all.
+ * Its surfaces exist because the auth model makes them real: a tenant, its
+ * users, their roles, their live sessions, the endpoints its events leave the
+ * cell for, and an append-only record of every change to those. Nothing here
+ * presupposes fiscal data.
  *
  * No fiscal amount appears anywhere in this file, and none can: the api module's
  * types have no way to express one (C1 is a type-level property here, not a
  * discipline).
  */
 
-type Tab = 'users' | 'sessions' | 'audit'
+type Tab = 'users' | 'organisation' | 'integrations' | 'security' | 'audit'
+const TABS: readonly Tab[] = ['users', 'organisation', 'integrations', 'security', 'audit']
 
 export interface AdminPanelProps {
   readonly session: SessionInfo
   readonly onSignOut: () => Promise<void>
   readonly onRefresh: () => Promise<void>
+  /** Where the shell is: the panel opens the tab the menu sent it to. */
+  readonly route?: Route
+  /** Reports a tab the user picks, so the menu follows it. */
+  readonly onTabChange?: (tab: string) => void
 }
 
-export function AdminPanel({ session, onSignOut, onRefresh }: AdminPanelProps) {
-  const [tab, setTab] = useState<Tab>('users')
+export function AdminPanel({ session, onSignOut, onRefresh, route, onTabChange }: AdminPanelProps) {
+  const [tab, setTab] = useRoutedTab(TABS, 'users', route, onTabChange)
   const isAdmin = session.user.roles.includes('ADMIN')
   const isAuditor = session.user.roles.includes('AUDITOR')
 
@@ -72,13 +79,38 @@ export function AdminPanel({ session, onSignOut, onRefresh }: AdminPanelProps) {
 
       <nav className="tabs" aria-label="Administration">
         <TabButton current={tab} value="users" onSelect={setTab}>Users</TabButton>
-        {isAdmin && <TabButton current={tab} value="sessions" onSelect={setTab}>Sessions</TabButton>}
+        <TabButton current={tab} value="organisation" onSelect={setTab}>Organisation</TabButton>
+        <TabButton current={tab} value="integrations" onSelect={setTab}>Integrations &amp; APIs</TabButton>
+        <TabButton current={tab} value="security" onSelect={setTab}>Security</TabButton>
         {(isAdmin || isAuditor) && <TabButton current={tab} value="audit" onSelect={setTab}>Audit</TabButton>}
       </nav>
 
       {tab === 'users' && <UsersPanel canManage={isAdmin} onChanged={onRefresh} />}
-      {tab === 'sessions' && isAdmin && <SessionsPanel onSignedOutSelf={onRefresh} />}
-      {tab === 'audit' && (isAdmin || isAuditor) && <AuditPanel />}
+      {tab === 'organisation' && <OrganisationPanel session={session} />}
+      {tab === 'integrations' && (
+        <IntegrationsPanel canManage={isAdmin} canRead={isAdmin || isAuditor} />
+      )}
+      {tab === 'security' && (
+        <>
+          <ChangePasswordPanel onChanged={onRefresh} />
+          {isAdmin ? (
+            <SessionsPanel onSignedOutSelf={onRefresh} />
+          ) : (
+            <section className="panel" aria-labelledby="sessions-heading">
+              <h2 id="sessions-heading">Sessions</h2>
+              <p className="panel__note">
+                Listing and revoking the tenant&apos;s sessions needs the ADMIN role.
+              </p>
+            </section>
+          )}
+        </>
+      )}
+      {tab === 'audit' && (isAdmin || isAuditor ? <AuditPanel /> : (
+        <section className="panel" aria-labelledby="audit-heading">
+          <h2 id="audit-heading">Audit</h2>
+          <p className="panel__note">The administrative audit needs the ADMIN or AUDITOR role.</p>
+        </section>
+      ))}
     </main>
   )
 }
@@ -494,6 +526,96 @@ function RevokeSession({ session, onRevoke }: { session: Session; onRevoke: () =
       }
       onConfirm={onRevoke}
     />
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Password
+// ---------------------------------------------------------------------------
+
+/**
+ * Change the signed-in user's own password. The cell revokes every session
+ * the user holds, this one included, so success ends in the sign-in screen —
+ * said before the button is pressed, not discovered after (C5).
+ */
+function ChangePasswordPanel({ onChanged }: { onChanged: () => Promise<void> }) {
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [repeat, setRepeat] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  return (
+    <section className="panel" aria-labelledby="password-heading">
+      <h2 id="password-heading">Change your password</h2>
+      <p className="panel__note">
+        Changing your password ends <strong>every</strong> session you hold, including this one. You will be signed
+        out at once and must sign in again with the new password.
+      </p>
+      <form
+        className="subpanel"
+        onSubmit={(event) => {
+          event.preventDefault()
+          if (next !== repeat) {
+            setError('The new password and its repetition differ.')
+            return
+          }
+          setBusy(true)
+          setError('')
+          api
+            .changePassword(current, next)
+            .then(() => {
+              setCurrent(''); setNext(''); setRepeat('')
+              return onChanged()
+            })
+            .catch((cause: unknown) => { setError(describeError(cause)) })
+            .finally(() => { setBusy(false) })
+        }}
+      >
+        <div className="field">
+          <label htmlFor="pw-current">Current password</label>
+          <input
+            id="pw-current"
+            type="password"
+            autoComplete="current-password"
+            value={current}
+            required
+            onChange={(e) => { setCurrent(e.target.value) }}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="pw-new">New password</label>
+          <input
+            id="pw-new"
+            type="password"
+            autoComplete="new-password"
+            value={next}
+            required
+            minLength={12}
+            aria-describedby="pw-new-help"
+            onChange={(e) => { setNext(e.target.value) }}
+          />
+          <p className="field__help" id="pw-new-help">Minimum 12 characters.</p>
+        </div>
+        <div className="field">
+          <label htmlFor="pw-repeat">New password again</label>
+          <input
+            id="pw-repeat"
+            type="password"
+            autoComplete="new-password"
+            value={repeat}
+            required
+            onChange={(e) => { setRepeat(e.target.value) }}
+          />
+        </div>
+        <p className="field__error" role="alert" aria-live="polite">{error}</p>
+        <div className="confirm__actions">
+          <button type="submit" className="btn btn--primary" disabled={busy}>
+            {busy ? 'Changing…' : 'Change password and sign out'}
+          </button>
+        </div>
+      </form>
+    </section>
   )
 }
 

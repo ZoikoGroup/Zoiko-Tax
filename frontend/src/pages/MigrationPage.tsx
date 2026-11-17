@@ -20,8 +20,24 @@ import {
   useAction,
   useLoad,
 } from '../ui/kit'
+import { TabBar } from './determine/shared'
+import { useRoutedTab } from './routedTab'
 import type { PageProps } from './types'
 import './obligations.css'
+
+type Tab = 'import' | 'mapping' | 'parallel' | 'cutover' | 'rollback'
+
+const TABS: readonly { value: Tab; label: string }[] = [
+  { value: 'import', label: 'Data import' },
+  { value: 'mapping', label: 'Mapping validation' },
+  { value: 'parallel', label: 'Parallel runs' },
+  { value: 'cutover', label: 'Cutover readiness' },
+  { value: 'rollback', label: 'Rollback & history' },
+]
+
+// The states from which a rollback move exists, and the moves of the rollback
+// branch itself (§26).
+const ROLLBACK_STATES: readonly Cutover[] = ['ROLLBACK_ACTIVE', 'ROLLED_BACK', 'FAILED_MANUAL_RECOVERY']
 
 // Migration (ZTAX-MIG-001): history brought in AS_KNOWN from immutable
 // snapshots through versioned mappings, reconciled by count, value and
@@ -58,7 +74,8 @@ const pick = <T extends string>(values: readonly T[], v: string, fallback: T): T
   (values as readonly string[]).includes(v) ? (v as T) : fallback
 const words = (s: string) => s.replaceAll('_', ' ')
 
-export const MigrationPage = ({ session }: PageProps) => {
+export const MigrationPage = ({ session, route, onTabChange }: PageProps) => {
+  const [tab, setTab] = useRoutedTab(TABS.map((t) => t.value), 'import', route, onTabChange)
   const programs = useLoad((signal) => ztax.listMigrationPrograms(signal), [])
   const [selected, setSelected] = useState<string | null>(null)
   const roles = session.user.roles
@@ -72,6 +89,7 @@ export const MigrationPage = ({ session }: PageProps) => {
         subtitle="History brought in as it was recorded: immutable snapshots, versioned mappings, reconciled runs and a governed cutover."
         actions={<button type="button" className="ztax-btn-quiet" onClick={programs.reload}>Refresh</button>}
       />
+      <TabBar label="Migration" tabs={TABS} current={tab} onSelect={setTab} />
       <Card title="Programs">
         <Loaded load={programs.load}>
           {(data) => data.programs.length === 0 ? <Empty>No migration programs yet.</Empty> : (
@@ -91,9 +109,11 @@ export const MigrationPage = ({ session }: PageProps) => {
             </table>
           )}
         </Loaded>
-        {canOperate ? <NewProgram onCreated={(p) => { setSelected(p.id); programs.reload() }} /> : null}
+        {canOperate && tab === 'import' ? <NewProgram onCreated={(p) => { setSelected(p.id); programs.reload() }} /> : null}
       </Card>
-      {selected === null ? null : <ProgramDetail key={selected} id={selected} canOperate={canOperate} canDecide={canDecide} />}
+      {selected === null ? (
+        tab === 'import' ? null : <Card><Empty>Open a program above to see its {TABS.find((t) => t.value === tab)?.label.toLowerCase()}.</Empty></Card>
+      ) : <ProgramDetail key={selected} id={selected} tab={tab} canOperate={canOperate} canDecide={canDecide} />}
     </div>
   )
 }
@@ -134,41 +154,109 @@ const NewProgram = ({ onCreated }: { onCreated: (p: Program) => void }) => {
   )
 }
 
-const ProgramDetail = ({ id, canOperate, canDecide }: { id: string; canOperate: boolean; canDecide: boolean }) => {
+const ProgramDetail = ({ id, tab, canOperate, canDecide }: { id: string; tab: Tab; canOperate: boolean; canDecide: boolean }) => {
   const { load, reload } = useLoad((signal) => ztax.getMigrationProgram(id, signal), [id])
   const [runId, setRunId] = useState<string | null>(null)
   return (
     <Loaded load={load}>
-      {(d) => (
-        <>
-          <Columns>
-            <Card title={`Program · ${d.program.name}`}>
-              <dl className="ztax-kv">
-                <dt>Program</dt><dd><Id value={d.program.id} /></dd>
-                <dt>Type</dt><dd>{words(d.program.type)}</dd>
-                <dt>Legal entity</dt><dd><Id value={d.program.legalEntityId} /></dd>
-                <dt>Period</dt><dd>{civilDate(d.program.periodFrom)} – {civilDate(d.program.periodTo)}</dd>
-                <dt>Scale</dt><dd>{d.program.scale} decimal places</dd>
-                <dt>Conversion</dt><dd>AS KNOWN — amounts carried as the source recorded them, never recalculated.</dd>
-              </dl>
-              <Raw value={d} />
-            </Card>
-            <CutoverCard d={d} canOperate={canOperate} onMoved={reload} />
-          </Columns>
-          <Columns>
-            <SnapshotsCard d={d} canOperate={canOperate} onDone={reload} />
-            <MappingsCard d={d} canOperate={canOperate} onDone={reload} />
-          </Columns>
-          <RunsCard d={d} canOperate={canOperate} canDecide={canDecide} onDone={reload} onOpen={setRunId} />
-          {runId === null ? null : <RunRecords key={runId} id={runId} />}
-        </>
-      )}
+      {(d) => {
+        switch (tab) {
+          case 'import':
+            return (
+              <Columns>
+                <Card title={`Program · ${d.program.name}`}>
+                  <dl className="ztax-kv">
+                    <dt>Program</dt><dd><Id value={d.program.id} /></dd>
+                    <dt>Type</dt><dd>{words(d.program.type)}</dd>
+                    <dt>Legal entity</dt><dd><Id value={d.program.legalEntityId} /></dd>
+                    <dt>Period</dt><dd>{civilDate(d.program.periodFrom)} – {civilDate(d.program.periodTo)}</dd>
+                    <dt>Scale</dt><dd>{d.program.scale} decimal places</dd>
+                    <dt>Conversion</dt><dd>AS KNOWN — amounts carried as the source recorded them, never recalculated.</dd>
+                    <dt>Cutover</dt><dd><Status value={d.cutoverState} /></dd>
+                  </dl>
+                  <Raw value={d} />
+                </Card>
+                <SnapshotsCard d={d} canOperate={canOperate} onDone={reload} />
+              </Columns>
+            )
+          case 'mapping':
+            return <MappingsCard d={d} canOperate={canOperate} onDone={reload} />
+          case 'parallel':
+            return (
+              <>
+                <RunsCard d={d} canOperate={canOperate} canDecide={canDecide} onDone={reload} onOpen={setRunId} />
+                {runId === null ? null : <RunRecords key={runId} id={runId} />}
+              </>
+            )
+          case 'cutover':
+            return <CutoverCard d={d} canOperate={canOperate} onMoved={reload} />
+          case 'rollback':
+            return <RollbackCard d={d} canOperate={canOperate} onMoved={reload} />
+        }
+      }}
     </Loaded>
   )
 }
 
+/**
+ * The whole cutover history, oldest first, and the rollback branch: from
+ * ROUTING_SWITCH, VALIDATING_LIVE or CUTOVER_COMPLETE a program may move to
+ * ROLLBACK_ACTIVE, and from there to ROLLED_BACK or FAILED_MANUAL_RECOVERY.
+ */
+const RollbackCard = ({ d, canOperate, onMoved }: { d: Detail; canOperate: boolean; onMoved: () => void }) => {
+  const options = (NEXT[d.cutoverState] ?? []).filter((o) => ROLLBACK_STATES.includes(o))
+  const [to, setTo] = useState<Cutover>(options[0] ?? 'ROLLBACK_ACTIVE')
+  const [note, setNote] = useState('')
+  const action = useAction<Detail>()
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    void action.run(() => ztax.moveMigrationCutover(d.program.id, { to: options.includes(to) ? to : (options[0] ?? to), note: note.trim() }))
+      .then((x) => { if (x !== null) { setNote(''); onMoved() } })
+  }
+  return (
+    <Card title="Rollback & history" aside={<Status value={d.cutoverState} />}>
+      <p className="ztax-note">
+        Every cutover move recorded for this program, oldest first. A rollback is available only once routing has
+        switched; before that, a program is aborted instead (Cutover readiness).
+      </p>
+      {d.cutover.length === 0 ? <Empty>No cutover move recorded yet; the program is {words(d.cutoverState)}.</Empty> : (
+        <table className="ztax-action-table">
+          <thead><tr><th>#</th><th>State</th><th>Why</th><th>By</th><th>When</th></tr></thead>
+          <tbody>
+            {d.cutover.map((e) => (
+              <tr key={e.seq}>
+                <td className="mono" style={{ paddingRight: 8 }}>{e.seq}</td>
+                <td style={{ paddingRight: 8 }}><Status value={e.state} /></td>
+                <td style={{ paddingRight: 8 }}>{e.note}</td>
+                <td style={{ paddingRight: 8 }}><Id value={e.recordedBy} /></td>
+                <td>{instant(e.recordedAt)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {options.length === 0 ? (
+        <p className="muted">No rollback move exists from {words(d.cutoverState)}.</p>
+      ) : canOperate ? (
+        <form className="ztax-form" onSubmit={submit}>
+          <Field label="Move to">
+            <select value={options.includes(to) ? to : options[0]} onChange={(e) => { setTo(pick(options, e.target.value, options[0] ?? 'ROLLBACK_ACTIVE')) }}>
+              {options.map((o) => <option key={o} value={o}>{words(o)}</option>)}
+            </select>
+          </Field>
+          <Field label="Why (required)"><input value={note} required onChange={(e) => { setNote(e.target.value) }} /></Field>
+          <div className="ztax-form-actions"><Submit busy={action.busy}>Record rollback move</Submit></div>
+          <div style={{ gridColumn: '1 / -1' }}>{action.error === null ? null : <ErrorNote error={action.error} />}</div>
+        </form>
+      ) : (
+        <p className="muted">Recording a rollback move needs the ADMIN or OPERATOR role.</p>
+      )}
+    </Card>
+  )
+}
+
 const CutoverCard = ({ d, canOperate, onMoved }: { d: Detail; canOperate: boolean; onMoved: () => void }) => {
-  const options = NEXT[d.cutoverState] ?? []
+  const options = (NEXT[d.cutoverState] ?? []).filter((o) => !ROLLBACK_STATES.includes(o))
   const [to, setTo] = useState<Cutover>(options[0] ?? 'PRECHECK')
   const [note, setNote] = useState('')
   const action = useAction<Detail>()
@@ -179,7 +267,7 @@ const CutoverCard = ({ d, canOperate, onMoved }: { d: Detail; canOperate: boolea
   }
   const r = d.readiness
   return (
-    <Card title="Cutover">
+    <Card title="Cutover readiness">
       <dl className="ztax-kv">
         <dt>State</dt><dd><Status value={d.cutoverState} /></dd>
         <dt>Latest run</dt><dd>{r.hasRun ? (r.reconciled ? <Status value="READY" /> : <Status value="UNMATCHED" />) : <span className="muted">none</span>}</dd>
