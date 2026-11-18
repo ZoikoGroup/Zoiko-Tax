@@ -38,7 +38,7 @@ from typing import Any, Final, NoReturn
 import grpc
 
 from .evidence_sink import EvidenceSink, LoggingEvidenceSink
-from .fake_runtime import FakeRuntime
+from .fake_runtime import BASE_STACK_CANNED, FakeRuntime
 from .governance import (
     UNREGISTERED_USE_CASE,
     GovernanceRefusedError,
@@ -1082,7 +1082,7 @@ def _runtime() -> ModelRuntime:
                 file=sys.stderr,
             )
             raise SystemExit(2)
-        return FakeRuntime()
+        return FakeRuntime(canned=BASE_STACK_CANNED)
     print(
         f"gateway: unknown ZTAX_GATEWAY_RUNTIME value {runtime_name!r}; "
         "expected 'unconfigured' or 'fake'",

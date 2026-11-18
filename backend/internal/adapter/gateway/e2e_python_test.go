@@ -166,9 +166,10 @@ func TestCrossLanguageBoundary(t *testing.T) {
 // for classification-review, which is the only kind FakeRuntime's default
 // answers with the proposed_code below, so it is reused as-is.
 //
-// "FAKE-UNCLASSIFIED" and "0.9000" mirror FakeRuntime's default
-// CLASSIFICATION_PROPOSAL result (_DEFAULT_PROPOSAL in
-// intelligence/src/ztax_gateway/fake_runtime.py) exactly; they are not
+// "ontology:telecom/voice/mobile" and "0.9000" mirror BASE_STACK_CANNED in
+// intelligence/src/ztax_gateway/fake_runtime.py — the canned table that
+// _runtime() now passes to FakeRuntime when ZTAX_GATEWAY_RUNTIME=fake, so
+// the base stack shows PROPOSED on the Intelligence screen.  They are not
 // independently chosen here.
 func TestFakeRuntimeCrossesTheBoundary(t *testing.T) {
 	addr := startPythonGateway(t, "fake")
@@ -178,7 +179,7 @@ func TestFakeRuntimeCrossesTheBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if reply.ProposedCode != "FAKE-UNCLASSIFIED" || reply.Confidence != "0.9000" {
+	if reply.ProposedCode != "ontology:telecom/voice/mobile" || reply.Confidence != "0.9000" {
 		t.Fatalf("proposal = %+v", reply)
 	}
 	if reply.ModelProfile != testRouteModelProfile || reply.ProviderProfile != testRouteProviderProfile ||

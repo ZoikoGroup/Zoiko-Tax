@@ -75,6 +75,76 @@ _DEFAULTS: dict[Kind, Result] = {
     Kind.CLASSIFICATION_PROPOSAL: _DEFAULT_PROPOSAL,
 }
 
+# ---------------------------------------------------------------------------
+# Base-stack canned table — used by _runtime() in server.py when
+# ZTAX_GATEWAY_RUNTIME=fake so the base stack returns a real-looking
+# PROPOSED answer on the Intelligence screen.  The code is on the synthetic
+# approved list (config/approved_ontology.live-demo.json) and passes the Go-
+# path format check (OntologyID.Validate).  The fallback _DEFAULT_PROPOSAL
+# ("FAKE-UNCLASSIFIED") is intentionally left unchanged so all other callers
+# of FakeRuntime() — tests, the evaluation harness — keep their existing
+# default behaviour.
+# ---------------------------------------------------------------------------
+BASE_STACK_CANNED: dict[tuple[str, Kind], Result] = {
+    ("classification-review", Kind.CLASSIFICATION_PROPOSAL): Result(
+        proposed_code="ontology:telecom/voice/mobile",
+        confidence="0.9000",
+    ),
+    # Explainer canned answers for the base stack.  The explain() function in
+    # tools/report_ai_http.py sends Kind.EXTRACTION for all explain use cases;
+    # the reply's fields dict must carry "explanation" and "cited_ids".
+    #
+    # Fixed answers cannot dynamically cite the right row for every request.
+    # check_guard will reject them if the cited id is not among the rows the
+    # caller supplied for this particular request (GUARD_FOREIGN_CITATION), or
+    # if the explanation text contains numbers not present in those rows
+    # (GUARD_NUMBER_NOT_IN_ROWS).  That is the documented and expected outcome
+    # for the base stack; it means the explain button returns ABSTAINED rather
+    # than EXPLAINED.  This is acceptable: the base stack has no real model,
+    # and the canned answer is here to prove the route is wired, not to pass
+    # the guard on every call.  See Task 3 test_fake_runtime.py for the recorded
+    # guard outcome.
+    ("explain-report-figure", Kind.EXTRACTION): Result(
+        fields={
+            "explanation": (
+                "[fake] Canned base-stack answer for explain-report-figure. "
+                "No model was called. "
+                "This figure is taken from the synthetic demo fixture (FIG-001)."
+            ),
+            "cited_ids": '["FIG-001"]',
+            "abstain": "false",
+            "reason": "",
+        },
+        confidence="0.9000",
+    ),
+    ("explain-obligation-row", Kind.EXTRACTION): Result(
+        fields={
+            "explanation": (
+                "[fake] Canned base-stack answer for explain-obligation-row. "
+                "No model was called. "
+                "This obligation row is taken from the synthetic demo fixture (OBL-001)."
+            ),
+            "cited_ids": '["OBL-001"]',
+            "abstain": "false",
+            "reason": "",
+        },
+        confidence="0.9000",
+    ),
+    ("explain-shadow-variance", Kind.EXTRACTION): Result(
+        fields={
+            "explanation": (
+                "[fake] Canned base-stack answer for explain-shadow-variance. "
+                "No model was called. "
+                "This shadow assurance row is taken from the synthetic demo fixture (SHD-001)."
+            ),
+            "cited_ids": '["SHD-001"]',
+            "abstain": "false",
+            "reason": "",
+        },
+        confidence="0.9000",
+    ),
+}
+
 
 class FakeRuntime:
     """A deterministic fake ModelRuntime for development and e2e testing.
