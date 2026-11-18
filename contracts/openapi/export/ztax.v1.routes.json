@@ -297,6 +297,54 @@
     },
     {
       "method": "GET",
+      "path": "/v1/exemptions",
+      "operationId": "listExemptionCertificates",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/exemptions",
+      "operationId": "receiveExemptionCertificate",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/exemptions/{certificateId}",
+      "operationId": "getExemptionCertificate",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/exemptions/{certificateId}/decision",
+      "operationId": "decideExemptionCertificate",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/exemptions/{certificateId}/recommendation",
+      "operationId": "recommendExemptionCertificate",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/exemptions/{certificateId}/screening",
+      "operationId": "screenExemptionCertificate",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/exemptions/{certificateId}/transitions",
+      "operationId": "transitionExemptionCertificate",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/exemptions/{certificateId}/versions",
+      "operationId": "addExemptionCertificateVersion",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/jobs",
       "operationId": "listJobs",
       "public": false
@@ -587,6 +635,42 @@
       "method": "POST",
       "path": "/v1/refunds/{refundId}/reports",
       "operationId": "reportRefund",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/registrations",
+      "operationId": "listRegistrations",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/registrations",
+      "operationId": "createRegistration",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/registrations/{registrationId}",
+      "operationId": "getRegistration",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/registrations/{registrationId}/attachments",
+      "operationId": "recordRegistrationAttachment",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/registrations/{registrationId}/checks",
+      "operationId": "recordRegistrationCheck",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/registrations/{registrationId}/transitions",
+      "operationId": "transitionRegistration",
       "public": false
     },
     {

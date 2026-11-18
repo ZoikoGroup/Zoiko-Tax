@@ -3503,6 +3503,397 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/registrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The registration and permit inventory
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The tenant's registrations with authorities, newest first, as of now, in
+         *     any status: an expired, revoked or withdrawn registration stays listed
+         *     as recorded and is never shown as in force (Doc 17 ER-012). Numbers are
+         *     masked in a listing; the detail read reveals them to the people who
+         *     record and review registrations.
+         *
+         *     `flags` are computed as of `asOf`: `EXPIRING_SOON` within 60 days,
+         *     `PAST_EXPIRY` once the end date has passed without an expiry being
+         *     recorded, `NOT_YET_EFFECTIVE`, `PENDING_VALIDATION` after an
+         *     inconclusive or unavailable authority check, `AUTHORITY_NEGATIVE`, and
+         *     `AWAITING_ACTIVATION`. No registration is NOT_REGISTERED's opposite:
+         *     an absent registration is never "tax exempt" (EER-04).
+         */
+        get: operations["listRegistrations"];
+        put?: never;
+        /**
+         * Record a registration, as a draft or submitted for review
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records a registration a legal entity holds or is applying for: its
+         *     scheme, jurisdiction, authority, number and effective dates, with any
+         *     supporting documents by digest (hashed in the browser; nothing is
+         *     uploaded). It is kept as a `DRAFT`, or `SUBMITTED` with `submit: true`
+         *     — never `VERIFIED` or `ACTIVE`: an uploaded application is not an
+         *     official acceptance (Doc 17 ER-014). The legal entity defaults to the
+         *     tenant's default entity.
+         *
+         *     Each scheme keeps its own identifier: an FCC FRN, a USAC 499 Filer ID
+         *     and a USAC 498 ID are distinct, and a number of one scheme entered under
+         *     another is `400 REGISTRATION_SCHEME_MISMATCH`, never converted
+         *     (ER-011). A number already recorded for another of the tenant's legal
+         *     entities is `409 EVIDENCE_PROVENANCE_CONFLICT`; one already recorded
+         *     for this entity is `409 ALREADY_EXISTS` unless the new registration
+         *     `supersedes` it. A renewal or correction is a new registration; nothing
+         *     is edited.
+         *
+         *     **Idempotent on the `Idempotency-Key`**: the same key and request return
+         *     the registration already recorded with `200`; the same key with a
+         *     different request is `409 IDEMPOTENCY_KEY_REUSE`.
+         */
+        post: operations["createRegistration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/registrations/{registrationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One registration with its history
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The registration as of now, with every event: submissions, authority
+         *     checks with the authority's reference, activation, suspension, expiry,
+         *     revocation and supporting documents. The number is revealed to
+         *     `OPERATOR` and `ANALYST` and masked for `AUDITOR`.
+         */
+        get: operations["getRegistration"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/registrations/{registrationId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit, withdraw, return, activate, suspend, reinstate, expire or revoke a registration
+         * @description Signed in as themselves. `SUBMITTED` and `WITHDRAWN` are `OPERATOR` or
+         *     `ANALYST`; every other move is `ANALYST`.
+         *
+         *     `SUBMITTED` from `DRAFT`; `WITHDRAWN` from `DRAFT` or `SUBMITTED`;
+         *     `DRAFT` from `SUBMITTED` or `VERIFIED` (returned for evidence). `ACTIVE`
+         *     from `VERIFIED` is activation: by someone other than the submitter
+         *     (`403 MAKER_CHECKER`), once the effective date has come, and only on the
+         *     version read — anything recorded since is `409 VERSION_CONFLICT`.
+         *     `SUSPENDED`, `REVOKED` and `EXPIRED` from `ACTIVE` or `SUSPENDED`;
+         *     `EXPIRED` only once the effective end date has passed. `ACTIVE` from
+         *     `SUSPENDED` is reinstatement, by someone other than the suspender.
+         *     Every move but `SUBMITTED` and `EXPIRED` gives its reason. `VERIFIED`
+         *     is never a move a person names: only an authority check makes it.
+         *
+         *     An active registration is evidence of status. It is not authority to
+         *     file and changes no tax result.
+         */
+        post: operations["transitionRegistration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/registrations/{registrationId}/checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record an authority check of a registration's number
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     Records what an authority returned when a specialist looked the number
+         *     up. No authority adapter is connected, so `method` is `MANUAL_LOOKUP`:
+         *     a named person's attested lookup, never a fabricated authority result.
+         *     The source must be one that can check the scheme — VIES does not
+         *     validate a GB number, HMRC does not validate an EU one (ER-018).
+         *
+         *     `VERIFIED` moves a `SUBMITTED` registration to `VERIFIED`, and
+         *     `NEGATIVE` takes a `VERIFIED` one back to `SUBMITTED`; both carry the
+         *     authority's own `reference`. `INCONCLUSIVE` and `UNAVAILABLE` move
+         *     nothing and are never treated as valid (ER-015, XC-06). A negative
+         *     check on an `ACTIVE` registration flags it for review; it is suspended
+         *     only by a person. The submitter does not record the check that verifies
+         *     their own registration (`403 MAKER_CHECKER`).
+         */
+        post: operations["recordRegistrationCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/registrations/{registrationId}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a supporting document by digest
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records a PDF or image as evidence by its SHA-256, name, media type and
+         *     size; the file is hashed in the browser and not uploaded. It is a new
+         *     event, so an activation prepared on the earlier version is refused with
+         *     `409 VERSION_CONFLICT`. A closed registration takes no more evidence.
+         */
+        post: operations["recordRegistrationAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exemptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The certificate relationship register and renewal queue
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Exemption certificates held as evidence, newest first, as of now, in any
+         *     status. Filter by `flag` for the work queues: `EXPIRING_SOON` and
+         *     `PAST_EXPIRY` are the renewal queue (EER-13), `CORRECTION_REQUESTED`
+         *     waits for a corrected document, `AWAITING_SECOND_REVIEW` waits for a
+         *     checker. An approved certificate is evidence for its buyer, seller
+         *     entity, jurisdiction and dates; it changes no tax result (Doc 17 §01).
+         */
+        get: operations["listExemptionCertificates"];
+        put?: never;
+        /**
+         * Receive an exemption certificate as evidence
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Receives a buyer's exemption certificate given to a seller entity, with
+         *     its document by digest — a PDF or image of at most 25 MiB, hashed in the
+         *     browser and not uploaded. It is `SUBMITTED`, evidence version 1: a
+         *     receipt, not an approval, and no tax benefit (EER-09). The seller
+         *     entity defaults to the tenant's default entity.
+         *
+         *     A document already recorded for a different buyer or seller entity is
+         *     `409 EVIDENCE_PROVENANCE_CONFLICT`: a certificate never carries from one
+         *     buyer or entity to another (EER-08, EER-10). A renewal names the
+         *     certificate it `supersedes`, of the same seller, buyer and jurisdiction;
+         *     the old one stays as it is until the renewal is approved.
+         *
+         *     **Idempotent on the `Idempotency-Key`**: the same key and request return
+         *     the certificate already received with `200`; the same key with
+         *     different bytes or fields is `409 IDEMPOTENCY_KEY_REUSE` (ER-027).
+         */
+        post: operations["receiveExemptionCertificate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exemptions/{certificateId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One exemption certificate with its evidence history
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The certificate as of now: its current document, screening, any
+         *     recommendation awaiting a checker, the approval with its maker and
+         *     checker, and every event and document version as recorded.
+         */
+        get: operations["getExemptionCertificate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exemptions/{certificateId}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replace the certificate document with a corrected version
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records a corrected document as the next evidence version, while the
+         *     certificate is `SUBMITTED`, `SCREENING` or `REVIEW_REQUIRED`. It goes
+         *     back to `SUBMITTED`: a screening or recommendation of the old version
+         *     no longer counts, and a checker confirming the old version is refused
+         *     with `409 VERSION_CONFLICT` (ER-042). An approved, rejected or expired
+         *     certificate takes no new document; a renewal is a new certificate.
+         */
+        post: operations["addExemptionCertificateVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exemptions/{certificateId}/screening": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the completeness checklist
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     Records the completeness checklist against the current evidence version
+         *     of a `SUBMITTED` certificate (EER-10). `DOCUMENT_COMPLETE` needs every
+         *     criterion to pass or not apply, and is refused for a document already
+         *     past its expiry (T15-13A); it and `NEEDS_LEGAL_DECISION` move the
+         *     certificate to `REVIEW_REQUIRED`. `INCOMPLETE` and `INCONSISTENT` name a
+         *     failed criterion and say what is wrong; the certificate waits in
+         *     `SCREENING` for a corrected document. Complete is not approved.
+         */
+        post: operations["screenExemptionCertificate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exemptions/{certificateId}/recommendation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recommend approval or rejection (the maker)
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     The maker's half of a decision on a `REVIEW_REQUIRED` certificate, with
+         *     its rationale: approve or reject the current evidence version. An
+         *     approval states the period the certificate is evidence for, from no
+         *     earlier than its issue date and ending no later than its expiry; an
+         *     already-expired certificate is not recommended for approval. Nothing is
+         *     decided until a different person confirms it.
+         */
+        post: operations["recommendExemptionCertificate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exemptions/{certificateId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm or return the recommendation (the checker)
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     The checker's half: `CONFIRM` publishes the pending recommendation —
+         *     `APPROVED` or `REJECTED` — and `RETURN` sends it back with a reason. The
+         *     checker names the evidence version they reviewed; any other is
+         *     `409 VERSION_CONFLICT` and nothing is published (ER-042, XC-08). The
+         *     checker is neither the recommender nor the person who recorded the
+         *     current document (`403 MAKER_CHECKER`; ER-041). Confirming a renewal's
+         *     approval supersedes the certificate it renews.
+         *
+         *     `APPROVED` is evidence for one buyer, seller entity, jurisdiction and
+         *     period. It is not a tax exemption: the determination engine decides
+         *     applicability from its own approved rules, and nothing committed is
+         *     rewritten (T15-13C; ER-033).
+         */
+        post: operations["decideExemptionCertificate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exemptions/{certificateId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suspend, reinstate, expire or revoke an approved certificate
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     `SUSPENDED` from `APPROVED`; `APPROVED` from `SUSPENDED` (reinstatement,
+         *     by someone other than the suspender, while the evidence period lasts);
+         *     `EXPIRED` from either once the evidence period has ended; `REVOKED` from
+         *     either. Every move but `EXPIRED` gives its reason. Expiry and revocation
+         *     block future use only: history stays as recorded, and an expired or
+         *     revoked certificate is never resumed — a renewal is a new certificate
+         *     reviewed afresh (ER-038, ER-039).
+         */
+        post: operations["transitionExemptionCertificate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -8023,6 +8414,431 @@ export interface components {
             to: components["schemas"]["CutoverState"];
             note: components["schemas"]["MigrationText"];
         };
+        /**
+         * RegistrationId
+         * Format: uuid
+         * @example 01920d20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        RegistrationId: string;
+        /**
+         * ExemptionEvidenceId
+         * Format: uuid
+         * @description An exemption certificate held as evidence.
+         * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ExemptionEvidenceId: string;
+        /**
+         * EvidenceActor
+         * Format: uuid
+         * @description The person who recorded an act.
+         * @example 01920a4c-0000-7000-8000-0000000000a1
+         */
+        EvidenceActor: string;
+        /**
+         * EvidenceJurisdiction
+         * @description A country, or a country and one subdivision, upper case.
+         * @example US-NY
+         */
+        EvidenceJurisdiction: string;
+        /**
+         * EvidenceText
+         * @description A reason, rationale or note from the person recording an act.
+         */
+        EvidenceText: string;
+        /**
+         * EvidenceFilename
+         * @description A document's file name, as given. It may name a person.
+         */
+        EvidenceFilename: string;
+        /**
+         * EvidenceMediaType
+         * @description A document's media type. Only a PDF or an image is accepted.
+         * @example application/pdf
+         */
+        EvidenceMediaType: string;
+        /**
+         * EvidenceDocument
+         * @description A document recorded as evidence by its SHA-256, hashed in the browser.
+         *     The file itself is not uploaded, scanned or stored.
+         */
+        EvidenceDocument: {
+            sha256: components["schemas"]["Sha256Hex"];
+            filename: components["schemas"]["EvidenceFilename"];
+            mediaType: components["schemas"]["EvidenceMediaType"];
+            /** Format: int64 */
+            bytes: number;
+        };
+        /**
+         * EvidenceFlag
+         * @description Something about a registration or certificate a person should look at, as of `asOf`.
+         * @enum {string}
+         */
+        EvidenceFlag: "EXPIRING_SOON" | "PAST_EXPIRY" | "NOT_YET_EFFECTIVE" | "PENDING_VALIDATION" | "AUTHORITY_NEGATIVE" | "AWAITING_ACTIVATION" | "CORRECTION_REQUESTED" | "AWAITING_SECOND_REVIEW";
+        /**
+         * RegistrationScheme
+         * @description The kind of registration. Each has its own identifier, never converted
+         *     into another's: an FCC FRN, a USAC 499 Filer ID and a USAC 498 ID are
+         *     distinct (Doc 17 §02).
+         * @enum {string}
+         */
+        RegistrationScheme: "US_FCC_FRN" | "US_USAC_499_FILER_ID" | "US_USAC_498_ID" | "US_STATE_SALES_TAX_PERMIT" | "US_STATE_TELECOM_REGISTRATION" | "UK_VAT" | "EU_VAT" | "CA_GST_HST" | "OTHER_REGISTRATION";
+        /**
+         * RegistrationStatus
+         * @description `SUBMITTED` is not `VERIFIED`, `VERIFIED` is not `ACTIVE`, and `ACTIVE`
+         *     is not authority to file (Doc 17 §02, §07).
+         * @enum {string}
+         */
+        RegistrationStatus: "DRAFT" | "SUBMITTED" | "VERIFIED" | "ACTIVE" | "SUSPENDED" | "EXPIRED" | "REVOKED" | "WITHDRAWN";
+        /**
+         * RegistrationEventKind
+         * @enum {string}
+         */
+        RegistrationEventKind: "CREATED" | "SUBMITTED" | "WITHDRAWN" | "RETURNED" | "CHECK_RECORDED" | "ACTIVATED" | "SUSPENDED" | "REINSTATED" | "EXPIRED" | "REVOKED" | "ATTACHMENT_RECORDED";
+        /**
+         * RegistrationAuthority
+         * @description The authority the registration is held with, by name.
+         * @example USAC
+         */
+        RegistrationAuthority: string;
+        /**
+         * RegistrationNumber
+         * @description The authority's number for the registration. Masked to its last four
+         *     characters (`****2345`) wherever `numberMasked` is true.
+         * @example 812345
+         */
+        RegistrationNumber: string;
+        /**
+         * AuthorityCheckSource
+         * @description The authority service a number was checked against. VIES does not validate GB numbers; HMRC does not validate EU ones.
+         * @enum {string}
+         */
+        AuthorityCheckSource: "FCC" | "USAC" | "HMRC" | "VIES" | "CRA" | "STATE_REVENUE_AUTHORITY" | "OTHER_AUTHORITY";
+        /**
+         * AuthorityCheckMethod
+         * @description How the check was made. No authority adapter is connected, so the only
+         *     method is a named person's lookup with the authority.
+         * @enum {string}
+         */
+        AuthorityCheckMethod: "MANUAL_LOOKUP";
+        /**
+         * AuthorityCheckOutcome
+         * @description What the authority returned. Only `VERIFIED` is positive; `INCONCLUSIVE` and `UNAVAILABLE` are never valid.
+         * @enum {string}
+         */
+        AuthorityCheckOutcome: "VERIFIED" | "NEGATIVE" | "INCONCLUSIVE" | "UNAVAILABLE";
+        /**
+         * AuthorityCheckReference
+         * @description The authority's own reference or receipt for a check, as returned.
+         */
+        AuthorityCheckReference: string;
+        /**
+         * AuthorityCheck
+         * @description One authority check of a registration's number, as a person recorded it.
+         */
+        AuthorityCheck: {
+            source: components["schemas"]["AuthorityCheckSource"];
+            method: components["schemas"]["AuthorityCheckMethod"];
+            outcome: components["schemas"]["AuthorityCheckOutcome"];
+            reference?: components["schemas"]["AuthorityCheckReference"];
+            checkedAt: components["schemas"]["Timestamp"];
+            receiptSha256?: components["schemas"]["Sha256Hex"];
+        };
+        /** RegistrationEvent */
+        RegistrationEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["RegistrationEventKind"];
+            status: components["schemas"]["RegistrationStatus"];
+            reason?: components["schemas"]["EvidenceText"];
+            check?: components["schemas"]["AuthorityCheck"];
+            attachment?: components["schemas"]["EvidenceDocument"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * Registration
+         * @description A registration a legal entity holds or is applying for, as of `asOf`.
+         *     Evidence of status: it changes no tax result, and `inForce` is
+         *     `ACTIVE` within its effective dates, nothing more.
+         */
+        Registration: {
+            id: components["schemas"]["RegistrationId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            scheme: components["schemas"]["RegistrationScheme"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            authority: components["schemas"]["RegistrationAuthority"];
+            registrationNumber: components["schemas"]["RegistrationNumber"];
+            /** @description True when `registrationNumber` shows only its last four characters. */
+            numberMasked: boolean;
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            supersedes?: components["schemas"]["RegistrationId"];
+            status: components["schemas"]["RegistrationStatus"];
+            /**
+             * Format: int32
+             * @description The number of events recorded. An activation names it.
+             */
+            version: number;
+            /** @description ACTIVE and within its effective dates on `asOf`'s UTC date. */
+            inForce: boolean;
+            flags: components["schemas"]["EvidenceFlag"][];
+            lastCheck?: components["schemas"]["AuthorityCheck"];
+            submittedBy?: components["schemas"]["EvidenceActor"];
+            attachments: components["schemas"]["EvidenceDocument"][];
+            history: components["schemas"]["RegistrationEvent"][];
+            asOf: components["schemas"]["Timestamp"];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /** RegistrationList */
+        RegistrationList: {
+            registrations: components["schemas"]["Registration"][];
+        };
+        /** RegistrationRequest */
+        RegistrationRequest: {
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            scheme: components["schemas"]["RegistrationScheme"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            authority: components["schemas"]["RegistrationAuthority"];
+            registrationNumber: components["schemas"]["RegistrationNumber"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            supersedes?: components["schemas"]["RegistrationId"];
+            attachments?: components["schemas"]["EvidenceDocument"][];
+            /** @description Submit for review now. Otherwise the registration is kept as a DRAFT. */
+            submit?: boolean;
+        };
+        /** RegistrationTransitionRequest */
+        RegistrationTransitionRequest: {
+            to: components["schemas"]["RegistrationStatus"];
+            /**
+             * Format: int32
+             * @description The `version` that was read. Anything recorded since is `VERSION_CONFLICT`.
+             */
+            expectedVersion: number;
+            reason?: components["schemas"]["EvidenceText"];
+        };
+        /** RegistrationCheckRequest */
+        RegistrationCheckRequest: {
+            source: components["schemas"]["AuthorityCheckSource"];
+            method: components["schemas"]["AuthorityCheckMethod"];
+            outcome: components["schemas"]["AuthorityCheckOutcome"];
+            reference?: components["schemas"]["AuthorityCheckReference"];
+            checkedAt: components["schemas"]["Timestamp"];
+            receiptSha256?: components["schemas"]["Sha256Hex"];
+            note?: components["schemas"]["EvidenceText"];
+        };
+        /**
+         * ExemptionEvidenceType
+         * @description The kind of exemption claimed. A resale or wholesale certificate is not an unconditional exemption and relieves no provider-side duty.
+         * @enum {string}
+         */
+        ExemptionEvidenceType: "RESALE" | "WHOLESALE_TELECOM" | "EXEMPT_ORGANIZATION" | "GOVERNMENT_ENTITY" | "DIPLOMATIC" | "DIRECT_PAY_PERMIT" | "OTHER_EXEMPTION";
+        /**
+         * ExemptionEvidenceStatus
+         * @description `SCREENING` waits for a corrected document. `APPROVED` is evidence
+         *     approved for its scope and dates; it is not a tax exemption.
+         * @enum {string}
+         */
+        ExemptionEvidenceStatus: "SUBMITTED" | "SCREENING" | "REVIEW_REQUIRED" | "APPROVED" | "REJECTED" | "EXPIRED" | "SUSPENDED" | "REVOKED" | "SUPERSEDED";
+        /**
+         * ExemptionEvidenceEventKind
+         * @enum {string}
+         */
+        ExemptionEvidenceEventKind: "RECEIVED" | "VERSION_ADDED" | "SCREENED" | "RECOMMENDED" | "CONFIRMED" | "RETURNED" | "SUSPENDED" | "REINSTATED" | "EXPIRED" | "REVOKED" | "SUPERSEDED";
+        /**
+         * BuyerRef
+         * @description The buyer's identifier in the tenant's own customer system.
+         * @example CUST-0042
+         */
+        BuyerRef: string;
+        /**
+         * BuyerName
+         * @description The buyer's name as written on the certificate.
+         */
+        BuyerName: string;
+        /**
+         * ExemptionReasonText
+         * @description The exemption the buyer claims, in the words of the certificate.
+         */
+        ExemptionReasonText: string;
+        /**
+         * CertificateNumberText
+         * @description The certificate or exemption permit number.
+         */
+        CertificateNumberText: string;
+        /**
+         * ProductScopeEntry
+         * @description A product family or classification pattern the certificate claims, as written. Never interpreted as a rule.
+         */
+        ProductScopeEntry: string;
+        /**
+         * ScreeningCheckResult
+         * @enum {string}
+         */
+        ScreeningCheckResult: "PASS" | "FAIL" | "NOT_APPLICABLE";
+        /**
+         * ScreeningResult
+         * @description `DOCUMENT_COMPLETE` is not approved for use, and not a legal
+         *     applicability pass (Doc 17 §02).
+         * @enum {string}
+         */
+        ScreeningResult: "DOCUMENT_COMPLETE" | "INCOMPLETE" | "INCONSISTENT" | "NEEDS_LEGAL_DECISION";
+        /**
+         * ExemptionScreening
+         * @description The completeness checklist against one evidence version (Doc 17 EER-10).
+         */
+        ExemptionScreening: {
+            sellerMatches: components["schemas"]["ScreeningCheckResult"];
+            buyerMatches: components["schemas"]["ScreeningCheckResult"];
+            jurisdictionMatches: components["schemas"]["ScreeningCheckResult"];
+            formAccepted: components["schemas"]["ScreeningCheckResult"];
+            signaturePresent: components["schemas"]["ScreeningCheckResult"];
+            datesValid: components["schemas"]["ScreeningCheckResult"];
+            numberPresent: components["schemas"]["ScreeningCheckResult"];
+            result: components["schemas"]["ScreeningResult"];
+        };
+        /**
+         * ExemptionRecommendationOutcome
+         * @enum {string}
+         */
+        ExemptionRecommendationOutcome: "APPROVE" | "REJECT";
+        /**
+         * ExemptionDecision
+         * @description The checker's act on a pending recommendation.
+         * @enum {string}
+         */
+        ExemptionDecision: "CONFIRM" | "RETURN";
+        /**
+         * ExemptionRecommendation
+         * @description A recommendation awaiting a different person's confirmation.
+         */
+        ExemptionRecommendation: {
+            recommendation: components["schemas"]["ExemptionRecommendationOutcome"];
+            effectiveFrom?: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            /** Format: int32 */
+            evidenceVersion: number;
+            rationale: components["schemas"]["EvidenceText"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * ExemptionApproval
+         * @description The confirmed approval, with its maker and checker.
+         */
+        ExemptionApproval: {
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            recommendedBy: components["schemas"]["EvidenceActor"];
+            confirmedBy: components["schemas"]["EvidenceActor"];
+            confirmedAt: components["schemas"]["Timestamp"];
+        };
+        /** ExemptionEvidenceEvent */
+        ExemptionEvidenceEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["ExemptionEvidenceEventKind"];
+            status: components["schemas"]["ExemptionEvidenceStatus"];
+            /** Format: int32 */
+            evidenceVersion: number;
+            note?: components["schemas"]["EvidenceText"];
+            document?: components["schemas"]["EvidenceDocument"];
+            screening?: components["schemas"]["ExemptionScreening"];
+            recommendation?: components["schemas"]["ExemptionRecommendationOutcome"];
+            effectiveFrom?: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            decision?: components["schemas"]["ExemptionDecision"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * ExemptionEvidence
+         * @description An exemption certificate held as evidence, as of `asOf`. `inForce` is
+         *     `APPROVED` within its approved period: a statement about the document,
+         *     never a tax treatment.
+         */
+        ExemptionEvidence: {
+            id: components["schemas"]["ExemptionEvidenceId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            buyerRef: components["schemas"]["BuyerRef"];
+            buyerName: components["schemas"]["BuyerName"];
+            certificateType: components["schemas"]["ExemptionEvidenceType"];
+            exemptionReason: components["schemas"]["ExemptionReasonText"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            certificateNumber?: components["schemas"]["CertificateNumberText"];
+            productScope: components["schemas"]["ProductScopeEntry"][];
+            issuedOn: components["schemas"]["CivilDate"];
+            expiresOn?: components["schemas"]["CivilDate"];
+            supersedes?: components["schemas"]["ExemptionEvidenceId"];
+            status: components["schemas"]["ExemptionEvidenceStatus"];
+            /**
+             * Format: int32
+             * @description The current document version. A checker's decision names it.
+             */
+            evidenceVersion: number;
+            inForce: boolean;
+            flags: components["schemas"]["EvidenceFlag"][];
+            document: components["schemas"]["EvidenceDocument"];
+            screening?: components["schemas"]["ExemptionScreening"];
+            pendingRecommendation?: components["schemas"]["ExemptionRecommendation"];
+            approval?: components["schemas"]["ExemptionApproval"];
+            history: components["schemas"]["ExemptionEvidenceEvent"][];
+            asOf: components["schemas"]["Timestamp"];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /** ExemptionEvidenceList */
+        ExemptionEvidenceList: {
+            certificates: components["schemas"]["ExemptionEvidence"][];
+        };
+        /** ExemptionEvidenceRequest */
+        ExemptionEvidenceRequest: {
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            buyerRef: components["schemas"]["BuyerRef"];
+            buyerName: components["schemas"]["BuyerName"];
+            certificateType: components["schemas"]["ExemptionEvidenceType"];
+            exemptionReason: components["schemas"]["ExemptionReasonText"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            certificateNumber?: components["schemas"]["CertificateNumberText"];
+            productScope?: components["schemas"]["ProductScopeEntry"][];
+            issuedOn: components["schemas"]["CivilDate"];
+            expiresOn?: components["schemas"]["CivilDate"];
+            supersedes?: components["schemas"]["ExemptionEvidenceId"];
+            document: components["schemas"]["EvidenceDocument"];
+        };
+        /** ExemptionVersionRequest */
+        ExemptionVersionRequest: {
+            document: components["schemas"]["EvidenceDocument"];
+            note?: components["schemas"]["EvidenceText"];
+        };
+        /** ExemptionScreeningRequest */
+        ExemptionScreeningRequest: {
+            screening: components["schemas"]["ExemptionScreening"];
+            note?: components["schemas"]["EvidenceText"];
+        };
+        /** ExemptionRecommendationRequest */
+        ExemptionRecommendationRequest: {
+            recommendation: components["schemas"]["ExemptionRecommendationOutcome"];
+            effectiveFrom?: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            rationale: components["schemas"]["EvidenceText"];
+        };
+        /** ExemptionDecisionRequest */
+        ExemptionDecisionRequest: {
+            decision: components["schemas"]["ExemptionDecision"];
+            /**
+             * Format: int32
+             * @description The evidence version that was reviewed. Any other is `VERSION_CONFLICT`.
+             */
+            expectedEvidenceVersion: number;
+            note?: components["schemas"]["EvidenceText"];
+        };
+        /** ExemptionTransitionRequest */
+        ExemptionTransitionRequest: {
+            to: components["schemas"]["ExemptionEvidenceStatus"];
+            reason?: components["schemas"]["EvidenceText"];
+        };
     };
     responses: {
         /**
@@ -8146,6 +8962,24 @@ export interface components {
             };
             content: {
                 "application/json": components["schemas"]["Notice"];
+            };
+        };
+        /** @description The registration as it stands now. */
+        RegistrationResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Registration"];
+            };
+        };
+        /** @description The certificate as it stands now. */
+        ExemptionEvidenceResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ExemptionEvidence"];
             };
         };
     };
@@ -8294,6 +9128,16 @@ export interface components {
          * @example ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C
          */
         UserId: components["schemas"]["UserId"];
+        /**
+         * @description The registration identifier.
+         * @example 01920d20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        RegistrationId: components["schemas"]["RegistrationId"];
+        /**
+         * @description The exemption certificate identifier.
+         * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ExemptionEvidenceId: components["schemas"]["ExemptionEvidenceId"];
     };
     requestBodies: never;
     headers: never;
@@ -13201,6 +14045,464 @@ export interface operations {
                     "application/json": components["schemas"]["MigrationException"];
                 };
             };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listRegistrations: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only registrations in this status.
+                 * @example ACTIVE
+                 */
+                status?: components["schemas"]["RegistrationStatus"];
+                /**
+                 * @description Only registrations of this scheme.
+                 * @example US_USAC_499_FILER_ID
+                 */
+                scheme?: components["schemas"]["RegistrationScheme"];
+                /**
+                 * @description Only registrations of this legal entity.
+                 * @example 01920a4c-0000-7000-8000-00000000e001
+                 */
+                legalEntityId?: components["schemas"]["LegalEntityId"];
+                /**
+                 * @description Only registrations in this jurisdiction; a country matches its subdivisions.
+                 * @example US
+                 */
+                jurisdiction?: components["schemas"]["EvidenceJurisdiction"];
+                /**
+                 * @description Only registrations carrying this flag now.
+                 * @example EXPIRING_SOON
+                 */
+                flag?: components["schemas"]["EvidenceFlag"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The registrations. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createRegistration: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistrationRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RegistrationResult"];
+            201: components["responses"]["RegistrationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getRegistration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The registration identifier.
+                 * @example 01920d20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                registrationId: components["parameters"]["RegistrationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["RegistrationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    transitionRegistration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The registration identifier.
+                 * @example 01920d20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                registrationId: components["parameters"]["RegistrationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistrationTransitionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RegistrationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordRegistrationCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The registration identifier.
+                 * @example 01920d20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                registrationId: components["parameters"]["RegistrationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistrationCheckRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RegistrationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordRegistrationAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The registration identifier.
+                 * @example 01920d20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                registrationId: components["parameters"]["RegistrationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvidenceDocument"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RegistrationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listExemptionCertificates: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only certificates in this status.
+                 * @example REVIEW_REQUIRED
+                 */
+                status?: components["schemas"]["ExemptionEvidenceStatus"];
+                /**
+                 * @description Only certificates given to this seller entity.
+                 * @example 01920a4c-0000-7000-8000-00000000e001
+                 */
+                legalEntityId?: components["schemas"]["LegalEntityId"];
+                /**
+                 * @description Only certificates of this buyer.
+                 * @example CUST-0042
+                 */
+                buyerRef?: components["schemas"]["BuyerRef"];
+                /**
+                 * @description Only certificates for this jurisdiction; a country matches its subdivisions.
+                 * @example US-NY
+                 */
+                jurisdiction?: components["schemas"]["EvidenceJurisdiction"];
+                /**
+                 * @description Only certificates carrying this flag now.
+                 * @example EXPIRING_SOON
+                 */
+                flag?: components["schemas"]["EvidenceFlag"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The certificates. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExemptionEvidenceList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    receiveExemptionCertificate: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExemptionEvidenceRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ExemptionEvidenceResult"];
+            201: components["responses"]["ExemptionEvidenceResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getExemptionCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The exemption certificate identifier.
+                 * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                certificateId: components["parameters"]["ExemptionEvidenceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ExemptionEvidenceResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    addExemptionCertificateVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The exemption certificate identifier.
+                 * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                certificateId: components["parameters"]["ExemptionEvidenceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExemptionVersionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ExemptionEvidenceResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    screenExemptionCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The exemption certificate identifier.
+                 * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                certificateId: components["parameters"]["ExemptionEvidenceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExemptionScreeningRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ExemptionEvidenceResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recommendExemptionCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The exemption certificate identifier.
+                 * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                certificateId: components["parameters"]["ExemptionEvidenceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExemptionRecommendationRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ExemptionEvidenceResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    decideExemptionCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The exemption certificate identifier.
+                 * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                certificateId: components["parameters"]["ExemptionEvidenceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExemptionDecisionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ExemptionEvidenceResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    transitionExemptionCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The exemption certificate identifier.
+                 * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                certificateId: components["parameters"]["ExemptionEvidenceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExemptionTransitionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ExemptionEvidenceResult"];
             400: components["responses"]["Validation"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];

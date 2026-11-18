@@ -47,6 +47,7 @@ export type View =
   | 'filing-remittance'
   | 'cases'
   | 'contributions'
+  | 'registrations'
   | 'notices'
 
 /** A screen: a view, and the tab inside it when the view has tabs. */
@@ -129,7 +130,7 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
       { id: 'compliance.preparation', label: 'Filing Preparation', target: at('compliance', 'queue') },
       { id: 'compliance.returns', label: 'Regulatory Returns', target: at('compliance', 'returns') },
       { id: 'compliance.acks', label: 'Authority Acknowledgements', target: at('compliance', 'acks') },
-      { id: 'compliance.registrations', label: 'Registrations & Exemptions' },
+      { id: 'compliance.registrations', label: 'Registrations & Exemptions', target: at('registrations') },
       { id: 'compliance.status', label: 'Compliance Status', target: at('compliance', 'status') },
     ],
   },

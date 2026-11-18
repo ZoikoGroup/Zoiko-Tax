@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:25dc95ef25b2b622c8740ddac58a36ab5a32617989d2515240b1107b781e15bb`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:784f232b2ad7987284d0ed2bca5b81e7b0cabea79e14f4550516484b943d4796`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -8734,6 +8734,816 @@
           ]
         },
         {
+          "name": "POST /v1/registrations — Record a registration, as a draft or submitted for review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheme\": \"US_USAC_499_FILER_ID\",\n  \"jurisdiction\": \"US\",\n  \"authority\": \"USAC\",\n  \"registrationNumber\": \"812345\",\n  \"effectiveFrom\": \"2026-01-01\",\n  \"effectiveTo\": \"2026-12-31\",\n  \"attachments\": [\n    {\n      \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n      \"filename\": \"usac-499-confirmation.pdf\",\n      \"mediaType\": \"application/pdf\",\n      \"bytes\": 48213\n    }\n  ],\n  \"submit\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/registrations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "registrations"
+              ]
+            },
+            "description": "Record a registration, as a draft or submitted for review\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nRecords a registration a legal entity holds or is applying for: its\nscheme, jurisdiction, authority, number and effective dates, with any\nsupporting documents by digest (hashed in the browser; nothing is\nuploaded). It is kept as a `DRAFT`, or `SUBMITTED` with `submit: true`\n— never `VERIFIED` or `ACTIVE`: an uploaded application is not an\nofficial acceptance (Doc 17 ER-014). The legal entity defaults to the\ntenant's default entity.\n\nEach scheme keeps its own identifier: an FCC FRN, a USAC 499 Filer ID\nand a USAC 498 ID are distinct, and a number of one scheme entered under\nanother is `400 REGISTRATION_SCHEME_MISMATCH`, never converted\n(ER-011). A number already recorded for another of the tenant's legal\nentities is `409 EVIDENCE_PROVENANCE_CONFLICT`; one already recorded\nfor this entity is `409 ALREADY_EXISTS` unless the new registration\n`supersedes` it. A renewal or correction is a new registration; nothing\nis edited.\n\n**Idempotent on the `Idempotency-Key`**: the same key and request return\nthe registration already recorded with `200`; the same key with a\ndifferent request is `409 IDEMPOTENCY_KEY_REUSE`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('createRegistration returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 409]);",
+                  "});",
+                  "pm.test('Doc 17 ER-014 — a submitted registration is SUBMITTED, never ACTIVE; or the number is already recorded', function () {",
+                  "  pm.expect([200, 201, 409]).to.include(pm.response.code);",
+                  "  if (pm.response.code !== 409) { pm.expect(pm.response.json().status).to.eql('SUBMITTED'); }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/registrations — The registration and permit inventory",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/registrations?status={{status}}&scheme={{scheme}}&legalEntityId={{legalEntityId}}&jurisdiction={{jurisdiction}}&flag={{flag}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "registrations"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only registrations in this status."
+                },
+                {
+                  "key": "scheme",
+                  "value": "{{scheme}}",
+                  "description": "Only registrations of this scheme."
+                },
+                {
+                  "key": "legalEntityId",
+                  "value": "{{legalEntityId}}",
+                  "description": "Only registrations of this legal entity."
+                },
+                {
+                  "key": "jurisdiction",
+                  "value": "{{jurisdiction}}",
+                  "description": "Only registrations in this jurisdiction; a country matches its subdivisions."
+                },
+                {
+                  "key": "flag",
+                  "value": "{{flag}}",
+                  "description": "Only registrations carrying this flag now."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The registration and permit inventory\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nThe tenant's registrations with authorities, newest first, as of now, in\nany status: an expired, revoked or withdrawn registration stays listed\nas recorded and is never shown as in force (Doc 17 ER-012). Numbers are\nmasked in a listing; the detail read reveals them to the people who\nrecord and review registrations.\n\n`flags` are computed as of `asOf`: `EXPIRING_SOON` within 60 days,\n`PAST_EXPIRY` once the end date has passed without an expiry being\nrecorded, `NOT_YET_EFFECTIVE`, `PENDING_VALIDATION` after an\ninconclusive or unavailable authority check, `AUTHORITY_NEGATIVE`, and\n`AWAITING_ACTIVATION`. No registration is NOT_REGISTERED's opposite:\nan absent registration is never \"tax exempt\" (EER-04)."
+          },
+          "response": [
+            {
+              "name": "200 · One active USAC 499 Filer ID, number masked",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/registrations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "registrations"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"registrations\": [\n    {\n      \"id\": \"01920d20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"scheme\": \"US_USAC_499_FILER_ID\",\n      \"jurisdiction\": \"US\",\n      \"authority\": \"USAC\",\n      \"registrationNumber\": \"****2345\",\n      \"numberMasked\": true,\n      \"effectiveFrom\": \"2026-01-01\",\n      \"effectiveTo\": \"2026-12-31\",\n      \"status\": \"ACTIVE\",\n      \"version\": 5,\n      \"inForce\": true,\n      \"flags\": [\n        \"EXPIRING_SOON\"\n      ],\n      \"lastCheck\": {\n        \"source\": \"USAC\",\n        \"method\": \"MANUAL_LOOKUP\",\n        \"outcome\": \"VERIFIED\",\n        \"reference\": \"USAC-499-LOOKUP-20261102\",\n        \"checkedAt\": \"2026-11-02T10:00:00.000000Z\"\n      },\n      \"attachments\": [\n        {\n          \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n          \"filename\": \"usac-499-confirmation.pdf\",\n          \"mediaType\": \"application/pdf\",\n          \"bytes\": 48213\n        }\n      ],\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"CREATED\",\n          \"status\": \"DRAFT\",\n          \"recordedAt\": \"2026-11-01T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 2,\n          \"kind\": \"ATTACHMENT_RECORDED\",\n          \"status\": \"DRAFT\",\n          \"attachment\": {\n            \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n            \"filename\": \"usac-499-confirmation.pdf\",\n            \"mediaType\": \"application/pdf\",\n            \"bytes\": 48213\n          },\n          \"recordedAt\": \"2026-11-01T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 3,\n          \"kind\": \"SUBMITTED\",\n          \"status\": \"SUBMITTED\",\n          \"recordedAt\": \"2026-11-01T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 4,\n          \"kind\": \"CHECK_RECORDED\",\n          \"status\": \"VERIFIED\",\n          \"check\": {\n            \"source\": \"USAC\",\n            \"method\": \"MANUAL_LOOKUP\",\n            \"outcome\": \"VERIFIED\",\n            \"reference\": \"USAC-499-LOOKUP-20261102\",\n            \"checkedAt\": \"2026-11-02T10:00:00.000000Z\"\n          },\n          \"recordedAt\": \"2026-11-02T10:05:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        },\n        {\n          \"seq\": 5,\n          \"kind\": \"ACTIVATED\",\n          \"status\": \"ACTIVE\",\n          \"reason\": \"Legal officer approval on file\",\n          \"recordedAt\": \"2026-11-02T11:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        }\n      ],\n      \"asOf\": \"2026-11-18T09:00:00.000000Z\",\n      \"createdAt\": \"2026-11-01T09:00:00.000000Z\",\n      \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listRegistrations returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('Doc 17 EER-04 — a listing masks registration numbers', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.response.json().registrations.forEach(function (r) { pm.expect(r.numberMasked).to.eql(true); });",
+                  "});",
+                  "const regs = pm.response.json().registrations;",
+                  "if (regs.length > 0) { pm.collectionVariables.set('registrationId', regs[0].id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/registrations/{registrationId} — One registration with its history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/registrations/{{registrationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "registrations",
+                "{{registrationId}}"
+              ]
+            },
+            "description": "One registration with its history\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nThe registration as of now, with every event: submissions, authority\nchecks with the authority's reference, activation, suspension, expiry,\nrevocation and supporting documents. The number is revealed to\n`OPERATOR` and `ANALYST` and masked for `AUDITOR`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getRegistration returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/registrations/{registrationId}/attachments — Record a supporting document by digest",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n  \"filename\": \"ny-permit.pdf\",\n  \"mediaType\": \"application/pdf\",\n  \"bytes\": 120334\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/registrations/{{registrationId}}/attachments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "registrations",
+                "{{registrationId}}",
+                "attachments"
+              ]
+            },
+            "description": "Record a supporting document by digest\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nRecords a PDF or image as evidence by its SHA-256, name, media type and\nsize; the file is hashed in the browser and not uploaded. It is a new\nevent, so an activation prepared on the earlier version is refused with\n`409 VERSION_CONFLICT`. A closed registration takes no more evidence."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordRegistrationAttachment returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/registrations/{registrationId}/checks — Record an authority check of a registration's number",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source\": \"USAC\",\n  \"method\": \"MANUAL_LOOKUP\",\n  \"outcome\": \"VERIFIED\",\n  \"reference\": \"USAC-499-LOOKUP-20261102\",\n  \"checkedAt\": \"2026-11-02T10:00:00.000000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/registrations/{{registrationId}}/checks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "registrations",
+                "{{registrationId}}",
+                "checks"
+              ]
+            },
+            "description": "Record an authority check of a registration's number\n\n`ANALYST`, signed in as themselves.\n\nRecords what an authority returned when a specialist looked the number\nup. No authority adapter is connected, so `method` is `MANUAL_LOOKUP`:\na named person's attested lookup, never a fabricated authority result.\nThe source must be one that can check the scheme — VIES does not\nvalidate a GB number, HMRC does not validate an EU one (ER-018).\n\n`VERIFIED` moves a `SUBMITTED` registration to `VERIFIED`, and\n`NEGATIVE` takes a `VERIFIED` one back to `SUBMITTED`; both carry the\nauthority's own `reference`. `INCONCLUSIVE` and `UNAVAILABLE` move\nnothing and are never treated as valid (ER-015, XC-06). A negative\ncheck on an `ACTIVE` registration flags it for review; it is suspended\nonly by a person. The submitter does not record the check that verifies\ntheir own registration (`403 MAKER_CHECKER`)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordRegistrationCheck returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/registrations/{registrationId}/transitions — Submit, withdraw, return, activate, suspend, reinstate, expire or revoke a registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"ACTIVE\",\n  \"expectedVersion\": 4,\n  \"reason\": \"Legal officer approval on file\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/registrations/{{registrationId}}/transitions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "registrations",
+                "{{registrationId}}",
+                "transitions"
+              ]
+            },
+            "description": "Submit, withdraw, return, activate, suspend, reinstate, expire or revoke a registration\n\nSigned in as themselves. `SUBMITTED` and `WITHDRAWN` are `OPERATOR` or\n`ANALYST`; every other move is `ANALYST`.\n\n`SUBMITTED` from `DRAFT`; `WITHDRAWN` from `DRAFT` or `SUBMITTED`;\n`DRAFT` from `SUBMITTED` or `VERIFIED` (returned for evidence). `ACTIVE`\nfrom `VERIFIED` is activation: by someone other than the submitter\n(`403 MAKER_CHECKER`), once the effective date has come, and only on the\nversion read — anything recorded since is `409 VERSION_CONFLICT`.\n`SUSPENDED`, `REVOKED` and `EXPIRED` from `ACTIVE` or `SUSPENDED`;\n`EXPIRED` only once the effective end date has passed. `ACTIVE` from\n`SUSPENDED` is reinstatement, by someone other than the suspender.\nEvery move but `SUBMITTED` and `EXPIRED` gives its reason. `VERIFIED`\nis never a move a person names: only an authority check makes it.\n\nAn active registration is evidence of status. It is not authority to\nfile and changes no tax result."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('transitionRegistration returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/exemptions — Receive an exemption certificate as evidence",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"buyerRef\": \"CUST-0042\",\n  \"buyerName\": \"Hudson Wireless LLC\",\n  \"certificateType\": \"RESALE\",\n  \"exemptionReason\": \"Purchase for resale of telecommunication services\",\n  \"jurisdiction\": \"US-NY\",\n  \"certificateNumber\": \"ST-120-0042\",\n  \"productScope\": [\n    \"voice\",\n    \"data\"\n  ],\n  \"issuedOn\": \"2026-09-15\",\n  \"expiresOn\": \"2027-09-14\",\n  \"document\": {\n    \"sha256\": \"2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae\",\n    \"filename\": \"st-120-hudson.pdf\",\n    \"mediaType\": \"application/pdf\",\n    \"bytes\": 88120\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/exemptions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "exemptions"
+              ]
+            },
+            "description": "Receive an exemption certificate as evidence\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nReceives a buyer's exemption certificate given to a seller entity, with\nits document by digest — a PDF or image of at most 25 MiB, hashed in the\nbrowser and not uploaded. It is `SUBMITTED`, evidence version 1: a\nreceipt, not an approval, and no tax benefit (EER-09). The seller\nentity defaults to the tenant's default entity.\n\nA document already recorded for a different buyer or seller entity is\n`409 EVIDENCE_PROVENANCE_CONFLICT`: a certificate never carries from one\nbuyer or entity to another (EER-08, EER-10). A renewal names the\ncertificate it `supersedes`, of the same seller, buyer and jurisdiction;\nthe old one stays as it is until the renewal is approved.\n\n**Idempotent on the `Idempotency-Key`**: the same key and request return\nthe certificate already received with `200`; the same key with\ndifferent bytes or fields is `409 IDEMPOTENCY_KEY_REUSE` (ER-027)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('receiveExemptionCertificate returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test('Doc 17 EER-09 — a received certificate is SUBMITTED evidence version 1, not approved', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "  pm.expect(pm.response.json().status).to.eql('SUBMITTED');",
+                  "  pm.expect(pm.response.json().inForce).to.eql(false);",
+                  "});",
+                  "pm.collectionVariables.set('certificateId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/exemptions — The certificate relationship register and renewal queue",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/exemptions?status={{status}}&legalEntityId={{legalEntityId}}&buyerRef={{buyerRef}}&jurisdiction={{jurisdiction}}&flag={{flag}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "exemptions"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only certificates in this status."
+                },
+                {
+                  "key": "legalEntityId",
+                  "value": "{{legalEntityId}}",
+                  "description": "Only certificates given to this seller entity."
+                },
+                {
+                  "key": "buyerRef",
+                  "value": "{{buyerRef}}",
+                  "description": "Only certificates of this buyer."
+                },
+                {
+                  "key": "jurisdiction",
+                  "value": "{{jurisdiction}}",
+                  "description": "Only certificates for this jurisdiction; a country matches its subdivisions."
+                },
+                {
+                  "key": "flag",
+                  "value": "{{flag}}",
+                  "description": "Only certificates carrying this flag now."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The certificate relationship register and renewal queue\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nExemption certificates held as evidence, newest first, as of now, in any\nstatus. Filter by `flag` for the work queues: `EXPIRING_SOON` and\n`PAST_EXPIRY` are the renewal queue (EER-13), `CORRECTION_REQUESTED`\nwaits for a corrected document, `AWAITING_SECOND_REVIEW` waits for a\nchecker. An approved certificate is evidence for its buyer, seller\nentity, jurisdiction and dates; it changes no tax result (Doc 17 §01)."
+          },
+          "response": [
+            {
+              "name": "200 · A New York resale certificate awaiting its checker",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/exemptions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "exemptions"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"certificates\": [\n    {\n      \"id\": \"01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"buyerRef\": \"CUST-0042\",\n      \"buyerName\": \"Hudson Wireless LLC\",\n      \"certificateType\": \"RESALE\",\n      \"exemptionReason\": \"Purchase for resale of telecommunication services\",\n      \"jurisdiction\": \"US-NY\",\n      \"certificateNumber\": \"ST-120-0042\",\n      \"productScope\": [\n        \"voice\",\n        \"data\"\n      ],\n      \"issuedOn\": \"2026-09-15\",\n      \"expiresOn\": \"2027-09-14\",\n      \"status\": \"REVIEW_REQUIRED\",\n      \"evidenceVersion\": 1,\n      \"inForce\": false,\n      \"flags\": [\n        \"AWAITING_SECOND_REVIEW\"\n      ],\n      \"document\": {\n        \"sha256\": \"2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae\",\n        \"filename\": \"st-120-hudson.pdf\",\n        \"mediaType\": \"application/pdf\",\n        \"bytes\": 88120\n      },\n      \"screening\": {\n        \"sellerMatches\": \"PASS\",\n        \"buyerMatches\": \"PASS\",\n        \"jurisdictionMatches\": \"PASS\",\n        \"formAccepted\": \"PASS\",\n        \"signaturePresent\": \"PASS\",\n        \"datesValid\": \"PASS\",\n        \"numberPresent\": \"PASS\",\n        \"result\": \"DOCUMENT_COMPLETE\"\n      },\n      \"pendingRecommendation\": {\n        \"recommendation\": \"APPROVE\",\n        \"effectiveFrom\": \"2026-09-15\",\n        \"effectiveTo\": \"2027-09-14\",\n        \"evidenceVersion\": 1,\n        \"rationale\": \"ST-120 complete; buyer and seller match\",\n        \"recordedAt\": \"2026-11-03T10:00:00.000000Z\",\n        \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n      },\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"RECEIVED\",\n          \"status\": \"SUBMITTED\",\n          \"evidenceVersion\": 1,\n          \"document\": {\n            \"sha256\": \"2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae\",\n            \"filename\": \"st-120-hudson.pdf\",\n            \"mediaType\": \"application/pdf\",\n            \"bytes\": 88120\n          },\n          \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 2,\n          \"kind\": \"SCREENED\",\n          \"status\": \"REVIEW_REQUIRED\",\n          \"evidenceVersion\": 1,\n          \"screening\": {\n            \"sellerMatches\": \"PASS\",\n            \"buyerMatches\": \"PASS\",\n            \"jurisdictionMatches\": \"PASS\",\n            \"formAccepted\": \"PASS\",\n            \"signaturePresent\": \"PASS\",\n            \"datesValid\": \"PASS\",\n            \"numberPresent\": \"PASS\",\n            \"result\": \"DOCUMENT_COMPLETE\"\n          },\n          \"recordedAt\": \"2026-11-03T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        },\n        {\n          \"seq\": 3,\n          \"kind\": \"RECOMMENDED\",\n          \"status\": \"REVIEW_REQUIRED\",\n          \"evidenceVersion\": 1,\n          \"note\": \"ST-120 complete; buyer and seller match\",\n          \"recommendation\": \"APPROVE\",\n          \"effectiveFrom\": \"2026-09-15\",\n          \"effectiveTo\": \"2027-09-14\",\n          \"recordedAt\": \"2026-11-03T10:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        }\n      ],\n      \"asOf\": \"2026-11-18T09:00:00.000000Z\",\n      \"createdAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listExemptionCertificates returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/exemptions/{certificateId} — One exemption certificate with its evidence history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/exemptions/{{certificateId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "exemptions",
+                "{{certificateId}}"
+              ]
+            },
+            "description": "One exemption certificate with its evidence history\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nThe certificate as of now: its current document, screening, any\nrecommendation awaiting a checker, the approval with its maker and\nchecker, and every event and document version as recorded."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getExemptionCertificate returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/exemptions/{certificateId}/versions — Replace the certificate document with a corrected version",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document\": {\n    \"sha256\": \"fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9\",\n    \"filename\": \"st-120-hudson-signed.pdf\",\n    \"mediaType\": \"application/pdf\",\n    \"bytes\": 90211\n  },\n  \"note\": \"Signed copy received from the buyer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/exemptions/{{certificateId}}/versions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "exemptions",
+                "{{certificateId}}",
+                "versions"
+              ]
+            },
+            "description": "Replace the certificate document with a corrected version\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nRecords a corrected document as the next evidence version, while the\ncertificate is `SUBMITTED`, `SCREENING` or `REVIEW_REQUIRED`. It goes\nback to `SUBMITTED`: a screening or recommendation of the old version\nno longer counts, and a checker confirming the old version is refused\nwith `409 VERSION_CONFLICT` (ER-042). An approved, rejected or expired\ncertificate takes no new document; a renewal is a new certificate."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('addExemptionCertificateVersion returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/exemptions/{certificateId}/screening — Record the completeness checklist",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"screening\": {\n    \"sellerMatches\": \"PASS\",\n    \"buyerMatches\": \"PASS\",\n    \"jurisdictionMatches\": \"PASS\",\n    \"formAccepted\": \"PASS\",\n    \"signaturePresent\": \"FAIL\",\n    \"datesValid\": \"PASS\",\n    \"numberPresent\": \"PASS\",\n    \"result\": \"INCOMPLETE\"\n  },\n  \"note\": \"The buyer did not sign section 4\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/exemptions/{{certificateId}}/screening",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "exemptions",
+                "{{certificateId}}",
+                "screening"
+              ]
+            },
+            "description": "Record the completeness checklist\n\n`ANALYST`, signed in as themselves.\n\nRecords the completeness checklist against the current evidence version\nof a `SUBMITTED` certificate (EER-10). `DOCUMENT_COMPLETE` needs every\ncriterion to pass or not apply, and is refused for a document already\npast its expiry (T15-13A); it and `NEEDS_LEGAL_DECISION` move the\ncertificate to `REVIEW_REQUIRED`. `INCOMPLETE` and `INCONSISTENT` name a\nfailed criterion and say what is wrong; the certificate waits in\n`SCREENING` for a corrected document. Complete is not approved."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('screenExemptionCertificate returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/exemptions/{certificateId}/recommendation — Recommend approval or rejection (the maker)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recommendation\": \"APPROVE\",\n  \"effectiveFrom\": \"2026-09-15\",\n  \"effectiveTo\": \"2027-09-14\",\n  \"rationale\": \"ST-120 complete; buyer and seller match\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/exemptions/{{certificateId}}/recommendation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "exemptions",
+                "{{certificateId}}",
+                "recommendation"
+              ]
+            },
+            "description": "Recommend approval or rejection (the maker)\n\n`ANALYST`, signed in as themselves.\n\nThe maker's half of a decision on a `REVIEW_REQUIRED` certificate, with\nits rationale: approve or reject the current evidence version. An\napproval states the period the certificate is evidence for, from no\nearlier than its issue date and ending no later than its expiry; an\nalready-expired certificate is not recommended for approval. Nothing is\ndecided until a different person confirms it."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recommendExemptionCertificate returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/exemptions/{certificateId}/decision — Confirm or return the recommendation (the checker)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"CONFIRM\",\n  \"expectedEvidenceVersion\": 1,\n  \"note\": \"Checked against the original\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/exemptions/{{certificateId}}/decision",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "exemptions",
+                "{{certificateId}}",
+                "decision"
+              ]
+            },
+            "description": "Confirm or return the recommendation (the checker)\n\n`ANALYST`, signed in as themselves.\n\nThe checker's half: `CONFIRM` publishes the pending recommendation —\n`APPROVED` or `REJECTED` — and `RETURN` sends it back with a reason. The\nchecker names the evidence version they reviewed; any other is\n`409 VERSION_CONFLICT` and nothing is published (ER-042, XC-08). The\nchecker is neither the recommender nor the person who recorded the\ncurrent document (`403 MAKER_CHECKER`; ER-041). Confirming a renewal's\napproval supersedes the certificate it renews.\n\n`APPROVED` is evidence for one buyer, seller entity, jurisdiction and\nperiod. It is not a tax exemption: the determination engine decides\napplicability from its own approved rules, and nothing committed is\nrewritten (T15-13C; ER-033)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('decideExemptionCertificate returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/exemptions/{certificateId}/transitions — Suspend, reinstate, expire or revoke an approved certificate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"SUSPENDED\",\n  \"reason\": \"Buyer reported a change of legal name\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/exemptions/{{certificateId}}/transitions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "exemptions",
+                "{{certificateId}}",
+                "transitions"
+              ]
+            },
+            "description": "Suspend, reinstate, expire or revoke an approved certificate\n\n`ANALYST`, signed in as themselves.\n\n`SUSPENDED` from `APPROVED`; `APPROVED` from `SUSPENDED` (reinstatement,\nby someone other than the suspender, while the evidence period lasts);\n`EXPIRED` from either once the evidence period has ended; `REVOKED` from\neither. Every move but `EXPIRED` gives its reason. Expiry and revocation\nblock future use only: history stays as recorded, and an expired or\nrevoked certificate is never resumed — a renewal is a new certificate\nreviewed afresh (ER-038, ER-039)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('transitionExemptionCertificate returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "POST /v1/shadow/comparators — Record a comparator profile",
           "request": {
             "method": "POST",
@@ -12483,6 +13293,36 @@
       "type": "string"
     },
     {
+      "key": "registrationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "certificateId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "scheme",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "jurisdiction",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "flag",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "buyerRef",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "webhookId",
       "value": "",
       "type": "string"
@@ -12589,7 +13429,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:25dc95ef25b2b622c8740ddac58a36ab5a32617989d2515240b1107b781e15bb",
+      "value": "sha256:784f232b2ad7987284d0ed2bca5b81e7b0cabea79e14f4550516484b943d4796",
       "type": "string"
     }
   ]

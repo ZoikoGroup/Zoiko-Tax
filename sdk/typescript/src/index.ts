@@ -860,6 +860,90 @@ export class ZoikoTaxClient {
     return this.#send<S<"Notice">>("POST", `/v1/notices/${encodeURIComponent(noticeId)}/appeal`, body, signal);
   }
 
+  // --- registrations and exemption evidence (Doc 17) --------------------------
+  /** List registrations, newest first, numbers masked. `GET /v1/registrations`. */
+  listRegistrations(
+    params: { status?: string; scheme?: string; legalEntityId?: string; jurisdiction?: string; flag?: string; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"RegistrationList">>> {
+    return this.#send<S<"RegistrationList">>("GET", `/v1/registrations${query(params)}`, undefined, signal);
+  }
+
+  /**
+   * Record a registration as a DRAFT, or SUBMITTED with `submit: true` —
+   * never VERIFIED or ACTIVE. `idempotencyKey` is mandatory; `200` returns the
+   * registration this key already recorded. `POST /v1/registrations`.
+   */
+  createRegistration(idempotencyKey: string, body: S<"RegistrationRequest">, signal?: AbortSignal): Promise<Result<S<"Registration">>> {
+    return this.#send<S<"Registration">>("POST", `/v1/registrations`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** One registration with its history. `GET /v1/registrations/{registrationId}`. */
+  getRegistration(registrationId: string, signal?: AbortSignal): Promise<Result<S<"Registration">>> {
+    return this.#send<S<"Registration">>("GET", `/v1/registrations/${encodeURIComponent(registrationId)}`, undefined, signal);
+  }
+
+  /** Move a registration, against the version read. `POST /v1/registrations/{registrationId}/transitions`. */
+  transitionRegistration(registrationId: string, body: S<"RegistrationTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"Registration">>> {
+    return this.#send<S<"Registration">>("POST", `/v1/registrations/${encodeURIComponent(registrationId)}/transitions`, body, signal);
+  }
+
+  /** Record an authority check a person made. `POST /v1/registrations/{registrationId}/checks`. */
+  recordRegistrationCheck(registrationId: string, body: S<"RegistrationCheckRequest">, signal?: AbortSignal): Promise<Result<S<"Registration">>> {
+    return this.#send<S<"Registration">>("POST", `/v1/registrations/${encodeURIComponent(registrationId)}/checks`, body, signal);
+  }
+
+  /** Record a supporting document by digest. `POST /v1/registrations/{registrationId}/attachments`. */
+  recordRegistrationAttachment(registrationId: string, body: S<"EvidenceDocument">, signal?: AbortSignal): Promise<Result<S<"Registration">>> {
+    return this.#send<S<"Registration">>("POST", `/v1/registrations/${encodeURIComponent(registrationId)}/attachments`, body, signal);
+  }
+
+  /** List exemption certificates held as evidence. `GET /v1/exemptions`. */
+  listExemptionCertificates(
+    params: { status?: string; legalEntityId?: string; buyerRef?: string; jurisdiction?: string; flag?: string; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"ExemptionEvidenceList">>> {
+    return this.#send<S<"ExemptionEvidenceList">>("GET", `/v1/exemptions${query(params)}`, undefined, signal);
+  }
+
+  /**
+   * Receive a certificate with its document by digest, as SUBMITTED evidence
+   * version 1. `idempotencyKey` is mandatory. `POST /v1/exemptions`.
+   */
+  receiveExemptionCertificate(idempotencyKey: string, body: S<"ExemptionEvidenceRequest">, signal?: AbortSignal): Promise<Result<S<"ExemptionEvidence">>> {
+    return this.#send<S<"ExemptionEvidence">>("POST", `/v1/exemptions`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** One certificate with its evidence history. `GET /v1/exemptions/{certificateId}`. */
+  getExemptionCertificate(certificateId: string, signal?: AbortSignal): Promise<Result<S<"ExemptionEvidence">>> {
+    return this.#send<S<"ExemptionEvidence">>("GET", `/v1/exemptions/${encodeURIComponent(certificateId)}`, undefined, signal);
+  }
+
+  /** Replace the document with a corrected version. `POST /v1/exemptions/{certificateId}/versions`. */
+  addExemptionCertificateVersion(certificateId: string, body: S<"ExemptionVersionRequest">, signal?: AbortSignal): Promise<Result<S<"ExemptionEvidence">>> {
+    return this.#send<S<"ExemptionEvidence">>("POST", `/v1/exemptions/${encodeURIComponent(certificateId)}/versions`, body, signal);
+  }
+
+  /** Record the completeness checklist. `POST /v1/exemptions/{certificateId}/screening`. */
+  screenExemptionCertificate(certificateId: string, body: S<"ExemptionScreeningRequest">, signal?: AbortSignal): Promise<Result<S<"ExemptionEvidence">>> {
+    return this.#send<S<"ExemptionEvidence">>("POST", `/v1/exemptions/${encodeURIComponent(certificateId)}/screening`, body, signal);
+  }
+
+  /** Recommend approval or rejection (the maker). `POST /v1/exemptions/{certificateId}/recommendation`. */
+  recommendExemptionCertificate(certificateId: string, body: S<"ExemptionRecommendationRequest">, signal?: AbortSignal): Promise<Result<S<"ExemptionEvidence">>> {
+    return this.#send<S<"ExemptionEvidence">>("POST", `/v1/exemptions/${encodeURIComponent(certificateId)}/recommendation`, body, signal);
+  }
+
+  /** Confirm or return the recommendation (the checker). `POST /v1/exemptions/{certificateId}/decision`. */
+  decideExemptionCertificate(certificateId: string, body: S<"ExemptionDecisionRequest">, signal?: AbortSignal): Promise<Result<S<"ExemptionEvidence">>> {
+    return this.#send<S<"ExemptionEvidence">>("POST", `/v1/exemptions/${encodeURIComponent(certificateId)}/decision`, body, signal);
+  }
+
+  /** Suspend, reinstate, expire or revoke an approved certificate. `POST /v1/exemptions/{certificateId}/transitions`. */
+  transitionExemptionCertificate(certificateId: string, body: S<"ExemptionTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"ExemptionEvidence">>> {
+    return this.#send<S<"ExemptionEvidence">>("POST", `/v1/exemptions/${encodeURIComponent(certificateId)}/transitions`, body, signal);
+  }
+
   // --- shadow ----------------------------------------------------------------
   /** List comparator profiles. `GET /v1/shadow/comparators`. */
   listComparators(signal?: AbortSignal): Promise<Result<S<"ComparatorList">>> {

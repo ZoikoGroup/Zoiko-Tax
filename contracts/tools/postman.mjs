@@ -213,6 +213,11 @@ const FOLDERS = [
       "recordRemittanceStatus", "resolveRemittance", "returnRemittance", "cancelRemittance",
       "recordContribution", "listContributions", "getContributionTrace", "getContributionSummary",
       "quarantineContribution", "releaseContribution",
+      "createRegistration", "listRegistrations", "getRegistration", "recordRegistrationAttachment",
+      "recordRegistrationCheck", "transitionRegistration",
+      "receiveExemptionCertificate", "listExemptionCertificates", "getExemptionCertificate",
+      "addExemptionCertificateVersion", "screenExemptionCertificate", "recommendExemptionCertificate",
+      "decideExemptionCertificate", "transitionExemptionCertificate",
       "createComparator", "listComparators", "executeShadowRun", "listShadowRuns", "getShadowRun", "moveDiscrepancy",
       "issueDocument", "getDocument", "correctDocument", "getDocumentLineage", "listDocuments",
       "adjustTransaction", "refundTransaction", "getRefund", "reportRefund", "listRefunds", "proposeClassification",
@@ -512,6 +517,28 @@ const OPERATION_TESTS = {
     "  pm.expect(pm.response.json().immutableHash).to.match(/^zt1:[0-9a-f]{64}$/);",
     "});",
     "pm.collectionVariables.set('contributionId', pm.response.json().id);",
+  ],
+  createRegistration: [
+    "pm.test('Doc 17 ER-014 — a submitted registration is SUBMITTED, never ACTIVE; or the number is already recorded', function () {",
+    "  pm.expect([200, 201, 409]).to.include(pm.response.code);",
+    "  if (pm.response.code !== 409) { pm.expect(pm.response.json().status).to.eql('SUBMITTED'); }",
+    "});",
+  ],
+  listRegistrations: [
+    "pm.test('Doc 17 EER-04 — a listing masks registration numbers', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.response.json().registrations.forEach(function (r) { pm.expect(r.numberMasked).to.eql(true); });",
+    "});",
+    "const regs = pm.response.json().registrations;",
+    "if (regs.length > 0) { pm.collectionVariables.set('registrationId', regs[0].id); }",
+  ],
+  receiveExemptionCertificate: [
+    "pm.test('Doc 17 EER-09 — a received certificate is SUBMITTED evidence version 1, not approved', function () {",
+    "  pm.expect([200, 201]).to.include(pm.response.code);",
+    "  pm.expect(pm.response.json().status).to.eql('SUBMITTED');",
+    "  pm.expect(pm.response.json().inForce).to.eql(false);",
+    "});",
+    "pm.collectionVariables.set('certificateId', pm.response.json().id);",
   ],
   createRemittance: [
     "pm.test('ZTAX-REM-REQ-0005 — only an accepted return is paid', function () {",
@@ -980,6 +1007,18 @@ const ACCEPTED_OUTCOMES = {
   // and only an ANALYST other than the quarantiner releases.
   quarantineContribution: ["409"],
   releaseContribution: ["403"],
+  // The example registration number is recorded by the first run; later runs
+  // find it already recorded. Its example document is the one recorded with
+  // it, and folder 06 runs as an OPERATOR, while checks, activation,
+  // screening, recommendation, decision and suspension are an ANALYST's.
+  createRegistration: ["409"],
+  recordRegistrationAttachment: ["409"],
+  recordRegistrationCheck: ["403"],
+  transitionRegistration: ["403"],
+  screenExemptionCertificate: ["403"],
+  recommendExemptionCertificate: ["403"],
+  decideExemptionCertificate: ["403"],
+  transitionExemptionCertificate: ["403"],
   moveDiscrepancy: ["404"],
 };
 
@@ -1297,6 +1336,14 @@ function variables(overlay, contractDigest, local) {
     { key: "regime", value: "", type: "string" },
     { key: "sourceType", value: "", type: "string" },
     { key: "legalEntityId", value: "", type: "string" },
+    // Captured by listRegistrations and receiveExemptionCertificate; the
+    // registration and certificate filters are empty so they list everything.
+    { key: "registrationId", value: "", type: "string" },
+    { key: "certificateId", value: "", type: "string" },
+    { key: "scheme", value: "", type: "string" },
+    { key: "jurisdiction", value: "", type: "string" },
+    { key: "flag", value: "", type: "string" },
+    { key: "buyerRef", value: "", type: "string" },
     { key: "webhookId", value: "", type: "string" },
     { key: "jobId", value: "", type: "string" },
     { key: "sealId", value: "", type: "string" },
