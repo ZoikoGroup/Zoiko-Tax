@@ -138,6 +138,10 @@ type Router struct {
 	// from the contribution ledger and the subledger, evidence-linked
 	// adjustments and resolutions, freeze and two-person approval.
 	Workpapers *app.WorkpaperService
+	// Registrations serves the registration ledger and the exemption
+	// certificates held as evidence (Doc 17). It reads and writes those
+	// records only, so it is served wherever the store is.
+	Registrations *app.RegistrationService
 
 	// Shadow serves shadow assurance: comparator profiles, comparison runs
 	// and their discrepancies. Nil when the cell has no evidence store to
@@ -397,6 +401,24 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/workpapers/{workpaperId}/build", false, []security.Role{operator, analyst}}, rt.handleBuildWorkpaper},
 		{Route{"GET", "/v1/workpapers/{workpaperId}/source-check", false, []security.Role{operator, analyst, auditor}}, rt.handleCheckWorkpaperSources},
 		{Route{"POST", "/v1/workpapers/{workpaperId}/actions", false, []security.Role{operator, analyst}}, rt.handleActOnWorkpaper},
+		// Registrations and exemption evidence (Doc 17, G-048): OPERATOR and
+		// ANALYST record and submit; ANALYST checks, activates, screens,
+		// recommends and confirms, and the service compares the people for
+		// the four-eye rules. AUDITOR reads. ADMIN reads no customer evidence.
+		{Route{"GET", "/v1/registrations", false, []security.Role{operator, analyst, auditor}}, rt.handleListRegistrations},
+		{Route{"POST", "/v1/registrations", false, []security.Role{operator, analyst}}, rt.handleCreateRegistration},
+		{Route{"GET", "/v1/registrations/{registrationId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetRegistration},
+		{Route{"POST", "/v1/registrations/{registrationId}/transitions", false, []security.Role{operator, analyst}}, rt.handleTransitionRegistration},
+		{Route{"POST", "/v1/registrations/{registrationId}/checks", false, []security.Role{analyst}}, rt.handleRecordRegistrationCheck},
+		{Route{"POST", "/v1/registrations/{registrationId}/attachments", false, []security.Role{operator, analyst}}, rt.handleRecordRegistrationAttachment},
+		{Route{"GET", "/v1/exemptions", false, []security.Role{operator, analyst, auditor}}, rt.handleListExemptionCertificates},
+		{Route{"POST", "/v1/exemptions", false, []security.Role{operator, analyst}}, rt.handleReceiveExemptionCertificate},
+		{Route{"GET", "/v1/exemptions/{certificateId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetExemptionCertificate},
+		{Route{"POST", "/v1/exemptions/{certificateId}/versions", false, []security.Role{operator, analyst}}, rt.handleAddExemptionCertificateVersion},
+		{Route{"POST", "/v1/exemptions/{certificateId}/screening", false, []security.Role{analyst}}, rt.handleScreenExemptionCertificate},
+		{Route{"POST", "/v1/exemptions/{certificateId}/recommendation", false, []security.Role{analyst}}, rt.handleRecommendExemptionCertificate},
+		{Route{"POST", "/v1/exemptions/{certificateId}/decision", false, []security.Role{analyst}}, rt.handleDecideExemptionCertificate},
+		{Route{"POST", "/v1/exemptions/{certificateId}/transitions", false, []security.Role{analyst}}, rt.handleTransitionExemptionCertificate},
 		// Shadow: non-impact reads of committed decisions, compared with
 		// another engine's results (ZTAX-SHD-001).
 		{Route{"GET", "/v1/shadow/comparators", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListComparators},

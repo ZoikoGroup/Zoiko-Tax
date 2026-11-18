@@ -182,6 +182,9 @@ func run() error {
 	// subledger and read no decision, so they need only the store too.
 	router.Workpapers = app.NewWorkpaperService(store.Workpapers(), store.ProviderContributions(), store.Periods(),
 		store.LegalEntities(), store, clk, ids)
+	// Registrations and exemption evidence read and write their own records
+	// and no decision; like notices they need only the store.
+	router.Registrations = app.NewRegistrationService(store.Registrations(), store.LegalEntities(), store, clk, ids)
 	if router.Determination != nil {
 		// Compliance packages execute the obligations commits assess, and
 		// move them only on filing evidence, so they are served wherever the
