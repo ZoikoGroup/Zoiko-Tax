@@ -213,6 +213,7 @@ const FOLDERS = [
       "recordRemittanceStatus", "resolveRemittance", "returnRemittance", "cancelRemittance",
       "recordContribution", "listContributions", "getContributionTrace", "getContributionSummary",
       "quarantineContribution", "releaseContribution",
+      "createWorkpaper", "getWorkpaper", "buildWorkpaper", "checkWorkpaperSources", "listWorkpapers", "actOnWorkpaper",
       "createComparator", "listComparators", "executeShadowRun", "listShadowRuns", "getShadowRun", "moveDiscrepancy",
       "issueDocument", "getDocument", "correctDocument", "getDocumentLineage", "listDocuments",
       "adjustTransaction", "refundTransaction", "getRefund", "reportRefund", "listRefunds", "proposeClassification",
@@ -512,6 +513,19 @@ const OPERATION_TESTS = {
     "  pm.expect(pm.response.json().immutableHash).to.match(/^zt1:[0-9a-f]{64}$/);",
     "});",
     "pm.collectionVariables.set('contributionId', pm.response.json().id);",
+  ],
+  createWorkpaper: [
+    "pm.test('OBL-07 — one workpaper per filer, duty and period: opened, or the one already open', function () {",
+    "  pm.expect([200, 201]).to.include(pm.response.code);",
+    "  pm.expect(pm.response.json().history[0].kind).to.eql('CREATED');",
+    "});",
+    "pm.collectionVariables.set('workpaperId', pm.response.json().id);",
+  ],
+  buildWorkpaper: [
+    "pm.test('OBL-07 — a build is deterministic: a new version, or the latest when nothing changed', function () {",
+    "  pm.expect([200, 201]).to.include(pm.response.code);",
+    "  pm.expect(pm.response.json().latestBuild.inputsHash).to.match(/^zt1:[0-9a-f]{64}$/);",
+    "});",
   ],
   createRemittance: [
     "pm.test('ZTAX-REM-REQ-0005 — only an accepted return is paid', function () {",
@@ -980,6 +994,9 @@ const ACCEPTED_OUTCOMES = {
   // and only an ANALYST other than the quarantiner releases.
   quarantineContribution: ["409"],
   releaseContribution: ["403"],
+  // The example adjustment names the event count of a first run; a later
+  // run finds the workpaper moved on, or frozen, and is refused as stale.
+  actOnWorkpaper: ["409"],
   moveDiscrepancy: ["404"],
 };
 
@@ -1297,6 +1314,10 @@ function variables(overlay, contractDigest, local) {
     { key: "regime", value: "", type: "string" },
     { key: "sourceType", value: "", type: "string" },
     { key: "legalEntityId", value: "", type: "string" },
+    // Captured by createWorkpaper; the duty filter is empty so it lists
+    // every duty.
+    { key: "workpaperId", value: "", type: "string" },
+    { key: "duty", value: "", type: "string" },
     { key: "webhookId", value: "", type: "string" },
     { key: "jobId", value: "", type: "string" },
     { key: "sealId", value: "", type: "string" },

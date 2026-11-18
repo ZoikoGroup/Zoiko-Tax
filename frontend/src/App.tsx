@@ -30,6 +30,7 @@ import { ReportsDemoPage } from './pages/ReportsDemoPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { ShadowPage } from './pages/ShadowPage'
 import { SupportCasesPage } from './pages/SupportCasesPage'
+import { WorkpapersPage } from './pages/WorkpapersPage'
 import type { PageProps } from './pages/types'
 import { CellHealth } from './platform/CellHealth'
 import { ztax } from './platform/client'
@@ -199,6 +200,8 @@ export function App() {
             return <ContributionsPage {...page} />
           case 'notices':
             return <RegulatoryNoticesPage {...page} />
+          case 'workpapers':
+            return <WorkpapersPage {...page} />
           case 'dashboard':
             return <HomePage {...page} capabilities={capabilities} />
         }

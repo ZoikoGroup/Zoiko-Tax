@@ -864,6 +864,42 @@
       "path": "/v1/webhooks/{webhookId}/status",
       "operationId": "setWebhookStatus",
       "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/workpapers",
+      "operationId": "listWorkpapers",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/workpapers",
+      "operationId": "createWorkpaper",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/workpapers/{workpaperId}",
+      "operationId": "getWorkpaper",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/workpapers/{workpaperId}/actions",
+      "operationId": "actOnWorkpaper",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/workpapers/{workpaperId}/build",
+      "operationId": "buildWorkpaper",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/workpapers/{workpaperId}/source-check",
+      "operationId": "checkWorkpaperSources",
+      "public": false
     }
   ]
 }

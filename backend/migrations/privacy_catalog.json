@@ -3911,6 +3911,214 @@
         "aiAllowed": "NONE",
         "note": "The person who acted."
       }
+    },
+    "regulatory_workpaper": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "workpaper_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0",
+        "note": "The legal filer the workpaper is for."
+      },
+      "duty": {
+        "class": "P0"
+      },
+      "period": {
+        "class": "P0"
+      },
+      "authority": {
+        "class": "P0",
+        "note": "The authority the duty is reported to, by name."
+      },
+      "reporting_currency": {
+        "class": "P0"
+      },
+      "materiality": {
+        "class": "P0",
+        "note": "The threshold at or above which an adjustment needs a second person: a policy figure, not a consumer amount."
+      },
+      "obligation_id": {
+        "class": "P0"
+      },
+      "content_release": {
+        "class": "P0",
+        "note": "The content or formula release the workpaper applies."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who opened the workpaper."
+      }
+    },
+    "regulatory_workpaper_build": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "workpaper_id": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "inputs_hash": {
+        "class": "P0",
+        "note": "The digest of everything the build read."
+      },
+      "output_hash": {
+        "class": "P0",
+        "note": "The digest of the build's canonical document."
+      },
+      "basis_digest": {
+        "class": "P0",
+        "note": "The digest of the preparer-controlled inputs: content release, documented rates and approved adjustments."
+      },
+      "formula_version": {
+        "class": "P0"
+      },
+      "content_release": {
+        "class": "P0"
+      },
+      "output_canonical": {
+        "class": "P0",
+        "note": "The build's schedules and reconciliation: a provider's revenue aggregates and references into its own systems, never a customer identity."
+      },
+      "built_at": {
+        "class": "P0"
+      },
+      "built_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who ran the build."
+      }
+    },
+    "regulatory_workpaper_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "workpaper_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "status_after": {
+        "class": "P0"
+      },
+      "note": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text from the person acting: a reason, an explanation of an exception, a review note."
+      },
+      "build_version": {
+        "class": "P0"
+      },
+      "content_release": {
+        "class": "P0"
+      },
+      "fx_currency": {
+        "class": "P0"
+      },
+      "fx_rate": {
+        "class": "P0"
+      },
+      "fx_rate_source": {
+        "class": "P0",
+        "note": "Where a documented FX rate came from, such as a central bank reference rate."
+      },
+      "fx_rate_date": {
+        "class": "P0"
+      },
+      "fx_rounding_mode": {
+        "class": "P0"
+      },
+      "fx_rounding_scale": {
+        "class": "P0"
+      },
+      "fx_conversion_basis": {
+        "class": "P0",
+        "note": "How converted amounts are computed and rounded, as documented."
+      },
+      "adjustment_number": {
+        "class": "P0"
+      },
+      "adjustment_kind": {
+        "class": "P0"
+      },
+      "adjustment_category": {
+        "class": "P0"
+      },
+      "adjustment_amount": {
+        "class": "P0",
+        "note": "An allowance or adjustment to a provider's base: an operator aggregate, not a consumer amount."
+      },
+      "decision": {
+        "class": "P0"
+      },
+      "exception_key": {
+        "class": "P0"
+      },
+      "exception_fingerprint": {
+        "class": "P0"
+      },
+      "evidence_sha256": {
+        "class": "P0",
+        "note": "The SHA-256 of a document recorded as evidence. The document itself is not stored."
+      },
+      "evidence_name": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The file name of a document recorded as evidence, as given; it may name a person."
+      },
+      "evidence_media": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the event."
+      }
     }
   }
 }
