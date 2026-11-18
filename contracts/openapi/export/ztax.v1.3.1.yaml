@@ -108,6 +108,8 @@ tags:
     description: Customer support cases — triage, routing and response under two separate clocks, the support SLA and any statutory deadline. No tax-rule or financial authority; fiscal records are referenced, never changed.
   - name: contributions
     description: Provider contributions — the operator's own contributions to USF, CRTC NCF and similar funds, assessed on its eligible revenue. Never the recovery charged to customers. Source events recorded once, reversed by new events, quarantined without deletion, and totalled exactly per period.
+  - name: workpapers
+    description: Regulatory workpapers — a legal filer's tax or regulatory base for one duty and period, assembled deterministically from the provider contribution ledger and the subledger, reconciled to control totals, with evidence-linked adjustments and resolutions, a frozen source snapshot and a two-person approval.
   - name: shadow
     description: Shadow assurance — another engine's results compared with ZoikoTax's decisions, component by component. Non-impact; matching a comparator is not verified correctness.
   - name: migration
@@ -9534,6 +9536,373 @@ paths:
           $ref: "#/components/responses/Internal"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/workpapers:
+    get:
+      operationId: listWorkpapers
+      tags:
+        - workpapers
+      summary: The workpaper register
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        Regulatory workpapers, newest period first, in any status, with their
+        builds' summaries. A listing carries no schedules: read one workpaper for
+        its latest build.
+      parameters:
+        - name: period
+          in: query
+          required: false
+          description: Only workpapers of this period.
+          schema:
+            $ref: "#/components/schemas/LegalPeriod"
+          example: 2026-09
+        - name: duty
+          in: query
+          required: false
+          description: Only workpapers of this duty.
+          schema:
+            $ref: "#/components/schemas/ContributionRegime"
+          example: US_USF
+        - name: status
+          in: query
+          required: false
+          description: Only workpapers in this status.
+          schema:
+            $ref: "#/components/schemas/WorkpaperStatus"
+          example: DATA_INCOMPLETE
+        - name: legalEntityId
+          in: query
+          required: false
+          description: Only workpapers of this legal filer.
+          schema:
+            $ref: "#/components/schemas/LegalEntityId"
+          example: 01920a4c-0000-7000-8000-00000000e001
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The workpapers.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkpaperList"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    workpapers:
+                      - id: 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        duty: US_USF
+                        period: 2026-09
+                        authority: USAC
+                        reportingCurrency: USD
+                        materialityThreshold: "500.00"
+                        initialContentRelease: usf-499q@2026.3
+                        contentRelease: usf-499q@2026.3
+                        formulaVersion: obl07-assembly/v1
+                        status: DATA_INCOMPLETE
+                        eventCount: 2
+                        createdAt: 2026-10-05T09:00:00.000000Z
+                        createdBy: 01920a4c-0000-7000-8000-0000000000a1
+                        builds:
+                          - version: 1
+                            inputsHash: zt1:3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e
+                            outputHash: zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c
+                            basisDigest: zt1:0b2d4f6a8c1e3b5d7f9a0c2e4b6d8f1a3c5e7b9d0f2a4c6e8b1d3f5a7c9e0b2d
+                            formulaVersion: obl07-assembly/v1
+                            contentRelease: usf-499q@2026.3
+                            builtAt: 2026-10-05T09:05:00.000000Z
+                            builtBy: 01920a4c-0000-7000-8000-0000000000a1
+                        exceptions: []
+                        fxRates: []
+                        adjustments: []
+                        resolutions: []
+                        history:
+                          - seq: 1
+                            kind: CREATED
+                            status: DRAFT
+                            recordedAt: 2026-10-05T09:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                          - seq: 2
+                            kind: BUILT
+                            status: DATA_INCOMPLETE
+                            buildVersion: 1
+                            recordedAt: 2026-10-05T09:05:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                        allowedActions: []
+                        blockers: []
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: createWorkpaper
+      tags:
+        - workpapers
+      summary: Open a workpaper for a legal filer, duty and period
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Opens the workpaper header (OBL-07 01): the legal filer — the tenant's
+        default legal entity when none is named — the duty, the period, the
+        authority it is reported to, the reporting currency, the materiality
+        threshold at or above which an adjustment needs a second person, and the
+        content release it applies. Nothing is assembled until it is built.
+
+        **Idempotent on the filer, duty and period**, not on an
+        `Idempotency-Key`: there is one workpaper for each. The same header again
+        returns the workpaper already opened with `200`; a different header is
+        `409 WORKPAPER_EXISTS`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkpaperRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  duty: US_USF
+                  period: 2026-09
+                  authority: USAC
+                  reportingCurrency: USD
+                  materialityThreshold: "500.00"
+                  contentRelease: usf-499q@2026.3
+      responses:
+        "200":
+          $ref: "#/components/responses/WorkpaperResult"
+        "201":
+          $ref: "#/components/responses/WorkpaperResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/workpapers/{workpaperId}:
+    get:
+      operationId: getWorkpaper
+      tags:
+        - workpapers
+      summary: A workpaper with its schedules, reconciliation and controls
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        The header, the latest build's schedules — revenue categories, excluded
+        bases, volume and transaction counts, permitted allowances and audited
+        adjustments — with lineage to every source event, the reconciliation to
+        the contribution ledger's control totals, the subledger and the GL
+        bridge, the exceptions and their resolutions, the documented FX rates,
+        the history, and what the workpaper admits now. The latest build's stored
+        document is re-hashed on read; one that no longer matches its output hash
+        is refused (`500 EVIDENCE_INTEGRITY`) rather than shown.
+      parameters:
+        - $ref: "#/components/parameters/WorkpaperId"
+      responses:
+        "200":
+          $ref: "#/components/responses/WorkpaperResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/workpapers/{workpaperId}/build:
+    post:
+      operationId: buildWorkpaper
+      tags:
+        - workpapers
+      summary: Build the workpaper deterministically from its sources
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Assembles the schedules and the reconciliation from the provider
+        contribution ledger for the filer, duty and period and the filer's Tax
+        Control Subledger balances, applying the documented FX rates and the
+        approved adjustments. The build records the hash of everything it read,
+        its canonical document and that document's hash.
+
+        **Deterministic and idempotent**: when the inputs hash equals the latest
+        build's, nothing is recorded and the workpaper is returned with `200`.
+        Otherwise the next build version is recorded (`201`). An open exception —
+        no source event at all, a held import, a source currency with no
+        documented rate, a total that does not tie — leaves the workpaper
+        `DATA_INCOMPLETE`. A rebuild of an `APPROVED` workpaper with changed
+        inputs revokes the approval. A workpaper frozen for review is not rebuilt
+        (`409 WORKPAPER_SNAPSHOT_LOCKED`).
+      parameters:
+        - $ref: "#/components/parameters/WorkpaperId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkpaperBuildRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  expectedSeq: 1
+      responses:
+        "200":
+          $ref: "#/components/responses/WorkpaperResult"
+        "201":
+          $ref: "#/components/responses/WorkpaperResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/workpapers/{workpaperId}/source-check:
+    get:
+      operationId: checkWorkpaperSources
+      tags:
+        - workpapers
+      summary: Compare the latest build with what its sources say now
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        Assembles the workpaper from its sources now, records nothing, and
+        compares the inputs hash with the latest build's. `matches` false on a
+        frozen or approved workpaper means a source moved after the snapshot was
+        taken: the snapshot stands, and a rebuild would record a new version.
+      parameters:
+        - $ref: "#/components/parameters/WorkpaperId"
+      responses:
+        "200":
+          description: The comparison.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkpaperSourceCheck"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    workpaperId: 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    latestBuildVersion: 1
+                    latestInputsHash: zt1:3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e
+                    latestOutputHash: zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c
+                    currentInputsHash: zt1:3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e
+                    currentOutputHash: zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c
+                    matches: true
+                    checkedAt: 2026-10-06T10:00:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/workpapers/{workpaperId}/actions:
+    post:
+      operationId: actOnWorkpaper
+      tags:
+        - workpapers
+      summary: Freeze, review, approve, or record an adjustment, rate or resolution
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves; `APPROVE`,
+        `DECIDE_ADJUSTMENT` and `DECIDE_RESOLUTION` need `ANALYST`.
+
+        One act, named by `action`, appended to the workpaper's history:
+
+        - `DOCUMENT_FX_RATE` documents the rate and conversion basis for one
+          source currency (`fx`). A source currency without one is a
+          `CURRENCY_MISMATCH` exception until it is documented and rebuilt.
+        - `PROPOSE_ADJUSTMENT` records a permitted allowance or an audited
+          adjustment in the reporting currency, with its `evidence`. One at or
+          above the materiality threshold waits for a second person:
+          `DECIDE_ADJUSTMENT` by someone other than the proposer
+          (`403 SEGREGATION_OF_DUTIES`).
+        - `PROPOSE_RESOLUTION` explains one resolvable exception of the latest
+          build, with its `evidence` and the exception's `fingerprint`;
+          `DECIDE_RESOLUTION` confirms or rejects it, by someone else.
+        - `FREEZE` locks the latest build for review. Refused with
+          `403 WORKPAPER_NOT_READY` while any exception is unresolved, a decision
+          is pending, or the basis changed since the build — material data
+          absent never reaches `READY_FOR_REVIEW`.
+        - `RETURN_TO_DRAFT` unlocks a frozen workpaper, with the reason.
+        - `APPROVE` approves the frozen `buildVersion`. The approver neither froze
+          it nor ran it.
+        - `CHANGE_BASIS` records a new `contentRelease`; it revokes an approval
+          and unlocks a frozen workpaper.
+
+        Writes to a frozen workpaper's inputs are `409 WORKPAPER_SNAPSHOT_LOCKED`.
+        `expectedSeq`, when given, is the number of events the caller read; a
+        workpaper that has moved since is `409 WORKPAPER_STALE`.
+      parameters:
+        - $ref: "#/components/parameters/WorkpaperId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkpaperActionRequest"
+            examples:
+              default:
+                summary: Propose an audited adjustment
+                value:
+                  action: PROPOSE_ADJUSTMENT
+                  expectedSeq: 2
+                  adjustment:
+                    kind: AUDITED_ADJUSTMENT
+                    category: Prior-period billing correction
+                    amount: "-1200.00"
+                    reason: Credit notes issued in October for September usage, per the billing audit
+                  evidence:
+                    sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                    filename: billing-audit-2026-09.pdf
+                    mediaType: application/pdf
+      responses:
+        "200":
+          $ref: "#/components/responses/WorkpaperResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/shadow/comparators:
     get:
       operationId: listComparators
@@ -10783,6 +11152,14 @@ components:
       schema:
         $ref: "#/components/schemas/ContributionId"
       example: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+    WorkpaperId:
+      name: workpaperId
+      in: path
+      required: true
+      description: The workpaper identifier.
+      schema:
+        $ref: "#/components/schemas/WorkpaperId"
+      example: 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
     ShadowRunId:
       name: shadowRunId
       in: path
@@ -11269,6 +11646,184 @@ components:
                     status: LEGAL_REVIEW
                     recordedAt: 2026-10-01T11:05:00.000000Z
                     recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+    WorkpaperResult:
+      description: The workpaper as it stands now.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Workpaper"
+          examples:
+            default:
+              summary: A draft with one build, an approved allowance and a resolved difference
+              value:
+                id: 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                duty: US_USF
+                period: 2026-09
+                authority: USAC
+                reportingCurrency: USD
+                materialityThreshold: "500.00"
+                initialContentRelease: usf-499q@2026.3
+                contentRelease: usf-499q@2026.3
+                formulaVersion: obl07-assembly/v1
+                status: DRAFT
+                eventCount: 3
+                createdAt: 2026-10-05T09:00:00.000000Z
+                createdBy: 01920a4c-0000-7000-8000-0000000000a1
+                builds:
+                  - version: 1
+                    inputsHash: zt1:3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e
+                    outputHash: zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c
+                    basisDigest: zt1:0b2d4f6a8c1e3b5d7f9a0c2e4b6d8f1a3c5e7b9d0f2a4c6e8b1d3f5a7c9e0b2d
+                    formulaVersion: obl07-assembly/v1
+                    contentRelease: usf-499q@2026.3
+                    builtAt: 2026-10-05T09:05:00.000000Z
+                    builtBy: 01920a4c-0000-7000-8000-0000000000a1
+                latestBuild:
+                  version: 1
+                  inputsHash: zt1:3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e
+                  outputHash: zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c
+                  basisDigest: zt1:0b2d4f6a8c1e3b5d7f9a0c2e4b6d8f1a3c5e7b9d0f2a4c6e8b1d3f5a7c9e0b2d
+                  formulaVersion: obl07-assembly/v1
+                  contentRelease: usf-499q@2026.3
+                  builtAt: 2026-10-05T09:05:00.000000Z
+                  builtBy: 01920a4c-0000-7000-8000-0000000000a1
+                  output:
+                    formulaVersion: obl07-assembly/v1
+                    contentRelease: usf-499q@2026.3
+                    reportingCurrency: USD
+                    revenue:
+                      - category: usf:interstate-telecom
+                        currency: USD
+                        count: 1
+                        amount: "1250.00"
+                        sources:
+                          - contributionId: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                            sourceEventId: BSS-INV-2026-09-000123
+                            sourceVersion: 1
+                            sourceRef: INV-2026-000123
+                            ruleVersion: usf-499a@2026.1
+                            amount: "1250.00"
+                    excluded:
+                      - reason: International-only revenue, outside the contribution base
+                        currency: USD
+                        count: 1
+                        amount: "250.00"
+                        sources:
+                          - contributionId: 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                            sourceEventId: BSS-INV-2026-09-000123
+                            sourceVersion: 1
+                            sourceRef: INV-2026-000123
+                            ruleVersion: usf-499a@2026.1
+                            amount: "250.00"
+                    volumes:
+                      accepted: 1
+                      quarantined: 0
+                      reversals: 0
+                      amendments: 0
+                      quantities: []
+                      bySource:
+                        - sourceType: BSS_INVOICE
+                          currency: USD
+                          count: 1
+                          eligible: "1250.00"
+                    allowances:
+                      - number: 1
+                        category: Bad debt allowance
+                        amount: "50.00"
+                        reason: Uncollectible amounts written off in the period
+                        evidenceSha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                        material: false
+                    adjustments: []
+                    totals:
+                      currency: USD
+                      grossEligible: "1250.00"
+                      excluded: "250.00"
+                      allowances: "50.00"
+                      adjustments: "0"
+                      reportableBase: "1200.00"
+                    controlTotals:
+                      - currency: USD
+                        accepted: 1
+                        quarantined: 0
+                        reversals: 0
+                        eligible: "1250.00"
+                        excluded: "250.00"
+                        periodDigest: zt1:3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e
+                        incomplete: []
+                        sourceChecksums: []
+                    reconciliation:
+                      - code: SCHEDULE_ELIGIBLE_VS_CONTROL_TOTAL
+                        currency: USD
+                        expected: "1250.00"
+                        actual: "1250.00"
+                        difference: "0.00"
+                        status: MATCHED
+                      - code: SCHEDULE_EXCLUDED_VS_CONTROL_TOTAL
+                        currency: USD
+                        expected: "250.00"
+                        actual: "250.00"
+                        difference: "0.00"
+                        status: MATCHED
+                      - code: REPORTABLE_BASE_BRIDGE
+                        currency: USD
+                        expected: "1250.00"
+                        actual: "1200.00"
+                        difference: "-50.00"
+                        status: BRIDGED
+                    subledger: []
+                    conversions: []
+                exceptions: []
+                fxRates: []
+                adjustments:
+                  - number: 1
+                    kind: PERMITTED_ALLOWANCE
+                    category: Bad debt allowance
+                    amount: "50.00"
+                    currency: USD
+                    reason: Uncollectible amounts written off in the period
+                    evidence:
+                      sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                      filename: write-offs-2026-09.pdf
+                      mediaType: application/pdf
+                    material: false
+                    state: APPROVED
+                    proposedAt: 2026-10-05T09:02:00.000000Z
+                    proposedBy: 01920a4c-0000-7000-8000-0000000000a1
+                resolutions: []
+                history:
+                  - seq: 1
+                    kind: CREATED
+                    status: DRAFT
+                    recordedAt: 2026-10-05T09:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                  - seq: 2
+                    kind: ADJUSTMENT_PROPOSED
+                    status: DRAFT
+                    adjustmentNumber: 1
+                    adjustmentKind: PERMITTED_ALLOWANCE
+                    adjustmentCategory: Bad debt allowance
+                    adjustmentAmount: "50.00"
+                    note: Uncollectible amounts written off in the period
+                    evidence:
+                      sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                      filename: write-offs-2026-09.pdf
+                      mediaType: application/pdf
+                    recordedAt: 2026-10-05T09:02:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                  - seq: 3
+                    kind: BUILT
+                    status: DRAFT
+                    buildVersion: 1
+                    recordedAt: 2026-10-05T09:05:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                allowedActions:
+                  - BUILD
+                  - FREEZE
+                  - CHANGE_BASIS
+                  - DOCUMENT_FX_RATE
+                  - PROPOSE_ADJUSTMENT
+                blockers: []
   schemas:
     Problem:
       type: object
@@ -22162,3 +22717,1123 @@ components:
           $ref: "#/components/schemas/CutoverState"
         note:
           $ref: "#/components/schemas/MigrationText"
+    WorkpaperId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperId
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+    WorkpaperStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperStatus
+      description: |
+        Where a workpaper stands (Document 08 §04). DATA_INCOMPLETE while an
+        exception of the latest build is unresolved; READY_FOR_REVIEW once a
+        build is frozen; APPROVED by a second person; REVOKED when the basis
+        changed after approval.
+      enum:
+        - DRAFT
+        - DATA_INCOMPLETE
+        - READY_FOR_REVIEW
+        - APPROVED
+        - REVOKED
+    WorkpaperEventKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperEventKind
+      description: What an event records. Every one is appended; none edits.
+      enum:
+        - CREATED
+        - BUILT
+        - APPROVAL_REVOKED
+        - BASIS_CHANGED
+        - FX_DOCUMENTED
+        - ADJUSTMENT_PROPOSED
+        - ADJUSTMENT_DECIDED
+        - RESOLUTION_PROPOSED
+        - RESOLUTION_DECIDED
+        - FROZEN
+        - RETURNED
+        - APPROVED
+    WorkpaperAction:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperAction
+      description: An act on a workpaper. BUILD is its own request.
+      enum:
+        - BUILD
+        - FREEZE
+        - RETURN_TO_DRAFT
+        - APPROVE
+        - CHANGE_BASIS
+        - DOCUMENT_FX_RATE
+        - PROPOSE_ADJUSTMENT
+        - DECIDE_ADJUSTMENT
+        - PROPOSE_RESOLUTION
+        - DECIDE_RESOLUTION
+    WorkpaperBlocker:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperBlocker
+      description: A reason an open workpaper cannot be frozen for review yet.
+      enum:
+        - NO_BUILD
+        - BASIS_CHANGED_SINCE_BUILD
+        - FORMULA_CHANGED
+        - EXCEPTION_UNRESOLVED
+        - ADJUSTMENT_PENDING
+        - RESOLUTION_PENDING
+    WorkpaperAdjustmentKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperAdjustmentKind
+      description: A permitted allowance is a positive deduction from the base; an audited adjustment is a signed correction.
+      enum:
+        - PERMITTED_ALLOWANCE
+        - AUDITED_ADJUSTMENT
+    WorkpaperDecision:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperDecision
+      description: A second person's decision on a proposal.
+      enum:
+        - APPROVED
+        - REJECTED
+    WorkpaperAdjustmentState:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperAdjustmentState
+      description: Where an adjustment stands. One below the materiality threshold is APPROVED as proposed.
+      enum:
+        - PROPOSED
+        - APPROVED
+        - REJECTED
+    WorkpaperResolutionState:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperResolutionState
+      enum:
+        - PROPOSED
+        - CONFIRMED
+        - REJECTED
+    WorkpaperExceptionState:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperExceptionState
+      description: OPEN with no confirmed resolution of this very difference; PENDING while one awaits its second person; RESOLVED once confirmed.
+      enum:
+        - OPEN
+        - PENDING
+        - RESOLVED
+    WorkpaperExceptionCode:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperExceptionCode
+      description: |
+        SOURCE_MISSING — no source event for the filer, duty and period;
+        SOURCE_INCOMPLETE — a held import or an unbalanced reversal, repaired at
+        the source; CURRENCY_MISMATCH — no documented FX rate, cleared by
+        documenting one; CONTROL_TOTAL_DIFFERENCE — a schedule total that does
+        not equal the ledger's control total; SUBLEDGER_SUSPENSE_OPEN and
+        GL_BRIDGE_DIFFERENCE — subledger accounts that do not clear in the period.
+      enum:
+        - SOURCE_MISSING
+        - SOURCE_INCOMPLETE
+        - CURRENCY_MISMATCH
+        - CONTROL_TOTAL_DIFFERENCE
+        - SUBLEDGER_SUSPENSE_OPEN
+        - GL_BRIDGE_DIFFERENCE
+    WorkpaperReconStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperReconStatus
+      description: MATCHED ties exactly; DIFFERENCE does not; BRIDGED differs by exactly the approved, evidence-linked allowances and adjustments.
+      enum:
+        - MATCHED
+        - DIFFERENCE
+        - BRIDGED
+    WorkpaperRoundingMode:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperRoundingMode
+      description: How a converted schedule line is rounded, as the documented conversion basis says.
+      enum:
+        - HALF_UP
+        - HALF_EVEN
+        - HALF_DOWN
+        - DOWN
+        - UP
+        - CEILING
+        - FLOOR
+    WorkpaperAmount:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperAmount
+      description: |
+        An amount or quantity in canonical decimal string form — never a JSON
+        number, and never computed by a client. A provider's own revenue
+        aggregate, not a consumer amount.
+      pattern: ^-?(0|[1-9][0-9]*)(\.[0-9]+)?$
+      maxLength: 64
+      example: "1250.00"
+    WorkpaperRate:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperRate
+      description: An FX rate, one unit of the source currency in the reporting currency, as a canonical decimal string.
+      pattern: ^(0|[1-9][0-9]*)(\.[0-9]+)?$
+      maxLength: 64
+      example: "1.0842"
+    WorkpaperRef:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperRef
+      description: A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+      minLength: 1
+      maxLength: 200
+      example: usf-499q@2026.3
+    WorkpaperLabel:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperLabel
+      description: Text a build computed — a classification, an exclusion reason as the rule gave it, an exception's detail.
+      example: usf:interstate-telecom
+    WorkpaperText:
+      x-ztax-privacy:
+        class: P2
+        purposes:
+          - PURP-FILE
+          - PURP-EVID
+        retention: RET-EVIDENCE
+        redaction: REDACT
+        aiAllowed: NONE
+      type: string
+      title: WorkpaperText
+      description: Free text from the person acting — a reason, an explanation of an exception, a review note.
+      minLength: 1
+      maxLength: 2000
+      example: Credit notes issued in October for September usage, per the billing audit
+    WorkpaperFilename:
+      x-ztax-privacy:
+        class: P2
+        purposes:
+          - PURP-FILE
+          - PURP-EVID
+        retention: RET-EVIDENCE
+        redaction: REDACT
+        aiAllowed: NONE
+      type: string
+      title: WorkpaperFilename
+      minLength: 1
+      maxLength: 255
+      description: A recorded document's file name, as given. It may name a person.
+      example: billing-audit-2026-09.pdf
+    WorkpaperMediaType:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: WorkpaperMediaType
+      maxLength: 192
+      example: application/pdf
+    WorkpaperCount:
+      x-ztax-privacy:
+        class: P0
+      type: integer
+      title: WorkpaperCount
+      format: int32
+      minimum: 0
+    WorkpaperFlag:
+      x-ztax-privacy:
+        class: P0
+      type: boolean
+      title: WorkpaperFlag
+    WorkpaperActor:
+      x-ztax-privacy:
+        class: P1
+        purposes:
+          - PURP-SEC
+          - PURP-EVID
+        retention: RET-EVIDENCE
+        redaction: NONE
+      type: string
+      title: WorkpaperActor
+      format: uuid
+      description: The person who acted.
+    WorkpaperEvidence:
+      type: object
+      title: WorkpaperEvidence
+      description: A document named by its SHA-256, computed where the document is. Nothing is uploaded.
+      additionalProperties: false
+      required:
+        - sha256
+        - filename
+        - mediaType
+      properties:
+        sha256:
+          $ref: "#/components/schemas/Sha256Hex"
+        filename:
+          $ref: "#/components/schemas/WorkpaperFilename"
+        mediaType:
+          $ref: "#/components/schemas/WorkpaperMediaType"
+    WorkpaperFXRequest:
+      type: object
+      title: WorkpaperFXRequest
+      description: A documented FX rate and its conversion basis for one source currency.
+      additionalProperties: false
+      required:
+        - currency
+        - rate
+        - rateSource
+        - rateDate
+        - roundingMode
+        - scale
+        - conversionBasis
+      properties:
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        rate:
+          $ref: "#/components/schemas/WorkpaperRate"
+        rateSource:
+          $ref: "#/components/schemas/WorkpaperRef"
+        rateDate:
+          $ref: "#/components/schemas/CivilDate"
+        roundingMode:
+          $ref: "#/components/schemas/WorkpaperRoundingMode"
+        scale:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 12
+        conversionBasis:
+          $ref: "#/components/schemas/WorkpaperText"
+    WorkpaperFXRate:
+      type: object
+      title: WorkpaperFXRate
+      description: The documented rate in force for one source currency.
+      additionalProperties: false
+      required:
+        - currency
+        - rate
+        - rateSource
+        - rateDate
+        - roundingMode
+        - scale
+        - conversionBasis
+        - recordedAt
+        - recordedBy
+      properties:
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        rate:
+          $ref: "#/components/schemas/WorkpaperRate"
+        rateSource:
+          $ref: "#/components/schemas/WorkpaperRef"
+        rateDate:
+          $ref: "#/components/schemas/CivilDate"
+        roundingMode:
+          $ref: "#/components/schemas/WorkpaperRoundingMode"
+        scale:
+          $ref: "#/components/schemas/WorkpaperCount"
+        conversionBasis:
+          $ref: "#/components/schemas/WorkpaperText"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          $ref: "#/components/schemas/WorkpaperActor"
+    WorkpaperAdjustmentRequest:
+      type: object
+      title: WorkpaperAdjustmentRequest
+      additionalProperties: false
+      required:
+        - kind
+        - category
+        - amount
+        - reason
+      properties:
+        kind:
+          $ref: "#/components/schemas/WorkpaperAdjustmentKind"
+        category:
+          $ref: "#/components/schemas/WorkpaperRef"
+        amount:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        reason:
+          $ref: "#/components/schemas/WorkpaperText"
+    WorkpaperAdjustment:
+      type: object
+      title: WorkpaperAdjustment
+      description: A permitted allowance or audited adjustment in the reporting currency, with its evidence and decision.
+      additionalProperties: false
+      required:
+        - number
+        - kind
+        - category
+        - amount
+        - currency
+        - reason
+        - evidence
+        - material
+        - state
+        - proposedAt
+        - proposedBy
+      properties:
+        number:
+          $ref: "#/components/schemas/WorkpaperCount"
+        kind:
+          $ref: "#/components/schemas/WorkpaperAdjustmentKind"
+        category:
+          $ref: "#/components/schemas/WorkpaperRef"
+        amount:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        reason:
+          $ref: "#/components/schemas/WorkpaperText"
+        evidence:
+          $ref: "#/components/schemas/WorkpaperEvidence"
+        material:
+          $ref: "#/components/schemas/WorkpaperFlag"
+        state:
+          $ref: "#/components/schemas/WorkpaperAdjustmentState"
+        proposedAt:
+          $ref: "#/components/schemas/Timestamp"
+        proposedBy:
+          $ref: "#/components/schemas/WorkpaperActor"
+        decidedAt:
+          $ref: "#/components/schemas/Timestamp"
+        decidedBy:
+          $ref: "#/components/schemas/WorkpaperActor"
+        decisionNote:
+          $ref: "#/components/schemas/WorkpaperText"
+    WorkpaperResolution:
+      type: object
+      title: WorkpaperResolution
+      description: An evidence-linked explanation of one exception, confirmed or rejected by a second person.
+      additionalProperties: false
+      required:
+        - exceptionKey
+        - fingerprint
+        - explanation
+        - evidence
+        - state
+        - proposedAt
+        - proposedBy
+      properties:
+        exceptionKey:
+          $ref: "#/components/schemas/WorkpaperRef"
+        fingerprint:
+          $ref: "#/components/schemas/Digest"
+        explanation:
+          $ref: "#/components/schemas/WorkpaperText"
+        evidence:
+          $ref: "#/components/schemas/WorkpaperEvidence"
+        state:
+          $ref: "#/components/schemas/WorkpaperResolutionState"
+        proposedAt:
+          $ref: "#/components/schemas/Timestamp"
+        proposedBy:
+          $ref: "#/components/schemas/WorkpaperActor"
+        decidedAt:
+          $ref: "#/components/schemas/Timestamp"
+        decidedBy:
+          $ref: "#/components/schemas/WorkpaperActor"
+        decisionNote:
+          $ref: "#/components/schemas/WorkpaperText"
+    WorkpaperException:
+      type: object
+      title: WorkpaperException
+      description: One exception of the latest build and where its resolution stands.
+      additionalProperties: false
+      required:
+        - key
+        - code
+        - detail
+        - resolvable
+        - fingerprint
+        - state
+      properties:
+        key:
+          $ref: "#/components/schemas/WorkpaperRef"
+        code:
+          $ref: "#/components/schemas/WorkpaperExceptionCode"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        difference:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        detail:
+          $ref: "#/components/schemas/WorkpaperLabel"
+        resolvable:
+          $ref: "#/components/schemas/WorkpaperFlag"
+        fingerprint:
+          $ref: "#/components/schemas/Digest"
+        state:
+          $ref: "#/components/schemas/WorkpaperExceptionState"
+        resolution:
+          $ref: "#/components/schemas/WorkpaperResolution"
+    WorkpaperSourceRef:
+      type: object
+      title: WorkpaperSourceRef
+      description: Lineage from a schedule line to one source event.
+      additionalProperties: false
+      required:
+        - contributionId
+        - sourceEventId
+        - sourceVersion
+        - sourceRef
+        - ruleVersion
+        - amount
+      properties:
+        contributionId:
+          $ref: "#/components/schemas/ContributionId"
+        sourceEventId:
+          $ref: "#/components/schemas/ContributionRef"
+        sourceVersion:
+          $ref: "#/components/schemas/WorkpaperCount"
+        sourceRef:
+          $ref: "#/components/schemas/ContributionRef"
+        ruleVersion:
+          $ref: "#/components/schemas/ContributionRef"
+        amount:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        reverses:
+          $ref: "#/components/schemas/WorkpaperLabel"
+    WorkpaperRevenueLine:
+      type: object
+      title: WorkpaperRevenueLine
+      description: One revenue category in one source currency, with its source events.
+      additionalProperties: false
+      required:
+        - category
+        - currency
+        - count
+        - amount
+        - sources
+      properties:
+        category:
+          $ref: "#/components/schemas/WorkpaperLabel"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        count:
+          $ref: "#/components/schemas/WorkpaperCount"
+        amount:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        converted:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperSourceRef"
+    WorkpaperExclusionLine:
+      type: object
+      title: WorkpaperExclusionLine
+      description: One excluded base, by the reason the rule gave, with its source events.
+      additionalProperties: false
+      required:
+        - reason
+        - currency
+        - count
+        - amount
+        - sources
+      properties:
+        reason:
+          $ref: "#/components/schemas/WorkpaperLabel"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        count:
+          $ref: "#/components/schemas/WorkpaperCount"
+        amount:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        converted:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperSourceRef"
+    WorkpaperQuantityLine:
+      type: object
+      title: WorkpaperQuantityLine
+      additionalProperties: false
+      required:
+        - unit
+        - total
+      properties:
+        unit:
+          $ref: "#/components/schemas/WorkpaperLabel"
+        total:
+          $ref: "#/components/schemas/WorkpaperAmount"
+    WorkpaperSourceTypeLine:
+      type: object
+      title: WorkpaperSourceTypeLine
+      description: The BSS control total of one kind of source record in one currency.
+      additionalProperties: false
+      required:
+        - sourceType
+        - currency
+        - count
+        - eligible
+      properties:
+        sourceType:
+          $ref: "#/components/schemas/ContributionSourceType"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        count:
+          $ref: "#/components/schemas/WorkpaperCount"
+        eligible:
+          $ref: "#/components/schemas/WorkpaperAmount"
+    WorkpaperVolumes:
+      type: object
+      title: WorkpaperVolumes
+      description: Volume and transaction counts.
+      additionalProperties: false
+      required:
+        - accepted
+        - quarantined
+        - reversals
+        - amendments
+        - quantities
+        - bySource
+      properties:
+        accepted:
+          $ref: "#/components/schemas/WorkpaperCount"
+        quarantined:
+          $ref: "#/components/schemas/WorkpaperCount"
+        reversals:
+          $ref: "#/components/schemas/WorkpaperCount"
+        amendments:
+          $ref: "#/components/schemas/WorkpaperCount"
+        quantities:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperQuantityLine"
+        bySource:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperSourceTypeLine"
+    WorkpaperAdjustmentLine:
+      type: object
+      title: WorkpaperAdjustmentLine
+      description: An approved allowance or adjustment as it entered the build.
+      additionalProperties: false
+      required:
+        - number
+        - category
+        - amount
+        - reason
+        - evidenceSha256
+        - material
+      properties:
+        number:
+          $ref: "#/components/schemas/WorkpaperCount"
+        category:
+          $ref: "#/components/schemas/WorkpaperLabel"
+        amount:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        reason:
+          $ref: "#/components/schemas/WorkpaperText"
+        evidenceSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+        material:
+          $ref: "#/components/schemas/WorkpaperFlag"
+    WorkpaperTotals:
+      type: object
+      title: WorkpaperTotals
+      description: The report totals in the reporting currency. Absent while a source currency has no documented conversion.
+      additionalProperties: false
+      required:
+        - currency
+        - grossEligible
+        - excluded
+        - allowances
+        - adjustments
+        - reportableBase
+      properties:
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        grossEligible:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        excluded:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        allowances:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        adjustments:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        reportableBase:
+          $ref: "#/components/schemas/WorkpaperAmount"
+    WorkpaperControlTotal:
+      type: object
+      title: WorkpaperControlTotal
+      description: The contribution ledger's own control total for the filer, duty, period and one currency — the independent expectation the schedules are reconciled to.
+      additionalProperties: false
+      required:
+        - currency
+        - accepted
+        - quarantined
+        - reversals
+        - eligible
+        - excluded
+        - periodDigest
+        - incomplete
+        - sourceChecksums
+      properties:
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        accepted:
+          $ref: "#/components/schemas/WorkpaperCount"
+        quarantined:
+          $ref: "#/components/schemas/WorkpaperCount"
+        reversals:
+          $ref: "#/components/schemas/WorkpaperCount"
+        eligible:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        excluded:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        periodDigest:
+          $ref: "#/components/schemas/Digest"
+        incomplete:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContributionIncompleteReason"
+        sourceChecksums:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperLabel"
+    WorkpaperReconLine:
+      type: object
+      title: WorkpaperReconLine
+      description: One reconciliation — expected against actual in one currency.
+      additionalProperties: false
+      required:
+        - code
+        - currency
+        - expected
+        - actual
+        - difference
+        - status
+      properties:
+        code:
+          $ref: "#/components/schemas/WorkpaperLabel"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        expected:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        actual:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        difference:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        status:
+          $ref: "#/components/schemas/WorkpaperReconStatus"
+    WorkpaperBalanceLine:
+      type: object
+      title: WorkpaperBalanceLine
+      description: One Tax Control Subledger balance of the filer in the period, debits and credits apart. Shown beside the schedules, never netted into them.
+      additionalProperties: false
+      required:
+        - account
+        - currency
+        - debits
+        - credits
+      properties:
+        account:
+          $ref: "#/components/schemas/WorkpaperLabel"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        debits:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        credits:
+          $ref: "#/components/schemas/WorkpaperAmount"
+    WorkpaperConversion:
+      type: object
+      title: WorkpaperConversion
+      description: A documented FX rate a build converted with.
+      additionalProperties: false
+      required:
+        - from
+        - to
+        - rate
+        - rateSource
+        - rateDate
+        - roundingMode
+        - scale
+        - basis
+      properties:
+        from:
+          $ref: "#/components/schemas/CurrencyCode"
+        to:
+          $ref: "#/components/schemas/CurrencyCode"
+        rate:
+          $ref: "#/components/schemas/WorkpaperRate"
+        rateSource:
+          $ref: "#/components/schemas/WorkpaperRef"
+        rateDate:
+          $ref: "#/components/schemas/CivilDate"
+        roundingMode:
+          $ref: "#/components/schemas/WorkpaperRoundingMode"
+        scale:
+          $ref: "#/components/schemas/WorkpaperCount"
+        basis:
+          $ref: "#/components/schemas/WorkpaperText"
+    WorkpaperOutput:
+      type: object
+      title: WorkpaperOutput
+      description: A build's sealed document — its schedules, control totals and reconciliation. Its exceptions are listed on the workpaper with their resolutions.
+      additionalProperties: false
+      required:
+        - formulaVersion
+        - contentRelease
+        - reportingCurrency
+        - revenue
+        - excluded
+        - volumes
+        - allowances
+        - adjustments
+        - controlTotals
+        - reconciliation
+        - subledger
+        - conversions
+      properties:
+        formulaVersion:
+          $ref: "#/components/schemas/WorkpaperRef"
+        contentRelease:
+          $ref: "#/components/schemas/WorkpaperRef"
+        reportingCurrency:
+          $ref: "#/components/schemas/CurrencyCode"
+        revenue:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperRevenueLine"
+        excluded:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperExclusionLine"
+        volumes:
+          $ref: "#/components/schemas/WorkpaperVolumes"
+        allowances:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperAdjustmentLine"
+        adjustments:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperAdjustmentLine"
+        totals:
+          $ref: "#/components/schemas/WorkpaperTotals"
+        controlTotals:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperControlTotal"
+        reconciliation:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperReconLine"
+        subledger:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperBalanceLine"
+        conversions:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperConversion"
+    WorkpaperBuild:
+      type: object
+      title: WorkpaperBuild
+      description: One build version — the hash of what it read, the hash of what it produced. Only the latest build carries its output.
+      additionalProperties: false
+      required:
+        - version
+        - inputsHash
+        - outputHash
+        - basisDigest
+        - formulaVersion
+        - contentRelease
+        - builtAt
+        - builtBy
+      properties:
+        version:
+          $ref: "#/components/schemas/WorkpaperCount"
+        inputsHash:
+          $ref: "#/components/schemas/Digest"
+        outputHash:
+          $ref: "#/components/schemas/Digest"
+        basisDigest:
+          $ref: "#/components/schemas/Digest"
+        formulaVersion:
+          $ref: "#/components/schemas/WorkpaperRef"
+        contentRelease:
+          $ref: "#/components/schemas/WorkpaperRef"
+        builtAt:
+          $ref: "#/components/schemas/Timestamp"
+        builtBy:
+          $ref: "#/components/schemas/WorkpaperActor"
+        output:
+          $ref: "#/components/schemas/WorkpaperOutput"
+    WorkpaperEvent:
+      type: object
+      title: WorkpaperEvent
+      additionalProperties: false
+      required:
+        - seq
+        - kind
+        - status
+        - recordedAt
+        - recordedBy
+      properties:
+        seq:
+          $ref: "#/components/schemas/WorkpaperCount"
+        kind:
+          $ref: "#/components/schemas/WorkpaperEventKind"
+        status:
+          $ref: "#/components/schemas/WorkpaperStatus"
+        note:
+          $ref: "#/components/schemas/WorkpaperText"
+        buildVersion:
+          $ref: "#/components/schemas/WorkpaperCount"
+        contentRelease:
+          $ref: "#/components/schemas/WorkpaperRef"
+        fx:
+          $ref: "#/components/schemas/WorkpaperFXRequest"
+        adjustmentNumber:
+          $ref: "#/components/schemas/WorkpaperCount"
+        adjustmentKind:
+          $ref: "#/components/schemas/WorkpaperAdjustmentKind"
+        adjustmentCategory:
+          $ref: "#/components/schemas/WorkpaperRef"
+        adjustmentAmount:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        decision:
+          $ref: "#/components/schemas/WorkpaperDecision"
+        exceptionKey:
+          $ref: "#/components/schemas/WorkpaperRef"
+        fingerprint:
+          $ref: "#/components/schemas/Digest"
+        evidence:
+          $ref: "#/components/schemas/WorkpaperEvidence"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          $ref: "#/components/schemas/WorkpaperActor"
+    Workpaper:
+      type: object
+      title: Workpaper
+      description: |
+        A regulatory workpaper (OBL-07): the header, its builds, the latest
+        build's schedules and reconciliation, the exceptions and their
+        resolutions, the documented FX rates, the adjustments, the history, and
+        what it admits now. `eventCount` is the `expectedSeq` an act sends.
+      additionalProperties: false
+      required:
+        - id
+        - legalEntityId
+        - duty
+        - period
+        - authority
+        - reportingCurrency
+        - materialityThreshold
+        - initialContentRelease
+        - contentRelease
+        - formulaVersion
+        - status
+        - eventCount
+        - createdAt
+        - createdBy
+        - builds
+        - exceptions
+        - fxRates
+        - adjustments
+        - resolutions
+        - history
+        - allowedActions
+        - blockers
+      properties:
+        id:
+          $ref: "#/components/schemas/WorkpaperId"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        duty:
+          $ref: "#/components/schemas/ContributionRegime"
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+        authority:
+          $ref: "#/components/schemas/WorkpaperRef"
+        reportingCurrency:
+          $ref: "#/components/schemas/CurrencyCode"
+        materialityThreshold:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        obligationId:
+          $ref: "#/components/schemas/ObligationId"
+        initialContentRelease:
+          $ref: "#/components/schemas/WorkpaperRef"
+        contentRelease:
+          $ref: "#/components/schemas/WorkpaperRef"
+        formulaVersion:
+          $ref: "#/components/schemas/WorkpaperRef"
+        status:
+          $ref: "#/components/schemas/WorkpaperStatus"
+        eventCount:
+          $ref: "#/components/schemas/WorkpaperCount"
+        frozenBuildVersion:
+          $ref: "#/components/schemas/WorkpaperCount"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        createdBy:
+          $ref: "#/components/schemas/WorkpaperActor"
+        builds:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperBuild"
+        latestBuild:
+          $ref: "#/components/schemas/WorkpaperBuild"
+        exceptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperException"
+        fxRates:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperFXRate"
+        adjustments:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperAdjustment"
+        resolutions:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperResolution"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperEvent"
+        allowedActions:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperAction"
+        blockers:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkpaperBlocker"
+    WorkpaperList:
+      type: object
+      title: WorkpaperList
+      additionalProperties: false
+      required:
+        - workpapers
+      properties:
+        workpapers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Workpaper"
+    WorkpaperRequest:
+      type: object
+      title: WorkpaperRequest
+      additionalProperties: false
+      required:
+        - duty
+        - period
+        - authority
+        - reportingCurrency
+        - contentRelease
+      properties:
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        duty:
+          $ref: "#/components/schemas/ContributionRegime"
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+        authority:
+          $ref: "#/components/schemas/WorkpaperRef"
+        reportingCurrency:
+          $ref: "#/components/schemas/CurrencyCode"
+        materialityThreshold:
+          $ref: "#/components/schemas/WorkpaperAmount"
+        obligationId:
+          $ref: "#/components/schemas/ObligationId"
+        contentRelease:
+          $ref: "#/components/schemas/WorkpaperRef"
+    WorkpaperBuildRequest:
+      type: object
+      title: WorkpaperBuildRequest
+      additionalProperties: false
+      properties:
+        expectedSeq:
+          $ref: "#/components/schemas/WorkpaperCount"
+    WorkpaperActionRequest:
+      type: object
+      title: WorkpaperActionRequest
+      description: One act. The fields an action does not use are ignored.
+      additionalProperties: false
+      required:
+        - action
+      properties:
+        action:
+          $ref: "#/components/schemas/WorkpaperAction"
+        expectedSeq:
+          $ref: "#/components/schemas/WorkpaperCount"
+        note:
+          $ref: "#/components/schemas/WorkpaperText"
+        buildVersion:
+          $ref: "#/components/schemas/WorkpaperCount"
+        contentRelease:
+          $ref: "#/components/schemas/WorkpaperRef"
+        fx:
+          $ref: "#/components/schemas/WorkpaperFXRequest"
+        adjustment:
+          $ref: "#/components/schemas/WorkpaperAdjustmentRequest"
+        adjustmentNumber:
+          $ref: "#/components/schemas/WorkpaperCount"
+        decision:
+          $ref: "#/components/schemas/WorkpaperDecision"
+        exceptionKey:
+          $ref: "#/components/schemas/WorkpaperRef"
+        fingerprint:
+          $ref: "#/components/schemas/Digest"
+        evidence:
+          $ref: "#/components/schemas/WorkpaperEvidence"
+    WorkpaperSourceCheck:
+      type: object
+      title: WorkpaperSourceCheck
+      description: The latest build compared with what the sources would build now. Nothing is recorded.
+      additionalProperties: false
+      required:
+        - workpaperId
+        - currentInputsHash
+        - currentOutputHash
+        - matches
+        - checkedAt
+      properties:
+        workpaperId:
+          $ref: "#/components/schemas/WorkpaperId"
+        latestBuildVersion:
+          $ref: "#/components/schemas/WorkpaperCount"
+        latestInputsHash:
+          $ref: "#/components/schemas/Digest"
+        latestOutputHash:
+          $ref: "#/components/schemas/Digest"
+        currentInputsHash:
+          $ref: "#/components/schemas/Digest"
+        currentOutputHash:
+          $ref: "#/components/schemas/Digest"
+        frozenBuildVersion:
+          $ref: "#/components/schemas/WorkpaperCount"
+        matches:
+          $ref: "#/components/schemas/WorkpaperFlag"
+        checkedAt:
+          $ref: "#/components/schemas/Timestamp"

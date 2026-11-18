@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:25dc95ef25b2b622c8740ddac58a36ab5a32617989d2515240b1107b781e15bb`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:4f9fcc307ac4fa207605a1bf27c566ce4ef7d2445787433ec4f65e3e2dd17b7c`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -8734,6 +8734,366 @@
           ]
         },
         {
+          "name": "POST /v1/workpapers — Open a workpaper for a legal filer, duty and period",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"duty\": \"US_USF\",\n  \"period\": \"2026-09\",\n  \"authority\": \"USAC\",\n  \"reportingCurrency\": \"USD\",\n  \"materialityThreshold\": \"500.00\",\n  \"contentRelease\": \"usf-499q@2026.3\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/workpapers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "workpapers"
+              ]
+            },
+            "description": "Open a workpaper for a legal filer, duty and period\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nOpens the workpaper header (OBL-07 01): the legal filer — the tenant's\ndefault legal entity when none is named — the duty, the period, the\nauthority it is reported to, the reporting currency, the materiality\nthreshold at or above which an adjustment needs a second person, and the\ncontent release it applies. Nothing is assembled until it is built.\n\n**Idempotent on the filer, duty and period**, not on an\n`Idempotency-Key`: there is one workpaper for each. The same header again\nreturns the workpaper already opened with `200`; a different header is\n`409 WORKPAPER_EXISTS`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('createWorkpaper returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test('OBL-07 — one workpaper per filer, duty and period: opened, or the one already open', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "  pm.expect(pm.response.json().history[0].kind).to.eql('CREATED');",
+                  "});",
+                  "pm.collectionVariables.set('workpaperId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/workpapers/{workpaperId} — A workpaper with its schedules, reconciliation and controls",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/workpapers/{{workpaperId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "workpapers",
+                "{{workpaperId}}"
+              ]
+            },
+            "description": "A workpaper with its schedules, reconciliation and controls\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nThe header, the latest build's schedules — revenue categories, excluded\nbases, volume and transaction counts, permitted allowances and audited\nadjustments — with lineage to every source event, the reconciliation to\nthe contribution ledger's control totals, the subledger and the GL\nbridge, the exceptions and their resolutions, the documented FX rates,\nthe history, and what the workpaper admits now. The latest build's stored\ndocument is re-hashed on read; one that no longer matches its output hash\nis refused (`500 EVIDENCE_INTEGRITY`) rather than shown."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getWorkpaper returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/workpapers/{workpaperId}/build — Build the workpaper deterministically from its sources",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expectedSeq\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/workpapers/{{workpaperId}}/build",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "workpapers",
+                "{{workpaperId}}",
+                "build"
+              ]
+            },
+            "description": "Build the workpaper deterministically from its sources\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nAssembles the schedules and the reconciliation from the provider\ncontribution ledger for the filer, duty and period and the filer's Tax\nControl Subledger balances, applying the documented FX rates and the\napproved adjustments. The build records the hash of everything it read,\nits canonical document and that document's hash.\n\n**Deterministic and idempotent**: when the inputs hash equals the latest\nbuild's, nothing is recorded and the workpaper is returned with `200`.\nOtherwise the next build version is recorded (`201`). An open exception —\nno source event at all, a held import, a source currency with no\ndocumented rate, a total that does not tie — leaves the workpaper\n`DATA_INCOMPLETE`. A rebuild of an `APPROVED` workpaper with changed\ninputs revokes the approval. A workpaper frozen for review is not rebuilt\n(`409 WORKPAPER_SNAPSHOT_LOCKED`)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('buildWorkpaper returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test('OBL-07 — a build is deterministic: a new version, or the latest when nothing changed', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "  pm.expect(pm.response.json().latestBuild.inputsHash).to.match(/^zt1:[0-9a-f]{64}$/);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/workpapers/{workpaperId}/source-check — Compare the latest build with what its sources say now",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/workpapers/{{workpaperId}}/source-check",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "workpapers",
+                "{{workpaperId}}",
+                "source-check"
+              ]
+            },
+            "description": "Compare the latest build with what its sources say now\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nAssembles the workpaper from its sources now, records nothing, and\ncompares the inputs hash with the latest build's. `matches` false on a\nfrozen or approved workpaper means a source moved after the snapshot was\ntaken: the snapshot stands, and a rebuild would record a new version."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/workpapers/{{workpaperId}}/source-check",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "workpapers",
+                    "{{workpaperId}}",
+                    "source-check"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"workpaperId\": \"01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"latestBuildVersion\": 1,\n  \"latestInputsHash\": \"zt1:3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e\",\n  \"latestOutputHash\": \"zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c\",\n  \"currentInputsHash\": \"zt1:3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e\",\n  \"currentOutputHash\": \"zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c\",\n  \"matches\": true,\n  \"checkedAt\": \"2026-10-06T10:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('checkWorkpaperSources returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/workpapers — The workpaper register",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/workpapers?period={{period}}&duty={{duty}}&status={{status}}&legalEntityId={{legalEntityId}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "workpapers"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "{{period}}",
+                  "description": "Only workpapers of this period."
+                },
+                {
+                  "key": "duty",
+                  "value": "{{duty}}",
+                  "description": "Only workpapers of this duty."
+                },
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only workpapers in this status."
+                },
+                {
+                  "key": "legalEntityId",
+                  "value": "{{legalEntityId}}",
+                  "description": "Only workpapers of this legal filer."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The workpaper register\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nRegulatory workpapers, newest period first, in any status, with their\nbuilds' summaries. A listing carries no schedules: read one workpaper for\nits latest build."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/workpapers",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "workpapers"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"workpapers\": [\n    {\n      \"id\": \"01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"duty\": \"US_USF\",\n      \"period\": \"2026-09\",\n      \"authority\": \"USAC\",\n      \"reportingCurrency\": \"USD\",\n      \"materialityThreshold\": \"500.00\",\n      \"initialContentRelease\": \"usf-499q@2026.3\",\n      \"contentRelease\": \"usf-499q@2026.3\",\n      \"formulaVersion\": \"obl07-assembly/v1\",\n      \"status\": \"DATA_INCOMPLETE\",\n      \"eventCount\": 2,\n      \"createdAt\": \"2026-10-05T09:00:00.000000Z\",\n      \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n      \"builds\": [\n        {\n          \"version\": 1,\n          \"inputsHash\": \"zt1:3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e\",\n          \"outputHash\": \"zt1:7a1c4e9b2d0f3a6c8e5b1d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c\",\n          \"basisDigest\": \"zt1:0b2d4f6a8c1e3b5d7f9a0c2e4b6d8f1a3c5e7b9d0f2a4c6e8b1d3f5a7c9e0b2d\",\n          \"formulaVersion\": \"obl07-assembly/v1\",\n          \"contentRelease\": \"usf-499q@2026.3\",\n          \"builtAt\": \"2026-10-05T09:05:00.000000Z\",\n          \"builtBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        }\n      ],\n      \"exceptions\": [],\n      \"fxRates\": [],\n      \"adjustments\": [],\n      \"resolutions\": [],\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"CREATED\",\n          \"status\": \"DRAFT\",\n          \"recordedAt\": \"2026-10-05T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 2,\n          \"kind\": \"BUILT\",\n          \"status\": \"DATA_INCOMPLETE\",\n          \"buildVersion\": 1,\n          \"recordedAt\": \"2026-10-05T09:05:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        }\n      ],\n      \"allowedActions\": [],\n      \"blockers\": []\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listWorkpapers returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/workpapers/{workpaperId}/actions — Freeze, review, approve, or record an adjustment, rate or resolution",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"PROPOSE_ADJUSTMENT\",\n  \"expectedSeq\": 2,\n  \"adjustment\": {\n    \"kind\": \"AUDITED_ADJUSTMENT\",\n    \"category\": \"Prior-period billing correction\",\n    \"amount\": \"-1200.00\",\n    \"reason\": \"Credit notes issued in October for September usage, per the billing audit\"\n  },\n  \"evidence\": {\n    \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n    \"filename\": \"billing-audit-2026-09.pdf\",\n    \"mediaType\": \"application/pdf\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/workpapers/{{workpaperId}}/actions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "workpapers",
+                "{{workpaperId}}",
+                "actions"
+              ]
+            },
+            "description": "Freeze, review, approve, or record an adjustment, rate or resolution\n\n`OPERATOR` or `ANALYST`, signed in as themselves; `APPROVE`,\n`DECIDE_ADJUSTMENT` and `DECIDE_RESOLUTION` need `ANALYST`.\n\nOne act, named by `action`, appended to the workpaper's history:\n\n- `DOCUMENT_FX_RATE` documents the rate and conversion basis for one\n  source currency (`fx`). A source currency without one is a\n  `CURRENCY_MISMATCH` exception until it is documented and rebuilt.\n- `PROPOSE_ADJUSTMENT` records a permitted allowance or an audited\n  adjustment in the reporting currency, with its `evidence`. One at or\n  above the materiality threshold waits for a second person:\n  `DECIDE_ADJUSTMENT` by someone other than the proposer\n  (`403 SEGREGATION_OF_DUTIES`).\n- `PROPOSE_RESOLUTION` explains one resolvable exception of the latest\n  build, with its `evidence` and the exception's `fingerprint`;\n  `DECIDE_RESOLUTION` confirms or rejects it, by someone else.\n- `FREEZE` locks the latest build for review. Refused with\n  `403 WORKPAPER_NOT_READY` while any exception is unresolved, a decision\n  is pending, or the basis changed since the build — material data\n  absent never reaches `READY_FOR_REVIEW`.\n- `RETURN_TO_DRAFT` unlocks a frozen workpaper, with the reason.\n- `APPROVE` approves the frozen `buildVersion`. The approver neither froze\n  it nor ran it.\n- `CHANGE_BASIS` records a new `contentRelease`; it revokes an approval\n  and unlocks a frozen workpaper.\n\nWrites to a frozen workpaper's inputs are `409 WORKPAPER_SNAPSHOT_LOCKED`.\n`expectedSeq`, when given, is the number of events the caller read; a\nworkpaper that has moved since is `409 WORKPAPER_STALE`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('actOnWorkpaper returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "POST /v1/shadow/comparators — Record a comparator profile",
           "request": {
             "method": "POST",
@@ -12483,6 +12843,16 @@
       "type": "string"
     },
     {
+      "key": "workpaperId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "duty",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "webhookId",
       "value": "",
       "type": "string"
@@ -12589,7 +12959,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:25dc95ef25b2b622c8740ddac58a36ab5a32617989d2515240b1107b781e15bb",
+      "value": "sha256:4f9fcc307ac4fa207605a1bf27c566ce4ef7d2445787433ec4f65e3e2dd17b7c",
       "type": "string"
     }
   ]

@@ -620,16 +620,16 @@ func (e ContributionIncompleteReason) Valid() bool {
 
 // Defines values for ContributionPeriodTotalsStatus.
 const (
-	COMPLETE       ContributionPeriodTotalsStatus = "COMPLETE"
-	DATAINCOMPLETE ContributionPeriodTotalsStatus = "DATA_INCOMPLETE"
+	ContributionPeriodTotalsStatusCOMPLETE       ContributionPeriodTotalsStatus = "COMPLETE"
+	ContributionPeriodTotalsStatusDATAINCOMPLETE ContributionPeriodTotalsStatus = "DATA_INCOMPLETE"
 )
 
 // Valid indicates whether the value is a known member of the ContributionPeriodTotalsStatus enum.
 func (e ContributionPeriodTotalsStatus) Valid() bool {
 	switch e {
-	case COMPLETE:
+	case ContributionPeriodTotalsStatusCOMPLETE:
 		return true
-	case DATAINCOMPLETE:
+	case ContributionPeriodTotalsStatusDATAINCOMPLETE:
 		return true
 	default:
 		return false
@@ -4008,6 +4008,336 @@ func (e WebhookStatus) Valid() bool {
 	case WebhookStatusDISABLED:
 		return true
 	case WebhookStatusPAUSED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkpaperAction.
+const (
+	APPROVE           WorkpaperAction = "APPROVE"
+	BUILD             WorkpaperAction = "BUILD"
+	CHANGEBASIS       WorkpaperAction = "CHANGE_BASIS"
+	DECIDEADJUSTMENT  WorkpaperAction = "DECIDE_ADJUSTMENT"
+	DECIDERESOLUTION  WorkpaperAction = "DECIDE_RESOLUTION"
+	DOCUMENTFXRATE    WorkpaperAction = "DOCUMENT_FX_RATE"
+	FREEZE            WorkpaperAction = "FREEZE"
+	PROPOSEADJUSTMENT WorkpaperAction = "PROPOSE_ADJUSTMENT"
+	PROPOSERESOLUTION WorkpaperAction = "PROPOSE_RESOLUTION"
+	RETURNTODRAFT     WorkpaperAction = "RETURN_TO_DRAFT"
+)
+
+// Valid indicates whether the value is a known member of the WorkpaperAction enum.
+func (e WorkpaperAction) Valid() bool {
+	switch e {
+	case APPROVE:
+		return true
+	case BUILD:
+		return true
+	case CHANGEBASIS:
+		return true
+	case DECIDEADJUSTMENT:
+		return true
+	case DECIDERESOLUTION:
+		return true
+	case DOCUMENTFXRATE:
+		return true
+	case FREEZE:
+		return true
+	case PROPOSEADJUSTMENT:
+		return true
+	case PROPOSERESOLUTION:
+		return true
+	case RETURNTODRAFT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkpaperAdjustmentKind.
+const (
+	AUDITEDADJUSTMENT  WorkpaperAdjustmentKind = "AUDITED_ADJUSTMENT"
+	PERMITTEDALLOWANCE WorkpaperAdjustmentKind = "PERMITTED_ALLOWANCE"
+)
+
+// Valid indicates whether the value is a known member of the WorkpaperAdjustmentKind enum.
+func (e WorkpaperAdjustmentKind) Valid() bool {
+	switch e {
+	case AUDITEDADJUSTMENT:
+		return true
+	case PERMITTEDALLOWANCE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkpaperAdjustmentState.
+const (
+	WorkpaperAdjustmentStateAPPROVED WorkpaperAdjustmentState = "APPROVED"
+	WorkpaperAdjustmentStatePROPOSED WorkpaperAdjustmentState = "PROPOSED"
+	WorkpaperAdjustmentStateREJECTED WorkpaperAdjustmentState = "REJECTED"
+)
+
+// Valid indicates whether the value is a known member of the WorkpaperAdjustmentState enum.
+func (e WorkpaperAdjustmentState) Valid() bool {
+	switch e {
+	case WorkpaperAdjustmentStateAPPROVED:
+		return true
+	case WorkpaperAdjustmentStatePROPOSED:
+		return true
+	case WorkpaperAdjustmentStateREJECTED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkpaperBlocker.
+const (
+	ADJUSTMENTPENDING      WorkpaperBlocker = "ADJUSTMENT_PENDING"
+	BASISCHANGEDSINCEBUILD WorkpaperBlocker = "BASIS_CHANGED_SINCE_BUILD"
+	EXCEPTIONUNRESOLVED    WorkpaperBlocker = "EXCEPTION_UNRESOLVED"
+	FORMULACHANGED         WorkpaperBlocker = "FORMULA_CHANGED"
+	NOBUILD                WorkpaperBlocker = "NO_BUILD"
+	RESOLUTIONPENDING      WorkpaperBlocker = "RESOLUTION_PENDING"
+)
+
+// Valid indicates whether the value is a known member of the WorkpaperBlocker enum.
+func (e WorkpaperBlocker) Valid() bool {
+	switch e {
+	case ADJUSTMENTPENDING:
+		return true
+	case BASISCHANGEDSINCEBUILD:
+		return true
+	case EXCEPTIONUNRESOLVED:
+		return true
+	case FORMULACHANGED:
+		return true
+	case NOBUILD:
+		return true
+	case RESOLUTIONPENDING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkpaperDecision.
+const (
+	WorkpaperDecisionAPPROVED WorkpaperDecision = "APPROVED"
+	WorkpaperDecisionREJECTED WorkpaperDecision = "REJECTED"
+)
+
+// Valid indicates whether the value is a known member of the WorkpaperDecision enum.
+func (e WorkpaperDecision) Valid() bool {
+	switch e {
+	case WorkpaperDecisionAPPROVED:
+		return true
+	case WorkpaperDecisionREJECTED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkpaperEventKind.
+const (
+	WorkpaperEventKindADJUSTMENTDECIDED  WorkpaperEventKind = "ADJUSTMENT_DECIDED"
+	WorkpaperEventKindADJUSTMENTPROPOSED WorkpaperEventKind = "ADJUSTMENT_PROPOSED"
+	WorkpaperEventKindAPPROVALREVOKED    WorkpaperEventKind = "APPROVAL_REVOKED"
+	WorkpaperEventKindAPPROVED           WorkpaperEventKind = "APPROVED"
+	WorkpaperEventKindBASISCHANGED       WorkpaperEventKind = "BASIS_CHANGED"
+	WorkpaperEventKindBUILT              WorkpaperEventKind = "BUILT"
+	WorkpaperEventKindCREATED            WorkpaperEventKind = "CREATED"
+	WorkpaperEventKindFROZEN             WorkpaperEventKind = "FROZEN"
+	WorkpaperEventKindFXDOCUMENTED       WorkpaperEventKind = "FX_DOCUMENTED"
+	WorkpaperEventKindRESOLUTIONDECIDED  WorkpaperEventKind = "RESOLUTION_DECIDED"
+	WorkpaperEventKindRESOLUTIONPROPOSED WorkpaperEventKind = "RESOLUTION_PROPOSED"
+	WorkpaperEventKindRETURNED           WorkpaperEventKind = "RETURNED"
+)
+
+// Valid indicates whether the value is a known member of the WorkpaperEventKind enum.
+func (e WorkpaperEventKind) Valid() bool {
+	switch e {
+	case WorkpaperEventKindADJUSTMENTDECIDED:
+		return true
+	case WorkpaperEventKindADJUSTMENTPROPOSED:
+		return true
+	case WorkpaperEventKindAPPROVALREVOKED:
+		return true
+	case WorkpaperEventKindAPPROVED:
+		return true
+	case WorkpaperEventKindBASISCHANGED:
+		return true
+	case WorkpaperEventKindBUILT:
+		return true
+	case WorkpaperEventKindCREATED:
+		return true
+	case WorkpaperEventKindFROZEN:
+		return true
+	case WorkpaperEventKindFXDOCUMENTED:
+		return true
+	case WorkpaperEventKindRESOLUTIONDECIDED:
+		return true
+	case WorkpaperEventKindRESOLUTIONPROPOSED:
+		return true
+	case WorkpaperEventKindRETURNED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkpaperExceptionCode.
+const (
+	CONTROLTOTALDIFFERENCE WorkpaperExceptionCode = "CONTROL_TOTAL_DIFFERENCE"
+	CURRENCYMISMATCH       WorkpaperExceptionCode = "CURRENCY_MISMATCH"
+	GLBRIDGEDIFFERENCE     WorkpaperExceptionCode = "GL_BRIDGE_DIFFERENCE"
+	SOURCEINCOMPLETE       WorkpaperExceptionCode = "SOURCE_INCOMPLETE"
+	SOURCEMISSING          WorkpaperExceptionCode = "SOURCE_MISSING"
+	SUBLEDGERSUSPENSEOPEN  WorkpaperExceptionCode = "SUBLEDGER_SUSPENSE_OPEN"
+)
+
+// Valid indicates whether the value is a known member of the WorkpaperExceptionCode enum.
+func (e WorkpaperExceptionCode) Valid() bool {
+	switch e {
+	case CONTROLTOTALDIFFERENCE:
+		return true
+	case CURRENCYMISMATCH:
+		return true
+	case GLBRIDGEDIFFERENCE:
+		return true
+	case SOURCEINCOMPLETE:
+		return true
+	case SOURCEMISSING:
+		return true
+	case SUBLEDGERSUSPENSEOPEN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkpaperExceptionState.
+const (
+	WorkpaperExceptionStateOPEN     WorkpaperExceptionState = "OPEN"
+	WorkpaperExceptionStatePENDING  WorkpaperExceptionState = "PENDING"
+	WorkpaperExceptionStateRESOLVED WorkpaperExceptionState = "RESOLVED"
+)
+
+// Valid indicates whether the value is a known member of the WorkpaperExceptionState enum.
+func (e WorkpaperExceptionState) Valid() bool {
+	switch e {
+	case WorkpaperExceptionStateOPEN:
+		return true
+	case WorkpaperExceptionStatePENDING:
+		return true
+	case WorkpaperExceptionStateRESOLVED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkpaperReconStatus.
+const (
+	WorkpaperReconStatusBRIDGED    WorkpaperReconStatus = "BRIDGED"
+	WorkpaperReconStatusDIFFERENCE WorkpaperReconStatus = "DIFFERENCE"
+	WorkpaperReconStatusMATCHED    WorkpaperReconStatus = "MATCHED"
+)
+
+// Valid indicates whether the value is a known member of the WorkpaperReconStatus enum.
+func (e WorkpaperReconStatus) Valid() bool {
+	switch e {
+	case WorkpaperReconStatusBRIDGED:
+		return true
+	case WorkpaperReconStatusDIFFERENCE:
+		return true
+	case WorkpaperReconStatusMATCHED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkpaperResolutionState.
+const (
+	WorkpaperResolutionStateCONFIRMED WorkpaperResolutionState = "CONFIRMED"
+	WorkpaperResolutionStatePROPOSED  WorkpaperResolutionState = "PROPOSED"
+	WorkpaperResolutionStateREJECTED  WorkpaperResolutionState = "REJECTED"
+)
+
+// Valid indicates whether the value is a known member of the WorkpaperResolutionState enum.
+func (e WorkpaperResolutionState) Valid() bool {
+	switch e {
+	case WorkpaperResolutionStateCONFIRMED:
+		return true
+	case WorkpaperResolutionStatePROPOSED:
+		return true
+	case WorkpaperResolutionStateREJECTED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkpaperRoundingMode.
+const (
+	CEILING  WorkpaperRoundingMode = "CEILING"
+	DOWN     WorkpaperRoundingMode = "DOWN"
+	FLOOR    WorkpaperRoundingMode = "FLOOR"
+	HALFDOWN WorkpaperRoundingMode = "HALF_DOWN"
+	HALFEVEN WorkpaperRoundingMode = "HALF_EVEN"
+	HALFUP   WorkpaperRoundingMode = "HALF_UP"
+	UP       WorkpaperRoundingMode = "UP"
+)
+
+// Valid indicates whether the value is a known member of the WorkpaperRoundingMode enum.
+func (e WorkpaperRoundingMode) Valid() bool {
+	switch e {
+	case CEILING:
+		return true
+	case DOWN:
+		return true
+	case FLOOR:
+		return true
+	case HALFDOWN:
+		return true
+	case HALFEVEN:
+		return true
+	case HALFUP:
+		return true
+	case UP:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkpaperStatus.
+const (
+	WorkpaperStatusAPPROVED       WorkpaperStatus = "APPROVED"
+	WorkpaperStatusDATAINCOMPLETE WorkpaperStatus = "DATA_INCOMPLETE"
+	WorkpaperStatusDRAFT          WorkpaperStatus = "DRAFT"
+	WorkpaperStatusREADYFORREVIEW WorkpaperStatus = "READY_FOR_REVIEW"
+	WorkpaperStatusREVOKED        WorkpaperStatus = "REVOKED"
+)
+
+// Valid indicates whether the value is a known member of the WorkpaperStatus enum.
+func (e WorkpaperStatus) Valid() bool {
+	switch e {
+	case WorkpaperStatusAPPROVED:
+		return true
+	case WorkpaperStatusDATAINCOMPLETE:
+		return true
+	case WorkpaperStatusDRAFT:
+		return true
+	case WorkpaperStatusREADYFORREVIEW:
+		return true
+	case WorkpaperStatusREVOKED:
 		return true
 	default:
 		return false
@@ -10504,6 +10834,843 @@ type WebhookStatusRequest struct {
 // WebhookURL An HTTPS endpoint at a public address, with no credentials in it.
 type WebhookURL = string
 
+// Workpaper A regulatory workpaper (OBL-07): the header, its builds, the latest
+// build's schedules and reconciliation, the exceptions and their
+// resolutions, the documented FX rates, the adjustments, the history, and
+// what it admits now. `eventCount` is the `expectedSeq` an act sends.
+type Workpaper struct {
+	Adjustments    []WorkpaperAdjustment `json:"adjustments"`
+	AllowedActions []WorkpaperAction     `json:"allowedActions"`
+
+	// Authority A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	Authority WorkpaperRef       `json:"authority"`
+	Blockers  []WorkpaperBlocker `json:"blockers"`
+	Builds    []WorkpaperBuild   `json:"builds"`
+
+	// ContentRelease A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	ContentRelease WorkpaperRef `json:"contentRelease"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// CreatedBy The person who acted.
+	CreatedBy WorkpaperActor `json:"createdBy"`
+
+	// Duty The fund a provider contribution is owed to — the US Universal Service Fund through USAC, Canada's CRTC National Contribution Fund, or another.
+	Duty       ContributionRegime   `json:"duty"`
+	EventCount WorkpaperCount       `json:"eventCount"`
+	Exceptions []WorkpaperException `json:"exceptions"`
+
+	// FormulaVersion A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	FormulaVersion     WorkpaperRef      `json:"formulaVersion"`
+	FrozenBuildVersion *WorkpaperCount   `json:"frozenBuildVersion,omitempty"`
+	FxRates            []WorkpaperFXRate `json:"fxRates"`
+	History            []WorkpaperEvent  `json:"history"`
+	ID                 WorkpaperID       `json:"id"`
+
+	// InitialContentRelease A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	InitialContentRelease WorkpaperRef `json:"initialContentRelease"`
+
+	// LatestBuild One build version — the hash of what it read, the hash of what it produced. Only the latest build carries its output.
+	LatestBuild *WorkpaperBuild `json:"latestBuild,omitempty"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// MaterialityThreshold An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	MaterialityThreshold WorkpaperAmount `json:"materialityThreshold"`
+
+	// ObligationID One row of an obligation's history. A UUID in lowercase canonical form.
+	ObligationID *ObligationID `json:"obligationId,omitempty"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod `json:"period"`
+
+	// ReportingCurrency An ISO 4217 alphabetic currency code.
+	ReportingCurrency CurrencyCode          `json:"reportingCurrency"`
+	Resolutions       []WorkpaperResolution `json:"resolutions"`
+
+	// Status Where a workpaper stands (Document 08 §04). DATA_INCOMPLETE while an
+	// exception of the latest build is unresolved; READY_FOR_REVIEW once a
+	// build is frozen; APPROVED by a second person; REVOKED when the basis
+	// changed after approval.
+	Status WorkpaperStatus `json:"status"`
+}
+
+// WorkpaperAction An act on a workpaper. BUILD is its own request.
+type WorkpaperAction string
+
+// WorkpaperActionRequest One act. The fields an action does not use are ignored.
+type WorkpaperActionRequest struct {
+	// Action An act on a workpaper. BUILD is its own request.
+	Action           WorkpaperAction             `json:"action"`
+	Adjustment       *WorkpaperAdjustmentRequest `json:"adjustment,omitempty"`
+	AdjustmentNumber *WorkpaperCount             `json:"adjustmentNumber,omitempty"`
+	BuildVersion     *WorkpaperCount             `json:"buildVersion,omitempty"`
+
+	// ContentRelease A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	ContentRelease *WorkpaperRef `json:"contentRelease,omitempty"`
+
+	// Decision A second person's decision on a proposal.
+	Decision *WorkpaperDecision `json:"decision,omitempty"`
+
+	// Evidence A document named by its SHA-256, computed where the document is. Nothing is uploaded.
+	Evidence *WorkpaperEvidence `json:"evidence,omitempty"`
+
+	// ExceptionKey A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	ExceptionKey *WorkpaperRef   `json:"exceptionKey,omitempty"`
+	ExpectedSeq  *WorkpaperCount `json:"expectedSeq,omitempty"`
+
+	// Fingerprint A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	Fingerprint *Digest `json:"fingerprint,omitempty"`
+
+	// Fx A documented FX rate and its conversion basis for one source currency.
+	Fx *WorkpaperFXRequest `json:"fx,omitempty"`
+
+	// Note Free text from the person acting — a reason, an explanation of an exception, a review note.
+	Note *WorkpaperText `json:"note,omitempty"`
+}
+
+// WorkpaperActor The person who acted.
+type WorkpaperActor = string
+
+// WorkpaperAdjustment A permitted allowance or audited adjustment in the reporting currency, with its evidence and decision.
+type WorkpaperAdjustment struct {
+	// Amount An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Amount WorkpaperAmount `json:"amount"`
+
+	// Category A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	Category WorkpaperRef `json:"category"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// DecidedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	DecidedAt *Timestamp `json:"decidedAt,omitempty"`
+
+	// DecidedBy The person who acted.
+	DecidedBy *WorkpaperActor `json:"decidedBy,omitempty"`
+
+	// DecisionNote Free text from the person acting — a reason, an explanation of an exception, a review note.
+	DecisionNote *WorkpaperText `json:"decisionNote,omitempty"`
+
+	// Evidence A document named by its SHA-256, computed where the document is. Nothing is uploaded.
+	Evidence WorkpaperEvidence `json:"evidence"`
+
+	// Kind A permitted allowance is a positive deduction from the base; an audited adjustment is a signed correction.
+	Kind     WorkpaperAdjustmentKind `json:"kind"`
+	Material WorkpaperFlag           `json:"material"`
+	Number   WorkpaperCount          `json:"number"`
+
+	// ProposedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	ProposedAt Timestamp `json:"proposedAt"`
+
+	// ProposedBy The person who acted.
+	ProposedBy WorkpaperActor `json:"proposedBy"`
+
+	// Reason Free text from the person acting — a reason, an explanation of an exception, a review note.
+	Reason WorkpaperText `json:"reason"`
+
+	// State Where an adjustment stands. One below the materiality threshold is APPROVED as proposed.
+	State WorkpaperAdjustmentState `json:"state"`
+}
+
+// WorkpaperAdjustmentKind A permitted allowance is a positive deduction from the base; an audited adjustment is a signed correction.
+type WorkpaperAdjustmentKind string
+
+// WorkpaperAdjustmentLine An approved allowance or adjustment as it entered the build.
+type WorkpaperAdjustmentLine struct {
+	// Amount An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Amount WorkpaperAmount `json:"amount"`
+
+	// Category Text a build computed — a classification, an exclusion reason as the rule gave it, an exception's detail.
+	Category WorkpaperLabel `json:"category"`
+
+	// EvidenceSha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	EvidenceSha256 Sha256Hex      `json:"evidenceSha256"`
+	Material       WorkpaperFlag  `json:"material"`
+	Number         WorkpaperCount `json:"number"`
+
+	// Reason Free text from the person acting — a reason, an explanation of an exception, a review note.
+	Reason WorkpaperText `json:"reason"`
+}
+
+// WorkpaperAdjustmentRequest defines model for WorkpaperAdjustmentRequest.
+type WorkpaperAdjustmentRequest struct {
+	// Amount An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Amount WorkpaperAmount `json:"amount"`
+
+	// Category A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	Category WorkpaperRef `json:"category"`
+
+	// Kind A permitted allowance is a positive deduction from the base; an audited adjustment is a signed correction.
+	Kind WorkpaperAdjustmentKind `json:"kind"`
+
+	// Reason Free text from the person acting — a reason, an explanation of an exception, a review note.
+	Reason WorkpaperText `json:"reason"`
+}
+
+// WorkpaperAdjustmentState Where an adjustment stands. One below the materiality threshold is APPROVED as proposed.
+type WorkpaperAdjustmentState string
+
+// WorkpaperAmount An amount or quantity in canonical decimal string form — never a JSON
+// number, and never computed by a client. A provider's own revenue
+// aggregate, not a consumer amount.
+type WorkpaperAmount = string
+
+// WorkpaperBalanceLine One Tax Control Subledger balance of the filer in the period, debits and credits apart. Shown beside the schedules, never netted into them.
+type WorkpaperBalanceLine struct {
+	// Account Text a build computed — a classification, an exclusion reason as the rule gave it, an exception's detail.
+	Account WorkpaperLabel `json:"account"`
+
+	// Credits An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Credits WorkpaperAmount `json:"credits"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// Debits An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Debits WorkpaperAmount `json:"debits"`
+}
+
+// WorkpaperBlocker A reason an open workpaper cannot be frozen for review yet.
+type WorkpaperBlocker string
+
+// WorkpaperBuild One build version — the hash of what it read, the hash of what it produced. Only the latest build carries its output.
+type WorkpaperBuild struct {
+	// BasisDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	BasisDigest Digest `json:"basisDigest"`
+
+	// BuiltAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	BuiltAt Timestamp `json:"builtAt"`
+
+	// BuiltBy The person who acted.
+	BuiltBy WorkpaperActor `json:"builtBy"`
+
+	// ContentRelease A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	ContentRelease WorkpaperRef `json:"contentRelease"`
+
+	// FormulaVersion A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	FormulaVersion WorkpaperRef `json:"formulaVersion"`
+
+	// InputsHash A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	InputsHash Digest `json:"inputsHash"`
+
+	// Output A build's sealed document — its schedules, control totals and reconciliation. Its exceptions are listed on the workpaper with their resolutions.
+	Output *WorkpaperOutput `json:"output,omitempty"`
+
+	// OutputHash A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	OutputHash Digest         `json:"outputHash"`
+	Version    WorkpaperCount `json:"version"`
+}
+
+// WorkpaperBuildRequest defines model for WorkpaperBuildRequest.
+type WorkpaperBuildRequest struct {
+	ExpectedSeq *WorkpaperCount `json:"expectedSeq,omitempty"`
+}
+
+// WorkpaperControlTotal The contribution ledger's own control total for the filer, duty, period and one currency — the independent expectation the schedules are reconciled to.
+type WorkpaperControlTotal struct {
+	Accepted WorkpaperCount `json:"accepted"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// Eligible An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Eligible WorkpaperAmount `json:"eligible"`
+
+	// Excluded An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Excluded   WorkpaperAmount                `json:"excluded"`
+	Incomplete []ContributionIncompleteReason `json:"incomplete"`
+
+	// PeriodDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	PeriodDigest    Digest           `json:"periodDigest"`
+	Quarantined     WorkpaperCount   `json:"quarantined"`
+	Reversals       WorkpaperCount   `json:"reversals"`
+	SourceChecksums []WorkpaperLabel `json:"sourceChecksums"`
+}
+
+// WorkpaperConversion A documented FX rate a build converted with.
+type WorkpaperConversion struct {
+	// Basis Free text from the person acting — a reason, an explanation of an exception, a review note.
+	Basis WorkpaperText `json:"basis"`
+
+	// From An ISO 4217 alphabetic currency code.
+	From CurrencyCode `json:"from"`
+
+	// Rate An FX rate, one unit of the source currency in the reporting currency, as a canonical decimal string.
+	Rate WorkpaperRate `json:"rate"`
+
+	// RateDate A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	RateDate CivilDate `json:"rateDate"`
+
+	// RateSource A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	RateSource WorkpaperRef `json:"rateSource"`
+
+	// RoundingMode How a converted schedule line is rounded, as the documented conversion basis says.
+	RoundingMode WorkpaperRoundingMode `json:"roundingMode"`
+	Scale        WorkpaperCount        `json:"scale"`
+
+	// To An ISO 4217 alphabetic currency code.
+	To CurrencyCode `json:"to"`
+}
+
+// WorkpaperCount defines model for WorkpaperCount.
+type WorkpaperCount = int32
+
+// WorkpaperDecision A second person's decision on a proposal.
+type WorkpaperDecision string
+
+// WorkpaperEvent defines model for WorkpaperEvent.
+type WorkpaperEvent struct {
+	// AdjustmentAmount An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	AdjustmentAmount *WorkpaperAmount `json:"adjustmentAmount,omitempty"`
+
+	// AdjustmentCategory A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	AdjustmentCategory *WorkpaperRef `json:"adjustmentCategory,omitempty"`
+
+	// AdjustmentKind A permitted allowance is a positive deduction from the base; an audited adjustment is a signed correction.
+	AdjustmentKind   *WorkpaperAdjustmentKind `json:"adjustmentKind,omitempty"`
+	AdjustmentNumber *WorkpaperCount          `json:"adjustmentNumber,omitempty"`
+	BuildVersion     *WorkpaperCount          `json:"buildVersion,omitempty"`
+
+	// ContentRelease A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	ContentRelease *WorkpaperRef `json:"contentRelease,omitempty"`
+
+	// Decision A second person's decision on a proposal.
+	Decision *WorkpaperDecision `json:"decision,omitempty"`
+
+	// Evidence A document named by its SHA-256, computed where the document is. Nothing is uploaded.
+	Evidence *WorkpaperEvidence `json:"evidence,omitempty"`
+
+	// ExceptionKey A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	ExceptionKey *WorkpaperRef `json:"exceptionKey,omitempty"`
+
+	// Fingerprint A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	Fingerprint *Digest `json:"fingerprint,omitempty"`
+
+	// Fx A documented FX rate and its conversion basis for one source currency.
+	Fx *WorkpaperFXRequest `json:"fx,omitempty"`
+
+	// Kind What an event records. Every one is appended; none edits.
+	Kind WorkpaperEventKind `json:"kind"`
+
+	// Note Free text from the person acting — a reason, an explanation of an exception, a review note.
+	Note *WorkpaperText `json:"note,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy The person who acted.
+	RecordedBy WorkpaperActor `json:"recordedBy"`
+	Seq        WorkpaperCount `json:"seq"`
+
+	// Status Where a workpaper stands (Document 08 §04). DATA_INCOMPLETE while an
+	// exception of the latest build is unresolved; READY_FOR_REVIEW once a
+	// build is frozen; APPROVED by a second person; REVOKED when the basis
+	// changed after approval.
+	Status WorkpaperStatus `json:"status"`
+}
+
+// WorkpaperEventKind What an event records. Every one is appended; none edits.
+type WorkpaperEventKind string
+
+// WorkpaperEvidence A document named by its SHA-256, computed where the document is. Nothing is uploaded.
+type WorkpaperEvidence struct {
+	// Filename A recorded document's file name, as given. It may name a person.
+	Filename  WorkpaperFilename  `json:"filename"`
+	MediaType WorkpaperMediaType `json:"mediaType"`
+
+	// Sha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	Sha256 Sha256Hex `json:"sha256"`
+}
+
+// WorkpaperException One exception of the latest build and where its resolution stands.
+type WorkpaperException struct {
+	// Code SOURCE_MISSING — no source event for the filer, duty and period;
+	// SOURCE_INCOMPLETE — a held import or an unbalanced reversal, repaired at
+	// the source; CURRENCY_MISMATCH — no documented FX rate, cleared by
+	// documenting one; CONTROL_TOTAL_DIFFERENCE — a schedule total that does
+	// not equal the ledger's control total; SUBLEDGER_SUSPENSE_OPEN and
+	// GL_BRIDGE_DIFFERENCE — subledger accounts that do not clear in the period.
+	Code WorkpaperExceptionCode `json:"code"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency *CurrencyCode `json:"currency,omitempty"`
+
+	// Detail Text a build computed — a classification, an exclusion reason as the rule gave it, an exception's detail.
+	Detail WorkpaperLabel `json:"detail"`
+
+	// Difference An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Difference *WorkpaperAmount `json:"difference,omitempty"`
+
+	// Fingerprint A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	Fingerprint Digest `json:"fingerprint"`
+
+	// Key A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	Key WorkpaperRef `json:"key"`
+
+	// Resolution An evidence-linked explanation of one exception, confirmed or rejected by a second person.
+	Resolution *WorkpaperResolution `json:"resolution,omitempty"`
+	Resolvable WorkpaperFlag        `json:"resolvable"`
+
+	// State OPEN with no confirmed resolution of this very difference; PENDING while one awaits its second person; RESOLVED once confirmed.
+	State WorkpaperExceptionState `json:"state"`
+}
+
+// WorkpaperExceptionCode SOURCE_MISSING — no source event for the filer, duty and period;
+// SOURCE_INCOMPLETE — a held import or an unbalanced reversal, repaired at
+// the source; CURRENCY_MISMATCH — no documented FX rate, cleared by
+// documenting one; CONTROL_TOTAL_DIFFERENCE — a schedule total that does
+// not equal the ledger's control total; SUBLEDGER_SUSPENSE_OPEN and
+// GL_BRIDGE_DIFFERENCE — subledger accounts that do not clear in the period.
+type WorkpaperExceptionCode string
+
+// WorkpaperExceptionState OPEN with no confirmed resolution of this very difference; PENDING while one awaits its second person; RESOLVED once confirmed.
+type WorkpaperExceptionState string
+
+// WorkpaperExclusionLine One excluded base, by the reason the rule gave, with its source events.
+type WorkpaperExclusionLine struct {
+	// Amount An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Amount WorkpaperAmount `json:"amount"`
+
+	// Converted An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Converted *WorkpaperAmount `json:"converted,omitempty"`
+	Count     WorkpaperCount   `json:"count"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// Reason Text a build computed — a classification, an exclusion reason as the rule gave it, an exception's detail.
+	Reason  WorkpaperLabel       `json:"reason"`
+	Sources []WorkpaperSourceRef `json:"sources"`
+}
+
+// WorkpaperFXRate The documented rate in force for one source currency.
+type WorkpaperFXRate struct {
+	// ConversionBasis Free text from the person acting — a reason, an explanation of an exception, a review note.
+	ConversionBasis WorkpaperText `json:"conversionBasis"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// Rate An FX rate, one unit of the source currency in the reporting currency, as a canonical decimal string.
+	Rate WorkpaperRate `json:"rate"`
+
+	// RateDate A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	RateDate CivilDate `json:"rateDate"`
+
+	// RateSource A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	RateSource WorkpaperRef `json:"rateSource"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy The person who acted.
+	RecordedBy WorkpaperActor `json:"recordedBy"`
+
+	// RoundingMode How a converted schedule line is rounded, as the documented conversion basis says.
+	RoundingMode WorkpaperRoundingMode `json:"roundingMode"`
+	Scale        WorkpaperCount        `json:"scale"`
+}
+
+// WorkpaperFXRequest A documented FX rate and its conversion basis for one source currency.
+type WorkpaperFXRequest struct {
+	// ConversionBasis Free text from the person acting — a reason, an explanation of an exception, a review note.
+	ConversionBasis WorkpaperText `json:"conversionBasis"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// Rate An FX rate, one unit of the source currency in the reporting currency, as a canonical decimal string.
+	Rate WorkpaperRate `json:"rate"`
+
+	// RateDate A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	RateDate CivilDate `json:"rateDate"`
+
+	// RateSource A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	RateSource WorkpaperRef `json:"rateSource"`
+
+	// RoundingMode How a converted schedule line is rounded, as the documented conversion basis says.
+	RoundingMode WorkpaperRoundingMode `json:"roundingMode"`
+	Scale        int32                 `json:"scale"`
+}
+
+// WorkpaperFilename A recorded document's file name, as given. It may name a person.
+type WorkpaperFilename = string
+
+// WorkpaperFlag defines model for WorkpaperFlag.
+type WorkpaperFlag = bool
+
+// WorkpaperID defines model for WorkpaperId.
+type WorkpaperID = string
+
+// WorkpaperLabel Text a build computed — a classification, an exclusion reason as the rule gave it, an exception's detail.
+type WorkpaperLabel = string
+
+// WorkpaperList defines model for WorkpaperList.
+type WorkpaperList struct {
+	Workpapers []Workpaper `json:"workpapers"`
+}
+
+// WorkpaperMediaType defines model for WorkpaperMediaType.
+type WorkpaperMediaType = string
+
+// WorkpaperOutput A build's sealed document — its schedules, control totals and reconciliation. Its exceptions are listed on the workpaper with their resolutions.
+type WorkpaperOutput struct {
+	Adjustments []WorkpaperAdjustmentLine `json:"adjustments"`
+	Allowances  []WorkpaperAdjustmentLine `json:"allowances"`
+
+	// ContentRelease A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	ContentRelease WorkpaperRef             `json:"contentRelease"`
+	ControlTotals  []WorkpaperControlTotal  `json:"controlTotals"`
+	Conversions    []WorkpaperConversion    `json:"conversions"`
+	Excluded       []WorkpaperExclusionLine `json:"excluded"`
+
+	// FormulaVersion A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	FormulaVersion WorkpaperRef         `json:"formulaVersion"`
+	Reconciliation []WorkpaperReconLine `json:"reconciliation"`
+
+	// ReportingCurrency An ISO 4217 alphabetic currency code.
+	ReportingCurrency CurrencyCode           `json:"reportingCurrency"`
+	Revenue           []WorkpaperRevenueLine `json:"revenue"`
+	Subledger         []WorkpaperBalanceLine `json:"subledger"`
+
+	// Totals The report totals in the reporting currency. Absent while a source currency has no documented conversion.
+	Totals *WorkpaperTotals `json:"totals,omitempty"`
+
+	// Volumes Volume and transaction counts.
+	Volumes WorkpaperVolumes `json:"volumes"`
+}
+
+// WorkpaperQuantityLine defines model for WorkpaperQuantityLine.
+type WorkpaperQuantityLine struct {
+	// Total An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Total WorkpaperAmount `json:"total"`
+
+	// Unit Text a build computed — a classification, an exclusion reason as the rule gave it, an exception's detail.
+	Unit WorkpaperLabel `json:"unit"`
+}
+
+// WorkpaperRate An FX rate, one unit of the source currency in the reporting currency, as a canonical decimal string.
+type WorkpaperRate = string
+
+// WorkpaperReconLine One reconciliation — expected against actual in one currency.
+type WorkpaperReconLine struct {
+	// Actual An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Actual WorkpaperAmount `json:"actual"`
+
+	// Code Text a build computed — a classification, an exclusion reason as the rule gave it, an exception's detail.
+	Code WorkpaperLabel `json:"code"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// Difference An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Difference WorkpaperAmount `json:"difference"`
+
+	// Expected An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Expected WorkpaperAmount `json:"expected"`
+
+	// Status MATCHED ties exactly; DIFFERENCE does not; BRIDGED differs by exactly the approved, evidence-linked allowances and adjustments.
+	Status WorkpaperReconStatus `json:"status"`
+}
+
+// WorkpaperReconStatus MATCHED ties exactly; DIFFERENCE does not; BRIDGED differs by exactly the approved, evidence-linked allowances and adjustments.
+type WorkpaperReconStatus string
+
+// WorkpaperRef A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+type WorkpaperRef = string
+
+// WorkpaperRequest defines model for WorkpaperRequest.
+type WorkpaperRequest struct {
+	// Authority A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	Authority WorkpaperRef `json:"authority"`
+
+	// ContentRelease A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	ContentRelease WorkpaperRef `json:"contentRelease"`
+
+	// Duty The fund a provider contribution is owed to — the US Universal Service Fund through USAC, Canada's CRTC National Contribution Fund, or another.
+	Duty ContributionRegime `json:"duty"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID *LegalEntityID `json:"legalEntityId,omitempty"`
+
+	// MaterialityThreshold An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	MaterialityThreshold *WorkpaperAmount `json:"materialityThreshold,omitempty"`
+
+	// ObligationID One row of an obligation's history. A UUID in lowercase canonical form.
+	ObligationID *ObligationID `json:"obligationId,omitempty"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod `json:"period"`
+
+	// ReportingCurrency An ISO 4217 alphabetic currency code.
+	ReportingCurrency CurrencyCode `json:"reportingCurrency"`
+}
+
+// WorkpaperResolution An evidence-linked explanation of one exception, confirmed or rejected by a second person.
+type WorkpaperResolution struct {
+	// DecidedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	DecidedAt *Timestamp `json:"decidedAt,omitempty"`
+
+	// DecidedBy The person who acted.
+	DecidedBy *WorkpaperActor `json:"decidedBy,omitempty"`
+
+	// DecisionNote Free text from the person acting — a reason, an explanation of an exception, a review note.
+	DecisionNote *WorkpaperText `json:"decisionNote,omitempty"`
+
+	// Evidence A document named by its SHA-256, computed where the document is. Nothing is uploaded.
+	Evidence WorkpaperEvidence `json:"evidence"`
+
+	// ExceptionKey A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+	ExceptionKey WorkpaperRef `json:"exceptionKey"`
+
+	// Explanation Free text from the person acting — a reason, an explanation of an exception, a review note.
+	Explanation WorkpaperText `json:"explanation"`
+
+	// Fingerprint A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	Fingerprint Digest `json:"fingerprint"`
+
+	// ProposedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	ProposedAt Timestamp `json:"proposedAt"`
+
+	// ProposedBy The person who acted.
+	ProposedBy WorkpaperActor           `json:"proposedBy"`
+	State      WorkpaperResolutionState `json:"state"`
+}
+
+// WorkpaperResolutionState defines model for WorkpaperResolutionState.
+type WorkpaperResolutionState string
+
+// WorkpaperRevenueLine One revenue category in one source currency, with its source events.
+type WorkpaperRevenueLine struct {
+	// Amount An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Amount WorkpaperAmount `json:"amount"`
+
+	// Category Text a build computed — a classification, an exclusion reason as the rule gave it, an exception's detail.
+	Category WorkpaperLabel `json:"category"`
+
+	// Converted An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Converted *WorkpaperAmount `json:"converted,omitempty"`
+	Count     WorkpaperCount   `json:"count"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode         `json:"currency"`
+	Sources  []WorkpaperSourceRef `json:"sources"`
+}
+
+// WorkpaperRoundingMode How a converted schedule line is rounded, as the documented conversion basis says.
+type WorkpaperRoundingMode string
+
+// WorkpaperSourceCheck The latest build compared with what the sources would build now. Nothing is recorded.
+type WorkpaperSourceCheck struct {
+	// CheckedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CheckedAt Timestamp `json:"checkedAt"`
+
+	// CurrentInputsHash A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	CurrentInputsHash Digest `json:"currentInputsHash"`
+
+	// CurrentOutputHash A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	CurrentOutputHash  Digest          `json:"currentOutputHash"`
+	FrozenBuildVersion *WorkpaperCount `json:"frozenBuildVersion,omitempty"`
+	LatestBuildVersion *WorkpaperCount `json:"latestBuildVersion,omitempty"`
+
+	// LatestInputsHash A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	LatestInputsHash *Digest `json:"latestInputsHash,omitempty"`
+
+	// LatestOutputHash A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	LatestOutputHash *Digest       `json:"latestOutputHash,omitempty"`
+	Matches          WorkpaperFlag `json:"matches"`
+	WorkpaperID      WorkpaperID   `json:"workpaperId"`
+}
+
+// WorkpaperSourceRef Lineage from a schedule line to one source event.
+type WorkpaperSourceRef struct {
+	// Amount An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Amount         WorkpaperAmount `json:"amount"`
+	ContributionID ContributionID  `json:"contributionId"`
+
+	// Reverses Text a build computed — a classification, an exclusion reason as the rule gave it, an exception's detail.
+	Reverses *WorkpaperLabel `json:"reverses,omitempty"`
+
+	// RuleVersion A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+	RuleVersion ContributionRef `json:"ruleVersion"`
+
+	// SourceEventID A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+	SourceEventID ContributionRef `json:"sourceEventId"`
+
+	// SourceRef A reference into the provider's own systems or rules — a source event, invoice, usage or GL reference, classification, situs, component or rule version. Never a customer identity.
+	SourceRef     ContributionRef `json:"sourceRef"`
+	SourceVersion WorkpaperCount  `json:"sourceVersion"`
+}
+
+// WorkpaperSourceTypeLine The BSS control total of one kind of source record in one currency.
+type WorkpaperSourceTypeLine struct {
+	Count WorkpaperCount `json:"count"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// Eligible An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Eligible WorkpaperAmount `json:"eligible"`
+
+	// SourceType The kind of record a source event is (OBL-06).
+	SourceType ContributionSourceType `json:"sourceType"`
+}
+
+// WorkpaperStatus Where a workpaper stands (Document 08 §04). DATA_INCOMPLETE while an
+// exception of the latest build is unresolved; READY_FOR_REVIEW once a
+// build is frozen; APPROVED by a second person; REVOKED when the basis
+// changed after approval.
+type WorkpaperStatus string
+
+// WorkpaperText Free text from the person acting — a reason, an explanation of an exception, a review note.
+type WorkpaperText = string
+
+// WorkpaperTotals The report totals in the reporting currency. Absent while a source currency has no documented conversion.
+type WorkpaperTotals struct {
+	// Adjustments An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Adjustments WorkpaperAmount `json:"adjustments"`
+
+	// Allowances An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Allowances WorkpaperAmount `json:"allowances"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// Excluded An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	Excluded WorkpaperAmount `json:"excluded"`
+
+	// GrossEligible An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	GrossEligible WorkpaperAmount `json:"grossEligible"`
+
+	// ReportableBase An amount or quantity in canonical decimal string form — never a JSON
+	// number, and never computed by a client. A provider's own revenue
+	// aggregate, not a consumer amount.
+	ReportableBase WorkpaperAmount `json:"reportableBase"`
+}
+
+// WorkpaperVolumes Volume and transaction counts.
+type WorkpaperVolumes struct {
+	Accepted    WorkpaperCount            `json:"accepted"`
+	Amendments  WorkpaperCount            `json:"amendments"`
+	BySource    []WorkpaperSourceTypeLine `json:"bySource"`
+	Quantities  []WorkpaperQuantityLine   `json:"quantities"`
+	Quarantined WorkpaperCount            `json:"quarantined"`
+	Reversals   WorkpaperCount            `json:"reversals"`
+}
+
 // ZoikoSlot A ZoikoTax emitted slot, or UNMAPPED_EXTERNAL_CODE.
 type ZoikoSlot = string
 
@@ -10571,6 +11738,12 @@ type Unavailable = Problem
 // data to be understood names a decision or a request, and the data is
 // fetched through an audited path.
 type Validation = Problem
+
+// WorkpaperResult A regulatory workpaper (OBL-07): the header, its builds, the latest
+// build's schedules and reconciliation, the exceptions and their
+// resolutions, the documented FX rates, the adjustments, the history, and
+// what it admits now. `eventCount` is the `expectedSeq` an act sends.
+type WorkpaperResult = Workpaper
 
 // ListAuditParams defines parameters for ListAudit.
 type ListAuditParams struct {
@@ -10893,6 +12066,25 @@ type ListWebhookDeliveriesParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// ListWorkpapersParams defines parameters for ListWorkpapers.
+type ListWorkpapersParams struct {
+	// Period Only workpapers of this period.
+	Period *LegalPeriod `form:"period,omitempty" json:"period,omitempty"`
+
+	// Duty Only workpapers of this duty.
+	Duty *ContributionRegime `form:"duty,omitempty" json:"duty,omitempty"`
+
+	// Status Only workpapers in this status.
+	Status *WorkpaperStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// LegalEntityID Only workpapers of this legal filer.
+	LegalEntityID *LegalEntityID `form:"legalEntityId,omitempty" json:"legalEntityId,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // CreateUserJSONRequestBody defines body for CreateUser for application/json ContentType.
 type CreateUserJSONRequestBody = CreateUserRequest
 
@@ -11123,3 +12315,12 @@ type CreateWebhookJSONRequestBody = WebhookCreateRequest
 
 // SetWebhookStatusJSONRequestBody defines body for SetWebhookStatus for application/json ContentType.
 type SetWebhookStatusJSONRequestBody = WebhookStatusRequest
+
+// CreateWorkpaperJSONRequestBody defines body for CreateWorkpaper for application/json ContentType.
+type CreateWorkpaperJSONRequestBody = WorkpaperRequest
+
+// ActOnWorkpaperJSONRequestBody defines body for ActOnWorkpaper for application/json ContentType.
+type ActOnWorkpaperJSONRequestBody = WorkpaperActionRequest
+
+// BuildWorkpaperJSONRequestBody defines body for BuildWorkpaper for application/json ContentType.
+type BuildWorkpaperJSONRequestBody = WorkpaperBuildRequest

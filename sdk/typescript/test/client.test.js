@@ -386,3 +386,39 @@ test("regulatory notices: register filters in the query, actions on the notice's
   assert.equal(JSON.parse(calls[4].init.body).dueDate, "2026-11-30");
   assert.deepEqual(JSON.parse(calls[5].init.body), { version: 1 });
 });
+
+test("the workpaper calls send amounts as strings and no Idempotency-Key", async () => {
+  const { fetch, calls } = stub(json(201, { id: "01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01" }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+  const id = "01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+
+  await client.createWorkpaper({
+    duty: "US_USF",
+    period: "2026-09",
+    authority: "USAC",
+    reportingCurrency: "USD",
+    materialityThreshold: "500.00",
+    contentRelease: "usf-499q@2026.3",
+  });
+  await client.listWorkpapers({ period: "2026-09", status: "DATA_INCOMPLETE" });
+  await client.getWorkpaper(id);
+  await client.buildWorkpaper(id, { expectedSeq: 1 });
+  await client.checkWorkpaperSources(id);
+  await client.actOnWorkpaper(id, {
+    action: "PROPOSE_ADJUSTMENT",
+    adjustment: { kind: "AUDITED_ADJUSTMENT", category: "Billing correction", amount: "-1200.00", reason: "Credit notes" },
+    evidence: { sha256: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", filename: "audit.pdf", mediaType: "application/pdf" },
+  });
+
+  assert.deepEqual(calls.map((c) => `${c.init.method} ${c.url}`), [
+    "POST /api/v1/workpapers",
+    "GET /api/v1/workpapers?period=2026-09&status=DATA_INCOMPLETE",
+    `GET /api/v1/workpapers/${id}`,
+    `POST /api/v1/workpapers/${id}/build`,
+    `GET /api/v1/workpapers/${id}/source-check`,
+    `POST /api/v1/workpapers/${id}/actions`,
+  ]);
+  assert.equal(JSON.parse(calls[0].init.body).materialityThreshold, "500.00");
+  assert.equal(JSON.parse(calls[5].init.body).adjustment.amount, "-1200.00");
+  for (const c of calls) assert.equal(c.init.headers["Idempotency-Key"], undefined);
+});

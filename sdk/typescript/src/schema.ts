@@ -3190,6 +3190,182 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workpapers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The workpaper register
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Regulatory workpapers, newest period first, in any status, with their
+         *     builds' summaries. A listing carries no schedules: read one workpaper for
+         *     its latest build.
+         */
+        get: operations["listWorkpapers"];
+        put?: never;
+        /**
+         * Open a workpaper for a legal filer, duty and period
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Opens the workpaper header (OBL-07 01): the legal filer — the tenant's
+         *     default legal entity when none is named — the duty, the period, the
+         *     authority it is reported to, the reporting currency, the materiality
+         *     threshold at or above which an adjustment needs a second person, and the
+         *     content release it applies. Nothing is assembled until it is built.
+         *
+         *     **Idempotent on the filer, duty and period**, not on an
+         *     `Idempotency-Key`: there is one workpaper for each. The same header again
+         *     returns the workpaper already opened with `200`; a different header is
+         *     `409 WORKPAPER_EXISTS`.
+         */
+        post: operations["createWorkpaper"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workpapers/{workpaperId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A workpaper with its schedules, reconciliation and controls
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The header, the latest build's schedules — revenue categories, excluded
+         *     bases, volume and transaction counts, permitted allowances and audited
+         *     adjustments — with lineage to every source event, the reconciliation to
+         *     the contribution ledger's control totals, the subledger and the GL
+         *     bridge, the exceptions and their resolutions, the documented FX rates,
+         *     the history, and what the workpaper admits now. The latest build's stored
+         *     document is re-hashed on read; one that no longer matches its output hash
+         *     is refused (`500 EVIDENCE_INTEGRITY`) rather than shown.
+         */
+        get: operations["getWorkpaper"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workpapers/{workpaperId}/build": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Build the workpaper deterministically from its sources
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Assembles the schedules and the reconciliation from the provider
+         *     contribution ledger for the filer, duty and period and the filer's Tax
+         *     Control Subledger balances, applying the documented FX rates and the
+         *     approved adjustments. The build records the hash of everything it read,
+         *     its canonical document and that document's hash.
+         *
+         *     **Deterministic and idempotent**: when the inputs hash equals the latest
+         *     build's, nothing is recorded and the workpaper is returned with `200`.
+         *     Otherwise the next build version is recorded (`201`). An open exception —
+         *     no source event at all, a held import, a source currency with no
+         *     documented rate, a total that does not tie — leaves the workpaper
+         *     `DATA_INCOMPLETE`. A rebuild of an `APPROVED` workpaper with changed
+         *     inputs revokes the approval. A workpaper frozen for review is not rebuilt
+         *     (`409 WORKPAPER_SNAPSHOT_LOCKED`).
+         */
+        post: operations["buildWorkpaper"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workpapers/{workpaperId}/source-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare the latest build with what its sources say now
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Assembles the workpaper from its sources now, records nothing, and
+         *     compares the inputs hash with the latest build's. `matches` false on a
+         *     frozen or approved workpaper means a source moved after the snapshot was
+         *     taken: the snapshot stands, and a rebuild would record a new version.
+         */
+        get: operations["checkWorkpaperSources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workpapers/{workpaperId}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Freeze, review, approve, or record an adjustment, rate or resolution
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves; `APPROVE`,
+         *     `DECIDE_ADJUSTMENT` and `DECIDE_RESOLUTION` need `ANALYST`.
+         *
+         *     One act, named by `action`, appended to the workpaper's history:
+         *
+         *     - `DOCUMENT_FX_RATE` documents the rate and conversion basis for one
+         *       source currency (`fx`). A source currency without one is a
+         *       `CURRENCY_MISMATCH` exception until it is documented and rebuilt.
+         *     - `PROPOSE_ADJUSTMENT` records a permitted allowance or an audited
+         *       adjustment in the reporting currency, with its `evidence`. One at or
+         *       above the materiality threshold waits for a second person:
+         *       `DECIDE_ADJUSTMENT` by someone other than the proposer
+         *       (`403 SEGREGATION_OF_DUTIES`).
+         *     - `PROPOSE_RESOLUTION` explains one resolvable exception of the latest
+         *       build, with its `evidence` and the exception's `fingerprint`;
+         *       `DECIDE_RESOLUTION` confirms or rejects it, by someone else.
+         *     - `FREEZE` locks the latest build for review. Refused with
+         *       `403 WORKPAPER_NOT_READY` while any exception is unresolved, a decision
+         *       is pending, or the basis changed since the build — material data
+         *       absent never reaches `READY_FOR_REVIEW`.
+         *     - `RETURN_TO_DRAFT` unlocks a frozen workpaper, with the reason.
+         *     - `APPROVE` approves the frozen `buildVersion`. The approver neither froze
+         *       it nor ran it.
+         *     - `CHANGE_BASIS` records a new `contentRelease`; it revokes an approval
+         *       and unlocks a frozen workpaper.
+         *
+         *     Writes to a frozen workpaper's inputs are `409 WORKPAPER_SNAPSHOT_LOCKED`.
+         *     `expectedSeq`, when given, is the number of events the caller read; a
+         *     workpaper that has moved since is `409 WORKPAPER_STALE`.
+         */
+        post: operations["actOnWorkpaper"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/shadow/comparators": {
         parameters: {
             query?: never;
@@ -8023,6 +8199,522 @@ export interface components {
             to: components["schemas"]["CutoverState"];
             note: components["schemas"]["MigrationText"];
         };
+        /**
+         * WorkpaperId
+         * Format: uuid
+         * @example 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        WorkpaperId: string;
+        /**
+         * WorkpaperStatus
+         * @description Where a workpaper stands (Document 08 §04). DATA_INCOMPLETE while an
+         *     exception of the latest build is unresolved; READY_FOR_REVIEW once a
+         *     build is frozen; APPROVED by a second person; REVOKED when the basis
+         *     changed after approval.
+         * @enum {string}
+         */
+        WorkpaperStatus: "DRAFT" | "DATA_INCOMPLETE" | "READY_FOR_REVIEW" | "APPROVED" | "REVOKED";
+        /**
+         * WorkpaperEventKind
+         * @description What an event records. Every one is appended; none edits.
+         * @enum {string}
+         */
+        WorkpaperEventKind: "CREATED" | "BUILT" | "APPROVAL_REVOKED" | "BASIS_CHANGED" | "FX_DOCUMENTED" | "ADJUSTMENT_PROPOSED" | "ADJUSTMENT_DECIDED" | "RESOLUTION_PROPOSED" | "RESOLUTION_DECIDED" | "FROZEN" | "RETURNED" | "APPROVED";
+        /**
+         * WorkpaperAction
+         * @description An act on a workpaper. BUILD is its own request.
+         * @enum {string}
+         */
+        WorkpaperAction: "BUILD" | "FREEZE" | "RETURN_TO_DRAFT" | "APPROVE" | "CHANGE_BASIS" | "DOCUMENT_FX_RATE" | "PROPOSE_ADJUSTMENT" | "DECIDE_ADJUSTMENT" | "PROPOSE_RESOLUTION" | "DECIDE_RESOLUTION";
+        /**
+         * WorkpaperBlocker
+         * @description A reason an open workpaper cannot be frozen for review yet.
+         * @enum {string}
+         */
+        WorkpaperBlocker: "NO_BUILD" | "BASIS_CHANGED_SINCE_BUILD" | "FORMULA_CHANGED" | "EXCEPTION_UNRESOLVED" | "ADJUSTMENT_PENDING" | "RESOLUTION_PENDING";
+        /**
+         * WorkpaperAdjustmentKind
+         * @description A permitted allowance is a positive deduction from the base; an audited adjustment is a signed correction.
+         * @enum {string}
+         */
+        WorkpaperAdjustmentKind: "PERMITTED_ALLOWANCE" | "AUDITED_ADJUSTMENT";
+        /**
+         * WorkpaperDecision
+         * @description A second person's decision on a proposal.
+         * @enum {string}
+         */
+        WorkpaperDecision: "APPROVED" | "REJECTED";
+        /**
+         * WorkpaperAdjustmentState
+         * @description Where an adjustment stands. One below the materiality threshold is APPROVED as proposed.
+         * @enum {string}
+         */
+        WorkpaperAdjustmentState: "PROPOSED" | "APPROVED" | "REJECTED";
+        /**
+         * WorkpaperResolutionState
+         * @enum {string}
+         */
+        WorkpaperResolutionState: "PROPOSED" | "CONFIRMED" | "REJECTED";
+        /**
+         * WorkpaperExceptionState
+         * @description OPEN with no confirmed resolution of this very difference; PENDING while one awaits its second person; RESOLVED once confirmed.
+         * @enum {string}
+         */
+        WorkpaperExceptionState: "OPEN" | "PENDING" | "RESOLVED";
+        /**
+         * WorkpaperExceptionCode
+         * @description SOURCE_MISSING — no source event for the filer, duty and period;
+         *     SOURCE_INCOMPLETE — a held import or an unbalanced reversal, repaired at
+         *     the source; CURRENCY_MISMATCH — no documented FX rate, cleared by
+         *     documenting one; CONTROL_TOTAL_DIFFERENCE — a schedule total that does
+         *     not equal the ledger's control total; SUBLEDGER_SUSPENSE_OPEN and
+         *     GL_BRIDGE_DIFFERENCE — subledger accounts that do not clear in the period.
+         * @enum {string}
+         */
+        WorkpaperExceptionCode: "SOURCE_MISSING" | "SOURCE_INCOMPLETE" | "CURRENCY_MISMATCH" | "CONTROL_TOTAL_DIFFERENCE" | "SUBLEDGER_SUSPENSE_OPEN" | "GL_BRIDGE_DIFFERENCE";
+        /**
+         * WorkpaperReconStatus
+         * @description MATCHED ties exactly; DIFFERENCE does not; BRIDGED differs by exactly the approved, evidence-linked allowances and adjustments.
+         * @enum {string}
+         */
+        WorkpaperReconStatus: "MATCHED" | "DIFFERENCE" | "BRIDGED";
+        /**
+         * WorkpaperRoundingMode
+         * @description How a converted schedule line is rounded, as the documented conversion basis says.
+         * @enum {string}
+         */
+        WorkpaperRoundingMode: "HALF_UP" | "HALF_EVEN" | "HALF_DOWN" | "DOWN" | "UP" | "CEILING" | "FLOOR";
+        /**
+         * WorkpaperAmount
+         * @description An amount or quantity in canonical decimal string form — never a JSON
+         *     number, and never computed by a client. A provider's own revenue
+         *     aggregate, not a consumer amount.
+         * @example 1250.00
+         */
+        WorkpaperAmount: string;
+        /**
+         * WorkpaperRate
+         * @description An FX rate, one unit of the source currency in the reporting currency, as a canonical decimal string.
+         * @example 1.0842
+         */
+        WorkpaperRate: string;
+        /**
+         * WorkpaperRef
+         * @description A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+         * @example usf-499q@2026.3
+         */
+        WorkpaperRef: string;
+        /**
+         * WorkpaperLabel
+         * @description Text a build computed — a classification, an exclusion reason as the rule gave it, an exception's detail.
+         * @example usf:interstate-telecom
+         */
+        WorkpaperLabel: string;
+        /**
+         * WorkpaperText
+         * @description Free text from the person acting — a reason, an explanation of an exception, a review note.
+         * @example Credit notes issued in October for September usage, per the billing audit
+         */
+        WorkpaperText: string;
+        /**
+         * WorkpaperFilename
+         * @description A recorded document's file name, as given. It may name a person.
+         * @example billing-audit-2026-09.pdf
+         */
+        WorkpaperFilename: string;
+        /**
+         * WorkpaperMediaType
+         * @example application/pdf
+         */
+        WorkpaperMediaType: string;
+        /**
+         * WorkpaperCount
+         * Format: int32
+         */
+        WorkpaperCount: number;
+        /** WorkpaperFlag */
+        WorkpaperFlag: boolean;
+        /**
+         * WorkpaperActor
+         * Format: uuid
+         * @description The person who acted.
+         */
+        WorkpaperActor: string;
+        /**
+         * WorkpaperEvidence
+         * @description A document named by its SHA-256, computed where the document is. Nothing is uploaded.
+         */
+        WorkpaperEvidence: {
+            sha256: components["schemas"]["Sha256Hex"];
+            filename: components["schemas"]["WorkpaperFilename"];
+            mediaType: components["schemas"]["WorkpaperMediaType"];
+        };
+        /**
+         * WorkpaperFXRequest
+         * @description A documented FX rate and its conversion basis for one source currency.
+         */
+        WorkpaperFXRequest: {
+            currency: components["schemas"]["CurrencyCode"];
+            rate: components["schemas"]["WorkpaperRate"];
+            rateSource: components["schemas"]["WorkpaperRef"];
+            rateDate: components["schemas"]["CivilDate"];
+            roundingMode: components["schemas"]["WorkpaperRoundingMode"];
+            /** Format: int32 */
+            scale: number;
+            conversionBasis: components["schemas"]["WorkpaperText"];
+        };
+        /**
+         * WorkpaperFXRate
+         * @description The documented rate in force for one source currency.
+         */
+        WorkpaperFXRate: {
+            currency: components["schemas"]["CurrencyCode"];
+            rate: components["schemas"]["WorkpaperRate"];
+            rateSource: components["schemas"]["WorkpaperRef"];
+            rateDate: components["schemas"]["CivilDate"];
+            roundingMode: components["schemas"]["WorkpaperRoundingMode"];
+            scale: components["schemas"]["WorkpaperCount"];
+            conversionBasis: components["schemas"]["WorkpaperText"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["WorkpaperActor"];
+        };
+        /** WorkpaperAdjustmentRequest */
+        WorkpaperAdjustmentRequest: {
+            kind: components["schemas"]["WorkpaperAdjustmentKind"];
+            category: components["schemas"]["WorkpaperRef"];
+            amount: components["schemas"]["WorkpaperAmount"];
+            reason: components["schemas"]["WorkpaperText"];
+        };
+        /**
+         * WorkpaperAdjustment
+         * @description A permitted allowance or audited adjustment in the reporting currency, with its evidence and decision.
+         */
+        WorkpaperAdjustment: {
+            number: components["schemas"]["WorkpaperCount"];
+            kind: components["schemas"]["WorkpaperAdjustmentKind"];
+            category: components["schemas"]["WorkpaperRef"];
+            amount: components["schemas"]["WorkpaperAmount"];
+            currency: components["schemas"]["CurrencyCode"];
+            reason: components["schemas"]["WorkpaperText"];
+            evidence: components["schemas"]["WorkpaperEvidence"];
+            material: components["schemas"]["WorkpaperFlag"];
+            state: components["schemas"]["WorkpaperAdjustmentState"];
+            proposedAt: components["schemas"]["Timestamp"];
+            proposedBy: components["schemas"]["WorkpaperActor"];
+            decidedAt?: components["schemas"]["Timestamp"];
+            decidedBy?: components["schemas"]["WorkpaperActor"];
+            decisionNote?: components["schemas"]["WorkpaperText"];
+        };
+        /**
+         * WorkpaperResolution
+         * @description An evidence-linked explanation of one exception, confirmed or rejected by a second person.
+         */
+        WorkpaperResolution: {
+            exceptionKey: components["schemas"]["WorkpaperRef"];
+            fingerprint: components["schemas"]["Digest"];
+            explanation: components["schemas"]["WorkpaperText"];
+            evidence: components["schemas"]["WorkpaperEvidence"];
+            state: components["schemas"]["WorkpaperResolutionState"];
+            proposedAt: components["schemas"]["Timestamp"];
+            proposedBy: components["schemas"]["WorkpaperActor"];
+            decidedAt?: components["schemas"]["Timestamp"];
+            decidedBy?: components["schemas"]["WorkpaperActor"];
+            decisionNote?: components["schemas"]["WorkpaperText"];
+        };
+        /**
+         * WorkpaperException
+         * @description One exception of the latest build and where its resolution stands.
+         */
+        WorkpaperException: {
+            key: components["schemas"]["WorkpaperRef"];
+            code: components["schemas"]["WorkpaperExceptionCode"];
+            currency?: components["schemas"]["CurrencyCode"];
+            difference?: components["schemas"]["WorkpaperAmount"];
+            detail: components["schemas"]["WorkpaperLabel"];
+            resolvable: components["schemas"]["WorkpaperFlag"];
+            fingerprint: components["schemas"]["Digest"];
+            state: components["schemas"]["WorkpaperExceptionState"];
+            resolution?: components["schemas"]["WorkpaperResolution"];
+        };
+        /**
+         * WorkpaperSourceRef
+         * @description Lineage from a schedule line to one source event.
+         */
+        WorkpaperSourceRef: {
+            contributionId: components["schemas"]["ContributionId"];
+            sourceEventId: components["schemas"]["ContributionRef"];
+            sourceVersion: components["schemas"]["WorkpaperCount"];
+            sourceRef: components["schemas"]["ContributionRef"];
+            ruleVersion: components["schemas"]["ContributionRef"];
+            amount: components["schemas"]["WorkpaperAmount"];
+            reverses?: components["schemas"]["WorkpaperLabel"];
+        };
+        /**
+         * WorkpaperRevenueLine
+         * @description One revenue category in one source currency, with its source events.
+         */
+        WorkpaperRevenueLine: {
+            category: components["schemas"]["WorkpaperLabel"];
+            currency: components["schemas"]["CurrencyCode"];
+            count: components["schemas"]["WorkpaperCount"];
+            amount: components["schemas"]["WorkpaperAmount"];
+            converted?: components["schemas"]["WorkpaperAmount"];
+            sources: components["schemas"]["WorkpaperSourceRef"][];
+        };
+        /**
+         * WorkpaperExclusionLine
+         * @description One excluded base, by the reason the rule gave, with its source events.
+         */
+        WorkpaperExclusionLine: {
+            reason: components["schemas"]["WorkpaperLabel"];
+            currency: components["schemas"]["CurrencyCode"];
+            count: components["schemas"]["WorkpaperCount"];
+            amount: components["schemas"]["WorkpaperAmount"];
+            converted?: components["schemas"]["WorkpaperAmount"];
+            sources: components["schemas"]["WorkpaperSourceRef"][];
+        };
+        /** WorkpaperQuantityLine */
+        WorkpaperQuantityLine: {
+            unit: components["schemas"]["WorkpaperLabel"];
+            total: components["schemas"]["WorkpaperAmount"];
+        };
+        /**
+         * WorkpaperSourceTypeLine
+         * @description The BSS control total of one kind of source record in one currency.
+         */
+        WorkpaperSourceTypeLine: {
+            sourceType: components["schemas"]["ContributionSourceType"];
+            currency: components["schemas"]["CurrencyCode"];
+            count: components["schemas"]["WorkpaperCount"];
+            eligible: components["schemas"]["WorkpaperAmount"];
+        };
+        /**
+         * WorkpaperVolumes
+         * @description Volume and transaction counts.
+         */
+        WorkpaperVolumes: {
+            accepted: components["schemas"]["WorkpaperCount"];
+            quarantined: components["schemas"]["WorkpaperCount"];
+            reversals: components["schemas"]["WorkpaperCount"];
+            amendments: components["schemas"]["WorkpaperCount"];
+            quantities: components["schemas"]["WorkpaperQuantityLine"][];
+            bySource: components["schemas"]["WorkpaperSourceTypeLine"][];
+        };
+        /**
+         * WorkpaperAdjustmentLine
+         * @description An approved allowance or adjustment as it entered the build.
+         */
+        WorkpaperAdjustmentLine: {
+            number: components["schemas"]["WorkpaperCount"];
+            category: components["schemas"]["WorkpaperLabel"];
+            amount: components["schemas"]["WorkpaperAmount"];
+            reason: components["schemas"]["WorkpaperText"];
+            evidenceSha256: components["schemas"]["Sha256Hex"];
+            material: components["schemas"]["WorkpaperFlag"];
+        };
+        /**
+         * WorkpaperTotals
+         * @description The report totals in the reporting currency. Absent while a source currency has no documented conversion.
+         */
+        WorkpaperTotals: {
+            currency: components["schemas"]["CurrencyCode"];
+            grossEligible: components["schemas"]["WorkpaperAmount"];
+            excluded: components["schemas"]["WorkpaperAmount"];
+            allowances: components["schemas"]["WorkpaperAmount"];
+            adjustments: components["schemas"]["WorkpaperAmount"];
+            reportableBase: components["schemas"]["WorkpaperAmount"];
+        };
+        /**
+         * WorkpaperControlTotal
+         * @description The contribution ledger's own control total for the filer, duty, period and one currency — the independent expectation the schedules are reconciled to.
+         */
+        WorkpaperControlTotal: {
+            currency: components["schemas"]["CurrencyCode"];
+            accepted: components["schemas"]["WorkpaperCount"];
+            quarantined: components["schemas"]["WorkpaperCount"];
+            reversals: components["schemas"]["WorkpaperCount"];
+            eligible: components["schemas"]["WorkpaperAmount"];
+            excluded: components["schemas"]["WorkpaperAmount"];
+            periodDigest: components["schemas"]["Digest"];
+            incomplete: components["schemas"]["ContributionIncompleteReason"][];
+            sourceChecksums: components["schemas"]["WorkpaperLabel"][];
+        };
+        /**
+         * WorkpaperReconLine
+         * @description One reconciliation — expected against actual in one currency.
+         */
+        WorkpaperReconLine: {
+            code: components["schemas"]["WorkpaperLabel"];
+            currency: components["schemas"]["CurrencyCode"];
+            expected: components["schemas"]["WorkpaperAmount"];
+            actual: components["schemas"]["WorkpaperAmount"];
+            difference: components["schemas"]["WorkpaperAmount"];
+            status: components["schemas"]["WorkpaperReconStatus"];
+        };
+        /**
+         * WorkpaperBalanceLine
+         * @description One Tax Control Subledger balance of the filer in the period, debits and credits apart. Shown beside the schedules, never netted into them.
+         */
+        WorkpaperBalanceLine: {
+            account: components["schemas"]["WorkpaperLabel"];
+            currency: components["schemas"]["CurrencyCode"];
+            debits: components["schemas"]["WorkpaperAmount"];
+            credits: components["schemas"]["WorkpaperAmount"];
+        };
+        /**
+         * WorkpaperConversion
+         * @description A documented FX rate a build converted with.
+         */
+        WorkpaperConversion: {
+            from: components["schemas"]["CurrencyCode"];
+            to: components["schemas"]["CurrencyCode"];
+            rate: components["schemas"]["WorkpaperRate"];
+            rateSource: components["schemas"]["WorkpaperRef"];
+            rateDate: components["schemas"]["CivilDate"];
+            roundingMode: components["schemas"]["WorkpaperRoundingMode"];
+            scale: components["schemas"]["WorkpaperCount"];
+            basis: components["schemas"]["WorkpaperText"];
+        };
+        /**
+         * WorkpaperOutput
+         * @description A build's sealed document — its schedules, control totals and reconciliation. Its exceptions are listed on the workpaper with their resolutions.
+         */
+        WorkpaperOutput: {
+            formulaVersion: components["schemas"]["WorkpaperRef"];
+            contentRelease: components["schemas"]["WorkpaperRef"];
+            reportingCurrency: components["schemas"]["CurrencyCode"];
+            revenue: components["schemas"]["WorkpaperRevenueLine"][];
+            excluded: components["schemas"]["WorkpaperExclusionLine"][];
+            volumes: components["schemas"]["WorkpaperVolumes"];
+            allowances: components["schemas"]["WorkpaperAdjustmentLine"][];
+            adjustments: components["schemas"]["WorkpaperAdjustmentLine"][];
+            totals?: components["schemas"]["WorkpaperTotals"];
+            controlTotals: components["schemas"]["WorkpaperControlTotal"][];
+            reconciliation: components["schemas"]["WorkpaperReconLine"][];
+            subledger: components["schemas"]["WorkpaperBalanceLine"][];
+            conversions: components["schemas"]["WorkpaperConversion"][];
+        };
+        /**
+         * WorkpaperBuild
+         * @description One build version — the hash of what it read, the hash of what it produced. Only the latest build carries its output.
+         */
+        WorkpaperBuild: {
+            version: components["schemas"]["WorkpaperCount"];
+            inputsHash: components["schemas"]["Digest"];
+            outputHash: components["schemas"]["Digest"];
+            basisDigest: components["schemas"]["Digest"];
+            formulaVersion: components["schemas"]["WorkpaperRef"];
+            contentRelease: components["schemas"]["WorkpaperRef"];
+            builtAt: components["schemas"]["Timestamp"];
+            builtBy: components["schemas"]["WorkpaperActor"];
+            output?: components["schemas"]["WorkpaperOutput"];
+        };
+        /** WorkpaperEvent */
+        WorkpaperEvent: {
+            seq: components["schemas"]["WorkpaperCount"];
+            kind: components["schemas"]["WorkpaperEventKind"];
+            status: components["schemas"]["WorkpaperStatus"];
+            note?: components["schemas"]["WorkpaperText"];
+            buildVersion?: components["schemas"]["WorkpaperCount"];
+            contentRelease?: components["schemas"]["WorkpaperRef"];
+            fx?: components["schemas"]["WorkpaperFXRequest"];
+            adjustmentNumber?: components["schemas"]["WorkpaperCount"];
+            adjustmentKind?: components["schemas"]["WorkpaperAdjustmentKind"];
+            adjustmentCategory?: components["schemas"]["WorkpaperRef"];
+            adjustmentAmount?: components["schemas"]["WorkpaperAmount"];
+            decision?: components["schemas"]["WorkpaperDecision"];
+            exceptionKey?: components["schemas"]["WorkpaperRef"];
+            fingerprint?: components["schemas"]["Digest"];
+            evidence?: components["schemas"]["WorkpaperEvidence"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["WorkpaperActor"];
+        };
+        /**
+         * Workpaper
+         * @description A regulatory workpaper (OBL-07): the header, its builds, the latest
+         *     build's schedules and reconciliation, the exceptions and their
+         *     resolutions, the documented FX rates, the adjustments, the history, and
+         *     what it admits now. `eventCount` is the `expectedSeq` an act sends.
+         */
+        Workpaper: {
+            id: components["schemas"]["WorkpaperId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            duty: components["schemas"]["ContributionRegime"];
+            period: components["schemas"]["LegalPeriod"];
+            authority: components["schemas"]["WorkpaperRef"];
+            reportingCurrency: components["schemas"]["CurrencyCode"];
+            materialityThreshold: components["schemas"]["WorkpaperAmount"];
+            obligationId?: components["schemas"]["ObligationId"];
+            initialContentRelease: components["schemas"]["WorkpaperRef"];
+            contentRelease: components["schemas"]["WorkpaperRef"];
+            formulaVersion: components["schemas"]["WorkpaperRef"];
+            status: components["schemas"]["WorkpaperStatus"];
+            eventCount: components["schemas"]["WorkpaperCount"];
+            frozenBuildVersion?: components["schemas"]["WorkpaperCount"];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["WorkpaperActor"];
+            builds: components["schemas"]["WorkpaperBuild"][];
+            latestBuild?: components["schemas"]["WorkpaperBuild"];
+            exceptions: components["schemas"]["WorkpaperException"][];
+            fxRates: components["schemas"]["WorkpaperFXRate"][];
+            adjustments: components["schemas"]["WorkpaperAdjustment"][];
+            resolutions: components["schemas"]["WorkpaperResolution"][];
+            history: components["schemas"]["WorkpaperEvent"][];
+            allowedActions: components["schemas"]["WorkpaperAction"][];
+            blockers: components["schemas"]["WorkpaperBlocker"][];
+        };
+        /** WorkpaperList */
+        WorkpaperList: {
+            workpapers: components["schemas"]["Workpaper"][];
+        };
+        /** WorkpaperRequest */
+        WorkpaperRequest: {
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            duty: components["schemas"]["ContributionRegime"];
+            period: components["schemas"]["LegalPeriod"];
+            authority: components["schemas"]["WorkpaperRef"];
+            reportingCurrency: components["schemas"]["CurrencyCode"];
+            materialityThreshold?: components["schemas"]["WorkpaperAmount"];
+            obligationId?: components["schemas"]["ObligationId"];
+            contentRelease: components["schemas"]["WorkpaperRef"];
+        };
+        /** WorkpaperBuildRequest */
+        WorkpaperBuildRequest: {
+            expectedSeq?: components["schemas"]["WorkpaperCount"];
+        };
+        /**
+         * WorkpaperActionRequest
+         * @description One act. The fields an action does not use are ignored.
+         */
+        WorkpaperActionRequest: {
+            action: components["schemas"]["WorkpaperAction"];
+            expectedSeq?: components["schemas"]["WorkpaperCount"];
+            note?: components["schemas"]["WorkpaperText"];
+            buildVersion?: components["schemas"]["WorkpaperCount"];
+            contentRelease?: components["schemas"]["WorkpaperRef"];
+            fx?: components["schemas"]["WorkpaperFXRequest"];
+            adjustment?: components["schemas"]["WorkpaperAdjustmentRequest"];
+            adjustmentNumber?: components["schemas"]["WorkpaperCount"];
+            decision?: components["schemas"]["WorkpaperDecision"];
+            exceptionKey?: components["schemas"]["WorkpaperRef"];
+            fingerprint?: components["schemas"]["Digest"];
+            evidence?: components["schemas"]["WorkpaperEvidence"];
+        };
+        /**
+         * WorkpaperSourceCheck
+         * @description The latest build compared with what the sources would build now. Nothing is recorded.
+         */
+        WorkpaperSourceCheck: {
+            workpaperId: components["schemas"]["WorkpaperId"];
+            latestBuildVersion?: components["schemas"]["WorkpaperCount"];
+            latestInputsHash?: components["schemas"]["Digest"];
+            latestOutputHash?: components["schemas"]["Digest"];
+            currentInputsHash: components["schemas"]["Digest"];
+            currentOutputHash: components["schemas"]["Digest"];
+            frozenBuildVersion?: components["schemas"]["WorkpaperCount"];
+            matches: components["schemas"]["WorkpaperFlag"];
+            checkedAt: components["schemas"]["Timestamp"];
+        };
     };
     responses: {
         /**
@@ -8148,6 +8840,15 @@ export interface components {
                 "application/json": components["schemas"]["Notice"];
             };
         };
+        /** @description The workpaper as it stands now. */
+        WorkpaperResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Workpaper"];
+            };
+        };
     };
     parameters: {
         /**
@@ -8203,6 +8904,11 @@ export interface components {
          * @example 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
          */
         ContributionId: components["schemas"]["ContributionId"];
+        /**
+         * @description The workpaper identifier.
+         * @example 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        WorkpaperId: components["schemas"]["WorkpaperId"];
         /**
          * @description The shadow run identifier.
          * @example 01920b50-1a2b-7c3d-8e4f-5a6b7c8d9e01
@@ -12708,6 +13414,196 @@ export interface operations {
         };
         responses: {
             200: components["responses"]["NoticeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listWorkpapers: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only workpapers of this period.
+                 * @example 2026-09
+                 */
+                period?: components["schemas"]["LegalPeriod"];
+                /**
+                 * @description Only workpapers of this duty.
+                 * @example US_USF
+                 */
+                duty?: components["schemas"]["ContributionRegime"];
+                /**
+                 * @description Only workpapers in this status.
+                 * @example DATA_INCOMPLETE
+                 */
+                status?: components["schemas"]["WorkpaperStatus"];
+                /**
+                 * @description Only workpapers of this legal filer.
+                 * @example 01920a4c-0000-7000-8000-00000000e001
+                 */
+                legalEntityId?: components["schemas"]["LegalEntityId"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The workpapers. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkpaperList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createWorkpaper: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkpaperRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["WorkpaperResult"];
+            201: components["responses"]["WorkpaperResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getWorkpaper: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The workpaper identifier.
+                 * @example 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                workpaperId: components["parameters"]["WorkpaperId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["WorkpaperResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    buildWorkpaper: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The workpaper identifier.
+                 * @example 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                workpaperId: components["parameters"]["WorkpaperId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkpaperBuildRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["WorkpaperResult"];
+            201: components["responses"]["WorkpaperResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    checkWorkpaperSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The workpaper identifier.
+                 * @example 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                workpaperId: components["parameters"]["WorkpaperId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The comparison. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkpaperSourceCheck"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    actOnWorkpaper: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The workpaper identifier.
+                 * @example 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                workpaperId: components["parameters"]["WorkpaperId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkpaperActionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["WorkpaperResult"];
             400: components["responses"]["Validation"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];

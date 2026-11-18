@@ -178,6 +178,10 @@ func run() error {
 	// Regulatory notices reference fiscal records and change none; like
 	// migration they need only the store.
 	router.Notices = app.NewNoticeService(store.Notices(), store.LegalEntities(), store, clk, ids)
+	// Regulatory workpapers are built from the contribution ledger and the
+	// subledger and read no decision, so they need only the store too.
+	router.Workpapers = app.NewWorkpaperService(store.Workpapers(), store.ProviderContributions(), store.Periods(),
+		store.LegalEntities(), store, clk, ids)
 	if router.Determination != nil {
 		// Compliance packages execute the obligations commits assess, and
 		// move them only on filing evidence, so they are served wherever the

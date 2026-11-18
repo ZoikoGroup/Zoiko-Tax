@@ -860,6 +860,47 @@ export class ZoikoTaxClient {
     return this.#send<S<"Notice">>("POST", `/v1/notices/${encodeURIComponent(noticeId)}/appeal`, body, signal);
   }
 
+  // --- regulatory workpapers ------------------------------------------------
+  /** List workpapers, newest period first, with their builds' summaries. `GET /v1/workpapers`. */
+  listWorkpapers(
+    params: { period?: string; duty?: string; status?: string; legalEntityId?: string; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"WorkpaperList">>> {
+    return this.#send<S<"WorkpaperList">>("GET", `/v1/workpapers${query(params)}`, undefined, signal);
+  }
+
+  /**
+   * Open a workpaper for a legal filer, duty and period; `200` returns the one
+   * already open with the same header. Idempotent on the three, not on an
+   * Idempotency-Key. `POST /v1/workpapers`.
+   */
+  createWorkpaper(body: S<"WorkpaperRequest">, signal?: AbortSignal): Promise<Result<S<"Workpaper">>> {
+    return this.#send<S<"Workpaper">>("POST", `/v1/workpapers`, body, signal);
+  }
+
+  /** A workpaper with its latest build, exceptions and history. `GET /v1/workpapers/{workpaperId}`. */
+  getWorkpaper(workpaperId: string, signal?: AbortSignal): Promise<Result<S<"Workpaper">>> {
+    return this.#send<S<"Workpaper">>("GET", `/v1/workpapers/${encodeURIComponent(workpaperId)}`, undefined, signal);
+  }
+
+  /**
+   * Build the workpaper from its sources. Deterministic: the same inputs record
+   * nothing and return the latest build. `POST /v1/workpapers/{workpaperId}/build`.
+   */
+  buildWorkpaper(workpaperId: string, body: S<"WorkpaperBuildRequest"> = {}, signal?: AbortSignal): Promise<Result<S<"Workpaper">>> {
+    return this.#send<S<"Workpaper">>("POST", `/v1/workpapers/${encodeURIComponent(workpaperId)}/build`, body, signal);
+  }
+
+  /** Compare the latest build with what its sources say now. `GET /v1/workpapers/{workpaperId}/source-check`. */
+  checkWorkpaperSources(workpaperId: string, signal?: AbortSignal): Promise<Result<S<"WorkpaperSourceCheck">>> {
+    return this.#send<S<"WorkpaperSourceCheck">>("GET", `/v1/workpapers/${encodeURIComponent(workpaperId)}/source-check`, undefined, signal);
+  }
+
+  /** Freeze, review, approve, or record a rate, adjustment or resolution. `POST /v1/workpapers/{workpaperId}/actions`. */
+  actOnWorkpaper(workpaperId: string, body: S<"WorkpaperActionRequest">, signal?: AbortSignal): Promise<Result<S<"Workpaper">>> {
+    return this.#send<S<"Workpaper">>("POST", `/v1/workpapers/${encodeURIComponent(workpaperId)}/actions`, body, signal);
+  }
+
   // --- shadow ----------------------------------------------------------------
   /** List comparator profiles. `GET /v1/shadow/comparators`. */
   listComparators(signal?: AbortSignal): Promise<Result<S<"ComparatorList">>> {

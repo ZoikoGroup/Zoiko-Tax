@@ -134,6 +134,11 @@ type Router struct {
 	// only the store, so it is served wherever the store is.
 	Notices *app.NoticeService
 
+	// Workpapers serves regulatory workpapers (OBL-07): deterministic builds
+	// from the contribution ledger and the subledger, evidence-linked
+	// adjustments and resolutions, freeze and two-person approval.
+	Workpapers *app.WorkpaperService
+
 	// Shadow serves shadow assurance: comparator profiles, comparison runs
 	// and their discrepancies. Nil when the cell has no evidence store to
 	// read committed results from.
@@ -382,6 +387,16 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/notices/{noticeId}/submission", false, []security.Role{operator, analyst}}, rt.handleRecordNoticeSubmission},
 		{Route{"POST", "/v1/notices/{noticeId}/outcome", false, []security.Role{operator, analyst}}, rt.handleRecordNoticeOutcome},
 		{Route{"POST", "/v1/notices/{noticeId}/appeal", false, []security.Role{operator, analyst}}, rt.handleLodgeNoticeAppeal},
+		// Regulatory workpapers (OBL-07): OPERATOR and ANALYST prepare; an
+		// ANALYST other than the preparer decides and approves (the service
+		// compares the people and checks the role per action). ADMIN reads no
+		// fiscal record.
+		{Route{"GET", "/v1/workpapers", false, []security.Role{operator, analyst, auditor}}, rt.handleListWorkpapers},
+		{Route{"POST", "/v1/workpapers", false, []security.Role{operator, analyst}}, rt.handleCreateWorkpaper},
+		{Route{"GET", "/v1/workpapers/{workpaperId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetWorkpaper},
+		{Route{"POST", "/v1/workpapers/{workpaperId}/build", false, []security.Role{operator, analyst}}, rt.handleBuildWorkpaper},
+		{Route{"GET", "/v1/workpapers/{workpaperId}/source-check", false, []security.Role{operator, analyst, auditor}}, rt.handleCheckWorkpaperSources},
+		{Route{"POST", "/v1/workpapers/{workpaperId}/actions", false, []security.Role{operator, analyst}}, rt.handleActOnWorkpaper},
 		// Shadow: non-impact reads of committed decisions, compared with
 		// another engine's results (ZTAX-SHD-001).
 		{Route{"GET", "/v1/shadow/comparators", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListComparators},
