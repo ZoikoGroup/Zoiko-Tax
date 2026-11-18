@@ -2818,6 +2818,303 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/erp-bridges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The ERP journal bridges
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Every bridge from a member legal entity's Tax Control Subledger to a
+         *     customer general ledger, oldest first, each with its account mapping
+         *     versions. The bridge is vendor-agnostic; the vendor names the connector
+         *     that consumes a dispatch, and no real ERP is connected by this cell.
+         */
+        get: operations["listERPBridges"];
+        put?: never;
+        /**
+         * Connect a legal entity's subledger to a customer general ledger
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Records a bridge under the entity's ERP company code. The member legal
+         *     entity defaults to the tenant's default entity. A bridge exports nothing
+         *     until an account mapping is recorded for it.
+         */
+        post: operations["createERPBridge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/erp-bridges/{bridgeId}/mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the bridge's next account mapping version
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Maps TCSL control accounts onto the customer's GL accounts under a named
+         *     chart-of-accounts version (ZTAX-FIN-REQ-0051). A version is never
+         *     edited: a change is the next version, and a batch sealed under an
+         *     earlier version is no longer dispatched (`409 ERP_MAPPING_CHANGED`,
+         *     QA-LED-068). A mapping identical to the current one records nothing and
+         *     answers `200` with the bridge as it is.
+         */
+        post: operations["recordERPMapping"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/erp-bridges/{bridgeId}/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The bridge's export batches and their transfer state
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     A bridge's export batches, newest first, in any status, each with its
+         *     delivery evidence. A rejected batch carries the correction task its
+         *     rejection opened, open until every journal it held is in a batch the
+         *     ERP has posted. Lines are omitted here; read one batch for them.
+         */
+        get: operations["listERPExports"];
+        put?: never;
+        /**
+         * Prepare and seal an export batch
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Seals every posted TCSL journal of the bridge's legal entity, the period
+         *     and the currency that is not already in a live batch: the exact journal
+         *     ID set, each line mapped by the bridge's current mapping version, the
+         *     company code, chart version and posting date, under one batch digest
+         *     (QA-LED-067). A line on an account the mapping does not map holds the
+         *     whole export (`409 ERP_MAPPING_INCOMPLETE`) — nothing goes to a suspense
+         *     account by default. With nothing left to export, the prepared batch that
+         *     already holds the journals under the same posting date and mapping
+         *     version is returned with `200`; otherwise `409 ERP_NOTHING_TO_EXPORT`.
+         */
+        post: operations["prepareERPExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/erp-bridges/{bridgeId}/exports/{batchId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One export batch with its lines and delivery evidence
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The sealed batch — journal IDs, every mapped line traced to its TCSL
+         *     journal line, totals and digest — with every attempt and every ERP
+         *     answer recorded against it, and its correction task when it was
+         *     rejected.
+         */
+        get: operations["getERPExport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/erp-bridges/{bridgeId}/exports/{batchId}/dispatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Authorise and dispatch a sealed batch
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves, and not the person who
+         *     prepared the batch (`403 MAKER_CHECKER`).
+         *
+         *     The checker names the batch digest they reviewed (`409
+         *     ERP_BATCH_DIGEST_MISMATCH` when it is not the batch's). The dispatch is
+         *     one attempt, recorded with a `com.zoikotax.gl.export-dispatched` event
+         *     through the transactional outbox in the same transaction; a connector
+         *     subscribed to it sends the batch under its `externalRef`, which every
+         *     attempt shares, so the ERP posts one GL journal however many attempts
+         *     there are. `TRANSMITTED` means committed for transmission — not
+         *     received, and not posted.
+         *
+         *     **Idempotent on the batch.** A batch already transmitted, acknowledged
+         *     or posted is returned as it is with `200` and no new attempt
+         *     (QA-LED-069). A batch sealed under a superseded mapping version is
+         *     refused (`409 ERP_MAPPING_CHANGED`, QA-LED-068). A batch whose outcome
+         *     is unknown is sent again only after a status query recorded that the
+         *     ERP holds nothing under its reference (`409 ERP_OUTCOME_UNKNOWN`). A
+         *     rejected or withdrawn batch is never sent.
+         */
+        post: operations["dispatchERPExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/erp-bridges/{bridgeId}/exports/{batchId}/responses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record what the ERP answered about an attempt
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     ZoikoTax does not invent the ERP's answer: a person records it here with
+         *     the ERP's references as evidence. `ACKNOWLEDGED` is a transport receipt
+         *     and names the ERP's `remoteCorrelation`; `POSTED` names the ERP's posted
+         *     journal (`erpReference`) and is the only answer a GL reconciliation
+         *     counts. `REJECTED` says why, opens a correction task and holds the
+         *     period's GL reconciliation. `OUTCOME_UNKNOWN` says why nobody knows.
+         *     `STATUS_NOT_FOUND` records a status query, by `remoteCorrelation`, that
+         *     found nothing under the batch's reference — the only thing that lets a
+         *     batch of unknown outcome be sent again.
+         *
+         *     **Idempotent on the answer**: the same answer about the same attempt
+         *     again records nothing and answers `200`. An answer that does not apply
+         *     to the batch's state is `409 STATE_TRANSITION_INVALID`.
+         */
+        post: operations["recordERPResponse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/erp-bridges/{bridgeId}/exports/{batchId}/withdrawal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw a prepared batch that was never dispatched
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Releases a `PREPARED` batch, with the reason, so its journals can be
+         *     prepared again — after a mapping change, say. The batch and its digest
+         *     stay on record. Only a batch never dispatched is withdrawn (`409
+         *     STATE_TRANSITION_INVALID`).
+         */
+        post: operations["withdrawERPExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/erp-bridges/{bridgeId}/gl-balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The GL balances the ERP reported
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Every GL balance snapshot recorded for the bridge, newest first, each
+         *     with the ERP report it came from and its digest.
+         */
+        get: operations["listGLSnapshots"];
+        put?: never;
+        /**
+         * Record the GL balances an ERP reported for a period
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     The period's activity on each GL account in one currency, debits and
+         *     credits apart, as the ERP reported it, with the report it came from
+         *     (`sourceRef`, and `sourceDigest` when the report is kept as a file).
+         *     Amounts are canonical, non-negative decimal strings; the side carries
+         *     direction. ZoikoTax reads no ERP itself — these figures are the ERP's,
+         *     recorded as evidence, and a reconciliation compares them with the
+         *     subledger.
+         */
+        post: operations["recordGLSnapshot"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/erp-bridges/{bridgeId}/gl-reconciliations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The subledger-to-GL reconciliations (R6)
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Every GL reconciliation run on the bridge, newest first, with its items
+         *     and exact variances. Each is a record: a later run is a new one.
+         */
+        get: operations["listGLReconciliations"];
+        put?: never;
+        /**
+         * Reconcile the subledger with an ERP's GL balances
+         * @description `OPERATOR`.
+         *
+         *     Compares one GL snapshot, account by account, with what the subledger's
+         *     journals of the bridge's legal entity, the snapshot's period and
+         *     currency put on the TCSL accounts the bridge's current mapping maps to
+         *     each GL account. Every item keeps its exact variance (observed −
+         *     expected, net debit) whatever it is; there is no tolerance. A GL account
+         *     the ERP reported and nothing maps to, a mapped account the ERP did not
+         *     report, and a TCSL account with no mapping are each items of their own.
+         *
+         *     `HELD` while any of the period's journals is not in a batch the ERP has
+         *     posted — unexported, awaiting dispatch or posting, of unknown outcome,
+         *     or rejected with its correction open — and never reported reconciled
+         *     while it is. A variance is cleared by fixing the source and running a
+         *     new reconciliation over a new snapshot, not by a note.
+         */
+        post: operations["runGLReconciliation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/notices": {
         parameters: {
             query?: never;
@@ -5028,7 +5325,7 @@ export interface components {
          * @example com.zoikotax.decision.committed
          * @enum {string}
          */
-        EventType: "com.zoikotax.decision.committed" | "com.zoikotax.decision.corrected" | "com.zoikotax.obligation.status-changed" | "com.zoikotax.accumulator.threshold-crossed" | "com.zoikotax.refund.requested" | "com.zoikotax.refund.status-changed" | "com.zoikotax.document.committed";
+        EventType: "com.zoikotax.decision.committed" | "com.zoikotax.decision.corrected" | "com.zoikotax.obligation.status-changed" | "com.zoikotax.accumulator.threshold-crossed" | "com.zoikotax.refund.requested" | "com.zoikotax.refund.status-changed" | "com.zoikotax.document.committed" | "com.zoikotax.gl.export-dispatched";
         /**
          * WebhookStatus
          * @example ACTIVE
@@ -6976,6 +7273,383 @@ export interface components {
             recordedBy: string;
         };
         /**
+         * ERPBridgeId
+         * Format: uuid
+         * @example 01920c20-0000-7000-8000-0000000000b1
+         */
+        ERPBridgeId: string;
+        /**
+         * ERPExportId
+         * Format: uuid
+         * @description An export batch. Also the external reference every attempt of the batch carries to the ERP.
+         * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+         */
+        ERPExportId: string;
+        /**
+         * ERPAttemptId
+         * Format: uuid
+         * @description One dispatch attempt of an export batch.
+         * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20
+         */
+        ERPAttemptId: string;
+        /**
+         * GLSnapshotId
+         * Format: uuid
+         * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e30
+         */
+        GLSnapshotId: string;
+        /**
+         * GLReconciliationId
+         * Format: uuid
+         * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e40
+         */
+        GLReconciliationId: string;
+        /**
+         * ERPVendor
+         * @description The ERP family a bridge targets. A label for the connector that consumes a dispatch; each real target still needs its own contract verification (LED-23).
+         * @example SAP
+         * @enum {string}
+         */
+        ERPVendor: "SAP" | "ORACLE" | "NETSUITE" | "DYNAMICS" | "OTHER";
+        /**
+         * ERPRef
+         * @description A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
+         * @example SAP-MSG-000918
+         */
+        ERPRef: string;
+        /**
+         * ERPDetail
+         * @description Why — an ERP's rejection text, why an outcome is unknown, or why a batch was withdrawn — in the words of the person who recorded it.
+         * @example F5 702: GL account 2310-00 is blocked for posting in company code AC01
+         */
+        ERPDetail: string;
+        /**
+         * GLAccountCode
+         * @description An account code in the customer's general ledger. Never a TCSL control account.
+         * @example 2310-00
+         */
+        GLAccountCode: string;
+        /**
+         * LedgerAmount
+         * @description A ledger figure in canonical decimal string form — never a JSON number,
+         *     never computed by a client. Scale is significant. A control total or GL
+         *     aggregate of the provider's own books, not a consumer amount.
+         * @example 10.00
+         */
+        LedgerAmount: string;
+        /** ERPBridgeRequest */
+        ERPBridgeRequest: {
+            /** @description A label for the connection. */
+            name: string;
+            vendor: components["schemas"]["ERPVendor"];
+            /** @description The legal entity's company code in the ERP. */
+            companyCode: string;
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+        };
+        /**
+         * ERPAccountMap
+         * @description One TCSL control account, onto one customer GL account.
+         */
+        ERPAccountMap: {
+            account: components["schemas"]["ControlAccount"];
+            glAccount: components["schemas"]["GLAccountCode"];
+        };
+        /**
+         * ERPMapping
+         * @description One version of a bridge's account mapping. Never edited; a change is the next version.
+         */
+        ERPMapping: {
+            /** Format: int32 */
+            version: number;
+            chartVersion: components["schemas"]["ERPRef"];
+            accounts: components["schemas"]["ERPAccountMap"][];
+            digest: components["schemas"]["Digest"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /** ERPMappingRequest */
+        ERPMappingRequest: {
+            chartVersion: components["schemas"]["ERPRef"];
+            accounts: components["schemas"]["ERPAccountMap"][];
+        };
+        /**
+         * ERPBridge
+         * @description A member legal entity's subledger connected to one customer general ledger, with its mapping versions oldest first.
+         */
+        ERPBridge: {
+            id: components["schemas"]["ERPBridgeId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            name: string;
+            vendor: components["schemas"]["ERPVendor"];
+            companyCode: string;
+            createdAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            createdBy: string;
+            /**
+             * Format: int32
+             * @description The version a new batch is prepared under. Absent until a mapping is recorded.
+             */
+            currentMappingVersion?: number;
+            mappings: components["schemas"]["ERPMapping"][];
+        };
+        /** ERPBridgeList */
+        ERPBridgeList: {
+            bridges: components["schemas"]["ERPBridge"][];
+        };
+        /**
+         * ERPExportStatus
+         * @description A batch's transfer state (LED-23). `TRANSMITTED` is committed for
+         *     transmission; `ACKNOWLEDGED` is the ERP's transport receipt; only
+         *     `ERP_POSTED` says the general ledger holds it. `WITHDRAWN` is a batch
+         *     released before it was ever sent.
+         * @example ERP_POSTED
+         * @enum {string}
+         */
+        ERPExportStatus: "PREPARED" | "TRANSMITTED" | "ACKNOWLEDGED" | "ERP_POSTED" | "REJECTED" | "OUTCOME_UNKNOWN" | "WITHDRAWN";
+        /**
+         * ERPExportEventKind
+         * @example DISPATCHED
+         * @enum {string}
+         */
+        ERPExportEventKind: "PREPARED" | "DISPATCHED" | "ACKNOWLEDGED" | "POSTED" | "REJECTED" | "OUTCOME_UNKNOWN" | "STATUS_NOT_FOUND" | "WITHDRAWN";
+        /**
+         * ERPResponseKind
+         * @description An ERP answer a person records.
+         * @example POSTED
+         * @enum {string}
+         */
+        ERPResponseKind: "ACKNOWLEDGED" | "POSTED" | "REJECTED" | "OUTCOME_UNKNOWN" | "STATUS_NOT_FOUND";
+        /**
+         * ERPExportEvent
+         * @description One appended act on a batch — its delivery evidence, attempt by attempt.
+         */
+        ERPExportEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["ERPExportEventKind"];
+            status: components["schemas"]["ERPExportStatus"];
+            attemptId?: components["schemas"]["ERPAttemptId"];
+            remoteCorrelation?: components["schemas"]["ERPRef"];
+            erpReference?: components["schemas"]["ERPRef"];
+            responseDigest?: components["schemas"]["ERPRef"];
+            detail?: components["schemas"]["ERPDetail"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /**
+         * ERPExportLine
+         * @description One exported line, traced to the TCSL journal line it carries (ZTAX-FIN-REQ-0053).
+         */
+        ERPExportLine: {
+            /** Format: uuid */
+            journalId: string;
+            /** Format: int32 */
+            journalLine: number;
+            account: components["schemas"]["ControlAccount"];
+            glAccount: components["schemas"]["GLAccountCode"];
+            /** @enum {string} */
+            side: "DEBIT" | "CREDIT";
+            amount: components["schemas"]["LedgerAmount"];
+            authority?: string;
+            jurisdiction?: string;
+        };
+        /**
+         * ERPCorrectionTask
+         * @description The task an ERP rejection opens: the rejected batch's journals that no
+         *     posted batch has carried into the GL since. Open while any is
+         *     outstanding, and the period's GL reconciliation is held until then.
+         */
+        ERPCorrectionTask: {
+            open: boolean;
+            openedAt: components["schemas"]["Timestamp"];
+            reason?: components["schemas"]["ERPDetail"];
+            outstandingJournalIds: string[];
+            /** @description The posted batches that carried the rejected journals. */
+            postedBy: components["schemas"]["ERPExportId"][];
+        };
+        /**
+         * ERPExport
+         * @description A sealed export batch: the export mapping (company code, mapping and
+         *     chart version, currency, posting date), the exact journal ID set, the
+         *     totals and the batch digest, with its transfer state and every attempt
+         *     and ERP answer recorded against it.
+         */
+        ERPExport: {
+            id: components["schemas"]["ERPExportId"];
+            bridgeId: components["schemas"]["ERPBridgeId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            period: components["schemas"]["LegalPeriod"];
+            currency: components["schemas"]["CurrencyCode"];
+            postingDate: components["schemas"]["CivilDate"];
+            companyCode: string;
+            /** Format: int32 */
+            mappingVersion: number;
+            chartVersion: components["schemas"]["ERPRef"];
+            mappingDigest: components["schemas"]["Digest"];
+            /** @description The reference every attempt carries to the ERP, and that the ERP deduplicates on. */
+            externalRef: string;
+            journalIds: string[];
+            /** Format: int32 */
+            lineCount: number;
+            totalDebits: components["schemas"]["LedgerAmount"];
+            totalCredits: components["schemas"]["LedgerAmount"];
+            batchDigest: components["schemas"]["Digest"];
+            preparedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            preparedBy: string;
+            status: components["schemas"]["ERPExportStatus"];
+            history: components["schemas"]["ERPExportEvent"][];
+            correction?: components["schemas"]["ERPCorrectionTask"];
+            /** @description Present when one batch is read. */
+            lines?: components["schemas"]["ERPExportLine"][];
+        };
+        /** ERPExportList */
+        ERPExportList: {
+            exports: components["schemas"]["ERPExport"][];
+        };
+        /** ERPExportRequest */
+        ERPExportRequest: {
+            period: components["schemas"]["LegalPeriod"];
+            currency: components["schemas"]["CurrencyCode"];
+            postingDate: components["schemas"]["CivilDate"];
+        };
+        /** ERPDispatchRequest */
+        ERPDispatchRequest: {
+            expectedDigest: components["schemas"]["Digest"];
+        };
+        /** ERPResponseRequest */
+        ERPResponseRequest: {
+            kind: components["schemas"]["ERPResponseKind"];
+            attemptId: components["schemas"]["ERPAttemptId"];
+            remoteCorrelation?: components["schemas"]["ERPRef"];
+            erpReference?: components["schemas"]["ERPRef"];
+            responseDigest?: components["schemas"]["ERPRef"];
+            detail?: components["schemas"]["ERPDetail"];
+        };
+        /** ERPWithdrawalRequest */
+        ERPWithdrawalRequest: {
+            reason: components["schemas"]["ERPDetail"];
+        };
+        /**
+         * GLBalanceLine
+         * @description One GL account's period activity as the ERP reported it, debits and credits apart.
+         */
+        GLBalanceLine: {
+            glAccount: components["schemas"]["GLAccountCode"];
+            debits: components["schemas"]["LedgerAmount"];
+            credits: components["schemas"]["LedgerAmount"];
+        };
+        /** GLSnapshotRequest */
+        GLSnapshotRequest: {
+            period: components["schemas"]["LegalPeriod"];
+            currency: components["schemas"]["CurrencyCode"];
+            /**
+             * Format: date-time
+             * @description When the ERP's figures were taken, RFC 3339.
+             */
+            asOf: string;
+            sourceRef: components["schemas"]["ERPRef"];
+            sourceDigest?: components["schemas"]["ERPRef"];
+            balances: components["schemas"]["GLBalanceLine"][];
+        };
+        /**
+         * GLSnapshot
+         * @description GL balances an ERP reported for a period and currency, with the report they came from and their digest.
+         */
+        GLSnapshot: {
+            id: components["schemas"]["GLSnapshotId"];
+            bridgeId: components["schemas"]["ERPBridgeId"];
+            period: components["schemas"]["LegalPeriod"];
+            currency: components["schemas"]["CurrencyCode"];
+            asOf: components["schemas"]["Timestamp"];
+            sourceRef: components["schemas"]["ERPRef"];
+            sourceDigest?: components["schemas"]["ERPRef"];
+            digest: components["schemas"]["Digest"];
+            balances: components["schemas"]["GLBalanceLine"][];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /** GLSnapshotList */
+        GLSnapshotList: {
+            snapshots: components["schemas"]["GLSnapshot"][];
+        };
+        /** GLReconciliationRequest */
+        GLReconciliationRequest: {
+            snapshotId: components["schemas"]["GLSnapshotId"];
+        };
+        /**
+         * GLReconOutcome
+         * @description `RECONCILED` — every item tied and nothing held the period.
+         *     `VARIANCES` — an item did not tie. `HELD` — a journal of the period is
+         *     not in a batch the ERP posted; never reported reconciled while it is.
+         * @example HELD
+         * @enum {string}
+         */
+        GLReconOutcome: "RECONCILED" | "VARIANCES" | "HELD";
+        /**
+         * GLHold
+         * @description How many of the period's journals are held for one reason.
+         */
+        GLHold: {
+            /** @enum {string} */
+            reason: "UNEXPORTED_JOURNALS" | "AWAITING_DISPATCH" | "AWAITING_ERP_POSTING" | "OUTCOME_UNKNOWN" | "REJECTED_CORRECTION_OPEN";
+            /** Format: int32 */
+            journals: number;
+        };
+        /**
+         * GLReconciliationItem
+         * @description One compared GL account (an R6 item). Amounts are net debit — debits
+         *     less credits. `variance` is observed minus expected, exact, whatever the
+         *     status; absent when one side is.
+         */
+        GLReconciliationItem: {
+            /** @description `gl:<account>`, or `tcsl:<account>` for a TCSL account with no mapping. */
+            matchKey: string;
+            glAccount?: components["schemas"]["GLAccountCode"];
+            tcslAccounts: components["schemas"]["ControlAccount"][];
+            expected?: components["schemas"]["MoneyValue"];
+            observed?: components["schemas"]["MoneyValue"];
+            variance?: components["schemas"]["MoneyValue"];
+            /** @enum {string} */
+            status: "MATCHED" | "TOLERANCE_MATCH" | "UNMATCHED" | "PARTIAL" | "DUPLICATE" | "MISSING" | "CONFLICTED" | "PENDING" | "EXPLAINED" | "RESOLVED";
+            detail?: string;
+        };
+        /**
+         * GLReconciliation
+         * @description One subledger-to-GL reconciliation of a period and currency, against one snapshot, under one mapping version. A record; a re-run is a new one.
+         */
+        GLReconciliation: {
+            id: components["schemas"]["GLReconciliationId"];
+            bridgeId: components["schemas"]["ERPBridgeId"];
+            snapshotId: components["schemas"]["GLSnapshotId"];
+            snapshotDigest: components["schemas"]["Digest"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            period: components["schemas"]["LegalPeriod"];
+            currency: components["schemas"]["CurrencyCode"];
+            /** Format: int32 */
+            mappingVersion: number;
+            outcome: components["schemas"]["GLReconOutcome"];
+            holds: components["schemas"]["GLHold"][];
+            /** Format: int32 */
+            journalCount: number;
+            /** Format: int32 */
+            postedJournalCount: number;
+            populationDigest: components["schemas"]["Digest"];
+            /** Format: int32 */
+            exceptionCount: number;
+            items: components["schemas"]["GLReconciliationItem"][];
+            ranAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            ranBy?: string;
+        };
+        /** GLReconciliationList */
+        GLReconciliationList: {
+            reconciliations: components["schemas"]["GLReconciliation"][];
+        };
+        /**
          * ProviderContribution
          * @description One ContributionEvent: the contribution base a source event carries, with
          *     its eligibility and its immutable hash. The provider's own obligation on
@@ -8203,6 +8877,16 @@ export interface components {
          * @example 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
          */
         ContributionId: components["schemas"]["ContributionId"];
+        /**
+         * @description The ERP journal bridge identifier.
+         * @example 01920c20-0000-7000-8000-0000000000b1
+         */
+        ERPBridgeId: components["schemas"]["ERPBridgeId"];
+        /**
+         * @description The ERP export batch identifier.
+         * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+         */
+        ERPExportId: components["schemas"]["ERPExportId"];
         /**
          * @description The shadow run identifier.
          * @example 01920b50-1a2b-7c3d-8e4f-5a6b7c8d9e01
@@ -12173,6 +12857,529 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProviderContribution"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listERPBridges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The bridges. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPBridgeList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createERPBridge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ERPBridgeRequest"];
+            };
+        };
+        responses: {
+            /** @description The bridge, recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPBridge"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordERPMapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ERPMappingRequest"];
+            };
+        };
+        responses: {
+            /** @description The mapping is the current one already; nothing was recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPBridge"];
+                };
+            };
+            /** @description The bridge, with the new mapping version current. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPBridge"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listERPExports: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only batches of this legal period.
+                 * @example 2026-09
+                 */
+                period?: components["schemas"]["LegalPeriod"];
+                /**
+                 * @description Only batches in this currency.
+                 * @example USD
+                 */
+                currency?: components["schemas"]["CurrencyCode"];
+                /**
+                 * @description Only batches in this transfer state.
+                 * @example REJECTED
+                 */
+                status?: components["schemas"]["ERPExportStatus"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The batches. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExportList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    prepareERPExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ERPExportRequest"];
+            };
+        };
+        responses: {
+            /** @description The prepared batch that already holds these journals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExport"];
+                };
+            };
+            /** @description The batch, prepared and sealed. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExport"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getERPExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+                /**
+                 * @description The ERP export batch identifier.
+                 * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                 */
+                batchId: components["parameters"]["ERPExportId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The batch. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExport"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    dispatchERPExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+                /**
+                 * @description The ERP export batch identifier.
+                 * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                 */
+                batchId: components["parameters"]["ERPExportId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ERPDispatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Already transmitted, acknowledged or posted; no new attempt. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExport"];
+                };
+            };
+            /** @description Dispatched — one new attempt, accepted into the outbox for transmission. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExport"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordERPResponse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+                /**
+                 * @description The ERP export batch identifier.
+                 * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                 */
+                batchId: components["parameters"]["ERPExportId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ERPResponseRequest"];
+            };
+        };
+        responses: {
+            /** @description The same answer was already recorded; nothing changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExport"];
+                };
+            };
+            /** @description The answer, recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExport"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    withdrawERPExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+                /**
+                 * @description The ERP export batch identifier.
+                 * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                 */
+                batchId: components["parameters"]["ERPExportId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ERPWithdrawalRequest"];
+            };
+        };
+        responses: {
+            /** @description The batch, withdrawn. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExport"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listGLSnapshots: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only snapshots of this legal period.
+                 * @example 2026-09
+                 */
+                period?: components["schemas"]["LegalPeriod"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The snapshots. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GLSnapshotList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordGLSnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GLSnapshotRequest"];
+            };
+        };
+        responses: {
+            /** @description The snapshot, recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GLSnapshot"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listGLReconciliations: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only reconciliations of this legal period.
+                 * @example 2026-09
+                 */
+                period?: components["schemas"]["LegalPeriod"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The reconciliations. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GLReconciliationList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    runGLReconciliation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GLReconciliationRequest"];
+            };
+        };
+        responses: {
+            /** @description The reconciliation, recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GLReconciliation"];
                 };
             };
             400: components["responses"]["Validation"];

@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:25dc95ef25b2b622c8740ddac58a36ab5a32617989d2515240b1107b781e15bb`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:5d7c44c936673209c4b30649335967d8f98308836eace11647488a73db8ddd9c`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -8734,6 +8734,1164 @@
           ]
         },
         {
+          "name": "POST /v1/erp-bridges — Connect a legal entity's subledger to a customer general ledger",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Telecom — SAP S/4HANA\",\n  \"vendor\": \"SAP\",\n  \"companyCode\": \"AC01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/erp-bridges",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "erp-bridges"
+              ]
+            },
+            "description": "Connect a legal entity's subledger to a customer general ledger\n\n`OPERATOR`, signed in as themselves.\n\nRecords a bridge under the entity's ERP company code. The member legal\nentity defaults to the tenant's default entity. A bridge exports nothing\nuntil an account mapping is recorded for it."
+          },
+          "response": [
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/erp-bridges",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "erp-bridges"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c20-0000-7000-8000-0000000000b1\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"name\": \"Acme Telecom — SAP S/4HANA\",\n  \"vendor\": \"SAP\",\n  \"companyCode\": \"AC01\",\n  \"createdAt\": \"2026-10-01T09:00:00.000000Z\",\n  \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"mappings\": []\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('createERPBridge returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('the bridge is recorded with no mapping yet', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().mappings).to.eql([]);",
+                  "});",
+                  "pm.collectionVariables.set('bridgeId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/erp-bridges — The ERP journal bridges",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/erp-bridges",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "erp-bridges"
+              ]
+            },
+            "description": "The ERP journal bridges\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nEvery bridge from a member legal entity's Tax Control Subledger to a\ncustomer general ledger, oldest first, each with its account mapping\nversions. The bridge is vendor-agnostic; the vendor names the connector\nthat consumes a dispatch, and no real ERP is connected by this cell."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/erp-bridges",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "erp-bridges"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"bridges\": [\n    {\n      \"id\": \"01920c20-0000-7000-8000-0000000000b1\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"name\": \"Acme Telecom — SAP S/4HANA\",\n      \"vendor\": \"SAP\",\n      \"companyCode\": \"AC01\",\n      \"createdAt\": \"2026-10-01T09:00:00.000000Z\",\n      \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n      \"currentMappingVersion\": 1,\n      \"mappings\": [\n        {\n          \"version\": 1,\n          \"chartVersion\": \"COA-2026.2\",\n          \"digest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n          \"recordedAt\": \"2026-10-01T09:05:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n          \"accounts\": [\n            {\n              \"account\": \"TAX_COLLECTED_LIABILITY\",\n              \"glAccount\": \"2310-00\"\n            },\n            {\n              \"account\": \"CUSTOMER_GL_BRIDGE\",\n              \"glAccount\": \"1990-00\"\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listERPBridges returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/erp-bridges/{bridgeId}/mappings — Record the bridge's next account mapping version",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chartVersion\": \"COA-2026.2\",\n  \"accounts\": [\n    {\n      \"account\": \"TAX_COLLECTED_LIABILITY\",\n      \"glAccount\": \"2310-00\"\n    },\n    {\n      \"account\": \"CUSTOMER_GL_BRIDGE\",\n      \"glAccount\": \"1990-00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/mappings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "erp-bridges",
+                "{{bridgeId}}",
+                "mappings"
+              ]
+            },
+            "description": "Record the bridge's next account mapping version\n\n`OPERATOR`, signed in as themselves.\n\nMaps TCSL control accounts onto the customer's GL accounts under a named\nchart-of-accounts version (ZTAX-FIN-REQ-0051). A version is never\nedited: a change is the next version, and a batch sealed under an\nearlier version is no longer dispatched (`409 ERP_MAPPING_CHANGED`,\nQA-LED-068). A mapping identical to the current one records nothing and\nanswers `200` with the bridge as it is."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/mappings",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "erp-bridges",
+                    "{{bridgeId}}",
+                    "mappings"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c20-0000-7000-8000-0000000000b1\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"name\": \"Acme Telecom — SAP S/4HANA\",\n  \"vendor\": \"SAP\",\n  \"companyCode\": \"AC01\",\n  \"createdAt\": \"2026-10-01T09:00:00.000000Z\",\n  \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"currentMappingVersion\": 1,\n  \"mappings\": [\n    {\n      \"version\": 1,\n      \"chartVersion\": \"COA-2026.2\",\n      \"digest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n      \"recordedAt\": \"2026-10-01T09:05:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n      \"accounts\": [\n        {\n          \"account\": \"CUSTOMER_GL_BRIDGE\",\n          \"glAccount\": \"1990-00\"\n        },\n        {\n          \"account\": \"TAX_COLLECTED_LIABILITY\",\n          \"glAccount\": \"2310-00\"\n        }\n      ]\n    }\n  ]\n}"
+            },
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/mappings",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "erp-bridges",
+                    "{{bridgeId}}",
+                    "mappings"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c20-0000-7000-8000-0000000000b1\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"name\": \"Acme Telecom — SAP S/4HANA\",\n  \"vendor\": \"SAP\",\n  \"companyCode\": \"AC01\",\n  \"createdAt\": \"2026-10-01T09:00:00.000000Z\",\n  \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"currentMappingVersion\": 1,\n  \"mappings\": [\n    {\n      \"version\": 1,\n      \"chartVersion\": \"COA-2026.2\",\n      \"digest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n      \"recordedAt\": \"2026-10-01T09:05:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n      \"accounts\": [\n        {\n          \"account\": \"CUSTOMER_GL_BRIDGE\",\n          \"glAccount\": \"1990-00\"\n        },\n        {\n          \"account\": \"TAX_COLLECTED_LIABILITY\",\n          \"glAccount\": \"2310-00\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordERPMapping returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/erp-bridges/{bridgeId}/exports — Prepare and seal an export batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"period\": \"2026-09\",\n  \"currency\": \"USD\",\n  \"postingDate\": \"2026-10-03\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/exports",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "erp-bridges",
+                "{{bridgeId}}",
+                "exports"
+              ]
+            },
+            "description": "Prepare and seal an export batch\n\n`OPERATOR`, signed in as themselves.\n\nSeals every posted TCSL journal of the bridge's legal entity, the period\nand the currency that is not already in a live batch: the exact journal\nID set, each line mapped by the bridge's current mapping version, the\ncompany code, chart version and posting date, under one batch digest\n(QA-LED-067). A line on an account the mapping does not map holds the\nwhole export (`409 ERP_MAPPING_INCOMPLETE`) — nothing goes to a suspense\naccount by default. With nothing left to export, the prepared batch that\nalready holds the journals under the same posting date and mapping\nversion is returned with `200`; otherwise `409 ERP_NOTHING_TO_EXPORT`."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/exports",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "erp-bridges",
+                    "{{bridgeId}}",
+                    "exports"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n  \"bridgeId\": \"01920c20-0000-7000-8000-0000000000b1\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"period\": \"2026-09\",\n  \"currency\": \"USD\",\n  \"postingDate\": \"2026-10-03\",\n  \"companyCode\": \"AC01\",\n  \"mappingVersion\": 1,\n  \"chartVersion\": \"COA-2026.2\",\n  \"mappingDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n  \"externalRef\": \"ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n  \"journalIds\": [\n    \"01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01\"\n  ],\n  \"lineCount\": 2,\n  \"totalDebits\": \"10.00\",\n  \"totalCredits\": \"10.00\",\n  \"batchDigest\": \"zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c\",\n  \"preparedAt\": \"2026-10-02T10:00:00.000000Z\",\n  \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"status\": \"PREPARED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PREPARED\",\n      \"status\": \"PREPARED\",\n      \"recordedAt\": \"2026-10-02T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/exports",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "erp-bridges",
+                    "{{bridgeId}}",
+                    "exports"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n  \"bridgeId\": \"01920c20-0000-7000-8000-0000000000b1\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"period\": \"2026-09\",\n  \"currency\": \"USD\",\n  \"postingDate\": \"2026-10-03\",\n  \"companyCode\": \"AC01\",\n  \"mappingVersion\": 1,\n  \"chartVersion\": \"COA-2026.2\",\n  \"mappingDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n  \"externalRef\": \"ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n  \"journalIds\": [\n    \"01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01\"\n  ],\n  \"lineCount\": 2,\n  \"totalDebits\": \"10.00\",\n  \"totalCredits\": \"10.00\",\n  \"batchDigest\": \"zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c\",\n  \"preparedAt\": \"2026-10-02T10:00:00.000000Z\",\n  \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"status\": \"PREPARED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PREPARED\",\n      \"status\": \"PREPARED\",\n      \"recordedAt\": \"2026-10-02T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ],\n  \"lines\": [\n    {\n      \"journalId\": \"01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"journalLine\": 1,\n      \"account\": \"CUSTOMER_GL_BRIDGE\",\n      \"glAccount\": \"1990-00\",\n      \"side\": \"DEBIT\",\n      \"amount\": \"10.00\"\n    },\n    {\n      \"journalId\": \"01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"journalLine\": 2,\n      \"account\": \"TAX_COLLECTED_LIABILITY\",\n      \"glAccount\": \"2310-00\",\n      \"side\": \"CREDIT\",\n      \"amount\": \"10.00\",\n      \"authority\": \"US-NY-DTF\",\n      \"jurisdiction\": \"US-NY\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('prepareERPExport returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 409]);",
+                  "});",
+                  "pm.test('LED-23 — a prepared batch is sealed with its digest, or there is nothing to export', function () {",
+                  "  pm.expect([200, 201, 409]).to.include(pm.response.code);",
+                  "  if (pm.response.code !== 409) {",
+                  "    pm.expect(pm.response.json().batchDigest).to.match(/^zt1:[0-9a-f]{64}$/);",
+                  "    pm.collectionVariables.set('batchId', pm.response.json().id);",
+                  "  }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/erp-bridges/{bridgeId}/exports — The bridge's export batches and their transfer state",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/exports?period={{period}}&currency={{currency}}&status={{status}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "erp-bridges",
+                "{{bridgeId}}",
+                "exports"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "{{period}}",
+                  "description": "Only batches of this legal period."
+                },
+                {
+                  "key": "currency",
+                  "value": "{{currency}}",
+                  "description": "Only batches in this currency."
+                },
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only batches in this transfer state."
+                }
+              ]
+            },
+            "description": "The bridge's export batches and their transfer state\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nA bridge's export batches, newest first, in any status, each with its\ndelivery evidence. A rejected batch carries the correction task its\nrejection opened, open until every journal it held is in a batch the\nERP has posted. Lines are omitted here; read one batch for them."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/exports",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "erp-bridges",
+                    "{{bridgeId}}",
+                    "exports"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"exports\": [\n    {\n      \"id\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n      \"bridgeId\": \"01920c20-0000-7000-8000-0000000000b1\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"period\": \"2026-09\",\n      \"currency\": \"USD\",\n      \"postingDate\": \"2026-10-03\",\n      \"companyCode\": \"AC01\",\n      \"mappingVersion\": 1,\n      \"chartVersion\": \"COA-2026.2\",\n      \"mappingDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n      \"externalRef\": \"ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n      \"journalIds\": [\n        \"01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01\"\n      ],\n      \"lineCount\": 2,\n      \"totalDebits\": \"10.00\",\n      \"totalCredits\": \"10.00\",\n      \"batchDigest\": \"zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c\",\n      \"preparedAt\": \"2026-10-02T10:00:00.000000Z\",\n      \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n      \"status\": \"ERP_POSTED\",\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"PREPARED\",\n          \"status\": \"PREPARED\",\n          \"recordedAt\": \"2026-10-02T10:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 2,\n          \"kind\": \"DISPATCHED\",\n          \"status\": \"TRANSMITTED\",\n          \"attemptId\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n          \"recordedAt\": \"2026-10-02T11:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        },\n        {\n          \"seq\": 3,\n          \"kind\": \"ACKNOWLEDGED\",\n          \"status\": \"ACKNOWLEDGED\",\n          \"attemptId\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n          \"remoteCorrelation\": \"SAP-MSG-000918\",\n          \"recordedAt\": \"2026-10-02T11:01:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 4,\n          \"kind\": \"POSTED\",\n          \"status\": \"ERP_POSTED\",\n          \"attemptId\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n          \"remoteCorrelation\": \"SAP-MSG-000918\",\n          \"erpReference\": \"AC01/2026/1900004411\",\n          \"responseDigest\": \"sha256:3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a\",\n          \"recordedAt\": \"2026-10-02T11:20:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listERPExports returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/erp-bridges/{bridgeId}/exports/{batchId} — One export batch with its lines and delivery evidence",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/exports/{{batchId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "erp-bridges",
+                "{{bridgeId}}",
+                "exports",
+                "{{batchId}}"
+              ]
+            },
+            "description": "One export batch with its lines and delivery evidence\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nThe sealed batch — journal IDs, every mapped line traced to its TCSL\njournal line, totals and digest — with every attempt and every ERP\nanswer recorded against it, and its correction task when it was\nrejected."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/exports/{{batchId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "erp-bridges",
+                    "{{bridgeId}}",
+                    "exports",
+                    "{{batchId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n  \"bridgeId\": \"01920c20-0000-7000-8000-0000000000b1\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"period\": \"2026-09\",\n  \"currency\": \"USD\",\n  \"postingDate\": \"2026-10-03\",\n  \"companyCode\": \"AC01\",\n  \"mappingVersion\": 1,\n  \"chartVersion\": \"COA-2026.2\",\n  \"mappingDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n  \"externalRef\": \"ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n  \"journalIds\": [\n    \"01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01\"\n  ],\n  \"lineCount\": 2,\n  \"totalDebits\": \"10.00\",\n  \"totalCredits\": \"10.00\",\n  \"batchDigest\": \"zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c\",\n  \"preparedAt\": \"2026-10-02T10:00:00.000000Z\",\n  \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"status\": \"REJECTED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PREPARED\",\n      \"status\": \"PREPARED\",\n      \"recordedAt\": \"2026-10-02T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"DISPATCHED\",\n      \"status\": \"TRANSMITTED\",\n      \"attemptId\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"recordedAt\": \"2026-10-02T11:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 3,\n      \"kind\": \"REJECTED\",\n      \"status\": \"REJECTED\",\n      \"attemptId\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"remoteCorrelation\": \"SAP-MSG-000918\",\n      \"detail\": \"F5 702: GL account 2310-00 is blocked for posting in company code AC01\",\n      \"recordedAt\": \"2026-10-02T11:02:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ],\n  \"correction\": {\n    \"open\": true,\n    \"openedAt\": \"2026-10-02T11:02:00.000000Z\",\n    \"reason\": \"F5 702: GL account 2310-00 is blocked for posting in company code AC01\",\n    \"outstandingJournalIds\": [\n      \"01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01\"\n    ],\n    \"postedBy\": []\n  },\n  \"lines\": [\n    {\n      \"journalId\": \"01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"journalLine\": 1,\n      \"account\": \"CUSTOMER_GL_BRIDGE\",\n      \"glAccount\": \"1990-00\",\n      \"side\": \"DEBIT\",\n      \"amount\": \"10.00\"\n    },\n    {\n      \"journalId\": \"01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"journalLine\": 2,\n      \"account\": \"TAX_COLLECTED_LIABILITY\",\n      \"glAccount\": \"2310-00\",\n      \"side\": \"CREDIT\",\n      \"amount\": \"10.00\",\n      \"authority\": \"US-NY-DTF\",\n      \"jurisdiction\": \"US-NY\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getERPExport returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/erp-bridges/{bridgeId}/exports/{batchId}/dispatch — Authorise and dispatch a sealed batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expectedDigest\": \"zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/exports/{{batchId}}/dispatch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "erp-bridges",
+                "{{bridgeId}}",
+                "exports",
+                "{{batchId}}",
+                "dispatch"
+              ]
+            },
+            "description": "Authorise and dispatch a sealed batch\n\n`OPERATOR` or `ANALYST`, signed in as themselves, and not the person who\nprepared the batch (`403 MAKER_CHECKER`).\n\nThe checker names the batch digest they reviewed (`409\nERP_BATCH_DIGEST_MISMATCH` when it is not the batch's). The dispatch is\none attempt, recorded with a `com.zoikotax.gl.export-dispatched` event\nthrough the transactional outbox in the same transaction; a connector\nsubscribed to it sends the batch under its `externalRef`, which every\nattempt shares, so the ERP posts one GL journal however many attempts\nthere are. `TRANSMITTED` means committed for transmission — not\nreceived, and not posted.\n\n**Idempotent on the batch.** A batch already transmitted, acknowledged\nor posted is returned as it is with `200` and no new attempt\n(QA-LED-069). A batch sealed under a superseded mapping version is\nrefused (`409 ERP_MAPPING_CHANGED`, QA-LED-068). A batch whose outcome\nis unknown is sent again only after a status query recorded that the\nERP holds nothing under its reference (`409 ERP_OUTCOME_UNKNOWN`). A\nrejected or withdrawn batch is never sent."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/exports/{{batchId}}/dispatch",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "erp-bridges",
+                    "{{bridgeId}}",
+                    "exports",
+                    "{{batchId}}",
+                    "dispatch"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n  \"bridgeId\": \"01920c20-0000-7000-8000-0000000000b1\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"period\": \"2026-09\",\n  \"currency\": \"USD\",\n  \"postingDate\": \"2026-10-03\",\n  \"companyCode\": \"AC01\",\n  \"mappingVersion\": 1,\n  \"chartVersion\": \"COA-2026.2\",\n  \"mappingDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n  \"externalRef\": \"ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n  \"journalIds\": [\n    \"01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01\"\n  ],\n  \"lineCount\": 2,\n  \"totalDebits\": \"10.00\",\n  \"totalCredits\": \"10.00\",\n  \"batchDigest\": \"zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c\",\n  \"preparedAt\": \"2026-10-02T10:00:00.000000Z\",\n  \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"status\": \"TRANSMITTED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PREPARED\",\n      \"status\": \"PREPARED\",\n      \"recordedAt\": \"2026-10-02T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"DISPATCHED\",\n      \"status\": \"TRANSMITTED\",\n      \"attemptId\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"recordedAt\": \"2026-10-02T11:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "202 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/exports/{{batchId}}/dispatch",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "erp-bridges",
+                    "{{bridgeId}}",
+                    "exports",
+                    "{{batchId}}",
+                    "dispatch"
+                  ]
+                }
+              },
+              "status": "202",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n  \"bridgeId\": \"01920c20-0000-7000-8000-0000000000b1\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"period\": \"2026-09\",\n  \"currency\": \"USD\",\n  \"postingDate\": \"2026-10-03\",\n  \"companyCode\": \"AC01\",\n  \"mappingVersion\": 1,\n  \"chartVersion\": \"COA-2026.2\",\n  \"mappingDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n  \"externalRef\": \"ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n  \"journalIds\": [\n    \"01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01\"\n  ],\n  \"lineCount\": 2,\n  \"totalDebits\": \"10.00\",\n  \"totalCredits\": \"10.00\",\n  \"batchDigest\": \"zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c\",\n  \"preparedAt\": \"2026-10-02T10:00:00.000000Z\",\n  \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"status\": \"TRANSMITTED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PREPARED\",\n      \"status\": \"PREPARED\",\n      \"recordedAt\": \"2026-10-02T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"DISPATCHED\",\n      \"status\": \"TRANSMITTED\",\n      \"attemptId\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"recordedAt\": \"2026-10-02T11:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('dispatchERPExport returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 202, 403, 404, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/erp-bridges/{bridgeId}/exports/{batchId}/responses — Record what the ERP answered about an attempt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kind\": \"POSTED\",\n  \"attemptId\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n  \"remoteCorrelation\": \"SAP-MSG-000918\",\n  \"erpReference\": \"AC01/2026/1900004411\",\n  \"responseDigest\": \"sha256:3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/exports/{{batchId}}/responses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "erp-bridges",
+                "{{bridgeId}}",
+                "exports",
+                "{{batchId}}",
+                "responses"
+              ]
+            },
+            "description": "Record what the ERP answered about an attempt\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nZoikoTax does not invent the ERP's answer: a person records it here with\nthe ERP's references as evidence. `ACKNOWLEDGED` is a transport receipt\nand names the ERP's `remoteCorrelation`; `POSTED` names the ERP's posted\njournal (`erpReference`) and is the only answer a GL reconciliation\ncounts. `REJECTED` says why, opens a correction task and holds the\nperiod's GL reconciliation. `OUTCOME_UNKNOWN` says why nobody knows.\n`STATUS_NOT_FOUND` records a status query, by `remoteCorrelation`, that\nfound nothing under the batch's reference — the only thing that lets a\nbatch of unknown outcome be sent again.\n\n**Idempotent on the answer**: the same answer about the same attempt\nagain records nothing and answers `200`. An answer that does not apply\nto the batch's state is `409 STATE_TRANSITION_INVALID`."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/exports/{{batchId}}/responses",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "erp-bridges",
+                    "{{bridgeId}}",
+                    "exports",
+                    "{{batchId}}",
+                    "responses"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n  \"bridgeId\": \"01920c20-0000-7000-8000-0000000000b1\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"period\": \"2026-09\",\n  \"currency\": \"USD\",\n  \"postingDate\": \"2026-10-03\",\n  \"companyCode\": \"AC01\",\n  \"mappingVersion\": 1,\n  \"chartVersion\": \"COA-2026.2\",\n  \"mappingDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n  \"externalRef\": \"ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n  \"journalIds\": [\n    \"01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01\"\n  ],\n  \"lineCount\": 2,\n  \"totalDebits\": \"10.00\",\n  \"totalCredits\": \"10.00\",\n  \"batchDigest\": \"zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c\",\n  \"preparedAt\": \"2026-10-02T10:00:00.000000Z\",\n  \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"status\": \"ERP_POSTED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PREPARED\",\n      \"status\": \"PREPARED\",\n      \"recordedAt\": \"2026-10-02T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"DISPATCHED\",\n      \"status\": \"TRANSMITTED\",\n      \"attemptId\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"recordedAt\": \"2026-10-02T11:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 3,\n      \"kind\": \"POSTED\",\n      \"status\": \"ERP_POSTED\",\n      \"attemptId\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"remoteCorrelation\": \"SAP-MSG-000918\",\n      \"erpReference\": \"AC01/2026/1900004411\",\n      \"recordedAt\": \"2026-10-02T11:20:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/exports/{{batchId}}/responses",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "erp-bridges",
+                    "{{bridgeId}}",
+                    "exports",
+                    "{{batchId}}",
+                    "responses"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n  \"bridgeId\": \"01920c20-0000-7000-8000-0000000000b1\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"period\": \"2026-09\",\n  \"currency\": \"USD\",\n  \"postingDate\": \"2026-10-03\",\n  \"companyCode\": \"AC01\",\n  \"mappingVersion\": 1,\n  \"chartVersion\": \"COA-2026.2\",\n  \"mappingDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n  \"externalRef\": \"ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n  \"journalIds\": [\n    \"01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01\"\n  ],\n  \"lineCount\": 2,\n  \"totalDebits\": \"10.00\",\n  \"totalCredits\": \"10.00\",\n  \"batchDigest\": \"zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c\",\n  \"preparedAt\": \"2026-10-02T10:00:00.000000Z\",\n  \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"status\": \"ERP_POSTED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PREPARED\",\n      \"status\": \"PREPARED\",\n      \"recordedAt\": \"2026-10-02T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"DISPATCHED\",\n      \"status\": \"TRANSMITTED\",\n      \"attemptId\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"recordedAt\": \"2026-10-02T11:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 3,\n      \"kind\": \"POSTED\",\n      \"status\": \"ERP_POSTED\",\n      \"attemptId\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"remoteCorrelation\": \"SAP-MSG-000918\",\n      \"erpReference\": \"AC01/2026/1900004411\",\n      \"responseDigest\": \"sha256:3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a\",\n      \"recordedAt\": \"2026-10-02T11:20:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordERPResponse returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/erp-bridges/{bridgeId}/exports/{batchId}/withdrawal — Withdraw a prepared batch that was never dispatched",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Mapping version 2 moves the bridge clearing account; re-prepare under it\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/exports/{{batchId}}/withdrawal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "erp-bridges",
+                "{{bridgeId}}",
+                "exports",
+                "{{batchId}}",
+                "withdrawal"
+              ]
+            },
+            "description": "Withdraw a prepared batch that was never dispatched\n\n`OPERATOR`, signed in as themselves.\n\nReleases a `PREPARED` batch, with the reason, so its journals can be\nprepared again — after a mapping change, say. The batch and its digest\nstay on record. Only a batch never dispatched is withdrawn (`409\nSTATE_TRANSITION_INVALID`)."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/exports/{{batchId}}/withdrawal",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "erp-bridges",
+                    "{{bridgeId}}",
+                    "exports",
+                    "{{batchId}}",
+                    "withdrawal"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n  \"bridgeId\": \"01920c20-0000-7000-8000-0000000000b1\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"period\": \"2026-09\",\n  \"currency\": \"USD\",\n  \"postingDate\": \"2026-10-03\",\n  \"companyCode\": \"AC01\",\n  \"mappingVersion\": 1,\n  \"chartVersion\": \"COA-2026.2\",\n  \"mappingDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n  \"externalRef\": \"ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10\",\n  \"journalIds\": [\n    \"01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01\"\n  ],\n  \"lineCount\": 2,\n  \"totalDebits\": \"10.00\",\n  \"totalCredits\": \"10.00\",\n  \"batchDigest\": \"zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c\",\n  \"preparedAt\": \"2026-10-02T10:00:00.000000Z\",\n  \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"status\": \"WITHDRAWN\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PREPARED\",\n      \"status\": \"PREPARED\",\n      \"recordedAt\": \"2026-10-02T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"WITHDRAWN\",\n      \"status\": \"WITHDRAWN\",\n      \"detail\": \"Mapping version 2 moves the bridge clearing account; re-prepare under it\",\n      \"recordedAt\": \"2026-10-02T10:30:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('withdrawERPExport returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/erp-bridges/{bridgeId}/gl-balances — Record the GL balances an ERP reported for a period",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"period\": \"2026-09\",\n  \"currency\": \"USD\",\n  \"asOf\": \"2026-10-05T18:00:00.000000Z\",\n  \"sourceRef\": \"SAP FAGLB03 AC01 2026/09\",\n  \"balances\": [\n    {\n      \"glAccount\": \"1990-00\",\n      \"debits\": \"10.00\",\n      \"credits\": \"0.00\"\n    },\n    {\n      \"glAccount\": \"2310-00\",\n      \"debits\": \"0.00\",\n      \"credits\": \"10.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/gl-balances",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "erp-bridges",
+                "{{bridgeId}}",
+                "gl-balances"
+              ]
+            },
+            "description": "Record the GL balances an ERP reported for a period\n\n`OPERATOR`, signed in as themselves.\n\nThe period's activity on each GL account in one currency, debits and\ncredits apart, as the ERP reported it, with the report it came from\n(`sourceRef`, and `sourceDigest` when the report is kept as a file).\nAmounts are canonical, non-negative decimal strings; the side carries\ndirection. ZoikoTax reads no ERP itself — these figures are the ERP's,\nrecorded as evidence, and a reconciliation compares them with the\nsubledger."
+          },
+          "response": [
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/gl-balances",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "erp-bridges",
+                    "{{bridgeId}}",
+                    "gl-balances"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e30\",\n  \"bridgeId\": \"01920c20-0000-7000-8000-0000000000b1\",\n  \"period\": \"2026-09\",\n  \"currency\": \"USD\",\n  \"asOf\": \"2026-10-05T18:00:00.000000Z\",\n  \"sourceRef\": \"SAP FAGLB03 AC01 2026/09\",\n  \"digest\": \"zt1:1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a8c0e1b3d5f7a9c2e4b6d8f0a1c3e\",\n  \"balances\": [\n    {\n      \"glAccount\": \"1990-00\",\n      \"debits\": \"10.00\",\n      \"credits\": \"0.00\"\n    },\n    {\n      \"glAccount\": \"2310-00\",\n      \"debits\": \"0.00\",\n      \"credits\": \"10.00\"\n    }\n  ],\n  \"recordedAt\": \"2026-10-05T18:10:00.000000Z\",\n  \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordGLSnapshot returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('the ERP balances are recorded with their digest', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().digest).to.match(/^zt1:[0-9a-f]{64}$/);",
+                  "});",
+                  "pm.collectionVariables.set('snapshotId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/erp-bridges/{bridgeId}/gl-balances — The GL balances the ERP reported",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/gl-balances?period={{period}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "erp-bridges",
+                "{{bridgeId}}",
+                "gl-balances"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "{{period}}",
+                  "description": "Only snapshots of this legal period."
+                }
+              ]
+            },
+            "description": "The GL balances the ERP reported\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nEvery GL balance snapshot recorded for the bridge, newest first, each\nwith the ERP report it came from and its digest."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/gl-balances",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "erp-bridges",
+                    "{{bridgeId}}",
+                    "gl-balances"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"snapshots\": [\n    {\n      \"id\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e30\",\n      \"bridgeId\": \"01920c20-0000-7000-8000-0000000000b1\",\n      \"period\": \"2026-09\",\n      \"currency\": \"USD\",\n      \"asOf\": \"2026-10-05T18:00:00.000000Z\",\n      \"sourceRef\": \"SAP FAGLB03 AC01 2026/09\",\n      \"digest\": \"zt1:1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a8c0e1b3d5f7a9c2e4b6d8f0a1c3e\",\n      \"balances\": [\n        {\n          \"glAccount\": \"1990-00\",\n          \"debits\": \"10.00\",\n          \"credits\": \"0.00\"\n        },\n        {\n          \"glAccount\": \"2310-00\",\n          \"debits\": \"0.00\",\n          \"credits\": \"10.00\"\n        }\n      ],\n      \"recordedAt\": \"2026-10-05T18:10:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listGLSnapshots returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/erp-bridges/{bridgeId}/gl-reconciliations — Reconcile the subledger with an ERP's GL balances",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"snapshotId\": \"{{snapshotId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/gl-reconciliations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "erp-bridges",
+                "{{bridgeId}}",
+                "gl-reconciliations"
+              ]
+            },
+            "description": "Reconcile the subledger with an ERP's GL balances\n\n`OPERATOR`.\n\nCompares one GL snapshot, account by account, with what the subledger's\njournals of the bridge's legal entity, the snapshot's period and\ncurrency put on the TCSL accounts the bridge's current mapping maps to\neach GL account. Every item keeps its exact variance (observed −\nexpected, net debit) whatever it is; there is no tolerance. A GL account\nthe ERP reported and nothing maps to, a mapped account the ERP did not\nreport, and a TCSL account with no mapping are each items of their own.\n\n`HELD` while any of the period's journals is not in a batch the ERP has\nposted — unexported, awaiting dispatch or posting, of unknown outcome,\nor rejected with its correction open — and never reported reconciled\nwhile it is. A variance is cleared by fixing the source and running a\nnew reconciliation over a new snapshot, not by a note."
+          },
+          "response": [
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/gl-reconciliations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "erp-bridges",
+                    "{{bridgeId}}",
+                    "gl-reconciliations"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e40\",\n  \"bridgeId\": \"01920c20-0000-7000-8000-0000000000b1\",\n  \"snapshotId\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e30\",\n  \"snapshotDigest\": \"zt1:1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a8c0e1b3d5f7a9c2e4b6d8f0a1c3e\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"period\": \"2026-09\",\n  \"currency\": \"USD\",\n  \"mappingVersion\": 1,\n  \"outcome\": \"HELD\",\n  \"holds\": [\n    {\n      \"reason\": \"REJECTED_CORRECTION_OPEN\",\n      \"journals\": 1\n    }\n  ],\n  \"journalCount\": 2,\n  \"postedJournalCount\": 1,\n  \"populationDigest\": \"zt1:7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d\",\n  \"exceptionCount\": 2,\n  \"ranAt\": \"2026-10-05T18:15:00.000000Z\",\n  \"ranBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"items\": [\n    {\n      \"matchKey\": \"gl:1990-00\",\n      \"glAccount\": \"1990-00\",\n      \"tcslAccounts\": [\n        \"CUSTOMER_GL_BRIDGE\"\n      ],\n      \"expected\": {\n        \"amount\": \"17.50\",\n        \"currency\": \"USD\"\n      },\n      \"observed\": {\n        \"amount\": \"10.00\",\n        \"currency\": \"USD\"\n      },\n      \"variance\": {\n        \"amount\": \"-7.50\",\n        \"currency\": \"USD\"\n      },\n      \"status\": \"PARTIAL\"\n    },\n    {\n      \"matchKey\": \"gl:2310-00\",\n      \"glAccount\": \"2310-00\",\n      \"tcslAccounts\": [\n        \"TAX_COLLECTED_LIABILITY\"\n      ],\n      \"expected\": {\n        \"amount\": \"-17.50\",\n        \"currency\": \"USD\"\n      },\n      \"observed\": {\n        \"amount\": \"-10.00\",\n        \"currency\": \"USD\"\n      },\n      \"variance\": {\n        \"amount\": \"7.50\",\n        \"currency\": \"USD\"\n      },\n      \"status\": \"PARTIAL\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('runGLReconciliation returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/erp-bridges/{bridgeId}/gl-reconciliations — The subledger-to-GL reconciliations (R6)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/gl-reconciliations?period={{period}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "erp-bridges",
+                "{{bridgeId}}",
+                "gl-reconciliations"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "{{period}}",
+                  "description": "Only reconciliations of this legal period."
+                }
+              ]
+            },
+            "description": "The subledger-to-GL reconciliations (R6)\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nEvery GL reconciliation run on the bridge, newest first, with its items\nand exact variances. Each is a record: a later run is a new one."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/erp-bridges/{{bridgeId}}/gl-reconciliations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "erp-bridges",
+                    "{{bridgeId}}",
+                    "gl-reconciliations"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"reconciliations\": [\n    {\n      \"id\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e40\",\n      \"bridgeId\": \"01920c20-0000-7000-8000-0000000000b1\",\n      \"snapshotId\": \"01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e30\",\n      \"snapshotDigest\": \"zt1:1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a8c0e1b3d5f7a9c2e4b6d8f0a1c3e\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"period\": \"2026-09\",\n      \"currency\": \"USD\",\n      \"mappingVersion\": 1,\n      \"outcome\": \"RECONCILED\",\n      \"holds\": [],\n      \"journalCount\": 1,\n      \"postedJournalCount\": 1,\n      \"populationDigest\": \"zt1:7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d\",\n      \"exceptionCount\": 0,\n      \"ranAt\": \"2026-10-05T18:15:00.000000Z\",\n      \"ranBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n      \"items\": [\n        {\n          \"matchKey\": \"gl:1990-00\",\n          \"glAccount\": \"1990-00\",\n          \"tcslAccounts\": [\n            \"CUSTOMER_GL_BRIDGE\"\n          ],\n          \"expected\": {\n            \"amount\": \"10.00\",\n            \"currency\": \"USD\"\n          },\n          \"observed\": {\n            \"amount\": \"10.00\",\n            \"currency\": \"USD\"\n          },\n          \"variance\": {\n            \"amount\": \"0.00\",\n            \"currency\": \"USD\"\n          },\n          \"status\": \"MATCHED\"\n        },\n        {\n          \"matchKey\": \"gl:2310-00\",\n          \"glAccount\": \"2310-00\",\n          \"tcslAccounts\": [\n            \"TAX_COLLECTED_LIABILITY\"\n          ],\n          \"expected\": {\n            \"amount\": \"-10.00\",\n            \"currency\": \"USD\"\n          },\n          \"observed\": {\n            \"amount\": \"-10.00\",\n            \"currency\": \"USD\"\n          },\n          \"variance\": {\n            \"amount\": \"0.00\",\n            \"currency\": \"USD\"\n          },\n          \"status\": \"MATCHED\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listGLReconciliations returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "POST /v1/shadow/comparators — Record a comparator profile",
           "request": {
             "method": "POST",
@@ -12483,6 +13641,26 @@
       "type": "string"
     },
     {
+      "key": "bridgeId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "batchId",
+      "value": "00000000-0000-7000-8000-000000000000",
+      "type": "string"
+    },
+    {
+      "key": "snapshotId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "currency",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "webhookId",
       "value": "",
       "type": "string"
@@ -12589,7 +13767,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:25dc95ef25b2b622c8740ddac58a36ab5a32617989d2515240b1107b781e15bb",
+      "value": "sha256:5d7c44c936673209c4b30649335967d8f98308836eace11647488a73db8ddd9c",
       "type": "string"
     }
   ]

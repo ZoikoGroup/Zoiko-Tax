@@ -54,6 +54,7 @@ func Events() []EventSpec {
 		{EventRefundRequested, SchemaRefundRequestedRef},
 		{EventRefundStatusChanged, SchemaRefundStatusChangedRef},
 		{EventDocumentCommitted, SchemaDocumentCommittedRef},
+		{EventGLExportDispatched, SchemaGLExportDispatchedRef},
 	}
 }
 

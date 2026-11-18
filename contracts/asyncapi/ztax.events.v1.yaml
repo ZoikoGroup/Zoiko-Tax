@@ -92,6 +92,7 @@ channels:
       refundRequested: { $ref: "#/components/messages/refundRequested" }
       refundStatusChanged: { $ref: "#/components/messages/refundStatusChanged" }
       documentCommitted: { $ref: "#/components/messages/documentCommitted" }
+      glExportDispatched: { $ref: "#/components/messages/glExportDispatched" }
 
 operations:
   receiveCellEvents:
@@ -106,6 +107,7 @@ operations:
       - $ref: "#/channels/cellEvents/messages/refundRequested"
       - $ref: "#/channels/cellEvents/messages/refundStatusChanged"
       - $ref: "#/channels/cellEvents/messages/documentCommitted"
+      - $ref: "#/channels/cellEvents/messages/glExportDispatched"
 
 components:
   messageTraits:
@@ -201,3 +203,12 @@ components:
       payload:
         schemaFormat: application/schema+json;version=draft-2020-12
         schema: { $ref: "../schemas/events/document-committed.schema.json" }
+
+    glExportDispatched:
+      name: com.zoikotax.gl.export-dispatched
+      title: GL export dispatched
+      summary: An ERP export batch was authorised and dispatched, one attempt. Dispatched is not posted. Read the batch from GET /v1/erp-bridges/{bridgeId}/exports/{batchId} and send it under its externalRef.
+      traits: [{ $ref: "#/components/messageTraits/cloudEvent" }]
+      payload:
+        schemaFormat: application/schema+json;version=draft-2020-12
+        schema: { $ref: "../schemas/events/gl-export-dispatched.schema.json" }

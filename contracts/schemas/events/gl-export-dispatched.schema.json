@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GLExportDispatched",
+  "description": "An ERP export batch was authorised and dispatched: one attempt (LED-23). Emitted in the transaction that recorded the attempt, through the transactional outbox. Dispatched is not received and not posted: the ERP's receipt and posting are recorded separately, with the ERP's references. Every attempt of a batch carries the same externalRef and batchDigest, and a connector must send it under that reference so the ERP posts one GL journal however many attempts there are. Thin: no amount; read the batch's lines from GET /v1/erp-bridges/{bridgeId}/exports/{batchId}.",
+  "$comment": "Producer: backend/internal/app/erp.go (emitDispatch). Event type com.zoikotax.gl.export-dispatched; schema ref ztax:events/gl-export-dispatched/1.0.0. Partition key erp-export/<batchId>, so a batch's attempts arrive in order.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "batchId",
+    "bridgeId",
+    "attemptId",
+    "attempt",
+    "externalRef",
+    "batchDigest",
+    "vendor",
+    "companyCode",
+    "legalEntityId",
+    "period",
+    "currency",
+    "postingDate",
+    "mappingVersion",
+    "journalCount",
+    "dispatchedAt"
+  ],
+  "properties": {
+    "batchId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "bridgeId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "attemptId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "externalRef": {
+      "type": "string",
+      "pattern": "^ztax-erp-export:[0-9a-f-]{36}$"
+    },
+    "batchDigest": {
+      "type": "string",
+      "pattern": "^zt1:[0-9a-f]{64}$"
+    },
+    "vendor": {
+      "enum": [
+        "SAP",
+        "ORACLE",
+        "NETSUITE",
+        "DYNAMICS",
+        "OTHER"
+      ]
+    },
+    "companyCode": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "legalEntityId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "period": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "postingDate": {
+      "type": "string",
+      "format": "date"
+    },
+    "mappingVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "journalCount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "dispatchedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

@@ -18,6 +18,7 @@ import { ContributionsPage } from './pages/ContributionsPage'
 import { ContentPage } from './pages/ContentPage'
 import { DeterminePage } from './pages/DeterminePage'
 import { DocumentsPage } from './pages/DocumentsPage'
+import { ErpReconciliationPage } from './pages/ErpReconciliationPage'
 import { EvidencePage } from './pages/EvidencePage'
 import { IntelligencePage } from './pages/IntelligencePage'
 import { LocationsPage } from './pages/LocationsPage'
@@ -199,6 +200,8 @@ export function App() {
             return <ContributionsPage {...page} />
           case 'notices':
             return <RegulatoryNoticesPage {...page} />
+          case 'erp-reconciliation':
+            return <ErpReconciliationPage {...page} />
           case 'dashboard':
             return <HomePage {...page} capabilities={capabilities} />
         }

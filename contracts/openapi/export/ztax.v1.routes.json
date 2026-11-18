@@ -297,6 +297,84 @@
     },
     {
       "method": "GET",
+      "path": "/v1/erp-bridges",
+      "operationId": "listERPBridges",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/erp-bridges",
+      "operationId": "createERPBridge",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/erp-bridges/{bridgeId}/exports",
+      "operationId": "listERPExports",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/erp-bridges/{bridgeId}/exports",
+      "operationId": "prepareERPExport",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/erp-bridges/{bridgeId}/exports/{batchId}",
+      "operationId": "getERPExport",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/erp-bridges/{bridgeId}/exports/{batchId}/dispatch",
+      "operationId": "dispatchERPExport",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/erp-bridges/{bridgeId}/exports/{batchId}/responses",
+      "operationId": "recordERPResponse",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/erp-bridges/{bridgeId}/exports/{batchId}/withdrawal",
+      "operationId": "withdrawERPExport",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/erp-bridges/{bridgeId}/gl-balances",
+      "operationId": "listGLSnapshots",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/erp-bridges/{bridgeId}/gl-balances",
+      "operationId": "recordGLSnapshot",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/erp-bridges/{bridgeId}/gl-reconciliations",
+      "operationId": "listGLReconciliations",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/erp-bridges/{bridgeId}/gl-reconciliations",
+      "operationId": "runGLReconciliation",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/erp-bridges/{bridgeId}/mappings",
+      "operationId": "recordERPMapping",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/jobs",
       "operationId": "listJobs",
       "public": false
