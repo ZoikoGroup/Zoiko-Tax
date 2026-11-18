@@ -1,23 +1,14 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 import type { S } from '@zoikotax/sdk'
 
 import { ztax } from '../platform/client'
-import { Card, Columns, ErrorNote, Field, Id, PageHeader, Submit, useAction } from '../ui/kit'
+import { Card, Columns, Field, Id, PageHeader, Submit, useAction } from '../ui/kit'
+import { viewOfProposal, viewOfWaiting, type ProposalView } from './intelligence/viewOfProposal'
 import type { PageProps } from './types'
 import './obligations.css'
 
 type Proposal = S<'ClassificationProposal'>
-
-/** Why the AI plane could not help, said plainly. The item goes to a person either way. */
-const reviewReasons: Record<string, string> = {
-  AI_GATEWAY_NOT_CONFIGURED:
-    'AI assistance is not available here: no approved AI provider is connected.',
-  AI_GATEWAY_UNAVAILABLE: 'The AI is down or slow right now.',
-  AI_GATEWAY_REPLY_UNEVIDENCED: 'The AI answered without saying which model produced it, so the answer was discarded.',
-  AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE: 'The model proposed a code that is not an ontology node, so the proposal was discarded.',
-}
-
 
 /**
  * Four invented, public, non-personal catalog items plus one deliberately
@@ -170,16 +161,8 @@ const ReviewerPanel = ({ proposal }: { proposal: Proposal }) => {
 
 const ProposalResult = ({ proposal }: { proposal: Proposal }) => {
   const provenance = proposal.provenance
-  if (proposal.disposition !== 'PROPOSED' || provenance === undefined) {
-    const reasonText = reviewReasons[proposal.reviewReason ?? ''] ?? 'The AI could not help with this item.'
-    return (
-      <div className="ztax-stepper">
-        <p className="ztax-note">
-          {reasonText} Deterministic processing is unaffected. No AI output is shown and nothing was changed.
-        </p>
-        <p className="ztax-note">There is no AI proposal to review. Classify the item by hand.</p>
-      </div>
-    )
+  if (provenance === undefined) {
+    return null
   }
   return (
     <div className="ztax-stepper">
@@ -224,19 +207,49 @@ const ProposalResult = ({ proposal }: { proposal: Proposal }) => {
   )
 }
 
+/** The plain ending of a call: headline, what to do next, and how long it took. */
+const EndingBanner = ({ view }: { view: ProposalView }) => (
+  <div className="ztax-stepper" role="status" aria-live="polite">
+    <p className="ztax-note" style={{ fontWeight: 600, marginBottom: 4 }}>{view.headline}</p>
+    <p className="ztax-note" style={{ marginTop: 0 }}>{view.sentence}</p>
+    <p className="ztax-note muted" style={{ marginTop: 0 }}>{view.elapsed}</p>
+  </div>
+)
+
 export const IntelligencePage = ({ session, route }: PageProps) => {
   const canAsk = session.user.roles.some((r) => r === 'OPERATOR' || r === 'ANALYST')
   const [subjectRef, setSubjectRef] = useState('')
   // A description handed over from Home's assistant card, if any.
   const [description, setDescription] = useState(route?.draft ?? '')
   const action = useAction<Proposal>()
+  // How long the call has run (display only; the real limit is the client's own).
+  const startedAt = useRef(0)
+  const [waitedMs, setWaitedMs] = useState(0)
+  const [tookMs, setTookMs] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!action.busy) return undefined
+    const timer = setInterval(() => { setWaitedMs(Date.now() - startedAt.current) }, 1000)
+    return () => { clearInterval(timer) }
+  }, [action.busy])
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
+    startedAt.current = Date.now()
+    setWaitedMs(0)
+    setTookMs(null)
     void action.run(() => ztax.proposeClassification({ subjectRef: subjectRef.trim(), description: description.trim() }))
+      .then(() => { setTookMs(Date.now() - startedAt.current) })
   }
 
   const proposal = action.done
+  const waitingView = action.busy ? viewOfWaiting(waitedMs) : null
+  const ending = action.error !== null
+    ? { kind: 'failure' as const, error: action.error }
+    : proposal !== null
+      ? { kind: 'proposal' as const, proposal }
+      : null
+  const endView = !action.busy && tookMs !== null && ending !== null ? viewOfProposal(ending, tookMs) : null
 
   return (
     <div className="ztax-page">
@@ -297,17 +310,24 @@ export const IntelligencePage = ({ session, route }: PageProps) => {
           {canAsk ? null : (
             <p className="ztax-note">Asking for a proposal needs the Operator or Analyst role.</p>
           )}
-          {action.error === null ? null : <ErrorNote error={action.error} />}
         </Card>
 
         <Card
           title="Proposal"
-          aside={proposal === null ? undefined : <span className="ztax-advisory-badge">Advisory — never authoritative</span>}
+          aside={endView?.state === 'proposed' ? <span className="ztax-advisory-badge">Advisory — never authoritative</span> : undefined}
         >
-          {proposal === null ? (
+          {action.busy ? (
+            <>
+              <p className="ztax-empty-note" role="status" aria-live="polite">Asking the AI…</p>
+              {waitingView === null ? null : <EndingBanner view={waitingView} />}
+            </>
+          ) : endView === null ? (
             <p className="ztax-empty-note">No proposal yet. Describe an item and ask.</p>
           ) : (
-            <ProposalResult proposal={proposal} />
+            <>
+              <EndingBanner view={endView} />
+              {endView.state === 'proposed' && proposal !== null ? <ProposalResult proposal={proposal} /> : null}
+            </>
           )}
         </Card>
       </Columns>
