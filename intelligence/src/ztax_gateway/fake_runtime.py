@@ -75,6 +75,23 @@ _DEFAULTS: dict[Kind, Result] = {
     Kind.CLASSIFICATION_PROPOSAL: _DEFAULT_PROPOSAL,
 }
 
+# ---------------------------------------------------------------------------
+# Base-stack canned table — used by _runtime() in server.py when
+# ZTAX_GATEWAY_RUNTIME=fake so the base stack returns a real-looking
+# PROPOSED answer on the Intelligence screen.  The code is on the synthetic
+# approved list (config/approved_ontology.live-demo.json) and passes the Go-
+# path format check (OntologyID.Validate).  The fallback _DEFAULT_PROPOSAL
+# ("FAKE-UNCLASSIFIED") is intentionally left unchanged so all other callers
+# of FakeRuntime() — tests, the evaluation harness — keep their existing
+# default behaviour.
+# ---------------------------------------------------------------------------
+BASE_STACK_CANNED: dict[tuple[str, Kind], Result] = {
+    ("classification-review", Kind.CLASSIFICATION_PROPOSAL): Result(
+        proposed_code="ontology:telecom/voice/mobile",
+        confidence="0.9000",
+    ),
+}
+
 
 class FakeRuntime:
     """A deterministic fake ModelRuntime for development and e2e testing.

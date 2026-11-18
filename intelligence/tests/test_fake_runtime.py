@@ -18,7 +18,7 @@ import re
 
 import pytest
 
-from ztax_gateway.fake_runtime import _DEFAULTS, FakeRuntime
+from ztax_gateway.fake_runtime import _DEFAULTS, BASE_STACK_CANNED, FakeRuntime
 from ztax_gateway.provenance import AuthorityOutcome, RiskTier
 from ztax_gateway.runtime import (
     Result,
@@ -316,3 +316,157 @@ class TestFakeRuntimeWithGateway:
         import grpc
 
         assert exc_info.value.code == grpc.StatusCode.UNAVAILABLE
+
+
+# ---------------------------------------------------------------------------
+# BASE_STACK_CANNED — the canned table that _runtime() passes when
+# ZTAX_GATEWAY_RUNTIME=fake, so the base stack shows PROPOSED on the
+# Intelligence screen.
+# ---------------------------------------------------------------------------
+
+_BASE_STACK_APPROVED_CODE = "ontology:telecom/voice/mobile"
+_BASE_STACK_APPROVED_CONFIDENCE = "0.9000"
+
+
+class TestBaseStackCanned:
+    """FakeRuntime(canned=BASE_STACK_CANNED) answers the approved code for
+    classification-review; FakeRuntime() without arguments still answers the
+    unchanged FAKE-UNCLASSIFIED default.
+    """
+
+    def test_default_still_answers_fake_unclassified(self) -> None:
+        """FakeRuntime() without canned= keeps the existing default.
+
+        This assertion must stay true: other callers (harness, unit tests) rely
+        on the unmodified default.  Changing _DEFAULT_PROPOSAL would break them.
+        """
+        runtime = FakeRuntime()
+        call = _make_call(Kind.CLASSIFICATION_PROPOSAL)
+        result = runtime.run(_make_route(), call)
+        assert result.proposed_code == "FAKE-UNCLASSIFIED"
+
+    def test_base_stack_canned_answers_approved_code(self) -> None:
+        """FakeRuntime(canned=BASE_STACK_CANNED) returns the approved code for
+        classification-review/CLASSIFICATION_PROPOSAL.
+        """
+        runtime = FakeRuntime(canned=BASE_STACK_CANNED)
+        call = _make_call(Kind.CLASSIFICATION_PROPOSAL)
+        result = runtime.run(_make_route(), call)
+        assert result.proposed_code == _BASE_STACK_APPROVED_CODE
+        assert result.confidence == _BASE_STACK_APPROVED_CONFIDENCE
+
+    def test_approved_code_is_on_the_synthetic_approved_list(self) -> None:
+        """The approved code in BASE_STACK_CANNED exists in the synthetic
+        approved ontology file (config/approved_ontology.live-demo.json).
+        """
+        import json
+        from pathlib import Path
+
+        list_path = (
+            Path(__file__).parent.parent
+            / "config"
+            / "approved_ontology.live-demo.json"
+        )
+        approved_doc = json.loads(list_path.read_text(encoding="utf-8"))
+        approved_codes = {entry["code"] for entry in approved_doc["approved"]}
+        assert _BASE_STACK_APPROVED_CODE in approved_codes, (
+            f"{_BASE_STACK_APPROVED_CODE!r} is not in the synthetic approved list "
+            f"at {list_path}"
+        )
+
+    def test_approved_code_passes_ontology_format_check(self) -> None:
+        """The approved code passes the ontology: format check: must start with
+        'ontology:' and have non-empty content after the colon (mirrors the Go
+        OntologyID.Validate rule in backend/internal/domain/classification).
+        """
+        code = _BASE_STACK_APPROVED_CODE
+        assert code.startswith("ontology:"), f"{code!r} must start with 'ontology:'"
+        rest = code[len("ontology:"):]
+        assert rest, f"{code!r} names nothing after 'ontology:'"
+
+    def test_base_stack_canned_via_gateway_roundtrip(self) -> None:
+        """End-to-end: FakeRuntime(canned=BASE_STACK_CANNED) through the real
+        Gateway returns the approved code in the wire reply.
+        """
+        import json
+
+        gateway = self._make_gateway(FakeRuntime(canned=BASE_STACK_CANNED))
+        raw_reply = gateway.invoke(self._encode_call(Kind.CLASSIFICATION_PROPOSAL))
+        reply = json.loads(raw_reply)
+        assert reply["proposed_code"] == _BASE_STACK_APPROVED_CODE
+        assert _CONFIDENCE.match(reply.get("confidence", ""))
+
+    # -- helpers (mirror GatewayIntegration helpers above) -------------------
+
+    def _make_gateway(self, runtime: FakeRuntime):  # type: ignore[no-untyped-def]
+        from ztax_gateway.governance import UseCase, UseCaseRegistry
+        from ztax_gateway.runtime import RoutingTable
+        from ztax_gateway.server import Gateway
+
+        registry = UseCaseRegistry()
+        registry.register(
+            UseCase(
+                use_case_id="classification-review",
+                owner="lane-l",
+                description="Propose an ontology mapping for review",
+                max_risk_tier=RiskTier.T2,
+                max_authority=AuthorityOutcome.A1,
+                permitted_regions=frozenset({"euc1-dev-01"}),
+                permitted_data_classes=frozenset({"P0"}),
+            )
+        )
+        routes = RoutingTable({"classification-review": _ROUTE})
+        return Gateway(registry, routes, runtime, "euc1-dev-01", "ai-fake-v1")
+
+    def _encode_call(self, kind: Kind) -> bytes:
+        import base64
+        import json
+
+        payload = {
+            "kind": kind.value,
+            "governance": {
+                "tenant_id": "00000000-0000-0000-0000-000000000001",
+                "use_case": "classification-review",
+                "authority_outcome": "A1",
+                "risk_tier": "T2",
+                "region": "euc1-dev-01",
+                "data_classes": ["P0"],
+            },
+            "subject_ref": "sku:PLAN-UNL-5G",
+            "input_b64": base64.b64encode(b"test-item").decode(),
+        }
+        return json.dumps(payload).encode()
+
+
+# ---------------------------------------------------------------------------
+# Helpers shared by TestBaseStackCanned (outside the class — simple functions)
+# ---------------------------------------------------------------------------
+
+
+def _make_route() -> Route:
+    from ztax_gateway.runtime import Route
+
+    return Route(
+        model_profile="model:fake-v1",
+        provider_profile="provider:fake",
+        prompt_profile="prompt:fake-v1",
+    )
+
+
+def _make_call(kind: Kind) -> Call:
+    from ztax_gateway.provenance import AuthorityOutcome, RiskTier
+    from ztax_gateway.wire import Governance
+
+    return Call(
+        kind=kind,
+        governance=Governance(
+            tenant_id="00000000-0000-0000-0000-000000000001",
+            use_case="classification-review",
+            authority_outcome=AuthorityOutcome.A1,
+            risk_tier=RiskTier.T2,
+            region="euc1-dev-01",
+            data_classes=("P0",),
+        ),
+        subject_ref="sku:PLAN-UNL-5G",
+        input=b"test-item",
+    )
