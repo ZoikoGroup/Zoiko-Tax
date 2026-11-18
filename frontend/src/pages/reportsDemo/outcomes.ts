@@ -53,7 +53,7 @@ const HEADLINES: Readonly<Record<ViewKind, string>> = {
   not_configured: 'Not configured',
   needs_review: 'Result could not be interpreted',
   rejected: 'Request not accepted',
-  not_found: 'Route not found on the AI service',
+  not_found: 'This AI feature is not available',
   timeout: 'Taking too long',
   network: 'AI service not reachable',
   service: 'AI service could not answer',
@@ -123,7 +123,7 @@ const FAILURE_SENTENCES: Readonly<Record<FailureKind, string>> = {
   rejected:
     'The service did not accept the request. Check that both fields are filled and not too long, shorten them if needed, then press Classify.',
   not_found:
-    'The AI service does not have this route. Ask whoever runs the demo to check that the service is up to date.',
+    'This AI feature is not available on this demo. Ask whoever runs the demo to check that it is up to date.',
   timeout: `The AI service did not answer within ${String(TIMEOUT_SECONDS)} seconds. It may still finish in the background. Try again. ${ASK_A_REVIEWER} ${UNAFFECTED}`,
   network: `This page could not reach the AI service. Check that the demo service is running and that your connection works, then try again. ${UNAFFECTED}`,
   service: `The AI service reported a problem and did not answer. Try again in a moment. ${ASK_A_REVIEWER} ${UNAFFECTED}`,

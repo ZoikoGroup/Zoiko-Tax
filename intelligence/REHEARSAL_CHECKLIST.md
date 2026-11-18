@@ -98,8 +98,9 @@ curl -X POST http://127.0.0.1:18090/demo/classify \
 
 | Screen text | Meaning |
 |---|---|
-| A proposed code, a confidence value, and the provenance table | Model passed format check (`ontology:*`). Disclaimer: "whether that code is a real ontology node is not verified here" (format check only; no approved-list check on this path). |
-| Step 4 "Output checks" stopped; code `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`; steps 5-7 "Not reached" | Model's reply failed even the format check — governed boundary working as designed. |
+| "The AI suggested a code", the proposed code, a confidence line "Not calibrated", the provenance table and "took N seconds". On the base stack (fake runtime) a badge "Test runtime: not a real AI answer" shows too; with the live Groq overlay it does not. | Model passed format check (`ontology:*`). Disclaimer: "whether that code is a real ontology node is not verified here" (format check only; no approved-list check on this path). |
+| Headline "Set aside for a person to review", a plain sentence ("Classify it by hand"), "took N seconds". No code and no reason code. | Model's reply failed even the format check — governed boundary working as designed. (`AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE` is in the API response only.) |
+| After 5 seconds with no answer: "Still waiting for the AI" and "The AI is taking longer than usual." | Not a failure. The call may still finish. |
 
 *HTTP `/demo/classify` — source: `LIVE_DEMO.md §6`, `report_ai_http.py` docstring*
 
@@ -266,12 +267,13 @@ Cause a model failure, timeout (> 45 s), or format error. Options:
 
 | Path | Screen state |
 |---|---|
-| Main Intelligence page | Seven-step view stopped at step 3 "Model call". Note: "The Model Gateway is down or slow right now. Deterministic processing is unaffected." Code: `AI_GATEWAY_UNAVAILABLE`. |
-| `/demo/classify` | `{"outcome": "REFUSED", "reason_code": "AI_GATEWAY_UNAVAILABLE"}` |
+| Main Intelligence page | Headline "The AI could not be reached". Sentence: "Try again in a moment. If it keeps happening, classify the item by hand. Deterministic processing is unaffected. Nothing was changed." and "took N seconds". No reason code on the screen. |
+| `/demo/classify` (API response) | `{"outcome": "REFUSED", "reason_code": "AI_GATEWAY_UNAVAILABLE"}` |
 | Frontend classify panel | Headline: "AI service could not answer". Sentence includes "Try again in a moment." Button: "Try again". Source: `outcomes.ts` `FAILURE_SENTENCES.service`. |
 
 **Key point to show:** The UI never crashes with an unhandled exception. It degrades gracefully
-to human review (`AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`, `AI_GATEWAY_UNAVAILABLE`,
+to human review (screen: "Set aside for a person to review" or "The AI could not be reached";
+API responses and logs: `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`, `AI_GATEWAY_UNAVAILABLE`,
 `REVIEW_REQUIRED`), proving fail-closed governance. Source: `LIVE_DEMO.md §7`.
 
 ---
@@ -330,8 +332,8 @@ box is what **not** to claim.
 > pending decision D-05 and is not in this repository.
 >
 > **Confidence is not calibrated.**
-> The confidence value shown (`0.5000`) is a fixed placeholder. The model returns no probability,
-> so the number has no meaning regardless of what the page's caption says.
+> The runtime sets a fixed placeholder confidence (`0.5000`). The model returns no probability,
+> so the number has no meaning. The Intelligence page does not show it: it shows "Not calibrated".
 >
 > **The Go path has no approved-list check.**
 > On the main Intelligence page (the Go → gRPC path), the output check is format-only: the code
@@ -370,7 +372,7 @@ Fill in one row per step immediately after running it.
 | 3 — Kill switch (global) | Set `"global_kill": true`, send classify and explain | | | | |
 | 3 — Kill release | Remove kill, confirm service restores | | | | |
 | 4 — Evidence record | `docker compose logs ztax-model-gateway`; identify evidence record and check event | | | | |
-| 5 — Screen: governed fallback | Trigger `AI_GATEWAY_UNAVAILABLE`; confirm no crash | | | | |
+| 5 — Screen: governed fallback | Trigger a gateway failure (`AI_GATEWAY_UNAVAILABLE` in logs); confirm "The AI could not be reached", no crash | | | | |
 | 5 — Screen: slow service | Stand-in waits > 30 s; confirm timeout headline and "Try again" | | | | |
 | 5 — Screen: unknown result | Stand-in returns `SOMETHING_NEW`; confirm "could not be interpreted" | | | | |
 

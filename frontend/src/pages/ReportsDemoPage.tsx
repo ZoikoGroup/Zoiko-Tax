@@ -49,11 +49,8 @@ export const ReportsDemoPage = () => {
         <p className="muted" aria-live="polite">Reading…</p>
       ) : (
         <p className="ztax-error-note" role="alert">
-          The demo data service is unavailable.
-          <span className="muted">
-            {' '}Start the live-demo stack (intelligence/LIVE_DEMO.md). The service only answers a page served from
-            http://localhost:13000.
-          </span>
+          The demo data is unavailable right now.
+          <span className="muted"> Ask whoever runs the demo to start it.</span>
         </p>
       )}
       <ClassifyPanel />

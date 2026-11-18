@@ -110,6 +110,13 @@ type Reply struct {
 	// KindClassificationProposal. Confidence is a decimal string or empty.
 	ProposedCode string
 	Confidence   string
+
+	// InvocationID is the Gateway's ai_invocation_id for this call, read from
+	// the "ztax-invocation-id" trailer (grpc.go). Optional: empty means none
+	// (no trailer, or one that failed the shape check). It is not part of the
+	// wire body, is never logged, and is not copied into Provenance or the
+	// transfer record.
+	InvocationID string
 }
 
 // Transport carries a Call to the Gateway. An implementation returns an

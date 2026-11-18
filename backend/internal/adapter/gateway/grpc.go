@@ -132,7 +132,44 @@ func toWire(c Call) wireCall {
 // reply converts the wire form. The two structs have the same fields by
 // construction — TestWireStructsMatchTheCanonicalSchemas holds wireReply to
 // the schema — so this is a conversion, not a copy that could drop one.
-func (w wireReply) reply() Reply { return Reply(w) }
+func (w wireReply) reply() Reply {
+	return Reply{
+		ModelProfile: w.ModelProfile, ProviderProfile: w.ProviderProfile,
+		PromptProfile: w.PromptProfile, AiTrainVersion: w.AiTrainVersion,
+		Text: w.Text, Payload: w.Payload, Fields: w.Fields,
+		ProposedCode: w.ProposedCode, Confidence: w.Confidence,
+	}
+}
+
+// invocationKey is the trailer the Python Gateway sets on a call that left an
+// evidence record (intelligence/src/ztax_gateway/server.py INVOCATION_ID_KEY).
+const invocationKey = "ztax-invocation-id"
+
+// maxInvocationIDLen bounds the id this side will accept. The Gateway sends a
+// UUID4 hex string (32 characters); 64 leaves room without trusting anything.
+const maxInvocationIDLen = 64
+
+// invocationID returns the first value of the trailer if it is 1 to 64
+// letters, digits or dashes, and "" otherwise. A bad or missing id is never an
+// error: the call has already succeeded.
+func invocationID(trailer metadata.MD) string {
+	vals := trailer.Get(invocationKey)
+	if len(vals) == 0 {
+		return ""
+	}
+	v := vals[0]
+	if v == "" || len(v) > maxInvocationIDLen {
+		return ""
+	}
+	for i := 0; i < len(v); i++ {
+		c := v[i]
+		ok := c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '-'
+		if !ok {
+			return ""
+		}
+	}
+	return v
+}
 
 // GRPC is the Transport to a Governed Model Gateway.
 type GRPC struct {
@@ -193,9 +230,15 @@ func (g *GRPC) Invoke(ctx context.Context, call Call) (Reply, error) {
 	var trailer metadata.MD
 	err := g.conn.Invoke(ctx, Method, &req, &resp, grpc.CallContentSubtype(codecName), grpc.Trailer(&trailer))
 	if err != nil {
+		// The error path is unchanged and carries no id. The Gateway also sets
+		// the id on a BLOCK record's trailer; if it is wanted on an error later,
+		// read invocationID(trailer) here and attach it to the error. Not done
+		// now, so an error means exactly what it meant before.
 		return Reply{}, fromStatus(err, trailer)
 	}
-	return resp.reply(), nil
+	r := resp.reply()
+	r.InvocationID = invocationID(trailer)
+	return r, nil
 }
 
 // fromStatus maps a gRPC failure onto the estate taxonomy.

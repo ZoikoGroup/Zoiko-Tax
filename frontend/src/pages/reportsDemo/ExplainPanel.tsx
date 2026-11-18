@@ -1,6 +1,6 @@
 /**
- * The Explain side panel: one answer from the demo AI service, shown with the
- * same seven-step view the Intelligence page uses (its StepRow, not a copy).
+ * The Explain side panel: one answer from the demo AI service, shown with its
+ * AI label, the cited rows and the provenance table.
  *
  * The AI only ever explains; nothing here edits or computes a number. When the
  * outcome is not EXPLAINED the panel shows the reason plainly and never the
@@ -8,10 +8,8 @@
  */
 import { useEffect, useRef } from 'react'
 
-import { OUTPUT_CHECK_PASSED_LABEL, StepRow } from '../IntelligencePage'
 import '../obligations.css'
 import { CitedRows, type RegisterRow } from './CitedRows'
-import { explainSteps } from './derive'
 import type { ExplainReply, ExplainTarget, Provenance } from './model'
 
 export type PanelState =
@@ -38,8 +36,8 @@ const ProvenanceTable = ({ provenance }: { provenance: Provenance }) => (
 )
 
 const Answer = ({
-  target, reply, onCite, resolveRow,
-}: { target: ExplainTarget; reply: ExplainReply; onCite: (id: string) => void; resolveRow: (id: string) => RegisterRow | null }) => (
+  reply, onCite, resolveRow,
+}: { reply: ExplainReply; onCite: (id: string) => void; resolveRow: (id: string) => RegisterRow | null }) => (
   <>
     <p className="ztax-note rd-ai-label" role="note">{AI_LABEL}</p>
 
@@ -71,27 +69,14 @@ const Answer = ({
     ) : (
       <>
         <p className="ztax-error-note" role="status">
-          <strong>{reply.outcome.replaceAll('_', ' ')}.</strong> {reply.reason}
+          <strong>{reply.outcome.replaceAll('_', ' ')}.</strong> {reply.reason}{' '}
+          The figures on this page are deterministic and unaffected.
         </p>
         <p className="rd-check"><strong>A person should check this.</strong></p>
       </>
     )}
 
-    <h3 className="ztax-card-title" style={{ marginTop: 16 }}>Workflow</h3>
-    <div className="ztax-stepper" style={{ marginTop: 8 }}>
-      {explainSteps(target, reply).map((step) => (
-        <StepRow
-          key={step.n}
-          n={step.n}
-          title={step.title}
-          state={step.state}
-          note={step.note}
-          passedLabel={step.n === 4 ? OUTPUT_CHECK_PASSED_LABEL : 'Passed'}
-        >
-          {step.n === 7 && reply.provenance !== null ? <ProvenanceTable provenance={reply.provenance} /> : null}
-        </StepRow>
-      ))}
-    </div>
+    {reply.provenance !== null ? <ProvenanceTable provenance={reply.provenance} /> : null}
   </>
 )
 
@@ -145,15 +130,15 @@ export const ExplainPanel = ({
         <button type="button" className="ztax-btn-quiet" onClick={onClose}>Close</button>
       </div>
 
-      {state.status === 'loading' ? <p className="rd-muted">Asking the demo AI service…</p> : null}
+      {state.status === 'loading' ? <p className="rd-muted">Asking the AI for an explanation…</p> : null}
 
       {state.status === 'unavailable' ? (
         <p className="ztax-error-note" role="alert">
-          The AI service is unavailable. The figures on this page are deterministic and unaffected.
+          The AI explanation is unavailable right now. The figures on this page are deterministic and unaffected.
         </p>
       ) : null}
 
-      {state.status === 'done' ? <Answer target={state.target} reply={state.reply} onCite={onCite} resolveRow={resolveRow} /> : null}
+      {state.status === 'done' ? <Answer reply={state.reply} onCite={onCite} resolveRow={resolveRow} /> : null}
     </aside>
   )
 }

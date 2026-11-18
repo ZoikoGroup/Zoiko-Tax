@@ -76,10 +76,10 @@ describe('texts (outcomes.ts)', () => {
     assert.match(v.sentence, /AI model is not set up/)
   })
 
-  test('a missing route says so, offers no retry and sends the person to whoever runs the demo', () => {
+  test('a missing feature says so, offers no retry and sends the person to whoever runs the demo', () => {
     const v = viewOfFailure('not_found')
-    assert.equal(v.headline, 'Route not found on the AI service')
-    assert.equal(v.sentence, 'The AI service does not have this route. Ask whoever runs the demo to check that the service is up to date.')
+    assert.equal(v.headline, 'This AI feature is not available')
+    assert.equal(v.sentence, 'This AI feature is not available on this demo. Ask whoever runs the demo to check that it is up to date.')
     assert.equal(v.canRetry, false)
   })
 

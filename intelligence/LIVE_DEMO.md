@@ -49,8 +49,12 @@ to the Model Gateway and, this time, on to Groq).
 ### What to expect
 
 - **A proposal**: if the model's reply passes the output check, the page
-  shows a proposed code, a confidence value, and the provenance table (use
-  case, model profile, provider profile, prompt profile, AI train). On this
+  says "The AI suggested a code" and shows the proposed code, a confidence
+  line that reads "Not calibrated", the provenance table (use
+  case, model profile, provider profile, prompt profile, AI train) and
+  "took N seconds". On the base stack (fake runtime) it also shows the badge
+  "Test runtime: not a real AI answer"; with this Groq overlay it does not.
+  On this
   main Intelligence page (the Go-to-gRPC path), the output check is
   **format-only**: the code must start with `ontology:` and name something
   after it; it does **not** check that the code is on an approved list (the Go
@@ -61,25 +65,31 @@ to the Model Gateway and, this time, on to Groq).
   below (`POST /demo/classify`).
 - **A review-required result**: unlike the fake runtime (which always
   returns a valid placeholder code), a real, unconstrained model's free-text
-  answer can fail even that format check. The page then shows its seven-step
-  view stopped at step 4, **Output checks**, with the note "The model
-  proposed a code that is not an ontology node, so the proposal was
-  discarded. Deterministic processing is unaffected." and the code
-  `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`; steps 5-7 read "Not reached". This is
-  the governed boundary working as designed
-  (`backend/internal/app/classification.go`), not a bug in the demo.
-- A provider failure, a timeout, or a malformed reply stops the same view at
-  step 3, **Model call**, with "The Model Gateway is down or slow right now.
-  Deterministic processing is unaffected." and `AI_GATEWAY_UNAVAILABLE`,
-  rather than an error page -- the governed path degrades to review, it does
-  not crash.
+  answer can fail even that format check. The page then ends in the headline
+  "Set aside for a person to review", with the sentence "The AI did not give a
+  usable suggestion for this item. Classify it by hand. Deterministic
+  processing is unaffected. Nothing was changed." and "took N seconds". No code
+  and no reason code is shown. This is the governed boundary working as
+  designed (`backend/internal/app/classification.go`), not a bug in the demo.
+  (The reason, `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`, is in the API response
+  only, not on the screen.)
+- A provider failure, a timeout, or a malformed reply ends the page in the
+  headline "The AI could not be reached", with the sentence "Try again in a
+  moment. If it keeps happening, classify the item by hand. Deterministic
+  processing is unaffected. Nothing was changed." and "took N seconds", rather
+  than an error page -- the governed path degrades to review, it does not
+  crash. (`AI_GATEWAY_UNAVAILABLE` is in the API response and gateway logs
+  only, not on the screen.) If the AI has not answered after 5 seconds, the
+  page first shows "Still waiting for the AI" with "The AI is taking longer
+  than usual.".
 - **Time and concurrency limits**: the demo Gateway gives up on a model call
   after 45 seconds, and at most 8 model calls run at once. A call that hits
   either limit is refused with "model runtime unavailable" and one evidence
-  record, and the screen shows the same review-required view as above.
+  record, and the screen ends in "The AI could not be reached", as above.
 - **Confidence is a fixed placeholder** (`0.5000`, set in
   `groq_demo_runtime.py`). Groq returns no probability, so the number is not
-  the model's score and means nothing, whatever the page's caption says.
+  the model's score and means nothing. The Intelligence page does not show it:
+  it shows "Not calibrated".
 
 ## 4. Stop the demo
 
@@ -335,7 +345,7 @@ This script maps the five demonstration capabilities to what is operational in t
 | **2. Explain** | Open Reports (demo) page and click Explain on any row. | `report_ai_http.py` (`POST /demo/explain`) runs `explanation_guard`. Checks model reply against cited row IDs, numbers, and statuses; returns `EXPLAINED` or `ABSTAINED`. |
 | **3. Kill switch** | Edit `intelligence/config/registry.live-demo.json` in place to add a use case to `"killed"` or set `"global_kill": true`. | Python gateway re-reads flags on the next request without container restart (`Gateway._refresh_kill_state`). Call is immediately refused with `KILL_SWITCH_ENGAGED` / `REVIEW_REQUIRED` (explain route). The classify route answers `REFUSED` with `AI_KILL_SWITCH_ENGAGED`. |
 | **4. Evidence & events** | Inspect container logs (`docker compose logs ztax-model-gateway`). | Every model invocation seals a tamper-evident `PROPOSE` record (`ztax_gateway.evidence`) with prompt hash, latency, and token metrics (`UsageMetrics`, with `prompt_tokens` and `completion_tokens` captured from hosted providers; zero when unreported). `TokenPricing` calculates cost in USD with price caps. Answer checks append a linked `AnswerCheckedEvent` naming the invocation ID. |
-| **5. Governed fallback** | Cause a model failure, timeout (>45s), or format error. | The UI never crashes with an unhandled exception. It degrades gracefully to human review (`AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`, `AI_GATEWAY_UNAVAILABLE`, `REVIEW_REQUIRED`), proving fail-closed governance. The classify route answers `REFUSED` with `AI_GATEWAY_UNAVAILABLE`. Release gates run the full 21-case adversarial suite (`ADV-001` through `ADV-021`) by default. |
+| **5. Governed fallback** | Cause a model failure, timeout (>45s), or format error. | The UI never crashes with an unhandled exception. It degrades gracefully to human review (screen: "Set aside for a person to review" or "The AI could not be reached"; in API responses and logs: `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`, `AI_GATEWAY_UNAVAILABLE`, `REVIEW_REQUIRED`), proving fail-closed governance. The classify route answers `REFUSED` with `AI_GATEWAY_UNAVAILABLE`. Release gates run the full 21-case adversarial suite (`ADV-001` through `ADV-021`) by default. |
 
 ## Fallback: no frontend, no Docker
 
