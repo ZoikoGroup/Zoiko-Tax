@@ -112,6 +112,8 @@ tags:
     description: Regulatory workpapers — a legal filer's tax or regulatory base for one duty and period, assembled deterministically from the provider contribution ledger and the subledger, reconciled to control totals, with evidence-linked adjustments and resolutions, a frozen source snapshot and a two-person approval.
   - name: registrations
     description: Legal-entity registrations and exemption certificates held as evidence (Engineering Doc 17). Records, authority checks a person attests, four-eyed activation and approval on an exact version, and expiry. Evidence only — neither changes a tax result.
+  - name: erp
+    description: The ERP journal bridge — sealed export batches of posted subledger journals, mapped onto the customer's chart of accounts, dispatched through the transactional outbox, with transport receipt kept apart from GL posting — and the subledger-to-GL reconciliation (R6). ZoikoTax is not the customer's general ledger and connects to no real ERP here; the ERP's answers and balances are recorded with their evidence.
   - name: shadow
     description: Shadow assurance — another engine's results compared with ZoikoTax's decisions, component by component. Non-impact; matching a comparator is not verified correctness.
   - name: migration
@@ -8613,6 +8615,1271 @@ paths:
           $ref: "#/components/responses/Internal"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/erp-bridges:
+    get:
+      operationId: listERPBridges
+      tags:
+        - erp
+      summary: The ERP journal bridges
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        Every bridge from a member legal entity's Tax Control Subledger to a
+        customer general ledger, oldest first, each with its account mapping
+        versions. The bridge is vendor-agnostic; the vendor names the connector
+        that consumes a dispatch, and no real ERP is connected by this cell.
+      responses:
+        "200":
+          description: The bridges.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ERPBridgeList"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    bridges:
+                      - id: 01920c20-0000-7000-8000-0000000000b1
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        name: Acme Telecom — SAP S/4HANA
+                        vendor: SAP
+                        companyCode: AC01
+                        createdAt: 2026-10-01T09:00:00.000000Z
+                        createdBy: 01920a4c-0000-7000-8000-0000000000a1
+                        currentMappingVersion: 1
+                        mappings:
+                          - version: 1
+                            chartVersion: COA-2026.2
+                            digest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                            recordedAt: 2026-10-01T09:05:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                            accounts:
+                              - account: TAX_COLLECTED_LIABILITY
+                                glAccount: 2310-00
+                              - account: CUSTOMER_GL_BRIDGE
+                                glAccount: 1990-00
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: createERPBridge
+      tags:
+        - erp
+      summary: Connect a legal entity's subledger to a customer general ledger
+      description: |
+        `OPERATOR`, signed in as themselves.
+
+        Records a bridge under the entity's ERP company code. The member legal
+        entity defaults to the tenant's default entity. A bridge exports nothing
+        until an account mapping is recorded for it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ERPBridgeRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  name: Acme Telecom — SAP S/4HANA
+                  vendor: SAP
+                  companyCode: AC01
+      responses:
+        "201":
+          description: The bridge, recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ERPBridge"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c20-0000-7000-8000-0000000000b1
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    name: Acme Telecom — SAP S/4HANA
+                    vendor: SAP
+                    companyCode: AC01
+                    createdAt: 2026-10-01T09:00:00.000000Z
+                    createdBy: 01920a4c-0000-7000-8000-0000000000a1
+                    mappings: []
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/erp-bridges/{bridgeId}/mappings:
+    post:
+      operationId: recordERPMapping
+      tags:
+        - erp
+      summary: Record the bridge's next account mapping version
+      description: |
+        `OPERATOR`, signed in as themselves.
+
+        Maps TCSL control accounts onto the customer's GL accounts under a named
+        chart-of-accounts version (ZTAX-FIN-REQ-0051). A version is never
+        edited: a change is the next version, and a batch sealed under an
+        earlier version is no longer dispatched (`409 ERP_MAPPING_CHANGED`,
+        QA-LED-068). A mapping identical to the current one records nothing and
+        answers `200` with the bridge as it is.
+      parameters:
+        - $ref: "#/components/parameters/ERPBridgeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ERPMappingRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  chartVersion: COA-2026.2
+                  accounts:
+                    - account: TAX_COLLECTED_LIABILITY
+                      glAccount: 2310-00
+                    - account: CUSTOMER_GL_BRIDGE
+                      glAccount: 1990-00
+      responses:
+        "200":
+          description: The mapping is the current one already; nothing was recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ERPBridge"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c20-0000-7000-8000-0000000000b1
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    name: Acme Telecom — SAP S/4HANA
+                    vendor: SAP
+                    companyCode: AC01
+                    createdAt: 2026-10-01T09:00:00.000000Z
+                    createdBy: 01920a4c-0000-7000-8000-0000000000a1
+                    currentMappingVersion: 1
+                    mappings:
+                      - version: 1
+                        chartVersion: COA-2026.2
+                        digest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                        recordedAt: 2026-10-01T09:05:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                        accounts:
+                          - account: CUSTOMER_GL_BRIDGE
+                            glAccount: 1990-00
+                          - account: TAX_COLLECTED_LIABILITY
+                            glAccount: 2310-00
+        "201":
+          description: The bridge, with the new mapping version current.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ERPBridge"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c20-0000-7000-8000-0000000000b1
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    name: Acme Telecom — SAP S/4HANA
+                    vendor: SAP
+                    companyCode: AC01
+                    createdAt: 2026-10-01T09:00:00.000000Z
+                    createdBy: 01920a4c-0000-7000-8000-0000000000a1
+                    currentMappingVersion: 1
+                    mappings:
+                      - version: 1
+                        chartVersion: COA-2026.2
+                        digest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                        recordedAt: 2026-10-01T09:05:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                        accounts:
+                          - account: CUSTOMER_GL_BRIDGE
+                            glAccount: 1990-00
+                          - account: TAX_COLLECTED_LIABILITY
+                            glAccount: 2310-00
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/erp-bridges/{bridgeId}/exports:
+    get:
+      operationId: listERPExports
+      tags:
+        - erp
+      summary: The bridge's export batches and their transfer state
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        A bridge's export batches, newest first, in any status, each with its
+        delivery evidence. A rejected batch carries the correction task its
+        rejection opened, open until every journal it held is in a batch the
+        ERP has posted. Lines are omitted here; read one batch for them.
+      parameters:
+        - $ref: "#/components/parameters/ERPBridgeId"
+        - name: period
+          in: query
+          required: false
+          description: Only batches of this legal period.
+          schema:
+            $ref: "#/components/schemas/LegalPeriod"
+          example: 2026-09
+        - name: currency
+          in: query
+          required: false
+          description: Only batches in this currency.
+          schema:
+            $ref: "#/components/schemas/CurrencyCode"
+          example: USD
+        - name: status
+          in: query
+          required: false
+          description: Only batches in this transfer state.
+          schema:
+            $ref: "#/components/schemas/ERPExportStatus"
+          example: REJECTED
+      responses:
+        "200":
+          description: The batches.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ERPExportList"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    exports:
+                      - id: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                        bridgeId: 01920c20-0000-7000-8000-0000000000b1
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        period: 2026-09
+                        currency: USD
+                        postingDate: 2026-10-03
+                        companyCode: AC01
+                        mappingVersion: 1
+                        chartVersion: COA-2026.2
+                        mappingDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                        externalRef: ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                        journalIds:
+                          - 01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        lineCount: 2
+                        totalDebits: "10.00"
+                        totalCredits: "10.00"
+                        batchDigest: zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c
+                        preparedAt: 2026-10-02T10:00:00.000000Z
+                        preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                        status: ERP_POSTED
+                        history:
+                          - seq: 1
+                            kind: PREPARED
+                            status: PREPARED
+                            recordedAt: 2026-10-02T10:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                          - seq: 2
+                            kind: DISPATCHED
+                            status: TRANSMITTED
+                            attemptId: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                            recordedAt: 2026-10-02T11:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                          - seq: 3
+                            kind: ACKNOWLEDGED
+                            status: ACKNOWLEDGED
+                            attemptId: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                            remoteCorrelation: SAP-MSG-000918
+                            recordedAt: 2026-10-02T11:01:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                          - seq: 4
+                            kind: POSTED
+                            status: ERP_POSTED
+                            attemptId: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                            remoteCorrelation: SAP-MSG-000918
+                            erpReference: AC01/2026/1900004411
+                            responseDigest: sha256:3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a
+                            recordedAt: 2026-10-02T11:20:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: prepareERPExport
+      tags:
+        - erp
+      summary: Prepare and seal an export batch
+      description: |
+        `OPERATOR`, signed in as themselves.
+
+        Seals every posted TCSL journal of the bridge's legal entity, the period
+        and the currency that is not already in a live batch: the exact journal
+        ID set, each line mapped by the bridge's current mapping version, the
+        company code, chart version and posting date, under one batch digest
+        (QA-LED-067). A line on an account the mapping does not map holds the
+        whole export (`409 ERP_MAPPING_INCOMPLETE`) — nothing goes to a suspense
+        account by default. With nothing left to export, the prepared batch that
+        already holds the journals under the same posting date and mapping
+        version is returned with `200`; otherwise `409 ERP_NOTHING_TO_EXPORT`.
+      parameters:
+        - $ref: "#/components/parameters/ERPBridgeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ERPExportRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  period: 2026-09
+                  currency: USD
+                  postingDate: 2026-10-03
+      responses:
+        "200":
+          description: The prepared batch that already holds these journals.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ERPExport"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                    bridgeId: 01920c20-0000-7000-8000-0000000000b1
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    period: 2026-09
+                    currency: USD
+                    postingDate: 2026-10-03
+                    companyCode: AC01
+                    mappingVersion: 1
+                    chartVersion: COA-2026.2
+                    mappingDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                    externalRef: ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                    journalIds:
+                      - 01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    lineCount: 2
+                    totalDebits: "10.00"
+                    totalCredits: "10.00"
+                    batchDigest: zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c
+                    preparedAt: 2026-10-02T10:00:00.000000Z
+                    preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    status: PREPARED
+                    history:
+                      - seq: 1
+                        kind: PREPARED
+                        status: PREPARED
+                        recordedAt: 2026-10-02T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "201":
+          description: The batch, prepared and sealed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ERPExport"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                    bridgeId: 01920c20-0000-7000-8000-0000000000b1
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    period: 2026-09
+                    currency: USD
+                    postingDate: 2026-10-03
+                    companyCode: AC01
+                    mappingVersion: 1
+                    chartVersion: COA-2026.2
+                    mappingDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                    externalRef: ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                    journalIds:
+                      - 01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    lineCount: 2
+                    totalDebits: "10.00"
+                    totalCredits: "10.00"
+                    batchDigest: zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c
+                    preparedAt: 2026-10-02T10:00:00.000000Z
+                    preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    status: PREPARED
+                    history:
+                      - seq: 1
+                        kind: PREPARED
+                        status: PREPARED
+                        recordedAt: 2026-10-02T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    lines:
+                      - journalId: 01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        journalLine: 1
+                        account: CUSTOMER_GL_BRIDGE
+                        glAccount: 1990-00
+                        side: DEBIT
+                        amount: "10.00"
+                      - journalId: 01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        journalLine: 2
+                        account: TAX_COLLECTED_LIABILITY
+                        glAccount: 2310-00
+                        side: CREDIT
+                        amount: "10.00"
+                        authority: US-NY-DTF
+                        jurisdiction: US-NY
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/erp-bridges/{bridgeId}/exports/{batchId}:
+    get:
+      operationId: getERPExport
+      tags:
+        - erp
+      summary: One export batch with its lines and delivery evidence
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        The sealed batch — journal IDs, every mapped line traced to its TCSL
+        journal line, totals and digest — with every attempt and every ERP
+        answer recorded against it, and its correction task when it was
+        rejected.
+      parameters:
+        - $ref: "#/components/parameters/ERPBridgeId"
+        - $ref: "#/components/parameters/ERPExportId"
+      responses:
+        "200":
+          description: The batch.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ERPExport"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                    bridgeId: 01920c20-0000-7000-8000-0000000000b1
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    period: 2026-09
+                    currency: USD
+                    postingDate: 2026-10-03
+                    companyCode: AC01
+                    mappingVersion: 1
+                    chartVersion: COA-2026.2
+                    mappingDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                    externalRef: ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                    journalIds:
+                      - 01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    lineCount: 2
+                    totalDebits: "10.00"
+                    totalCredits: "10.00"
+                    batchDigest: zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c
+                    preparedAt: 2026-10-02T10:00:00.000000Z
+                    preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    status: REJECTED
+                    history:
+                      - seq: 1
+                        kind: PREPARED
+                        status: PREPARED
+                        recordedAt: 2026-10-02T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: DISPATCHED
+                        status: TRANSMITTED
+                        attemptId: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        recordedAt: 2026-10-02T11:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 3
+                        kind: REJECTED
+                        status: REJECTED
+                        attemptId: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        remoteCorrelation: SAP-MSG-000918
+                        detail: "F5 702: GL account 2310-00 is blocked for posting in company code AC01"
+                        recordedAt: 2026-10-02T11:02:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    correction:
+                      open: true
+                      openedAt: 2026-10-02T11:02:00.000000Z
+                      reason: "F5 702: GL account 2310-00 is blocked for posting in company code AC01"
+                      outstandingJournalIds:
+                        - 01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                      postedBy: []
+                    lines:
+                      - journalId: 01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        journalLine: 1
+                        account: CUSTOMER_GL_BRIDGE
+                        glAccount: 1990-00
+                        side: DEBIT
+                        amount: "10.00"
+                      - journalId: 01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        journalLine: 2
+                        account: TAX_COLLECTED_LIABILITY
+                        glAccount: 2310-00
+                        side: CREDIT
+                        amount: "10.00"
+                        authority: US-NY-DTF
+                        jurisdiction: US-NY
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/erp-bridges/{bridgeId}/exports/{batchId}/dispatch:
+    post:
+      operationId: dispatchERPExport
+      tags:
+        - erp
+      summary: Authorise and dispatch a sealed batch
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves, and not the person who
+        prepared the batch (`403 MAKER_CHECKER`).
+
+        The checker names the batch digest they reviewed (`409
+        ERP_BATCH_DIGEST_MISMATCH` when it is not the batch's). The dispatch is
+        one attempt, recorded with a `com.zoikotax.gl.export-dispatched` event
+        through the transactional outbox in the same transaction; a connector
+        subscribed to it sends the batch under its `externalRef`, which every
+        attempt shares, so the ERP posts one GL journal however many attempts
+        there are. `TRANSMITTED` means committed for transmission — not
+        received, and not posted.
+
+        **Idempotent on the batch.** A batch already transmitted, acknowledged
+        or posted is returned as it is with `200` and no new attempt
+        (QA-LED-069). A batch sealed under a superseded mapping version is
+        refused (`409 ERP_MAPPING_CHANGED`, QA-LED-068). A batch whose outcome
+        is unknown is sent again only after a status query recorded that the
+        ERP holds nothing under its reference (`409 ERP_OUTCOME_UNKNOWN`). A
+        rejected or withdrawn batch is never sent.
+      parameters:
+        - $ref: "#/components/parameters/ERPBridgeId"
+        - $ref: "#/components/parameters/ERPExportId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ERPDispatchRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  expectedDigest: zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c
+      responses:
+        "200":
+          description: Already transmitted, acknowledged or posted; no new attempt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ERPExport"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                    bridgeId: 01920c20-0000-7000-8000-0000000000b1
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    period: 2026-09
+                    currency: USD
+                    postingDate: 2026-10-03
+                    companyCode: AC01
+                    mappingVersion: 1
+                    chartVersion: COA-2026.2
+                    mappingDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                    externalRef: ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                    journalIds:
+                      - 01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    lineCount: 2
+                    totalDebits: "10.00"
+                    totalCredits: "10.00"
+                    batchDigest: zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c
+                    preparedAt: 2026-10-02T10:00:00.000000Z
+                    preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    status: TRANSMITTED
+                    history:
+                      - seq: 1
+                        kind: PREPARED
+                        status: PREPARED
+                        recordedAt: 2026-10-02T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: DISPATCHED
+                        status: TRANSMITTED
+                        attemptId: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        recordedAt: 2026-10-02T11:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+        "202":
+          description: Dispatched — one new attempt, accepted into the outbox for transmission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ERPExport"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                    bridgeId: 01920c20-0000-7000-8000-0000000000b1
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    period: 2026-09
+                    currency: USD
+                    postingDate: 2026-10-03
+                    companyCode: AC01
+                    mappingVersion: 1
+                    chartVersion: COA-2026.2
+                    mappingDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                    externalRef: ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                    journalIds:
+                      - 01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    lineCount: 2
+                    totalDebits: "10.00"
+                    totalCredits: "10.00"
+                    batchDigest: zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c
+                    preparedAt: 2026-10-02T10:00:00.000000Z
+                    preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    status: TRANSMITTED
+                    history:
+                      - seq: 1
+                        kind: PREPARED
+                        status: PREPARED
+                        recordedAt: 2026-10-02T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: DISPATCHED
+                        status: TRANSMITTED
+                        attemptId: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        recordedAt: 2026-10-02T11:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/erp-bridges/{bridgeId}/exports/{batchId}/responses:
+    post:
+      operationId: recordERPResponse
+      tags:
+        - erp
+      summary: Record what the ERP answered about an attempt
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        ZoikoTax does not invent the ERP's answer: a person records it here with
+        the ERP's references as evidence. `ACKNOWLEDGED` is a transport receipt
+        and names the ERP's `remoteCorrelation`; `POSTED` names the ERP's posted
+        journal (`erpReference`) and is the only answer a GL reconciliation
+        counts. `REJECTED` says why, opens a correction task and holds the
+        period's GL reconciliation. `OUTCOME_UNKNOWN` says why nobody knows.
+        `STATUS_NOT_FOUND` records a status query, by `remoteCorrelation`, that
+        found nothing under the batch's reference — the only thing that lets a
+        batch of unknown outcome be sent again.
+
+        **Idempotent on the answer**: the same answer about the same attempt
+        again records nothing and answers `200`. An answer that does not apply
+        to the batch's state is `409 STATE_TRANSITION_INVALID`.
+      parameters:
+        - $ref: "#/components/parameters/ERPBridgeId"
+        - $ref: "#/components/parameters/ERPExportId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ERPResponseRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  kind: POSTED
+                  attemptId: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                  remoteCorrelation: SAP-MSG-000918
+                  erpReference: AC01/2026/1900004411
+                  responseDigest: sha256:3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a
+      responses:
+        "200":
+          description: The same answer was already recorded; nothing changed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ERPExport"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                    bridgeId: 01920c20-0000-7000-8000-0000000000b1
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    period: 2026-09
+                    currency: USD
+                    postingDate: 2026-10-03
+                    companyCode: AC01
+                    mappingVersion: 1
+                    chartVersion: COA-2026.2
+                    mappingDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                    externalRef: ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                    journalIds:
+                      - 01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    lineCount: 2
+                    totalDebits: "10.00"
+                    totalCredits: "10.00"
+                    batchDigest: zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c
+                    preparedAt: 2026-10-02T10:00:00.000000Z
+                    preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    status: ERP_POSTED
+                    history:
+                      - seq: 1
+                        kind: PREPARED
+                        status: PREPARED
+                        recordedAt: 2026-10-02T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: DISPATCHED
+                        status: TRANSMITTED
+                        attemptId: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        recordedAt: 2026-10-02T11:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 3
+                        kind: POSTED
+                        status: ERP_POSTED
+                        attemptId: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        remoteCorrelation: SAP-MSG-000918
+                        erpReference: AC01/2026/1900004411
+                        recordedAt: 2026-10-02T11:20:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "201":
+          description: The answer, recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ERPExport"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                    bridgeId: 01920c20-0000-7000-8000-0000000000b1
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    period: 2026-09
+                    currency: USD
+                    postingDate: 2026-10-03
+                    companyCode: AC01
+                    mappingVersion: 1
+                    chartVersion: COA-2026.2
+                    mappingDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                    externalRef: ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                    journalIds:
+                      - 01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    lineCount: 2
+                    totalDebits: "10.00"
+                    totalCredits: "10.00"
+                    batchDigest: zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c
+                    preparedAt: 2026-10-02T10:00:00.000000Z
+                    preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    status: ERP_POSTED
+                    history:
+                      - seq: 1
+                        kind: PREPARED
+                        status: PREPARED
+                        recordedAt: 2026-10-02T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: DISPATCHED
+                        status: TRANSMITTED
+                        attemptId: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        recordedAt: 2026-10-02T11:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 3
+                        kind: POSTED
+                        status: ERP_POSTED
+                        attemptId: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        remoteCorrelation: SAP-MSG-000918
+                        erpReference: AC01/2026/1900004411
+                        responseDigest: sha256:3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a
+                        recordedAt: 2026-10-02T11:20:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/erp-bridges/{bridgeId}/exports/{batchId}/withdrawal:
+    post:
+      operationId: withdrawERPExport
+      tags:
+        - erp
+      summary: Withdraw a prepared batch that was never dispatched
+      description: |
+        `OPERATOR`, signed in as themselves.
+
+        Releases a `PREPARED` batch, with the reason, so its journals can be
+        prepared again — after a mapping change, say. The batch and its digest
+        stay on record. Only a batch never dispatched is withdrawn (`409
+        STATE_TRANSITION_INVALID`).
+      parameters:
+        - $ref: "#/components/parameters/ERPBridgeId"
+        - $ref: "#/components/parameters/ERPExportId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ERPWithdrawalRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  reason: Mapping version 2 moves the bridge clearing account; re-prepare under it
+      responses:
+        "200":
+          description: The batch, withdrawn.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ERPExport"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                    bridgeId: 01920c20-0000-7000-8000-0000000000b1
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    period: 2026-09
+                    currency: USD
+                    postingDate: 2026-10-03
+                    companyCode: AC01
+                    mappingVersion: 1
+                    chartVersion: COA-2026.2
+                    mappingDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                    externalRef: ztax-erp-export:01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                    journalIds:
+                      - 01920b00-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    lineCount: 2
+                    totalDebits: "10.00"
+                    totalCredits: "10.00"
+                    batchDigest: zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c
+                    preparedAt: 2026-10-02T10:00:00.000000Z
+                    preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    status: WITHDRAWN
+                    history:
+                      - seq: 1
+                        kind: PREPARED
+                        status: PREPARED
+                        recordedAt: 2026-10-02T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: WITHDRAWN
+                        status: WITHDRAWN
+                        detail: Mapping version 2 moves the bridge clearing account; re-prepare under it
+                        recordedAt: 2026-10-02T10:30:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/erp-bridges/{bridgeId}/gl-balances:
+    get:
+      operationId: listGLSnapshots
+      tags:
+        - erp
+      summary: The GL balances the ERP reported
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        Every GL balance snapshot recorded for the bridge, newest first, each
+        with the ERP report it came from and its digest.
+      parameters:
+        - $ref: "#/components/parameters/ERPBridgeId"
+        - name: period
+          in: query
+          required: false
+          description: Only snapshots of this legal period.
+          schema:
+            $ref: "#/components/schemas/LegalPeriod"
+          example: 2026-09
+      responses:
+        "200":
+          description: The snapshots.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GLSnapshotList"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    snapshots:
+                      - id: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e30
+                        bridgeId: 01920c20-0000-7000-8000-0000000000b1
+                        period: 2026-09
+                        currency: USD
+                        asOf: 2026-10-05T18:00:00.000000Z
+                        sourceRef: SAP FAGLB03 AC01 2026/09
+                        digest: zt1:1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a8c0e1b3d5f7a9c2e4b6d8f0a1c3e
+                        balances:
+                          - glAccount: 1990-00
+                            debits: "10.00"
+                            credits: "0.00"
+                          - glAccount: 2310-00
+                            debits: "0.00"
+                            credits: "10.00"
+                        recordedAt: 2026-10-05T18:10:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: recordGLSnapshot
+      tags:
+        - erp
+      summary: Record the GL balances an ERP reported for a period
+      description: |
+        `OPERATOR`, signed in as themselves.
+
+        The period's activity on each GL account in one currency, debits and
+        credits apart, as the ERP reported it, with the report it came from
+        (`sourceRef`, and `sourceDigest` when the report is kept as a file).
+        Amounts are canonical, non-negative decimal strings; the side carries
+        direction. ZoikoTax reads no ERP itself — these figures are the ERP's,
+        recorded as evidence, and a reconciliation compares them with the
+        subledger.
+      parameters:
+        - $ref: "#/components/parameters/ERPBridgeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GLSnapshotRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  period: 2026-09
+                  currency: USD
+                  asOf: 2026-10-05T18:00:00.000000Z
+                  sourceRef: SAP FAGLB03 AC01 2026/09
+                  balances:
+                    - glAccount: 1990-00
+                      debits: "10.00"
+                      credits: "0.00"
+                    - glAccount: 2310-00
+                      debits: "0.00"
+                      credits: "10.00"
+      responses:
+        "201":
+          description: The snapshot, recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GLSnapshot"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e30
+                    bridgeId: 01920c20-0000-7000-8000-0000000000b1
+                    period: 2026-09
+                    currency: USD
+                    asOf: 2026-10-05T18:00:00.000000Z
+                    sourceRef: SAP FAGLB03 AC01 2026/09
+                    digest: zt1:1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a8c0e1b3d5f7a9c2e4b6d8f0a1c3e
+                    balances:
+                      - glAccount: 1990-00
+                        debits: "10.00"
+                        credits: "0.00"
+                      - glAccount: 2310-00
+                        debits: "0.00"
+                        credits: "10.00"
+                    recordedAt: 2026-10-05T18:10:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/erp-bridges/{bridgeId}/gl-reconciliations:
+    get:
+      operationId: listGLReconciliations
+      tags:
+        - erp
+      summary: The subledger-to-GL reconciliations (R6)
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        Every GL reconciliation run on the bridge, newest first, with its items
+        and exact variances. Each is a record: a later run is a new one.
+      parameters:
+        - $ref: "#/components/parameters/ERPBridgeId"
+        - name: period
+          in: query
+          required: false
+          description: Only reconciliations of this legal period.
+          schema:
+            $ref: "#/components/schemas/LegalPeriod"
+          example: 2026-09
+      responses:
+        "200":
+          description: The reconciliations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GLReconciliationList"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    reconciliations:
+                      - id: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e40
+                        bridgeId: 01920c20-0000-7000-8000-0000000000b1
+                        snapshotId: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e30
+                        snapshotDigest: zt1:1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a8c0e1b3d5f7a9c2e4b6d8f0a1c3e
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        period: 2026-09
+                        currency: USD
+                        mappingVersion: 1
+                        outcome: RECONCILED
+                        holds: []
+                        journalCount: 1
+                        postedJournalCount: 1
+                        populationDigest: zt1:7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d
+                        exceptionCount: 0
+                        ranAt: 2026-10-05T18:15:00.000000Z
+                        ranBy: 01920a4c-0000-7000-8000-0000000000a1
+                        items:
+                          - matchKey: gl:1990-00
+                            glAccount: 1990-00
+                            tcslAccounts:
+                              - CUSTOMER_GL_BRIDGE
+                            expected:
+                              amount: "10.00"
+                              currency: USD
+                            observed:
+                              amount: "10.00"
+                              currency: USD
+                            variance:
+                              amount: "0.00"
+                              currency: USD
+                            status: MATCHED
+                          - matchKey: gl:2310-00
+                            glAccount: 2310-00
+                            tcslAccounts:
+                              - TAX_COLLECTED_LIABILITY
+                            expected:
+                              amount: "-10.00"
+                              currency: USD
+                            observed:
+                              amount: "-10.00"
+                              currency: USD
+                            variance:
+                              amount: "0.00"
+                              currency: USD
+                            status: MATCHED
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: runGLReconciliation
+      tags:
+        - erp
+      summary: Reconcile the subledger with an ERP's GL balances
+      description: |
+        `OPERATOR`.
+
+        Compares one GL snapshot, account by account, with what the subledger's
+        journals of the bridge's legal entity, the snapshot's period and
+        currency put on the TCSL accounts the bridge's current mapping maps to
+        each GL account. Every item keeps its exact variance (observed −
+        expected, net debit) whatever it is; there is no tolerance. A GL account
+        the ERP reported and nothing maps to, a mapped account the ERP did not
+        report, and a TCSL account with no mapping are each items of their own.
+
+        `HELD` while any of the period's journals is not in a batch the ERP has
+        posted — unexported, awaiting dispatch or posting, of unknown outcome,
+        or rejected with its correction open — and never reported reconciled
+        while it is. A variance is cleared by fixing the source and running a
+        new reconciliation over a new snapshot, not by a note.
+      parameters:
+        - $ref: "#/components/parameters/ERPBridgeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GLReconciliationRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  snapshotId: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e30
+      responses:
+        "201":
+          description: The reconciliation, recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GLReconciliation"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e40
+                    bridgeId: 01920c20-0000-7000-8000-0000000000b1
+                    snapshotId: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e30
+                    snapshotDigest: zt1:1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a8c0e1b3d5f7a9c2e4b6d8f0a1c3e
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    period: 2026-09
+                    currency: USD
+                    mappingVersion: 1
+                    outcome: HELD
+                    holds:
+                      - reason: REJECTED_CORRECTION_OPEN
+                        journals: 1
+                    journalCount: 2
+                    postedJournalCount: 1
+                    populationDigest: zt1:7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d
+                    exceptionCount: 2
+                    ranAt: 2026-10-05T18:15:00.000000Z
+                    ranBy: 01920a4c-0000-7000-8000-0000000000a1
+                    items:
+                      - matchKey: gl:1990-00
+                        glAccount: 1990-00
+                        tcslAccounts:
+                          - CUSTOMER_GL_BRIDGE
+                        expected:
+                          amount: "17.50"
+                          currency: USD
+                        observed:
+                          amount: "10.00"
+                          currency: USD
+                        variance:
+                          amount: "-7.50"
+                          currency: USD
+                        status: PARTIAL
+                      - matchKey: gl:2310-00
+                        glAccount: 2310-00
+                        tcslAccounts:
+                          - TAX_COLLECTED_LIABILITY
+                        expected:
+                          amount: "-17.50"
+                          currency: USD
+                        observed:
+                          amount: "-10.00"
+                          currency: USD
+                        variance:
+                          amount: "7.50"
+                          currency: USD
+                        status: PARTIAL
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
   /v1/notices:
     get:
       operationId: listNotices
@@ -12068,6 +13335,22 @@ components:
       schema:
         $ref: "#/components/schemas/WorkpaperId"
       example: 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+    ERPBridgeId:
+      name: bridgeId
+      in: path
+      required: true
+      description: The ERP journal bridge identifier.
+      schema:
+        $ref: "#/components/schemas/ERPBridgeId"
+      example: 01920c20-0000-7000-8000-0000000000b1
+    ERPExportId:
+      name: batchId
+      in: path
+      required: true
+      description: The ERP export batch identifier.
+      schema:
+        $ref: "#/components/schemas/ERPExportId"
+      example: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
     ShadowRunId:
       name: shadowRunId
       in: path
@@ -16127,6 +17410,7 @@ components:
         - com.zoikotax.refund.requested
         - com.zoikotax.refund.status-changed
         - com.zoikotax.document.committed
+        - com.zoikotax.gl.export-dispatched
       example: com.zoikotax.decision.committed
     WebhookStatus:
       x-ztax-privacy:
@@ -21038,6 +22322,902 @@ components:
             redaction: NONE
           type: string
           format: uuid
+    ERPBridgeId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ERPBridgeId
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920c20-0000-7000-8000-0000000000b1
+    ERPExportId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ERPExportId
+      description: An export batch. Also the external reference every attempt of the batch carries to the ERP.
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+    ERPAttemptId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ERPAttemptId
+      description: One dispatch attempt of an export batch.
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20
+    GLSnapshotId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: GLSnapshotId
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e30
+    GLReconciliationId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: GLReconciliationId
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e40
+    ERPVendor:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ERPVendor
+      description: The ERP family a bridge targets. A label for the connector that consumes a dispatch; each real target still needs its own contract verification (LED-23).
+      enum:
+        - SAP
+        - ORACLE
+        - NETSUITE
+        - DYNAMICS
+        - OTHER
+      example: SAP
+    ERPRef:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ERPRef
+      description: A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
+      minLength: 1
+      maxLength: 200
+      example: SAP-MSG-000918
+    ERPDetail:
+      x-ztax-privacy:
+        class: P2
+        purposes:
+          - PURP-FILE
+          - PURP-EVID
+        retention: RET-EVIDENCE
+        redaction: REDACT
+        aiAllowed: NONE
+      type: string
+      title: ERPDetail
+      description: Why — an ERP's rejection text, why an outcome is unknown, or why a batch was withdrawn — in the words of the person who recorded it.
+      minLength: 1
+      maxLength: 2000
+      example: "F5 702: GL account 2310-00 is blocked for posting in company code AC01"
+    GLAccountCode:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: GLAccountCode
+      description: An account code in the customer's general ledger. Never a TCSL control account.
+      pattern: ^[A-Za-z0-9._:/-]{1,60}$
+      example: 2310-00
+    LedgerAmount:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: LedgerAmount
+      description: |
+        A ledger figure in canonical decimal string form — never a JSON number,
+        never computed by a client. Scale is significant. A control total or GL
+        aggregate of the provider's own books, not a consumer amount.
+      pattern: ^-?(0|[1-9][0-9]*)(\.[0-9]+)?$
+      maxLength: 64
+      example: "10.00"
+    ERPBridgeRequest:
+      type: object
+      title: ERPBridgeRequest
+      additionalProperties: false
+      required:
+        - name
+        - vendor
+        - companyCode
+      properties:
+        name:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: A label for the connection.
+        vendor:
+          $ref: "#/components/schemas/ERPVendor"
+        companyCode:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          pattern: ^[A-Za-z0-9._-]{1,40}$
+          description: The legal entity's company code in the ERP.
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+    ERPAccountMap:
+      type: object
+      title: ERPAccountMap
+      description: One TCSL control account, onto one customer GL account.
+      additionalProperties: false
+      required:
+        - account
+        - glAccount
+      properties:
+        account:
+          $ref: "#/components/schemas/ControlAccount"
+        glAccount:
+          $ref: "#/components/schemas/GLAccountCode"
+    ERPMapping:
+      type: object
+      title: ERPMapping
+      description: One version of a bridge's account mapping. Never edited; a change is the next version.
+      additionalProperties: false
+      required:
+        - version
+        - chartVersion
+        - accounts
+        - digest
+        - recordedAt
+        - recordedBy
+      properties:
+        version:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        chartVersion:
+          $ref: "#/components/schemas/ERPRef"
+        accounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ERPAccountMap"
+        digest:
+          $ref: "#/components/schemas/Digest"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+    ERPMappingRequest:
+      type: object
+      title: ERPMappingRequest
+      additionalProperties: false
+      required:
+        - chartVersion
+        - accounts
+      properties:
+        chartVersion:
+          $ref: "#/components/schemas/ERPRef"
+        accounts:
+          type: array
+          minItems: 1
+          maxItems: 12
+          items:
+            $ref: "#/components/schemas/ERPAccountMap"
+    ERPBridge:
+      type: object
+      title: ERPBridge
+      description: A member legal entity's subledger connected to one customer general ledger, with its mapping versions oldest first.
+      additionalProperties: false
+      required:
+        - id
+        - legalEntityId
+        - name
+        - vendor
+        - companyCode
+        - createdAt
+        - createdBy
+        - mappings
+      properties:
+        id:
+          $ref: "#/components/schemas/ERPBridgeId"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        name:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        vendor:
+          $ref: "#/components/schemas/ERPVendor"
+        companyCode:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        createdBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+        currentMappingVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+          description: The version a new batch is prepared under. Absent until a mapping is recorded.
+        mappings:
+          type: array
+          items:
+            $ref: "#/components/schemas/ERPMapping"
+    ERPBridgeList:
+      type: object
+      title: ERPBridgeList
+      additionalProperties: false
+      required:
+        - bridges
+      properties:
+        bridges:
+          type: array
+          items:
+            $ref: "#/components/schemas/ERPBridge"
+    ERPExportStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ERPExportStatus
+      description: |
+        A batch's transfer state (LED-23). `TRANSMITTED` is committed for
+        transmission; `ACKNOWLEDGED` is the ERP's transport receipt; only
+        `ERP_POSTED` says the general ledger holds it. `WITHDRAWN` is a batch
+        released before it was ever sent.
+      enum:
+        - PREPARED
+        - TRANSMITTED
+        - ACKNOWLEDGED
+        - ERP_POSTED
+        - REJECTED
+        - OUTCOME_UNKNOWN
+        - WITHDRAWN
+      example: ERP_POSTED
+    ERPExportEventKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ERPExportEventKind
+      enum:
+        - PREPARED
+        - DISPATCHED
+        - ACKNOWLEDGED
+        - POSTED
+        - REJECTED
+        - OUTCOME_UNKNOWN
+        - STATUS_NOT_FOUND
+        - WITHDRAWN
+      example: DISPATCHED
+    ERPResponseKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ERPResponseKind
+      description: An ERP answer a person records.
+      enum:
+        - ACKNOWLEDGED
+        - POSTED
+        - REJECTED
+        - OUTCOME_UNKNOWN
+        - STATUS_NOT_FOUND
+      example: POSTED
+    ERPExportEvent:
+      type: object
+      title: ERPExportEvent
+      description: One appended act on a batch — its delivery evidence, attempt by attempt.
+      additionalProperties: false
+      required:
+        - seq
+        - kind
+        - status
+        - recordedAt
+        - recordedBy
+      properties:
+        seq:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        kind:
+          $ref: "#/components/schemas/ERPExportEventKind"
+        status:
+          $ref: "#/components/schemas/ERPExportStatus"
+        attemptId:
+          $ref: "#/components/schemas/ERPAttemptId"
+        remoteCorrelation:
+          $ref: "#/components/schemas/ERPRef"
+        erpReference:
+          $ref: "#/components/schemas/ERPRef"
+        responseDigest:
+          $ref: "#/components/schemas/ERPRef"
+        detail:
+          $ref: "#/components/schemas/ERPDetail"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+    ERPExportLine:
+      type: object
+      title: ERPExportLine
+      description: One exported line, traced to the TCSL journal line it carries (ZTAX-FIN-REQ-0053).
+      additionalProperties: false
+      required:
+        - journalId
+        - journalLine
+        - account
+        - glAccount
+        - side
+        - amount
+      properties:
+        journalId:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          format: uuid
+        journalLine:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        account:
+          $ref: "#/components/schemas/ControlAccount"
+        glAccount:
+          $ref: "#/components/schemas/GLAccountCode"
+        side:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - DEBIT
+            - CREDIT
+        amount:
+          $ref: "#/components/schemas/LedgerAmount"
+        authority:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        jurisdiction:
+          x-ztax-privacy:
+            class: P0
+          type: string
+    ERPCorrectionTask:
+      type: object
+      title: ERPCorrectionTask
+      description: |
+        The task an ERP rejection opens: the rejected batch's journals that no
+        posted batch has carried into the GL since. Open while any is
+        outstanding, and the period's GL reconciliation is held until then.
+      additionalProperties: false
+      required:
+        - open
+        - openedAt
+        - outstandingJournalIds
+        - postedBy
+      properties:
+        open:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+        openedAt:
+          $ref: "#/components/schemas/Timestamp"
+        reason:
+          $ref: "#/components/schemas/ERPDetail"
+        outstandingJournalIds:
+          x-ztax-privacy:
+            class: P0
+          type: array
+          items:
+            type: string
+            format: uuid
+        postedBy:
+          type: array
+          description: The posted batches that carried the rejected journals.
+          items:
+            $ref: "#/components/schemas/ERPExportId"
+    ERPExport:
+      type: object
+      title: ERPExport
+      description: |
+        A sealed export batch: the export mapping (company code, mapping and
+        chart version, currency, posting date), the exact journal ID set, the
+        totals and the batch digest, with its transfer state and every attempt
+        and ERP answer recorded against it.
+      additionalProperties: false
+      required:
+        - id
+        - bridgeId
+        - legalEntityId
+        - period
+        - currency
+        - postingDate
+        - companyCode
+        - mappingVersion
+        - chartVersion
+        - mappingDigest
+        - externalRef
+        - journalIds
+        - lineCount
+        - totalDebits
+        - totalCredits
+        - batchDigest
+        - preparedAt
+        - preparedBy
+        - status
+        - history
+      properties:
+        id:
+          $ref: "#/components/schemas/ERPExportId"
+        bridgeId:
+          $ref: "#/components/schemas/ERPBridgeId"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        postingDate:
+          $ref: "#/components/schemas/CivilDate"
+        companyCode:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        mappingVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        chartVersion:
+          $ref: "#/components/schemas/ERPRef"
+        mappingDigest:
+          $ref: "#/components/schemas/Digest"
+        externalRef:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The reference every attempt carries to the ERP, and that the ERP deduplicates on.
+        journalIds:
+          x-ztax-privacy:
+            class: P0
+          type: array
+          items:
+            type: string
+            format: uuid
+        lineCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        totalDebits:
+          $ref: "#/components/schemas/LedgerAmount"
+        totalCredits:
+          $ref: "#/components/schemas/LedgerAmount"
+        batchDigest:
+          $ref: "#/components/schemas/Digest"
+        preparedAt:
+          $ref: "#/components/schemas/Timestamp"
+        preparedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/ERPExportStatus"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ERPExportEvent"
+        correction:
+          $ref: "#/components/schemas/ERPCorrectionTask"
+        lines:
+          type: array
+          description: Present when one batch is read.
+          items:
+            $ref: "#/components/schemas/ERPExportLine"
+    ERPExportList:
+      type: object
+      title: ERPExportList
+      additionalProperties: false
+      required:
+        - exports
+      properties:
+        exports:
+          type: array
+          items:
+            $ref: "#/components/schemas/ERPExport"
+    ERPExportRequest:
+      type: object
+      title: ERPExportRequest
+      additionalProperties: false
+      required:
+        - period
+        - currency
+        - postingDate
+      properties:
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        postingDate:
+          $ref: "#/components/schemas/CivilDate"
+    ERPDispatchRequest:
+      type: object
+      title: ERPDispatchRequest
+      additionalProperties: false
+      required:
+        - expectedDigest
+      properties:
+        expectedDigest:
+          $ref: "#/components/schemas/Digest"
+    ERPResponseRequest:
+      type: object
+      title: ERPResponseRequest
+      additionalProperties: false
+      required:
+        - kind
+        - attemptId
+      properties:
+        kind:
+          $ref: "#/components/schemas/ERPResponseKind"
+        attemptId:
+          $ref: "#/components/schemas/ERPAttemptId"
+        remoteCorrelation:
+          $ref: "#/components/schemas/ERPRef"
+        erpReference:
+          $ref: "#/components/schemas/ERPRef"
+        responseDigest:
+          $ref: "#/components/schemas/ERPRef"
+        detail:
+          $ref: "#/components/schemas/ERPDetail"
+    ERPWithdrawalRequest:
+      type: object
+      title: ERPWithdrawalRequest
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          $ref: "#/components/schemas/ERPDetail"
+    GLBalanceLine:
+      type: object
+      title: GLBalanceLine
+      description: One GL account's period activity as the ERP reported it, debits and credits apart.
+      additionalProperties: false
+      required:
+        - glAccount
+        - debits
+        - credits
+      properties:
+        glAccount:
+          $ref: "#/components/schemas/GLAccountCode"
+        debits:
+          $ref: "#/components/schemas/LedgerAmount"
+        credits:
+          $ref: "#/components/schemas/LedgerAmount"
+    GLSnapshotRequest:
+      type: object
+      title: GLSnapshotRequest
+      additionalProperties: false
+      required:
+        - period
+        - currency
+        - asOf
+        - sourceRef
+        - balances
+      properties:
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        asOf:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          format: date-time
+          description: When the ERP's figures were taken, RFC 3339.
+        sourceRef:
+          $ref: "#/components/schemas/ERPRef"
+        sourceDigest:
+          $ref: "#/components/schemas/ERPRef"
+        balances:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            $ref: "#/components/schemas/GLBalanceLine"
+    GLSnapshot:
+      type: object
+      title: GLSnapshot
+      description: GL balances an ERP reported for a period and currency, with the report they came from and their digest.
+      additionalProperties: false
+      required:
+        - id
+        - bridgeId
+        - period
+        - currency
+        - asOf
+        - sourceRef
+        - digest
+        - balances
+        - recordedAt
+        - recordedBy
+      properties:
+        id:
+          $ref: "#/components/schemas/GLSnapshotId"
+        bridgeId:
+          $ref: "#/components/schemas/ERPBridgeId"
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        sourceRef:
+          $ref: "#/components/schemas/ERPRef"
+        sourceDigest:
+          $ref: "#/components/schemas/ERPRef"
+        digest:
+          $ref: "#/components/schemas/Digest"
+        balances:
+          type: array
+          items:
+            $ref: "#/components/schemas/GLBalanceLine"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+    GLSnapshotList:
+      type: object
+      title: GLSnapshotList
+      additionalProperties: false
+      required:
+        - snapshots
+      properties:
+        snapshots:
+          type: array
+          items:
+            $ref: "#/components/schemas/GLSnapshot"
+    GLReconciliationRequest:
+      type: object
+      title: GLReconciliationRequest
+      additionalProperties: false
+      required:
+        - snapshotId
+      properties:
+        snapshotId:
+          $ref: "#/components/schemas/GLSnapshotId"
+    GLReconOutcome:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: GLReconOutcome
+      description: |
+        `RECONCILED` — every item tied and nothing held the period.
+        `VARIANCES` — an item did not tie. `HELD` — a journal of the period is
+        not in a batch the ERP posted; never reported reconciled while it is.
+      enum:
+        - RECONCILED
+        - VARIANCES
+        - HELD
+      example: HELD
+    GLHold:
+      type: object
+      title: GLHold
+      description: How many of the period's journals are held for one reason.
+      additionalProperties: false
+      required:
+        - reason
+        - journals
+      properties:
+        reason:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - UNEXPORTED_JOURNALS
+            - AWAITING_DISPATCH
+            - AWAITING_ERP_POSTING
+            - OUTCOME_UNKNOWN
+            - REJECTED_CORRECTION_OPEN
+        journals:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+    GLReconciliationItem:
+      type: object
+      title: GLReconciliationItem
+      description: |
+        One compared GL account (an R6 item). Amounts are net debit — debits
+        less credits. `variance` is observed minus expected, exact, whatever the
+        status; absent when one side is.
+      additionalProperties: false
+      required:
+        - matchKey
+        - tcslAccounts
+        - status
+      properties:
+        matchKey:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: "`gl:<account>`, or `tcsl:<account>` for a TCSL account with no mapping."
+        glAccount:
+          $ref: "#/components/schemas/GLAccountCode"
+        tcslAccounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ControlAccount"
+        expected:
+          $ref: "#/components/schemas/MoneyValue"
+        observed:
+          $ref: "#/components/schemas/MoneyValue"
+        variance:
+          $ref: "#/components/schemas/MoneyValue"
+        status:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          enum:
+            - MATCHED
+            - TOLERANCE_MATCH
+            - UNMATCHED
+            - PARTIAL
+            - DUPLICATE
+            - MISSING
+            - CONFLICTED
+            - PENDING
+            - EXPLAINED
+            - RESOLVED
+        detail:
+          x-ztax-privacy:
+            class: P0
+          type: string
+    GLReconciliation:
+      type: object
+      title: GLReconciliation
+      description: One subledger-to-GL reconciliation of a period and currency, against one snapshot, under one mapping version. A record; a re-run is a new one.
+      additionalProperties: false
+      required:
+        - id
+        - bridgeId
+        - snapshotId
+        - snapshotDigest
+        - legalEntityId
+        - period
+        - currency
+        - mappingVersion
+        - outcome
+        - holds
+        - journalCount
+        - postedJournalCount
+        - populationDigest
+        - exceptionCount
+        - items
+        - ranAt
+      properties:
+        id:
+          $ref: "#/components/schemas/GLReconciliationId"
+        bridgeId:
+          $ref: "#/components/schemas/ERPBridgeId"
+        snapshotId:
+          $ref: "#/components/schemas/GLSnapshotId"
+        snapshotDigest:
+          $ref: "#/components/schemas/Digest"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        period:
+          $ref: "#/components/schemas/LegalPeriod"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        mappingVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        outcome:
+          $ref: "#/components/schemas/GLReconOutcome"
+        holds:
+          type: array
+          items:
+            $ref: "#/components/schemas/GLHold"
+        journalCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        postedJournalCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        populationDigest:
+          $ref: "#/components/schemas/Digest"
+        exceptionCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/GLReconciliationItem"
+        ranAt:
+          $ref: "#/components/schemas/Timestamp"
+        ranBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+    GLReconciliationList:
+      type: object
+      title: GLReconciliationList
+      additionalProperties: false
+      required:
+        - reconciliations
+      properties:
+        reconciliations:
+          type: array
+          items:
+            $ref: "#/components/schemas/GLReconciliation"
     ProviderContribution:
       type: object
       title: ProviderContribution

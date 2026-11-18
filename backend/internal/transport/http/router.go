@@ -130,6 +130,12 @@ type Router struct {
 	// explorer, quarantine and release, and a period's control totals.
 	Contributions *app.ProviderContributionService
 
+	// ERP serves the ERP journal bridge — sealed export batches, dispatch
+	// through the outbox, the ERP's recorded answers — and the
+	// subledger-to-GL reconciliation. It reads posted journals from the store,
+	// so it is served wherever the store is.
+	ERP *app.ERPService
+
 	// Notices serves regulatory notice and appeal intake (W17). It needs
 	// only the store, so it is served wherever the store is.
 	Notices *app.NoticeService
@@ -372,6 +378,23 @@ func (rt *Router) routes() []struct {
 		{Route{"GET", "/v1/contributions/{contributionId}/trace", false, []security.Role{operator, analyst, auditor}}, rt.handleContributionTrace},
 		{Route{"POST", "/v1/contributions/{contributionId}/quarantine", false, []security.Role{operator, analyst}}, rt.handleQuarantineContribution},
 		{Route{"POST", "/v1/contributions/{contributionId}/release", false, []security.Role{analyst}}, rt.handleReleaseContribution},
+		// ERP journal bridge and GL reconciliation (LED-23, R6): OPERATOR
+		// configures, prepares and records what the ERP reported; OPERATOR or
+		// ANALYST other than the preparer authorises a dispatch (the service
+		// compares the people). ADMIN reads no fiscal record.
+		{Route{"GET", "/v1/erp-bridges", false, []security.Role{operator, analyst, auditor}}, rt.handleListERPBridges},
+		{Route{"POST", "/v1/erp-bridges", false, []security.Role{operator}}, rt.handleCreateERPBridge},
+		{Route{"POST", "/v1/erp-bridges/{bridgeId}/mappings", false, []security.Role{operator}}, rt.handleRecordERPMapping},
+		{Route{"GET", "/v1/erp-bridges/{bridgeId}/exports", false, []security.Role{operator, analyst, auditor}}, rt.handleListERPExports},
+		{Route{"POST", "/v1/erp-bridges/{bridgeId}/exports", false, []security.Role{operator}}, rt.handlePrepareERPExport},
+		{Route{"GET", "/v1/erp-bridges/{bridgeId}/exports/{batchId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetERPExport},
+		{Route{"POST", "/v1/erp-bridges/{bridgeId}/exports/{batchId}/dispatch", false, []security.Role{operator, analyst}}, rt.handleDispatchERPExport},
+		{Route{"POST", "/v1/erp-bridges/{bridgeId}/exports/{batchId}/responses", false, []security.Role{operator, analyst}}, rt.handleRecordERPResponse},
+		{Route{"POST", "/v1/erp-bridges/{bridgeId}/exports/{batchId}/withdrawal", false, []security.Role{operator}}, rt.handleWithdrawERPExport},
+		{Route{"GET", "/v1/erp-bridges/{bridgeId}/gl-balances", false, []security.Role{operator, analyst, auditor}}, rt.handleListGLSnapshots},
+		{Route{"POST", "/v1/erp-bridges/{bridgeId}/gl-balances", false, []security.Role{operator}}, rt.handleRecordGLSnapshot},
+		{Route{"GET", "/v1/erp-bridges/{bridgeId}/gl-reconciliations", false, []security.Role{operator, analyst, auditor}}, rt.handleListGLReconciliations},
+		{Route{"POST", "/v1/erp-bridges/{bridgeId}/gl-reconciliations", false, []security.Role{operator}}, rt.handleRunGLReconciliation},
 		// Regulatory notices (W17, G-052): OPERATOR and ANALYST register and
 		// work them; ADMIN and AUDITOR read. The four-eye approval compares
 		// the preparer and approver as people in the service.

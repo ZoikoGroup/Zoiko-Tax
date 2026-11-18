@@ -771,6 +771,86 @@ export class ZoikoTaxClient {
     return this.#send<S<"ProviderContribution">>("POST", `/v1/contributions/${encodeURIComponent(contributionId)}/release`, body, signal);
   }
 
+  // --- ERP journal bridge and GL reconciliation ------------------------------
+  /** List the ERP journal bridges with their mapping versions. `GET /v1/erp-bridges`. */
+  listERPBridges(signal?: AbortSignal): Promise<Result<S<"ERPBridgeList">>> {
+    return this.#send<S<"ERPBridgeList">>("GET", `/v1/erp-bridges`, undefined, signal);
+  }
+
+  /** Connect a legal entity's subledger to a customer general ledger. `POST /v1/erp-bridges`. */
+  createERPBridge(body: S<"ERPBridgeRequest">, signal?: AbortSignal): Promise<Result<S<"ERPBridge">>> {
+    return this.#send<S<"ERPBridge">>("POST", `/v1/erp-bridges`, body, signal);
+  }
+
+  /**
+   * Record the bridge's next account mapping version; `200` when it is the
+   * current one already. `POST /v1/erp-bridges/{bridgeId}/mappings`.
+   */
+  recordERPMapping(bridgeId: string, body: S<"ERPMappingRequest">, signal?: AbortSignal): Promise<Result<S<"ERPBridge">>> {
+    return this.#send<S<"ERPBridge">>("POST", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/mappings`, body, signal);
+  }
+
+  /** A bridge's export batches, newest first. `GET /v1/erp-bridges/{bridgeId}/exports`. */
+  listERPExports(
+    bridgeId: string,
+    params: { period?: string; currency?: string; status?: string } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"ERPExportList">>> {
+    return this.#send<S<"ERPExportList">>("GET", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/exports${query(params)}`, undefined, signal);
+  }
+
+  /**
+   * Prepare and seal an export batch; `200` returns the prepared batch that
+   * already holds the journals. `POST /v1/erp-bridges/{bridgeId}/exports`.
+   */
+  prepareERPExport(bridgeId: string, body: S<"ERPExportRequest">, signal?: AbortSignal): Promise<Result<S<"ERPExport">>> {
+    return this.#send<S<"ERPExport">>("POST", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/exports`, body, signal);
+  }
+
+  /** One batch with its lines and delivery evidence. `GET /v1/erp-bridges/{bridgeId}/exports/{batchId}`. */
+  getERPExport(bridgeId: string, batchId: string, signal?: AbortSignal): Promise<Result<S<"ERPExport">>> {
+    return this.#send<S<"ERPExport">>("GET", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/exports/${encodeURIComponent(batchId)}`, undefined, signal);
+  }
+
+  /**
+   * Authorise and dispatch a sealed batch: `202` with a new attempt, `200`
+   * when it was already sent. Idempotent on the batch, not on an
+   * Idempotency-Key. `POST /v1/erp-bridges/{bridgeId}/exports/{batchId}/dispatch`.
+   */
+  dispatchERPExport(bridgeId: string, batchId: string, body: S<"ERPDispatchRequest">, signal?: AbortSignal): Promise<Result<S<"ERPExport">>> {
+    return this.#send<S<"ERPExport">>("POST", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/exports/${encodeURIComponent(batchId)}/dispatch`, body, signal);
+  }
+
+  /** Record what the ERP answered about an attempt. `POST /v1/erp-bridges/{bridgeId}/exports/{batchId}/responses`. */
+  recordERPResponse(bridgeId: string, batchId: string, body: S<"ERPResponseRequest">, signal?: AbortSignal): Promise<Result<S<"ERPExport">>> {
+    return this.#send<S<"ERPExport">>("POST", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/exports/${encodeURIComponent(batchId)}/responses`, body, signal);
+  }
+
+  /** Withdraw a prepared batch that was never dispatched. `POST /v1/erp-bridges/{bridgeId}/exports/{batchId}/withdrawal`. */
+  withdrawERPExport(bridgeId: string, batchId: string, body: S<"ERPWithdrawalRequest">, signal?: AbortSignal): Promise<Result<S<"ERPExport">>> {
+    return this.#send<S<"ERPExport">>("POST", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/exports/${encodeURIComponent(batchId)}/withdrawal`, body, signal);
+  }
+
+  /** The GL balances the ERP reported. `GET /v1/erp-bridges/{bridgeId}/gl-balances`. */
+  listGLSnapshots(bridgeId: string, params: { period?: string } = {}, signal?: AbortSignal): Promise<Result<S<"GLSnapshotList">>> {
+    return this.#send<S<"GLSnapshotList">>("GET", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/gl-balances${query(params)}`, undefined, signal);
+  }
+
+  /** Record the GL balances an ERP reported for a period. `POST /v1/erp-bridges/{bridgeId}/gl-balances`. */
+  recordGLSnapshot(bridgeId: string, body: S<"GLSnapshotRequest">, signal?: AbortSignal): Promise<Result<S<"GLSnapshot">>> {
+    return this.#send<S<"GLSnapshot">>("POST", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/gl-balances`, body, signal);
+  }
+
+  /** The subledger-to-GL reconciliations. `GET /v1/erp-bridges/{bridgeId}/gl-reconciliations`. */
+  listGLReconciliations(bridgeId: string, params: { period?: string } = {}, signal?: AbortSignal): Promise<Result<S<"GLReconciliationList">>> {
+    return this.#send<S<"GLReconciliationList">>("GET", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/gl-reconciliations${query(params)}`, undefined, signal);
+  }
+
+  /** Reconcile the subledger with an ERP's GL balances. `POST /v1/erp-bridges/{bridgeId}/gl-reconciliations`. */
+  runGLReconciliation(bridgeId: string, body: S<"GLReconciliationRequest">, signal?: AbortSignal): Promise<Result<S<"GLReconciliation">>> {
+    return this.#send<S<"GLReconciliation">>("POST", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/gl-reconciliations`, body, signal);
+  }
+
   // --- regulatory notices ---------------------------------------------------
   /**
    * List the regulatory notice register, in working order. `GET /v1/notices`.

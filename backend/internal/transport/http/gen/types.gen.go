@@ -1230,6 +1230,147 @@ func (e DocumentStatusEventStatus) Valid() bool {
 	}
 }
 
+// Defines values for ERPExportEventKind.
+const (
+	ERPExportEventKindACKNOWLEDGED   ERPExportEventKind = "ACKNOWLEDGED"
+	ERPExportEventKindDISPATCHED     ERPExportEventKind = "DISPATCHED"
+	ERPExportEventKindOUTCOMEUNKNOWN ERPExportEventKind = "OUTCOME_UNKNOWN"
+	ERPExportEventKindPOSTED         ERPExportEventKind = "POSTED"
+	ERPExportEventKindPREPARED       ERPExportEventKind = "PREPARED"
+	ERPExportEventKindREJECTED       ERPExportEventKind = "REJECTED"
+	ERPExportEventKindSTATUSNOTFOUND ERPExportEventKind = "STATUS_NOT_FOUND"
+	ERPExportEventKindWITHDRAWN      ERPExportEventKind = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the ERPExportEventKind enum.
+func (e ERPExportEventKind) Valid() bool {
+	switch e {
+	case ERPExportEventKindACKNOWLEDGED:
+		return true
+	case ERPExportEventKindDISPATCHED:
+		return true
+	case ERPExportEventKindOUTCOMEUNKNOWN:
+		return true
+	case ERPExportEventKindPOSTED:
+		return true
+	case ERPExportEventKindPREPARED:
+		return true
+	case ERPExportEventKindREJECTED:
+		return true
+	case ERPExportEventKindSTATUSNOTFOUND:
+		return true
+	case ERPExportEventKindWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ERPExportLineSide.
+const (
+	ERPExportLineSideCREDIT ERPExportLineSide = "CREDIT"
+	ERPExportLineSideDEBIT  ERPExportLineSide = "DEBIT"
+)
+
+// Valid indicates whether the value is a known member of the ERPExportLineSide enum.
+func (e ERPExportLineSide) Valid() bool {
+	switch e {
+	case ERPExportLineSideCREDIT:
+		return true
+	case ERPExportLineSideDEBIT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ERPExportStatus.
+const (
+	ERPExportStatusACKNOWLEDGED   ERPExportStatus = "ACKNOWLEDGED"
+	ERPExportStatusERPPOSTED      ERPExportStatus = "ERP_POSTED"
+	ERPExportStatusOUTCOMEUNKNOWN ERPExportStatus = "OUTCOME_UNKNOWN"
+	ERPExportStatusPREPARED       ERPExportStatus = "PREPARED"
+	ERPExportStatusREJECTED       ERPExportStatus = "REJECTED"
+	ERPExportStatusTRANSMITTED    ERPExportStatus = "TRANSMITTED"
+	ERPExportStatusWITHDRAWN      ERPExportStatus = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the ERPExportStatus enum.
+func (e ERPExportStatus) Valid() bool {
+	switch e {
+	case ERPExportStatusACKNOWLEDGED:
+		return true
+	case ERPExportStatusERPPOSTED:
+		return true
+	case ERPExportStatusOUTCOMEUNKNOWN:
+		return true
+	case ERPExportStatusPREPARED:
+		return true
+	case ERPExportStatusREJECTED:
+		return true
+	case ERPExportStatusTRANSMITTED:
+		return true
+	case ERPExportStatusWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ERPResponseKind.
+const (
+	ERPResponseKindACKNOWLEDGED   ERPResponseKind = "ACKNOWLEDGED"
+	ERPResponseKindOUTCOMEUNKNOWN ERPResponseKind = "OUTCOME_UNKNOWN"
+	ERPResponseKindPOSTED         ERPResponseKind = "POSTED"
+	ERPResponseKindREJECTED       ERPResponseKind = "REJECTED"
+	ERPResponseKindSTATUSNOTFOUND ERPResponseKind = "STATUS_NOT_FOUND"
+)
+
+// Valid indicates whether the value is a known member of the ERPResponseKind enum.
+func (e ERPResponseKind) Valid() bool {
+	switch e {
+	case ERPResponseKindACKNOWLEDGED:
+		return true
+	case ERPResponseKindOUTCOMEUNKNOWN:
+		return true
+	case ERPResponseKindPOSTED:
+		return true
+	case ERPResponseKindREJECTED:
+		return true
+	case ERPResponseKindSTATUSNOTFOUND:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ERPVendor.
+const (
+	ERPVendorDYNAMICS ERPVendor = "DYNAMICS"
+	ERPVendorNETSUITE ERPVendor = "NETSUITE"
+	ERPVendorORACLE   ERPVendor = "ORACLE"
+	ERPVendorOTHER    ERPVendor = "OTHER"
+	ERPVendorSAP      ERPVendor = "SAP"
+)
+
+// Valid indicates whether the value is a known member of the ERPVendor enum.
+func (e ERPVendor) Valid() bool {
+	switch e {
+	case ERPVendorDYNAMICS:
+		return true
+	case ERPVendorNETSUITE:
+		return true
+	case ERPVendorORACLE:
+		return true
+	case ERPVendorOTHER:
+		return true
+	case ERPVendorSAP:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EffectiveObligationStatus.
 const (
 	EffectiveObligationStatusACCEPTED          EffectiveObligationStatus = "ACCEPTED"
@@ -1287,6 +1428,7 @@ const (
 	ComZoikotaxDecisionCommitted           EventType = "com.zoikotax.decision.committed"
 	ComZoikotaxDecisionCorrected           EventType = "com.zoikotax.decision.corrected"
 	ComZoikotaxDocumentCommitted           EventType = "com.zoikotax.document.committed"
+	ComZoikotaxGlExportDispatched          EventType = "com.zoikotax.gl.export-dispatched"
 	ComZoikotaxObligationStatusChanged     EventType = "com.zoikotax.obligation.status-changed"
 	ComZoikotaxRefundRequested             EventType = "com.zoikotax.refund.requested"
 	ComZoikotaxRefundStatusChanged         EventType = "com.zoikotax.refund.status-changed"
@@ -1302,6 +1444,8 @@ func (e EventType) Valid() bool {
 	case ComZoikotaxDecisionCorrected:
 		return true
 	case ComZoikotaxDocumentCommitted:
+		return true
+	case ComZoikotaxGlExportDispatched:
 		return true
 	case ComZoikotaxObligationStatusChanged:
 		return true
@@ -1641,6 +1785,96 @@ func (e FundsPosture) Valid() bool {
 	case FundsPostureNOCUSTODY:
 		return true
 	case FundsPosturePSPPARTNER:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GLHoldReason.
+const (
+	GLHoldReasonAWAITINGDISPATCH       GLHoldReason = "AWAITING_DISPATCH"
+	GLHoldReasonAWAITINGERPPOSTING     GLHoldReason = "AWAITING_ERP_POSTING"
+	GLHoldReasonOUTCOMEUNKNOWN         GLHoldReason = "OUTCOME_UNKNOWN"
+	GLHoldReasonREJECTEDCORRECTIONOPEN GLHoldReason = "REJECTED_CORRECTION_OPEN"
+	GLHoldReasonUNEXPORTEDJOURNALS     GLHoldReason = "UNEXPORTED_JOURNALS"
+)
+
+// Valid indicates whether the value is a known member of the GLHoldReason enum.
+func (e GLHoldReason) Valid() bool {
+	switch e {
+	case GLHoldReasonAWAITINGDISPATCH:
+		return true
+	case GLHoldReasonAWAITINGERPPOSTING:
+		return true
+	case GLHoldReasonOUTCOMEUNKNOWN:
+		return true
+	case GLHoldReasonREJECTEDCORRECTIONOPEN:
+		return true
+	case GLHoldReasonUNEXPORTEDJOURNALS:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GLReconOutcome.
+const (
+	GLReconOutcomeHELD       GLReconOutcome = "HELD"
+	GLReconOutcomeRECONCILED GLReconOutcome = "RECONCILED"
+	GLReconOutcomeVARIANCES  GLReconOutcome = "VARIANCES"
+)
+
+// Valid indicates whether the value is a known member of the GLReconOutcome enum.
+func (e GLReconOutcome) Valid() bool {
+	switch e {
+	case GLReconOutcomeHELD:
+		return true
+	case GLReconOutcomeRECONCILED:
+		return true
+	case GLReconOutcomeVARIANCES:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GLReconciliationItemStatus.
+const (
+	GLReconciliationItemStatusCONFLICTED     GLReconciliationItemStatus = "CONFLICTED"
+	GLReconciliationItemStatusDUPLICATE      GLReconciliationItemStatus = "DUPLICATE"
+	GLReconciliationItemStatusEXPLAINED      GLReconciliationItemStatus = "EXPLAINED"
+	GLReconciliationItemStatusMATCHED        GLReconciliationItemStatus = "MATCHED"
+	GLReconciliationItemStatusMISSING        GLReconciliationItemStatus = "MISSING"
+	GLReconciliationItemStatusPARTIAL        GLReconciliationItemStatus = "PARTIAL"
+	GLReconciliationItemStatusPENDING        GLReconciliationItemStatus = "PENDING"
+	GLReconciliationItemStatusRESOLVED       GLReconciliationItemStatus = "RESOLVED"
+	GLReconciliationItemStatusTOLERANCEMATCH GLReconciliationItemStatus = "TOLERANCE_MATCH"
+	GLReconciliationItemStatusUNMATCHED      GLReconciliationItemStatus = "UNMATCHED"
+)
+
+// Valid indicates whether the value is a known member of the GLReconciliationItemStatus enum.
+func (e GLReconciliationItemStatus) Valid() bool {
+	switch e {
+	case GLReconciliationItemStatusCONFLICTED:
+		return true
+	case GLReconciliationItemStatusDUPLICATE:
+		return true
+	case GLReconciliationItemStatusEXPLAINED:
+		return true
+	case GLReconciliationItemStatusMATCHED:
+		return true
+	case GLReconciliationItemStatusMISSING:
+		return true
+	case GLReconciliationItemStatusPARTIAL:
+		return true
+	case GLReconciliationItemStatusPENDING:
+		return true
+	case GLReconciliationItemStatusRESOLVED:
+		return true
+	case GLReconciliationItemStatusTOLERANCEMATCH:
+		return true
+	case GLReconciliationItemStatusUNMATCHED:
 		return true
 	default:
 		return false
@@ -7129,6 +7363,322 @@ type DocumentTotals struct {
 	ReverseCharge Decimal `json:"reverseCharge"`
 }
 
+// ERPAccountMap One TCSL control account, onto one customer GL account.
+type ERPAccountMap struct {
+	// Account A Tax Control Subledger control account (ZTAX-FIN-001 §9). Never a customer GL account.
+	Account ControlAccount `json:"account"`
+
+	// GlAccount An account code in the customer's general ledger. Never a TCSL control account.
+	GlAccount GLAccountCode `json:"glAccount"`
+}
+
+// ERPAttemptID One dispatch attempt of an export batch.
+type ERPAttemptID = string
+
+// ERPBridge A member legal entity's subledger connected to one customer general ledger, with its mapping versions oldest first.
+type ERPBridge struct {
+	CompanyCode string `json:"companyCode"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+	CreatedBy string    `json:"createdBy"`
+
+	// CurrentMappingVersion The version a new batch is prepared under. Absent until a mapping is recorded.
+	CurrentMappingVersion *int32      `json:"currentMappingVersion,omitempty"`
+	ID                    ERPBridgeID `json:"id"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+	Mappings      []ERPMapping  `json:"mappings"`
+	Name          string        `json:"name"`
+
+	// Vendor The ERP family a bridge targets. A label for the connector that consumes a dispatch; each real target still needs its own contract verification (LED-23).
+	Vendor ERPVendor `json:"vendor"`
+}
+
+// ERPBridgeID defines model for ERPBridgeId.
+type ERPBridgeID = string
+
+// ERPBridgeList defines model for ERPBridgeList.
+type ERPBridgeList struct {
+	Bridges []ERPBridge `json:"bridges"`
+}
+
+// ERPBridgeRequest defines model for ERPBridgeRequest.
+type ERPBridgeRequest struct {
+	// CompanyCode The legal entity's company code in the ERP.
+	CompanyCode string `json:"companyCode"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID *LegalEntityID `json:"legalEntityId,omitempty"`
+
+	// Name A label for the connection.
+	Name string `json:"name"`
+
+	// Vendor The ERP family a bridge targets. A label for the connector that consumes a dispatch; each real target still needs its own contract verification (LED-23).
+	Vendor ERPVendor `json:"vendor"`
+}
+
+// ERPCorrectionTask The task an ERP rejection opens: the rejected batch's journals that no
+// posted batch has carried into the GL since. Open while any is
+// outstanding, and the period's GL reconciliation is held until then.
+type ERPCorrectionTask struct {
+	Open bool `json:"open"`
+
+	// OpenedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	OpenedAt              Timestamp `json:"openedAt"`
+	OutstandingJournalIds []string  `json:"outstandingJournalIds"`
+
+	// PostedBy The posted batches that carried the rejected journals.
+	PostedBy []ERPExportID `json:"postedBy"`
+
+	// Reason Why — an ERP's rejection text, why an outcome is unknown, or why a batch was withdrawn — in the words of the person who recorded it.
+	Reason *ERPDetail `json:"reason,omitempty"`
+}
+
+// ERPDetail Why — an ERP's rejection text, why an outcome is unknown, or why a batch was withdrawn — in the words of the person who recorded it.
+type ERPDetail = string
+
+// ERPDispatchRequest defines model for ERPDispatchRequest.
+type ERPDispatchRequest struct {
+	// ExpectedDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	ExpectedDigest Digest `json:"expectedDigest"`
+}
+
+// ERPExport A sealed export batch: the export mapping (company code, mapping and
+// chart version, currency, posting date), the exact journal ID set, the
+// totals and the batch digest, with its transfer state and every attempt
+// and ERP answer recorded against it.
+type ERPExport struct {
+	// BatchDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	BatchDigest Digest      `json:"batchDigest"`
+	BridgeID    ERPBridgeID `json:"bridgeId"`
+
+	// ChartVersion A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
+	ChartVersion ERPRef `json:"chartVersion"`
+	CompanyCode  string `json:"companyCode"`
+
+	// Correction The task an ERP rejection opens: the rejected batch's journals that no
+	// posted batch has carried into the GL since. Open while any is
+	// outstanding, and the period's GL reconciliation is held until then.
+	Correction *ERPCorrectionTask `json:"correction,omitempty"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// ExternalRef The reference every attempt carries to the ERP, and that the ERP deduplicates on.
+	ExternalRef string           `json:"externalRef"`
+	History     []ERPExportEvent `json:"history"`
+
+	// ID An export batch. Also the external reference every attempt of the batch carries to the ERP.
+	ID         ERPExportID `json:"id"`
+	JournalIds []string    `json:"journalIds"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+	LineCount     int32         `json:"lineCount"`
+
+	// Lines Present when one batch is read.
+	Lines []ERPExportLine `json:"lines,omitempty"`
+
+	// MappingDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	MappingDigest  Digest `json:"mappingDigest"`
+	MappingVersion int32  `json:"mappingVersion"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod `json:"period"`
+
+	// PostingDate A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	PostingDate CivilDate `json:"postingDate"`
+
+	// PreparedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	PreparedAt Timestamp `json:"preparedAt"`
+	PreparedBy string    `json:"preparedBy"`
+
+	// Status A batch's transfer state (LED-23). `TRANSMITTED` is committed for
+	// transmission; `ACKNOWLEDGED` is the ERP's transport receipt; only
+	// `ERP_POSTED` says the general ledger holds it. `WITHDRAWN` is a batch
+	// released before it was ever sent.
+	Status ERPExportStatus `json:"status"`
+
+	// TotalCredits A ledger figure in canonical decimal string form — never a JSON number,
+	// never computed by a client. Scale is significant. A control total or GL
+	// aggregate of the provider's own books, not a consumer amount.
+	TotalCredits LedgerAmount `json:"totalCredits"`
+
+	// TotalDebits A ledger figure in canonical decimal string form — never a JSON number,
+	// never computed by a client. Scale is significant. A control total or GL
+	// aggregate of the provider's own books, not a consumer amount.
+	TotalDebits LedgerAmount `json:"totalDebits"`
+}
+
+// ERPExportEvent One appended act on a batch — its delivery evidence, attempt by attempt.
+type ERPExportEvent struct {
+	// AttemptID One dispatch attempt of an export batch.
+	AttemptID *ERPAttemptID `json:"attemptId,omitempty"`
+
+	// Detail Why — an ERP's rejection text, why an outcome is unknown, or why a batch was withdrawn — in the words of the person who recorded it.
+	Detail *ERPDetail `json:"detail,omitempty"`
+
+	// ErpReference A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
+	ErpReference *ERPRef            `json:"erpReference,omitempty"`
+	Kind         ERPExportEventKind `json:"kind"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+	RecordedBy string    `json:"recordedBy"`
+
+	// RemoteCorrelation A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
+	RemoteCorrelation *ERPRef `json:"remoteCorrelation,omitempty"`
+
+	// ResponseDigest A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
+	ResponseDigest *ERPRef `json:"responseDigest,omitempty"`
+	Seq            int32   `json:"seq"`
+
+	// Status A batch's transfer state (LED-23). `TRANSMITTED` is committed for
+	// transmission; `ACKNOWLEDGED` is the ERP's transport receipt; only
+	// `ERP_POSTED` says the general ledger holds it. `WITHDRAWN` is a batch
+	// released before it was ever sent.
+	Status ERPExportStatus `json:"status"`
+}
+
+// ERPExportEventKind defines model for ERPExportEventKind.
+type ERPExportEventKind string
+
+// ERPExportID An export batch. Also the external reference every attempt of the batch carries to the ERP.
+type ERPExportID = string
+
+// ERPExportLine One exported line, traced to the TCSL journal line it carries (ZTAX-FIN-REQ-0053).
+type ERPExportLine struct {
+	// Account A Tax Control Subledger control account (ZTAX-FIN-001 §9). Never a customer GL account.
+	Account ControlAccount `json:"account"`
+
+	// Amount A ledger figure in canonical decimal string form — never a JSON number,
+	// never computed by a client. Scale is significant. A control total or GL
+	// aggregate of the provider's own books, not a consumer amount.
+	Amount    LedgerAmount `json:"amount"`
+	Authority *string      `json:"authority,omitempty"`
+
+	// GlAccount An account code in the customer's general ledger. Never a TCSL control account.
+	GlAccount    GLAccountCode     `json:"glAccount"`
+	JournalID    string            `json:"journalId"`
+	JournalLine  int32             `json:"journalLine"`
+	Jurisdiction *string           `json:"jurisdiction,omitempty"`
+	Side         ERPExportLineSide `json:"side"`
+}
+
+// ERPExportLineSide defines model for ERPExportLine.Side.
+type ERPExportLineSide string
+
+// ERPExportList defines model for ERPExportList.
+type ERPExportList struct {
+	Exports []ERPExport `json:"exports"`
+}
+
+// ERPExportRequest defines model for ERPExportRequest.
+type ERPExportRequest struct {
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod `json:"period"`
+
+	// PostingDate A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	PostingDate CivilDate `json:"postingDate"`
+}
+
+// ERPExportStatus A batch's transfer state (LED-23). `TRANSMITTED` is committed for
+// transmission; `ACKNOWLEDGED` is the ERP's transport receipt; only
+// `ERP_POSTED` says the general ledger holds it. `WITHDRAWN` is a batch
+// released before it was ever sent.
+type ERPExportStatus string
+
+// ERPMapping One version of a bridge's account mapping. Never edited; a change is the next version.
+type ERPMapping struct {
+	Accounts []ERPAccountMap `json:"accounts"`
+
+	// ChartVersion A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
+	ChartVersion ERPRef `json:"chartVersion"`
+
+	// Digest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	Digest Digest `json:"digest"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+	RecordedBy string    `json:"recordedBy"`
+	Version    int32     `json:"version"`
+}
+
+// ERPMappingRequest defines model for ERPMappingRequest.
+type ERPMappingRequest struct {
+	Accounts []ERPAccountMap `json:"accounts"`
+
+	// ChartVersion A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
+	ChartVersion ERPRef `json:"chartVersion"`
+}
+
+// ERPRef A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
+type ERPRef = string
+
+// ERPResponseKind An ERP answer a person records.
+type ERPResponseKind string
+
+// ERPResponseRequest defines model for ERPResponseRequest.
+type ERPResponseRequest struct {
+	// AttemptID One dispatch attempt of an export batch.
+	AttemptID ERPAttemptID `json:"attemptId"`
+
+	// Detail Why — an ERP's rejection text, why an outcome is unknown, or why a batch was withdrawn — in the words of the person who recorded it.
+	Detail *ERPDetail `json:"detail,omitempty"`
+
+	// ErpReference A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
+	ErpReference *ERPRef `json:"erpReference,omitempty"`
+
+	// Kind An ERP answer a person records.
+	Kind ERPResponseKind `json:"kind"`
+
+	// RemoteCorrelation A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
+	RemoteCorrelation *ERPRef `json:"remoteCorrelation,omitempty"`
+
+	// ResponseDigest A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
+	ResponseDigest *ERPRef `json:"responseDigest,omitempty"`
+}
+
+// ERPVendor The ERP family a bridge targets. A label for the connector that consumes a dispatch; each real target still needs its own contract verification (LED-23).
+type ERPVendor string
+
+// ERPWithdrawalRequest defines model for ERPWithdrawalRequest.
+type ERPWithdrawalRequest struct {
+	// Reason Why — an ERP's rejection text, why an outcome is unknown, or why a batch was withdrawn — in the words of the person who recorded it.
+	Reason ERPDetail `json:"reason"`
+}
+
 // EffectiveObligationStatus A stored status, or `OVERDUE` derived as of today for an unfiled obligation past its due date.
 type EffectiveObligationStatus string
 
@@ -7660,6 +8210,186 @@ type FiscalDocumentList struct {
 // FundsPosture defines model for FundsPosture.
 type FundsPosture string
 
+// GLAccountCode An account code in the customer's general ledger. Never a TCSL control account.
+type GLAccountCode = string
+
+// GLBalanceLine One GL account's period activity as the ERP reported it, debits and credits apart.
+type GLBalanceLine struct {
+	// Credits A ledger figure in canonical decimal string form — never a JSON number,
+	// never computed by a client. Scale is significant. A control total or GL
+	// aggregate of the provider's own books, not a consumer amount.
+	Credits LedgerAmount `json:"credits"`
+
+	// Debits A ledger figure in canonical decimal string form — never a JSON number,
+	// never computed by a client. Scale is significant. A control total or GL
+	// aggregate of the provider's own books, not a consumer amount.
+	Debits LedgerAmount `json:"debits"`
+
+	// GlAccount An account code in the customer's general ledger. Never a TCSL control account.
+	GlAccount GLAccountCode `json:"glAccount"`
+}
+
+// GLHold How many of the period's journals are held for one reason.
+type GLHold struct {
+	Journals int32        `json:"journals"`
+	Reason   GLHoldReason `json:"reason"`
+}
+
+// GLHoldReason defines model for GLHold.Reason.
+type GLHoldReason string
+
+// GLReconOutcome `RECONCILED` — every item tied and nothing held the period.
+// `VARIANCES` — an item did not tie. `HELD` — a journal of the period is
+// not in a batch the ERP posted; never reported reconciled while it is.
+type GLReconOutcome string
+
+// GLReconciliation One subledger-to-GL reconciliation of a period and currency, against one snapshot, under one mapping version. A record; a re-run is a new one.
+type GLReconciliation struct {
+	BridgeID ERPBridgeID `json:"bridgeId"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency       CurrencyCode           `json:"currency"`
+	ExceptionCount int32                  `json:"exceptionCount"`
+	Holds          []GLHold               `json:"holds"`
+	ID             GLReconciliationID     `json:"id"`
+	Items          []GLReconciliationItem `json:"items"`
+	JournalCount   int32                  `json:"journalCount"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID  LegalEntityID `json:"legalEntityId"`
+	MappingVersion int32         `json:"mappingVersion"`
+
+	// Outcome `RECONCILED` — every item tied and nothing held the period.
+	// `VARIANCES` — an item did not tie. `HELD` — a journal of the period is
+	// not in a batch the ERP posted; never reported reconciled while it is.
+	Outcome GLReconOutcome `json:"outcome"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod `json:"period"`
+
+	// PopulationDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	PopulationDigest   Digest `json:"populationDigest"`
+	PostedJournalCount int32  `json:"postedJournalCount"`
+
+	// RanAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RanAt Timestamp `json:"ranAt"`
+	RanBy *string   `json:"ranBy,omitempty"`
+
+	// SnapshotDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	SnapshotDigest Digest       `json:"snapshotDigest"`
+	SnapshotID     GLSnapshotID `json:"snapshotId"`
+}
+
+// GLReconciliationID defines model for GLReconciliationId.
+type GLReconciliationID = string
+
+// GLReconciliationItem One compared GL account (an R6 item). Amounts are net debit — debits
+// less credits. `variance` is observed minus expected, exact, whatever the
+// status; absent when one side is.
+type GLReconciliationItem struct {
+	Detail *string `json:"detail,omitempty"`
+
+	// Expected An amount and its currency, never one without the other.
+	Expected *MoneyValue `json:"expected,omitempty"`
+
+	// GlAccount An account code in the customer's general ledger. Never a TCSL control account.
+	GlAccount *GLAccountCode `json:"glAccount,omitempty"`
+
+	// MatchKey `gl:<account>`, or `tcsl:<account>` for a TCSL account with no mapping.
+	MatchKey string `json:"matchKey"`
+
+	// Observed An amount and its currency, never one without the other.
+	Observed     *MoneyValue                `json:"observed,omitempty"`
+	Status       GLReconciliationItemStatus `json:"status"`
+	TcslAccounts []ControlAccount           `json:"tcslAccounts"`
+
+	// Variance An amount and its currency, never one without the other.
+	Variance *MoneyValue `json:"variance,omitempty"`
+}
+
+// GLReconciliationItemStatus defines model for GLReconciliationItem.Status.
+type GLReconciliationItemStatus string
+
+// GLReconciliationList defines model for GLReconciliationList.
+type GLReconciliationList struct {
+	Reconciliations []GLReconciliation `json:"reconciliations"`
+}
+
+// GLReconciliationRequest defines model for GLReconciliationRequest.
+type GLReconciliationRequest struct {
+	SnapshotID GLSnapshotID `json:"snapshotId"`
+}
+
+// GLSnapshot GL balances an ERP reported for a period and currency, with the report they came from and their digest.
+type GLSnapshot struct {
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf     Timestamp       `json:"asOf"`
+	Balances []GLBalanceLine `json:"balances"`
+	BridgeID ERPBridgeID     `json:"bridgeId"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// Digest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	Digest Digest       `json:"digest"`
+	ID     GLSnapshotID `json:"id"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod `json:"period"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+	RecordedBy string    `json:"recordedBy"`
+
+	// SourceDigest A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
+	SourceDigest *ERPRef `json:"sourceDigest,omitempty"`
+
+	// SourceRef A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
+	SourceRef ERPRef `json:"sourceRef"`
+}
+
+// GLSnapshotID defines model for GLSnapshotId.
+type GLSnapshotID = string
+
+// GLSnapshotList defines model for GLSnapshotList.
+type GLSnapshotList struct {
+	Snapshots []GLSnapshot `json:"snapshots"`
+}
+
+// GLSnapshotRequest defines model for GLSnapshotRequest.
+type GLSnapshotRequest struct {
+	// AsOf When the ERP's figures were taken, RFC 3339.
+	AsOf     string          `json:"asOf"`
+	Balances []GLBalanceLine `json:"balances"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod `json:"period"`
+
+	// SourceDigest A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
+	SourceDigest *ERPRef `json:"sourceDigest,omitempty"`
+
+	// SourceRef A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
+	SourceRef ERPRef `json:"sourceRef"`
+}
+
 // InclusionProof defines model for InclusionProof.
 type InclusionProof struct {
 	// AuditPath Sibling node hashes from the leaf's level to the root, in the digest form.
@@ -7866,6 +8596,11 @@ type JournalList struct {
 // `jurisdiction:ca-qc`. Classified as location evidence: on a consumer
 // document, the deepest jurisdiction is where the customer is.
 type JurisdictionID = string
+
+// LedgerAmount A ledger figure in canonical decimal string form — never a JSON number,
+// never computed by a client. Scale is significant. A control total or GL
+// aggregate of the provider's own books, not a consumer amount.
+type LedgerAmount = string
 
 // LegacyCode A source system's own tax code.
 type LegacyCode = string
@@ -12917,6 +13652,30 @@ type CorrectDocumentParams struct {
 	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
 }
 
+// ListERPExportsParams defines parameters for ListERPExports.
+type ListERPExportsParams struct {
+	// Period Only batches of this legal period.
+	Period *LegalPeriod `form:"period,omitempty" json:"period,omitempty"`
+
+	// Currency Only batches in this currency.
+	Currency *CurrencyCode `form:"currency,omitempty" json:"currency,omitempty"`
+
+	// Status Only batches in this transfer state.
+	Status *ERPExportStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// ListGLSnapshotsParams defines parameters for ListGLSnapshots.
+type ListGLSnapshotsParams struct {
+	// Period Only snapshots of this legal period.
+	Period *LegalPeriod `form:"period,omitempty" json:"period,omitempty"`
+}
+
+// ListGLReconciliationsParams defines parameters for ListGLReconciliations.
+type ListGLReconciliationsParams struct {
+	// Period Only reconciliations of this legal period.
+	Period *LegalPeriod `form:"period,omitempty" json:"period,omitempty"`
+}
+
 // ListExemptionCertificatesParams defines parameters for ListExemptionCertificates.
 type ListExemptionCertificatesParams struct {
 	// Status Only certificates in this status.
@@ -13254,6 +14013,30 @@ type IssueDocumentJSONRequestBody = DocumentRequest
 
 // CorrectDocumentJSONRequestBody defines body for CorrectDocument for application/json ContentType.
 type CorrectDocumentJSONRequestBody = CorrectionRequest
+
+// CreateERPBridgeJSONRequestBody defines body for CreateERPBridge for application/json ContentType.
+type CreateERPBridgeJSONRequestBody = ERPBridgeRequest
+
+// PrepareERPExportJSONRequestBody defines body for PrepareERPExport for application/json ContentType.
+type PrepareERPExportJSONRequestBody = ERPExportRequest
+
+// DispatchERPExportJSONRequestBody defines body for DispatchERPExport for application/json ContentType.
+type DispatchERPExportJSONRequestBody = ERPDispatchRequest
+
+// RecordERPResponseJSONRequestBody defines body for RecordERPResponse for application/json ContentType.
+type RecordERPResponseJSONRequestBody = ERPResponseRequest
+
+// WithdrawERPExportJSONRequestBody defines body for WithdrawERPExport for application/json ContentType.
+type WithdrawERPExportJSONRequestBody = ERPWithdrawalRequest
+
+// RecordGLSnapshotJSONRequestBody defines body for RecordGLSnapshot for application/json ContentType.
+type RecordGLSnapshotJSONRequestBody = GLSnapshotRequest
+
+// RunGLReconciliationJSONRequestBody defines body for RunGLReconciliation for application/json ContentType.
+type RunGLReconciliationJSONRequestBody = GLReconciliationRequest
+
+// RecordERPMappingJSONRequestBody defines body for RecordERPMapping for application/json ContentType.
+type RecordERPMappingJSONRequestBody = ERPMappingRequest
 
 // ReceiveExemptionCertificateJSONRequestBody defines body for ReceiveExemptionCertificate for application/json ContentType.
 type ReceiveExemptionCertificateJSONRequestBody = ExemptionEvidenceRequest

@@ -219,6 +219,9 @@ const FOLDERS = [
       "receiveExemptionCertificate", "listExemptionCertificates", "getExemptionCertificate",
       "addExemptionCertificateVersion", "screenExemptionCertificate", "recommendExemptionCertificate",
       "decideExemptionCertificate", "transitionExemptionCertificate",
+      "createERPBridge", "listERPBridges", "recordERPMapping", "prepareERPExport", "listERPExports", "getERPExport",
+      "dispatchERPExport", "recordERPResponse", "withdrawERPExport", "recordGLSnapshot", "listGLSnapshots",
+      "runGLReconciliation", "listGLReconciliations",
       "createComparator", "listComparators", "executeShadowRun", "listShadowRuns", "getShadowRun", "moveDiscrepancy",
       "issueDocument", "getDocument", "correctDocument", "getDocumentLineage", "listDocuments",
       "adjustTransaction", "refundTransaction", "getRefund", "reportRefund", "listRefunds", "proposeClassification",
@@ -311,6 +314,11 @@ const VALUE_VARIABLES = {
   "01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{runId}}",
   // The job example's id: the batch the folder just queued.
   "01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{jobId}}",
+  // The ERP bridge examples' ids: the bridge, batch and GL snapshot folder
+  // 06 just made.
+  "01920c20-0000-7000-8000-0000000000b1": "{{bridgeId}}",
+  "01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10": "{{batchId}}",
+  "01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e30": "{{snapshotId}}",
   // The webhook examples' id: the subscription folder 04 just created.
   "01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{webhookId}}",
 };
@@ -553,6 +561,29 @@ const OPERATION_TESTS = {
     "  pm.expect(pm.response.json().inForce).to.eql(false);",
     "});",
     "pm.collectionVariables.set('certificateId', pm.response.json().id);",
+  ],
+  createERPBridge: [
+    "pm.test('the bridge is recorded with no mapping yet', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().mappings).to.eql([]);",
+    "});",
+    "pm.collectionVariables.set('bridgeId', pm.response.json().id);",
+  ],
+  prepareERPExport: [
+    "pm.test('LED-23 — a prepared batch is sealed with its digest, or there is nothing to export', function () {",
+    "  pm.expect([200, 201, 409]).to.include(pm.response.code);",
+    "  if (pm.response.code !== 409) {",
+    "    pm.expect(pm.response.json().batchDigest).to.match(/^zt1:[0-9a-f]{64}$/);",
+    "    pm.collectionVariables.set('batchId', pm.response.json().id);",
+    "  }",
+    "});",
+  ],
+  recordGLSnapshot: [
+    "pm.test('the ERP balances are recorded with their digest', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().digest).to.match(/^zt1:[0-9a-f]{64}$/);",
+    "});",
+    "pm.collectionVariables.set('snapshotId', pm.response.json().id);",
   ],
   createRemittance: [
     "pm.test('ZTAX-REM-REQ-0005 — only an accepted return is paid', function () {",
@@ -1036,6 +1067,17 @@ const ACCEPTED_OUTCOMES = {
   recommendExemptionCertificate: ["403"],
   decideExemptionCertificate: ["403"],
   transitionExemptionCertificate: ["403"],
+  // Folder 06 may post nothing in the example period and currency, so a
+  // prepare can find nothing to export and the batch reads then name the
+  // example batch. One OPERATOR prepares, so its dispatch is refused (the
+  // example digest is not the batch's, and the preparer is not the
+  // checker), the example attempt was never made, and the withdrawal finds
+  // the batch only when the prepare made one.
+  prepareERPExport: ["409"],
+  getERPExport: ["404"],
+  dispatchERPExport: ["403", "404", "409"],
+  recordERPResponse: ["404"],
+  withdrawERPExport: ["404"],
   moveDiscrepancy: ["404"],
 };
 
@@ -1365,6 +1407,13 @@ function variables(overlay, contractDigest, local) {
     { key: "jurisdiction", value: "", type: "string" },
     { key: "flag", value: "", type: "string" },
     { key: "buyerRef", value: "", type: "string" },
+    // Captured by createERPBridge, prepareERPExport and recordGLSnapshot; the
+    // batch defaults to one that does not exist, for a prepare that found
+    // nothing to export. The currency filter is empty, so it lists all.
+    { key: "bridgeId", value: "", type: "string" },
+    { key: "batchId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
+    { key: "snapshotId", value: "", type: "string" },
+    { key: "currency", value: "", type: "string" },
     { key: "webhookId", value: "", type: "string" },
     { key: "jobId", value: "", type: "string" },
     { key: "sealId", value: "", type: "string" },

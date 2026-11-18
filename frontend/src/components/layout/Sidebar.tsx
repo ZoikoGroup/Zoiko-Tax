@@ -50,6 +50,7 @@ export type View =
   | 'registrations'
   | 'notices'
   | 'workpapers'
+  | 'erp-reconciliation'
 
 /** A screen: a view, and the tab inside it when the view has tabs. */
 export interface NavTarget {
@@ -139,7 +140,7 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
     id: 'reconcile', label: 'Reconcile', icon: <IconRotateCw />, children: [
       { id: 'reconcile.subledger', label: 'Tax Control Subledger', target: at('determine', 'subledger') },
       { id: 'reconcile.billing', label: 'Billing-to-Tax', target: at('reconcile', 'runs') },
-      { id: 'reconcile.erp', label: 'ERP Reconciliation' },
+      { id: 'reconcile.erp', label: 'ERP Reconciliation', target: at('erp-reconciliation') },
       { id: 'reconcile.filing', label: 'Filing-to-Remittance', target: at('filing-remittance') },
       { id: 'reconcile.variances', label: 'Variances', target: at('reconcile', 'variances') },
     ],

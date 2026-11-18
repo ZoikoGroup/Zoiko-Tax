@@ -476,3 +476,48 @@ test("the registration and exemption calls send intake under an Idempotency-Key 
   assert.equal(calls[6].init.headers["Idempotency-Key"], "k-cert");
   for (const c of calls.filter((_, i) => i !== 0 && i !== 6)) assert.equal(c.init.headers["Idempotency-Key"], undefined);
 });
+
+test("the ERP bridge calls put ids in the path, amounts as strings and send no Idempotency-Key", async () => {
+  const { fetch, calls } = stub(json(201, { id: "01920c20-0000-7000-8000-0000000000b1" }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+  const bridge = "01920c20-0000-7000-8000-0000000000b1";
+  const batch = "01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10";
+
+  await client.listERPBridges();
+  await client.createERPBridge({ name: "Acme SAP", vendor: "SAP", companyCode: "AC01" });
+  await client.recordERPMapping(bridge, { chartVersion: "COA-2026.2", accounts: [{ account: "TAX_COLLECTED_LIABILITY", glAccount: "2310-00" }] });
+  await client.listERPExports(bridge, { period: "2026-09", status: "REJECTED" });
+  await client.prepareERPExport(bridge, { period: "2026-09", currency: "USD", postingDate: "2026-10-03" });
+  await client.getERPExport(bridge, batch);
+  await client.dispatchERPExport(bridge, batch, { expectedDigest: "zt1:" + "0".repeat(64) });
+  await client.recordERPResponse(bridge, batch, { kind: "POSTED", attemptId: "01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20", erpReference: "AC01/2026/1" });
+  await client.withdrawERPExport(bridge, batch, { reason: "mapping v2" });
+  await client.recordGLSnapshot(bridge, {
+    period: "2026-09",
+    currency: "USD",
+    asOf: "2026-10-05T18:00:00Z",
+    sourceRef: "FAGLB03",
+    balances: [{ glAccount: "2310-00", debits: "0.00", credits: "10.00" }],
+  });
+  await client.listGLSnapshots(bridge, { period: "2026-09" });
+  await client.runGLReconciliation(bridge, { snapshotId: "01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e30" });
+  await client.listGLReconciliations(bridge);
+
+  assert.deepEqual(calls.map((c) => `${c.init.method} ${c.url}`), [
+    "GET /api/v1/erp-bridges",
+    "POST /api/v1/erp-bridges",
+    `POST /api/v1/erp-bridges/${bridge}/mappings`,
+    `GET /api/v1/erp-bridges/${bridge}/exports?period=2026-09&status=REJECTED`,
+    `POST /api/v1/erp-bridges/${bridge}/exports`,
+    `GET /api/v1/erp-bridges/${bridge}/exports/${batch}`,
+    `POST /api/v1/erp-bridges/${bridge}/exports/${batch}/dispatch`,
+    `POST /api/v1/erp-bridges/${bridge}/exports/${batch}/responses`,
+    `POST /api/v1/erp-bridges/${bridge}/exports/${batch}/withdrawal`,
+    `POST /api/v1/erp-bridges/${bridge}/gl-balances`,
+    `GET /api/v1/erp-bridges/${bridge}/gl-balances?period=2026-09`,
+    `POST /api/v1/erp-bridges/${bridge}/gl-reconciliations`,
+    `GET /api/v1/erp-bridges/${bridge}/gl-reconciliations`,
+  ]);
+  assert.equal(JSON.parse(calls[9].init.body).balances[0].credits, "10.00");
+  for (const c of calls) assert.equal(c.init.headers["Idempotency-Key"], undefined);
+});
