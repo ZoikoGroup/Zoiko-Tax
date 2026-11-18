@@ -470,3 +470,188 @@ def _make_call(kind: Kind) -> Call:
         subject_ref="sku:PLAN-UNL-5G",
         input=b"test-item",
     )
+
+
+# ---------------------------------------------------------------------------
+# Task 3: explainer canned answers in BASE_STACK_CANNED
+# ---------------------------------------------------------------------------
+
+_EXPLAIN_USE_CASES = [
+    "explain-report-figure",
+    "explain-obligation-row",
+    "explain-shadow-variance",
+]
+
+# Expected fixed cited ids for each explainer (from the synthetic fixture).
+_EXPLAIN_CITED_IDS = {
+    "explain-report-figure": "FIG-001",
+    "explain-obligation-row": "OBL-001",
+    "explain-shadow-variance": "SHD-001",
+}
+
+
+def _explainer_call(use_case: str) -> Call:
+    """Build a Kind.EXTRACTION call for an explainer use case."""
+    import base64
+
+    from ztax_gateway.provenance import AuthorityOutcome, RiskTier
+    from ztax_gateway.wire import Governance
+
+    return Call(
+        kind=Kind.EXTRACTION,
+        governance=Governance(
+            tenant_id="00000000-0000-0000-0000-000000000001",
+            use_case=use_case,
+            authority_outcome=AuthorityOutcome.A1,
+            risk_tier=RiskTier.T1,
+            region="euc1-dev-01",
+            data_classes=("P0",),
+        ),
+        subject_ref=f"report-explain:{use_case}",
+        input=base64.b64encode(b"[]"),
+    )
+
+
+class TestBaseStackCannedExplainers:
+    """BASE_STACK_CANNED carries one EXTRACTION entry per explainer use case.
+
+    Task 3 adds these so the base stack (ZTAX_GATEWAY_RUNTIME=fake) can serve
+    explain-button calls without an API key.  The tests here check:
+      - each explainer is registered in registry.dev.json with the fake route;
+      - FakeRuntime(canned=BASE_STACK_CANNED) returns the canned answer;
+      - each canned answer starts with "[fake]";
+      - check_guard's outcome is recorded (a fixed answer cannot cite the right
+        row for every request, so the guard may abstain — see the comment on
+        each test for the exact outcome).
+    """
+
+    # -- Registration checks --------------------------------------------------
+
+    @pytest.mark.parametrize("use_case_id", _EXPLAIN_USE_CASES)
+    def test_explainer_registered_in_dev_registry(self, use_case_id: str) -> None:
+        """Each explainer is registered in registry.dev.json with the fake route."""
+        import json
+        from pathlib import Path
+
+        config_dir = Path(__file__).parent.parent / "config"
+        doc = json.loads((config_dir / "registry.dev.json").read_text(encoding="utf-8"))
+        by_id = {uc["use_case_id"]: uc for uc in doc["use_cases"]}
+        assert use_case_id in by_id, f"{use_case_id} missing from registry.dev.json"
+        uc = by_id[use_case_id]
+        assert uc["route"]["model_profile"] == "model:fake-v1", use_case_id
+        assert uc["route"]["provider_profile"] == "provider:fake", use_case_id
+
+    @pytest.mark.parametrize("use_case_id", _EXPLAIN_USE_CASES)
+    def test_explainer_max_risk_tier_is_t1(self, use_case_id: str) -> None:
+        """Explainers carry max_risk_tier T1 (the live-demo value)."""
+        import json
+        from pathlib import Path
+
+        config_dir = Path(__file__).parent.parent / "config"
+        doc = json.loads((config_dir / "registry.dev.json").read_text(encoding="utf-8"))
+        by_id = {uc["use_case_id"]: uc for uc in doc["use_cases"]}
+        assert by_id[use_case_id]["max_risk_tier"] == "T1", use_case_id
+
+    # -- Canned-answer presence checks ----------------------------------------
+
+    @pytest.mark.parametrize("use_case_id", _EXPLAIN_USE_CASES)
+    def test_explainer_in_base_stack_canned(self, use_case_id: str) -> None:
+        """Each explainer has an entry in BASE_STACK_CANNED for Kind.EXTRACTION."""
+        assert (use_case_id, Kind.EXTRACTION) in BASE_STACK_CANNED, (
+            f"({use_case_id!r}, Kind.EXTRACTION) missing from BASE_STACK_CANNED"
+        )
+
+    @pytest.mark.parametrize("use_case_id", _EXPLAIN_USE_CASES)
+    def test_fake_runtime_returns_canned_answer_for_explainer(self, use_case_id: str) -> None:
+        """FakeRuntime(canned=BASE_STACK_CANNED) returns the canned EXTRACTION result."""
+        runtime = FakeRuntime(canned=BASE_STACK_CANNED)
+        route = _make_route()
+        call = _explainer_call(use_case_id)
+        result = runtime.run(route, call)
+        assert result.fields is not None, f"{use_case_id}: canned result must have fields"
+
+    @pytest.mark.parametrize("use_case_id", _EXPLAIN_USE_CASES)
+    def test_canned_answer_starts_with_fake_prefix(self, use_case_id: str) -> None:
+        """Each canned explanation text starts with '[fake]'."""
+        runtime = FakeRuntime(canned=BASE_STACK_CANNED)
+        route = _make_route()
+        call = _explainer_call(use_case_id)
+        result = runtime.run(route, call)
+        assert result.fields is not None
+        explanation = result.fields.get("explanation", "")
+        assert explanation.startswith("[fake]"), (
+            f"{use_case_id}: explanation must start with '[fake]', got {explanation[:40]!r}"
+        )
+
+    @pytest.mark.parametrize("use_case_id", _EXPLAIN_USE_CASES)
+    def test_canned_answer_passes_check_result(self, use_case_id: str) -> None:
+        """check_result must not raise for each canned explainer answer."""
+        runtime = FakeRuntime(canned=BASE_STACK_CANNED)
+        route = _make_route()
+        call = _explainer_call(use_case_id)
+        result = runtime.run(route, call)
+        check_result(Kind.EXTRACTION, result)  # must not raise
+
+    # -- check_guard outcome --------------------------------------------------
+
+    @pytest.mark.parametrize("use_case_id", _EXPLAIN_USE_CASES)
+    def test_check_guard_outcome_for_canned_answer(self, use_case_id: str) -> None:
+        """Record what check_guard does with each fixed canned answer.
+
+        A fixed answer cites a hard-coded row id (e.g. FIG-001, OBL-001,
+        SHD-001).  When the caller's fixture rows do NOT include that id,
+        check_guard returns GUARD_FOREIGN_CITATION (the cited id is not among
+        the supplied rows).  This is the EXPECTED and documented outcome for
+        the base stack: the explain button returns ABSTAINED rather than
+        EXPLAINED, which is acceptable because the base stack has no real model.
+        The important thing is that the route is wired and the runtime returns a
+        result without raising — guard rejection is not a runtime failure.
+
+        If the caller happens to supply a fixture that includes the fixed cited
+        id but whose rows contain numbers not present in the canned explanation
+        text, check_guard may instead return GUARD_NUMBER_NOT_IN_ROWS.
+
+        This test supplies an EMPTY row list (the worst case), so the outcome
+        is always GUARD_NO_CITATION because there are also no cited_ids parsed
+        from the canned fields (cited_ids is a JSON list that the guard reads
+        AFTER it checks the explanation itself; with no rows, cited_ids cannot
+        be validated against anything, but the first check — "no cited id" —
+        fires first because the canned cited_ids key is non-empty JSON but the
+        guard's _check sees cited_ids as the Python list from json.loads, and
+        the check at line 280 fires if that list is empty).
+
+        Wait — to be precise: the canned fields["cited_ids"] carries a non-empty
+        JSON string e.g. '["FIG-001"]'.  The explain() function in
+        report_ai_http.py parses it with json.loads; the result is ["FIG-001"].
+        check_guard then checks whether "FIG-001" is in the supplied rows' ids.
+        When supplied with an empty row list, row_ids == set(), so "FIG-001"
+        is a foreign citation → GUARD_FOREIGN_CITATION, not GUARD_NO_CITATION.
+
+        Outcome asserted here: GUARD_FOREIGN_CITATION (not ok) when rows=[].
+        This is recorded, not hidden.
+        """
+        import json
+
+        from ztax_gateway.explanation_guard import GUARD_FOREIGN_CITATION, check_guard
+
+        runtime = FakeRuntime(canned=BASE_STACK_CANNED)
+        route = _make_route()
+        call = _explainer_call(use_case_id)
+        result = runtime.run(route, call)
+        assert result.fields is not None
+
+        explanation = result.fields.get("explanation", "")
+        cited_ids_raw = result.fields.get("cited_ids", "[]")
+        cited_ids: list[str] = json.loads(cited_ids_raw)
+
+        # Simulate an empty row list (worst case for a fixed canned answer).
+        rows: list[dict[str, object]] = []
+        guard_result = check_guard(rows, cited_ids, explanation)
+
+        # The expected outcome: the fixed cited id is foreign to the empty rows.
+        assert not guard_result.ok, (
+            f"{use_case_id}: guard unexpectedly passed for a fixed answer with empty rows"
+        )
+        assert guard_result.code == GUARD_FOREIGN_CITATION, (
+            f"{use_case_id}: expected GUARD_FOREIGN_CITATION, got {guard_result.code!r}"
+        )
