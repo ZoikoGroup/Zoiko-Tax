@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict'
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, test } from 'node:test'
 
 import {
+  DESCRIPTION_MAX,
   SLOW_AFTER_MS,
+  emptyNoteVisible,
   tookText,
   viewOfProposal,
   viewOfWaiting,
@@ -62,15 +66,30 @@ describe('the four states', () => {
     assert.match(v.headline, /Still waiting/)
   })
 
-  test('every state tells the person what to do next', () => {
-    const next = /(review|Try again|Classify|keep waiting|classify)/
-    const all = [
-      viewOfProposal(proposed(), 1),
-      viewOfProposal(reviewRequired('AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE'), 1),
-      viewOfProposal(failure(transportError()), 1),
-      viewOfWaiting(SLOW_AFTER_MS),
+  test('every state tells the person what to do next, in its own words', () => {
+    const cases = [
+      [viewOfProposal(proposed(), 1), /A person must review this suggestion/],
+      [viewOfProposal(reviewRequired('AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE'), 1), /Classify it by hand/],
+      [viewOfProposal(failure(apiError(403)), 1), /ask a reviewer/],
+      [viewOfProposal(failure(transportError()), 1), /Try again in a moment/],
+      [viewOfProposal(failure(apiError(400)), 1), /Check the fields and try again/],
+      [viewOfProposal(failure(apiError(401)), 1), /Sign in again/],
+      [viewOfWaiting(SLOW_AFTER_MS), /keep waiting/],
     ]
-    for (const v of all) assert.match(v.sentence, next, v.state)
+    for (const [v, phrase] of cases) assert.match(v.sentence, phrase, v.headline)
+  })
+
+  test('each state has its own sentence, so one is never used for another', () => {
+    const sentences = [
+      viewOfProposal(proposed(), 1).sentence,
+      viewOfProposal(reviewRequired('AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE'), 1).sentence,
+      viewOfProposal(failure(apiError(403)), 1).sentence,
+      viewOfProposal(failure(transportError()), 1).sentence,
+      viewOfProposal(failure(apiError(400)), 1).sentence,
+      viewOfProposal(failure(apiError(401)), 1).sentence,
+      viewOfWaiting(SLOW_AFTER_MS).sentence,
+    ]
+    assert.equal(new Set(sentences).size, sentences.length)
   })
 })
 
@@ -95,8 +114,13 @@ describe('the time text', () => {
     assert.equal(viewOfWaiting(SLOW_AFTER_MS + 1).elapsed, '5 seconds so far')
   })
 
-  test('the threshold is below the 10 s the client allows, so the line shows before the call is ended', () => {
-    assert.ok(SLOW_AFTER_MS > 0 && SLOW_AFTER_MS < 10000)
+  test('the threshold is below the limit set in platform/client.ts, so the line shows before the call is ended', () => {
+    const text = readFileSync(join(process.cwd(), 'src', 'platform', 'client.ts'), 'utf8')
+    const match = /timeoutMs:\s*([0-9_]+)/.exec(text)
+    assert.ok(match !== null, 'timeoutMs not found in platform/client.ts')
+    const limitMs = Number(match[1].replaceAll('_', ''))
+    assert.ok(Number.isFinite(limitMs) && limitMs > 0)
+    assert.ok(SLOW_AFTER_MS > 0 && SLOW_AFTER_MS < limitMs, `${SLOW_AFTER_MS} is not below ${limitMs}`)
   })
 
   test('every ending carries the time as text', () => {
@@ -149,5 +173,72 @@ describe('only a proposal carries a code, and no raw text leaks', () => {
       const text = `${v.headline} ${v.sentence} ${v.elapsed}`
       assert.ok(!text.includes(secret) && !/AI_[A-Z_]+/.test(text) && !/\b(403|503)\b/.test(text), text)
     }
+  })
+})
+
+describe('a request the service did not accept, and an ended session', () => {
+  test('400 and 422 say to check the fields, not that the AI was unreachable', () => {
+    for (const status of [400, 422]) {
+      const v = viewOfProposal(failure(apiError(status)), 400)
+      assert.equal(v.state, 'review', String(status))
+      assert.match(v.sentence, /Check the fields and try again/)
+      assert.ok(!/could not be reached/i.test(`${v.headline} ${v.sentence}`), String(status))
+      assert.equal(v.code, null)
+    }
+  })
+
+  test('401 says the session ended and to sign in again, not that the AI was unreachable', () => {
+    const v = viewOfProposal(failure(apiError(401)), 400)
+    assert.equal(v.state, 'unavailable')
+    assert.equal(v.headline, 'Your session has ended')
+    assert.match(v.sentence, /Your session has ended\. Sign in again\./)
+    assert.equal(v.code, null)
+  })
+
+  test('other statuses and no status still read as unreachable', () => {
+    for (const status of [500, 502, 503, 404, undefined]) {
+      assert.equal(viewOfProposal(failure(apiError(status)), 400).headline, 'The AI could not be reached', String(status))
+    }
+  })
+
+  test('403 is still "not allowed", and not the new sentences', () => {
+    const v = viewOfProposal(failure(apiError(403)), 400)
+    assert.match(v.sentence, /not allowed/)
+  })
+
+  test('the description limit is the service limit (classification.go) and is named in the 400 sentence', () => {
+    assert.equal(DESCRIPTION_MAX, 2000)
+    assert.match(viewOfProposal(failure(apiError(400)), 1).sentence, new RegExp(String(DESCRIPTION_MAX)))
+    const goFile = join(process.cwd(), '..', 'backend', 'internal', 'app', 'classification.go')
+    if (existsSync(goFile)) {
+      const m = /len\(in\.Description\) > (\d+)/.exec(readFileSync(goFile, 'utf8'))
+      assert.ok(m !== null, 'the description limit was not found in classification.go')
+      assert.equal(DESCRIPTION_MAX, Number(m[1]))
+    }
+  })
+})
+
+describe('a provenance of null is the same as no provenance', () => {
+  test('PROPOSED with provenance null is "review", with no code', () => {
+    for (const provenance of [null, undefined]) {
+      const v = viewOfProposal(proposed({ provenance }), 100)
+      assert.equal(v.state, 'review')
+      assert.equal(v.code, null)
+    }
+  })
+})
+
+describe('the "No proposal yet" note', () => {
+  test('shows only when nothing is running and there is no result', () => {
+    assert.equal(emptyNoteVisible(false, false), true)
+  })
+
+  test('never shows while a call is running, so a new call hides an old result and the note', () => {
+    assert.equal(emptyNoteVisible(true, false), false)
+    assert.equal(emptyNoteVisible(true, true), false)
+  })
+
+  test('never shows while a result exists, so it cannot flash between the call ending and the result', () => {
+    assert.equal(emptyNoteVisible(false, true), false)
   })
 })

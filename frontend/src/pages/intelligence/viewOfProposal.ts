@@ -17,6 +17,14 @@
  */
 export const SLOW_AFTER_MS = 5000
 
+/**
+ * The longest description the service accepts: `len(in.Description) > 2000` is
+ * refused (backend/internal/app/classification.go:91). The box stops the person
+ * before they send; the service still counts bytes, so text with many
+ * multi-byte characters can reach it over the limit and gets the 400 sentence.
+ */
+export const DESCRIPTION_MAX = 2000
+
 export type ViewState = 'proposed' | 'review' | 'unavailable' | 'slow'
 
 export interface ProposalView {
@@ -92,13 +100,26 @@ const unavailable = (elapsedMs: number): ProposalView => ({
   code: null,
 })
 
-const review = (elapsedMs: number, sentence: string): ProposalView => ({
+const review = (
+  elapsedMs: number,
+  sentence: string,
+  headline = 'Set aside for a person to review',
+): ProposalView => ({
   state: 'review',
-  headline: 'Set aside for a person to review',
+  headline,
   sentence,
   elapsed: tookText(elapsedMs),
   code: null,
 })
+
+/**
+ * Whether the "No proposal yet" note may show. Never while a call is running,
+ * and never while a result (a proposal or a failure) exists, so it cannot
+ * flash between the end of a call and the result appearing.
+ */
+export function emptyNoteVisible(busy: boolean, hasResult: boolean): boolean {
+  return !busy && !hasResult
+}
 
 /** One ending of the call, as the person should see it. */
 export function viewOfProposal(ending: Ending, elapsedMs: number): ProposalView {
@@ -106,17 +127,37 @@ export function viewOfProposal(ending: Ending, elapsedMs: number): ProposalView 
     // A refusal by governance (kill switch, region, authority) is a 403 with a
     // reason: the AI was blocked, not down. Every other failure, including a
     // timeout or no answer at all, means the AI could not be reached.
-    if (statusOf(ending.error) === 403) {
+    const status = statusOf(ending.error)
+    if (status === 403) {
       return review(
         elapsedMs,
         'The AI was not allowed to answer this request. Classify the item by hand, or ask a reviewer. Nothing was changed.',
       )
     }
+    // The service did not accept the request (for example a description over
+    // the limit): that is for the person to fix, not an outage.
+    if (status === 400 || status === 422) {
+      return review(
+        elapsedMs,
+        `Check the fields and try again. The description can be at most ${String(DESCRIPTION_MAX)} characters. Nothing was changed.`,
+        'The request was not accepted',
+      )
+    }
+    // The session ended: signing in again fixes it, trying again does not.
+    if (status === 401) {
+      return {
+        state: 'unavailable',
+        headline: 'Your session has ended',
+        sentence: 'Your session has ended. Sign in again. Nothing was changed.',
+        elapsed: tookText(elapsedMs),
+        code: null,
+      }
+    }
     return unavailable(elapsedMs)
   }
 
   const p = ending.proposal
-  if (p.disposition === 'PROPOSED' && p.provenance !== undefined && typeof p.proposedCode === 'string' && p.proposedCode !== '') {
+  if (p.disposition === 'PROPOSED' && p.provenance !== undefined && p.provenance !== null && typeof p.proposedCode === 'string' && p.proposedCode !== '') {
     return {
       state: 'proposed',
       headline: 'The AI suggested a code',

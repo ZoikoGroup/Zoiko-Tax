@@ -5,6 +5,7 @@ import type { S } from '@zoikotax/sdk'
 import '../../pages/obligations.css'
 import { Field, Id, Submit } from '../../ui/kit'
 import { provenanceKind } from './provenanceKind'
+import { provenanceNote } from './provenanceNote'
 import {
   acceptedCode,
   canRecordDecision,
@@ -135,10 +136,10 @@ const ReviewerPanel = ({ proposal, onAccept }: { proposal: Proposal; onAccept?: 
  */
 export const ProposalCard = ({ proposal, onAccept }: { proposal: Proposal; onAccept?: (code: string) => void }) => {
   const provenance = proposal.provenance
-  if (provenance === undefined) {
+  if (provenance === undefined || provenance === null) {
     return null
   }
-  const kind = provenanceKind(provenance)
+  const note = provenanceNote(provenanceKind(provenance))
   return (
     <div className="ztax-stepper">
       <p className="ztax-note" style={{ fontWeight: 600 }}>
@@ -146,12 +147,11 @@ export const ProposalCard = ({ proposal, onAccept }: { proposal: Proposal; onAcc
         Deterministic processing decides.{' '}
         It can be wrong. A qualified person must review it before anything relies on it.
       </p>
-      {kind === 'test' ? (
-        <p className="ztax-error-note" role="note"><strong>Test runtime: not a real AI answer</strong></p>
-      ) : null}
-      {kind === 'unknown' ? (
-        <p className="ztax-note muted">The source of this answer could not be confirmed from its profile ids.</p>
-      ) : null}
+      {note === null ? null : note.tone === 'badge' ? (
+        <p className="ztax-error-note" role="note"><strong>{note.text}</strong></p>
+      ) : (
+        <p className="ztax-note muted">{note.text}</p>
+      )}
       <dl className="ztax-kv" style={{ marginTop: 8 }}>
         <dt>Proposed code</dt>
         <dd className="ztax-proposed-code mono">{proposal.proposedCode}</dd>

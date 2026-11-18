@@ -5,7 +5,9 @@ import type { S } from '@zoikotax/sdk'
 import { ProposalCard } from '../components/ai/ProposalCard'
 import { ztax } from '../platform/client'
 import { Card, Columns, Field, PageHeader, Submit, useAction } from '../ui/kit'
-import { viewOfProposal, viewOfWaiting, type ProposalView } from './intelligence/viewOfProposal'
+import {
+  DESCRIPTION_MAX, emptyNoteVisible, viewOfProposal, viewOfWaiting, type ProposalView,
+} from './intelligence/viewOfProposal'
 import type { PageProps } from './types'
 import './obligations.css'
 
@@ -28,12 +30,11 @@ const sampleItems: ReadonlyArray<{ subjectRef: string; description: string }> = 
   },
 ]
 
-/** The plain ending of a call: headline, what to do next, and how long it took. */
-const EndingBanner = ({ view }: { view: ProposalView }) => (
-  <div className="ztax-stepper" role="status" aria-live="polite">
+/** The words of an ending: headline and what to do next. The time is shown apart, outside the live region. */
+const EndingText = ({ view }: { view: ProposalView }) => (
+  <div className="ztax-stepper">
     <p className="ztax-note" style={{ fontWeight: 600, marginBottom: 4 }}>{view.headline}</p>
     <p className="ztax-note" style={{ marginTop: 0 }}>{view.sentence}</p>
-    <p className="ztax-note muted" style={{ marginTop: 0 }}>{view.elapsed}</p>
   </div>
 )
 
@@ -59,8 +60,15 @@ export const IntelligencePage = ({ session, route }: PageProps) => {
     startedAt.current = Date.now()
     setWaitedMs(0)
     setTookMs(null)
-    void action.run(() => ztax.proposeClassification({ subjectRef: subjectRef.trim(), description: description.trim() }))
-      .then(() => { setTookMs(Date.now() - startedAt.current) })
+    // The time is recorded as the call ends, inside the same update as the
+    // result, so the screen never shows a gap between the two.
+    void action.run(async () => {
+      try {
+        return await ztax.proposeClassification({ subjectRef: subjectRef.trim(), description: description.trim() })
+      } finally {
+        setTookMs(Date.now() - startedAt.current)
+      }
+    })
   }
 
   const proposal = action.done
@@ -71,6 +79,7 @@ export const IntelligencePage = ({ session, route }: PageProps) => {
       ? { kind: 'proposal' as const, proposal }
       : null
   const endView = !action.busy && tookMs !== null && ending !== null ? viewOfProposal(ending, tookMs) : null
+  const shownElapsed = action.busy ? (waitingView?.elapsed ?? null) : (endView?.elapsed ?? null)
 
   return (
     <div className="ztax-page">
@@ -120,6 +129,7 @@ export const IntelligencePage = ({ session, route }: PageProps) => {
                 value={description}
                 required
                 rows={3}
+                maxLength={DESCRIPTION_MAX}
                 placeholder="Unlimited 5G mobile plan with 20 GB hotspot"
                 onChange={(e) => { setDescription(e.target.value) }}
               />
@@ -137,19 +147,22 @@ export const IntelligencePage = ({ session, route }: PageProps) => {
           title="Proposal"
           aside={endView?.state === 'proposed' ? <span className="ztax-advisory-badge">Advisory — never authoritative</span> : undefined}
         >
-          {action.busy ? (
-            <>
-              <p className="ztax-empty-note" role="status" aria-live="polite">Asking the AI…</p>
-              {waitingView === null ? null : <EndingBanner view={waitingView} />}
-            </>
-          ) : endView === null ? (
-            <p className="ztax-empty-note">No proposal yet. Describe an item and ask.</p>
-          ) : (
-            <>
-              <EndingBanner view={endView} />
-              {endView.state === 'proposed' && proposal !== null ? <ProposalCard proposal={proposal} /> : null}
-            </>
-          )}
+          {/* One status region that is always on the page, so a change in it is announced. */}
+          <div role="status" aria-live="polite">
+            {action.busy ? (
+              <>
+                <p className="ztax-empty-note">Asking the AI…</p>
+                {waitingView === null ? null : <EndingText view={waitingView} />}
+              </>
+            ) : endView !== null ? (
+              <EndingText view={endView} />
+            ) : emptyNoteVisible(action.busy, ending !== null) ? (
+              <p className="ztax-empty-note">No proposal yet. Describe an item and ask.</p>
+            ) : null}
+          </div>
+          {/* The seconds count sits outside the live region, so it is not read out every second. */}
+          {shownElapsed === null ? null : <p className="ztax-note muted" style={{ marginTop: 0 }}>{shownElapsed}</p>}
+          {!action.busy && endView?.state === 'proposed' && proposal !== null ? <ProposalCard proposal={proposal} /> : null}
         </Card>
       </Columns>
     </div>
