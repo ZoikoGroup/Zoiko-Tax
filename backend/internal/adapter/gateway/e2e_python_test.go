@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/grpc/metadata"
+
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
@@ -185,5 +187,10 @@ func TestFakeRuntimeCrossesTheBoundary(t *testing.T) {
 	if reply.ModelProfile != testRouteModelProfile || reply.ProviderProfile != testRouteProviderProfile ||
 		reply.PromptProfile != testRoutePromptProfile || reply.AiTrainVersion != testGatewayAITrain {
 		t.Fatalf("routing = %+v", reply)
+	}
+	// The Gateway names the evidence record it wrote in the "ztax-invocation-id"
+	// trailer; the Go transport must carry it through, in the accepted shape.
+	if reply.InvocationID == "" || invocationID(metadata.Pairs(invocationKey, reply.InvocationID)) != reply.InvocationID {
+		t.Fatalf("InvocationID = %q, want a non-empty id from the Python trailer", reply.InvocationID)
 	}
 }
