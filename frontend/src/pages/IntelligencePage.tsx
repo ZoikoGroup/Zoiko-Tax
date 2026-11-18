@@ -2,8 +2,9 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 import type { S } from '@zoikotax/sdk'
 
+import { ProposalCard } from '../components/ai/ProposalCard'
 import { ztax } from '../platform/client'
-import { Card, Columns, Field, Id, PageHeader, Submit, useAction } from '../ui/kit'
+import { Card, Columns, Field, PageHeader, Submit, useAction } from '../ui/kit'
 import { viewOfProposal, viewOfWaiting, type ProposalView } from './intelligence/viewOfProposal'
 import type { PageProps } from './types'
 import './obligations.css'
@@ -26,186 +27,6 @@ const sampleItems: ReadonlyArray<{ subjectRef: string; description: string }> = 
     description: 'Monthly bundle: unlimited calls, 50 SMS, 10 GB data and a streaming video subscription',
   },
 ]
-
-// ---------------------------------------------------------------------------
-// Reviewer panel: ACCEPT / REJECT / MODIFY / ESCALATE,
-// each with a reason code and a note. Demo only — nothing here calls a
-// backend endpoint or is saved anywhere; it only shows how the review step
-// would apply to the proposal already on screen, which stays visible and
-// unchanged above it (the original AI proposal is immutable evidence).
-// Starts with nothing preselected: no default action, reason or note.
-// ---------------------------------------------------------------------------
-
-type ReviewerActionKind = 'ACCEPT' | 'REJECT' | 'MODIFY' | 'ESCALATE'
-
-const reviewerActions: ReadonlyArray<{ kind: ReviewerActionKind; label: string }> = [
-  { kind: 'ACCEPT', label: 'Accept' },
-  { kind: 'REJECT', label: 'Reject' },
-  { kind: 'MODIFY', label: 'Modify' },
-  { kind: 'ESCALATE', label: 'Escalate' },
-]
-
-/** A short list for the demo; the governance model asks for reason codes but does not enumerate them. */
-const reviewerReasonCodes: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'MATCHES_CATALOG_DESCRIPTION', label: 'Matches the catalog description' },
-  { value: 'ONTOLOGY_NODE_LOOKS_WRONG', label: 'The proposed ontology node looks wrong' },
-  { value: 'DESCRIPTION_WAS_AMBIGUOUS', label: 'The item description was ambiguous' },
-  { value: 'NEEDS_SPECIALIST_REVIEW', label: 'Needs a tax specialist to confirm' },
-  { value: 'OTHER', label: 'Other (see note)' },
-]
-
-type ReviewerDecision = { action: ReviewerActionKind; reasonCode: string; note: string; modifiedCode: string }
-
-const ReviewerPanel = ({ proposal }: { proposal: Proposal }) => {
-  const [pending, setPending] = useState<ReviewerActionKind | null>(null)
-  const [reasonCode, setReasonCode] = useState('')
-  const [note, setNote] = useState('')
-  const [modifiedCode, setModifiedCode] = useState('')
-  const [decision, setDecision] = useState<ReviewerDecision | null>(null)
-
-  const startAction = (kind: ReviewerActionKind) => {
-    setPending(kind)
-    setReasonCode('')
-    setNote('')
-    setModifiedCode('')
-  }
-
-  const canRecord = reasonCode !== '' && note.trim() !== '' && (pending !== 'MODIFY' || modifiedCode.trim() !== '')
-
-  const record = (e: FormEvent) => {
-    e.preventDefault()
-    if (pending === null || !canRecord) {
-      return
-    }
-    setDecision({ action: pending, reasonCode, note: note.trim(), modifiedCode: modifiedCode.trim() })
-    setPending(null)
-  }
-
-  return (
-    <>
-      {decision === null ? null : (
-        <>
-          <span className="ztax-advisory-badge">Demo only: decision is not saved</span>
-          <dl className="ztax-kv" style={{ marginTop: 8 }}>
-            <dt>Action</dt>
-            <dd>{reviewerActions.find((a) => a.kind === decision.action)?.label ?? decision.action}</dd>
-            <dt>Reason</dt>
-            <dd>{reviewerReasonCodes.find((c) => c.value === decision.reasonCode)?.label ?? decision.reasonCode}</dd>
-            {decision.action === 'MODIFY' ? (
-              <>
-                <dt>Original code (unchanged)</dt>
-                <dd className="mono">{proposal.proposedCode}</dd>
-                <dt>Reviewer&apos;s code</dt>
-                <dd className="mono">{decision.modifiedCode}</dd>
-              </>
-            ) : null}
-            <dt>Note</dt>
-            <dd>{decision.note}</dd>
-          </dl>
-        </>
-      )}
-
-      {pending === null ? (
-        <div className="ztax-form-actions" style={{ justifyContent: 'flex-start', gap: 8, marginTop: decision === null ? 0 : 16 }}>
-          {reviewerActions.map((a) => (
-            <button key={a.kind} type="button" className="ztax-btn-quiet" onClick={() => { startAction(a.kind) }}>
-              {a.label}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <form className="ztax-form" onSubmit={record} style={{ marginTop: 12 }}>
-          <Field label="Reason code">
-            <select value={reasonCode} required onChange={(e) => { setReasonCode(e.target.value) }}>
-              <option value="">Choose a reason…</option>
-              {reviewerReasonCodes.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
-            </select>
-          </Field>
-          {pending === 'MODIFY' ? (
-            <Field label="Reviewer's ontology code" help="A code in ontology format, e.g. ontology:telecom/voice/mobile. Whether it exists is not verified here.">
-              <input
-                type="text"
-                value={modifiedCode}
-                required
-                placeholder="ontology:…"
-                onChange={(e) => { setModifiedCode(e.target.value) }}
-              />
-            </Field>
-          ) : null}
-          <Field label="Note">
-            <textarea
-              value={note}
-              required
-              rows={2}
-              placeholder="Why this decision"
-              onChange={(e) => { setNote(e.target.value) }}
-            />
-          </Field>
-          <div className="ztax-form-actions">
-            <button type="button" className="ztax-btn-quiet" onClick={() => { setPending(null) }}>Cancel</button>
-            <Submit busy={false}>Record decision</Submit>
-          </div>
-        </form>
-      )}
-    </>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// The result: what the AI proposed (or why it could not), with the notices a
-// reviewer needs and the provenance of the answer. Everything shown is taken
-// from the real response, never invented.
-// ---------------------------------------------------------------------------
-
-const ProposalResult = ({ proposal }: { proposal: Proposal }) => {
-  const provenance = proposal.provenance
-  if (provenance === undefined) {
-    return null
-  }
-  return (
-    <div className="ztax-stepper">
-      <p className="ztax-note" style={{ fontWeight: 600 }}>
-        AI-generated suggestion. General information, not tax advice or an authoritative determination.
-        Deterministic processing decides.{' '}
-        It can be wrong. A qualified person must review it before anything relies on it.
-      </p>
-      <dl className="ztax-kv" style={{ marginTop: 8 }}>
-        <dt>Proposed code</dt>
-        <dd className="ztax-proposed-code mono">{proposal.proposedCode}</dd>
-        <dt>Confidence</dt>
-        <dd className="mono">Not calibrated</dd>
-        <dt>Authoritative</dt>
-        <dd className="mono">{String(proposal.authoritative)}</dd>
-        <dt>Proposal</dt>
-        <dd>{proposal.id === undefined ? '—' : <Id value={proposal.id} />}</dd>
-      </dl>
-      <p className="ztax-note">
-        No measured accuracy exists for this proposal yet, so no confidence figure is shown. The code is checked for
-        ontology format only; whether it is an approved ontology node is not verified here. A person confirms or
-        rejects the mapping before anything relies on it.
-      </p>
-      <table className="ztax-action-table" style={{ marginTop: 8 }}>
-        <tbody>
-          <tr><th scope="row">Use case</th><td className="mono">{provenance.useCase}</td></tr>
-          <tr><th scope="row">Model profile</th><td className="mono">{provenance.modelProfile}</td></tr>
-          <tr><th scope="row">Provider profile</th><td className="mono">{provenance.providerProfile}</td></tr>
-          <tr><th scope="row">Prompt profile</th><td className="mono">{provenance.promptProfile}</td></tr>
-          <tr><th scope="row">AI train</th><td className="mono">{provenance.aiTrainVersion}</td></tr>
-        </tbody>
-      </table>
-      <p className="ztax-note">The full audit record is kept by the AI service and is not shown on this page.</p>
-
-      <h3 className="ztax-card-title" style={{ marginTop: 16 }}>Review</h3>
-      <p className="ztax-note">
-        A qualified person reviews the proposal and records Accept, Reject, Modify or Escalate with a reason.
-        Demo only: nothing below is sent anywhere or saved.
-      </p>
-      <ReviewerPanel key={proposal.id} proposal={proposal} />
-    </div>
-  )
-}
 
 /** The plain ending of a call: headline, what to do next, and how long it took. */
 const EndingBanner = ({ view }: { view: ProposalView }) => (
@@ -326,7 +147,7 @@ export const IntelligencePage = ({ session, route }: PageProps) => {
           ) : (
             <>
               <EndingBanner view={endView} />
-              {endView.state === 'proposed' && proposal !== null ? <ProposalResult proposal={proposal} /> : null}
+              {endView.state === 'proposed' && proposal !== null ? <ProposalCard proposal={proposal} /> : null}
             </>
           )}
         </Card>
