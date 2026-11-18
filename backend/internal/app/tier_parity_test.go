@@ -245,11 +245,11 @@ func TestTierTargetD04(t *testing.T) {
 
 // (d) BOTH REGISTRY FILES agree on what they share.
 //
-// registry.dev.json carries only classification-review; the three explanation
-// use cases exist only in registry.live-demo.json (a test in intelligence/
-// keeps them out of the dev file). The live demo deliberately narrows the data
-// classes to P0, so for data classes the rule is "never wider than dev", not
-// equality.
+// registry.dev.json carries classification-review and the three explanation
+// use cases; registry.live-demo.json carries the same four (with groq routes
+// and narrower data classes for classification-review). The live demo
+// deliberately narrows the data classes to P0, so for data classes the rule
+// is "never wider than dev", not equality.
 func TestRegistryFilesAgreeOnTiersAndDoNotWidenDataClasses(t *testing.T) {
 	dev := loadRegistry(t, registryDev)
 	live := loadRegistry(t, registryLive)

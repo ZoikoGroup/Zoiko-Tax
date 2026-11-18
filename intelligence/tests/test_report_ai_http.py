@@ -756,11 +756,27 @@ def test_new_use_cases_are_registered_at_t1_with_p0_only() -> None:
         assert uc["route"]["provider_profile"] == "provider:groq-demo"
 
 
-def test_new_use_cases_are_not_in_registry_dev_json() -> None:
+def test_new_use_cases_are_in_registry_dev_json_with_fake_route() -> None:
+    """The three explainer use cases are now registered in registry.dev.json
+    with the fake route (model:fake-v1 / provider:fake), so the base stack
+    can serve explain calls without an API key.  The prompt_profile labels
+    must match the live-demo file (the base stack has no prompt-profile file
+    mounted, but the label is recorded in provenance).
+    """
     dev_doc = json.loads((_CONFIG_DIR / "registry.dev.json").read_text(encoding="utf-8"))
-    dev_ids = {uc["use_case_id"] for uc in dev_doc["use_cases"]}
+    dev_by_id = {uc["use_case_id"]: uc for uc in dev_doc["use_cases"]}
+    live_doc = json.loads((_CONFIG_DIR / "registry.live-demo.json").read_text(encoding="utf-8"))
+    live_by_id = {uc["use_case_id"]: uc for uc in live_doc["use_cases"]}
     for use_case_id in _NEW_USE_CASES:
-        assert use_case_id not in dev_ids
+        assert use_case_id in dev_by_id, f"{use_case_id} missing from registry.dev.json"
+        dev_uc = dev_by_id[use_case_id]
+        assert dev_uc["route"]["model_profile"] == "model:fake-v1", use_case_id
+        assert dev_uc["route"]["provider_profile"] == "provider:fake", use_case_id
+        # prompt_profile label must match the live-demo entry.
+        live_prompt = live_by_id[use_case_id]["route"]["prompt_profile"]
+        assert dev_uc["route"]["prompt_profile"] == live_prompt, (
+            f"{use_case_id}: prompt_profile label mismatch between dev and live-demo"
+        )
 
 
 def test_patched_routes_already_covers_the_new_use_cases_without_any_code_change() -> None:

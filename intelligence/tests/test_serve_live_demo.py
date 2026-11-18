@@ -353,44 +353,73 @@ def test_registry_live_demo_json_loads_and_carries_the_placeholder_labels() -> N
 
 def test_registry_live_demo_json_matches_registry_dev_json_except_the_route_and_data_classes(
 ) -> None:
-    """registry.live-demo.json's classification-review entry started as a
-    copy of registry.dev.json's: everything but the route label is identical
-    except one deliberate, intentional narrowing -- the live demo permits only
-    P0 (synthetic public data), where registry.dev.json permits P0 and P1.
-    registry.dev.json itself is never touched. registry.live-demo.json has
-    since grown three more use cases (test_report_ai_http.py) that
-    registry.dev.json does not and must not carry -- this test only compares
-    the one use case the two files share. The killed / global_kill keys are
-    kept identical to the dev file's (load_config does not read them; the
-    running Gateway reads them live, before every call).
+    """Both registry files share the same four use cases; this test checks
+    that all four are present in dev, that the metadata fields that must be
+    equal are equal, and that the only allowed differences between the two
+    files are:
+      - the route model/provider ids (dev uses fake-v1/provider:fake, live uses
+        groq-live-demo/provider:groq-demo);
+      - classification-review's data classes (P0+P1 in dev, P0-only in live).
+
+    The explainer use cases carry only P0 in both files, so there is no data-
+    class difference to assert for them.
+
+    The killed / global_kill keys are kept identical to the dev file's
+    (load_config does not read them; the running Gateway reads them live,
+    before every call).
     """
+    _shared_use_case_ids = {
+        "classification-review",
+        "explain-report-figure",
+        "explain-obligation-row",
+        "explain-shadow-variance",
+    }
     dev_doc = json.loads(_REGISTRY_DEV_PATH.read_text(encoding="utf-8"))
     live_doc = json.loads(_REGISTRY_LIVE_DEMO_PATH.read_text(encoding="utf-8"))
     assert live_doc["killed"] == dev_doc["killed"]
     assert live_doc["global_kill"] == dev_doc["global_kill"]
-    assert len(dev_doc["use_cases"]) == 1
-    dev_uc = dev_doc["use_cases"][0]
-    live_uc = next(
-        uc for uc in live_doc["use_cases"] if uc["use_case_id"] == dev_uc["use_case_id"]
+
+    dev_by_id = {uc["use_case_id"]: uc for uc in dev_doc["use_cases"]}
+    live_by_id = {uc["use_case_id"]: uc for uc in live_doc["use_cases"]}
+
+    # All four shared use cases must be in both files.
+    assert dev_by_id.keys() >= _shared_use_case_ids, (
+        f"dev registry is missing: {_shared_use_case_ids - dev_by_id.keys()}"
     )
-    for field in (
-        "use_case_id", "owner", "description", "max_risk_tier", "max_authority",
-        "permitted_regions", "suspended",
-    ):
-        assert live_uc[field] == dev_uc[field]
-    # The intentional difference: P0 only in the live demo, P0 and P1 in dev.
-    assert dev_uc["permitted_data_classes"] == ["P0", "P1"]
-    assert live_uc["permitted_data_classes"] == ["P0"]
-    assert dev_uc["route"] == {
-        "model_profile": "model:fake-v1",
-        "provider_profile": "provider:fake",
-        "prompt_profile": "prompt:classification-review-v1",
-    }
-    assert live_uc["route"] == {
-        "model_profile": "model:groq-live-demo",
-        "provider_profile": "provider:groq-demo",
-        "prompt_profile": "prompt:classification-review-v1",
-    }
+    assert live_by_id.keys() >= _shared_use_case_ids, (
+        f"live-demo registry is missing: {_shared_use_case_ids - live_by_id.keys()}"
+    )
+
+    # For each shared use case the metadata must agree and the route's prompt
+    # profile must be the same label (only the model/provider ids differ).
+    for uc_id in _shared_use_case_ids:
+        dev_uc = dev_by_id[uc_id]
+        live_uc = live_by_id[uc_id]
+        for field in (
+            "use_case_id", "owner", "description", "max_risk_tier", "max_authority",
+            "permitted_regions", "suspended",
+        ):
+            assert live_uc[field] == dev_uc[field], (
+                f"{uc_id}: field {field!r} differs between dev and live-demo"
+            )
+        assert dev_uc["route"]["prompt_profile"] == live_uc["route"]["prompt_profile"], (
+            f"{uc_id}: prompt_profile label differs"
+        )
+        # dev uses fake routes; live uses groq routes.
+        assert dev_uc["route"]["model_profile"] == "model:fake-v1", uc_id
+        assert dev_uc["route"]["provider_profile"] == "provider:fake", uc_id
+        assert live_uc["route"]["model_profile"] == "model:groq-live-demo", uc_id
+        assert live_uc["route"]["provider_profile"] == "provider:groq-demo", uc_id
+
+    # The intentional data-class difference for classification-review:
+    # P0+P1 in dev, P0-only in live.
+    assert dev_by_id["classification-review"]["permitted_data_classes"] == ["P0", "P1"]
+    assert live_by_id["classification-review"]["permitted_data_classes"] == ["P0"]
+
+    # Explainer use cases carry only P0 in both files (no widening anywhere).
+    for uc_id in ("explain-report-figure", "explain-obligation-row", "explain-shadow-variance"):
+        assert dev_by_id[uc_id]["permitted_data_classes"] == ["P0"], uc_id
+        assert live_by_id[uc_id]["permitted_data_classes"] == ["P0"], uc_id
 
 
 def test_serve_live_demo_gateway_obeys_live_kill(tmp_path: Path) -> None:

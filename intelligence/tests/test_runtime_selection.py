@@ -133,6 +133,49 @@ class TestRuntimeFake:
             result = _runtime()
         assert isinstance(result, FakeRuntime)
 
+    def test_fake_in_development_uses_base_stack_canned(self) -> None:
+        """_runtime() with ZTAX_GATEWAY_RUNTIME=fake must return a FakeRuntime
+        configured with BASE_STACK_CANNED so the base stack shows an approved
+        code on the Intelligence screen instead of FAKE-UNCLASSIFIED.
+
+        The test drives the runtime with a minimal classification-review call
+        and asserts the approved code is returned.
+        """
+        from ztax_gateway.provenance import AuthorityOutcome, RiskTier
+        from ztax_gateway.wire import Call, Governance, Kind
+
+        with _clean_env("ZTAX_GATEWAY_RUNTIME", "ZTAX_ENVIRONMENT"):
+            os.environ["ZTAX_GATEWAY_RUNTIME"] = "fake"
+            os.environ["ZTAX_ENVIRONMENT"] = "development"
+            runtime = _runtime()
+
+        assert isinstance(runtime, FakeRuntime)
+        from ztax_gateway.runtime import Route
+
+        route = Route(
+            model_profile="model:fake-v1",
+            provider_profile="provider:fake",
+            prompt_profile="prompt:fake-v1",
+        )
+        call = Call(
+            kind=Kind.CLASSIFICATION_PROPOSAL,
+            governance=Governance(
+                tenant_id="00000000-0000-0000-0000-000000000001",
+                use_case="classification-review",
+                authority_outcome=AuthorityOutcome.A1,
+                risk_tier=RiskTier.T2,
+                region="local",
+                data_classes=("P0",),
+            ),
+            subject_ref="sku:PLAN-UNL-5G",
+            input=b"test-item",
+        )
+        result = runtime.run(route, call)
+        assert result.proposed_code == "ontology:telecom/voice/mobile", (
+            "_runtime(fake) must return FakeRuntime(canned=BASE_STACK_CANNED); "
+            f"got {result.proposed_code!r} instead of 'ontology:telecom/voice/mobile'"
+        )
+
     def test_fake_without_environment_set_exits(self) -> None:
         with _clean_env("ZTAX_GATEWAY_RUNTIME", "ZTAX_ENVIRONMENT"):
             os.environ["ZTAX_GATEWAY_RUNTIME"] = "fake"
