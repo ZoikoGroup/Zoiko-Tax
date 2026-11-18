@@ -1,9 +1,9 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useState, type FormEvent } from 'react'
 
 import type { S } from '@zoikotax/sdk'
 
 import { ztax } from '../platform/client'
-import { Card, Columns, ErrorNote, Field, Id, PageHeader, Raw, Submit, useAction } from '../ui/kit'
+import { Card, Columns, ErrorNote, Field, Id, PageHeader, Submit, useAction } from '../ui/kit'
 import type { PageProps } from './types'
 import './obligations.css'
 
@@ -12,34 +12,12 @@ type Proposal = S<'ClassificationProposal'>
 /** Why the AI plane could not help, said plainly. The item goes to a person either way. */
 const reviewReasons: Record<string, string> = {
   AI_GATEWAY_NOT_CONFIGURED:
-    'AI assistance is not available in this cell: it has no Model Gateway, or the Gateway has no approved provider.',
-  AI_GATEWAY_UNAVAILABLE: 'The Model Gateway is down or slow right now.',
-  AI_GATEWAY_REPLY_UNEVIDENCED: 'The Model Gateway answered without saying which model produced it, so the answer was discarded.',
+    'AI assistance is not available here: no approved AI provider is connected.',
+  AI_GATEWAY_UNAVAILABLE: 'The AI is down or slow right now.',
+  AI_GATEWAY_REPLY_UNEVIDENCED: 'The AI answered without saying which model produced it, so the answer was discarded.',
   AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE: 'The model proposed a code that is not an ontology node, so the proposal was discarded.',
 }
 
-/**
- * Which step a review-required reason code stops the stepper at
- * (backend/internal/app/classification.go's reviewWithoutAI list plus
- * ReasonProposalNotAnOntologyNode). AI_GATEWAY_NOT_CONFIGURED and
- * AI_GATEWAY_UNAVAILABLE mean the model was never usably reached, so both
- * stop at step 3 (Model call); AI_GATEWAY_REPLY_UNEVIDENCED and
- * AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE both mean the call answered but the reply
- * failed a check on its content, so both stop at step 4 (Output checks) —
- * matching the task's own two examples (gateway unavailable -> Model call;
- * not an ontology node -> Output checks). A reason code this page has not
- * seen falls back to step 3, the earliest point a review-required reply can
- * occur at this invocation (ZTAX_GATEWAY always clears Input and Governance
- * gate first; see STEP_INPUT/STEP_GOVERNANCE below).
- */
-const STOP_STEP_BY_REASON: Readonly<Record<string, number>> = {
-  AI_GATEWAY_NOT_CONFIGURED: 3,
-  AI_GATEWAY_UNAVAILABLE: 3,
-  AI_GATEWAY_REPLY_UNEVIDENCED: 4,
-  AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE: 4,
-}
-const STEP_MODEL_CALL = 3
-const STEP_OUTPUT_CHECKS = 4
 
 /**
  * Four invented, public, non-personal catalog items plus one deliberately
@@ -59,41 +37,7 @@ const sampleItems: ReadonlyArray<{ subjectRef: string; description: string }> = 
 ]
 
 // ---------------------------------------------------------------------------
-// The stepper: one row per stage of ZTAX-AIGOV-001's governed-AI-call model.
-// State is derived only from the real response (disposition, reviewReason,
-// provenance) — never invented. See STOP_STEP_BY_REASON above for how a
-// review-required reply picks where the stepper stops.
-// ---------------------------------------------------------------------------
-
-type StepState = 'pending' | 'passed' | 'stopped'
-
-const StepBadge = ({ state, passedLabel }: { state: StepState; passedLabel: string }) => {
-  const tone = state === 'passed' ? 'ok' : state === 'stopped' ? 'bad' : 'neutral'
-  const label = state === 'passed' ? passedLabel : state === 'stopped' ? 'Stopped' : 'Pending'
-  return <span className={`ztax-status ztax-status--${tone}`}>{label}</span>
-}
-
-/** Step 4 checks format only, so its passed badge says so (see the step 4 note). */
-export const OUTPUT_CHECK_PASSED_LABEL = 'Format checks passed'
-
-export const StepRow = ({
-  n, title, state, note, passedLabel = 'Passed', children,
-}: {
-  n: number; title: string; state: StepState; note: ReactNode; passedLabel?: string; children?: ReactNode
-}) => (
-  <div className={`ztax-step ztax-step--${state}`}>
-    <div className="ztax-step-head">
-      <span className="ztax-step-n">{n}</span>
-      <h3 className="ztax-step-title">{title}</h3>
-      <StepBadge state={state} passedLabel={passedLabel} />
-    </div>
-    <p className="ztax-step-note">{note}</p>
-    {children}
-  </div>
-)
-
-// ---------------------------------------------------------------------------
-// Reviewer panel (ZTAX-AIGOV-001 §12): ACCEPT / REJECT / MODIFY / ESCALATE,
+// Reviewer panel: ACCEPT / REJECT / MODIFY / ESCALATE,
 // each with a reason code and a note. Demo only — nothing here calls a
 // backend endpoint or is saved anywhere; it only shows how the review step
 // would apply to the proposal already on screen, which stays visible and
@@ -110,7 +54,7 @@ const reviewerActions: ReadonlyArray<{ kind: ReviewerActionKind; label: string }
   { kind: 'ESCALATE', label: 'Escalate' },
 ]
 
-/** A short list for the demo — ZTAX-AIGOV-001 §12 asks for reason codes but does not enumerate them. */
+/** A short list for the demo; the governance model asks for reason codes but does not enumerate them. */
 const reviewerReasonCodes: ReadonlyArray<{ value: string; label: string }> = [
   { value: 'MATCHES_CATALOG_DESCRIPTION', label: 'Matches the catalog description' },
   { value: 'ONTOLOGY_NODE_LOOKS_WRONG', label: 'The proposed ontology node looks wrong' },
@@ -153,9 +97,9 @@ const ReviewerPanel = ({ proposal }: { proposal: Proposal }) => {
           <span className="ztax-advisory-badge">Demo only: decision is not saved</span>
           <dl className="ztax-kv" style={{ marginTop: 8 }}>
             <dt>Action</dt>
-            <dd className="mono">{decision.action}</dd>
+            <dd>{reviewerActions.find((a) => a.kind === decision.action)?.label ?? decision.action}</dd>
             <dt>Reason</dt>
-            <dd className="mono">{decision.reasonCode}</dd>
+            <dd>{reviewerReasonCodes.find((c) => c.value === decision.reasonCode)?.label ?? decision.reasonCode}</dd>
             {decision.action === 'MODIFY' ? (
               <>
                 <dt>Original code (unchanged)</dt>
@@ -219,147 +163,63 @@ const ReviewerPanel = ({ proposal }: { proposal: Proposal }) => {
 }
 
 // ---------------------------------------------------------------------------
-// The seven-step stepper itself.
+// The result: what the AI proposed (or why it could not), with the notices a
+// reviewer needs and the provenance of the answer. Everything shown is taken
+// from the real response, never invented.
 // ---------------------------------------------------------------------------
 
-const Stepper = ({ proposal }: { proposal: Proposal }) => {
-  const isSuccess = proposal.disposition === 'PROPOSED' && proposal.provenance !== undefined
-  const stopAt = isSuccess ? null : (STOP_STEP_BY_REASON[proposal.reviewReason ?? ''] ?? STEP_MODEL_CALL)
-  const reason = proposal.reviewReason ?? ''
-  const reasonText = reviewReasons[reason] ?? ''
-
-  const step3State: StepState = isSuccess || stopAt === STEP_OUTPUT_CHECKS ? 'passed' : 'stopped'
-  const step4State: StepState = isSuccess ? 'passed' : (stopAt === STEP_OUTPUT_CHECKS ? 'stopped' : 'pending')
-  const step5State: StepState = isSuccess ? 'passed' : 'pending'
-  const step7State: StepState = isSuccess ? 'passed' : 'pending'
-
-  const stoppedNote = (
-    <>
-      {reasonText} Deterministic processing is unaffected.
-      <span className="mono muted"> {reason}</span>
-      {' '}No AI output is shown and nothing was changed.
-    </>
-  )
-
+const ProposalResult = ({ proposal }: { proposal: Proposal }) => {
+  const provenance = proposal.provenance
+  if (proposal.disposition !== 'PROPOSED' || provenance === undefined) {
+    const reasonText = reviewReasons[proposal.reviewReason ?? ''] ?? 'The AI could not help with this item.'
+    return (
+      <div className="ztax-stepper">
+        <p className="ztax-note">
+          {reasonText} Deterministic processing is unaffected. No AI output is shown and nothing was changed.
+        </p>
+        <p className="ztax-note">There is no AI proposal to review. Classify the item by hand.</p>
+      </div>
+    )
+  }
   return (
     <div className="ztax-stepper">
-      {isSuccess ? (
-        <p className="ztax-note" style={{ fontWeight: 600 }}>
-          AI-generated suggestion. General information, not tax advice or an authoritative determination.
-          Deterministic processing decides.{' '}
-          It can be wrong. A qualified person must review it before anything relies on it.
-        </p>
-      ) : null}
+      <p className="ztax-note" style={{ fontWeight: 600 }}>
+        AI-generated suggestion. General information, not tax advice or an authoritative determination.
+        Deterministic processing decides.{' '}
+        It can be wrong. A qualified person must review it before anything relies on it.
+      </p>
+      <dl className="ztax-kv" style={{ marginTop: 8 }}>
+        <dt>Proposed code</dt>
+        <dd className="ztax-proposed-code mono">{proposal.proposedCode}</dd>
+        <dt>Confidence</dt>
+        <dd className="mono">Not calibrated</dd>
+        <dt>Authoritative</dt>
+        <dd className="mono">{String(proposal.authoritative)}</dd>
+        <dt>Proposal</dt>
+        <dd>{proposal.id === undefined ? '—' : <Id value={proposal.id} />}</dd>
+      </dl>
+      <p className="ztax-note">
+        No measured accuracy exists for this proposal yet, so no confidence figure is shown. The code is checked for
+        ontology format only; whether it is an approved ontology node is not verified here. A person confirms or
+        rejects the mapping before anything relies on it.
+      </p>
+      <table className="ztax-action-table" style={{ marginTop: 8 }}>
+        <tbody>
+          <tr><th scope="row">Use case</th><td className="mono">{provenance.useCase}</td></tr>
+          <tr><th scope="row">Model profile</th><td className="mono">{provenance.modelProfile}</td></tr>
+          <tr><th scope="row">Provider profile</th><td className="mono">{provenance.providerProfile}</td></tr>
+          <tr><th scope="row">Prompt profile</th><td className="mono">{provenance.promptProfile}</td></tr>
+          <tr><th scope="row">AI train</th><td className="mono">{provenance.aiTrainVersion}</td></tr>
+        </tbody>
+      </table>
+      <p className="ztax-note">The full audit record is kept by the AI service and is not shown on this page.</p>
 
-      <StepRow
-        n={1}
-        title="Input"
-        state="passed"
-        note={<>Sent <span className="mono">{proposal.subjectRef}</span> as catalog text to the AI plane.</>}
-      />
-
-      <StepRow
-        n={2}
-        title="Governance gate"
-        state="passed"
-        note={
-          isSuccess ? (
-            'Cleared at authority A1, risk tier T1, data class P0, region — fixed in the request, not returned by the reply.'
-          ) : (
-            'Cleared at authority A1, risk tier T1, data class P0, region, for use case classification-review — ' +
-            'fixed in the request, not returned by the reply.'
-          )
-        }
-      />
-
-      <StepRow
-        n={3}
-        title="Model call"
-        state={step3State}
-        note={step3State === 'stopped' ? stoppedNote : 'The Model Gateway returned a reply.'}
-      />
-
-      <StepRow
-        n={4}
-        title="Output checks"
-        state={step4State}
-        passedLabel={OUTPUT_CHECK_PASSED_LABEL}
-        note={
-          step4State === 'stopped'
-            ? stoppedNote
-            : step4State === 'pending'
-              ? 'Not reached — the model call stopped first.'
-              : 'The reply carries the required ontology: format and names its model, provider and prompt profile. ' +
-                'Membership in the approved ontology is not verified here.'
-        }
-      />
-
-      <StepRow
-        n={5}
-        title="Disposition"
-        state={step5State}
-        note={
-          isSuccess
-            ? 'PROPOSED — an advisory classification proposal, authoritative: false. Output exists but must be ' +
-              'reviewed before authoritative adoption (ZTAX-AIGOV-001 §11).'
-            : 'Not reached — disposition is REVIEW_REQUIRED, decided at the step above.'
-        }
-      />
-
-      <StepRow
-        n={6}
-        title="Human review"
-        state="pending"
-        note={
-          isSuccess
-            ? 'A qualified person reviews the proposal below and records Accept, Reject, Modify or Escalate with a ' +
-              'reason code (ZTAX-AIGOV-001 §12). Demo only: nothing below is sent anywhere or saved.'
-            : 'Not reached — there is no AI proposal to review. Classify the item by hand.'
-        }
-      >
-        {isSuccess ? <ReviewerPanel key={proposal.id} proposal={proposal} /> : null}
-      </StepRow>
-
-      <StepRow
-        n={7}
-        title="Evidence"
-        state={step7State}
-        note={
-          isSuccess
-            ? 'The table below is the provenance the gateway returned with the proposal. The audit evidence record ' +
-              '(ZTAX-AIGOV-001 §14) is written by the gateway on its side and is not shown on this page.'
-            : 'Not reached as a disposition step. The actual reply received is shown below for the record.'
-        }
-      >
-        {isSuccess && proposal.provenance !== undefined ? (
-          <>
-            <dl className="ztax-kv" style={{ marginTop: 8 }}>
-              <dt>Proposed code</dt>
-              <dd className="ztax-proposed-code mono">{proposal.proposedCode}</dd>
-              <dt>Confidence</dt>
-              <dd className="mono">Not calibrated</dd>
-              <dt>Authoritative</dt>
-              <dd className="mono">{String(proposal.authoritative)}</dd>
-              <dt>Proposal</dt>
-              <dd>{proposal.id === undefined ? '—' : <Id value={proposal.id} />}</dd>
-            </dl>
-            <p className="ztax-note">
-              No measured accuracy exists for this proposal yet, so no confidence figure is shown. A person confirms or
-              rejects the mapping before anything relies on it.
-            </p>
-            <table className="ztax-action-table" style={{ marginTop: 8 }}>
-              <tbody>
-                <tr><th scope="row">Use case</th><td className="mono">{proposal.provenance.useCase}</td></tr>
-                <tr><th scope="row">Model profile</th><td className="mono">{proposal.provenance.modelProfile}</td></tr>
-                <tr><th scope="row">Provider profile</th><td className="mono">{proposal.provenance.providerProfile}</td></tr>
-                <tr><th scope="row">Prompt profile</th><td className="mono">{proposal.provenance.promptProfile}</td></tr>
-                <tr><th scope="row">AI train</th><td className="mono">{proposal.provenance.aiTrainVersion}</td></tr>
-              </tbody>
-            </table>
-          </>
-        ) : null}
-        <Raw value={proposal} />
-      </StepRow>
+      <h3 className="ztax-card-title" style={{ marginTop: 16 }}>Review</h3>
+      <p className="ztax-note">
+        A qualified person reviews the proposal and records Accept, Reject, Modify or Escalate with a reason.
+        Demo only: nothing below is sent anywhere or saved.
+      </p>
+      <ReviewerPanel key={proposal.id} proposal={proposal} />
     </div>
   )
 }
@@ -380,14 +240,14 @@ export const IntelligencePage = ({ session, route }: PageProps) => {
 
   return (
     <div className="ztax-page">
-      <PageHeader title="Intelligence" subtitle="Classification assistance from the governed AI plane · advisory only" />
+      <PageHeader title="Intelligence" subtitle="AI-assisted classification suggestions · advisory only" />
 
       <Card title="Advisory, never authoritative">
         <p className="ztax-alert-desc" style={{ margin: 0 }}>
-          The AI plane proposes a code in ontology format for a catalog item; whether that code is a real ontology
-          node is not verified here. Under ADR-0006 a proposal is advice: it never becomes a classification decision
+          The AI proposes a code in ontology format for a catalog item; whether that code is a real ontology
+          node is not verified here. A proposal is advice: it never becomes a classification decision
           on its own, and no confidence score makes it one. A person reviews it
-          and confirms the mapping, or it is nothing. Send catalog text only — the description goes to the Model Gateway,
+          and confirms the mapping, or it is nothing. Send catalog text only — the description goes to an AI model,
           so it must never contain customer data.
         </p>
       </Card>
@@ -435,7 +295,7 @@ export const IntelligencePage = ({ session, route }: PageProps) => {
             </div>
           </form>
           {canAsk ? null : (
-            <p className="ztax-note">Asking for a proposal needs the OPERATOR or ANALYST role; the cell will refuse it.</p>
+            <p className="ztax-note">Asking for a proposal needs the Operator or Analyst role.</p>
           )}
           {action.error === null ? null : <ErrorNote error={action.error} />}
         </Card>
@@ -447,7 +307,7 @@ export const IntelligencePage = ({ session, route }: PageProps) => {
           {proposal === null ? (
             <p className="ztax-empty-note">No proposal yet. Describe an item and ask.</p>
           ) : (
-            <Stepper proposal={proposal} />
+            <ProposalResult proposal={proposal} />
           )}
         </Card>
       </Columns>

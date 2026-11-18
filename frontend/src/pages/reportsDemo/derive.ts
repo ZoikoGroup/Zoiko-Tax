@@ -1,6 +1,6 @@
 /**
  * Pure helpers for the Reports (demo) page: display formatting, SVG geometry,
- * the seven-step view of an explanation, and the CSV export. No React, no I/O.
+ * and the CSV export. No React, no I/O.
  *
  * Nothing here computes a figure. Every number shown is the string the demo
  * service sent. Bar proportions are supplied by the server as per-mille
@@ -9,7 +9,7 @@
  * layout constants and parsed per-mille integers, never on a fiscal value.
  */
 import { displayAmount, fiscalAmount, money } from '../../fiscal/money'
-import type { ExplainReply, ExplainTarget, Fixture } from './model'
+import type { Fixture } from './model'
 
 // ---------------------------------------------------------------------------
 // display
@@ -134,128 +134,4 @@ function csvCell(value: string): string {
 
 export function toCsv(table: CsvTable): string {
   return [table.headers, ...table.rows].map((row) => row.map(csvCell).join(',')).join('\r\n') + '\r\n'
-}
-
-// ---------------------------------------------------------------------------
-// the seven-step view of one explanation
-// ---------------------------------------------------------------------------
-
-export type StepState = 'pending' | 'passed' | 'stopped'
-
-export interface StepSpec {
-  readonly n: number
-  readonly title: string
-  readonly state: StepState
-  readonly note: string
-}
-
-// The reason strings below are the demo service's own, from
-// intelligence/src governance.Refusal, server.py (REASON_*) and
-// report_ai_http.py's guard. The reply carries a reason, not a "stopped at"
-// step, so the stopping step is read from them. A reason this page does not
-// recognise from a REVIEW_REQUIRED reply is treated as having stopped before
-// the Gateway (the service's own pre-call checks: unknown kind, no ids found).
-const GOVERNANCE_REASONS: readonly string[] = [
-  'AI_UNKNOWN_USE_CASE', 'AI_USE_CASE_SUSPENDED', 'AI_KILL_SWITCH_ENGAGED', 'AI_AUTHORITY_REFUSED',
-  'AI_RISK_TIER_EXCEEDED', 'AI_RESIDENCY_REFUSED', 'AI_MALFORMED_CONTEXT', 'AI_DATA_CLASS_REFUSED',
-]
-const MODEL_CALL_REASONS: readonly string[] = ['AI_GATEWAY_UNAVAILABLE', 'AI_GATEWAY_NOT_CONFIGURED']
-const GUARD_REASONS: readonly string[] = [
-  'the explanation cites no row id',
-  'cited id(s) not in the supplied rows',
-  'explanation states a status that is not the cited row',
-  'explanation states a number not present in the supplied rows',
-]
-
-function startsWithAny(text: string, prefixes: readonly string[]): boolean {
-  return prefixes.some((p) => text.startsWith(p))
-}
-
-const STEP_INPUT = 1
-const STEP_GOVERNANCE = 2
-const STEP_MODEL_CALL = 3
-const STEP_OUTPUT_CHECKS = 4
-const STEP_DISPOSITION = 5
-
-/** The step a non-EXPLAINED reply stopped at; null for EXPLAINED. */
-export function stoppedAt(reply: ExplainReply): number | null {
-  if (reply.outcome === 'EXPLAINED') {
-    return null
-  }
-  if (reply.outcome === 'REVIEW_REQUIRED') {
-    if (startsWithAny(reply.reason, GOVERNANCE_REASONS)) return STEP_GOVERNANCE
-    if (startsWithAny(reply.reason, MODEL_CALL_REASONS)) return STEP_MODEL_CALL
-    return STEP_INPUT
-  }
-  // ABSTAINED: either the deterministic guard rejected a reply (Output checks),
-  // or the model itself abstained and there was nothing to check (Disposition).
-  return startsWithAny(reply.reason, GUARD_REASONS) ? STEP_OUTPUT_CHECKS : STEP_DISPOSITION
-}
-
-const UNAFFECTED = 'The figures on this page are deterministic and unaffected.'
-
-export function explainSteps(target: Pick<ExplainTarget, 'kind' | 'ids'>, reply: ExplainReply): readonly StepSpec[] {
-  const stop = stoppedAt(reply)
-  const at = (n: number): StepState => {
-    if (stop === null || n < stop) return 'passed'
-    return n === stop ? 'stopped' : 'pending'
-  }
-  const modelAbstained = stop === STEP_DISPOSITION
-  const hasProvenance = reply.provenance !== null
-  const stoppedNote = `${reply.reason} ${UNAFFECTED}`
-
-  return [
-    {
-      n: 1, title: 'Input', state: at(1),
-      note: at(1) === 'stopped'
-        ? stoppedNote
-        : `Asked to explain ${target.ids.join(', ')} (${target.kind}). Only those rows were sent to the model.`,
-    },
-    {
-      n: 2, title: 'Governance gate', state: at(2),
-      note: at(2) === 'stopped'
-        ? stoppedNote
-        : at(2) === 'pending'
-          ? 'Not reached.'
-          : 'Cleared at authority A1, risk tier T1, data class P0, region local — fixed by the demo service, not returned by the reply.',
-    },
-    {
-      n: 3, title: 'Model call', state: at(3),
-      note: at(3) === 'stopped'
-        ? stoppedNote
-        : at(3) === 'pending'
-          ? 'Not reached.'
-          : 'The Model Gateway returned a reply.',
-    },
-    {
-      n: 4, title: 'Output checks', state: modelAbstained ? 'pending' : at(4),
-      note: modelAbstained
-        ? 'Not run: the model abstained, so there was no explanation to check.'
-        : at(4) === 'stopped'
-          ? `The deterministic guard rejected the reply: ${reply.reason} ${UNAFFECTED}`
-          : at(4) === 'pending'
-            ? 'Not reached.'
-            : 'The deterministic guard (not the model) checked the explanation against the cited rows: cited ids exist, and its numbers and status words match them. It cannot prove the sentence is true, so a person should still check it.',
-    },
-    {
-      n: 5, title: 'Disposition', state: at(5),
-      note: stop === null
-        ? 'EXPLAINED — an advisory explanation whose figures were checked against the cited rows; a person should still check it. It never changes a figure on this page.'
-        : at(5) === 'stopped'
-          ? `ABSTAINED — ${reply.reason} ${UNAFFECTED}`
-          : `Not reached — the outcome is ${reply.outcome}, decided at the step above.`,
-    },
-    {
-      n: 6, title: 'Human review', state: 'pending',
-      note: stop === null
-        ? 'A person reviews the explanation against the register. Demo only: nothing here is recorded.'
-        : 'A person should check this.',
-    },
-    {
-      n: 7, title: 'Evidence', state: hasProvenance ? 'passed' : 'pending',
-      note: hasProvenance
-        ? 'Provenance returned with the reply. The Model Gateway keeps the full evidence record (AIGOV-001 section 14) on its side; it is not shown on this page.'
-        : 'Not reached: the call stopped before a reply was produced.',
-    },
-  ]
 }
