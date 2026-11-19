@@ -78,6 +78,10 @@ type Router struct {
 	// Classification proposes advisory ontology mappings through Models. Nil
 	// in a router built without one, which answers 503.
 	Classification *app.ClassificationService
+
+	// ClassificationDecisions saves reviewers' decisions on those proposals. It
+	// writes its own table only. Nil answers 503.
+	ClassificationDecisions *app.ClassificationDecisionService
 	// Refunds serves POST /v1/transactions:refund and the refund reads and
 	// provider reports. Nil in a cell deployed without the determination
 	// surface, which answers 503.
@@ -417,6 +421,10 @@ func (rt *Router) routes() []struct {
 		// Classification assistance: advisory, through the Governed Model
 		// Gateway only.
 		{Route{"POST", "/v1/classifications:propose", false, []security.Role{operator, analyst}}, rt.handleProposeClassification},
+		// A reviewer's decision on a proposal: the roles that may propose may
+		// decide, until the named signers are decided.
+		{Route{"POST", "/v1/classifications/decisions", false, []security.Role{operator, analyst}}, rt.handleRecordClassificationDecision},
+		{Route{"GET", "/v1/classifications/decisions/{proposalId}", false, []security.Role{operator, analyst}}, rt.handleGetClassificationDecision},
 	}
 }
 

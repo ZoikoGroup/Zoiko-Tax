@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:27e1f33831628198cf1ae4dcbea17db6b99f47be8c6f352f22e0505a6a9408f3`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:016c081e1d57c20b083c15487909937e27a12fcecf3e63b79d7c0aad896f69ee`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -10095,6 +10095,153 @@
           ]
         },
         {
+          "name": "POST /v1/classifications/decisions — Record what a reviewer decided about an AI classification proposal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"proposalId\": \"01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f\",\n  \"subjectRef\": \"sku:PLAN-UNL-5G\",\n  \"proposedCode\": \"ontology:telecom/voice/mobile\",\n  \"action\": \"MODIFY\",\n  \"reason\": \"The plan is data only\",\n  \"modifiedCode\": \"ontology:telecom/data/mobile\",\n  \"evidenceId\": \"call-id-1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/classifications/decisions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "classifications",
+                "decisions"
+              ]
+            },
+            "description": "Record what a reviewer decided about an AI classification proposal\n\n`OPERATOR` or `ANALYST`, signed in as themselves. Saves the reviewer's\ndecision on one proposal: `ACCEPT`, `REJECT`, `MODIFY` or `ESCALATE`,\nwith a reason. The proposal itself is advisory and is not stored, so the\nbody carries what the record needs of it: the proposal id, the subject\nreference, the proposed code and, when the proposal had one, its\n`evidenceId`.\n\nThe reviewer and the tenant are taken from the session, never from the\nbody; a body that names either is refused. The decision is append-only:\none per proposal per tenant, and a second decision for the same proposal\nis `409 ALREADY_EXISTS` with nothing changed. `MODIFY` needs a\n`modifiedCode` in ontology format, and no other action may carry one.\n`reason` and `note` are free text: they are never logged and never\nappear in an error. How long a decision is kept is set by the evidence\nretention decision, which is not yet made.\n\nA cell with no decision service wired answers `503`."
+          },
+          "response": [
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/classifications/decisions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "classifications",
+                    "decisions"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"proposalId\": \"01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f\",\n  \"subjectRef\": \"sku:PLAN-UNL-5G\",\n  \"proposedCode\": \"ontology:telecom/voice/mobile\",\n  \"action\": \"MODIFY\",\n  \"reason\": \"The plan is data only\",\n  \"modifiedCode\": \"ontology:telecom/data/mobile\",\n  \"evidenceId\": \"call-id-1\",\n  \"tenantId\": \"01920a4c-0000-7000-8000-0000000000a0\",\n  \"reviewerUserId\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"decidedAt\": \"2026-10-01T09:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordClassificationDecision returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201, 409, 503]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/classifications/decisions/{proposalId} — The reviewer's decision on one AI classification proposal",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/classifications/decisions/{{proposalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "classifications",
+                "decisions",
+                "{{proposalId}}"
+              ]
+            },
+            "description": "The reviewer's decision on one AI classification proposal\n\n`OPERATOR` or `ANALYST`. The decision recorded for the proposal in the\ncaller's tenant. `404` when there is none, and also for a proposal whose\ndecision belongs to another tenant. Reading changes nothing."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/classifications/decisions/{{proposalId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "classifications",
+                    "decisions",
+                    "{{proposalId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"proposalId\": \"01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f\",\n  \"subjectRef\": \"sku:PLAN-UNL-5G\",\n  \"proposedCode\": \"ontology:telecom/voice/mobile\",\n  \"action\": \"ACCEPT\",\n  \"reason\": \"The code fits the plan\",\n  \"tenantId\": \"01920a4c-0000-7000-8000-0000000000a0\",\n  \"reviewerUserId\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"decidedAt\": \"2026-10-01T09:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getClassificationDecision returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404, 503]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "POST /v1/batches — Queue many commits as one job",
           "request": {
             "method": "POST",
@@ -12589,7 +12736,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:27e1f33831628198cf1ae4dcbea17db6b99f47be8c6f352f22e0505a6a9408f3",
+      "value": "sha256:016c081e1d57c20b083c15487909937e27a12fcecf3e63b79d7c0aad896f69ee",
       "type": "string"
     }
   ]

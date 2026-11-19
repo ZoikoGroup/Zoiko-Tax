@@ -3911,6 +3911,67 @@
         "aiAllowed": "NONE",
         "note": "The person who acted."
       }
+    },
+    "classification_decision": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "proposal_id": {
+        "class": "P0"
+      },
+      "subject_ref": {
+        "class": "P0",
+        "note": "The caller's own reference for the item, such as a catalog SKU."
+      },
+      "proposed_code": {
+        "class": "P0"
+      },
+      "action": {
+        "class": "P0"
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-AI-ASSIST",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NO_LOG",
+        "aiAllowed": "NONE",
+        "note": "The reviewer's reason, free text. Never logged and never in an error message. Retention is set by the evidence retention decision, not yet decided."
+      },
+      "note": {
+        "class": "P2",
+        "purposes": [
+          "PURP-AI-ASSIST",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NO_LOG",
+        "aiAllowed": "NONE",
+        "note": "An optional reviewer note, free text. Never logged and never in an error message. Retention is set by the evidence retention decision, not yet decided."
+      },
+      "modified_code": {
+        "class": "P0"
+      },
+      "evidence_id": {
+        "class": "P0",
+        "note": "The Gateway evidence record id for the proposal call. Opaque and optional."
+      },
+      "reviewer_id": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who decided, from the session. Never taken from the request."
+      },
+      "decided_at": {
+        "class": "P0"
+      }
     }
   }
 }

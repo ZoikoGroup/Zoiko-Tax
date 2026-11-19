@@ -210,6 +210,8 @@ func run() error {
 	defer closeModels()
 	router.Models = models
 	router.Classification = app.NewClassificationService(models)
+	// Reviewers' decisions on those proposals are stored wherever the store is.
+	router.ClassificationDecisions = app.NewClassificationDecisionService(store.ClassificationDecisions(), store.Audit(), store, clk, ids)
 	if cfg.OntologyApprovedList != "" {
 		// A bad or unreadable list stops the cell with a fixed message; the
 		// check is never silently turned off.

@@ -231,6 +231,30 @@ func (e CertificateVerification) Valid() bool {
 	}
 }
 
+// Defines values for ClassificationDecisionAction.
+const (
+	ClassificationDecisionActionACCEPT   ClassificationDecisionAction = "ACCEPT"
+	ClassificationDecisionActionESCALATE ClassificationDecisionAction = "ESCALATE"
+	ClassificationDecisionActionMODIFY   ClassificationDecisionAction = "MODIFY"
+	ClassificationDecisionActionREJECT   ClassificationDecisionAction = "REJECT"
+)
+
+// Valid indicates whether the value is a known member of the ClassificationDecisionAction enum.
+func (e ClassificationDecisionAction) Valid() bool {
+	switch e {
+	case ClassificationDecisionActionACCEPT:
+		return true
+	case ClassificationDecisionActionESCALATE:
+		return true
+	case ClassificationDecisionActionMODIFY:
+		return true
+	case ClassificationDecisionActionREJECT:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ClassificationProposalAuthoritative.
 const (
 	False ClassificationProposalAuthoritative = false
@@ -4366,6 +4390,55 @@ type ChangePasswordRequest struct {
 // calendar, and converting it to UTC would move it.
 type CivilDate = string
 
+// ClassificationDecision A saved reviewer decision. Append-only.
+type ClassificationDecision struct {
+	Action ClassificationDecisionAction `json:"action"`
+
+	// DecidedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	DecidedAt    Timestamp                `json:"decidedAt"`
+	EvidenceID   *string                  `json:"evidenceId,omitempty"`
+	ModifiedCode *string                  `json:"modifiedCode,omitempty"`
+	Note         *string                  `json:"note,omitempty"`
+	ProposalID   ClassificationProposalID `json:"proposalId"`
+	ProposedCode string                   `json:"proposedCode"`
+	Reason       string                   `json:"reason"`
+
+	// ReviewerUserID The person who decided, from the session.
+	ReviewerUserID string `json:"reviewerUserId"`
+	SubjectRef     string `json:"subjectRef"`
+
+	// TenantID The tenant of the session that recorded the decision.
+	TenantID string `json:"tenantId"`
+}
+
+// ClassificationDecisionAction defines model for ClassificationDecisionAction.
+type ClassificationDecisionAction string
+
+// ClassificationDecisionRequest A reviewer's decision. It names no reviewer and no tenant: both come from the session.
+// `modifiedCode` is required for `MODIFY` and refused for every other action.
+type ClassificationDecisionRequest struct {
+	Action ClassificationDecisionAction `json:"action"`
+
+	// EvidenceID The Gateway's evidence record id for the proposal call, when the proposal had one.
+	EvidenceID *string `json:"evidenceId,omitempty"`
+
+	// ModifiedCode The reviewer's own code in ontology format. Only for `MODIFY`.
+	ModifiedCode *string `json:"modifiedCode,omitempty"`
+
+	// Note An optional note. Free text; never logged. Retention is set by the evidence retention decision, not yet decided.
+	Note       *string                  `json:"note,omitempty"`
+	ProposalID ClassificationProposalID `json:"proposalId"`
+
+	// ProposedCode The code the AI proposed, `ontology:...`.
+	ProposedCode string `json:"proposedCode"`
+
+	// Reason Why the reviewer decided this. Free text; never logged. Retention is set by the evidence retention decision, not yet decided.
+	Reason     string `json:"reason"`
+	SubjectRef string `json:"subjectRef"`
+}
+
 // ClassificationProposal An advisory mapping proposal. `authoritative` is always false; a person confirms it or it is nothing.
 //
 // `disposition` says what the AI plane contributed. `PROPOSED` carries a proposal (`id`, `proposedCode`,
@@ -4389,7 +4462,8 @@ type ClassificationProposal struct {
 	Provenance *AiProvenance `json:"provenance,omitempty"`
 
 	// ReviewReason Present when `disposition` is `REVIEW_REQUIRED`: `AI_GATEWAY_UNAVAILABLE`, `AI_GATEWAY_NOT_CONFIGURED`,
-	// `AI_GATEWAY_REPLY_UNEVIDENCED` or `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`.
+	// `AI_GATEWAY_REPLY_UNEVIDENCED`, `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE` or `AI_PROPOSAL_CODE_NOT_APPROVED`
+	// (the code is not on the approved ontology list at this time, so it is set aside for a person).
 	ReviewReason *string `json:"reviewReason,omitempty"`
 	SubjectRef   string  `json:"subjectRef"`
 }
@@ -4399,6 +4473,9 @@ type ClassificationProposalAuthoritative bool
 
 // ClassificationProposalDisposition defines model for ClassificationProposal.Disposition.
 type ClassificationProposalDisposition string
+
+// ClassificationProposalID defines model for ClassificationProposalId.
+type ClassificationProposalID = string
 
 // ClassificationProposalRequest defines model for ClassificationProposalRequest.
 type ClassificationProposalRequest struct {
@@ -10919,6 +10996,9 @@ type SignInJSONRequestBody = SignInRequest
 
 // SubmitBatchJSONRequestBody defines body for SubmitBatch for application/json ContentType.
 type SubmitBatchJSONRequestBody = BatchRequest
+
+// RecordClassificationDecisionJSONRequestBody defines body for RecordClassificationDecision for application/json ContentType.
+type RecordClassificationDecisionJSONRequestBody = ClassificationDecisionRequest
 
 // ProposeClassificationJSONRequestBody defines body for ProposeClassification for application/json ContentType.
 type ProposeClassificationJSONRequestBody = ClassificationProposalRequest

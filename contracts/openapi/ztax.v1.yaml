@@ -4112,6 +4112,111 @@ paths:
         "500": { $ref: "#/components/responses/Internal" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
+  /v1/classifications/decisions:
+    post:
+      operationId: recordClassificationDecision
+      tags: [classification]
+      summary: Record what a reviewer decided about an AI classification proposal
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves. Saves the reviewer's
+        decision on one proposal: `ACCEPT`, `REJECT`, `MODIFY` or `ESCALATE`,
+        with a reason. The proposal itself is advisory and is not stored, so the
+        body carries what the record needs of it: the proposal id, the subject
+        reference, the proposed code and, when the proposal had one, its
+        `evidenceId`.
+
+        The reviewer and the tenant are taken from the session, never from the
+        body; a body that names either is refused. The decision is append-only:
+        one per proposal per tenant, and a second decision for the same proposal
+        is `409 ALREADY_EXISTS` with nothing changed. `MODIFY` needs a
+        `modifiedCode` in ontology format, and no other action may carry one.
+        `reason` and `note` are free text: they are never logged and never
+        appear in an error. How long a decision is kept is set by the evidence
+        retention decision, which is not yet made.
+
+        A cell with no decision service wired answers `503`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClassificationDecisionRequest"
+            examples:
+              modify:
+                summary: A reviewer changes the proposed code
+                value:
+                  proposalId: 01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f
+                  subjectRef: sku:PLAN-UNL-5G
+                  proposedCode: ontology:telecom/voice/mobile
+                  action: MODIFY
+                  reason: The plan is data only
+                  modifiedCode: ontology:telecom/data/mobile
+                  evidenceId: call-id-1
+      responses:
+        "201":
+          description: The saved decision, with the reviewer and tenant from the session.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassificationDecision"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    proposalId: 01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f
+                    subjectRef: sku:PLAN-UNL-5G
+                    proposedCode: ontology:telecom/voice/mobile
+                    action: MODIFY
+                    reason: The plan is data only
+                    modifiedCode: ontology:telecom/data/mobile
+                    evidenceId: call-id-1
+                    tenantId: 01920a4c-0000-7000-8000-0000000000a0
+                    reviewerUserId: 01920a4c-0000-7000-8000-0000000000a1
+                    decidedAt: "2026-10-01T09:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/classifications/decisions/{proposalId}:
+    get:
+      operationId: getClassificationDecision
+      tags: [classification]
+      summary: The reviewer's decision on one AI classification proposal
+      description: |
+        `OPERATOR` or `ANALYST`. The decision recorded for the proposal in the
+        caller's tenant. `404` when there is none, and also for a proposal whose
+        decision belongs to another tenant. Reading changes nothing.
+      parameters:
+        - $ref: "#/components/parameters/ClassificationProposalId"
+      responses:
+        "200":
+          description: The decision.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClassificationDecision"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    proposalId: 01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f
+                    subjectRef: sku:PLAN-UNL-5G
+                    proposedCode: ontology:telecom/voice/mobile
+                    action: ACCEPT
+                    reason: The code fits the plan
+                    tenantId: 01920a4c-0000-7000-8000-0000000000a0
+                    reviewerUserId: 01920a4c-0000-7000-8000-0000000000a1
+                    decidedAt: "2026-10-01T09:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
   /v1/dashboard:
     get:
       operationId: getDashboard
@@ -8545,6 +8650,14 @@ components:
       schema: { $ref: "#/components/schemas/RemittanceId" }
       example: 01920b30-1a2b-7c3d-8e4f-5a6b7c8d9e01
 
+    ClassificationProposalId:
+      name: proposalId
+      in: path
+      required: true
+      description: The identifier of the AI classification proposal the decision is about.
+      schema: { $ref: "#/components/schemas/ClassificationProposalId" }
+      example: 01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f
+
     SupportCaseId:
       name: caseId
       in: path
@@ -10771,6 +10884,103 @@ components:
           type: string
           description: The Gateway's evidence record id for this call. Absent when the Gateway sent none.
 
+    ClassificationProposalId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: ClassificationProposalId
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f
+
+    ClassificationDecisionAction:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: ClassificationDecisionAction
+      enum: [ACCEPT, REJECT, MODIFY, ESCALATE]
+
+    ClassificationDecisionRequest:
+      type: object
+      title: ClassificationDecisionRequest
+      description: |
+        A reviewer's decision. It names no reviewer and no tenant: both come from the session.
+        `modifiedCode` is required for `MODIFY` and refused for every other action.
+      additionalProperties: false
+      required: [proposalId, subjectRef, proposedCode, action, reason]
+      properties:
+        proposalId: { $ref: "#/components/schemas/ClassificationProposalId" }
+        subjectRef:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          minLength: 1
+          maxLength: 512
+        proposedCode:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          maxLength: 256
+          description: The code the AI proposed, `ontology:...`.
+        action: { $ref: "#/components/schemas/ClassificationDecisionAction" }
+        reason:
+          x-ztax-privacy: { class: P2, purposes: [PURP-AI-ASSIST, PURP-EVID], retention: RET-EVIDENCE, redaction: NO_LOG, aiAllowed: NONE }
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Why the reviewer decided this. Free text; never logged. Retention is set by the evidence retention decision, not yet decided.
+        note:
+          x-ztax-privacy: { class: P2, purposes: [PURP-AI-ASSIST, PURP-EVID], retention: RET-EVIDENCE, redaction: NO_LOG, aiAllowed: NONE }
+          type: string
+          maxLength: 2000
+          description: An optional note. Free text; never logged. Retention is set by the evidence retention decision, not yet decided.
+        modifiedCode:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          maxLength: 256
+          description: The reviewer's own code in ontology format. Only for `MODIFY`.
+        evidenceId:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          maxLength: 64
+          pattern: "^[A-Za-z0-9-]{1,64}$"
+          description: The Gateway's evidence record id for the proposal call, when the proposal had one.
+
+    ClassificationDecision:
+      type: object
+      title: ClassificationDecision
+      description: A saved reviewer decision. Append-only.
+      additionalProperties: false
+      required: [proposalId, subjectRef, proposedCode, action, reason, tenantId, reviewerUserId, decidedAt]
+      properties:
+        proposalId: { $ref: "#/components/schemas/ClassificationProposalId" }
+        subjectRef:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        proposedCode:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        action: { $ref: "#/components/schemas/ClassificationDecisionAction" }
+        reason:
+          x-ztax-privacy: { class: P2, purposes: [PURP-AI-ASSIST, PURP-EVID], retention: RET-EVIDENCE, redaction: NO_LOG, aiAllowed: NONE }
+          type: string
+        note:
+          x-ztax-privacy: { class: P2, purposes: [PURP-AI-ASSIST, PURP-EVID], retention: RET-EVIDENCE, redaction: NO_LOG, aiAllowed: NONE }
+          type: string
+        modifiedCode:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        evidenceId:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        tenantId:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          format: uuid
+          description: The tenant of the session that recorded the decision.
+        reviewerUserId:
+          x-ztax-privacy: { class: P1, purposes: [PURP-SEC, PURP-EVID], retention: RET-EVIDENCE, redaction: NONE }
+          type: string
+          format: uuid
+          description: The person who decided, from the session.
+        decidedAt: { $ref: "#/components/schemas/Timestamp" }
+
     ClassificationProposal:
       type: object
       title: ClassificationProposal
@@ -10801,7 +11011,8 @@ components:
           type: string
           description: |
             Present when `disposition` is `REVIEW_REQUIRED`: `AI_GATEWAY_UNAVAILABLE`, `AI_GATEWAY_NOT_CONFIGURED`,
-            `AI_GATEWAY_REPLY_UNEVIDENCED` or `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`.
+            `AI_GATEWAY_REPLY_UNEVIDENCED`, `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE` or `AI_PROPOSAL_CODE_NOT_APPROVED`
+            (the code is not on the approved ontology list at this time, so it is set aside for a person).
         proposedCode:
           x-ztax-privacy: { class: P0 }
           type: string

@@ -216,6 +216,7 @@ const FOLDERS = [
       "createComparator", "listComparators", "executeShadowRun", "listShadowRuns", "getShadowRun", "moveDiscrepancy",
       "issueDocument", "getDocument", "correctDocument", "getDocumentLineage", "listDocuments",
       "adjustTransaction", "refundTransaction", "getRefund", "reportRefund", "listRefunds", "proposeClassification",
+      "recordClassificationDecision", "getClassificationDecision",
       "submitBatch", "getJob", "listJobs", "getDecisionInclusion",
       "getSubledgerPeriod", "transitionSubledgerPeriod", "requestPeriodReopen", "approvePeriodReopen",
       "runReconciliation", "getReconciliation", "listReconciliations", "resolveReconciliationItem",
@@ -916,6 +917,10 @@ function jsonBody(value) {
 // provider, which is every local stack.
 const ACCEPTED_OUTCOMES = {
   proposeClassification: ["422"],
+  // The example proposal id is fixed, so a second run finds its decision already
+  // recorded (409), and a cell with no decision service answers 503.
+  recordClassificationDecision: ["409", "503"],
+  getClassificationDecision: ["404", "503"],
   // A fresh stack has one session, the run's own, which listSessions does not
   // capture; there is then no other session to revoke.
   revokeSession: ["404"],
