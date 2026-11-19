@@ -110,6 +110,10 @@ export function viewOfWaiting(elapsedMs: number): ProposalView | null {
 // read here and never shown.
 const UNREACHED_REASONS: ReadonlySet<string> = new Set(['AI_GATEWAY_NOT_CONFIGURED', 'AI_GATEWAY_UNAVAILABLE'])
 
+// The AI answered with a well-formed code that cannot be used today. That is a
+// person's review, not a failure: no code, no retry (backend ReasonProposalCodeNotApproved).
+const NOT_APPROVED_REASON = 'AI_PROPOSAL_CODE_NOT_APPROVED'
+
 function statusOf(error: unknown): number | null {
   if (typeof error === 'object' && error !== null && 'status' in error) {
     const status = error.status
@@ -194,6 +198,13 @@ export function viewOfProposal(ending: Ending, elapsedMs: number): ProposalView 
   }
   if (p.disposition === 'REVIEW_REQUIRED' && p.reviewReason !== undefined && UNREACHED_REASONS.has(p.reviewReason)) {
     return unavailable(elapsedMs)
+  }
+  if (p.disposition === 'REVIEW_REQUIRED' && p.reviewReason === NOT_APPROVED_REASON) {
+    return review(
+      elapsedMs,
+      `The AI's suggestion is not a code that can be used today, so it is not shown. A person classifies this item. Nothing was changed. ${UNAFFECTED}`,
+      'A person needs to review this item',
+    )
   }
   // The AI answered and the answer was set aside, or the outcome is one this
   // screen does not know: either way there is no suggestion, so a person decides.

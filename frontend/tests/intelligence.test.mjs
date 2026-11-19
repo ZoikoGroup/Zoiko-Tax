@@ -341,3 +341,42 @@ describe('the subject reference limit', () => {
     assert.match(src.slice(call, call + 80), /subjectRef: ref,/)
   })
 })
+
+describe('a code that is not approved', () => {
+  const notApproved = (extra = {}) => ({
+    kind: 'proposal',
+    proposal: { disposition: 'REVIEW_REQUIRED', reviewReason: 'AI_PROPOSAL_CODE_NOT_APPROVED', ...extra },
+  })
+
+  test('it has its own headline and sentence, as a person\'s review', () => {
+    const v = viewOfProposal(notApproved(), 2000)
+    const generic = viewOfProposal(reviewRequired('AI_OUTPUT_REJECTED'), 2000)
+    assert.equal(v.state, 'review')
+    assert.equal(v.headline, 'A person needs to review this item')
+    assert.notEqual(v.headline, generic.headline)
+    assert.notEqual(v.sentence, generic.sentence)
+    assert.match(v.sentence, /A person classifies this item/)
+    assert.match(v.sentence, /Nothing was changed/)
+  })
+
+  test('it shows no code and offers no retry, and never the reason code or list jargon', () => {
+    const v = viewOfProposal(notApproved({ proposedCode: 'ontology:telecom/made-up/node' }), 2000)
+    assert.equal(v.code, null)
+    const text = `${v.headline} ${v.sentence}`
+    assert.ok(!/try again|retry|AI_PROPOSAL|approved list|ontology/i.test(text), text)
+  })
+
+  test('no provenance, id or code of the answer is in the view', () => {
+    const v = viewOfProposal(notApproved({ provenance: { ...PROVENANCE, invocationId: 'call-id-1' }, proposedCode: 'ontology:x/y' }), 1000)
+    assert.ok(!JSON.stringify(v).includes('call-id-1'))
+    assert.ok(!JSON.stringify(v).includes('ontology:'))
+  })
+
+  test('the other reasons are unchanged', () => {
+    assert.equal(viewOfProposal(reviewRequired('AI_GATEWAY_UNAVAILABLE'), 1).state, 'unavailable')
+    assert.equal(viewOfProposal(reviewRequired('AI_GATEWAY_NOT_CONFIGURED'), 1).state, 'unavailable')
+    const other = viewOfProposal(reviewRequired('AI_GATEWAY_REPLY_UNEVIDENCED'), 1)
+    assert.equal(other.headline, 'Set aside for a person to review')
+    assert.match(other.sentence, /did not give a usable suggestion/)
+  })
+})
