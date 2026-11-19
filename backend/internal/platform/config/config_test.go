@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/config"
 )
@@ -279,5 +280,19 @@ func TestTheApprovedOntologyListIsOptional(t *testing.T) {
 	}
 	if cfg.OntologyApprovedList != "/srv/approved.json" {
 		t.Fatalf("OntologyApprovedList = %q", cfg.OntologyApprovedList)
+	}
+}
+
+// The Gateway deadline default is 5s. The screen's request limit must stay above
+// it and the "still waiting" line below it (frontend/tests/intelligence.test.mjs
+// reads this default). Change it only after measuring the model.
+func TestTheGatewayDeadlineDefaultIsFiveSeconds(t *testing.T) {
+	withEnv(t, nil)
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.AIGatewayDeadline != 5*time.Second {
+		t.Fatalf("AIGatewayDeadline = %s, want 5s", cfg.AIGatewayDeadline)
 	}
 }
