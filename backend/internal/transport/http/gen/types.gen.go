@@ -4016,11 +4016,14 @@ func (e WebhookStatus) Valid() bool {
 
 // AiProvenance Which governed use case, model, provider, prompt and AI train produced an output (ADR-0006 §2.7).
 type AiProvenance struct {
-	AiTrainVersion  string `json:"aiTrainVersion"`
-	ModelProfile    string `json:"modelProfile"`
-	PromptProfile   string `json:"promptProfile"`
-	ProviderProfile string `json:"providerProfile"`
-	UseCase         string `json:"useCase"`
+	AiTrainVersion string `json:"aiTrainVersion"`
+
+	// InvocationID The Gateway's evidence record id for this call. Absent when the Gateway sent none.
+	InvocationID    *string `json:"invocationId,omitempty"`
+	ModelProfile    string  `json:"modelProfile"`
+	PromptProfile   string  `json:"promptProfile"`
+	ProviderProfile string  `json:"providerProfile"`
+	UseCase         string  `json:"useCase"`
 }
 
 // AuditID An audit record identifier (ADR-0012).

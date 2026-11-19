@@ -14002,6 +14002,11 @@ components:
           x-ztax-privacy:
             class: P0
           type: string
+        invocationId:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The Gateway's evidence record id for this call. Absent when the Gateway sent none.
     ClassificationProposal:
       type: object
       title: ClassificationProposal

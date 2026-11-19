@@ -83,6 +83,11 @@ func testClassificationProposal(t *testing.T) ai.AiClassificationProposal {
 
 func testClassificationProposalWithCode(t *testing.T, code string) ai.AiClassificationProposal {
 	t.Helper()
+	return testClassificationProposalWith(t, code, "")
+}
+
+func testClassificationProposalWith(t *testing.T, code, invocationID string) ai.AiClassificationProposal {
+	t.Helper()
 	id, err := ai.NewAiClassificationProposalID("01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f")
 	if err != nil {
 		t.Fatalf("NewAiClassificationProposalID: %v", err)
@@ -97,6 +102,7 @@ func testClassificationProposalWithCode(t *testing.T, code string) ai.AiClassifi
 		RiskTier:         ai.RiskTierT1,
 		AuthorityOutcome: ai.AuthorityOutcomeA1,
 		AiTrainVersion:   "ai-test-1",
+		InvocationID:     invocationID,
 	}
 	p, err := ai.NewAiClassificationProposal(id, "sku:PLAN-UNL-5G", code, "0.97", prov)
 	if err != nil {
@@ -335,6 +341,50 @@ func TestProposeClassificationSuccess(t *testing.T) {
 	if fake.seen.UseCase != app.ClassificationReviewUseCase || fake.seen.AuthorityOutcome != ai.AuthorityOutcomeA1 ||
 		fake.seen.RiskTier != ai.RiskTierT1 || len(fake.seen.DataClasses) != 1 || fake.seen.DataClasses[0] != privacy.P0 {
 		t.Fatalf("invocation = %+v", fake.seen)
+	}
+}
+
+// proposeProvenance runs one successful propose call and returns the
+// "provenance" object of the reply.
+func proposeProvenance(t *testing.T, proposal ai.AiClassificationProposal) map[string]any {
+	t.Helper()
+	rt := NewRouter(nil, nil, nil, nil, slog.New(slog.DiscardHandler), idgen.V7{})
+	rt.Cell = testCell
+	rt.Classification = app.NewClassificationService(&fakeModelGateway{proposal: proposal})
+	body := `{"subjectRef":"sku:PLAN-UNL-5G","description":"Unlimited 5G mobile plan with 20 GB hotspot"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/classifications:propose", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(security.Into(req.Context(), testClassificationContext(security.RoleOperator)))
+	rec := httptest.NewRecorder()
+	rt.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	var out map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode: %v; body=%s", err, rec.Body.String())
+	}
+	prov, ok := out["provenance"].(map[string]any)
+	if !ok {
+		t.Fatalf("no provenance object: %s", rec.Body.String())
+	}
+	return prov
+}
+
+func TestProposeClassificationCarriesTheInvocationID(t *testing.T) {
+	prov := proposeProvenance(t, testClassificationProposalWith(t, "ontology:telecom/voice/mobile", "call-id-1"))
+	if prov["invocationId"] != "call-id-1" {
+		t.Fatalf("provenance = %v, want invocationId call-id-1", prov)
+	}
+}
+
+func TestProposeClassificationOmitsTheInvocationIDWhenAbsent(t *testing.T) {
+	prov := proposeProvenance(t, testClassificationProposal(t))
+	if _, ok := prov["invocationId"]; ok {
+		t.Fatalf("the key invocationId is present with no id: %v", prov)
+	}
+	if prov["modelProfile"] != "model:cls-test" {
+		t.Fatalf("provenance lost its other fields: %v", prov)
 	}
 }
 

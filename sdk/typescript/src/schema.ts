@@ -4810,6 +4810,8 @@ export interface components {
             providerProfile: string;
             promptProfile: string;
             aiTrainVersion: string;
+            /** @description The Gateway's evidence record id for this call. Absent when the Gateway sent none. */
+            invocationId?: string;
         };
         /**
          * ClassificationProposal
