@@ -508,3 +508,44 @@ func TestKilledUseCaseNeverReachesTransport(t *testing.T) {
 		t.Fatalf("a killed use case reached the transport: %d call(s)", len(transport.Calls()))
 	}
 }
+
+// An unlisted code is a 200 that sends the item to a person: the reason, and
+// none of the proposal keys. The code never reaches the reply.
+func TestProposeClassificationUnlistedCodeIsReviewRequired(t *testing.T) {
+	list, err := app.ParseApprovedList([]byte(`{"list_version":"test-list-1","approved":[{"code":"ontology:telecom/voice/mobile","effective_from":"2024-01-01"}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	unlisted := "ontology:telecom/made-up/node"
+	fake := &fakeModelGateway{proposal: testClassificationProposalWithCode(t, unlisted)}
+	rt := NewRouter(nil, nil, nil, nil, slog.New(slog.DiscardHandler), idgen.V7{})
+	rt.Cell = testCell
+	rt.Classification = app.NewClassificationService(fake).
+		WithApprovedCodes(list, clock.Fixed{Instant: time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)})
+
+	body := `{"subjectRef":"sku:PLAN-UNL-5G","description":"Unlimited 5G mobile plan with 20 GB hotspot"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/classifications:propose", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(security.Into(req.Context(), testClassificationContext(security.RoleOperator)))
+	rec := httptest.NewRecorder()
+	rt.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	var out map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode: %v; body=%s", err, rec.Body.String())
+	}
+	if out["disposition"] != "REVIEW_REQUIRED" || out["reviewReason"] != string(ai.ReasonProposalCodeNotApproved) {
+		t.Fatalf("body = %s", rec.Body.String())
+	}
+	for _, absent := range []string{"id", "proposedCode", "confidence", "provenance"} {
+		if _, ok := out[absent]; ok {
+			t.Fatalf("an unlisted code answer carries %q: %s", absent, rec.Body.String())
+		}
+	}
+	if strings.Contains(rec.Body.String(), unlisted) {
+		t.Fatalf("the unlisted code is in the reply: %s", rec.Body.String())
+	}
+}

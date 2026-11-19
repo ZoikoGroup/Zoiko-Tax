@@ -260,3 +260,24 @@ func TestEmailedLinksAreHTTPSOutsideDevelopment(t *testing.T) {
 		t.Fatalf("error %v; want plain-HTTP links refused outside development", err)
 	}
 }
+
+// The approved-ontology list is optional: unset means no check, and the
+// variable is a recognised ZTAX_ name rather than a refused typo.
+func TestTheApprovedOntologyListIsOptional(t *testing.T) {
+	withEnv(t, nil)
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.OntologyApprovedList != "" {
+		t.Fatalf("OntologyApprovedList = %q, want empty by default", cfg.OntologyApprovedList)
+	}
+	withEnv(t, map[string]string{"ZTAX_ONTOLOGY_APPROVED_LIST": "/srv/approved.json"})
+	cfg, err = config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.OntologyApprovedList != "/srv/approved.json" {
+		t.Fatalf("OntologyApprovedList = %q", cfg.OntologyApprovedList)
+	}
+}
