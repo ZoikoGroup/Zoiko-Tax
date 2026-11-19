@@ -65,15 +65,15 @@ describe('the reviewer decision rules', () => {
     assert.deepEqual(reviewerActions.map((a) => a.kind), ['ACCEPT', 'REJECT', 'MODIFY', 'ESCALATE'])
   })
 
-  test('a decision needs a reason and a note; Modify also needs a code; nothing without an action', () => {
-    assert.equal(canRecordDecision(null, 'OTHER', 'why', ''), false)
-    assert.equal(canRecordDecision('ACCEPT', '', 'why', ''), false)
-    assert.equal(canRecordDecision('ACCEPT', 'OTHER', '   ', ''), false)
-    assert.equal(canRecordDecision('ACCEPT', 'OTHER', 'why', ''), true)
-    assert.equal(canRecordDecision('REJECT', 'OTHER', 'why', ''), true)
-    assert.equal(canRecordDecision('MODIFY', 'OTHER', 'why', ''), false)
-    assert.equal(canRecordDecision('MODIFY', 'OTHER', 'why', '  '), false)
-    assert.equal(canRecordDecision('MODIFY', 'OTHER', 'why', 'ontology:a/b'), true)
+  test('a decision needs a reason; Modify also needs a code; nothing without an action', () => {
+    assert.equal(canRecordDecision(null, 'why', ''), false)
+    assert.equal(canRecordDecision('ACCEPT', '', ''), false)
+    assert.equal(canRecordDecision('ACCEPT', '   ', ''), false)
+    assert.equal(canRecordDecision('ACCEPT', 'why', ''), true)
+    assert.equal(canRecordDecision('REJECT', 'why', ''), true)
+    assert.equal(canRecordDecision('MODIFY', 'why', ''), false)
+    assert.equal(canRecordDecision('MODIFY', 'why', '  '), false)
+    assert.equal(canRecordDecision('MODIFY', 'why', 'ontology:a/b'), true)
   })
 })
 
