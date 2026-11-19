@@ -75,7 +75,7 @@ var independenceInput = app.ProposeInput{SubjectRef: "sku:PLAN-UNL-5G", Descript
 
 // wantUnavailable checks both layers: the client's own error, and what the
 // classification service turns it into (review with no suggestion).
-func wantUnavailable(t *testing.T, ctx context.Context, client *gateway.Client) {
+func wantUnavailable(ctx context.Context, t *testing.T, client *gateway.Client) {
 	t.Helper()
 	_, err := client.ProposeClassification(ctx, ai.Invocation{
 		UseCase: app.ClassificationReviewUseCase, AuthorityOutcome: "A1", RiskTier: "T1",
@@ -104,7 +104,7 @@ func deterministicStillWorks(t *testing.T, h *harness, idem string) {
 
 func TestClassifyEndsUnavailableWhenTheGatewayIsDown(t *testing.T) {
 	transport := &gatewaytest.Fake{Err: downErr()}
-	wantUnavailable(t, bounded(t), downGateway(t, transport, nil))
+	wantUnavailable(bounded(t), t, downGateway(t, transport, nil))
 	if len(transport.Calls()) == 0 {
 		t.Fatal("the transport was never reached, so the test proved nothing")
 	}
@@ -117,7 +117,7 @@ func TestClassifyEndsUnavailableWhenTheGatewayHangs(t *testing.T) {
 	}}
 	ctx := bounded(t)
 	start := time.Now()
-	wantUnavailable(t, ctx, downGateway(t, transport, nil))
+	wantUnavailable(ctx, t, downGateway(t, transport, nil))
 	if ctx.Err() != nil || time.Since(start) > 2*time.Second {
 		t.Fatalf("the call did not end inside its deadline (took %s)", time.Since(start))
 	}
@@ -139,7 +139,7 @@ func TestDeterministicServiceWorksWhileTheBreakerIsOpen(t *testing.T) {
 	transport := &gatewaytest.Fake{Err: downErr()}
 	client := downGateway(t, transport, gateway.NewBreaker(threshold, time.Hour))
 	for range threshold {
-		wantUnavailable(t, bounded(t), client)
+		wantUnavailable(bounded(t), t, client)
 	}
 	// wantUnavailable calls the transport once per client call and once per
 	// service call, so count what reached it before the next round.
@@ -148,7 +148,7 @@ func TestDeterministicServiceWorksWhileTheBreakerIsOpen(t *testing.T) {
 		t.Fatalf("the transport saw %d calls before the breaker opened, want %d", reached, threshold)
 	}
 	// The breaker is open: refused without reaching the transport, same ending.
-	wantUnavailable(t, bounded(t), client)
+	wantUnavailable(bounded(t), t, client)
 	if n := len(transport.Calls()); n != reached {
 		t.Fatalf("the open breaker still let calls through: %d, then %d", reached, n)
 	}
