@@ -98,7 +98,7 @@ curl -X POST http://127.0.0.1:18090/demo/classify \
 
 | Screen text | Meaning |
 |---|---|
-| "The AI suggested a code", the proposed code, a confidence line "Not calibrated", the provenance table and "took N seconds". On the base stack (fake runtime) a badge "Test runtime: not a real AI answer" shows too; with the live Groq overlay it does not. | Model passed format check (`ontology:*`). Disclaimer: "whether that code is a real ontology node is not verified here" (format check only; no approved-list check on this path). |
+| "The AI suggested a code", the proposed code, a confidence line "Not calibrated", the provenance table and "took N seconds". On the base stack (fake runtime with `BASE_STACK_CANNED`, returning `ontology:telecom/voice/mobile`) a badge "Test runtime: not a real AI answer" shows too (`viewOfProposal.ts`); with the live Groq overlay it does not. | Model passed format check (`ontology:*`). Disclaimer: "whether that code is a real ontology node is not verified here" (format check only; no approved-list check on this path). |
 | Headline "Set aside for a person to review", a plain sentence ("Classify it by hand"), "took N seconds". No code and no reason code. | Model's reply failed even the format check — governed boundary working as designed. (`AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE` is in the API response only.) |
 | After 5 seconds with no answer: "Still waiting for the AI" and "The AI is taking longer than usual." | Not a failure. The call may still finish. |
 
@@ -130,6 +130,13 @@ Source: `LIVE_DEMO.md §3`.
 **What to do**
 
 Open `http://localhost:13000`, navigate to **Reports (demo)**, and click **Explain** on any row.
+
+> [!NOTE]
+> The three explainers (`explain-report-figure`, `explain-obligation-row`, `explain-shadow-variance`)
+> have no Go backend route (`backend/internal/transport/http/router.go`). The buttons reach the
+> demo HTTP service (`report_ai_http.py`) on port 18090 directly. On the base stack (no Groq overlay),
+> the development registry (`config/registry.dev.json`) routes to `FakeRuntime(canned=BASE_STACK_CANNED)`
+> which answers fixed `[fake]`-prefixed texts (`src/ztax_gateway/fake_runtime.py`).
 
 Or via curl:
 
@@ -419,5 +426,4 @@ python tools/step10_demo.py    # NO model at all — boundary claims only
 
 ---
 
-*Checklist version: written from code read on 2026-11-17. No git command was run; no file
-other than this one was created or modified.*
+*Checklist version: aligned with code read on 2026-11-19 (explainers in dev registry, base stack canned runtime). No git command was run.*

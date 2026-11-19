@@ -50,7 +50,8 @@ is available. Three statuses are used:
 
 ## E. Known gaps (verified)
 
-- No live model or provider adapter exists — only an unconfigured runtime (`runtime.py`) and a fake runtime for tests (`fake_runtime.py`) are present.
+- No live model or provider adapter exists — only an unconfigured runtime (`runtime.py`) and a fake runtime (`fake_runtime.py`) are present. When `ZTAX_GATEWAY_RUNTIME=fake` and `ZTAX_ENVIRONMENT=development`, `server.py::_runtime()` returns `FakeRuntime(canned=BASE_STACK_CANNED)`, which answers `ontology:telecom/voice/mobile` (confidence `"0.9000"`) for `classification-review` and fixed `[fake]`-prefixed extraction results for the three explainers. All other callers of `FakeRuntime()` without `canned=BASE_STACK_CANNED` still receive `_DEFAULT_PROPOSAL` (`"FAKE-UNCLASSIFIED"`). Tests: `tests/test_fake_runtime.py::TestBaseStackCanned::test_base_stack_canned_answers_approved_code`, `test_base_stack_canned_via_gateway_roundtrip`, `test_explainer_in_base_stack_canned`.
+- Dev registry (`config/registry.dev.json`) now registers four use cases: `classification-review` and three explainers — `explain-report-figure`, `explain-obligation-row`, `explain-shadow-variance` — all on the fake route (`model:fake-v1`, `provider:fake`). The three explainers have no Go route; they are reachable only from the sample HTTP service (`tools/report_ai_http.py`) on the live-demo stack, not from the main Go-to-gRPC Intelligence screen. Tests: `tests/test_fake_runtime.py::TestBaseStackCannedExplainers::test_explainer_registered_in_dev_registry`, `test_explainer_max_risk_tier_is_t1`, `test_explainer_in_base_stack_canned`; `tests/test_registry_dev.py`.
 - The Classifier is not connected to any gateway runtime.
 - The A3 constrained-automation guard is not implemented (no ADR-AIGOV-005 text committed).
 - `AgentMemoryPolicy` is declared but nothing in `src/` enforces it at runtime.

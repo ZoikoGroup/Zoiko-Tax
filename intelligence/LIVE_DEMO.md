@@ -52,8 +52,11 @@ to the Model Gateway and, this time, on to Groq).
   says "The AI suggested a code" and shows the proposed code, a confidence
   line that reads "Not calibrated", the provenance table (use
   case, model profile, provider profile, prompt profile, AI train) and
-  "took N seconds". On the base stack (fake runtime) it also shows the badge
-  "Test runtime: not a real AI answer"; with this Groq overlay it does not.
+  "took N seconds". On the base stack (fake runtime with `BASE_STACK_CANNED`),
+  it answers the synthetic approved code `ontology:telecom/voice/mobile`
+  (`server.py::_runtime()`, `tests/test_fake_runtime.py::TestBaseStackCanned`)
+  and shows the badge "Test runtime: not a real AI answer" (`frontend/src/pages/intelligence/viewOfProposal.ts`);
+  with this Groq overlay it does not.
   On this
   main Intelligence page (the Go-to-gRPC path), the output check is
   **format-only**: the code must start with `ontology:` and name something
@@ -63,16 +66,16 @@ to the Model Gateway and, this time, on to Groq).
   that validates proposed codes against an approved list and yields `ABSTAIN`
   on unknown codes, see [Section 6](#6-optional-classification-with-the-approved-list-check-democlassify)
   below (`POST /demo/classify`).
-- **A review-required result**: unlike the fake runtime (which always
-  returns a valid placeholder code), a real, unconstrained model's free-text
-  answer can fail even that format check. The page then ends in the headline
-  "Set aside for a person to review", with the sentence "The AI did not give a
-  usable suggestion for this item. Classify it by hand. Deterministic
-  processing is unaffected. Nothing was changed." and "took N seconds". No code
-  and no reason code is shown. This is the governed boundary working as
-  designed (`backend/internal/app/classification.go`), not a bug in the demo.
-  (The reason, `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`, is in the API response
-  only, not on the screen.)
+- **A review-required result**: unlike the base stack fake runtime (which
+  returns the approved synthetic code `ontology:telecom/voice/mobile`), a real,
+  unconstrained model's free-text answer can fail even that format check. The
+  page then ends in the headline "Set aside for a person to review", with the
+  sentence "The AI did not give a usable suggestion for this item. Classify it
+  by hand. Deterministic processing is unaffected. Nothing was changed." and
+  "took N seconds". No code and no reason code is shown. This is the governed
+  boundary working as designed (`backend/internal/app/classification.go`), not
+  a bug in the demo. (The reason, `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`, is in
+  the API response only, not on the screen.)
 - A provider failure, a timeout, or a malformed reply ends the page in the
   headline "The AI could not be reached", with the sentence "Try again in a
   moment. If it keeps happening, classify the item by hand. Deterministic
@@ -139,7 +142,15 @@ browser.
 **The report service is unauthenticated and loopback-only.** It has no login;
 the compose overlay publishes it on `127.0.0.1` only. Never forward, tunnel or
 otherwise expose that port. Its use cases (`explain-*`) are registered at risk
-tier T1 and data class P0 only.
+tier T1 and data class P0 only. In the development registry
+(`config/registry.dev.json`), all three explainers (`explain-report-figure`,
+`explain-obligation-row`, `explain-shadow-variance`) are registered on the fake
+route (`model:fake-v1`, `provider:fake`, prompt profile `prompt:explain-*-v1`)
+with fixed canned answers beginning with `[fake]`
+(`src/ztax_gateway/fake_runtime.py::BASE_STACK_CANNED`, verified by
+`tests/test_fake_runtime.py::TestExplainersInDevRegistry`). No Go backend route
+exists for the explainers (`backend/internal/transport/http/router.go`); they are
+reachable only via this sample HTTP service and its Reports (demo) UI panel.
 
 ## 6. Optional: classification with the approved-list check (/demo/classify)
 
