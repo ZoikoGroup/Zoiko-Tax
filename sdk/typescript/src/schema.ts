@@ -1992,7 +1992,7 @@ export interface paths {
          *     with a reason. The proposal itself is advisory and is not stored, so the
          *     body carries what the record needs of it: the proposal id, the subject
          *     reference, the proposed code and, when the proposal had one, its
-         *     `evidenceId`.
+         *     `evidenceId`. The proposal id, subject reference, proposed code and evidence id are stated by the caller; the service does not store or verify the proposal they refer to.
          *
          *     The reviewer and the tenant are taken from the session, never from the
          *     body; a body that names either is refused. The decision is append-only:
@@ -4886,6 +4886,7 @@ export interface components {
          * ClassificationDecisionRequest
          * @description A reviewer's decision. It names no reviewer and no tenant: both come from the session.
          *     `modifiedCode` is required for `MODIFY` and refused for every other action.
+         *     The proposal id, subject reference, proposed code and evidence id are stated by the caller; the service does not store or verify the proposal they refer to.
          */
         ClassificationDecisionRequest: {
             proposalId: components["schemas"]["ClassificationProposalId"];
@@ -4904,7 +4905,7 @@ export interface components {
         };
         /**
          * ClassificationDecision
-         * @description A saved reviewer decision. Append-only.
+         * @description A saved reviewer decision. Append-only. The proposal id, subject reference, proposed code and evidence id are stated by the caller; the service does not store or verify the proposal they refer to.
          */
         ClassificationDecision: {
             proposalId: components["schemas"]["ClassificationProposalId"];

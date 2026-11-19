@@ -4390,7 +4390,7 @@ type ChangePasswordRequest struct {
 // calendar, and converting it to UTC would move it.
 type CivilDate = string
 
-// ClassificationDecision A saved reviewer decision. Append-only.
+// ClassificationDecision A saved reviewer decision. Append-only. The proposal id, subject reference, proposed code and evidence id are stated by the caller; the service does not store or verify the proposal they refer to.
 type ClassificationDecision struct {
 	Action ClassificationDecisionAction `json:"action"`
 
@@ -4418,6 +4418,7 @@ type ClassificationDecisionAction string
 
 // ClassificationDecisionRequest A reviewer's decision. It names no reviewer and no tenant: both come from the session.
 // `modifiedCode` is required for `MODIFY` and refused for every other action.
+// The proposal id, subject reference, proposed code and evidence id are stated by the caller; the service does not store or verify the proposal they refer to.
 type ClassificationDecisionRequest struct {
 	Action ClassificationDecisionAction `json:"action"`
 

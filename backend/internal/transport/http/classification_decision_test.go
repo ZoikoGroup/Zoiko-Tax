@@ -230,3 +230,20 @@ func TestTheLogsNeverHoldTheReasonOrNote(t *testing.T) {
 		t.Fatalf("free text reached the logs:\n%s", rig.logs.String())
 	}
 }
+
+// A reason over 500 characters is a 400 with the invalid-value code, and the
+// text is not echoed back.
+func TestAReasonOver500CharactersIs400InvalidValue(t *testing.T) {
+	rig := newDecisionRig(t, true)
+	body := strings.Replace(decisionBody(""), markerReason, strings.Repeat("x", 501), 1)
+	rec := rig.do(http.MethodPost, decisionPath, body, testClassificationContext(security.RoleOperator))
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body=%s", rec.Code, rec.Body.String())
+	}
+	if got := decode(t, rec)["ztx_reason_code"]; got != "INVALID_VALUE" {
+		t.Fatalf("reason code = %v, want INVALID_VALUE", got)
+	}
+	if strings.Contains(rec.Body.String(), strings.Repeat("x", 50)) {
+		t.Fatal("the reason text was echoed")
+	}
+}

@@ -291,3 +291,28 @@ func TestNoErrorMessageEchoesTheFreeText(t *testing.T) {
 		t.Fatalf("err = %v, want a refusal that does not echo the text", err)
 	}
 }
+
+// A blank reason is a missing field; a reason that is too long is an invalid value.
+func TestAReasonThatIsBlankOrTooLongGivesItsOwnReasonCode(t *testing.T) {
+	for name, c := range map[string]struct {
+		reason string
+		want   errs.ReasonCode
+	}{
+		"blank":    {"   ", errs.ReasonMissingField},
+		"501 long": {strings.Repeat("x", 501), errs.ReasonInvalidValue},
+		"500 long": {strings.Repeat("x", 500), ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			in := validDecision(classification.ActionAccept)
+			in.Reason = c.reason
+			_, err := newDecisionHarness().svc.Record(asReviewer(security.RoleOperator), in)
+			var got errs.ReasonCode
+			if err != nil {
+				got = errs.ReasonOf(err)
+			}
+			if got != c.want {
+				t.Fatalf("reason code = %q, want %q", got, c.want)
+			}
+		})
+	}
+}

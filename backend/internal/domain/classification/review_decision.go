@@ -84,8 +84,11 @@ func (d ReviewDecision) Validate() error {
 	if !d.Action.Valid() {
 		return invalid("action", "The action must be ACCEPT, REJECT, MODIFY or ESCALATE.")
 	}
-	if d.Reason == "" || chars(d.Reason) > DecisionReasonMax {
+	if d.Reason == "" {
 		return errs.Invalid("reason", errs.ReasonMissingField, "A reason of at most 500 characters is required.")
+	}
+	if chars(d.Reason) > DecisionReasonMax {
+		return errs.Invalid("reason", errs.ReasonInvalidValue, "A reason can be at most 500 characters.")
 	}
 	if chars(d.Note) > DecisionNoteMax {
 		return invalid("note", "A note can be at most 2000 characters.")
