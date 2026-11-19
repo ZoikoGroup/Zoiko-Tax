@@ -175,9 +175,19 @@ func run() error {
 	// Provider contributions are recorded from the provider's own source
 	// events and read no decision, so they need no content either.
 	router.Contributions = app.NewProviderContributionService(store.ProviderContributions(), store.LegalEntities(), store, clk, ids)
+	// The ERP journal bridge reads posted journals and writes its own records
+	// and outbox events; like contributions it needs only the store.
+	router.ERP = app.NewERPService(store.ERP(), store.LegalEntities(), store.Outbox(), store, clk, ids)
 	// Regulatory notices reference fiscal records and change none; like
 	// migration they need only the store.
 	router.Notices = app.NewNoticeService(store.Notices(), store.LegalEntities(), store, clk, ids)
+	// Regulatory workpapers are built from the contribution ledger and the
+	// subledger and read no decision, so they need only the store too.
+	router.Workpapers = app.NewWorkpaperService(store.Workpapers(), store.ProviderContributions(), store.Periods(),
+		store.LegalEntities(), store, clk, ids)
+	// Registrations and exemption evidence read and write their own records
+	// and no decision; like notices they need only the store.
+	router.Registrations = app.NewRegistrationService(store.Registrations(), store.LegalEntities(), store, clk, ids)
 	if router.Determination != nil {
 		// Compliance packages execute the obligations commits assess, and
 		// move them only on filing evidence, so they are served wherever the

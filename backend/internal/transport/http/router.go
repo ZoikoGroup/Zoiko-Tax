@@ -130,9 +130,24 @@ type Router struct {
 	// explorer, quarantine and release, and a period's control totals.
 	Contributions *app.ProviderContributionService
 
+	// ERP serves the ERP journal bridge — sealed export batches, dispatch
+	// through the outbox, the ERP's recorded answers — and the
+	// subledger-to-GL reconciliation. It reads posted journals from the store,
+	// so it is served wherever the store is.
+	ERP *app.ERPService
+
 	// Notices serves regulatory notice and appeal intake (W17). It needs
 	// only the store, so it is served wherever the store is.
 	Notices *app.NoticeService
+
+	// Workpapers serves regulatory workpapers (OBL-07): deterministic builds
+	// from the contribution ledger and the subledger, evidence-linked
+	// adjustments and resolutions, freeze and two-person approval.
+	Workpapers *app.WorkpaperService
+	// Registrations serves the registration ledger and the exemption
+	// certificates held as evidence (Doc 17). It reads and writes those
+	// records only, so it is served wherever the store is.
+	Registrations *app.RegistrationService
 
 	// Shadow serves shadow assurance: comparator profiles, comparison runs
 	// and their discrepancies. Nil when the cell has no evidence store to
@@ -363,6 +378,23 @@ func (rt *Router) routes() []struct {
 		{Route{"GET", "/v1/contributions/{contributionId}/trace", false, []security.Role{operator, analyst, auditor}}, rt.handleContributionTrace},
 		{Route{"POST", "/v1/contributions/{contributionId}/quarantine", false, []security.Role{operator, analyst}}, rt.handleQuarantineContribution},
 		{Route{"POST", "/v1/contributions/{contributionId}/release", false, []security.Role{analyst}}, rt.handleReleaseContribution},
+		// ERP journal bridge and GL reconciliation (LED-23, R6): OPERATOR
+		// configures, prepares and records what the ERP reported; OPERATOR or
+		// ANALYST other than the preparer authorises a dispatch (the service
+		// compares the people). ADMIN reads no fiscal record.
+		{Route{"GET", "/v1/erp-bridges", false, []security.Role{operator, analyst, auditor}}, rt.handleListERPBridges},
+		{Route{"POST", "/v1/erp-bridges", false, []security.Role{operator}}, rt.handleCreateERPBridge},
+		{Route{"POST", "/v1/erp-bridges/{bridgeId}/mappings", false, []security.Role{operator}}, rt.handleRecordERPMapping},
+		{Route{"GET", "/v1/erp-bridges/{bridgeId}/exports", false, []security.Role{operator, analyst, auditor}}, rt.handleListERPExports},
+		{Route{"POST", "/v1/erp-bridges/{bridgeId}/exports", false, []security.Role{operator}}, rt.handlePrepareERPExport},
+		{Route{"GET", "/v1/erp-bridges/{bridgeId}/exports/{batchId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetERPExport},
+		{Route{"POST", "/v1/erp-bridges/{bridgeId}/exports/{batchId}/dispatch", false, []security.Role{operator, analyst}}, rt.handleDispatchERPExport},
+		{Route{"POST", "/v1/erp-bridges/{bridgeId}/exports/{batchId}/responses", false, []security.Role{operator, analyst}}, rt.handleRecordERPResponse},
+		{Route{"POST", "/v1/erp-bridges/{bridgeId}/exports/{batchId}/withdrawal", false, []security.Role{operator}}, rt.handleWithdrawERPExport},
+		{Route{"GET", "/v1/erp-bridges/{bridgeId}/gl-balances", false, []security.Role{operator, analyst, auditor}}, rt.handleListGLSnapshots},
+		{Route{"POST", "/v1/erp-bridges/{bridgeId}/gl-balances", false, []security.Role{operator}}, rt.handleRecordGLSnapshot},
+		{Route{"GET", "/v1/erp-bridges/{bridgeId}/gl-reconciliations", false, []security.Role{operator, analyst, auditor}}, rt.handleListGLReconciliations},
+		{Route{"POST", "/v1/erp-bridges/{bridgeId}/gl-reconciliations", false, []security.Role{operator}}, rt.handleRunGLReconciliation},
 		// Regulatory notices (W17, G-052): OPERATOR and ANALYST register and
 		// work them; ADMIN and AUDITOR read. The four-eye approval compares
 		// the preparer and approver as people in the service.
@@ -382,6 +414,34 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/notices/{noticeId}/submission", false, []security.Role{operator, analyst}}, rt.handleRecordNoticeSubmission},
 		{Route{"POST", "/v1/notices/{noticeId}/outcome", false, []security.Role{operator, analyst}}, rt.handleRecordNoticeOutcome},
 		{Route{"POST", "/v1/notices/{noticeId}/appeal", false, []security.Role{operator, analyst}}, rt.handleLodgeNoticeAppeal},
+		// Regulatory workpapers (OBL-07): OPERATOR and ANALYST prepare; an
+		// ANALYST other than the preparer decides and approves (the service
+		// compares the people and checks the role per action). ADMIN reads no
+		// fiscal record.
+		{Route{"GET", "/v1/workpapers", false, []security.Role{operator, analyst, auditor}}, rt.handleListWorkpapers},
+		{Route{"POST", "/v1/workpapers", false, []security.Role{operator, analyst}}, rt.handleCreateWorkpaper},
+		{Route{"GET", "/v1/workpapers/{workpaperId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetWorkpaper},
+		{Route{"POST", "/v1/workpapers/{workpaperId}/build", false, []security.Role{operator, analyst}}, rt.handleBuildWorkpaper},
+		{Route{"GET", "/v1/workpapers/{workpaperId}/source-check", false, []security.Role{operator, analyst, auditor}}, rt.handleCheckWorkpaperSources},
+		{Route{"POST", "/v1/workpapers/{workpaperId}/actions", false, []security.Role{operator, analyst}}, rt.handleActOnWorkpaper},
+		// Registrations and exemption evidence (Doc 17, G-048): OPERATOR and
+		// ANALYST record and submit; ANALYST checks, activates, screens,
+		// recommends and confirms, and the service compares the people for
+		// the four-eye rules. AUDITOR reads. ADMIN reads no customer evidence.
+		{Route{"GET", "/v1/registrations", false, []security.Role{operator, analyst, auditor}}, rt.handleListRegistrations},
+		{Route{"POST", "/v1/registrations", false, []security.Role{operator, analyst}}, rt.handleCreateRegistration},
+		{Route{"GET", "/v1/registrations/{registrationId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetRegistration},
+		{Route{"POST", "/v1/registrations/{registrationId}/transitions", false, []security.Role{operator, analyst}}, rt.handleTransitionRegistration},
+		{Route{"POST", "/v1/registrations/{registrationId}/checks", false, []security.Role{analyst}}, rt.handleRecordRegistrationCheck},
+		{Route{"POST", "/v1/registrations/{registrationId}/attachments", false, []security.Role{operator, analyst}}, rt.handleRecordRegistrationAttachment},
+		{Route{"GET", "/v1/exemptions", false, []security.Role{operator, analyst, auditor}}, rt.handleListExemptionCertificates},
+		{Route{"POST", "/v1/exemptions", false, []security.Role{operator, analyst}}, rt.handleReceiveExemptionCertificate},
+		{Route{"GET", "/v1/exemptions/{certificateId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetExemptionCertificate},
+		{Route{"POST", "/v1/exemptions/{certificateId}/versions", false, []security.Role{operator, analyst}}, rt.handleAddExemptionCertificateVersion},
+		{Route{"POST", "/v1/exemptions/{certificateId}/screening", false, []security.Role{analyst}}, rt.handleScreenExemptionCertificate},
+		{Route{"POST", "/v1/exemptions/{certificateId}/recommendation", false, []security.Role{analyst}}, rt.handleRecommendExemptionCertificate},
+		{Route{"POST", "/v1/exemptions/{certificateId}/decision", false, []security.Role{analyst}}, rt.handleDecideExemptionCertificate},
+		{Route{"POST", "/v1/exemptions/{certificateId}/transitions", false, []security.Role{analyst}}, rt.handleTransitionExemptionCertificate},
 		// Shadow: non-impact reads of committed decisions, compared with
 		// another engine's results (ZTAX-SHD-001).
 		{Route{"GET", "/v1/shadow/comparators", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListComparators},

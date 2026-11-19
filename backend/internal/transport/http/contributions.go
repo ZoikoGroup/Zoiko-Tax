@@ -61,9 +61,9 @@ func toContributionSummary(s app.PeriodSummary) gen.ContributionSummary {
 	out := gen.ContributionSummary{Period: s.Period, DataIncomplete: s.DataIncomplete(),
 		Groups: make([]gen.ContributionPeriodTotals, len(s.Groups))}
 	for i, g := range s.Groups {
-		status := gen.COMPLETE
+		status := gen.ContributionPeriodTotalsStatusCOMPLETE
 		if g.DataIncomplete() {
-			status = gen.DATAINCOMPLETE
+			status = gen.ContributionPeriodTotalsStatusDATAINCOMPLETE
 		}
 		t := gen.ContributionPeriodTotals{
 			LegalEntityID: g.LegalEntity.String(), Regime: gen.ContributionRegime(g.Regime), Currency: string(g.Currency),
