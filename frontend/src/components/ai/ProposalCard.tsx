@@ -242,7 +242,7 @@ export const ProposalCard = ({ proposal, onAccept }: { proposal: Proposal; onAcc
       </dl>
       <p className="ztax-note">
         No measured accuracy exists for this proposal yet, so no confidence figure is shown. The code is checked for
-        ontology format only; whether it is an approved ontology node is not verified here. A person confirms or
+        ontology format; whether it is an approved ontology node is checked only when an approved list is configured. A person confirms or
         rejects the mapping before anything relies on it.
       </p>
       <table className="ztax-action-table" style={{ marginTop: 8 }}>
@@ -262,7 +262,7 @@ export const ProposalCard = ({ proposal, onAccept }: { proposal: Proposal; onAcc
       <h3 className="ztax-card-title" style={{ marginTop: 16 }}>Review</h3>
       <p className="ztax-note">
         A qualified person reviews the proposal and records Accept, Reject, Modify or Escalate with a reason.
-        The decision is saved with who decided and when.
+        The decision is saved with who decided and when. Saving a decision does not change the item&apos;s classification.
       </p>
       <ReviewerPanel key={proposal.id} proposal={proposal} {...(onAccept === undefined ? {} : { onAccept })} />
     </div>

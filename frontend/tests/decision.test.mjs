@@ -146,7 +146,7 @@ describe('how saving ends', () => {
       assert.equal(v.state, 'failed', name)
       assert.equal(v.onRecord, false, name)
       assert.equal(v.locked, false, name)
-      assert.match(v.sentence, /Nothing was saved/, name)
+      assert.match(v.sentence, name === 'transport' ? /It may not have been saved/ : /Nothing was saved/, name)
       sentences.add(v.sentence)
     }
     assert.equal(sentences.size, 5)
@@ -154,7 +154,23 @@ describe('how saving ends', () => {
     assert.match(viewOfDecision({ ok: false, error: endings[401] }).sentence, /Sign in again/)
     assert.match(viewOfDecision({ ok: false, error: endings[403] }).sentence, /operator or an analyst/)
     assert.match(viewOfDecision({ ok: false, error: endings[503] }).sentence, /not available in this cell/)
-    assert.match(viewOfDecision({ ok: false, error: endings.transport }).sentence, /could not be reached/)
+    assert.equal(
+      viewOfDecision({ ok: false, error: endings.transport }).sentence,
+      'The service could not be reached or failed. It may not have been saved. If you try again and it says a decision is already on record, it was.',
+    )
+  })
+
+  test('a transport error, a 500 and any other status say it may not have been saved, and never "Nothing was saved"', () => {
+    for (const error of [transportError(), apiError(500), apiError(502), apiError(404), null]) {
+      const v = viewOfDecision({ ok: false, error })
+      assert.equal(v.headline, 'The decision could not be saved')
+      assert.match(v.sentence, /It may not have been saved/)
+      assert.ok(!/Nothing was saved/.test(v.sentence), v.sentence)
+      assert.equal(v.locked, false)
+    }
+    for (const status of [400, 401, 403, 503]) {
+      assert.match(viewOfDecision({ ok: false, error: apiError(status) }).sentence, /Nothing was saved\.$/, String(status))
+    }
   })
 
   test('only a 201 or a 409 counts as saved: a 500 and a 404 are failures', () => {
@@ -186,6 +202,16 @@ describe('the card', () => {
     assert.match(src, /ztax\.recordClassificationDecision\(built\.request\)/)
     assert.match(src, /buildDecisionRequest\(/)
     assert.match(src, /viewOfDecision\(/)
+  })
+
+  test('the Review paragraph says a saved decision does not change the classification', () => {
+    assert.match(card().replace(/\s+/g, ' '), /Saving a decision does not change the item&apos;s classification\./)
+  })
+
+  test('the ontology sentence says the approved list is checked only when one is configured', () => {
+    const src = card().replace(/\s+/g, ' ')
+    assert.match(src, /checked for ontology format; whether it is an approved ontology node is checked only when an approved list is configured\./)
+    assert.ok(!src.includes('is not verified here. A person confirms'))
   })
 
   test('the demo wording is gone', () => {

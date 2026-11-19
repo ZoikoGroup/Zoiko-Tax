@@ -19,6 +19,8 @@ export interface DecisionView {
   readonly sentence: string
 }
 
+const SAVE_UNSURE = 'The service could not be reached or failed. It may not have been saved. If you try again and it says a decision is already on record, it was.'
+
 function statusOf(error: unknown): number | null {
   if (typeof error === 'object' && error !== null && 'status' in error) {
     const status = error.status
@@ -27,8 +29,8 @@ function statusOf(error: unknown): number | null {
   return null
 }
 
-const failed = (headline: string, sentence: string): DecisionView => ({
-  state: 'failed', onRecord: false, locked: false, headline, sentence: `${sentence} Nothing was saved.`,
+const failed = (headline: string, sentence: string, nothingSaved = true): DecisionView => ({
+  state: 'failed', onRecord: false, locked: false, headline, sentence: nothingSaved ? `${sentence} Nothing was saved.` : sentence,
 })
 
 export function viewOfDecision(ending: DecisionEnding): DecisionView {
@@ -55,6 +57,6 @@ export function viewOfDecision(ending: DecisionEnding): DecisionView {
     case 503:
       return failed('Saving is not available here', 'Saving decisions is not available in this cell.')
     default:
-      return failed('The decision could not be saved', 'The service could not be reached or failed. Try again.')
+      return failed('The decision could not be saved', SAVE_UNSURE, false)
   }
 }
