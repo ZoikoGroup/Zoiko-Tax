@@ -12,10 +12,11 @@
 
 /**
  * How long the call may run before the screen says it is still waiting. It is
- * below the client's real limit (10 s, platform/client.ts), so the person sees
- * the line before the call is ended. It is a display threshold only.
+ * below the Go gateway deadline (5 s default, backend config.go) and the
+ * client's limit (10 s, platform/client.ts), so the person sees the line before
+ * either ends the call. It is a display threshold only.
  */
-export const SLOW_AFTER_MS = 5000
+export const SLOW_AFTER_MS = 3000
 
 /**
  * The longest description the service accepts: `len(in.Description) > 2000` is

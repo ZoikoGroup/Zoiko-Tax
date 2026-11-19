@@ -113,19 +113,28 @@ describe('the time text', () => {
   })
 
   test('just under and just over the slow threshold', () => {
-    assert.equal(tookText(SLOW_AFTER_MS - 1), 'took 4 seconds')
-    assert.equal(tookText(SLOW_AFTER_MS), 'took 5 seconds')
+    assert.equal(SLOW_AFTER_MS, 3000)
+    assert.equal(tookText(SLOW_AFTER_MS - 1), 'took 2 seconds')
+    assert.equal(tookText(SLOW_AFTER_MS), 'took 3 seconds')
     assert.equal(viewOfWaiting(SLOW_AFTER_MS - 1), null)
-    assert.equal(viewOfWaiting(SLOW_AFTER_MS + 1).elapsed, '5 seconds so far')
+    assert.equal(viewOfWaiting(SLOW_AFTER_MS + 1).elapsed, '3 seconds so far')
   })
 
-  test('the threshold is below the limit set in platform/client.ts, so the line shows before the call is ended', () => {
-    const text = readFileSync(join(process.cwd(), 'src', 'platform', 'client.ts'), 'utf8')
-    const match = /timeoutMs:\s*([0-9_]+)/.exec(text)
-    assert.ok(match !== null, 'timeoutMs not found in platform/client.ts')
-    const limitMs = Number(match[1].replaceAll('_', ''))
-    assert.ok(Number.isFinite(limitMs) && limitMs > 0)
-    assert.ok(SLOW_AFTER_MS > 0 && SLOW_AFTER_MS < limitMs, `${SLOW_AFTER_MS} is not below ${limitMs}`)
+  test('the layers keep their order: slow line < Go deadline < screen limit', () => {
+    const client = readFileSync(join(process.cwd(), 'src', 'platform', 'client.ts'), 'utf8')
+    const limit = /REQUEST_TIMEOUT_MS\s*=\s*([0-9_]+)/.exec(client)
+    assert.ok(limit !== null, 'REQUEST_TIMEOUT_MS not found in platform/client.ts')
+    assert.match(client, /timeoutMs:\s*REQUEST_TIMEOUT_MS/)
+    const limitMs = Number(limit[1].replaceAll('_', ''))
+    const goFile = join(process.cwd(), '..', 'backend', 'internal', 'platform', 'config', 'config.go')
+    if (existsSync(goFile)) {
+      const m = /"ZTAX_AI_GATEWAY_DEADLINE":\s*\{def:\s*"(\d+)s"\}/.exec(readFileSync(goFile, 'utf8'))
+      assert.ok(m !== null, 'the Go deadline default was not found in config.go')
+      const goMs = Number(m[1]) * 1000
+      assert.ok(SLOW_AFTER_MS > 0 && SLOW_AFTER_MS < goMs, `slow line ${SLOW_AFTER_MS} is not below the Go deadline ${goMs}`)
+      assert.ok(goMs < limitMs, `Go deadline ${goMs} is not below the screen limit ${limitMs}`)
+    }
+    assert.ok(SLOW_AFTER_MS < limitMs)
   })
 
   test('every ending carries the time as text', () => {

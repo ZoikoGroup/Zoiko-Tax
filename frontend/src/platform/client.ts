@@ -8,4 +8,7 @@
  */
 import { ZoikoTaxClient } from '@zoikotax/sdk'
 
-export const ztax = new ZoikoTaxClient({ baseUrl: '/api', timeoutMs: 10000 })
+/** The screen's request limit. It must stay above the Go gateway deadline (backend config, default 5s). */
+export const REQUEST_TIMEOUT_MS = 10000
+
+export const ztax = new ZoikoTaxClient({ baseUrl: '/api', timeoutMs: REQUEST_TIMEOUT_MS })
