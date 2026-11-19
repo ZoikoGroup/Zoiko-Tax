@@ -242,3 +242,24 @@ describe('the "No proposal yet" note', () => {
     assert.equal(emptyNoteVisible(false, true), false)
   })
 })
+
+describe('the evidence id', () => {
+  const withId = { ...PROVENANCE, invocationId: 'call-id-1' }
+  test('it never appears in the failure and review-required views', () => {
+    const endings = [
+      failure(apiError(403)), failure(apiError(400)), failure(apiError(401)), failure(transportError()),
+      { kind: 'proposal', proposal: { disposition: 'REVIEW_REQUIRED', reviewReason: 'AI_GATEWAY_UNAVAILABLE', provenance: withId } },
+      { kind: 'proposal', proposal: { disposition: 'REVIEW_REQUIRED', reviewReason: 'AI_OUTPUT_REJECTED', provenance: withId } },
+    ]
+    for (const e of endings) {
+      assert.ok(!JSON.stringify(viewOfProposal(e, 3000)).includes('call-id-1'), JSON.stringify(e))
+    }
+  })
+
+  test('the card shows the Evidence id row only behind the helper check', () => {
+    const src = readFileSync(join(process.cwd(), 'src', 'components', 'ai', 'ProposalCard.tsx'), 'utf8')
+    const row = src.indexOf('Evidence id')
+    assert.ok(row > 0)
+    assert.match(src.slice(Math.max(0, row - 200), row), /evidenceId === null \? null/)
+  })
+})
