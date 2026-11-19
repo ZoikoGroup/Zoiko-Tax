@@ -25,6 +25,32 @@ export const SLOW_AFTER_MS = 5000
  */
 export const DESCRIPTION_MAX = 2000
 
+/**
+ * The longest subject reference the service accepts, counted in bytes after
+ * trimming: `len(in.SubjectRef) > 512` is refused
+ * (backend/internal/app/classification.go:88). The box stops at this many
+ * characters; text with multi-byte characters can still be over in bytes, so
+ * the check below counts bytes, as the service does.
+ */
+export const SUBJECT_REF_MAX = 512
+
+export const SUBJECT_REF_SENTENCE = `The subject reference can be at most ${String(SUBJECT_REF_MAX)} characters. Shorten it and try again.`
+
+/** True when the trimmed value is longer than the service accepts (in UTF-8 bytes). */
+export function subjectRefTooLong(value: string): boolean {
+  return new TextEncoder().encode(value.trim()).length > SUBJECT_REF_MAX
+}
+
+/** The sentence to show under the box: when the limit is reached or passed, otherwise null. */
+export function subjectRefNote(value: string): string | null {
+  return value.length >= SUBJECT_REF_MAX || subjectRefTooLong(value) ? SUBJECT_REF_SENTENCE : null
+}
+
+/** The value to send (trimmed), or null when it is over the limit and nothing may be sent. */
+export function subjectRefToSend(value: string): string | null {
+  return subjectRefTooLong(value) ? null : value.trim()
+}
+
 export type ViewState = 'proposed' | 'review' | 'unavailable' | 'slow'
 
 export interface ProposalView {

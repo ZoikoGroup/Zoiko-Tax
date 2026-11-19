@@ -5,8 +5,13 @@ import { describe, test } from 'node:test'
 
 import {
   DESCRIPTION_MAX,
+  SUBJECT_REF_MAX,
+  SUBJECT_REF_SENTENCE,
   SLOW_AFTER_MS,
   emptyNoteVisible,
+  subjectRefNote,
+  subjectRefToSend,
+  subjectRefTooLong,
   tookText,
   viewOfProposal,
   viewOfWaiting,
@@ -261,5 +266,78 @@ describe('the evidence id', () => {
     const row = src.indexOf('Evidence id')
     assert.ok(row > 0)
     assert.match(src.slice(Math.max(0, row - 200), row), /evidenceId === null \? null/)
+  })
+})
+
+describe('the subject reference limit', () => {
+  const page = () => readFileSync(join(process.cwd(), 'src', 'pages', 'IntelligencePage.tsx'), 'utf8')
+
+  test('the limit is the service limit (classification.go) and the sentence names it', () => {
+    assert.equal(SUBJECT_REF_MAX, 512)
+    assert.match(SUBJECT_REF_SENTENCE, /512/)
+    const goFile = join(process.cwd(), '..', 'backend', 'internal', 'app', 'classification.go')
+    if (existsSync(goFile)) {
+      const m = /len\(in\.SubjectRef\) > (\d+)/.exec(readFileSync(goFile, 'utf8'))
+      assert.ok(m !== null, 'the subject reference limit was not found in classification.go')
+      assert.equal(SUBJECT_REF_MAX, Number(m[1]))
+    }
+  })
+
+  test('exactly at the limit passes, one over fails', () => {
+    assert.equal(subjectRefTooLong('a'.repeat(512)), false)
+    assert.equal(subjectRefTooLong('a'.repeat(513)), true)
+    assert.equal(subjectRefToSend('a'.repeat(512)), 'a'.repeat(512))
+    assert.equal(subjectRefToSend('a'.repeat(513)), null)
+  })
+
+  test('spaces around the value are not counted, as in the service', () => {
+    assert.equal(subjectRefTooLong('  ' + 'a'.repeat(512) + '  '), false)
+    assert.equal(subjectRefToSend('  sku:A  '), 'sku:A')
+  })
+
+  test('the count is in bytes, as in Go: 257 two-byte characters are over', () => {
+    assert.equal(subjectRefTooLong('é'.repeat(256)), false)
+    assert.equal(subjectRefTooLong('é'.repeat(257)), true)
+  })
+
+  test('300 two-byte characters (600 bytes) are refused, 256 (512 bytes) are accepted', () => {
+    const v = 'é'.repeat(300)
+    assert.ok(v.length < SUBJECT_REF_MAX)
+    assert.equal(subjectRefTooLong(v), true)
+    assert.equal(subjectRefNote(v), SUBJECT_REF_SENTENCE)
+    assert.equal(subjectRefToSend(v), null)
+    // The other side of the boundary: 256 two-byte characters are exactly 512 bytes.
+    const edge = 'é'.repeat(256)
+    assert.equal(subjectRefTooLong(edge), false)
+    assert.equal(subjectRefNote(edge), null)
+    assert.equal(subjectRefToSend(edge), edge)
+  })
+
+  test('empty and blank are not "too long" and not given a sentence', () => {
+    for (const v of ['', '   ']) {
+      assert.equal(subjectRefTooLong(v), false)
+      assert.equal(subjectRefNote(v), null)
+    }
+    assert.equal(subjectRefToSend(''), '')
+  })
+
+  test('the sentence shows when the limit is reached or passed, not before', () => {
+    assert.equal(subjectRefNote('a'.repeat(511)), null)
+    assert.equal(subjectRefNote('a'.repeat(512)), SUBJECT_REF_SENTENCE)
+    assert.equal(subjectRefNote('a'.repeat(600)), SUBJECT_REF_SENTENCE)
+  })
+
+  test('the box has the limit as maxLength, so a paste of 600 is cut as the description is', () => {
+    assert.match(page(), /maxLength=\{SUBJECT_REF_MAX\}/)
+    assert.match(page(), /maxLength=\{DESCRIPTION_MAX\}/)
+  })
+
+  test('submit refuses an over-limit value before any request is made', () => {
+    const src = page()
+    const guard = src.indexOf('subjectRefToSend(subjectRef)')
+    const call = src.indexOf('proposeClassification(')
+    assert.ok(guard > 0 && call > guard, 'the limit check must come before the call')
+    assert.match(src.slice(guard, call), /if \(ref === null\) return/)
+    assert.match(src.slice(call, call + 80), /subjectRef: ref,/)
   })
 })
