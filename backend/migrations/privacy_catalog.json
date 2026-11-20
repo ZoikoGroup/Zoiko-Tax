@@ -4908,6 +4908,318 @@
       "decided_at": {
         "class": "P0"
       }
+    },
+    "content_crosswalk": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "crosswalk_id": {
+        "class": "P0"
+      },
+      "vendor": {
+        "class": "P0"
+      },
+      "namespace": {
+        "class": "P0"
+      },
+      "vendor_release": {
+        "class": "P0"
+      },
+      "title": {
+        "class": "P0",
+        "note": "A label for the crosswalk; vendor configuration, not personal data."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who wrote the crosswalk."
+      }
+    },
+    "content_crosswalk_version": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "crosswalk_id": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "rights_basis": {
+        "class": "P0"
+      },
+      "rights_reference": {
+        "class": "P0",
+        "note": "The contract, authorization or documentation reference the vendor code data is held under."
+      },
+      "rights_expires_on": {
+        "class": "P0"
+      },
+      "rights_evidence_sha256": {
+        "class": "P0",
+        "note": "The SHA-256 of the grant document. The document itself is not stored."
+      },
+      "effective_from": {
+        "class": "P0"
+      },
+      "effective_to": {
+        "class": "P0"
+      },
+      "content_digest": {
+        "class": "P0",
+        "note": "The canonical digest of the version: what an approval approves."
+      },
+      "intake_key": {
+        "class": "P0",
+        "note": "The client-minted Idempotency-Key the version was written under; opaque."
+      },
+      "intake_hash": {
+        "class": "P0",
+        "note": "The canonical digest of the request, compared on a retry."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who wrote the version."
+      }
+    },
+    "content_crosswalk_entry": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "crosswalk_id": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "ordinal": {
+        "class": "P0"
+      },
+      "external_code": {
+        "class": "P0",
+        "note": "A vendor code as the vendor emits it."
+      },
+      "description": {
+        "class": "P0",
+        "note": "The vendor meaning of the code; vendor configuration, not personal data."
+      },
+      "match_quality": {
+        "class": "P0"
+      },
+      "service_target": {
+        "class": "P0"
+      },
+      "levy_hint": {
+        "class": "P0"
+      },
+      "predicate": {
+        "class": "P0",
+        "note": "The condition under which the code means the target."
+      },
+      "note": {
+        "class": "P0",
+        "note": "A mapping note; vendor configuration, not personal data."
+      }
+    },
+    "content_crosswalk_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "crosswalk_id": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "status_after": {
+        "class": "P0"
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text from the person recording the event: why it was approved, returned, rejected, withdrawn or suspended."
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the event."
+      }
+    },
+    "content_rule_change": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "change_id": {
+        "class": "P0"
+      },
+      "pack_id": {
+        "class": "P0"
+      },
+      "base_version": {
+        "class": "P0"
+      },
+      "rule_id": {
+        "class": "P0"
+      },
+      "jurisdiction": {
+        "class": "P0"
+      },
+      "change_type": {
+        "class": "P0"
+      },
+      "summary": {
+        "class": "P0",
+        "note": "Legal content: what the change does. Not personal data."
+      },
+      "detail": {
+        "class": "P0",
+        "note": "Legal content: the proposed rule change. Not personal data."
+      },
+      "impact": {
+        "class": "P0",
+        "note": "Legal content: the expected impact. Not personal data."
+      },
+      "source_id": {
+        "class": "P0"
+      },
+      "source_reference": {
+        "class": "P0",
+        "note": "The cited passage of the legal source."
+      },
+      "source_edition": {
+        "class": "P0"
+      },
+      "authority_class": {
+        "class": "P0"
+      },
+      "published_on": {
+        "class": "P0"
+      },
+      "effective_from": {
+        "class": "P0"
+      },
+      "effective_to": {
+        "class": "P0"
+      },
+      "origin_ref": {
+        "class": "P0",
+        "note": "An opaque reference to what prompted the proposal, such as a change-feed item."
+      },
+      "supersedes": {
+        "class": "P0"
+      },
+      "intake_key": {
+        "class": "P0",
+        "note": "The client-minted Idempotency-Key the proposal was recorded under; opaque."
+      },
+      "intake_hash": {
+        "class": "P0",
+        "note": "The canonical digest of the request, compared on a retry."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who proposed the change."
+      }
+    },
+    "content_rule_change_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "change_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "status_after": {
+        "class": "P0"
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text from the person recording the event: the review rationale, or why it was returned, rejected or withdrawn."
+      },
+      "test_evidence_ref": {
+        "class": "P0",
+        "note": "A reference to the test run the change was verified by."
+      },
+      "test_evidence_sha256": {
+        "class": "P0",
+        "note": "The SHA-256 of the test report. The report itself is not stored."
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the event."
+      }
     }
   }
 }

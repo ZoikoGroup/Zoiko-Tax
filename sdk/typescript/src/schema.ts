@@ -4425,6 +4425,301 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/content/crosswalks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The vendor crosswalk library
+         * @description `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.
+         *
+         *     The tenant's vendor crosswalks, most recently created first, each with
+         *     every version. A crosswalk maps one vendor code namespace at one vendor
+         *     release onto Zoiko canonical service codes (Doc 02 WF-06). It is a
+         *     translation aid: `advisoryOnly` is always `true`, and no crosswalk is
+         *     ever fiscal authority — the determination engine never reads one.
+         */
+        get: operations["listCrosswalks"];
+        put?: never;
+        /**
+         * Write a vendor crosswalk and its first version
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Writes a crosswalk for one vendor code namespace at one vendor release,
+         *     with version 1: its mappings, the grant the vendor's code data is held
+         *     under (`VENDOR_LICENCE`, `CUSTOMER_SUPPLIED` or `PUBLIC_DOCUMENTATION`,
+         *     with its reference and end date), and its effective window. The version
+         *     is a `DRAFT`, or `IN_REVIEW` with `submit: true` — never `APPROVED`.
+         *
+         *     Each entry maps an external code exactly as the vendor emits it, with
+         *     the vendor's own meaning and a match quality: `EXACT`, `PARTIAL` (with
+         *     the predicate under which it holds) or `NO_EQUIVALENT` (no target). A
+         *     code mapped twice without a discriminating predicate, or a `PARTIAL`
+         *     entry without one, is `400 CROSSWALK_UNRESOLVED_AMBIGUITY` (WF-07). A
+         *     `levyHint` is a hint for a content researcher, never a levy.
+         *
+         *     A crosswalk for the same vendor, namespace and release already written
+         *     is `409 ALREADY_EXISTS`: a change is its next version.
+         *
+         *     **Idempotent on the `Idempotency-Key`**: the same key and request return
+         *     the crosswalk already written with `200`; the same key with a different
+         *     request is `409 IDEMPOTENCY_KEY_REUSE`.
+         */
+        post: operations["createCrosswalk"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/content/crosswalks/{crosswalkId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One vendor crosswalk with every version
+         * @description `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.
+         *
+         *     The crosswalk with every version, oldest first: entries, grant, window,
+         *     content digest and history. A superseded version stays readable so a
+         *     historical translation can be reproduced.
+         */
+        get: operations["getCrosswalk"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/content/crosswalks/{crosswalkId}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Write the next version of a crosswalk
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     A correction or extension of a crosswalk is its next version, written
+         *     whole; nothing in an earlier version changes. A crosswalk has at most
+         *     one version in `DRAFT` or `IN_REVIEW` at a time; another is
+         *     `409 STATE_TRANSITION_INVALID`.
+         *
+         *     **Idempotent on the `Idempotency-Key`**, as `createCrosswalk`.
+         */
+        post: operations["addCrosswalkVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/content/crosswalks/{crosswalkId}/versions/{version}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit, withdraw, approve, return, reject, suspend or reinstate a crosswalk version
+         * @description Signed in as themselves. `IN_REVIEW` and `WITHDRAWN` are `OPERATOR` or
+         *     `ANALYST`; every other move is `ANALYST`.
+         *
+         *     `IN_REVIEW` from `DRAFT`. `WITHDRAWN` from `DRAFT` or `IN_REVIEW`, by
+         *     the version's author. From `IN_REVIEW`: `APPROVED`,
+         *     `CHANGES_REQUESTED` or `REJECTED`, each by someone other than the
+         *     version's author and submitter (`403 MAKER_CHECKER`). `SUSPENDED` from
+         *     `APPROVED`; `APPROVED` from `SUSPENDED` is reinstatement. Approval and
+         *     reinstatement are refused once the grant's end date has passed
+         *     (`403 CROSSWALK_RIGHTS_LAPSED`). Every move but `IN_REVIEW` gives its
+         *     reason, and every move names the `revision` it was decided on —
+         *     anything recorded since is `409 VERSION_CONFLICT`.
+         *
+         *     Approving a version supersedes the version in use before it, in the
+         *     same transaction. Approval makes the mapping usable as a translation;
+         *     it does not make it fiscal authority.
+         */
+        post: operations["transitionCrosswalkVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/content/crosswalks/{crosswalkId}/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Translate one external code, advisory only
+         * @description `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.
+         *
+         *     Looks one external code up exactly — no case folding, prefix or
+         *     wildcard — in the version in use, or in the approved or superseded
+         *     version named by `atVersion`, for a transaction on `on` (default today, UTC).
+         *     `MAPPED` is one unconditional exact mapping; `REVIEW_REQUIRED` is a
+         *     conditional or multiple mapping the caller must resolve with facts;
+         *     `NO_EQUIVALENT` was reviewed and maps to nothing; `UNMAPPED` is not in
+         *     the version, with no default and no nearest match; `NOT_IN_FORCE` is
+         *     outside the window; `QUARANTINED` is a suspended version or a lapsed
+         *     grant. The answer is a canonical service code for a person to classify
+         *     with — never a tax treatment.
+         */
+        get: operations["lookupCrosswalk"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/content/rule-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The rule approval queue
+         * @description `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.
+         *
+         *     Proposed rule changes, newest first, in any status. A change is
+         *     `PROPOSED`, `RECOMMENDED` by a specialist reviewer, and
+         *     `APPROVED_FOR_RELEASE` by an independent approver — eligible for a
+         *     content release, and nothing more: no pack is published from this
+         *     queue (WF-02).
+         */
+        get: operations["listRuleChanges"];
+        put?: never;
+        /**
+         * Propose a rule change for review
+         * @description `ANALYST` or `OPERATOR`, signed in as themselves.
+         *
+         *     Records a proposed change to a jurisdiction rule pack as `PROPOSED`:
+         *     the pack and the version it is against, the rule, the change type, the
+         *     proposed change, the source it rests on (registered source, exact
+         *     passage, edition read, authority class) and its three clocks — when the
+         *     authority published, when it takes legal effect, and (the record's
+         *     `createdAt`) when Zoiko learned of it. Test evidence may be attached now
+         *     or later. `originRef` is an opaque reference to what prompted it — a
+         *     change-feed item or a review recommendation; it is provenance only and
+         *     approves nothing.
+         *
+         *     A revision of a change sent back with `CHANGES_REQUESTED` names it in
+         *     `supersedes`, and the old one becomes `SUPERSEDED`.
+         *
+         *     **Idempotent on the `Idempotency-Key`**: the same key and request return
+         *     the proposal already recorded with `200`; the same key with a different
+         *     request is `409 IDEMPOTENCY_KEY_REUSE`.
+         */
+        post: operations["proposeRuleChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/content/rule-changes/{changeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One proposed rule change with its review history
+         * @description `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.
+         */
+        get: operations["getRuleChange"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/content/rule-changes/{changeId}/test-evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach test evidence to a proposed rule change
+         * @description `ANALYST` or `OPERATOR`, signed in as themselves.
+         *
+         *     Attaches the reference to the golden-suite run or regression diff the
+         *     change was verified by, with the optional SHA-256 of its report (hashed
+         *     in the browser, not uploaded). Only while `PROPOSED`: what a reviewer
+         *     recommends is the change with that evidence. A change is recommended and
+         *     approved only with test evidence (`403 RULE_CHANGE_TEST_EVIDENCE_REQUIRED`).
+         */
+        post: operations["recordRuleChangeTestEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/content/rule-changes/{changeId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recommend, approve for release, request changes, reject or withdraw a rule change
+         * @description Signed in as themselves. `WITHDRAWN` is the proposer's (`ANALYST` or
+         *     `OPERATOR`); every other move is `ANALYST`.
+         *
+         *     `RECOMMENDED` from `PROPOSED`: the specialist review, by someone other
+         *     than the proposer, with test evidence attached.
+         *     `APPROVED_FOR_RELEASE` from `RECOMMENDED`: the independent approval, by
+         *     someone who is neither the proposer nor the recommender, of a change
+         *     citing A0 or A1 authority (`403 SOURCE_AUTHORITY_INSUFFICIENT`
+         *     otherwise). `CHANGES_REQUESTED` and `REJECTED` from `PROPOSED` or
+         *     `RECOMMENDED`, by someone other than the proposer. Conflicts of interest
+         *     are `403 MAKER_CHECKER`. Every move gives its rationale and names the
+         *     `revision` it was decided on (`409 VERSION_CONFLICT`).
+         *
+         *     `APPROVED_FOR_RELEASE` makes the change eligible for a content release.
+         *     It does not compile, sign, publish or activate a rule pack, and changes
+         *     no tax result.
+         */
+        post: operations["transitionRuleChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -10323,6 +10618,377 @@ export interface components {
             to: components["schemas"]["ExemptionEvidenceStatus"];
             reason?: components["schemas"]["EvidenceText"];
         };
+        /**
+         * CrosswalkId
+         * Format: uuid
+         * @example 01920e10-0000-7000-8000-00000000c001
+         */
+        CrosswalkId: string;
+        /**
+         * RuleChangeId
+         * Format: uuid
+         * @example 01920e20-0000-7000-8000-00000000d001
+         */
+        RuleChangeId: string;
+        /**
+         * CrosswalkVendor
+         * @description The vendor or source system, upper case.
+         * @example SURETAX
+         */
+        CrosswalkVendor: string;
+        /**
+         * CrosswalkNamespace
+         * @description The vendor's code namespace, upper case.
+         * @example TRANS_TYPE
+         */
+        CrosswalkNamespace: string;
+        /**
+         * CrosswalkLabel
+         * @description A short label — a title, a vendor release, a grant reference.
+         */
+        CrosswalkLabel: string;
+        /**
+         * CrosswalkText
+         * @description The vendor's meaning of a code, a predicate or a note. Vendor configuration, not personal data.
+         */
+        CrosswalkText: string;
+        /**
+         * CrosswalkExternalCode
+         * @description An external code exactly as the vendor emits it.
+         * @example 010101
+         */
+        CrosswalkExternalCode: string;
+        /**
+         * CanonicalServiceCode
+         * @description A Zoiko canonical service code in the tax ontology.
+         * @example ontology:telecom/voice/fixed/local
+         */
+        CanonicalServiceCode: string;
+        /**
+         * CrosswalkLevyHint
+         * @description A candidate levy component code for a content researcher. Never creates a levy.
+         * @example US-FUSF
+         */
+        CrosswalkLevyHint: string;
+        /**
+         * CrosswalkMatch
+         * @description How well the external code corresponds to the target.
+         * @enum {string}
+         */
+        CrosswalkMatch: "EXACT" | "PARTIAL" | "NO_EQUIVALENT";
+        /**
+         * CrosswalkRightsBasis
+         * @description On what footing the vendor's code data is held.
+         * @enum {string}
+         */
+        CrosswalkRightsBasis: "VENDOR_LICENCE" | "CUSTOMER_SUPPLIED" | "PUBLIC_DOCUMENTATION";
+        /**
+         * CrosswalkStatus
+         * @enum {string}
+         */
+        CrosswalkStatus: "DRAFT" | "IN_REVIEW" | "APPROVED" | "CHANGES_REQUESTED" | "REJECTED" | "WITHDRAWN" | "SUSPENDED" | "SUPERSEDED";
+        /**
+         * CrosswalkEventKind
+         * @enum {string}
+         */
+        CrosswalkEventKind: "CREATED" | "SUBMITTED" | "APPROVED" | "CHANGES_REQUESTED" | "REJECTED" | "WITHDRAWN" | "SUSPENDED" | "REINSTATED" | "SUPERSEDED";
+        /**
+         * CrosswalkResolution
+         * @enum {string}
+         */
+        CrosswalkResolution: "MAPPED" | "REVIEW_REQUIRED" | "NO_EQUIVALENT" | "UNMAPPED" | "NOT_IN_FORCE" | "QUARANTINED";
+        /**
+         * CrosswalkRights
+         * @description The grant a version's vendor data is held under.
+         */
+        CrosswalkRights: {
+            basis: components["schemas"]["CrosswalkRightsBasis"];
+            reference: components["schemas"]["CrosswalkLabel"];
+            expiresOn?: components["schemas"]["CivilDate"];
+            evidenceSha256?: components["schemas"]["Sha256Hex"];
+        };
+        /** CrosswalkEntry */
+        CrosswalkEntry: {
+            externalCode: components["schemas"]["CrosswalkExternalCode"];
+            description: components["schemas"]["CrosswalkText"];
+            match: components["schemas"]["CrosswalkMatch"];
+            serviceTarget?: components["schemas"]["CanonicalServiceCode"];
+            levyHint?: components["schemas"]["CrosswalkLevyHint"];
+            predicate?: components["schemas"]["CrosswalkText"];
+            note?: components["schemas"]["CrosswalkText"];
+        };
+        /** CrosswalkEvent */
+        CrosswalkEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["CrosswalkEventKind"];
+            status: components["schemas"]["CrosswalkStatus"];
+            reason?: components["schemas"]["EvidenceText"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * CrosswalkVersion
+         * @description One immutable crosswalk version. Its entries never change; its status is its history.
+         */
+        CrosswalkVersion: {
+            /** Format: int32 */
+            version: number;
+            status: components["schemas"]["CrosswalkStatus"];
+            /**
+             * Format: int32
+             * @description The number of events recorded. A transition names it.
+             */
+            revision: number;
+            rights: components["schemas"]["CrosswalkRights"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            contentDigest: components["schemas"]["Digest"];
+            entries: components["schemas"]["CrosswalkEntry"][];
+            submittedBy?: components["schemas"]["EvidenceActor"];
+            approvedBy?: components["schemas"]["EvidenceActor"];
+            approvedAt?: components["schemas"]["Timestamp"];
+            history: components["schemas"]["CrosswalkEvent"][];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * Crosswalk
+         * @description One vendor code namespace at one vendor release, mapped onto Zoiko
+         *     canonical service codes, with every version. Advisory only: a
+         *     crosswalk is never fiscal authority.
+         */
+        Crosswalk: {
+            id: components["schemas"]["CrosswalkId"];
+            vendor: components["schemas"]["CrosswalkVendor"];
+            namespace: components["schemas"]["CrosswalkNamespace"];
+            vendorRelease: components["schemas"]["CrosswalkLabel"];
+            title: components["schemas"]["CrosswalkLabel"];
+            /** @description Always true. A crosswalk translates codes; it never determines tax. */
+            advisoryOnly: boolean;
+            /**
+             * Format: int32
+             * @description The version in use — the newest approved or suspended one — if any.
+             */
+            currentVersion?: number;
+            versions: components["schemas"]["CrosswalkVersion"][];
+            asOf: components["schemas"]["Timestamp"];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /** CrosswalkList */
+        CrosswalkList: {
+            crosswalks: components["schemas"]["Crosswalk"][];
+        };
+        /** CrosswalkVersionRequest */
+        CrosswalkVersionRequest: {
+            rights: components["schemas"]["CrosswalkRights"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            entries: components["schemas"]["CrosswalkEntry"][];
+            /** @description Submit for review now. Otherwise the version is kept as a DRAFT. */
+            submit?: boolean;
+        };
+        /** CrosswalkRequest */
+        CrosswalkRequest: {
+            vendor: components["schemas"]["CrosswalkVendor"];
+            namespace: components["schemas"]["CrosswalkNamespace"];
+            vendorRelease: components["schemas"]["CrosswalkLabel"];
+            title: components["schemas"]["CrosswalkLabel"];
+            version: components["schemas"]["CrosswalkVersionRequest"];
+        };
+        /**
+         * ContentTransitionRequest
+         * @description A move of a crosswalk version to the status named.
+         */
+        ContentTransitionRequest: {
+            to: components["schemas"]["CrosswalkStatus"];
+            /**
+             * Format: int32
+             * @description The `revision` that was read. Anything recorded since is `VERSION_CONFLICT`.
+             */
+            expectedRevision: number;
+            reason?: components["schemas"]["EvidenceText"];
+        };
+        /**
+         * CrosswalkLookup
+         * @description One external code translated. Advisory only — never a tax treatment.
+         */
+        CrosswalkLookup: {
+            crosswalkId: components["schemas"]["CrosswalkId"];
+            /**
+             * Format: int32
+             * @description The version resolved against; absent when none has been approved.
+             */
+            version?: number;
+            code: components["schemas"]["CrosswalkExternalCode"];
+            on: components["schemas"]["CivilDate"];
+            resolution: components["schemas"]["CrosswalkResolution"];
+            /** @description Always true. */
+            advisoryOnly: boolean;
+            candidates: components["schemas"]["CrosswalkEntry"][];
+            detail: components["schemas"]["CrosswalkText"];
+            asOf: components["schemas"]["Timestamp"];
+        };
+        /**
+         * RulePackId
+         * @description A rule pack identity (CONT-001 §11 pack_id).
+         * @example US-NY-TELECOM
+         */
+        RulePackId: string;
+        /**
+         * RulePackVersion
+         * @description A rule pack version, MAJOR.MINOR.PATCH.
+         * @example 3.2.0
+         */
+        RulePackVersion: string;
+        /**
+         * RuleSemanticId
+         * @description The stable identity of a logical rule across its versions.
+         * @example ZTAX-RULE-NY-MCTD-SURCHARGE
+         */
+        RuleSemanticId: string;
+        /**
+         * RuleChangeType
+         * @enum {string}
+         */
+        RuleChangeType: "RATE_CHANGE" | "BASE_CHANGE" | "NEW_LEVY" | "LEVY_REPEAL" | "EXEMPTION_CHANGE" | "THRESHOLD_CHANGE" | "SITUS_CHANGE" | "RESPONSIBILITY_CHANGE" | "OBLIGATION_CHANGE" | "OTHER";
+        /**
+         * RuleChangeStatus
+         * @enum {string}
+         */
+        RuleChangeStatus: "PROPOSED" | "RECOMMENDED" | "APPROVED_FOR_RELEASE" | "CHANGES_REQUESTED" | "REJECTED" | "WITHDRAWN" | "SUPERSEDED";
+        /**
+         * RuleChangeEventKind
+         * @enum {string}
+         */
+        RuleChangeEventKind: "PROPOSED" | "TEST_EVIDENCE_RECORDED" | "RECOMMENDED" | "APPROVED" | "CHANGES_REQUESTED" | "REJECTED" | "WITHDRAWN" | "SUPERSEDED";
+        /**
+         * SourceAuthorityClass
+         * @description CONT-001 §4's source authority class. Only A0 and A1 ground a production rule by themselves.
+         * @enum {string}
+         */
+        SourceAuthorityClass: "A0" | "A1" | "A2" | "B1" | "B2" | "C1" | "U";
+        /**
+         * RuleChangeText
+         * @description Legal content text — a summary, the proposed change, its impact. Not personal data.
+         */
+        RuleChangeText: string;
+        /**
+         * RuleChangeRef
+         * @description A reference — a source id, passage, edition, test run or origin.
+         */
+        RuleChangeRef: string;
+        /** RuleChangeCitation */
+        RuleChangeCitation: {
+            sourceId: components["schemas"]["RuleChangeRef"];
+            reference: components["schemas"]["RuleChangeRef"];
+            edition: components["schemas"]["RuleChangeRef"];
+            authorityClass: components["schemas"]["SourceAuthorityClass"];
+        };
+        /** RuleChangeTestEvidence */
+        RuleChangeTestEvidence: {
+            ref: components["schemas"]["RuleChangeRef"];
+            sha256?: components["schemas"]["Sha256Hex"];
+        };
+        /** RuleChangeEvent */
+        RuleChangeEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["RuleChangeEventKind"];
+            status: components["schemas"]["RuleChangeStatus"];
+            reason?: components["schemas"]["EvidenceText"];
+            testEvidence?: components["schemas"]["RuleChangeTestEvidence"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * RuleChange
+         * @description A proposed change to a jurisdiction rule pack and its review.
+         *     `releaseEligible` is true once approved for release; nothing is
+         *     published or activated by it.
+         */
+        RuleChange: {
+            id: components["schemas"]["RuleChangeId"];
+            packId: components["schemas"]["RulePackId"];
+            baseVersion: components["schemas"]["RulePackVersion"];
+            ruleId?: components["schemas"]["RuleSemanticId"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            changeType: components["schemas"]["RuleChangeType"];
+            summary: components["schemas"]["RuleChangeText"];
+            detail: components["schemas"]["RuleChangeText"];
+            impact?: components["schemas"]["RuleChangeText"];
+            citation: components["schemas"]["RuleChangeCitation"];
+            publishedOn?: components["schemas"]["CivilDate"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            originRef?: components["schemas"]["RuleChangeRef"];
+            supersedes?: components["schemas"]["RuleChangeId"];
+            status: components["schemas"]["RuleChangeStatus"];
+            /**
+             * Format: int32
+             * @description The number of events recorded. A transition names it.
+             */
+            revision: number;
+            testEvidence?: components["schemas"]["RuleChangeTestEvidence"];
+            recommendedBy?: components["schemas"]["EvidenceActor"];
+            approvedBy?: components["schemas"]["EvidenceActor"];
+            approvedAt?: components["schemas"]["Timestamp"];
+            /** @description True once APPROVED_FOR_RELEASE — eligible for a content release, not released. */
+            releaseEligible: boolean;
+            history: components["schemas"]["RuleChangeEvent"][];
+            asOf: components["schemas"]["Timestamp"];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /** RuleChangeList */
+        RuleChangeList: {
+            ruleChanges: components["schemas"]["RuleChange"][];
+        };
+        /** RuleChangeRequest */
+        RuleChangeRequest: {
+            packId: components["schemas"]["RulePackId"];
+            baseVersion: components["schemas"]["RulePackVersion"];
+            ruleId?: components["schemas"]["RuleSemanticId"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            changeType: components["schemas"]["RuleChangeType"];
+            summary: components["schemas"]["RuleChangeText"];
+            detail: components["schemas"]["RuleChangeText"];
+            impact?: components["schemas"]["RuleChangeText"];
+            citation: components["schemas"]["RuleChangeCitation"];
+            publishedOn?: components["schemas"]["CivilDate"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            originRef?: components["schemas"]["RuleChangeRef"];
+            supersedes?: components["schemas"]["RuleChangeId"];
+            testEvidence?: components["schemas"]["RuleChangeTestEvidence"];
+        };
+        /** RuleChangeTestEvidenceRequest */
+        RuleChangeTestEvidenceRequest: {
+            testEvidence: components["schemas"]["RuleChangeTestEvidence"];
+            /**
+             * Format: int32
+             * @description The `revision` that was read.
+             */
+            expectedRevision: number;
+        };
+        /** RuleChangeTransitionRequest */
+        RuleChangeTransitionRequest: {
+            to: components["schemas"]["RuleChangeStatus"];
+            /**
+             * Format: int32
+             * @description The `revision` that was read. Anything recorded since is `VERSION_CONFLICT`.
+             */
+            expectedRevision: number;
+            reason: components["schemas"]["EvidenceText"];
+        };
+        /**
+         * CrosswalkVersionNumber
+         * Format: int32
+         * @description A crosswalk version number.
+         * @example 1
+         */
+        CrosswalkVersionNumber: number;
     };
     responses: {
         /**
@@ -10473,6 +11139,24 @@ export interface components {
             };
             content: {
                 "application/json": components["schemas"]["ExemptionEvidence"];
+            };
+        };
+        /** @description The crosswalk as it stands now, with every version. */
+        CrosswalkResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Crosswalk"];
+            };
+        };
+        /** @description The proposed rule change as it stands now. */
+        RuleChangeResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["RuleChange"];
             };
         };
     };
@@ -10651,6 +11335,16 @@ export interface components {
          * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
          */
         ExemptionEvidenceId: components["schemas"]["ExemptionEvidenceId"];
+        /**
+         * @description The crosswalk identifier.
+         * @example 01920e10-0000-7000-8000-00000000c001
+         */
+        CrosswalkId: components["schemas"]["CrosswalkId"];
+        /**
+         * @description The rule change identifier.
+         * @example 01920e20-0000-7000-8000-00000000d001
+         */
+        RuleChangeId: components["schemas"]["RuleChangeId"];
     };
     requestBodies: never;
     headers: never;
@@ -16791,6 +17485,386 @@ export interface operations {
         };
         responses: {
             200: components["responses"]["ExemptionEvidenceResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listCrosswalks: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only crosswalks of this vendor.
+                 * @example SURETAX
+                 */
+                vendor?: components["schemas"]["CrosswalkVendor"];
+                /**
+                 * @description Only crosswalks with a version in this status.
+                 * @example IN_REVIEW
+                 */
+                status?: components["schemas"]["CrosswalkStatus"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The crosswalks. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrosswalkList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createCrosswalk: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrosswalkRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["CrosswalkResult"];
+            201: components["responses"]["CrosswalkResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getCrosswalk: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The crosswalk identifier.
+                 * @example 01920e10-0000-7000-8000-00000000c001
+                 */
+                crosswalkId: components["parameters"]["CrosswalkId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["CrosswalkResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    addCrosswalkVersion: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /**
+                 * @description The crosswalk identifier.
+                 * @example 01920e10-0000-7000-8000-00000000c001
+                 */
+                crosswalkId: components["parameters"]["CrosswalkId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CrosswalkVersionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["CrosswalkResult"];
+            201: components["responses"]["CrosswalkResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    transitionCrosswalkVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The crosswalk identifier.
+                 * @example 01920e10-0000-7000-8000-00000000c001
+                 */
+                crosswalkId: components["parameters"]["CrosswalkId"];
+                /**
+                 * @description The crosswalk version number.
+                 * @example 1
+                 */
+                version: components["schemas"]["CrosswalkVersionNumber"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContentTransitionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["CrosswalkResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    lookupCrosswalk: {
+        parameters: {
+            query: {
+                /**
+                 * @description The external code, exactly as the vendor emits it.
+                 * @example 010101
+                 */
+                code: components["schemas"]["CrosswalkExternalCode"];
+                /**
+                 * @description The transaction date. Defaults to today.
+                 * @example 2026-11-20
+                 */
+                on?: components["schemas"]["CivilDate"];
+                /**
+                 * @description Resolve against this approved or superseded version instead of the one in use.
+                 * @example 1
+                 */
+                atVersion?: components["schemas"]["CrosswalkVersionNumber"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description The crosswalk identifier.
+                 * @example 01920e10-0000-7000-8000-00000000c001
+                 */
+                crosswalkId: components["parameters"]["CrosswalkId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The lookup. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrosswalkLookup"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listRuleChanges: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only changes in this status.
+                 * @example RECOMMENDED
+                 */
+                status?: components["schemas"]["RuleChangeStatus"];
+                /**
+                 * @description Only changes against this rule pack.
+                 * @example US-NY-TELECOM
+                 */
+                packId?: components["schemas"]["RulePackId"];
+                /**
+                 * @description Only changes in this jurisdiction.
+                 * @example US-NY
+                 */
+                jurisdiction?: components["schemas"]["EvidenceJurisdiction"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The queue. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleChangeList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    proposeRuleChange: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleChangeRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RuleChangeResult"];
+            201: components["responses"]["RuleChangeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getRuleChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The rule change identifier.
+                 * @example 01920e20-0000-7000-8000-00000000d001
+                 */
+                changeId: components["parameters"]["RuleChangeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["RuleChangeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordRuleChangeTestEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The rule change identifier.
+                 * @example 01920e20-0000-7000-8000-00000000d001
+                 */
+                changeId: components["parameters"]["RuleChangeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleChangeTestEvidenceRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RuleChangeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    transitionRuleChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The rule change identifier.
+                 * @example 01920e20-0000-7000-8000-00000000d001
+                 */
+                changeId: components["parameters"]["RuleChangeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleChangeTransitionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RuleChangeResult"];
             400: components["responses"]["Validation"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];

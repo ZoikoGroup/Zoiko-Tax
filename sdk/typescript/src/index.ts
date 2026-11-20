@@ -981,6 +981,62 @@ export class ZoikoTaxClient {
     return this.#send<S<"Workpaper">>("POST", `/v1/workpapers/${encodeURIComponent(workpaperId)}/actions`, body, signal);
   }
 
+  // --- content workbench: vendor crosswalks and rule approvals ---------------
+  /** The vendor crosswalk library. Advisory only. `GET /v1/content/crosswalks`. */
+  listCrosswalks(params: { vendor?: string; status?: string; limit?: number } = {}, signal?: AbortSignal): Promise<Result<S<"CrosswalkList">>> {
+    return this.#send<S<"CrosswalkList">>("GET", `/v1/content/crosswalks${query(params)}`, undefined, signal);
+  }
+
+  /** Write a crosswalk and its first version, a DRAFT or IN_REVIEW. `POST /v1/content/crosswalks`. */
+  createCrosswalk(idempotencyKey: string, body: S<"CrosswalkRequest">, signal?: AbortSignal): Promise<Result<S<"Crosswalk">>> {
+    return this.#send<S<"Crosswalk">>("POST", `/v1/content/crosswalks`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** One crosswalk with every version. `GET /v1/content/crosswalks/{crosswalkId}`. */
+  getCrosswalk(crosswalkId: string, signal?: AbortSignal): Promise<Result<S<"Crosswalk">>> {
+    return this.#send<S<"Crosswalk">>("GET", `/v1/content/crosswalks/${encodeURIComponent(crosswalkId)}`, undefined, signal);
+  }
+
+  /** Write the next version of a crosswalk. `POST /v1/content/crosswalks/{crosswalkId}/versions`. */
+  addCrosswalkVersion(crosswalkId: string, idempotencyKey: string, body: S<"CrosswalkVersionRequest">, signal?: AbortSignal): Promise<Result<S<"Crosswalk">>> {
+    return this.#send<S<"Crosswalk">>("POST", `/v1/content/crosswalks/${encodeURIComponent(crosswalkId)}/versions`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** Move one crosswalk version, against the revision read. `POST /v1/content/crosswalks/{crosswalkId}/versions/{version}/transitions`. */
+  transitionCrosswalkVersion(crosswalkId: string, version: number, body: S<"ContentTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"Crosswalk">>> {
+    return this.#send<S<"Crosswalk">>("POST", `/v1/content/crosswalks/${encodeURIComponent(crosswalkId)}/versions/${encodeURIComponent(String(version))}/transitions`, body, signal);
+  }
+
+  /** Translate one external code exactly; advisory only. `GET /v1/content/crosswalks/{crosswalkId}/lookup`. */
+  lookupCrosswalk(crosswalkId: string, params: { code: string; on?: string; atVersion?: number }, signal?: AbortSignal): Promise<Result<S<"CrosswalkLookup">>> {
+    return this.#send<S<"CrosswalkLookup">>("GET", `/v1/content/crosswalks/${encodeURIComponent(crosswalkId)}/lookup${query(params)}`, undefined, signal);
+  }
+
+  /** The rule approval queue. `GET /v1/content/rule-changes`. */
+  listRuleChanges(params: { status?: string; packId?: string; jurisdiction?: string; limit?: number } = {}, signal?: AbortSignal): Promise<Result<S<"RuleChangeList">>> {
+    return this.#send<S<"RuleChangeList">>("GET", `/v1/content/rule-changes${query(params)}`, undefined, signal);
+  }
+
+  /** Propose a rule change for review. `POST /v1/content/rule-changes`. */
+  proposeRuleChange(idempotencyKey: string, body: S<"RuleChangeRequest">, signal?: AbortSignal): Promise<Result<S<"RuleChange">>> {
+    return this.#send<S<"RuleChange">>("POST", `/v1/content/rule-changes`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** One rule change with its review history. `GET /v1/content/rule-changes/{changeId}`. */
+  getRuleChange(changeId: string, signal?: AbortSignal): Promise<Result<S<"RuleChange">>> {
+    return this.#send<S<"RuleChange">>("GET", `/v1/content/rule-changes/${encodeURIComponent(changeId)}`, undefined, signal);
+  }
+
+  /** Attach test evidence to a PROPOSED change. `POST /v1/content/rule-changes/{changeId}/test-evidence`. */
+  recordRuleChangeTestEvidence(changeId: string, body: S<"RuleChangeTestEvidenceRequest">, signal?: AbortSignal): Promise<Result<S<"RuleChange">>> {
+    return this.#send<S<"RuleChange">>("POST", `/v1/content/rule-changes/${encodeURIComponent(changeId)}/test-evidence`, body, signal);
+  }
+
+  /** Recommend, approve for release, request changes, reject or withdraw. `POST /v1/content/rule-changes/{changeId}/transitions`. */
+  transitionRuleChange(changeId: string, body: S<"RuleChangeTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"RuleChange">>> {
+    return this.#send<S<"RuleChange">>("POST", `/v1/content/rule-changes/${encodeURIComponent(changeId)}/transitions`, body, signal);
+  }
+
   // --- registrations and exemption evidence (Doc 17) --------------------------
   /** List registrations, newest first, numbers masked. `GET /v1/registrations`. */
   listRegistrations(

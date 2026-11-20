@@ -188,6 +188,10 @@ func run() error {
 	// Registrations and exemption evidence read and write their own records
 	// and no decision; like notices they need only the store.
 	router.Registrations = app.NewRegistrationService(store.Registrations(), store.LegalEntities(), store, clk, ids)
+	// The content workbench reads and writes its own records only: vendor
+	// crosswalks and the rule approval queue.
+	router.Crosswalks = app.NewCrosswalkService(store.Crosswalks(), store, clk, ids)
+	router.RuleChanges = app.NewRuleChangeService(store.RuleChanges(), store, clk, ids)
 	if router.Determination != nil {
 		// Compliance packages execute the obligations commits assess, and
 		// move them only on filing evidence, so they are served wherever the
