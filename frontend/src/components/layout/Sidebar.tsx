@@ -51,6 +51,7 @@ export type View =
   | 'notices'
   | 'workpapers'
   | 'erp-reconciliation'
+  | 'regulatory-intelligence'
 
 /** A screen: a view, and the tab inside it when the view has tabs. */
 export interface NavTarget {
@@ -184,11 +185,11 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
   },
   {
     id: 'intelligence', label: 'Intelligence', icon: <IconSparkles />, children: [
-      { id: 'intelligence.feed', label: 'Regulatory Change Feed' },
-      { id: 'intelligence.impact', label: 'Tax Impact Analysis' },
+      { id: 'intelligence.feed', label: 'Regulatory Change Feed', target: at('regulatory-intelligence', 'feed') },
+      { id: 'intelligence.impact', label: 'Tax Impact Analysis', target: at('regulatory-intelligence', 'impact') },
       { id: 'intelligence.coverage', label: 'Coverage Intelligence', target: at('locations', 'gaps') },
       { id: 'intelligence.assistant', label: 'AI Assistant', target: at('intelligence') },
-      { id: 'intelligence.recommendations', label: 'Review Recommendations' },
+      { id: 'intelligence.recommendations', label: 'Review Recommendations', target: at('regulatory-intelligence', 'recommendations') },
     ],
   },
   {

@@ -152,6 +152,10 @@ type Router struct {
 	// certificates held as evidence (Doc 17). It reads and writes those
 	// records only, so it is served wherever the store is.
 	Registrations *app.RegistrationService
+	// RegulatoryChanges serves the regulatory change feed, impact
+	// assessments and review recommendations (Doc 03 WF-05, WF-09; Sidebar
+	// WF-02). It writes its own ledgers only and publishes no content.
+	RegulatoryChanges *app.RegulatoryChangeService
 
 	// Shadow serves shadow assurance: comparator profiles, comparison runs
 	// and their discrepancies. Nil when the cell has no evidence store to
@@ -446,6 +450,24 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/exemptions/{certificateId}/recommendation", false, []security.Role{analyst}}, rt.handleRecommendExemptionCertificate},
 		{Route{"POST", "/v1/exemptions/{certificateId}/decision", false, []security.Role{analyst}}, rt.handleDecideExemptionCertificate},
 		{Route{"POST", "/v1/exemptions/{certificateId}/transitions", false, []security.Role{analyst}}, rt.handleTransitionExemptionCertificate},
+		// Regulatory change intelligence (Doc 03 WF-05, WF-09; Sidebar
+		// WF-02): OPERATOR and ANALYST record changes; ANALYST triages,
+		// assesses, recommends and independently reviews, and the service
+		// compares the people. AUDITOR reads. Nothing here publishes content.
+		{Route{"GET", "/v1/regulatory-changes", false, []security.Role{operator, analyst, auditor}}, rt.handleListRegulatoryChanges},
+		{Route{"POST", "/v1/regulatory-changes", false, []security.Role{operator, analyst}}, rt.handleRecordRegulatoryChange},
+		{Route{"GET", "/v1/regulatory-changes/{changeId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetRegulatoryChange},
+		{Route{"POST", "/v1/regulatory-changes/{changeId}/transitions", false, []security.Role{analyst}}, rt.handleTransitionRegulatoryChange},
+		{Route{"POST", "/v1/regulatory-changes/{changeId}/assessments", false, []security.Role{analyst}}, rt.handleAssessRegulatoryChange},
+		{Route{"GET", "/v1/impact-assessments", false, []security.Role{operator, analyst, auditor}}, rt.handleListImpactAssessments},
+		{Route{"GET", "/v1/impact-assessments/{assessmentId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetImpactAssessment},
+		{Route{"GET", "/v1/review-recommendations", false, []security.Role{operator, analyst, auditor}}, rt.handleListReviewRecommendations},
+		{Route{"POST", "/v1/review-recommendations", false, []security.Role{analyst}}, rt.handleDraftReviewRecommendation},
+		{Route{"GET", "/v1/review-recommendations/{recommendationId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetReviewRecommendation},
+		{Route{"POST", "/v1/review-recommendations/{recommendationId}/revisions", false, []security.Role{analyst}}, rt.handleReviseReviewRecommendation},
+		{Route{"POST", "/v1/review-recommendations/{recommendationId}/recommend", false, []security.Role{analyst}}, rt.handleRecommendReviewRecommendation},
+		{Route{"POST", "/v1/review-recommendations/{recommendationId}/review", false, []security.Role{analyst}}, rt.handleReviewReviewRecommendation},
+		{Route{"POST", "/v1/review-recommendations/{recommendationId}/withdrawal", false, []security.Role{analyst}}, rt.handleWithdrawReviewRecommendation},
 		// Shadow: non-impact reads of committed decisions, compared with
 		// another engine's results (ZTAX-SHD-001).
 		{Route{"GET", "/v1/shadow/comparators", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListComparators},

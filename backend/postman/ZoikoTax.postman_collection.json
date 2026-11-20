@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:649b91b423a099137f38885f47bd477df4abc4fb3ade0abc2fc0893f087d357d`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:f0dadc107c95e2c5b27263c7a94d64419a24acf3e850ea9fa8bad315209ca832`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -9904,6 +9904,792 @@
           ]
         },
         {
+          "name": "POST /v1/regulatory-changes — Record a regulatory change from a source edition",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jurisdiction\": \"US-NY\",\n  \"kind\": \"RATE_CHANGE\",\n  \"title\": \"New York excise on mobile voice rises\",\n  \"summary\": \"The excise rate on mobile voice rises from 2.5% to 2.9% from 1 January 2027.\",\n  \"source\": {\n    \"authority\": \"New York State Department of Taxation and Finance\",\n    \"citation\": \"N.Y. Tax Law §186-e\",\n    \"url\": \"https://www.tax.ny.gov/pubs_and_bulls/tg_bulletins/\",\n    \"edition\": \"TB-ST-2026-11\",\n    \"documentSha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"\n  },\n  \"publishedOn\": \"2026-11-01\",\n  \"effectiveFrom\": \"2027-01-01\",\n  \"detectedBy\": \"HUMAN\",\n  \"serviceFamilies\": [\n    \"MOBILE_VOICE\"\n  ],\n  \"taxTypes\": [\n    \"SALES_TAX\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/regulatory-changes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "regulatory-changes"
+              ]
+            },
+            "description": "Record a regulatory change from a source edition\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nRecords a reported change as `NEW`: the authority, jurisdiction,\ncitation, edition and the SHA-256 of the captured source document\n(hashed in the browser; nothing is uploaded), its kind (Doc 03 §06), and\nthree separate clocks — published, effective and discovered — never\nassumed equal (Z03-AT-10). A `MONITOR` change names the watcher alert it\nwas recorded from; no watcher is connected to this cell, so a person\nrecords it. A `BACKDATED_RULE` takes effect before it was published. A\nmissing source digest or effective date is `400` before anything is\nrecorded.\n\nA change is one legal effect of one source edition. A source with two\neffects is recorded as two changes of different kinds, linked by\n`sourceKey`. The same source edition's change of the same kind reported\nagain returns the change already recorded with `200`; with different\nparticulars it is `409 CHANGE_DEDUPE_CONFLICT`.\n\n**Idempotent on the `Idempotency-Key`**: the same key and request return\nthe change with `200`; the same key with a different request is\n`409 IDEMPOTENCY_KEY_REUSE`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordRegulatoryChange returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test('Doc 03 WF-05 — a reported change is recorded, or found already recorded for its source edition', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "  pm.expect(pm.response.json().sourceKey).to.match(/^zt1:/);",
+                  "});",
+                  "pm.collectionVariables.set('changeId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/regulatory-changes — The regulatory change feed",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/regulatory-changes?status={{status}}&kind={{kind}}&jurisdiction={{jurisdiction}}&priority={{priority}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "regulatory-changes"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only changes in this status."
+                },
+                {
+                  "key": "kind",
+                  "value": "{{kind}}",
+                  "description": "Only changes of this kind."
+                },
+                {
+                  "key": "jurisdiction",
+                  "value": "{{jurisdiction}}",
+                  "description": "Only changes in this jurisdiction; a country matches its subdivisions."
+                },
+                {
+                  "key": "priority",
+                  "value": "{{priority}}",
+                  "description": "Only changes triaged at this priority."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The regulatory change feed\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nRecorded regulatory changes, newest first, in any status: a change that\nwas closed or found not to apply stays listed with its disposition and\nrationale (Doc 03 Z03-AT-09). A listing carries no related changes or\nassessment summary; the detail read does."
+          },
+          "response": [
+            {
+              "name": "200 · One triaged rate change",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/regulatory-changes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "regulatory-changes"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"changes\": [\n    {\n      \"id\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"jurisdiction\": \"US-NY\",\n      \"kind\": \"RATE_CHANGE\",\n      \"title\": \"New York excise on mobile voice rises\",\n      \"source\": {\n        \"authority\": \"New York State Department of Taxation and Finance\",\n        \"citation\": \"N.Y. Tax Law §186-e\",\n        \"edition\": \"TB-ST-2026-11\",\n        \"documentSha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"\n      },\n      \"publishedOn\": \"2026-11-01\",\n      \"effectiveFrom\": \"2027-01-01\",\n      \"discoveredAt\": \"2026-11-02T08:00:00.000000Z\",\n      \"detectedBy\": \"HUMAN\",\n      \"serviceFamilies\": [\n        \"MOBILE_VOICE\"\n      ],\n      \"taxTypes\": [\n        \"SALES_TAX\"\n      ],\n      \"retroactive\": false,\n      \"status\": \"TRIAGED\",\n      \"priority\": \"MATERIAL\",\n      \"version\": 2,\n      \"sourceKey\": \"zt1:5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8\",\n      \"relatedChangeIds\": [],\n      \"recommendationCount\": 0,\n      \"acceptedRecommendationCount\": 0,\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"RECORDED\",\n          \"status\": \"NEW\",\n          \"recordedAt\": \"2026-11-02T08:05:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 2,\n          \"kind\": \"TRIAGED\",\n          \"status\": \"TRIAGED\",\n          \"priority\": \"MATERIAL\",\n          \"reason\": \"Rate rise on a covered levy\",\n          \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        }\n      ],\n      \"createdAt\": \"2026-11-02T08:05:00.000000Z\",\n      \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listRegulatoryChanges returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/regulatory-changes/{changeId} — One regulatory change with its history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/regulatory-changes/{{changeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "regulatory-changes",
+                "{{changeId}}"
+              ]
+            },
+            "description": "One regulatory change with its history\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nThe change with every triage, hold and disposition, the other changes\nrecorded from the same source edition, its current assessment's\nseverity and how many recommendations on that assessment were\naccepted."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getRegulatoryChange returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/regulatory-changes/{changeId}/transitions — Triage, hold, resume or decide a regulatory change",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"TRIAGED\",\n  \"priority\": \"MATERIAL\",\n  \"reason\": \"Rate rise on a covered levy; specialist triage within one business day\",\n  \"expectedVersion\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/regulatory-changes/{{changeId}}/transitions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "regulatory-changes",
+                "{{changeId}}",
+                "transitions"
+              ]
+            },
+            "description": "Triage, hold, resume or decide a regulatory change\n\n`ANALYST`, signed in as themselves. Every act gives its rationale and\nnames the `version` read; anything recorded since is\n`409 VERSION_CONFLICT`.\n\n`TRIAGED` from `NEW`, with a `priority`. `ON_HOLD` from any open status,\nwith a `holdReason`; a held change resumes to the status it was held\nfrom before anything else is decided. `NO_IMPACT` (disposition\n`NOT_APPLICABLE`) from `NEW`, `TRIAGED` or `IN_IMPACT_ASSESSMENT`.\n`CLOSED` from `IN_IMPACT_ASSESSMENT` with disposition `MONITOR`, or\n`CHANGE_NEEDED` once a recommendation on the current assessment has been\nindependently accepted. `IN_IMPACT_ASSESSMENT` is never named: running\nan assessment makes it.\n\nClosing a change publishes, approves and changes nothing: a change that\nneeds a rule change is handed off by its accepted recommendation."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('transitionRegulatoryChange returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/regulatory-changes/{changeId}/assessments — Run the deterministic impact assessment of a triaged change",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/regulatory-changes/{{changeId}}/assessments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "regulatory-changes",
+                "{{changeId}}",
+                "assessments"
+              ]
+            },
+            "description": "Run the deterministic impact assessment of a triaged change\n\n`ANALYST`, signed in as themselves.\n\nAssesses the change against the active content bundle's coverage at the\nchange's effective date and the tenant's own registrations and\nobligations: every content component in scope, or the coverage gap when\nnone is; every open registration in the jurisdiction; every open\nobligation whose period ends on or after the effective date, marked\nretrospective where a backdated change reaches into it. Each item has a\nseverity and its exact basis. The `inputsDigest` covers everything read\nand the `assessmentDigest` what was found, so the same inputs give the\nsame assessment: assessing again on unchanged inputs records nothing and\nreturns the current assessment with `200`. On changed inputs a new\ncurrent assessment is recorded with `201`, and recommendations on the\nold one can no longer be recommended or reviewed.\n\nThe first assessment moves a `TRIAGED` change to `IN_IMPACT_ASSESSMENT`.\nAn assessment is a read: it writes no tax decision, ledger posting or\nfiling (Z03-AT-17). A cell with no active content is\n`503 NO_CONTENT_BUNDLE`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('assessRegulatoryChange returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/impact-assessments — Tax impact assessments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/impact-assessments?changeId={{changeId}}&minSeverity={{minSeverity}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "impact-assessments"
+              ],
+              "query": [
+                {
+                  "key": "changeId",
+                  "value": "{{changeId}}",
+                  "description": "Only the assessments of this change."
+                },
+                {
+                  "key": "minSeverity",
+                  "value": "{{minSeverity}}",
+                  "description": "Only assessments of at least this severity."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "Tax impact assessments\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nAssessments newest first — of one change, or the tenant's — each saying\nwhether it is its change's current assessment."
+          },
+          "response": [
+            {
+              "name": "200 · No assessments yet",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/impact-assessments",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "impact-assessments"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"assessments\": []\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listImpactAssessments returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/impact-assessments/{assessmentId} — One impact assessment with its items and basis",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/impact-assessments/{{assessmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "impact-assessments",
+                "{{assessmentId}}"
+              ]
+            },
+            "description": "One impact assessment with its items and basis\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nThe assessment, verified against its digest before it is returned: a\nstored assessment whose items no longer match its digest is\n`500 EVIDENCE_INTEGRITY` and is not shown."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getImpactAssessment returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/review-recommendations — Draft a review recommendation on a change's current assessment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assessmentId\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"origin\": \"AI_ASSISTED\",\n  \"action\": \"UPDATE_RULE\",\n  \"rationale\": \"The NY excise component's rate rises on 1 January 2027; the rule needs a new version from that date.\",\n  \"targets\": [\n    {\n      \"kind\": \"CONTENT_COMPONENT\",\n      \"ref\": \"us-ny-excise\"\n    }\n  ],\n  \"ai\": {\n    \"useCase\": \"regulatory-change-recommendation\",\n    \"modelProfile\": \"model-profile-a\",\n    \"providerProfile\": \"provider-profile-a\",\n    \"promptProfile\": \"rcr-v1\",\n    \"aiTrainVersion\": \"2026.11\",\n    \"authorityOutcome\": \"A1\",\n    \"draft\": \"Update the NY excise component rate from 1 January 2027.\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/review-recommendations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "review-recommendations"
+              ]
+            },
+            "description": "Draft a review recommendation on a change's current assessment\n\n`ANALYST`, signed in as themselves.\n\nDrafts a recommendation — `UPDATE_RULE`, `ADD_RULE`, `RETIRE_RULE`,\n`NOTIFY_CUSTOMERS`, `RETROSPECTIVE_REASSESSMENT`, `MONITOR` or\n`NO_ACTION` — with its rationale and the assessed items it is about,\nbound to the assessment's digest. The change is `IN_IMPACT_ASSESSMENT`\nand the assessment is its current one, else\n`409 ASSESSMENT_SUPERSEDED`. Targets are items the assessment found, of\nthe kind the action needs.\n\n`AI_ASSISTED` records the model's provenance — use case, model, provider\nand prompt profiles, AI release train, the invocation and the model's\noriginal text, kept unchanged as evidence — at authority `A1` (propose)\nonly (ZTAX-AIGOV-001 §4, §14). The rationale is the person's own. AI\nnever counts as the recommender or the reviewer.\n\n**Idempotent on the `Idempotency-Key`**."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('draftReviewRecommendation returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/review-recommendations — Review recommendations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/review-recommendations?status={{status}}&changeId={{changeId}}&origin={{origin}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "review-recommendations"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only recommendations in this status."
+                },
+                {
+                  "key": "changeId",
+                  "value": "{{changeId}}",
+                  "description": "Only the recommendations on this change."
+                },
+                {
+                  "key": "origin",
+                  "value": "{{origin}}",
+                  "description": "Only HUMAN or only AI_ASSISTED recommendations."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "Review recommendations\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nRecommendations newest first, each with its change's current assessment\nso a recommendation overtaken by a reassessment shows `stale`."
+          },
+          "response": [
+            {
+              "name": "200 · No recommendations yet",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/review-recommendations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "review-recommendations"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"recommendations\": []\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listReviewRecommendations returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/review-recommendations/{recommendationId} — One review recommendation with its history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/review-recommendations/{{recommendationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "review-recommendations",
+                "{{recommendationId}}"
+              ]
+            },
+            "description": "One review recommendation with its history\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nThe recommendation with every version of its text, its recommendation,\nits independent review and, once accepted, its `handoffRef`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getReviewRecommendation returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/review-recommendations/{recommendationId}/revisions — Revise a draft or a recommendation returned for changes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"UPDATE_RULE\",\n  \"rationale\": \"The NY excise rate rises from 2.5% to 2.9% on 1 January 2027 (TB-ST-2026-11).\",\n  \"targets\": [\n    {\n      \"kind\": \"CONTENT_COMPONENT\",\n      \"ref\": \"us-ny-excise\"\n    }\n  ],\n  \"expectedVersion\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/review-recommendations/{{recommendationId}}/revisions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "review-recommendations",
+                "{{recommendationId}}",
+                "revisions"
+              ]
+            },
+            "description": "Revise a draft or a recommendation returned for changes\n\n`ANALYST`, signed in as themselves.\n\nReplaces what a `DRAFT` or `CHANGES_REQUESTED` recommendation says. The\nearlier text stays in the history, and the reviser may not review it."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('reviseReviewRecommendation returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/review-recommendations/{recommendationId}/recommend — Recommend a draft for independent review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Checked against the bulletin and the current component version.\",\n  \"expectedVersion\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/review-recommendations/{{recommendationId}}/recommend",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "review-recommendations",
+                "{{recommendationId}}",
+                "recommend"
+              ]
+            },
+            "description": "Recommend a draft for independent review\n\n`ANALYST`, signed in as themselves.\n\nA specialist's recommendation of a `DRAFT`, with the reason, on the\nchange's current assessment (`409 ASSESSMENT_SUPERSEDED` otherwise). It\nthen awaits an independent review."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recommendReviewRecommendation returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/review-recommendations/{recommendationId}/review — Independently review a recommended recommendation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"ACCEPT\",\n  \"reason\": \"Independent review agrees with the basis and the target component.\",\n  \"expectedVersion\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/review-recommendations/{{recommendationId}}/review",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "review-recommendations",
+                "{{recommendationId}}",
+                "review"
+              ]
+            },
+            "description": "Independently review a recommended recommendation\n\n`ANALYST`, signed in as themselves, and neither the recommender nor\nanyone who wrote a version of it (`403 MAKER_CHECKER`).\n\n`ACCEPT`, `REJECT` or `REQUEST_CHANGES` a `RECOMMENDED` recommendation,\nwith the reason, on its exact version and the change's current\nassessment. `ACCEPT` records an opaque `handoffRef` a later rule-approval\nworkflow can name. Acceptance publishes no release pack and changes no\nrule, content or tax result (Sidebar WF-02)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('reviewReviewRecommendation returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/review-recommendations/{recommendationId}/withdrawal — Withdraw an open recommendation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Superseded by the reassessment after the registration changed.\",\n  \"expectedVersion\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/review-recommendations/{{recommendationId}}/withdrawal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "review-recommendations",
+                "{{recommendationId}}",
+                "withdrawal"
+              ]
+            },
+            "description": "Withdraw an open recommendation\n\n`ANALYST`, signed in as themselves. Withdraws a recommendation that is\nnot accepted, rejected or already withdrawn, with the reason — for\nexample one overtaken by a reassessment."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('withdrawReviewRecommendation returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "POST /v1/erp-bridges — Connect a legal entity's subledger to a customer general ledger",
           "request": {
             "method": "POST",
@@ -14998,6 +15784,41 @@
       "type": "string"
     },
     {
+      "key": "changeId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "assessmentId",
+      "value": "00000000-0000-7000-8000-000000000000",
+      "type": "string"
+    },
+    {
+      "key": "recommendationId",
+      "value": "00000000-0000-7000-8000-000000000000",
+      "type": "string"
+    },
+    {
+      "key": "kind",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "priority",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "minSeverity",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "origin",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "bridgeId",
       "value": "",
       "type": "string"
@@ -15124,7 +15945,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:649b91b423a099137f38885f47bd477df4abc4fb3ade0abc2fc0893f087d357d",
+      "value": "sha256:f0dadc107c95e2c5b27263c7a94d64419a24acf3e850ea9fa8bad315209ca832",
       "type": "string"
     }
   ]

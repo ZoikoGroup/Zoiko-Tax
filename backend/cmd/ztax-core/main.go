@@ -188,6 +188,10 @@ func run() error {
 	// Registrations and exemption evidence read and write their own records
 	// and no decision; like notices they need only the store.
 	router.Registrations = app.NewRegistrationService(store.Registrations(), store.LegalEntities(), store, clk, ids)
+	// Regulatory change intelligence reads the active content's coverage,
+	// registrations and obligations, and writes only its own ledgers.
+	router.RegulatoryChanges = app.NewRegulatoryChangeService(store.RegulatoryChanges(), app.BundleCoverage{Holder: content},
+		store.Registrations(), store.Obligations(), store, clk, ids)
 	if router.Determination != nil {
 		// Compliance packages execute the obligations commits assess, and
 		// move them only on filing evidence, so they are served wherever the

@@ -112,6 +112,8 @@ tags:
     description: Regulatory workpapers — a legal filer's tax or regulatory base for one duty and period, assembled deterministically from the provider contribution ledger and the subledger, reconciled to control totals, with evidence-linked adjustments and resolutions, a frozen source snapshot and a two-person approval.
   - name: registrations
     description: Legal-entity registrations and exemption certificates held as evidence (Engineering Doc 17). Records, authority checks a person attests, four-eyed activation and approval on an exact version, and expiry. Evidence only — neither changes a tax result.
+  - name: regulatory-changes
+    description: Regulatory change intelligence (Engineering Doc 03 WF-05, WF-09; Sidebar WF-02) — the change feed with triage and disposition, deterministic tax impact assessment against the active content and the tenant's own records, and review recommendations a specialist recommends and a different person independently reviews. Advisory only — nothing here publishes content or changes a tax result.
   - name: erp
     description: The ERP journal bridge — sealed export batches of posted subledger journals, mapped onto the customer's chart of accounts, dispatched through the transactional outbox, with transport receipt kept apart from GL posting — and the subledger-to-GL reconciliation (R6). ZoikoTax is not the customer's general ledger and connects to no real ERP here; the ERP's answers and balances are recorded with their evidence.
   - name: shadow
@@ -13341,6 +13343,722 @@ paths:
           $ref: "#/components/responses/Internal"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/regulatory-changes:
+    get:
+      operationId: listRegulatoryChanges
+      tags:
+        - regulatory-changes
+      summary: The regulatory change feed
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        Recorded regulatory changes, newest first, in any status: a change that
+        was closed or found not to apply stays listed with its disposition and
+        rationale (Doc 03 Z03-AT-09). A listing carries no related changes or
+        assessment summary; the detail read does.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Only changes in this status.
+          schema:
+            $ref: "#/components/schemas/RegulatoryChangeStatus"
+          example: TRIAGED
+        - name: kind
+          in: query
+          required: false
+          description: Only changes of this kind.
+          schema:
+            $ref: "#/components/schemas/RegulatoryChangeKind"
+          example: RATE_CHANGE
+        - name: jurisdiction
+          in: query
+          required: false
+          description: Only changes in this jurisdiction; a country matches its subdivisions.
+          schema:
+            $ref: "#/components/schemas/EvidenceJurisdiction"
+          example: US
+        - name: priority
+          in: query
+          required: false
+          description: Only changes triaged at this priority.
+          schema:
+            $ref: "#/components/schemas/RegulatoryChangePriority"
+          example: URGENT
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The changes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegulatoryChangeList"
+              examples:
+                default:
+                  summary: One triaged rate change
+                  value:
+                    changes:
+                      - id: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        jurisdiction: US-NY
+                        kind: RATE_CHANGE
+                        title: New York excise on mobile voice rises
+                        source:
+                          authority: New York State Department of Taxation and Finance
+                          citation: N.Y. Tax Law §186-e
+                          edition: TB-ST-2026-11
+                          documentSha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                        publishedOn: 2026-11-01
+                        effectiveFrom: 2027-01-01
+                        discoveredAt: 2026-11-02T08:00:00.000000Z
+                        detectedBy: HUMAN
+                        serviceFamilies:
+                          - MOBILE_VOICE
+                        taxTypes:
+                          - SALES_TAX
+                        retroactive: false
+                        status: TRIAGED
+                        priority: MATERIAL
+                        version: 2
+                        sourceKey: zt1:5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8
+                        relatedChangeIds: []
+                        recommendationCount: 0
+                        acceptedRecommendationCount: 0
+                        history:
+                          - seq: 1
+                            kind: RECORDED
+                            status: NEW
+                            recordedAt: 2026-11-02T08:05:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                          - seq: 2
+                            kind: TRIAGED
+                            status: TRIAGED
+                            priority: MATERIAL
+                            reason: Rate rise on a covered levy
+                            recordedAt: 2026-11-02T09:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                        createdAt: 2026-11-02T08:05:00.000000Z
+                        createdBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: recordRegulatoryChange
+      tags:
+        - regulatory-changes
+      summary: Record a regulatory change from a source edition
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Records a reported change as `NEW`: the authority, jurisdiction,
+        citation, edition and the SHA-256 of the captured source document
+        (hashed in the browser; nothing is uploaded), its kind (Doc 03 §06), and
+        three separate clocks — published, effective and discovered — never
+        assumed equal (Z03-AT-10). A `MONITOR` change names the watcher alert it
+        was recorded from; no watcher is connected to this cell, so a person
+        records it. A `BACKDATED_RULE` takes effect before it was published. A
+        missing source digest or effective date is `400` before anything is
+        recorded.
+
+        A change is one legal effect of one source edition. A source with two
+        effects is recorded as two changes of different kinds, linked by
+        `sourceKey`. The same source edition's change of the same kind reported
+        again returns the change already recorded with `200`; with different
+        particulars it is `409 CHANGE_DEDUPE_CONFLICT`.
+
+        **Idempotent on the `Idempotency-Key`**: the same key and request return
+        the change with `200`; the same key with a different request is
+        `409 IDEMPOTENCY_KEY_REUSE`.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegulatoryChangeRequest"
+            examples:
+              default:
+                summary: A New York rate change from a technical bulletin
+                value:
+                  jurisdiction: US-NY
+                  kind: RATE_CHANGE
+                  title: New York excise on mobile voice rises
+                  summary: The excise rate on mobile voice rises from 2.5% to 2.9% from 1 January 2027.
+                  source:
+                    authority: New York State Department of Taxation and Finance
+                    citation: N.Y. Tax Law §186-e
+                    url: https://www.tax.ny.gov/pubs_and_bulls/tg_bulletins/
+                    edition: TB-ST-2026-11
+                    documentSha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                  publishedOn: 2026-11-01
+                  effectiveFrom: 2027-01-01
+                  detectedBy: HUMAN
+                  serviceFamilies:
+                    - MOBILE_VOICE
+                  taxTypes:
+                    - SALES_TAX
+      responses:
+        "200":
+          $ref: "#/components/responses/RegulatoryChangeResult"
+        "201":
+          $ref: "#/components/responses/RegulatoryChangeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/regulatory-changes/{changeId}:
+    get:
+      operationId: getRegulatoryChange
+      tags:
+        - regulatory-changes
+      summary: One regulatory change with its history
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        The change with every triage, hold and disposition, the other changes
+        recorded from the same source edition, its current assessment's
+        severity and how many recommendations on that assessment were
+        accepted.
+      parameters:
+        - $ref: "#/components/parameters/RegulatoryChangeId"
+      responses:
+        "200":
+          $ref: "#/components/responses/RegulatoryChangeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/regulatory-changes/{changeId}/transitions:
+    post:
+      operationId: transitionRegulatoryChange
+      tags:
+        - regulatory-changes
+      summary: Triage, hold, resume or decide a regulatory change
+      description: |
+        `ANALYST`, signed in as themselves. Every act gives its rationale and
+        names the `version` read; anything recorded since is
+        `409 VERSION_CONFLICT`.
+
+        `TRIAGED` from `NEW`, with a `priority`. `ON_HOLD` from any open status,
+        with a `holdReason`; a held change resumes to the status it was held
+        from before anything else is decided. `NO_IMPACT` (disposition
+        `NOT_APPLICABLE`) from `NEW`, `TRIAGED` or `IN_IMPACT_ASSESSMENT`.
+        `CLOSED` from `IN_IMPACT_ASSESSMENT` with disposition `MONITOR`, or
+        `CHANGE_NEEDED` once a recommendation on the current assessment has been
+        independently accepted. `IN_IMPACT_ASSESSMENT` is never named: running
+        an assessment makes it.
+
+        Closing a change publishes, approves and changes nothing: a change that
+        needs a rule change is handed off by its accepted recommendation.
+      parameters:
+        - $ref: "#/components/parameters/RegulatoryChangeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegulatoryChangeTransitionRequest"
+            examples:
+              default:
+                summary: Triage a change as material
+                value:
+                  to: TRIAGED
+                  priority: MATERIAL
+                  reason: Rate rise on a covered levy; specialist triage within one business day
+                  expectedVersion: 1
+      responses:
+        "200":
+          $ref: "#/components/responses/RegulatoryChangeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/regulatory-changes/{changeId}/assessments:
+    post:
+      operationId: assessRegulatoryChange
+      tags:
+        - regulatory-changes
+      summary: Run the deterministic impact assessment of a triaged change
+      description: |
+        `ANALYST`, signed in as themselves.
+
+        Assesses the change against the active content bundle's coverage at the
+        change's effective date and the tenant's own registrations and
+        obligations: every content component in scope, or the coverage gap when
+        none is; every open registration in the jurisdiction; every open
+        obligation whose period ends on or after the effective date, marked
+        retrospective where a backdated change reaches into it. Each item has a
+        severity and its exact basis. The `inputsDigest` covers everything read
+        and the `assessmentDigest` what was found, so the same inputs give the
+        same assessment: assessing again on unchanged inputs records nothing and
+        returns the current assessment with `200`. On changed inputs a new
+        current assessment is recorded with `201`, and recommendations on the
+        old one can no longer be recommended or reviewed.
+
+        The first assessment moves a `TRIAGED` change to `IN_IMPACT_ASSESSMENT`.
+        An assessment is a read: it writes no tax decision, ledger posting or
+        filing (Z03-AT-17). A cell with no active content is
+        `503 NO_CONTENT_BUNDLE`.
+      parameters:
+        - $ref: "#/components/parameters/RegulatoryChangeId"
+      responses:
+        "200":
+          $ref: "#/components/responses/ImpactAssessmentResult"
+        "201":
+          $ref: "#/components/responses/ImpactAssessmentResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/impact-assessments:
+    get:
+      operationId: listImpactAssessments
+      tags:
+        - regulatory-changes
+      summary: Tax impact assessments
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        Assessments newest first — of one change, or the tenant's — each saying
+        whether it is its change's current assessment.
+      parameters:
+        - name: changeId
+          in: query
+          required: false
+          description: Only the assessments of this change.
+          schema:
+            $ref: "#/components/schemas/RegulatoryChangeId"
+          example: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+        - name: minSeverity
+          in: query
+          required: false
+          description: Only assessments of at least this severity.
+          schema:
+            $ref: "#/components/schemas/ImpactSeverity"
+          example: HIGH
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The assessments.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImpactAssessmentList"
+              examples:
+                default:
+                  summary: No assessments yet
+                  value:
+                    assessments: []
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/impact-assessments/{assessmentId}:
+    get:
+      operationId: getImpactAssessment
+      tags:
+        - regulatory-changes
+      summary: One impact assessment with its items and basis
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        The assessment, verified against its digest before it is returned: a
+        stored assessment whose items no longer match its digest is
+        `500 EVIDENCE_INTEGRITY` and is not shown.
+      parameters:
+        - $ref: "#/components/parameters/ImpactAssessmentId"
+      responses:
+        "200":
+          $ref: "#/components/responses/ImpactAssessmentResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/review-recommendations:
+    get:
+      operationId: listReviewRecommendations
+      tags:
+        - regulatory-changes
+      summary: Review recommendations
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        Recommendations newest first, each with its change's current assessment
+        so a recommendation overtaken by a reassessment shows `stale`.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Only recommendations in this status.
+          schema:
+            $ref: "#/components/schemas/ReviewRecommendationStatus"
+          example: RECOMMENDED
+        - name: changeId
+          in: query
+          required: false
+          description: Only the recommendations on this change.
+          schema:
+            $ref: "#/components/schemas/RegulatoryChangeId"
+          example: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+        - name: origin
+          in: query
+          required: false
+          description: Only HUMAN or only AI_ASSISTED recommendations.
+          schema:
+            $ref: "#/components/schemas/ReviewRecommendationOrigin"
+          example: AI_ASSISTED
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The recommendations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewRecommendationList"
+              examples:
+                default:
+                  summary: No recommendations yet
+                  value:
+                    recommendations: []
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: draftReviewRecommendation
+      tags:
+        - regulatory-changes
+      summary: Draft a review recommendation on a change's current assessment
+      description: |
+        `ANALYST`, signed in as themselves.
+
+        Drafts a recommendation — `UPDATE_RULE`, `ADD_RULE`, `RETIRE_RULE`,
+        `NOTIFY_CUSTOMERS`, `RETROSPECTIVE_REASSESSMENT`, `MONITOR` or
+        `NO_ACTION` — with its rationale and the assessed items it is about,
+        bound to the assessment's digest. The change is `IN_IMPACT_ASSESSMENT`
+        and the assessment is its current one, else
+        `409 ASSESSMENT_SUPERSEDED`. Targets are items the assessment found, of
+        the kind the action needs.
+
+        `AI_ASSISTED` records the model's provenance — use case, model, provider
+        and prompt profiles, AI release train, the invocation and the model's
+        original text, kept unchanged as evidence — at authority `A1` (propose)
+        only (ZTAX-AIGOV-001 §4, §14). The rationale is the person's own. AI
+        never counts as the recommender or the reviewer.
+
+        **Idempotent on the `Idempotency-Key`**.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewRecommendationRequest"
+            examples:
+              default:
+                summary: An AI-assisted rule update recommendation
+                value:
+                  assessmentId: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                  origin: AI_ASSISTED
+                  action: UPDATE_RULE
+                  rationale: The NY excise component's rate rises on 1 January 2027; the rule needs a new version from that date.
+                  targets:
+                    - kind: CONTENT_COMPONENT
+                      ref: us-ny-excise
+                  ai:
+                    useCase: regulatory-change-recommendation
+                    modelProfile: model-profile-a
+                    providerProfile: provider-profile-a
+                    promptProfile: rcr-v1
+                    aiTrainVersion: "2026.11"
+                    authorityOutcome: A1
+                    draft: Update the NY excise component rate from 1 January 2027.
+      responses:
+        "200":
+          $ref: "#/components/responses/ReviewRecommendationResult"
+        "201":
+          $ref: "#/components/responses/ReviewRecommendationResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/review-recommendations/{recommendationId}:
+    get:
+      operationId: getReviewRecommendation
+      tags:
+        - regulatory-changes
+      summary: One review recommendation with its history
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        The recommendation with every version of its text, its recommendation,
+        its independent review and, once accepted, its `handoffRef`.
+      parameters:
+        - $ref: "#/components/parameters/ReviewRecommendationId"
+      responses:
+        "200":
+          $ref: "#/components/responses/ReviewRecommendationResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/review-recommendations/{recommendationId}/revisions:
+    post:
+      operationId: reviseReviewRecommendation
+      tags:
+        - regulatory-changes
+      summary: Revise a draft or a recommendation returned for changes
+      description: |
+        `ANALYST`, signed in as themselves.
+
+        Replaces what a `DRAFT` or `CHANGES_REQUESTED` recommendation says. The
+        earlier text stays in the history, and the reviser may not review it.
+      parameters:
+        - $ref: "#/components/parameters/ReviewRecommendationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewRecommendationRevisionRequest"
+            examples:
+              default:
+                summary: Cite the new rate
+                value:
+                  action: UPDATE_RULE
+                  rationale: The NY excise rate rises from 2.5% to 2.9% on 1 January 2027 (TB-ST-2026-11).
+                  targets:
+                    - kind: CONTENT_COMPONENT
+                      ref: us-ny-excise
+                  expectedVersion: 3
+      responses:
+        "200":
+          $ref: "#/components/responses/ReviewRecommendationResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/review-recommendations/{recommendationId}/recommend:
+    post:
+      operationId: recommendReviewRecommendation
+      tags:
+        - regulatory-changes
+      summary: Recommend a draft for independent review
+      description: |
+        `ANALYST`, signed in as themselves.
+
+        A specialist's recommendation of a `DRAFT`, with the reason, on the
+        change's current assessment (`409 ASSESSMENT_SUPERSEDED` otherwise). It
+        then awaits an independent review.
+      parameters:
+        - $ref: "#/components/parameters/ReviewRecommendationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewRecommendationActRequest"
+            examples:
+              default:
+                summary: Recommend
+                value:
+                  reason: Checked against the bulletin and the current component version.
+                  expectedVersion: 1
+      responses:
+        "200":
+          $ref: "#/components/responses/ReviewRecommendationResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/review-recommendations/{recommendationId}/review:
+    post:
+      operationId: reviewReviewRecommendation
+      tags:
+        - regulatory-changes
+      summary: Independently review a recommended recommendation
+      description: |
+        `ANALYST`, signed in as themselves, and neither the recommender nor
+        anyone who wrote a version of it (`403 MAKER_CHECKER`).
+
+        `ACCEPT`, `REJECT` or `REQUEST_CHANGES` a `RECOMMENDED` recommendation,
+        with the reason, on its exact version and the change's current
+        assessment. `ACCEPT` records an opaque `handoffRef` a later rule-approval
+        workflow can name. Acceptance publishes no release pack and changes no
+        rule, content or tax result (Sidebar WF-02).
+      parameters:
+        - $ref: "#/components/parameters/ReviewRecommendationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewRecommendationReviewRequest"
+            examples:
+              default:
+                summary: Accept
+                value:
+                  decision: ACCEPT
+                  reason: Independent review agrees with the basis and the target component.
+                  expectedVersion: 2
+      responses:
+        "200":
+          $ref: "#/components/responses/ReviewRecommendationResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/review-recommendations/{recommendationId}/withdrawal:
+    post:
+      operationId: withdrawReviewRecommendation
+      tags:
+        - regulatory-changes
+      summary: Withdraw an open recommendation
+      description: |
+        `ANALYST`, signed in as themselves. Withdraws a recommendation that is
+        not accepted, rejected or already withdrawn, with the reason — for
+        example one overtaken by a reassessment.
+      parameters:
+        - $ref: "#/components/parameters/ReviewRecommendationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewRecommendationActRequest"
+            examples:
+              default:
+                summary: Withdraw after a reassessment
+                value:
+                  reason: Superseded by the reassessment after the registration changed.
+                  expectedVersion: 2
+      responses:
+        "200":
+          $ref: "#/components/responses/ReviewRecommendationResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
 components:
   securitySchemes:
     sessionCookie:
@@ -13358,6 +14076,30 @@ components:
         because a browser silently drops a `__Host-` cookie that is not
         `Secure`.
   parameters:
+    RegulatoryChangeId:
+      name: changeId
+      in: path
+      required: true
+      description: The regulatory change identifier.
+      schema:
+        $ref: "#/components/schemas/RegulatoryChangeId"
+      example: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+    ImpactAssessmentId:
+      name: assessmentId
+      in: path
+      required: true
+      description: The impact assessment identifier.
+      schema:
+        $ref: "#/components/schemas/ImpactAssessmentId"
+      example: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+    ReviewRecommendationId:
+      name: recommendationId
+      in: path
+      required: true
+      description: The review recommendation identifier.
+      schema:
+        $ref: "#/components/schemas/ReviewRecommendationId"
+      example: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
     IdempotencyKey:
       name: Idempotency-Key
       in: header
@@ -13643,6 +14385,159 @@ components:
         $ref: "#/components/schemas/ExemptionEvidenceId"
       example: 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
   responses:
+    RegulatoryChangeResult:
+      description: The regulatory change as it stands now.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RegulatoryChange"
+          examples:
+            default:
+              summary: A change being assessed
+              value:
+                id: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                jurisdiction: US-NY
+                kind: RATE_CHANGE
+                title: New York excise on mobile voice rises
+                summary: The excise rate on mobile voice rises from 2.5% to 2.9% from 1 January 2027.
+                source:
+                  authority: New York State Department of Taxation and Finance
+                  citation: N.Y. Tax Law §186-e
+                  url: https://www.tax.ny.gov/pubs_and_bulls/tg_bulletins/
+                  edition: TB-ST-2026-11
+                  documentSha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                publishedOn: 2026-11-01
+                effectiveFrom: 2027-01-01
+                discoveredAt: 2026-11-02T08:00:00.000000Z
+                detectedBy: HUMAN
+                serviceFamilies:
+                  - MOBILE_VOICE
+                taxTypes:
+                  - SALES_TAX
+                retroactive: false
+                status: IN_IMPACT_ASSESSMENT
+                priority: MATERIAL
+                version: 3
+                sourceKey: zt1:5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8
+                relatedChangeIds: []
+                currentAssessmentId: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                currentSeverity: HIGH
+                recommendationCount: 1
+                acceptedRecommendationCount: 0
+                history:
+                  - seq: 1
+                    kind: RECORDED
+                    status: NEW
+                    recordedAt: 2026-11-02T08:05:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                  - seq: 2
+                    kind: TRIAGED
+                    status: TRIAGED
+                    priority: MATERIAL
+                    reason: Rate rise on a covered levy
+                    recordedAt: 2026-11-02T09:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                  - seq: 3
+                    kind: ASSESSMENT_STARTED
+                    status: IN_IMPACT_ASSESSMENT
+                    assessmentId: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    recordedAt: 2026-11-02T09:10:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                createdAt: 2026-11-02T08:05:00.000000Z
+                createdBy: 01920a4c-0000-7000-8000-0000000000a1
+    ImpactAssessmentResult:
+      description: The impact assessment.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ImpactAssessment"
+          examples:
+            default:
+              summary: One content component and one registration in scope
+              value:
+                id: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                changeId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                bundleId: global-telecom-2026.11
+                bundleDigest: zt1:2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
+                asOf: 2027-01-01
+                severity: HIGH
+                retroactive: false
+                current: true
+                items:
+                  - kind: CONTENT_COMPONENT
+                    ref: us-ny-excise
+                    label: New York excise
+                    jurisdiction: jurisdiction:us-ny
+                    severity: HIGH
+                    basis: Component us-ny-excise (TELECOM_EXCISE, authority:us-ny-dtf) of bundle global-telecom-2026.11 is in force on 2027-01-01 in jurisdiction:us-ny, within the change's jurisdiction US-NY.
+                    retrospective: false
+                  - kind: TENANT_REGISTRATION
+                    ref: 01920d20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    label: US_STATE_TELECOM_REGISTRATION US-NY
+                    jurisdiction: US-NY
+                    severity: HIGH
+                    basis: The tenant's US_STATE_TELECOM_REGISTRATION registration with NY DTF in US-NY is ACTIVE (version 5).
+                    retrospective: false
+                inputsDigest: zt1:fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9
+                assessmentDigest: zt1:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b
+                componentsRead: 312
+                registrationsRead: 4
+                obligationsRead: 12
+                createdAt: 2026-11-02T09:10:00.000000Z
+                createdBy: 01920a4c-0000-7000-8000-0000000000a2
+    ReviewRecommendationResult:
+      description: The review recommendation as it stands now.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ReviewRecommendation"
+          examples:
+            default:
+              summary: An accepted recommendation with its hand-off reference
+              value:
+                id: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                changeId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                assessmentId: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                assessmentDigest: zt1:6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b
+                currentAssessmentId: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                stale: false
+                origin: HUMAN
+                status: ACCEPTED
+                version: 3
+                action: UPDATE_RULE
+                rationale: The NY excise rate rises from 2.5% to 2.9% on 1 January 2027 (TB-ST-2026-11).
+                targets:
+                  - kind: CONTENT_COMPONENT
+                    ref: us-ny-excise
+                recommendedBy: 01920a4c-0000-7000-8000-0000000000a2
+                reviewedBy: 01920a4c-0000-7000-8000-0000000000a3
+                handoffRef: ztx-rcr:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01:6b86b273ff34fce1
+                history:
+                  - seq: 1
+                    kind: DRAFTED
+                    status: DRAFT
+                    action: UPDATE_RULE
+                    rationale: The NY excise rate rises from 2.5% to 2.9% on 1 January 2027 (TB-ST-2026-11).
+                    targets:
+                      - kind: CONTENT_COMPONENT
+                        ref: us-ny-excise
+                    recordedAt: 2026-11-02T09:20:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                  - seq: 2
+                    kind: RECOMMENDED
+                    status: RECOMMENDED
+                    reason: Checked against the bulletin.
+                    recordedAt: 2026-11-02T09:30:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                  - seq: 3
+                    kind: ACCEPTED
+                    status: ACCEPTED
+                    reason: Independent review agrees.
+                    handoffRef: ztx-rcr:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01:6b86b273ff34fce1
+                    recordedAt: 2026-11-02T10:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a3
+                createdAt: 2026-11-02T09:20:00.000000Z
+                createdBy: 01920a4c-0000-7000-8000-0000000000a1
     IdempotencyConflict:
       description: |
         The idempotency key was reused with a different request, or its first
@@ -28353,3 +29248,905 @@ components:
           $ref: "#/components/schemas/ExemptionEvidenceStatus"
         reason:
           $ref: "#/components/schemas/EvidenceText"
+    RegulatoryChangeId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RegulatoryChangeId
+      description: A recorded regulatory change. A later rule-approval workflow may reference it.
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+    ImpactAssessmentId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ImpactAssessmentId
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+    ReviewRecommendationId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ReviewRecommendationId
+      description: A review recommendation. This is the id a later rule-approval workflow names.
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+    RegulatoryChangeKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RegulatoryChangeKind
+      description: The class of legal change (Doc 03 §06). A source with several effects is recorded as one change per kind.
+      enum:
+        - NEW_LEVY
+        - RATE_CHANGE
+        - REPEAL_SUNSET
+        - BASE_CHANGE
+        - CLASS_CHANGE
+        - JURISDICTION_CHANGE
+        - BACKDATED_RULE
+        - RIGHTS_WITHDRAWAL
+        - SOURCE_DISPUTE
+    RegulatoryChangeStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RegulatoryChangeStatus
+      description: |
+        `NEW` until triaged; `IN_IMPACT_ASSESSMENT` only by an assessment;
+        `ON_HOLD` with a tracked reason; `CLOSED` and `NO_IMPACT` are final, each
+        with a disposition and rationale (Doc 03 Z03-AT-09).
+      enum:
+        - NEW
+        - TRIAGED
+        - IN_IMPACT_ASSESSMENT
+        - ON_HOLD
+        - CLOSED
+        - NO_IMPACT
+    RegulatoryChangePriority:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RegulatoryChangePriority
+      description: Triage's urgency (Doc 03 §06 monitoring targets).
+      enum:
+        - URGENT
+        - MATERIAL
+        - ORDINARY
+    RegulatoryChangeDisposition:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RegulatoryChangeDisposition
+      description: The decision every change ends with (Doc 03 WF-05).
+      enum:
+        - NOT_APPLICABLE
+        - CHANGE_NEEDED
+        - MONITOR
+    RegulatoryChangeHoldReason:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RegulatoryChangeHoldReason
+      enum:
+        - SOURCE_DISPUTED
+        - COUNSEL_QUESTION
+        - RIGHTS_HOLD
+        - MISSING_FACTS
+        - MONITOR_FAILURE
+    RegulatoryChangeDetector:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RegulatoryChangeDetector
+      description: Human legal intake, or a watcher's alert a person recorded. No watcher is connected to this cell.
+      enum:
+        - HUMAN
+        - MONITOR
+    RegulatoryChangeEventKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RegulatoryChangeEventKind
+      enum:
+        - RECORDED
+        - TRIAGED
+        - ASSESSMENT_STARTED
+        - HELD
+        - RESUMED
+        - CLOSED
+        - NO_IMPACT
+    RegulatoryChangeTitle:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RegulatoryChangeTitle
+      minLength: 1
+      maxLength: 200
+      description: A headline for the change. About law, not about a person.
+      example: New York excise on mobile voice rises
+    RegulatoryChangeSummary:
+      x-ztax-privacy:
+        class: P2
+        purposes:
+          - PURP-LEGAL
+          - PURP-EVID
+        retention: RET-EVIDENCE
+        redaction: REDACT
+        aiAllowed: NONE
+      type: string
+      title: RegulatoryChangeSummary
+      minLength: 1
+      maxLength: 4000
+      description: Free-text summary of the change from the person recording it.
+    RegulatoryChangeSourceText:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RegulatoryChangeSourceText
+      minLength: 1
+      maxLength: 200
+      description: An authority, citation, edition or reference, as published.
+      example: N.Y. Tax Law §186-e
+    RegulatoryChangeSourceUrl:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RegulatoryChangeSourceUrl
+      maxLength: 2048
+      pattern: ^https://
+      description: The source's official https URL.
+      example: https://www.tax.ny.gov/pubs_and_bulls/tg_bulletins/
+    RegulatoryChangeCode:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RegulatoryChangeCode
+      description: A tax type code, as the content packs name them.
+      pattern: ^[A-Z][A-Z0-9_]{1,63}$
+      example: SALES_TAX
+    RegulatoryChangeSource:
+      type: object
+      title: RegulatoryChangeSource
+      description: |
+        The source edition a change is reported from: its identity (authority,
+        citation) and version (edition, the captured document's SHA-256, hashed
+        in the browser — the document is not uploaded or stored).
+      additionalProperties: false
+      required:
+        - authority
+        - citation
+        - edition
+        - documentSha256
+      properties:
+        authority:
+          $ref: "#/components/schemas/RegulatoryChangeSourceText"
+        citation:
+          $ref: "#/components/schemas/RegulatoryChangeSourceText"
+        url:
+          $ref: "#/components/schemas/RegulatoryChangeSourceUrl"
+        edition:
+          $ref: "#/components/schemas/RegulatoryChangeSourceText"
+        documentSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+    RegulatoryChangeEvent:
+      type: object
+      title: RegulatoryChangeEvent
+      additionalProperties: false
+      required:
+        - seq
+        - kind
+        - status
+        - recordedAt
+        - recordedBy
+      properties:
+        seq:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        kind:
+          $ref: "#/components/schemas/RegulatoryChangeEventKind"
+        status:
+          $ref: "#/components/schemas/RegulatoryChangeStatus"
+        priority:
+          $ref: "#/components/schemas/RegulatoryChangePriority"
+        disposition:
+          $ref: "#/components/schemas/RegulatoryChangeDisposition"
+        holdReason:
+          $ref: "#/components/schemas/RegulatoryChangeHoldReason"
+        reason:
+          $ref: "#/components/schemas/EvidenceText"
+        assessmentId:
+          $ref: "#/components/schemas/ImpactAssessmentId"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          $ref: "#/components/schemas/EvidenceActor"
+    RegulatoryChange:
+      type: object
+      title: RegulatoryChange
+      description: |
+        A regulatory change as reported, with its triage and disposition. A
+        reported change is not a confirmed legal effect, and nothing about it
+        changes content or a tax result.
+      additionalProperties: false
+      required:
+        - id
+        - jurisdiction
+        - kind
+        - title
+        - source
+        - publishedOn
+        - effectiveFrom
+        - discoveredAt
+        - detectedBy
+        - serviceFamilies
+        - taxTypes
+        - retroactive
+        - status
+        - version
+        - sourceKey
+        - relatedChangeIds
+        - recommendationCount
+        - acceptedRecommendationCount
+        - history
+        - createdAt
+        - createdBy
+      properties:
+        id:
+          $ref: "#/components/schemas/RegulatoryChangeId"
+        jurisdiction:
+          $ref: "#/components/schemas/EvidenceJurisdiction"
+        kind:
+          $ref: "#/components/schemas/RegulatoryChangeKind"
+        title:
+          $ref: "#/components/schemas/RegulatoryChangeTitle"
+        summary:
+          $ref: "#/components/schemas/RegulatoryChangeSummary"
+        source:
+          $ref: "#/components/schemas/RegulatoryChangeSource"
+        publishedOn:
+          $ref: "#/components/schemas/CivilDate"
+        effectiveFrom:
+          $ref: "#/components/schemas/CivilDate"
+        discoveredAt:
+          $ref: "#/components/schemas/Timestamp"
+        detectedBy:
+          $ref: "#/components/schemas/RegulatoryChangeDetector"
+        monitorRef:
+          $ref: "#/components/schemas/RegulatoryChangeSourceText"
+        serviceFamilies:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceFamily"
+        taxTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/RegulatoryChangeCode"
+        retroactive:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: Effective before it was published.
+        status:
+          $ref: "#/components/schemas/RegulatoryChangeStatus"
+        priority:
+          $ref: "#/components/schemas/RegulatoryChangePriority"
+        disposition:
+          $ref: "#/components/schemas/RegulatoryChangeDisposition"
+        holdReason:
+          $ref: "#/components/schemas/RegulatoryChangeHoldReason"
+        resumesTo:
+          $ref: "#/components/schemas/RegulatoryChangeStatus"
+        version:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+          description: The number of events recorded. An act names it.
+        sourceKey:
+          $ref: "#/components/schemas/Digest"
+        relatedChangeIds:
+          type: array
+          description: The other changes recorded from the same source edition. Empty in a listing.
+          items:
+            $ref: "#/components/schemas/RegulatoryChangeId"
+        currentAssessmentId:
+          $ref: "#/components/schemas/ImpactAssessmentId"
+        currentSeverity:
+          $ref: "#/components/schemas/ImpactSeverity"
+        recommendationCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        acceptedRecommendationCount:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+          description: Recommendations accepted on the current assessment.
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/RegulatoryChangeEvent"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        createdBy:
+          $ref: "#/components/schemas/EvidenceActor"
+    RegulatoryChangeList:
+      type: object
+      title: RegulatoryChangeList
+      additionalProperties: false
+      required:
+        - changes
+      properties:
+        changes:
+          type: array
+          items:
+            $ref: "#/components/schemas/RegulatoryChange"
+    RegulatoryChangeRequest:
+      type: object
+      title: RegulatoryChangeRequest
+      additionalProperties: false
+      required:
+        - jurisdiction
+        - kind
+        - title
+        - source
+        - publishedOn
+        - effectiveFrom
+        - detectedBy
+      properties:
+        jurisdiction:
+          $ref: "#/components/schemas/EvidenceJurisdiction"
+        kind:
+          $ref: "#/components/schemas/RegulatoryChangeKind"
+        title:
+          $ref: "#/components/schemas/RegulatoryChangeTitle"
+        summary:
+          $ref: "#/components/schemas/RegulatoryChangeSummary"
+        source:
+          $ref: "#/components/schemas/RegulatoryChangeSource"
+        publishedOn:
+          $ref: "#/components/schemas/CivilDate"
+        effectiveFrom:
+          $ref: "#/components/schemas/CivilDate"
+        discoveredAt:
+          $ref: "#/components/schemas/Timestamp"
+        detectedBy:
+          $ref: "#/components/schemas/RegulatoryChangeDetector"
+        monitorRef:
+          $ref: "#/components/schemas/RegulatoryChangeSourceText"
+        serviceFamilies:
+          type: array
+          maxItems: 24
+          items:
+            $ref: "#/components/schemas/ServiceFamily"
+        taxTypes:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/RegulatoryChangeCode"
+    RegulatoryChangeTransitionRequest:
+      type: object
+      title: RegulatoryChangeTransitionRequest
+      additionalProperties: false
+      required:
+        - to
+        - reason
+        - expectedVersion
+      properties:
+        to:
+          $ref: "#/components/schemas/RegulatoryChangeStatus"
+        priority:
+          $ref: "#/components/schemas/RegulatoryChangePriority"
+        disposition:
+          $ref: "#/components/schemas/RegulatoryChangeDisposition"
+        holdReason:
+          $ref: "#/components/schemas/RegulatoryChangeHoldReason"
+        reason:
+          $ref: "#/components/schemas/EvidenceText"
+        expectedVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+          description: The `version` that was read. Anything recorded since is `VERSION_CONFLICT`.
+    ImpactSeverity:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ImpactSeverity
+      description: How much an impacted item, or a whole assessment, matters. Advisory triage, never an amount.
+      enum:
+        - LOW
+        - MEDIUM
+        - HIGH
+        - CRITICAL
+    ImpactItemKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ImpactItemKind
+      description: |
+        `CONTENT_COMPONENT` is a component of the active content in scope;
+        `COVERAGE_GAP` is the jurisdiction with none; `TENANT_REGISTRATION` and
+        `TENANT_OBLIGATION` are the tenant's own records in scope.
+      enum:
+        - CONTENT_COMPONENT
+        - COVERAGE_GAP
+        - TENANT_REGISTRATION
+        - TENANT_OBLIGATION
+    ImpactText:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ImpactText
+      minLength: 1
+      maxLength: 2000
+      description: A reference, label or basis the assessment generated from content and record identifiers.
+    ImpactItem:
+      type: object
+      title: ImpactItem
+      additionalProperties: false
+      required:
+        - kind
+        - ref
+        - label
+        - jurisdiction
+        - severity
+        - basis
+        - retrospective
+      properties:
+        kind:
+          $ref: "#/components/schemas/ImpactItemKind"
+        ref:
+          $ref: "#/components/schemas/ImpactText"
+        label:
+          $ref: "#/components/schemas/ImpactText"
+        jurisdiction:
+          $ref: "#/components/schemas/ImpactText"
+        severity:
+          $ref: "#/components/schemas/ImpactSeverity"
+        basis:
+          $ref: "#/components/schemas/ImpactText"
+        retrospective:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: An obligation period a backdated change reaches back into.
+    ImpactAssessment:
+      type: object
+      title: ImpactAssessment
+      description: |
+        A deterministic impact assessment: the same inputs give the same
+        `inputsDigest` and `assessmentDigest`. Advisory; it writes nothing.
+      additionalProperties: false
+      required:
+        - id
+        - changeId
+        - bundleId
+        - bundleDigest
+        - asOf
+        - severity
+        - retroactive
+        - current
+        - items
+        - inputsDigest
+        - assessmentDigest
+        - componentsRead
+        - registrationsRead
+        - obligationsRead
+        - createdAt
+        - createdBy
+      properties:
+        id:
+          $ref: "#/components/schemas/ImpactAssessmentId"
+        changeId:
+          $ref: "#/components/schemas/RegulatoryChangeId"
+        bundleId:
+          $ref: "#/components/schemas/ImpactText"
+        bundleDigest:
+          $ref: "#/components/schemas/ImpactText"
+        asOf:
+          $ref: "#/components/schemas/CivilDate"
+        severity:
+          $ref: "#/components/schemas/ImpactSeverity"
+        retroactive:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+        current:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: This is the change's newest assessment.
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImpactItem"
+        inputsDigest:
+          $ref: "#/components/schemas/Digest"
+        assessmentDigest:
+          $ref: "#/components/schemas/Digest"
+        componentsRead:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        registrationsRead:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        obligationsRead:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        createdBy:
+          $ref: "#/components/schemas/EvidenceActor"
+    ImpactAssessmentList:
+      type: object
+      title: ImpactAssessmentList
+      additionalProperties: false
+      required:
+        - assessments
+      properties:
+        assessments:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImpactAssessment"
+    ReviewRecommendationStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ReviewRecommendationStatus
+      description: |
+        `ACCEPTED` is an independent reviewer's acceptance and yields a
+        hand-off reference only; it is not a rule approval or a release.
+      enum:
+        - DRAFT
+        - RECOMMENDED
+        - CHANGES_REQUESTED
+        - ACCEPTED
+        - REJECTED
+        - WITHDRAWN
+    ReviewRecommendationOrigin:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ReviewRecommendationOrigin
+      enum:
+        - HUMAN
+        - AI_ASSISTED
+    ReviewRecommendationAction:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ReviewRecommendationAction
+      enum:
+        - UPDATE_RULE
+        - ADD_RULE
+        - RETIRE_RULE
+        - NOTIFY_CUSTOMERS
+        - RETROSPECTIVE_REASSESSMENT
+        - MONITOR
+        - NO_ACTION
+    ReviewRecommendationEventKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ReviewRecommendationEventKind
+      enum:
+        - DRAFTED
+        - REVISED
+        - RECOMMENDED
+        - CHANGES_REQUESTED
+        - ACCEPTED
+        - REJECTED
+        - WITHDRAWN
+    ReviewDecision:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: ReviewDecision
+      enum:
+        - ACCEPT
+        - REJECT
+        - REQUEST_CHANGES
+    RecommendationAuthorityOutcome:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RecommendationAuthorityOutcome
+      description: The AI authority outcome of the draft. Only A1 (propose) is accepted (ZTAX-AIGOV-001 §4).
+      enum:
+        - A1
+    HandoffRef:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: HandoffRef
+      minLength: 1
+      maxLength: 200
+      description: The opaque reference an accepted recommendation hands a later workflow.
+      example: ztx-rcr:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01:6b86b273ff34fce1
+    RecommendationAiDraft:
+      x-ztax-privacy:
+        class: P2
+        purposes:
+          - PURP-LEGAL
+          - PURP-EVID
+        retention: RET-EVIDENCE
+        redaction: REDACT
+        aiAllowed: NONE
+      type: string
+      title: RecommendationAiDraft
+      minLength: 1
+      maxLength: 4000
+      description: The model's original text, kept unchanged as evidence.
+    RecommendationTarget:
+      type: object
+      title: RecommendationTarget
+      additionalProperties: false
+      required:
+        - kind
+        - ref
+      properties:
+        kind:
+          $ref: "#/components/schemas/ImpactItemKind"
+        ref:
+          $ref: "#/components/schemas/ImpactText"
+    RecommendationAiProvenance:
+      type: object
+      title: RecommendationAiProvenance
+      description: What ZTAX-AIGOV-001 §14 requires recorded of an AI-assisted draft.
+      additionalProperties: false
+      required:
+        - useCase
+        - modelProfile
+        - providerProfile
+        - promptProfile
+        - aiTrainVersion
+        - authorityOutcome
+        - draft
+      properties:
+        useCase:
+          $ref: "#/components/schemas/RegulatoryChangeSourceText"
+        modelProfile:
+          $ref: "#/components/schemas/RegulatoryChangeSourceText"
+        providerProfile:
+          $ref: "#/components/schemas/RegulatoryChangeSourceText"
+        promptProfile:
+          $ref: "#/components/schemas/RegulatoryChangeSourceText"
+        aiTrainVersion:
+          $ref: "#/components/schemas/RegulatoryChangeSourceText"
+        authorityOutcome:
+          $ref: "#/components/schemas/RecommendationAuthorityOutcome"
+        invocationId:
+          $ref: "#/components/schemas/RegulatoryChangeSourceText"
+        draft:
+          $ref: "#/components/schemas/RecommendationAiDraft"
+    ReviewRecommendationEvent:
+      type: object
+      title: ReviewRecommendationEvent
+      additionalProperties: false
+      required:
+        - seq
+        - kind
+        - status
+        - recordedAt
+        - recordedBy
+      properties:
+        seq:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        kind:
+          $ref: "#/components/schemas/ReviewRecommendationEventKind"
+        status:
+          $ref: "#/components/schemas/ReviewRecommendationStatus"
+        action:
+          $ref: "#/components/schemas/ReviewRecommendationAction"
+        rationale:
+          $ref: "#/components/schemas/EvidenceText"
+        targets:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecommendationTarget"
+        reason:
+          $ref: "#/components/schemas/EvidenceText"
+        handoffRef:
+          $ref: "#/components/schemas/HandoffRef"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          $ref: "#/components/schemas/EvidenceActor"
+    ReviewRecommendation:
+      type: object
+      title: ReviewRecommendation
+      description: |
+        A recommendation derived from one assessment, bound to its digest.
+        Advisory: acceptance yields `handoffRef` and publishes or changes
+        nothing.
+      additionalProperties: false
+      required:
+        - id
+        - changeId
+        - assessmentId
+        - assessmentDigest
+        - stale
+        - origin
+        - status
+        - version
+        - action
+        - rationale
+        - targets
+        - history
+        - createdAt
+        - createdBy
+      properties:
+        id:
+          $ref: "#/components/schemas/ReviewRecommendationId"
+        changeId:
+          $ref: "#/components/schemas/RegulatoryChangeId"
+        assessmentId:
+          $ref: "#/components/schemas/ImpactAssessmentId"
+        assessmentDigest:
+          $ref: "#/components/schemas/Digest"
+        currentAssessmentId:
+          $ref: "#/components/schemas/ImpactAssessmentId"
+        stale:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: Open, and the change has been reassessed since.
+        origin:
+          $ref: "#/components/schemas/ReviewRecommendationOrigin"
+        ai:
+          $ref: "#/components/schemas/RecommendationAiProvenance"
+        status:
+          $ref: "#/components/schemas/ReviewRecommendationStatus"
+        version:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        action:
+          $ref: "#/components/schemas/ReviewRecommendationAction"
+        rationale:
+          $ref: "#/components/schemas/EvidenceText"
+        targets:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecommendationTarget"
+        recommendedBy:
+          $ref: "#/components/schemas/EvidenceActor"
+        reviewedBy:
+          $ref: "#/components/schemas/EvidenceActor"
+        handoffRef:
+          $ref: "#/components/schemas/HandoffRef"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewRecommendationEvent"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        createdBy:
+          $ref: "#/components/schemas/EvidenceActor"
+    ReviewRecommendationList:
+      type: object
+      title: ReviewRecommendationList
+      additionalProperties: false
+      required:
+        - recommendations
+      properties:
+        recommendations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewRecommendation"
+    ReviewRecommendationRequest:
+      type: object
+      title: ReviewRecommendationRequest
+      additionalProperties: false
+      required:
+        - assessmentId
+        - origin
+        - action
+        - rationale
+        - targets
+      properties:
+        assessmentId:
+          $ref: "#/components/schemas/ImpactAssessmentId"
+        origin:
+          $ref: "#/components/schemas/ReviewRecommendationOrigin"
+        action:
+          $ref: "#/components/schemas/ReviewRecommendationAction"
+        rationale:
+          $ref: "#/components/schemas/EvidenceText"
+        targets:
+          type: array
+          maxItems: 200
+          items:
+            $ref: "#/components/schemas/RecommendationTarget"
+        ai:
+          $ref: "#/components/schemas/RecommendationAiProvenance"
+    ReviewRecommendationRevisionRequest:
+      type: object
+      title: ReviewRecommendationRevisionRequest
+      additionalProperties: false
+      required:
+        - action
+        - rationale
+        - targets
+        - expectedVersion
+      properties:
+        action:
+          $ref: "#/components/schemas/ReviewRecommendationAction"
+        rationale:
+          $ref: "#/components/schemas/EvidenceText"
+        targets:
+          type: array
+          maxItems: 200
+          items:
+            $ref: "#/components/schemas/RecommendationTarget"
+        expectedVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+    ReviewRecommendationActRequest:
+      type: object
+      title: ReviewRecommendationActRequest
+      additionalProperties: false
+      required:
+        - reason
+        - expectedVersion
+      properties:
+        reason:
+          $ref: "#/components/schemas/EvidenceText"
+        expectedVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+    ReviewRecommendationReviewRequest:
+      type: object
+      title: ReviewRecommendationReviewRequest
+      additionalProperties: false
+      required:
+        - decision
+        - reason
+        - expectedVersion
+      properties:
+        decision:
+          $ref: "#/components/schemas/ReviewDecision"
+        reason:
+          $ref: "#/components/schemas/EvidenceText"
+        expectedVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1

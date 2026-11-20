@@ -4425,6 +4425,361 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/regulatory-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The regulatory change feed
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Recorded regulatory changes, newest first, in any status: a change that
+         *     was closed or found not to apply stays listed with its disposition and
+         *     rationale (Doc 03 Z03-AT-09). A listing carries no related changes or
+         *     assessment summary; the detail read does.
+         */
+        get: operations["listRegulatoryChanges"];
+        put?: never;
+        /**
+         * Record a regulatory change from a source edition
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records a reported change as `NEW`: the authority, jurisdiction,
+         *     citation, edition and the SHA-256 of the captured source document
+         *     (hashed in the browser; nothing is uploaded), its kind (Doc 03 §06), and
+         *     three separate clocks — published, effective and discovered — never
+         *     assumed equal (Z03-AT-10). A `MONITOR` change names the watcher alert it
+         *     was recorded from; no watcher is connected to this cell, so a person
+         *     records it. A `BACKDATED_RULE` takes effect before it was published. A
+         *     missing source digest or effective date is `400` before anything is
+         *     recorded.
+         *
+         *     A change is one legal effect of one source edition. A source with two
+         *     effects is recorded as two changes of different kinds, linked by
+         *     `sourceKey`. The same source edition's change of the same kind reported
+         *     again returns the change already recorded with `200`; with different
+         *     particulars it is `409 CHANGE_DEDUPE_CONFLICT`.
+         *
+         *     **Idempotent on the `Idempotency-Key`**: the same key and request return
+         *     the change with `200`; the same key with a different request is
+         *     `409 IDEMPOTENCY_KEY_REUSE`.
+         */
+        post: operations["recordRegulatoryChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/regulatory-changes/{changeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One regulatory change with its history
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The change with every triage, hold and disposition, the other changes
+         *     recorded from the same source edition, its current assessment's
+         *     severity and how many recommendations on that assessment were
+         *     accepted.
+         */
+        get: operations["getRegulatoryChange"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/regulatory-changes/{changeId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Triage, hold, resume or decide a regulatory change
+         * @description `ANALYST`, signed in as themselves. Every act gives its rationale and
+         *     names the `version` read; anything recorded since is
+         *     `409 VERSION_CONFLICT`.
+         *
+         *     `TRIAGED` from `NEW`, with a `priority`. `ON_HOLD` from any open status,
+         *     with a `holdReason`; a held change resumes to the status it was held
+         *     from before anything else is decided. `NO_IMPACT` (disposition
+         *     `NOT_APPLICABLE`) from `NEW`, `TRIAGED` or `IN_IMPACT_ASSESSMENT`.
+         *     `CLOSED` from `IN_IMPACT_ASSESSMENT` with disposition `MONITOR`, or
+         *     `CHANGE_NEEDED` once a recommendation on the current assessment has been
+         *     independently accepted. `IN_IMPACT_ASSESSMENT` is never named: running
+         *     an assessment makes it.
+         *
+         *     Closing a change publishes, approves and changes nothing: a change that
+         *     needs a rule change is handed off by its accepted recommendation.
+         */
+        post: operations["transitionRegulatoryChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/regulatory-changes/{changeId}/assessments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run the deterministic impact assessment of a triaged change
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     Assesses the change against the active content bundle's coverage at the
+         *     change's effective date and the tenant's own registrations and
+         *     obligations: every content component in scope, or the coverage gap when
+         *     none is; every open registration in the jurisdiction; every open
+         *     obligation whose period ends on or after the effective date, marked
+         *     retrospective where a backdated change reaches into it. Each item has a
+         *     severity and its exact basis. The `inputsDigest` covers everything read
+         *     and the `assessmentDigest` what was found, so the same inputs give the
+         *     same assessment: assessing again on unchanged inputs records nothing and
+         *     returns the current assessment with `200`. On changed inputs a new
+         *     current assessment is recorded with `201`, and recommendations on the
+         *     old one can no longer be recommended or reviewed.
+         *
+         *     The first assessment moves a `TRIAGED` change to `IN_IMPACT_ASSESSMENT`.
+         *     An assessment is a read: it writes no tax decision, ledger posting or
+         *     filing (Z03-AT-17). A cell with no active content is
+         *     `503 NO_CONTENT_BUNDLE`.
+         */
+        post: operations["assessRegulatoryChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/impact-assessments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tax impact assessments
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Assessments newest first — of one change, or the tenant's — each saying
+         *     whether it is its change's current assessment.
+         */
+        get: operations["listImpactAssessments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/impact-assessments/{assessmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One impact assessment with its items and basis
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The assessment, verified against its digest before it is returned: a
+         *     stored assessment whose items no longer match its digest is
+         *     `500 EVIDENCE_INTEGRITY` and is not shown.
+         */
+        get: operations["getImpactAssessment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/review-recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Review recommendations
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Recommendations newest first, each with its change's current assessment
+         *     so a recommendation overtaken by a reassessment shows `stale`.
+         */
+        get: operations["listReviewRecommendations"];
+        put?: never;
+        /**
+         * Draft a review recommendation on a change's current assessment
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     Drafts a recommendation — `UPDATE_RULE`, `ADD_RULE`, `RETIRE_RULE`,
+         *     `NOTIFY_CUSTOMERS`, `RETROSPECTIVE_REASSESSMENT`, `MONITOR` or
+         *     `NO_ACTION` — with its rationale and the assessed items it is about,
+         *     bound to the assessment's digest. The change is `IN_IMPACT_ASSESSMENT`
+         *     and the assessment is its current one, else
+         *     `409 ASSESSMENT_SUPERSEDED`. Targets are items the assessment found, of
+         *     the kind the action needs.
+         *
+         *     `AI_ASSISTED` records the model's provenance — use case, model, provider
+         *     and prompt profiles, AI release train, the invocation and the model's
+         *     original text, kept unchanged as evidence — at authority `A1` (propose)
+         *     only (ZTAX-AIGOV-001 §4, §14). The rationale is the person's own. AI
+         *     never counts as the recommender or the reviewer.
+         *
+         *     **Idempotent on the `Idempotency-Key`**.
+         */
+        post: operations["draftReviewRecommendation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/review-recommendations/{recommendationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One review recommendation with its history
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The recommendation with every version of its text, its recommendation,
+         *     its independent review and, once accepted, its `handoffRef`.
+         */
+        get: operations["getReviewRecommendation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/review-recommendations/{recommendationId}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revise a draft or a recommendation returned for changes
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     Replaces what a `DRAFT` or `CHANGES_REQUESTED` recommendation says. The
+         *     earlier text stays in the history, and the reviser may not review it.
+         */
+        post: operations["reviseReviewRecommendation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/review-recommendations/{recommendationId}/recommend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recommend a draft for independent review
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     A specialist's recommendation of a `DRAFT`, with the reason, on the
+         *     change's current assessment (`409 ASSESSMENT_SUPERSEDED` otherwise). It
+         *     then awaits an independent review.
+         */
+        post: operations["recommendReviewRecommendation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/review-recommendations/{recommendationId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Independently review a recommended recommendation
+         * @description `ANALYST`, signed in as themselves, and neither the recommender nor
+         *     anyone who wrote a version of it (`403 MAKER_CHECKER`).
+         *
+         *     `ACCEPT`, `REJECT` or `REQUEST_CHANGES` a `RECOMMENDED` recommendation,
+         *     with the reason, on its exact version and the change's current
+         *     assessment. `ACCEPT` records an opaque `handoffRef` a later rule-approval
+         *     workflow can name. Acceptance publishes no release pack and changes no
+         *     rule, content or tax result (Sidebar WF-02).
+         */
+        post: operations["reviewReviewRecommendation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/review-recommendations/{recommendationId}/withdrawal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw an open recommendation
+         * @description `ANALYST`, signed in as themselves. Withdraws a recommendation that is
+         *     not accepted, rejected or already withdrawn, with the reason — for
+         *     example one overtaken by a reassessment.
+         */
+        post: operations["withdrawReviewRecommendation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -10323,8 +10678,434 @@ export interface components {
             to: components["schemas"]["ExemptionEvidenceStatus"];
             reason?: components["schemas"]["EvidenceText"];
         };
+        /**
+         * RegulatoryChangeId
+         * Format: uuid
+         * @description A recorded regulatory change. A later rule-approval workflow may reference it.
+         * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        RegulatoryChangeId: string;
+        /**
+         * ImpactAssessmentId
+         * Format: uuid
+         * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ImpactAssessmentId: string;
+        /**
+         * ReviewRecommendationId
+         * Format: uuid
+         * @description A review recommendation. This is the id a later rule-approval workflow names.
+         * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ReviewRecommendationId: string;
+        /**
+         * RegulatoryChangeKind
+         * @description The class of legal change (Doc 03 §06). A source with several effects is recorded as one change per kind.
+         * @enum {string}
+         */
+        RegulatoryChangeKind: "NEW_LEVY" | "RATE_CHANGE" | "REPEAL_SUNSET" | "BASE_CHANGE" | "CLASS_CHANGE" | "JURISDICTION_CHANGE" | "BACKDATED_RULE" | "RIGHTS_WITHDRAWAL" | "SOURCE_DISPUTE";
+        /**
+         * RegulatoryChangeStatus
+         * @description `NEW` until triaged; `IN_IMPACT_ASSESSMENT` only by an assessment;
+         *     `ON_HOLD` with a tracked reason; `CLOSED` and `NO_IMPACT` are final, each
+         *     with a disposition and rationale (Doc 03 Z03-AT-09).
+         * @enum {string}
+         */
+        RegulatoryChangeStatus: "NEW" | "TRIAGED" | "IN_IMPACT_ASSESSMENT" | "ON_HOLD" | "CLOSED" | "NO_IMPACT";
+        /**
+         * RegulatoryChangePriority
+         * @description Triage's urgency (Doc 03 §06 monitoring targets).
+         * @enum {string}
+         */
+        RegulatoryChangePriority: "URGENT" | "MATERIAL" | "ORDINARY";
+        /**
+         * RegulatoryChangeDisposition
+         * @description The decision every change ends with (Doc 03 WF-05).
+         * @enum {string}
+         */
+        RegulatoryChangeDisposition: "NOT_APPLICABLE" | "CHANGE_NEEDED" | "MONITOR";
+        /**
+         * RegulatoryChangeHoldReason
+         * @enum {string}
+         */
+        RegulatoryChangeHoldReason: "SOURCE_DISPUTED" | "COUNSEL_QUESTION" | "RIGHTS_HOLD" | "MISSING_FACTS" | "MONITOR_FAILURE";
+        /**
+         * RegulatoryChangeDetector
+         * @description Human legal intake, or a watcher's alert a person recorded. No watcher is connected to this cell.
+         * @enum {string}
+         */
+        RegulatoryChangeDetector: "HUMAN" | "MONITOR";
+        /**
+         * RegulatoryChangeEventKind
+         * @enum {string}
+         */
+        RegulatoryChangeEventKind: "RECORDED" | "TRIAGED" | "ASSESSMENT_STARTED" | "HELD" | "RESUMED" | "CLOSED" | "NO_IMPACT";
+        /**
+         * RegulatoryChangeTitle
+         * @description A headline for the change. About law, not about a person.
+         * @example New York excise on mobile voice rises
+         */
+        RegulatoryChangeTitle: string;
+        /**
+         * RegulatoryChangeSummary
+         * @description Free-text summary of the change from the person recording it.
+         */
+        RegulatoryChangeSummary: string;
+        /**
+         * RegulatoryChangeSourceText
+         * @description An authority, citation, edition or reference, as published.
+         * @example N.Y. Tax Law §186-e
+         */
+        RegulatoryChangeSourceText: string;
+        /**
+         * RegulatoryChangeSourceUrl
+         * @description The source's official https URL.
+         * @example https://www.tax.ny.gov/pubs_and_bulls/tg_bulletins/
+         */
+        RegulatoryChangeSourceUrl: string;
+        /**
+         * RegulatoryChangeCode
+         * @description A tax type code, as the content packs name them.
+         * @example SALES_TAX
+         */
+        RegulatoryChangeCode: string;
+        /**
+         * RegulatoryChangeSource
+         * @description The source edition a change is reported from: its identity (authority,
+         *     citation) and version (edition, the captured document's SHA-256, hashed
+         *     in the browser — the document is not uploaded or stored).
+         */
+        RegulatoryChangeSource: {
+            authority: components["schemas"]["RegulatoryChangeSourceText"];
+            citation: components["schemas"]["RegulatoryChangeSourceText"];
+            url?: components["schemas"]["RegulatoryChangeSourceUrl"];
+            edition: components["schemas"]["RegulatoryChangeSourceText"];
+            documentSha256: components["schemas"]["Sha256Hex"];
+        };
+        /** RegulatoryChangeEvent */
+        RegulatoryChangeEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["RegulatoryChangeEventKind"];
+            status: components["schemas"]["RegulatoryChangeStatus"];
+            priority?: components["schemas"]["RegulatoryChangePriority"];
+            disposition?: components["schemas"]["RegulatoryChangeDisposition"];
+            holdReason?: components["schemas"]["RegulatoryChangeHoldReason"];
+            reason?: components["schemas"]["EvidenceText"];
+            assessmentId?: components["schemas"]["ImpactAssessmentId"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * RegulatoryChange
+         * @description A regulatory change as reported, with its triage and disposition. A
+         *     reported change is not a confirmed legal effect, and nothing about it
+         *     changes content or a tax result.
+         */
+        RegulatoryChange: {
+            id: components["schemas"]["RegulatoryChangeId"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            kind: components["schemas"]["RegulatoryChangeKind"];
+            title: components["schemas"]["RegulatoryChangeTitle"];
+            summary?: components["schemas"]["RegulatoryChangeSummary"];
+            source: components["schemas"]["RegulatoryChangeSource"];
+            publishedOn: components["schemas"]["CivilDate"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            discoveredAt: components["schemas"]["Timestamp"];
+            detectedBy: components["schemas"]["RegulatoryChangeDetector"];
+            monitorRef?: components["schemas"]["RegulatoryChangeSourceText"];
+            serviceFamilies: components["schemas"]["ServiceFamily"][];
+            taxTypes: components["schemas"]["RegulatoryChangeCode"][];
+            /** @description Effective before it was published. */
+            retroactive: boolean;
+            status: components["schemas"]["RegulatoryChangeStatus"];
+            priority?: components["schemas"]["RegulatoryChangePriority"];
+            disposition?: components["schemas"]["RegulatoryChangeDisposition"];
+            holdReason?: components["schemas"]["RegulatoryChangeHoldReason"];
+            resumesTo?: components["schemas"]["RegulatoryChangeStatus"];
+            /**
+             * Format: int32
+             * @description The number of events recorded. An act names it.
+             */
+            version: number;
+            sourceKey: components["schemas"]["Digest"];
+            /** @description The other changes recorded from the same source edition. Empty in a listing. */
+            relatedChangeIds: components["schemas"]["RegulatoryChangeId"][];
+            currentAssessmentId?: components["schemas"]["ImpactAssessmentId"];
+            currentSeverity?: components["schemas"]["ImpactSeverity"];
+            /** Format: int32 */
+            recommendationCount: number;
+            /**
+             * Format: int32
+             * @description Recommendations accepted on the current assessment.
+             */
+            acceptedRecommendationCount: number;
+            history: components["schemas"]["RegulatoryChangeEvent"][];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /** RegulatoryChangeList */
+        RegulatoryChangeList: {
+            changes: components["schemas"]["RegulatoryChange"][];
+        };
+        /** RegulatoryChangeRequest */
+        RegulatoryChangeRequest: {
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            kind: components["schemas"]["RegulatoryChangeKind"];
+            title: components["schemas"]["RegulatoryChangeTitle"];
+            summary?: components["schemas"]["RegulatoryChangeSummary"];
+            source: components["schemas"]["RegulatoryChangeSource"];
+            publishedOn: components["schemas"]["CivilDate"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            discoveredAt?: components["schemas"]["Timestamp"];
+            detectedBy: components["schemas"]["RegulatoryChangeDetector"];
+            monitorRef?: components["schemas"]["RegulatoryChangeSourceText"];
+            serviceFamilies?: components["schemas"]["ServiceFamily"][];
+            taxTypes?: components["schemas"]["RegulatoryChangeCode"][];
+        };
+        /** RegulatoryChangeTransitionRequest */
+        RegulatoryChangeTransitionRequest: {
+            to: components["schemas"]["RegulatoryChangeStatus"];
+            priority?: components["schemas"]["RegulatoryChangePriority"];
+            disposition?: components["schemas"]["RegulatoryChangeDisposition"];
+            holdReason?: components["schemas"]["RegulatoryChangeHoldReason"];
+            reason: components["schemas"]["EvidenceText"];
+            /**
+             * Format: int32
+             * @description The `version` that was read. Anything recorded since is `VERSION_CONFLICT`.
+             */
+            expectedVersion: number;
+        };
+        /**
+         * ImpactSeverity
+         * @description How much an impacted item, or a whole assessment, matters. Advisory triage, never an amount.
+         * @enum {string}
+         */
+        ImpactSeverity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+        /**
+         * ImpactItemKind
+         * @description `CONTENT_COMPONENT` is a component of the active content in scope;
+         *     `COVERAGE_GAP` is the jurisdiction with none; `TENANT_REGISTRATION` and
+         *     `TENANT_OBLIGATION` are the tenant's own records in scope.
+         * @enum {string}
+         */
+        ImpactItemKind: "CONTENT_COMPONENT" | "COVERAGE_GAP" | "TENANT_REGISTRATION" | "TENANT_OBLIGATION";
+        /**
+         * ImpactText
+         * @description A reference, label or basis the assessment generated from content and record identifiers.
+         */
+        ImpactText: string;
+        /** ImpactItem */
+        ImpactItem: {
+            kind: components["schemas"]["ImpactItemKind"];
+            ref: components["schemas"]["ImpactText"];
+            label: components["schemas"]["ImpactText"];
+            jurisdiction: components["schemas"]["ImpactText"];
+            severity: components["schemas"]["ImpactSeverity"];
+            basis: components["schemas"]["ImpactText"];
+            /** @description An obligation period a backdated change reaches back into. */
+            retrospective: boolean;
+        };
+        /**
+         * ImpactAssessment
+         * @description A deterministic impact assessment: the same inputs give the same
+         *     `inputsDigest` and `assessmentDigest`. Advisory; it writes nothing.
+         */
+        ImpactAssessment: {
+            id: components["schemas"]["ImpactAssessmentId"];
+            changeId: components["schemas"]["RegulatoryChangeId"];
+            bundleId: components["schemas"]["ImpactText"];
+            bundleDigest: components["schemas"]["ImpactText"];
+            asOf: components["schemas"]["CivilDate"];
+            severity: components["schemas"]["ImpactSeverity"];
+            retroactive: boolean;
+            /** @description This is the change's newest assessment. */
+            current: boolean;
+            items: components["schemas"]["ImpactItem"][];
+            inputsDigest: components["schemas"]["Digest"];
+            assessmentDigest: components["schemas"]["Digest"];
+            /** Format: int32 */
+            componentsRead: number;
+            /** Format: int32 */
+            registrationsRead: number;
+            /** Format: int32 */
+            obligationsRead: number;
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /** ImpactAssessmentList */
+        ImpactAssessmentList: {
+            assessments: components["schemas"]["ImpactAssessment"][];
+        };
+        /**
+         * ReviewRecommendationStatus
+         * @description `ACCEPTED` is an independent reviewer's acceptance and yields a
+         *     hand-off reference only; it is not a rule approval or a release.
+         * @enum {string}
+         */
+        ReviewRecommendationStatus: "DRAFT" | "RECOMMENDED" | "CHANGES_REQUESTED" | "ACCEPTED" | "REJECTED" | "WITHDRAWN";
+        /**
+         * ReviewRecommendationOrigin
+         * @enum {string}
+         */
+        ReviewRecommendationOrigin: "HUMAN" | "AI_ASSISTED";
+        /**
+         * ReviewRecommendationAction
+         * @enum {string}
+         */
+        ReviewRecommendationAction: "UPDATE_RULE" | "ADD_RULE" | "RETIRE_RULE" | "NOTIFY_CUSTOMERS" | "RETROSPECTIVE_REASSESSMENT" | "MONITOR" | "NO_ACTION";
+        /**
+         * ReviewRecommendationEventKind
+         * @enum {string}
+         */
+        ReviewRecommendationEventKind: "DRAFTED" | "REVISED" | "RECOMMENDED" | "CHANGES_REQUESTED" | "ACCEPTED" | "REJECTED" | "WITHDRAWN";
+        /**
+         * ReviewDecision
+         * @enum {string}
+         */
+        ReviewDecision: "ACCEPT" | "REJECT" | "REQUEST_CHANGES";
+        /**
+         * RecommendationAuthorityOutcome
+         * @description The AI authority outcome of the draft. Only A1 (propose) is accepted (ZTAX-AIGOV-001 §4).
+         * @enum {string}
+         */
+        RecommendationAuthorityOutcome: "A1";
+        /**
+         * HandoffRef
+         * @description The opaque reference an accepted recommendation hands a later workflow.
+         * @example ztx-rcr:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01:6b86b273ff34fce1
+         */
+        HandoffRef: string;
+        /**
+         * RecommendationAiDraft
+         * @description The model's original text, kept unchanged as evidence.
+         */
+        RecommendationAiDraft: string;
+        /** RecommendationTarget */
+        RecommendationTarget: {
+            kind: components["schemas"]["ImpactItemKind"];
+            ref: components["schemas"]["ImpactText"];
+        };
+        /**
+         * RecommendationAiProvenance
+         * @description What ZTAX-AIGOV-001 §14 requires recorded of an AI-assisted draft.
+         */
+        RecommendationAiProvenance: {
+            useCase: components["schemas"]["RegulatoryChangeSourceText"];
+            modelProfile: components["schemas"]["RegulatoryChangeSourceText"];
+            providerProfile: components["schemas"]["RegulatoryChangeSourceText"];
+            promptProfile: components["schemas"]["RegulatoryChangeSourceText"];
+            aiTrainVersion: components["schemas"]["RegulatoryChangeSourceText"];
+            authorityOutcome: components["schemas"]["RecommendationAuthorityOutcome"];
+            invocationId?: components["schemas"]["RegulatoryChangeSourceText"];
+            draft: components["schemas"]["RecommendationAiDraft"];
+        };
+        /** ReviewRecommendationEvent */
+        ReviewRecommendationEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["ReviewRecommendationEventKind"];
+            status: components["schemas"]["ReviewRecommendationStatus"];
+            action?: components["schemas"]["ReviewRecommendationAction"];
+            rationale?: components["schemas"]["EvidenceText"];
+            targets?: components["schemas"]["RecommendationTarget"][];
+            reason?: components["schemas"]["EvidenceText"];
+            handoffRef?: components["schemas"]["HandoffRef"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * ReviewRecommendation
+         * @description A recommendation derived from one assessment, bound to its digest.
+         *     Advisory: acceptance yields `handoffRef` and publishes or changes
+         *     nothing.
+         */
+        ReviewRecommendation: {
+            id: components["schemas"]["ReviewRecommendationId"];
+            changeId: components["schemas"]["RegulatoryChangeId"];
+            assessmentId: components["schemas"]["ImpactAssessmentId"];
+            assessmentDigest: components["schemas"]["Digest"];
+            currentAssessmentId?: components["schemas"]["ImpactAssessmentId"];
+            /** @description Open, and the change has been reassessed since. */
+            stale: boolean;
+            origin: components["schemas"]["ReviewRecommendationOrigin"];
+            ai?: components["schemas"]["RecommendationAiProvenance"];
+            status: components["schemas"]["ReviewRecommendationStatus"];
+            /** Format: int32 */
+            version: number;
+            action: components["schemas"]["ReviewRecommendationAction"];
+            rationale: components["schemas"]["EvidenceText"];
+            targets: components["schemas"]["RecommendationTarget"][];
+            recommendedBy?: components["schemas"]["EvidenceActor"];
+            reviewedBy?: components["schemas"]["EvidenceActor"];
+            handoffRef?: components["schemas"]["HandoffRef"];
+            history: components["schemas"]["ReviewRecommendationEvent"][];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /** ReviewRecommendationList */
+        ReviewRecommendationList: {
+            recommendations: components["schemas"]["ReviewRecommendation"][];
+        };
+        /** ReviewRecommendationRequest */
+        ReviewRecommendationRequest: {
+            assessmentId: components["schemas"]["ImpactAssessmentId"];
+            origin: components["schemas"]["ReviewRecommendationOrigin"];
+            action: components["schemas"]["ReviewRecommendationAction"];
+            rationale: components["schemas"]["EvidenceText"];
+            targets: components["schemas"]["RecommendationTarget"][];
+            ai?: components["schemas"]["RecommendationAiProvenance"];
+        };
+        /** ReviewRecommendationRevisionRequest */
+        ReviewRecommendationRevisionRequest: {
+            action: components["schemas"]["ReviewRecommendationAction"];
+            rationale: components["schemas"]["EvidenceText"];
+            targets: components["schemas"]["RecommendationTarget"][];
+            /** Format: int32 */
+            expectedVersion: number;
+        };
+        /** ReviewRecommendationActRequest */
+        ReviewRecommendationActRequest: {
+            reason: components["schemas"]["EvidenceText"];
+            /** Format: int32 */
+            expectedVersion: number;
+        };
+        /** ReviewRecommendationReviewRequest */
+        ReviewRecommendationReviewRequest: {
+            decision: components["schemas"]["ReviewDecision"];
+            reason: components["schemas"]["EvidenceText"];
+            /** Format: int32 */
+            expectedVersion: number;
+        };
     };
     responses: {
+        /** @description The regulatory change as it stands now. */
+        RegulatoryChangeResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["RegulatoryChange"];
+            };
+        };
+        /** @description The impact assessment. */
+        ImpactAssessmentResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ImpactAssessment"];
+            };
+        };
+        /** @description The review recommendation as it stands now. */
+        ReviewRecommendationResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ReviewRecommendation"];
+            };
+        };
         /**
          * @description The idempotency key was reused with a different request, or its first
          *     request is still running. In both cases **the request was not
@@ -10477,6 +11258,21 @@ export interface components {
         };
     };
     parameters: {
+        /**
+         * @description The regulatory change identifier.
+         * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        RegulatoryChangeId: components["schemas"]["RegulatoryChangeId"];
+        /**
+         * @description The impact assessment identifier.
+         * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ImpactAssessmentId: components["schemas"]["ImpactAssessmentId"];
+        /**
+         * @description The review recommendation identifier.
+         * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ReviewRecommendationId: components["schemas"]["ReviewRecommendationId"];
         /**
          * @description A key the client mints before the first attempt and reuses, unchanged,
          *     on every retry of the same request (ADR-0013). Opaque to the server: it
@@ -16791,6 +17587,454 @@ export interface operations {
         };
         responses: {
             200: components["responses"]["ExemptionEvidenceResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listRegulatoryChanges: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only changes in this status.
+                 * @example TRIAGED
+                 */
+                status?: components["schemas"]["RegulatoryChangeStatus"];
+                /**
+                 * @description Only changes of this kind.
+                 * @example RATE_CHANGE
+                 */
+                kind?: components["schemas"]["RegulatoryChangeKind"];
+                /**
+                 * @description Only changes in this jurisdiction; a country matches its subdivisions.
+                 * @example US
+                 */
+                jurisdiction?: components["schemas"]["EvidenceJurisdiction"];
+                /**
+                 * @description Only changes triaged at this priority.
+                 * @example URGENT
+                 */
+                priority?: components["schemas"]["RegulatoryChangePriority"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The changes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegulatoryChangeList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordRegulatoryChange: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegulatoryChangeRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RegulatoryChangeResult"];
+            201: components["responses"]["RegulatoryChangeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getRegulatoryChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory change identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                changeId: components["parameters"]["RegulatoryChangeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["RegulatoryChangeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    transitionRegulatoryChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory change identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                changeId: components["parameters"]["RegulatoryChangeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegulatoryChangeTransitionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RegulatoryChangeResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    assessRegulatoryChange: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The regulatory change identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                changeId: components["parameters"]["RegulatoryChangeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ImpactAssessmentResult"];
+            201: components["responses"]["ImpactAssessmentResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listImpactAssessments: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only the assessments of this change.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                changeId?: components["schemas"]["RegulatoryChangeId"];
+                /**
+                 * @description Only assessments of at least this severity.
+                 * @example HIGH
+                 */
+                minSeverity?: components["schemas"]["ImpactSeverity"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The assessments. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImpactAssessmentList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getImpactAssessment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The impact assessment identifier.
+                 * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                assessmentId: components["parameters"]["ImpactAssessmentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ImpactAssessmentResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listReviewRecommendations: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only recommendations in this status.
+                 * @example RECOMMENDED
+                 */
+                status?: components["schemas"]["ReviewRecommendationStatus"];
+                /**
+                 * @description Only the recommendations on this change.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                changeId?: components["schemas"]["RegulatoryChangeId"];
+                /**
+                 * @description Only HUMAN or only AI_ASSISTED recommendations.
+                 * @example AI_ASSISTED
+                 */
+                origin?: components["schemas"]["ReviewRecommendationOrigin"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The recommendations. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewRecommendationList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    draftReviewRecommendation: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRecommendationRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ReviewRecommendationResult"];
+            201: components["responses"]["ReviewRecommendationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getReviewRecommendation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The review recommendation identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                recommendationId: components["parameters"]["ReviewRecommendationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ReviewRecommendationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    reviseReviewRecommendation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The review recommendation identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                recommendationId: components["parameters"]["ReviewRecommendationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRecommendationRevisionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ReviewRecommendationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recommendReviewRecommendation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The review recommendation identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                recommendationId: components["parameters"]["ReviewRecommendationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRecommendationActRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ReviewRecommendationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    reviewReviewRecommendation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The review recommendation identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                recommendationId: components["parameters"]["ReviewRecommendationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRecommendationReviewRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ReviewRecommendationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    withdrawReviewRecommendation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The review recommendation identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                recommendationId: components["parameters"]["ReviewRecommendationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewRecommendationActRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ReviewRecommendationResult"];
             400: components["responses"]["Validation"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];

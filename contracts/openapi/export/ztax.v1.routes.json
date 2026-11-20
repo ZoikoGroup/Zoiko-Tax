@@ -435,6 +435,18 @@
     },
     {
       "method": "GET",
+      "path": "/v1/impact-assessments",
+      "operationId": "listImpactAssessments",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/impact-assessments/{assessmentId}",
+      "operationId": "getImpactAssessment",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/jobs",
       "operationId": "listJobs",
       "public": false
@@ -765,6 +777,36 @@
     },
     {
       "method": "GET",
+      "path": "/v1/regulatory-changes",
+      "operationId": "listRegulatoryChanges",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/regulatory-changes",
+      "operationId": "recordRegulatoryChange",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/regulatory-changes/{changeId}",
+      "operationId": "getRegulatoryChange",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/regulatory-changes/{changeId}/assessments",
+      "operationId": "assessRegulatoryChange",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/regulatory-changes/{changeId}/transitions",
+      "operationId": "transitionRegulatoryChange",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/remittances",
       "operationId": "listRemittances",
       "public": false
@@ -857,6 +899,48 @@
       "method": "POST",
       "path": "/v1/retention/policies",
       "operationId": "recordRetentionPolicy",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/review-recommendations",
+      "operationId": "listReviewRecommendations",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/review-recommendations",
+      "operationId": "draftReviewRecommendation",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/review-recommendations/{recommendationId}",
+      "operationId": "getReviewRecommendation",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/review-recommendations/{recommendationId}/recommend",
+      "operationId": "recommendReviewRecommendation",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/review-recommendations/{recommendationId}/review",
+      "operationId": "reviewReviewRecommendation",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/review-recommendations/{recommendationId}/revisions",
+      "operationId": "reviseReviewRecommendation",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/review-recommendations/{recommendationId}/withdrawal",
+      "operationId": "withdrawReviewRecommendation",
       "public": false
     },
     {
