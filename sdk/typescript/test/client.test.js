@@ -417,3 +417,138 @@ test("a second classification decision is a 409 error value, not an exception", 
   assert.equal(result.error.status, 409);
   assert.equal(result.error.reasonCode, "ALREADY_EXISTS");
 });
+
+test("the workpaper calls send amounts as strings and no Idempotency-Key", async () => {
+  const { fetch, calls } = stub(json(201, { id: "01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01" }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+  const id = "01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+
+  await client.createWorkpaper({
+    duty: "US_USF",
+    period: "2026-09",
+    authority: "USAC",
+    reportingCurrency: "USD",
+    materialityThreshold: "500.00",
+    contentRelease: "usf-499q@2026.3",
+  });
+  await client.listWorkpapers({ period: "2026-09", status: "DATA_INCOMPLETE" });
+  await client.getWorkpaper(id);
+  await client.buildWorkpaper(id, { expectedSeq: 1 });
+  await client.checkWorkpaperSources(id);
+  await client.actOnWorkpaper(id, {
+    action: "PROPOSE_ADJUSTMENT",
+    adjustment: { kind: "AUDITED_ADJUSTMENT", category: "Billing correction", amount: "-1200.00", reason: "Credit notes" },
+    evidence: { sha256: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", filename: "audit.pdf", mediaType: "application/pdf" },
+  });
+
+  assert.deepEqual(calls.map((c) => `${c.init.method} ${c.url}`), [
+    "POST /api/v1/workpapers",
+    "GET /api/v1/workpapers?period=2026-09&status=DATA_INCOMPLETE",
+    `GET /api/v1/workpapers/${id}`,
+    `POST /api/v1/workpapers/${id}/build`,
+    `GET /api/v1/workpapers/${id}/source-check`,
+    `POST /api/v1/workpapers/${id}/actions`,
+  ]);
+  assert.equal(JSON.parse(calls[0].init.body).materialityThreshold, "500.00");
+  assert.equal(JSON.parse(calls[5].init.body).adjustment.amount, "-1200.00");
+  for (const c of calls) assert.equal(c.init.headers["Idempotency-Key"], undefined);
+});
+
+test("the registration and exemption calls send intake under an Idempotency-Key and nothing else", async () => {
+  const { fetch, calls } = stub(json(201, { id: "01920d20-1a2b-7c3d-8e4f-5a6b7c8d9e01" }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+  const rid = "01920d20-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+  const cid = "01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+  const doc = { sha256: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", filename: "permit.pdf", mediaType: "application/pdf", bytes: 1024 };
+
+  await client.createRegistration("k-reg", {
+    scheme: "US_USAC_499_FILER_ID", jurisdiction: "US", authority: "USAC", registrationNumber: "812345",
+    effectiveFrom: "2026-01-01", attachments: [doc], submit: true,
+  });
+  await client.listRegistrations({ status: "ACTIVE", flag: "EXPIRING_SOON" });
+  await client.getRegistration(rid);
+  await client.transitionRegistration(rid, { to: "ACTIVE", expectedVersion: 4, reason: "ok" });
+  await client.recordRegistrationCheck(rid, { source: "USAC", method: "MANUAL_LOOKUP", outcome: "UNAVAILABLE", checkedAt: "2026-11-02T10:00:00.000000Z" });
+  await client.recordRegistrationAttachment(rid, doc);
+  await client.receiveExemptionCertificate("k-cert", {
+    buyerRef: "CUST-0042", buyerName: "Hudson Wireless LLC", certificateType: "RESALE", exemptionReason: "Resale",
+    jurisdiction: "US-NY", issuedOn: "2026-09-15", document: doc,
+  });
+  await client.listExemptionCertificates({ flag: "AWAITING_SECOND_REVIEW" });
+  await client.getExemptionCertificate(cid);
+  await client.addExemptionCertificateVersion(cid, { document: doc });
+  await client.screenExemptionCertificate(cid, {
+    screening: {
+      sellerMatches: "PASS", buyerMatches: "PASS", jurisdictionMatches: "PASS", formAccepted: "PASS",
+      signaturePresent: "PASS", datesValid: "PASS", numberPresent: "PASS", result: "DOCUMENT_COMPLETE",
+    },
+  });
+  await client.recommendExemptionCertificate(cid, { recommendation: "APPROVE", effectiveFrom: "2026-09-15", rationale: "complete" });
+  await client.decideExemptionCertificate(cid, { decision: "CONFIRM", expectedEvidenceVersion: 1 });
+  await client.transitionExemptionCertificate(cid, { to: "SUSPENDED", reason: "name change" });
+
+  assert.deepEqual(calls.map((c) => `${c.init.method} ${c.url}`), [
+    "POST /api/v1/registrations",
+    "GET /api/v1/registrations?status=ACTIVE&flag=EXPIRING_SOON",
+    `GET /api/v1/registrations/${rid}`,
+    `POST /api/v1/registrations/${rid}/transitions`,
+    `POST /api/v1/registrations/${rid}/checks`,
+    `POST /api/v1/registrations/${rid}/attachments`,
+    "POST /api/v1/exemptions",
+    "GET /api/v1/exemptions?flag=AWAITING_SECOND_REVIEW",
+    `GET /api/v1/exemptions/${cid}`,
+    `POST /api/v1/exemptions/${cid}/versions`,
+    `POST /api/v1/exemptions/${cid}/screening`,
+    `POST /api/v1/exemptions/${cid}/recommendation`,
+    `POST /api/v1/exemptions/${cid}/decision`,
+    `POST /api/v1/exemptions/${cid}/transitions`,
+  ]);
+  assert.equal(calls[0].init.headers["Idempotency-Key"], "k-reg");
+  assert.equal(calls[6].init.headers["Idempotency-Key"], "k-cert");
+  for (const c of calls.filter((_, i) => i !== 0 && i !== 6)) assert.equal(c.init.headers["Idempotency-Key"], undefined);
+});
+
+test("the ERP bridge calls put ids in the path, amounts as strings and send no Idempotency-Key", async () => {
+  const { fetch, calls } = stub(json(201, { id: "01920c20-0000-7000-8000-0000000000b1" }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+  const bridge = "01920c20-0000-7000-8000-0000000000b1";
+  const batch = "01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10";
+
+  await client.listERPBridges();
+  await client.createERPBridge({ name: "Acme SAP", vendor: "SAP", companyCode: "AC01" });
+  await client.recordERPMapping(bridge, { chartVersion: "COA-2026.2", accounts: [{ account: "TAX_COLLECTED_LIABILITY", glAccount: "2310-00" }] });
+  await client.listERPExports(bridge, { period: "2026-09", status: "REJECTED" });
+  await client.prepareERPExport(bridge, { period: "2026-09", currency: "USD", postingDate: "2026-10-03" });
+  await client.getERPExport(bridge, batch);
+  await client.dispatchERPExport(bridge, batch, { expectedDigest: "zt1:" + "0".repeat(64) });
+  await client.recordERPResponse(bridge, batch, { kind: "POSTED", attemptId: "01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20", erpReference: "AC01/2026/1" });
+  await client.withdrawERPExport(bridge, batch, { reason: "mapping v2" });
+  await client.recordGLSnapshot(bridge, {
+    period: "2026-09",
+    currency: "USD",
+    asOf: "2026-10-05T18:00:00Z",
+    sourceRef: "FAGLB03",
+    balances: [{ glAccount: "2310-00", debits: "0.00", credits: "10.00" }],
+  });
+  await client.listGLSnapshots(bridge, { period: "2026-09" });
+  await client.runGLReconciliation(bridge, { snapshotId: "01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e30" });
+  await client.listGLReconciliations(bridge);
+
+  assert.deepEqual(calls.map((c) => `${c.init.method} ${c.url}`), [
+    "GET /api/v1/erp-bridges",
+    "POST /api/v1/erp-bridges",
+    `POST /api/v1/erp-bridges/${bridge}/mappings`,
+    `GET /api/v1/erp-bridges/${bridge}/exports?period=2026-09&status=REJECTED`,
+    `POST /api/v1/erp-bridges/${bridge}/exports`,
+    `GET /api/v1/erp-bridges/${bridge}/exports/${batch}`,
+    `POST /api/v1/erp-bridges/${bridge}/exports/${batch}/dispatch`,
+    `POST /api/v1/erp-bridges/${bridge}/exports/${batch}/responses`,
+    `POST /api/v1/erp-bridges/${bridge}/exports/${batch}/withdrawal`,
+    `POST /api/v1/erp-bridges/${bridge}/gl-balances`,
+    `GET /api/v1/erp-bridges/${bridge}/gl-balances?period=2026-09`,
+    `POST /api/v1/erp-bridges/${bridge}/gl-reconciliations`,
+    `GET /api/v1/erp-bridges/${bridge}/gl-reconciliations`,
+  ]);
+  assert.equal(JSON.parse(calls[9].init.body).balances[0].credits, "10.00");
+  for (const c of calls) assert.equal(c.init.headers["Idempotency-Key"], undefined);
+});

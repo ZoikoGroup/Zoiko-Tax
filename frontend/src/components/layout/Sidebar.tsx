@@ -47,7 +47,10 @@ export type View =
   | 'filing-remittance'
   | 'cases'
   | 'contributions'
+  | 'registrations'
   | 'notices'
+  | 'workpapers'
+  | 'erp-reconciliation'
 
 /** A screen: a view, and the tab inside it when the view has tabs. */
 export interface NavTarget {
@@ -120,7 +123,7 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
       { id: 'obligations.register', label: 'Obligation Register', target: at('obligations', 'register') },
       { id: 'obligations.contributions', label: 'Provider Contributions', target: at('contributions') },
       { id: 'obligations.calendar', label: 'Compliance Calendar', target: at('obligations', 'calendar') },
-      { id: 'obligations.workpapers', label: 'Regulatory Workpapers' },
+      { id: 'obligations.workpapers', label: 'Regulatory Workpapers', target: at('workpapers') },
       { id: 'obligations.exceptions', label: 'Obligation Exceptions', target: at('obligations', 'exceptions') },
     ],
   },
@@ -129,7 +132,7 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
       { id: 'compliance.preparation', label: 'Filing Preparation', target: at('compliance', 'queue') },
       { id: 'compliance.returns', label: 'Regulatory Returns', target: at('compliance', 'returns') },
       { id: 'compliance.acks', label: 'Authority Acknowledgements', target: at('compliance', 'acks') },
-      { id: 'compliance.registrations', label: 'Registrations & Exemptions' },
+      { id: 'compliance.registrations', label: 'Registrations & Exemptions', target: at('registrations') },
       { id: 'compliance.status', label: 'Compliance Status', target: at('compliance', 'status') },
     ],
   },
@@ -137,7 +140,7 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
     id: 'reconcile', label: 'Reconcile', icon: <IconRotateCw />, children: [
       { id: 'reconcile.subledger', label: 'Tax Control Subledger', target: at('determine', 'subledger') },
       { id: 'reconcile.billing', label: 'Billing-to-Tax', target: at('reconcile', 'runs') },
-      { id: 'reconcile.erp', label: 'ERP Reconciliation' },
+      { id: 'reconcile.erp', label: 'ERP Reconciliation', target: at('erp-reconciliation') },
       { id: 'reconcile.filing', label: 'Filing-to-Remittance', target: at('filing-remittance') },
       { id: 'reconcile.variances', label: 'Variances', target: at('reconcile', 'variances') },
     ],

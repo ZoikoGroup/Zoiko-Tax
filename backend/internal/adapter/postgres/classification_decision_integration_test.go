@@ -20,7 +20,7 @@ import (
 )
 
 // A reviewer decision is saved once per proposal per tenant, read back for the
-// same tenant only, and has no UPDATE or DELETE path (migration 000032).
+// same tenant only, and has no UPDATE or DELETE path (migration 000035).
 func TestIntegrationClassificationDecisionIsAppendOnlyAndTenantScoped(t *testing.T) {
 	dsn := os.Getenv("ZTAX_TEST_DATABASE_URL")
 	if dsn == "" {

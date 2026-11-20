@@ -322,6 +322,406 @@
         "class": "P0"
       }
     },
+    "erp_bridge": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "bridge_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "name": {
+        "class": "P0",
+        "note": "An operator-chosen label for the ERP connection; not a person."
+      },
+      "vendor": {
+        "class": "P0"
+      },
+      "company_code": {
+        "class": "P0",
+        "note": "The legal entity's company code in the customer's ERP."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the bridge."
+      }
+    },
+    "erp_account_mapping": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "bridge_id": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "chart_version": {
+        "class": "P0",
+        "note": "The customer's chart-of-accounts version label."
+      },
+      "digest": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the mapping version."
+      }
+    },
+    "erp_account_mapping_line": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "bridge_id": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "tcsl_account": {
+        "class": "P0"
+      },
+      "gl_account": {
+        "class": "P0",
+        "note": "An account code in the customer's general ledger."
+      }
+    },
+    "erp_export_batch": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "batch_id": {
+        "class": "P0"
+      },
+      "bridge_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "legal_period": {
+        "class": "P0"
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "posting_date": {
+        "class": "P0"
+      },
+      "company_code": {
+        "class": "P0"
+      },
+      "mapping_version": {
+        "class": "P0"
+      },
+      "chart_version": {
+        "class": "P0"
+      },
+      "mapping_digest": {
+        "class": "P0"
+      },
+      "total_debits": {
+        "class": "P0",
+        "note": "A control total across posted TCSL journals: an operator ledger aggregate, not a consumer amount."
+      },
+      "total_credits": {
+        "class": "P0",
+        "note": "A control total across posted TCSL journals: an operator ledger aggregate, not a consumer amount."
+      },
+      "batch_digest": {
+        "class": "P0"
+      },
+      "prepared_at": {
+        "class": "P0"
+      },
+      "prepared_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who prepared the batch."
+      }
+    },
+    "erp_export_line": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "batch_id": {
+        "class": "P0"
+      },
+      "line_no": {
+        "class": "P0"
+      },
+      "journal_id": {
+        "class": "P0"
+      },
+      "journal_line_no": {
+        "class": "P0"
+      },
+      "tcsl_account": {
+        "class": "P0"
+      },
+      "gl_account": {
+        "class": "P0"
+      },
+      "side": {
+        "class": "P0"
+      },
+      "amount": {
+        "class": "P0",
+        "note": "A posted TCSL journal line amount, as exported: a ledger figure, not a consumer identity."
+      },
+      "authority": {
+        "class": "P0"
+      },
+      "jurisdiction": {
+        "class": "P0"
+      }
+    },
+    "erp_export_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "batch_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "status_after": {
+        "class": "P0"
+      },
+      "attempt_id": {
+        "class": "P0"
+      },
+      "remote_correlation": {
+        "class": "P0",
+        "note": "The ERP's own message, receipt or query reference."
+      },
+      "erp_reference": {
+        "class": "P0",
+        "note": "The ERP's posted journal or document number."
+      },
+      "response_digest": {
+        "class": "P0",
+        "note": "Checksum of the raw ERP response kept as evidence."
+      },
+      "detail": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by the person who recorded the ERP's answer or withdrew the batch."
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the step."
+      }
+    },
+    "erp_gl_snapshot": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "snapshot_id": {
+        "class": "P0"
+      },
+      "bridge_id": {
+        "class": "P0"
+      },
+      "legal_period": {
+        "class": "P0"
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "as_of": {
+        "class": "P0"
+      },
+      "source_ref": {
+        "class": "P0",
+        "note": "The ERP report or extract the balances came from."
+      },
+      "source_digest": {
+        "class": "P0",
+        "note": "Checksum of the ERP report file."
+      },
+      "digest": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the ERP's balances."
+      }
+    },
+    "erp_gl_snapshot_line": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "snapshot_id": {
+        "class": "P0"
+      },
+      "gl_account": {
+        "class": "P0"
+      },
+      "debits": {
+        "class": "P0",
+        "note": "A GL account's period activity as the ERP reported it: an operator ledger aggregate."
+      },
+      "credits": {
+        "class": "P0",
+        "note": "A GL account's period activity as the ERP reported it: an operator ledger aggregate."
+      }
+    },
+    "erp_gl_reconciliation": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "reconciliation_id": {
+        "class": "P0"
+      },
+      "bridge_id": {
+        "class": "P0"
+      },
+      "snapshot_id": {
+        "class": "P0"
+      },
+      "snapshot_digest": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "legal_period": {
+        "class": "P0"
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "mapping_version": {
+        "class": "P0"
+      },
+      "outcome": {
+        "class": "P0"
+      },
+      "holds": {
+        "class": "P0"
+      },
+      "journal_count": {
+        "class": "P0"
+      },
+      "posted_journal_count": {
+        "class": "P0"
+      },
+      "population_digest": {
+        "class": "P0"
+      },
+      "ran_at": {
+        "class": "P0"
+      },
+      "ran_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who ran the reconciliation; null for system work."
+      }
+    },
+    "erp_gl_reconciliation_item": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "reconciliation_id": {
+        "class": "P0"
+      },
+      "ordinal": {
+        "class": "P0"
+      },
+      "match_key": {
+        "class": "P0"
+      },
+      "gl_account": {
+        "class": "P0"
+      },
+      "tcsl_accounts": {
+        "class": "P0"
+      },
+      "expected": {
+        "class": "P0",
+        "note": "A ledger aggregate per GL account."
+      },
+      "observed": {
+        "class": "P0",
+        "note": "A ledger aggregate per GL account, as the ERP reported it."
+      },
+      "variance": {
+        "class": "P0",
+        "note": "Observed less expected, exact."
+      },
+      "status": {
+        "class": "P0"
+      },
+      "detail": {
+        "class": "P0",
+        "note": "A fixed explanation the service writes; never free text."
+      }
+    },
     "evidence_period_seal": {
       "tenant_id": {
         "class": "P0"
@@ -3910,6 +4310,542 @@
         "redaction": "NONE",
         "aiAllowed": "NONE",
         "note": "The person who acted."
+      }
+    },
+    "regulatory_workpaper": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "workpaper_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0",
+        "note": "The legal filer the workpaper is for."
+      },
+      "duty": {
+        "class": "P0"
+      },
+      "period": {
+        "class": "P0"
+      },
+      "authority": {
+        "class": "P0",
+        "note": "The authority the duty is reported to, by name."
+      },
+      "reporting_currency": {
+        "class": "P0"
+      },
+      "materiality": {
+        "class": "P0",
+        "note": "The threshold at or above which an adjustment needs a second person: a policy figure, not a consumer amount."
+      },
+      "obligation_id": {
+        "class": "P0"
+      },
+      "content_release": {
+        "class": "P0",
+        "note": "The content or formula release the workpaper applies."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who opened the workpaper."
+      }
+    },
+    "regulatory_workpaper_build": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "workpaper_id": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "inputs_hash": {
+        "class": "P0",
+        "note": "The digest of everything the build read."
+      },
+      "output_hash": {
+        "class": "P0",
+        "note": "The digest of the build's canonical document."
+      },
+      "basis_digest": {
+        "class": "P0",
+        "note": "The digest of the preparer-controlled inputs: content release, documented rates and approved adjustments."
+      },
+      "formula_version": {
+        "class": "P0"
+      },
+      "content_release": {
+        "class": "P0"
+      },
+      "output_canonical": {
+        "class": "P0",
+        "note": "The build's schedules and reconciliation: a provider's revenue aggregates and references into its own systems, never a customer identity."
+      },
+      "built_at": {
+        "class": "P0"
+      },
+      "built_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who ran the build."
+      }
+    },
+    "regulatory_workpaper_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "workpaper_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "status_after": {
+        "class": "P0"
+      },
+      "note": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text from the person acting: a reason, an explanation of an exception, a review note."
+      },
+      "build_version": {
+        "class": "P0"
+      },
+      "content_release": {
+        "class": "P0"
+      },
+      "fx_currency": {
+        "class": "P0"
+      },
+      "fx_rate": {
+        "class": "P0"
+      },
+      "fx_rate_source": {
+        "class": "P0",
+        "note": "Where a documented FX rate came from, such as a central bank reference rate."
+      },
+      "fx_rate_date": {
+        "class": "P0"
+      },
+      "fx_rounding_mode": {
+        "class": "P0"
+      },
+      "fx_rounding_scale": {
+        "class": "P0"
+      },
+      "fx_conversion_basis": {
+        "class": "P0",
+        "note": "How converted amounts are computed and rounded, as documented."
+      },
+      "adjustment_number": {
+        "class": "P0"
+      },
+      "adjustment_kind": {
+        "class": "P0"
+      },
+      "adjustment_category": {
+        "class": "P0"
+      },
+      "adjustment_amount": {
+        "class": "P0",
+        "note": "An allowance or adjustment to a provider's base: an operator aggregate, not a consumer amount."
+      },
+      "decision": {
+        "class": "P0"
+      },
+      "exception_key": {
+        "class": "P0"
+      },
+      "exception_fingerprint": {
+        "class": "P0"
+      },
+      "evidence_sha256": {
+        "class": "P0",
+        "note": "The SHA-256 of a document recorded as evidence. The document itself is not stored."
+      },
+      "evidence_name": {
+        "class": "P2",
+        "purposes": [
+          "PURP-FILE",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The file name of a document recorded as evidence, as given; it may name a person."
+      },
+      "evidence_media": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the event."
+      }
+    },
+    "entity_registration": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "registration_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "scheme": {
+        "class": "P0"
+      },
+      "jurisdiction": {
+        "class": "P0"
+      },
+      "authority": {
+        "class": "P0",
+        "note": "The authority the registration is held with, by name."
+      },
+      "registration_number": {
+        "class": "P2",
+        "purposes": [
+          "PURP-OBL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The authority-issued registration number (FRN, 499 Filer ID, VAT number, permit). A sole trader's number identifies a person, so it is redacted in logs and masked in listings."
+      },
+      "effective_from": {
+        "class": "P0"
+      },
+      "effective_to": {
+        "class": "P0"
+      },
+      "supersedes": {
+        "class": "P0"
+      },
+      "intake_key": {
+        "class": "P0",
+        "note": "The client-minted Idempotency-Key the registration was recorded under; opaque."
+      },
+      "intake_hash": {
+        "class": "P0",
+        "note": "The canonical digest of the request, compared on a retry."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the registration."
+      }
+    },
+    "entity_registration_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "registration_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "status_after": {
+        "class": "P0"
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text from the person recording the event: why it was returned, suspended, revoked or reinstated, or a check note."
+      },
+      "check_source": {
+        "class": "P0"
+      },
+      "check_method": {
+        "class": "P0"
+      },
+      "check_outcome": {
+        "class": "P0"
+      },
+      "check_reference": {
+        "class": "P0",
+        "note": "The authority's own reference or receipt for a check, as returned."
+      },
+      "checked_at": {
+        "class": "P0"
+      },
+      "receipt_sha256": {
+        "class": "P0",
+        "note": "The SHA-256 of a saved copy of the authority's response. The copy itself is not stored."
+      },
+      "attachment_sha256": {
+        "class": "P0",
+        "note": "The SHA-256 of a supporting document. The document itself is not stored."
+      },
+      "attachment_name": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The file name of a supporting document, as given; it may name a person."
+      },
+      "attachment_media": {
+        "class": "P0"
+      },
+      "attachment_bytes": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the event."
+      }
+    },
+    "exemption_certificate": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "certificate_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0",
+        "note": "The seller entity the certificate is given to."
+      },
+      "buyer_ref": {
+        "class": "P1",
+        "purposes": [
+          "PURP-EVID",
+          "PURP-TAX-CALC"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The buyer's identifier in the tenant's own customer system; pseudonymous."
+      },
+      "buyer_name": {
+        "class": "P2",
+        "purposes": [
+          "PURP-EVID",
+          "PURP-LEGAL"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The buyer's name as written on the certificate; it may be a natural person."
+      },
+      "certificate_type": {
+        "class": "P0"
+      },
+      "exemption_reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-EVID",
+          "PURP-LEGAL"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The exemption the buyer claims, in the words of the certificate."
+      },
+      "jurisdiction": {
+        "class": "P0"
+      },
+      "certificate_number": {
+        "class": "P2",
+        "purposes": [
+          "PURP-EVID",
+          "PURP-LEGAL"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The certificate or exemption permit number; it can identify a person."
+      },
+      "product_scope": {
+        "class": "P0",
+        "note": "The product families or classification patterns the certificate claims, as written. Never interpreted as a tax rule."
+      },
+      "issued_on": {
+        "class": "P0"
+      },
+      "expires_on": {
+        "class": "P0"
+      },
+      "supersedes": {
+        "class": "P0"
+      },
+      "intake_key": {
+        "class": "P0",
+        "note": "The client-minted Idempotency-Key the certificate was received under; opaque."
+      },
+      "intake_hash": {
+        "class": "P0",
+        "note": "The canonical digest of the request, compared on a retry."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who received the certificate."
+      }
+    },
+    "exemption_certificate_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "certificate_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "status_after": {
+        "class": "P0"
+      },
+      "evidence_version": {
+        "class": "P0"
+      },
+      "note": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text from the person recording the event: a screening finding, a rationale, a return or suspension reason."
+      },
+      "document_sha256": {
+        "class": "P0",
+        "note": "The SHA-256 of the certificate document of an evidence version. The document itself is not stored."
+      },
+      "document_name": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The file name of the certificate document, as given; it may name a person."
+      },
+      "document_media": {
+        "class": "P0"
+      },
+      "document_bytes": {
+        "class": "P0"
+      },
+      "screening": {
+        "class": "P0",
+        "note": "The completeness checklist: PASS, FAIL or NOT_APPLICABLE per criterion. No document content."
+      },
+      "screening_result": {
+        "class": "P0"
+      },
+      "recommendation": {
+        "class": "P0"
+      },
+      "effective_from": {
+        "class": "P0"
+      },
+      "effective_to": {
+        "class": "P0"
+      },
+      "decision": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the event."
       }
     },
     "classification_decision": {

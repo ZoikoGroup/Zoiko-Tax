@@ -2876,6 +2876,303 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/erp-bridges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The ERP journal bridges
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Every bridge from a member legal entity's Tax Control Subledger to a
+         *     customer general ledger, oldest first, each with its account mapping
+         *     versions. The bridge is vendor-agnostic; the vendor names the connector
+         *     that consumes a dispatch, and no real ERP is connected by this cell.
+         */
+        get: operations["listERPBridges"];
+        put?: never;
+        /**
+         * Connect a legal entity's subledger to a customer general ledger
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Records a bridge under the entity's ERP company code. The member legal
+         *     entity defaults to the tenant's default entity. A bridge exports nothing
+         *     until an account mapping is recorded for it.
+         */
+        post: operations["createERPBridge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/erp-bridges/{bridgeId}/mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the bridge's next account mapping version
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Maps TCSL control accounts onto the customer's GL accounts under a named
+         *     chart-of-accounts version (ZTAX-FIN-REQ-0051). A version is never
+         *     edited: a change is the next version, and a batch sealed under an
+         *     earlier version is no longer dispatched (`409 ERP_MAPPING_CHANGED`,
+         *     QA-LED-068). A mapping identical to the current one records nothing and
+         *     answers `200` with the bridge as it is.
+         */
+        post: operations["recordERPMapping"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/erp-bridges/{bridgeId}/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The bridge's export batches and their transfer state
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     A bridge's export batches, newest first, in any status, each with its
+         *     delivery evidence. A rejected batch carries the correction task its
+         *     rejection opened, open until every journal it held is in a batch the
+         *     ERP has posted. Lines are omitted here; read one batch for them.
+         */
+        get: operations["listERPExports"];
+        put?: never;
+        /**
+         * Prepare and seal an export batch
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Seals every posted TCSL journal of the bridge's legal entity, the period
+         *     and the currency that is not already in a live batch: the exact journal
+         *     ID set, each line mapped by the bridge's current mapping version, the
+         *     company code, chart version and posting date, under one batch digest
+         *     (QA-LED-067). A line on an account the mapping does not map holds the
+         *     whole export (`409 ERP_MAPPING_INCOMPLETE`) — nothing goes to a suspense
+         *     account by default. With nothing left to export, the prepared batch that
+         *     already holds the journals under the same posting date and mapping
+         *     version is returned with `200`; otherwise `409 ERP_NOTHING_TO_EXPORT`.
+         */
+        post: operations["prepareERPExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/erp-bridges/{bridgeId}/exports/{batchId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One export batch with its lines and delivery evidence
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The sealed batch — journal IDs, every mapped line traced to its TCSL
+         *     journal line, totals and digest — with every attempt and every ERP
+         *     answer recorded against it, and its correction task when it was
+         *     rejected.
+         */
+        get: operations["getERPExport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/erp-bridges/{bridgeId}/exports/{batchId}/dispatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Authorise and dispatch a sealed batch
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves, and not the person who
+         *     prepared the batch (`403 MAKER_CHECKER`).
+         *
+         *     The checker names the batch digest they reviewed (`409
+         *     ERP_BATCH_DIGEST_MISMATCH` when it is not the batch's). The dispatch is
+         *     one attempt, recorded with a `com.zoikotax.gl.export-dispatched` event
+         *     through the transactional outbox in the same transaction; a connector
+         *     subscribed to it sends the batch under its `externalRef`, which every
+         *     attempt shares, so the ERP posts one GL journal however many attempts
+         *     there are. `TRANSMITTED` means committed for transmission — not
+         *     received, and not posted.
+         *
+         *     **Idempotent on the batch.** A batch already transmitted, acknowledged
+         *     or posted is returned as it is with `200` and no new attempt
+         *     (QA-LED-069). A batch sealed under a superseded mapping version is
+         *     refused (`409 ERP_MAPPING_CHANGED`, QA-LED-068). A batch whose outcome
+         *     is unknown is sent again only after a status query recorded that the
+         *     ERP holds nothing under its reference (`409 ERP_OUTCOME_UNKNOWN`). A
+         *     rejected or withdrawn batch is never sent.
+         */
+        post: operations["dispatchERPExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/erp-bridges/{bridgeId}/exports/{batchId}/responses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record what the ERP answered about an attempt
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     ZoikoTax does not invent the ERP's answer: a person records it here with
+         *     the ERP's references as evidence. `ACKNOWLEDGED` is a transport receipt
+         *     and names the ERP's `remoteCorrelation`; `POSTED` names the ERP's posted
+         *     journal (`erpReference`) and is the only answer a GL reconciliation
+         *     counts. `REJECTED` says why, opens a correction task and holds the
+         *     period's GL reconciliation. `OUTCOME_UNKNOWN` says why nobody knows.
+         *     `STATUS_NOT_FOUND` records a status query, by `remoteCorrelation`, that
+         *     found nothing under the batch's reference — the only thing that lets a
+         *     batch of unknown outcome be sent again.
+         *
+         *     **Idempotent on the answer**: the same answer about the same attempt
+         *     again records nothing and answers `200`. An answer that does not apply
+         *     to the batch's state is `409 STATE_TRANSITION_INVALID`.
+         */
+        post: operations["recordERPResponse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/erp-bridges/{bridgeId}/exports/{batchId}/withdrawal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw a prepared batch that was never dispatched
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Releases a `PREPARED` batch, with the reason, so its journals can be
+         *     prepared again — after a mapping change, say. The batch and its digest
+         *     stay on record. Only a batch never dispatched is withdrawn (`409
+         *     STATE_TRANSITION_INVALID`).
+         */
+        post: operations["withdrawERPExport"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/erp-bridges/{bridgeId}/gl-balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The GL balances the ERP reported
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Every GL balance snapshot recorded for the bridge, newest first, each
+         *     with the ERP report it came from and its digest.
+         */
+        get: operations["listGLSnapshots"];
+        put?: never;
+        /**
+         * Record the GL balances an ERP reported for a period
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     The period's activity on each GL account in one currency, debits and
+         *     credits apart, as the ERP reported it, with the report it came from
+         *     (`sourceRef`, and `sourceDigest` when the report is kept as a file).
+         *     Amounts are canonical, non-negative decimal strings; the side carries
+         *     direction. ZoikoTax reads no ERP itself — these figures are the ERP's,
+         *     recorded as evidence, and a reconciliation compares them with the
+         *     subledger.
+         */
+        post: operations["recordGLSnapshot"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/erp-bridges/{bridgeId}/gl-reconciliations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The subledger-to-GL reconciliations (R6)
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Every GL reconciliation run on the bridge, newest first, with its items
+         *     and exact variances. Each is a record: a later run is a new one.
+         */
+        get: operations["listGLReconciliations"];
+        put?: never;
+        /**
+         * Reconcile the subledger with an ERP's GL balances
+         * @description `OPERATOR`.
+         *
+         *     Compares one GL snapshot, account by account, with what the subledger's
+         *     journals of the bridge's legal entity, the snapshot's period and
+         *     currency put on the TCSL accounts the bridge's current mapping maps to
+         *     each GL account. Every item keeps its exact variance (observed −
+         *     expected, net debit) whatever it is; there is no tolerance. A GL account
+         *     the ERP reported and nothing maps to, a mapped account the ERP did not
+         *     report, and a TCSL account with no mapping are each items of their own.
+         *
+         *     `HELD` while any of the period's journals is not in a batch the ERP has
+         *     posted — unexported, awaiting dispatch or posting, of unknown outcome,
+         *     or rejected with its correction open — and never reported reconciled
+         *     while it is. A variance is cleared by fixing the source and running a
+         *     new reconciliation over a new snapshot, not by a note.
+         */
+        post: operations["runGLReconciliation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/notices": {
         parameters: {
             query?: never;
@@ -3248,6 +3545,182 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workpapers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The workpaper register
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Regulatory workpapers, newest period first, in any status, with their
+         *     builds' summaries. A listing carries no schedules: read one workpaper for
+         *     its latest build.
+         */
+        get: operations["listWorkpapers"];
+        put?: never;
+        /**
+         * Open a workpaper for a legal filer, duty and period
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Opens the workpaper header (OBL-07 01): the legal filer — the tenant's
+         *     default legal entity when none is named — the duty, the period, the
+         *     authority it is reported to, the reporting currency, the materiality
+         *     threshold at or above which an adjustment needs a second person, and the
+         *     content release it applies. Nothing is assembled until it is built.
+         *
+         *     **Idempotent on the filer, duty and period**, not on an
+         *     `Idempotency-Key`: there is one workpaper for each. The same header again
+         *     returns the workpaper already opened with `200`; a different header is
+         *     `409 WORKPAPER_EXISTS`.
+         */
+        post: operations["createWorkpaper"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workpapers/{workpaperId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A workpaper with its schedules, reconciliation and controls
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The header, the latest build's schedules — revenue categories, excluded
+         *     bases, volume and transaction counts, permitted allowances and audited
+         *     adjustments — with lineage to every source event, the reconciliation to
+         *     the contribution ledger's control totals, the subledger and the GL
+         *     bridge, the exceptions and their resolutions, the documented FX rates,
+         *     the history, and what the workpaper admits now. The latest build's stored
+         *     document is re-hashed on read; one that no longer matches its output hash
+         *     is refused (`500 EVIDENCE_INTEGRITY`) rather than shown.
+         */
+        get: operations["getWorkpaper"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workpapers/{workpaperId}/build": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Build the workpaper deterministically from its sources
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Assembles the schedules and the reconciliation from the provider
+         *     contribution ledger for the filer, duty and period and the filer's Tax
+         *     Control Subledger balances, applying the documented FX rates and the
+         *     approved adjustments. The build records the hash of everything it read,
+         *     its canonical document and that document's hash.
+         *
+         *     **Deterministic and idempotent**: when the inputs hash equals the latest
+         *     build's, nothing is recorded and the workpaper is returned with `200`.
+         *     Otherwise the next build version is recorded (`201`). An open exception —
+         *     no source event at all, a held import, a source currency with no
+         *     documented rate, a total that does not tie — leaves the workpaper
+         *     `DATA_INCOMPLETE`. A rebuild of an `APPROVED` workpaper with changed
+         *     inputs revokes the approval. A workpaper frozen for review is not rebuilt
+         *     (`409 WORKPAPER_SNAPSHOT_LOCKED`).
+         */
+        post: operations["buildWorkpaper"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workpapers/{workpaperId}/source-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare the latest build with what its sources say now
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Assembles the workpaper from its sources now, records nothing, and
+         *     compares the inputs hash with the latest build's. `matches` false on a
+         *     frozen or approved workpaper means a source moved after the snapshot was
+         *     taken: the snapshot stands, and a rebuild would record a new version.
+         */
+        get: operations["checkWorkpaperSources"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workpapers/{workpaperId}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Freeze, review, approve, or record an adjustment, rate or resolution
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves; `APPROVE`,
+         *     `DECIDE_ADJUSTMENT` and `DECIDE_RESOLUTION` need `ANALYST`.
+         *
+         *     One act, named by `action`, appended to the workpaper's history:
+         *
+         *     - `DOCUMENT_FX_RATE` documents the rate and conversion basis for one
+         *       source currency (`fx`). A source currency without one is a
+         *       `CURRENCY_MISMATCH` exception until it is documented and rebuilt.
+         *     - `PROPOSE_ADJUSTMENT` records a permitted allowance or an audited
+         *       adjustment in the reporting currency, with its `evidence`. One at or
+         *       above the materiality threshold waits for a second person:
+         *       `DECIDE_ADJUSTMENT` by someone other than the proposer
+         *       (`403 SEGREGATION_OF_DUTIES`).
+         *     - `PROPOSE_RESOLUTION` explains one resolvable exception of the latest
+         *       build, with its `evidence` and the exception's `fingerprint`;
+         *       `DECIDE_RESOLUTION` confirms or rejects it, by someone else.
+         *     - `FREEZE` locks the latest build for review. Refused with
+         *       `403 WORKPAPER_NOT_READY` while any exception is unresolved, a decision
+         *       is pending, or the basis changed since the build — material data
+         *       absent never reaches `READY_FOR_REVIEW`.
+         *     - `RETURN_TO_DRAFT` unlocks a frozen workpaper, with the reason.
+         *     - `APPROVE` approves the frozen `buildVersion`. The approver neither froze
+         *       it nor ran it.
+         *     - `CHANGE_BASIS` records a new `contentRelease`; it revokes an approval
+         *       and unlocks a frozen workpaper.
+         *
+         *     Writes to a frozen workpaper's inputs are `409 WORKPAPER_SNAPSHOT_LOCKED`.
+         *     `expectedSeq`, when given, is the number of events the caller read; a
+         *     workpaper that has moved since is `409 WORKPAPER_STALE`.
+         */
+        post: operations["actOnWorkpaper"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/shadow/comparators": {
         parameters: {
             query?: never;
@@ -3555,6 +4028,397 @@ export interface paths {
          *     Records the one decision on an exception: `RESOLVED`, or `ACCEPTED_RESIDUAL` — a known migration residual, accepted with its reason and never counted as converted (ZTAX-MIG-001 §15).
          */
         post: operations["decideMigrationException"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/registrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The registration and permit inventory
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The tenant's registrations with authorities, newest first, as of now, in
+         *     any status: an expired, revoked or withdrawn registration stays listed
+         *     as recorded and is never shown as in force (Doc 17 ER-012). Numbers are
+         *     masked in a listing; the detail read reveals them to the people who
+         *     record and review registrations.
+         *
+         *     `flags` are computed as of `asOf`: `EXPIRING_SOON` within 60 days,
+         *     `PAST_EXPIRY` once the end date has passed without an expiry being
+         *     recorded, `NOT_YET_EFFECTIVE`, `PENDING_VALIDATION` after an
+         *     inconclusive or unavailable authority check, `AUTHORITY_NEGATIVE`, and
+         *     `AWAITING_ACTIVATION`. No registration is NOT_REGISTERED's opposite:
+         *     an absent registration is never "tax exempt" (EER-04).
+         */
+        get: operations["listRegistrations"];
+        put?: never;
+        /**
+         * Record a registration, as a draft or submitted for review
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records a registration a legal entity holds or is applying for: its
+         *     scheme, jurisdiction, authority, number and effective dates, with any
+         *     supporting documents by digest (hashed in the browser; nothing is
+         *     uploaded). It is kept as a `DRAFT`, or `SUBMITTED` with `submit: true`
+         *     — never `VERIFIED` or `ACTIVE`: an uploaded application is not an
+         *     official acceptance (Doc 17 ER-014). The legal entity defaults to the
+         *     tenant's default entity.
+         *
+         *     Each scheme keeps its own identifier: an FCC FRN, a USAC 499 Filer ID
+         *     and a USAC 498 ID are distinct, and a number of one scheme entered under
+         *     another is `400 REGISTRATION_SCHEME_MISMATCH`, never converted
+         *     (ER-011). A number already recorded for another of the tenant's legal
+         *     entities is `409 EVIDENCE_PROVENANCE_CONFLICT`; one already recorded
+         *     for this entity is `409 ALREADY_EXISTS` unless the new registration
+         *     `supersedes` it. A renewal or correction is a new registration; nothing
+         *     is edited.
+         *
+         *     **Idempotent on the `Idempotency-Key`**: the same key and request return
+         *     the registration already recorded with `200`; the same key with a
+         *     different request is `409 IDEMPOTENCY_KEY_REUSE`.
+         */
+        post: operations["createRegistration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/registrations/{registrationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One registration with its history
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The registration as of now, with every event: submissions, authority
+         *     checks with the authority's reference, activation, suspension, expiry,
+         *     revocation and supporting documents. The number is revealed to
+         *     `OPERATOR` and `ANALYST` and masked for `AUDITOR`.
+         */
+        get: operations["getRegistration"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/registrations/{registrationId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit, withdraw, return, activate, suspend, reinstate, expire or revoke a registration
+         * @description Signed in as themselves. `SUBMITTED` and `WITHDRAWN` are `OPERATOR` or
+         *     `ANALYST`; every other move is `ANALYST`.
+         *
+         *     `SUBMITTED` from `DRAFT`; `WITHDRAWN` from `DRAFT` or `SUBMITTED`;
+         *     `DRAFT` from `SUBMITTED` or `VERIFIED` (returned for evidence). `ACTIVE`
+         *     from `VERIFIED` is activation: by someone other than the submitter
+         *     (`403 MAKER_CHECKER`), once the effective date has come, and only on the
+         *     version read — anything recorded since is `409 VERSION_CONFLICT`.
+         *     `SUSPENDED`, `REVOKED` and `EXPIRED` from `ACTIVE` or `SUSPENDED`;
+         *     `EXPIRED` only once the effective end date has passed. `ACTIVE` from
+         *     `SUSPENDED` is reinstatement, by someone other than the suspender.
+         *     Every move but `SUBMITTED` and `EXPIRED` gives its reason. `VERIFIED`
+         *     is never a move a person names: only an authority check makes it.
+         *
+         *     An active registration is evidence of status. It is not authority to
+         *     file and changes no tax result.
+         */
+        post: operations["transitionRegistration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/registrations/{registrationId}/checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record an authority check of a registration's number
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     Records what an authority returned when a specialist looked the number
+         *     up. No authority adapter is connected, so `method` is `MANUAL_LOOKUP`:
+         *     a named person's attested lookup, never a fabricated authority result.
+         *     The source must be one that can check the scheme — VIES does not
+         *     validate a GB number, HMRC does not validate an EU one (ER-018).
+         *
+         *     `VERIFIED` moves a `SUBMITTED` registration to `VERIFIED`, and
+         *     `NEGATIVE` takes a `VERIFIED` one back to `SUBMITTED`; both carry the
+         *     authority's own `reference`. `INCONCLUSIVE` and `UNAVAILABLE` move
+         *     nothing and are never treated as valid (ER-015, XC-06). A negative
+         *     check on an `ACTIVE` registration flags it for review; it is suspended
+         *     only by a person. The submitter does not record the check that verifies
+         *     their own registration (`403 MAKER_CHECKER`).
+         */
+        post: operations["recordRegistrationCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/registrations/{registrationId}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a supporting document by digest
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records a PDF or image as evidence by its SHA-256, name, media type and
+         *     size; the file is hashed in the browser and not uploaded. It is a new
+         *     event, so an activation prepared on the earlier version is refused with
+         *     `409 VERSION_CONFLICT`. A closed registration takes no more evidence.
+         */
+        post: operations["recordRegistrationAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exemptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The certificate relationship register and renewal queue
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Exemption certificates held as evidence, newest first, as of now, in any
+         *     status. Filter by `flag` for the work queues: `EXPIRING_SOON` and
+         *     `PAST_EXPIRY` are the renewal queue (EER-13), `CORRECTION_REQUESTED`
+         *     waits for a corrected document, `AWAITING_SECOND_REVIEW` waits for a
+         *     checker. An approved certificate is evidence for its buyer, seller
+         *     entity, jurisdiction and dates; it changes no tax result (Doc 17 §01).
+         */
+        get: operations["listExemptionCertificates"];
+        put?: never;
+        /**
+         * Receive an exemption certificate as evidence
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Receives a buyer's exemption certificate given to a seller entity, with
+         *     its document by digest — a PDF or image of at most 25 MiB, hashed in the
+         *     browser and not uploaded. It is `SUBMITTED`, evidence version 1: a
+         *     receipt, not an approval, and no tax benefit (EER-09). The seller
+         *     entity defaults to the tenant's default entity.
+         *
+         *     A document already recorded for a different buyer or seller entity is
+         *     `409 EVIDENCE_PROVENANCE_CONFLICT`: a certificate never carries from one
+         *     buyer or entity to another (EER-08, EER-10). A renewal names the
+         *     certificate it `supersedes`, of the same seller, buyer and jurisdiction;
+         *     the old one stays as it is until the renewal is approved.
+         *
+         *     **Idempotent on the `Idempotency-Key`**: the same key and request return
+         *     the certificate already received with `200`; the same key with
+         *     different bytes or fields is `409 IDEMPOTENCY_KEY_REUSE` (ER-027).
+         */
+        post: operations["receiveExemptionCertificate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exemptions/{certificateId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One exemption certificate with its evidence history
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The certificate as of now: its current document, screening, any
+         *     recommendation awaiting a checker, the approval with its maker and
+         *     checker, and every event and document version as recorded.
+         */
+        get: operations["getExemptionCertificate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exemptions/{certificateId}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replace the certificate document with a corrected version
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records a corrected document as the next evidence version, while the
+         *     certificate is `SUBMITTED`, `SCREENING` or `REVIEW_REQUIRED`. It goes
+         *     back to `SUBMITTED`: a screening or recommendation of the old version
+         *     no longer counts, and a checker confirming the old version is refused
+         *     with `409 VERSION_CONFLICT` (ER-042). An approved, rejected or expired
+         *     certificate takes no new document; a renewal is a new certificate.
+         */
+        post: operations["addExemptionCertificateVersion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exemptions/{certificateId}/screening": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the completeness checklist
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     Records the completeness checklist against the current evidence version
+         *     of a `SUBMITTED` certificate (EER-10). `DOCUMENT_COMPLETE` needs every
+         *     criterion to pass or not apply, and is refused for a document already
+         *     past its expiry (T15-13A); it and `NEEDS_LEGAL_DECISION` move the
+         *     certificate to `REVIEW_REQUIRED`. `INCOMPLETE` and `INCONSISTENT` name a
+         *     failed criterion and say what is wrong; the certificate waits in
+         *     `SCREENING` for a corrected document. Complete is not approved.
+         */
+        post: operations["screenExemptionCertificate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exemptions/{certificateId}/recommendation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recommend approval or rejection (the maker)
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     The maker's half of a decision on a `REVIEW_REQUIRED` certificate, with
+         *     its rationale: approve or reject the current evidence version. An
+         *     approval states the period the certificate is evidence for, from no
+         *     earlier than its issue date and ending no later than its expiry; an
+         *     already-expired certificate is not recommended for approval. Nothing is
+         *     decided until a different person confirms it.
+         */
+        post: operations["recommendExemptionCertificate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exemptions/{certificateId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm or return the recommendation (the checker)
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     The checker's half: `CONFIRM` publishes the pending recommendation —
+         *     `APPROVED` or `REJECTED` — and `RETURN` sends it back with a reason. The
+         *     checker names the evidence version they reviewed; any other is
+         *     `409 VERSION_CONFLICT` and nothing is published (ER-042, XC-08). The
+         *     checker is neither the recommender nor the person who recorded the
+         *     current document (`403 MAKER_CHECKER`; ER-041). Confirming a renewal's
+         *     approval supersedes the certificate it renews.
+         *
+         *     `APPROVED` is evidence for one buyer, seller entity, jurisdiction and
+         *     period. It is not a tax exemption: the determination engine decides
+         *     applicability from its own approved rules, and nothing committed is
+         *     rewritten (T15-13C; ER-033).
+         */
+        post: operations["decideExemptionCertificate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/exemptions/{certificateId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suspend, reinstate, expire or revoke an approved certificate
+         * @description `ANALYST`, signed in as themselves.
+         *
+         *     `SUSPENDED` from `APPROVED`; `APPROVED` from `SUSPENDED` (reinstatement,
+         *     by someone other than the suspender, while the evidence period lasts);
+         *     `EXPIRED` from either once the evidence period has ended; `REVOKED` from
+         *     either. Every move but `EXPIRED` gives its reason. Expiry and revocation
+         *     block future use only: history stays as recorded, and an expired or
+         *     revoked certificate is never resumed — a renewal is a new certificate
+         *     reviewed afresh (ER-038, ER-039).
+         */
+        post: operations["transitionExemptionCertificate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5146,7 +6010,7 @@ export interface components {
          * @example com.zoikotax.decision.committed
          * @enum {string}
          */
-        EventType: "com.zoikotax.decision.committed" | "com.zoikotax.decision.corrected" | "com.zoikotax.obligation.status-changed" | "com.zoikotax.accumulator.threshold-crossed" | "com.zoikotax.refund.requested" | "com.zoikotax.refund.status-changed" | "com.zoikotax.document.committed";
+        EventType: "com.zoikotax.decision.committed" | "com.zoikotax.decision.corrected" | "com.zoikotax.obligation.status-changed" | "com.zoikotax.accumulator.threshold-crossed" | "com.zoikotax.refund.requested" | "com.zoikotax.refund.status-changed" | "com.zoikotax.document.committed" | "com.zoikotax.gl.export-dispatched";
         /**
          * WebhookStatus
          * @example ACTIVE
@@ -7094,6 +7958,383 @@ export interface components {
             recordedBy: string;
         };
         /**
+         * ERPBridgeId
+         * Format: uuid
+         * @example 01920c20-0000-7000-8000-0000000000b1
+         */
+        ERPBridgeId: string;
+        /**
+         * ERPExportId
+         * Format: uuid
+         * @description An export batch. Also the external reference every attempt of the batch carries to the ERP.
+         * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+         */
+        ERPExportId: string;
+        /**
+         * ERPAttemptId
+         * Format: uuid
+         * @description One dispatch attempt of an export batch.
+         * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e20
+         */
+        ERPAttemptId: string;
+        /**
+         * GLSnapshotId
+         * Format: uuid
+         * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e30
+         */
+        GLSnapshotId: string;
+        /**
+         * GLReconciliationId
+         * Format: uuid
+         * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e40
+         */
+        GLReconciliationId: string;
+        /**
+         * ERPVendor
+         * @description The ERP family a bridge targets. A label for the connector that consumes a dispatch; each real target still needs its own contract verification (LED-23).
+         * @example SAP
+         * @enum {string}
+         */
+        ERPVendor: "SAP" | "ORACLE" | "NETSUITE" | "DYNAMICS" | "OTHER";
+        /**
+         * ERPRef
+         * @description A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
+         * @example SAP-MSG-000918
+         */
+        ERPRef: string;
+        /**
+         * ERPDetail
+         * @description Why — an ERP's rejection text, why an outcome is unknown, or why a batch was withdrawn — in the words of the person who recorded it.
+         * @example F5 702: GL account 2310-00 is blocked for posting in company code AC01
+         */
+        ERPDetail: string;
+        /**
+         * GLAccountCode
+         * @description An account code in the customer's general ledger. Never a TCSL control account.
+         * @example 2310-00
+         */
+        GLAccountCode: string;
+        /**
+         * LedgerAmount
+         * @description A ledger figure in canonical decimal string form — never a JSON number,
+         *     never computed by a client. Scale is significant. A control total or GL
+         *     aggregate of the provider's own books, not a consumer amount.
+         * @example 10.00
+         */
+        LedgerAmount: string;
+        /** ERPBridgeRequest */
+        ERPBridgeRequest: {
+            /** @description A label for the connection. */
+            name: string;
+            vendor: components["schemas"]["ERPVendor"];
+            /** @description The legal entity's company code in the ERP. */
+            companyCode: string;
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+        };
+        /**
+         * ERPAccountMap
+         * @description One TCSL control account, onto one customer GL account.
+         */
+        ERPAccountMap: {
+            account: components["schemas"]["ControlAccount"];
+            glAccount: components["schemas"]["GLAccountCode"];
+        };
+        /**
+         * ERPMapping
+         * @description One version of a bridge's account mapping. Never edited; a change is the next version.
+         */
+        ERPMapping: {
+            /** Format: int32 */
+            version: number;
+            chartVersion: components["schemas"]["ERPRef"];
+            accounts: components["schemas"]["ERPAccountMap"][];
+            digest: components["schemas"]["Digest"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /** ERPMappingRequest */
+        ERPMappingRequest: {
+            chartVersion: components["schemas"]["ERPRef"];
+            accounts: components["schemas"]["ERPAccountMap"][];
+        };
+        /**
+         * ERPBridge
+         * @description A member legal entity's subledger connected to one customer general ledger, with its mapping versions oldest first.
+         */
+        ERPBridge: {
+            id: components["schemas"]["ERPBridgeId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            name: string;
+            vendor: components["schemas"]["ERPVendor"];
+            companyCode: string;
+            createdAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            createdBy: string;
+            /**
+             * Format: int32
+             * @description The version a new batch is prepared under. Absent until a mapping is recorded.
+             */
+            currentMappingVersion?: number;
+            mappings: components["schemas"]["ERPMapping"][];
+        };
+        /** ERPBridgeList */
+        ERPBridgeList: {
+            bridges: components["schemas"]["ERPBridge"][];
+        };
+        /**
+         * ERPExportStatus
+         * @description A batch's transfer state (LED-23). `TRANSMITTED` is committed for
+         *     transmission; `ACKNOWLEDGED` is the ERP's transport receipt; only
+         *     `ERP_POSTED` says the general ledger holds it. `WITHDRAWN` is a batch
+         *     released before it was ever sent.
+         * @example ERP_POSTED
+         * @enum {string}
+         */
+        ERPExportStatus: "PREPARED" | "TRANSMITTED" | "ACKNOWLEDGED" | "ERP_POSTED" | "REJECTED" | "OUTCOME_UNKNOWN" | "WITHDRAWN";
+        /**
+         * ERPExportEventKind
+         * @example DISPATCHED
+         * @enum {string}
+         */
+        ERPExportEventKind: "PREPARED" | "DISPATCHED" | "ACKNOWLEDGED" | "POSTED" | "REJECTED" | "OUTCOME_UNKNOWN" | "STATUS_NOT_FOUND" | "WITHDRAWN";
+        /**
+         * ERPResponseKind
+         * @description An ERP answer a person records.
+         * @example POSTED
+         * @enum {string}
+         */
+        ERPResponseKind: "ACKNOWLEDGED" | "POSTED" | "REJECTED" | "OUTCOME_UNKNOWN" | "STATUS_NOT_FOUND";
+        /**
+         * ERPExportEvent
+         * @description One appended act on a batch — its delivery evidence, attempt by attempt.
+         */
+        ERPExportEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["ERPExportEventKind"];
+            status: components["schemas"]["ERPExportStatus"];
+            attemptId?: components["schemas"]["ERPAttemptId"];
+            remoteCorrelation?: components["schemas"]["ERPRef"];
+            erpReference?: components["schemas"]["ERPRef"];
+            responseDigest?: components["schemas"]["ERPRef"];
+            detail?: components["schemas"]["ERPDetail"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /**
+         * ERPExportLine
+         * @description One exported line, traced to the TCSL journal line it carries (ZTAX-FIN-REQ-0053).
+         */
+        ERPExportLine: {
+            /** Format: uuid */
+            journalId: string;
+            /** Format: int32 */
+            journalLine: number;
+            account: components["schemas"]["ControlAccount"];
+            glAccount: components["schemas"]["GLAccountCode"];
+            /** @enum {string} */
+            side: "DEBIT" | "CREDIT";
+            amount: components["schemas"]["LedgerAmount"];
+            authority?: string;
+            jurisdiction?: string;
+        };
+        /**
+         * ERPCorrectionTask
+         * @description The task an ERP rejection opens: the rejected batch's journals that no
+         *     posted batch has carried into the GL since. Open while any is
+         *     outstanding, and the period's GL reconciliation is held until then.
+         */
+        ERPCorrectionTask: {
+            open: boolean;
+            openedAt: components["schemas"]["Timestamp"];
+            reason?: components["schemas"]["ERPDetail"];
+            outstandingJournalIds: string[];
+            /** @description The posted batches that carried the rejected journals. */
+            postedBy: components["schemas"]["ERPExportId"][];
+        };
+        /**
+         * ERPExport
+         * @description A sealed export batch: the export mapping (company code, mapping and
+         *     chart version, currency, posting date), the exact journal ID set, the
+         *     totals and the batch digest, with its transfer state and every attempt
+         *     and ERP answer recorded against it.
+         */
+        ERPExport: {
+            id: components["schemas"]["ERPExportId"];
+            bridgeId: components["schemas"]["ERPBridgeId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            period: components["schemas"]["LegalPeriod"];
+            currency: components["schemas"]["CurrencyCode"];
+            postingDate: components["schemas"]["CivilDate"];
+            companyCode: string;
+            /** Format: int32 */
+            mappingVersion: number;
+            chartVersion: components["schemas"]["ERPRef"];
+            mappingDigest: components["schemas"]["Digest"];
+            /** @description The reference every attempt carries to the ERP, and that the ERP deduplicates on. */
+            externalRef: string;
+            journalIds: string[];
+            /** Format: int32 */
+            lineCount: number;
+            totalDebits: components["schemas"]["LedgerAmount"];
+            totalCredits: components["schemas"]["LedgerAmount"];
+            batchDigest: components["schemas"]["Digest"];
+            preparedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            preparedBy: string;
+            status: components["schemas"]["ERPExportStatus"];
+            history: components["schemas"]["ERPExportEvent"][];
+            correction?: components["schemas"]["ERPCorrectionTask"];
+            /** @description Present when one batch is read. */
+            lines?: components["schemas"]["ERPExportLine"][];
+        };
+        /** ERPExportList */
+        ERPExportList: {
+            exports: components["schemas"]["ERPExport"][];
+        };
+        /** ERPExportRequest */
+        ERPExportRequest: {
+            period: components["schemas"]["LegalPeriod"];
+            currency: components["schemas"]["CurrencyCode"];
+            postingDate: components["schemas"]["CivilDate"];
+        };
+        /** ERPDispatchRequest */
+        ERPDispatchRequest: {
+            expectedDigest: components["schemas"]["Digest"];
+        };
+        /** ERPResponseRequest */
+        ERPResponseRequest: {
+            kind: components["schemas"]["ERPResponseKind"];
+            attemptId: components["schemas"]["ERPAttemptId"];
+            remoteCorrelation?: components["schemas"]["ERPRef"];
+            erpReference?: components["schemas"]["ERPRef"];
+            responseDigest?: components["schemas"]["ERPRef"];
+            detail?: components["schemas"]["ERPDetail"];
+        };
+        /** ERPWithdrawalRequest */
+        ERPWithdrawalRequest: {
+            reason: components["schemas"]["ERPDetail"];
+        };
+        /**
+         * GLBalanceLine
+         * @description One GL account's period activity as the ERP reported it, debits and credits apart.
+         */
+        GLBalanceLine: {
+            glAccount: components["schemas"]["GLAccountCode"];
+            debits: components["schemas"]["LedgerAmount"];
+            credits: components["schemas"]["LedgerAmount"];
+        };
+        /** GLSnapshotRequest */
+        GLSnapshotRequest: {
+            period: components["schemas"]["LegalPeriod"];
+            currency: components["schemas"]["CurrencyCode"];
+            /**
+             * Format: date-time
+             * @description When the ERP's figures were taken, RFC 3339.
+             */
+            asOf: string;
+            sourceRef: components["schemas"]["ERPRef"];
+            sourceDigest?: components["schemas"]["ERPRef"];
+            balances: components["schemas"]["GLBalanceLine"][];
+        };
+        /**
+         * GLSnapshot
+         * @description GL balances an ERP reported for a period and currency, with the report they came from and their digest.
+         */
+        GLSnapshot: {
+            id: components["schemas"]["GLSnapshotId"];
+            bridgeId: components["schemas"]["ERPBridgeId"];
+            period: components["schemas"]["LegalPeriod"];
+            currency: components["schemas"]["CurrencyCode"];
+            asOf: components["schemas"]["Timestamp"];
+            sourceRef: components["schemas"]["ERPRef"];
+            sourceDigest?: components["schemas"]["ERPRef"];
+            digest: components["schemas"]["Digest"];
+            balances: components["schemas"]["GLBalanceLine"][];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /** GLSnapshotList */
+        GLSnapshotList: {
+            snapshots: components["schemas"]["GLSnapshot"][];
+        };
+        /** GLReconciliationRequest */
+        GLReconciliationRequest: {
+            snapshotId: components["schemas"]["GLSnapshotId"];
+        };
+        /**
+         * GLReconOutcome
+         * @description `RECONCILED` — every item tied and nothing held the period.
+         *     `VARIANCES` — an item did not tie. `HELD` — a journal of the period is
+         *     not in a batch the ERP posted; never reported reconciled while it is.
+         * @example HELD
+         * @enum {string}
+         */
+        GLReconOutcome: "RECONCILED" | "VARIANCES" | "HELD";
+        /**
+         * GLHold
+         * @description How many of the period's journals are held for one reason.
+         */
+        GLHold: {
+            /** @enum {string} */
+            reason: "UNEXPORTED_JOURNALS" | "AWAITING_DISPATCH" | "AWAITING_ERP_POSTING" | "OUTCOME_UNKNOWN" | "REJECTED_CORRECTION_OPEN";
+            /** Format: int32 */
+            journals: number;
+        };
+        /**
+         * GLReconciliationItem
+         * @description One compared GL account (an R6 item). Amounts are net debit — debits
+         *     less credits. `variance` is observed minus expected, exact, whatever the
+         *     status; absent when one side is.
+         */
+        GLReconciliationItem: {
+            /** @description `gl:<account>`, or `tcsl:<account>` for a TCSL account with no mapping. */
+            matchKey: string;
+            glAccount?: components["schemas"]["GLAccountCode"];
+            tcslAccounts: components["schemas"]["ControlAccount"][];
+            expected?: components["schemas"]["MoneyValue"];
+            observed?: components["schemas"]["MoneyValue"];
+            variance?: components["schemas"]["MoneyValue"];
+            /** @enum {string} */
+            status: "MATCHED" | "TOLERANCE_MATCH" | "UNMATCHED" | "PARTIAL" | "DUPLICATE" | "MISSING" | "CONFLICTED" | "PENDING" | "EXPLAINED" | "RESOLVED";
+            detail?: string;
+        };
+        /**
+         * GLReconciliation
+         * @description One subledger-to-GL reconciliation of a period and currency, against one snapshot, under one mapping version. A record; a re-run is a new one.
+         */
+        GLReconciliation: {
+            id: components["schemas"]["GLReconciliationId"];
+            bridgeId: components["schemas"]["ERPBridgeId"];
+            snapshotId: components["schemas"]["GLSnapshotId"];
+            snapshotDigest: components["schemas"]["Digest"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            period: components["schemas"]["LegalPeriod"];
+            currency: components["schemas"]["CurrencyCode"];
+            /** Format: int32 */
+            mappingVersion: number;
+            outcome: components["schemas"]["GLReconOutcome"];
+            holds: components["schemas"]["GLHold"][];
+            /** Format: int32 */
+            journalCount: number;
+            /** Format: int32 */
+            postedJournalCount: number;
+            populationDigest: components["schemas"]["Digest"];
+            /** Format: int32 */
+            exceptionCount: number;
+            items: components["schemas"]["GLReconciliationItem"][];
+            ranAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            ranBy?: string;
+        };
+        /** GLReconciliationList */
+        GLReconciliationList: {
+            reconciliations: components["schemas"]["GLReconciliation"][];
+        };
+        /**
          * ProviderContribution
          * @description One ContributionEvent: the contribution base a source event carries, with
          *     its eligibility and its immutable hash. The provider's own obligation on
@@ -8141,6 +9382,947 @@ export interface components {
             to: components["schemas"]["CutoverState"];
             note: components["schemas"]["MigrationText"];
         };
+        /**
+         * WorkpaperId
+         * Format: uuid
+         * @example 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        WorkpaperId: string;
+        /**
+         * WorkpaperStatus
+         * @description Where a workpaper stands (Document 08 §04). DATA_INCOMPLETE while an
+         *     exception of the latest build is unresolved; READY_FOR_REVIEW once a
+         *     build is frozen; APPROVED by a second person; REVOKED when the basis
+         *     changed after approval.
+         * @enum {string}
+         */
+        WorkpaperStatus: "DRAFT" | "DATA_INCOMPLETE" | "READY_FOR_REVIEW" | "APPROVED" | "REVOKED";
+        /**
+         * WorkpaperEventKind
+         * @description What an event records. Every one is appended; none edits.
+         * @enum {string}
+         */
+        WorkpaperEventKind: "CREATED" | "BUILT" | "APPROVAL_REVOKED" | "BASIS_CHANGED" | "FX_DOCUMENTED" | "ADJUSTMENT_PROPOSED" | "ADJUSTMENT_DECIDED" | "RESOLUTION_PROPOSED" | "RESOLUTION_DECIDED" | "FROZEN" | "RETURNED" | "APPROVED";
+        /**
+         * WorkpaperAction
+         * @description An act on a workpaper. BUILD is its own request.
+         * @enum {string}
+         */
+        WorkpaperAction: "BUILD" | "FREEZE" | "RETURN_TO_DRAFT" | "APPROVE" | "CHANGE_BASIS" | "DOCUMENT_FX_RATE" | "PROPOSE_ADJUSTMENT" | "DECIDE_ADJUSTMENT" | "PROPOSE_RESOLUTION" | "DECIDE_RESOLUTION";
+        /**
+         * WorkpaperBlocker
+         * @description A reason an open workpaper cannot be frozen for review yet.
+         * @enum {string}
+         */
+        WorkpaperBlocker: "NO_BUILD" | "BASIS_CHANGED_SINCE_BUILD" | "FORMULA_CHANGED" | "EXCEPTION_UNRESOLVED" | "ADJUSTMENT_PENDING" | "RESOLUTION_PENDING";
+        /**
+         * WorkpaperAdjustmentKind
+         * @description A permitted allowance is a positive deduction from the base; an audited adjustment is a signed correction.
+         * @enum {string}
+         */
+        WorkpaperAdjustmentKind: "PERMITTED_ALLOWANCE" | "AUDITED_ADJUSTMENT";
+        /**
+         * WorkpaperDecision
+         * @description A second person's decision on a proposal.
+         * @enum {string}
+         */
+        WorkpaperDecision: "APPROVED" | "REJECTED";
+        /**
+         * WorkpaperAdjustmentState
+         * @description Where an adjustment stands. One below the materiality threshold is APPROVED as proposed.
+         * @enum {string}
+         */
+        WorkpaperAdjustmentState: "PROPOSED" | "APPROVED" | "REJECTED";
+        /**
+         * WorkpaperResolutionState
+         * @enum {string}
+         */
+        WorkpaperResolutionState: "PROPOSED" | "CONFIRMED" | "REJECTED";
+        /**
+         * WorkpaperExceptionState
+         * @description OPEN with no confirmed resolution of this very difference; PENDING while one awaits its second person; RESOLVED once confirmed.
+         * @enum {string}
+         */
+        WorkpaperExceptionState: "OPEN" | "PENDING" | "RESOLVED";
+        /**
+         * WorkpaperExceptionCode
+         * @description SOURCE_MISSING — no source event for the filer, duty and period;
+         *     SOURCE_INCOMPLETE — a held import or an unbalanced reversal, repaired at
+         *     the source; CURRENCY_MISMATCH — no documented FX rate, cleared by
+         *     documenting one; CONTROL_TOTAL_DIFFERENCE — a schedule total that does
+         *     not equal the ledger's control total; SUBLEDGER_SUSPENSE_OPEN and
+         *     GL_BRIDGE_DIFFERENCE — subledger accounts that do not clear in the period.
+         * @enum {string}
+         */
+        WorkpaperExceptionCode: "SOURCE_MISSING" | "SOURCE_INCOMPLETE" | "CURRENCY_MISMATCH" | "CONTROL_TOTAL_DIFFERENCE" | "SUBLEDGER_SUSPENSE_OPEN" | "GL_BRIDGE_DIFFERENCE";
+        /**
+         * WorkpaperReconStatus
+         * @description MATCHED ties exactly; DIFFERENCE does not; BRIDGED differs by exactly the approved, evidence-linked allowances and adjustments.
+         * @enum {string}
+         */
+        WorkpaperReconStatus: "MATCHED" | "DIFFERENCE" | "BRIDGED";
+        /**
+         * WorkpaperRoundingMode
+         * @description How a converted schedule line is rounded, as the documented conversion basis says.
+         * @enum {string}
+         */
+        WorkpaperRoundingMode: "HALF_UP" | "HALF_EVEN" | "HALF_DOWN" | "DOWN" | "UP" | "CEILING" | "FLOOR";
+        /**
+         * WorkpaperAmount
+         * @description An amount or quantity in canonical decimal string form — never a JSON
+         *     number, and never computed by a client. A provider's own revenue
+         *     aggregate, not a consumer amount.
+         * @example 1250.00
+         */
+        WorkpaperAmount: string;
+        /**
+         * WorkpaperRate
+         * @description An FX rate, one unit of the source currency in the reporting currency, as a canonical decimal string.
+         * @example 1.0842
+         */
+        WorkpaperRate: string;
+        /**
+         * WorkpaperRef
+         * @description A reference or label — an authority, a content release, a category, an exception key, a rate source. Never a customer identity.
+         * @example usf-499q@2026.3
+         */
+        WorkpaperRef: string;
+        /**
+         * WorkpaperLabel
+         * @description Text a build computed — a classification, an exclusion reason as the rule gave it, an exception's detail.
+         * @example usf:interstate-telecom
+         */
+        WorkpaperLabel: string;
+        /**
+         * WorkpaperText
+         * @description Free text from the person acting — a reason, an explanation of an exception, a review note.
+         * @example Credit notes issued in October for September usage, per the billing audit
+         */
+        WorkpaperText: string;
+        /**
+         * WorkpaperFilename
+         * @description A recorded document's file name, as given. It may name a person.
+         * @example billing-audit-2026-09.pdf
+         */
+        WorkpaperFilename: string;
+        /**
+         * WorkpaperMediaType
+         * @example application/pdf
+         */
+        WorkpaperMediaType: string;
+        /**
+         * WorkpaperCount
+         * Format: int32
+         */
+        WorkpaperCount: number;
+        /** WorkpaperFlag */
+        WorkpaperFlag: boolean;
+        /**
+         * WorkpaperActor
+         * Format: uuid
+         * @description The person who acted.
+         */
+        WorkpaperActor: string;
+        /**
+         * WorkpaperEvidence
+         * @description A document named by its SHA-256, computed where the document is. Nothing is uploaded.
+         */
+        WorkpaperEvidence: {
+            sha256: components["schemas"]["Sha256Hex"];
+            filename: components["schemas"]["WorkpaperFilename"];
+            mediaType: components["schemas"]["WorkpaperMediaType"];
+        };
+        /**
+         * WorkpaperFXRequest
+         * @description A documented FX rate and its conversion basis for one source currency.
+         */
+        WorkpaperFXRequest: {
+            currency: components["schemas"]["CurrencyCode"];
+            rate: components["schemas"]["WorkpaperRate"];
+            rateSource: components["schemas"]["WorkpaperRef"];
+            rateDate: components["schemas"]["CivilDate"];
+            roundingMode: components["schemas"]["WorkpaperRoundingMode"];
+            /** Format: int32 */
+            scale: number;
+            conversionBasis: components["schemas"]["WorkpaperText"];
+        };
+        /**
+         * WorkpaperFXRate
+         * @description The documented rate in force for one source currency.
+         */
+        WorkpaperFXRate: {
+            currency: components["schemas"]["CurrencyCode"];
+            rate: components["schemas"]["WorkpaperRate"];
+            rateSource: components["schemas"]["WorkpaperRef"];
+            rateDate: components["schemas"]["CivilDate"];
+            roundingMode: components["schemas"]["WorkpaperRoundingMode"];
+            scale: components["schemas"]["WorkpaperCount"];
+            conversionBasis: components["schemas"]["WorkpaperText"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["WorkpaperActor"];
+        };
+        /** WorkpaperAdjustmentRequest */
+        WorkpaperAdjustmentRequest: {
+            kind: components["schemas"]["WorkpaperAdjustmentKind"];
+            category: components["schemas"]["WorkpaperRef"];
+            amount: components["schemas"]["WorkpaperAmount"];
+            reason: components["schemas"]["WorkpaperText"];
+        };
+        /**
+         * WorkpaperAdjustment
+         * @description A permitted allowance or audited adjustment in the reporting currency, with its evidence and decision.
+         */
+        WorkpaperAdjustment: {
+            number: components["schemas"]["WorkpaperCount"];
+            kind: components["schemas"]["WorkpaperAdjustmentKind"];
+            category: components["schemas"]["WorkpaperRef"];
+            amount: components["schemas"]["WorkpaperAmount"];
+            currency: components["schemas"]["CurrencyCode"];
+            reason: components["schemas"]["WorkpaperText"];
+            evidence: components["schemas"]["WorkpaperEvidence"];
+            material: components["schemas"]["WorkpaperFlag"];
+            state: components["schemas"]["WorkpaperAdjustmentState"];
+            proposedAt: components["schemas"]["Timestamp"];
+            proposedBy: components["schemas"]["WorkpaperActor"];
+            decidedAt?: components["schemas"]["Timestamp"];
+            decidedBy?: components["schemas"]["WorkpaperActor"];
+            decisionNote?: components["schemas"]["WorkpaperText"];
+        };
+        /**
+         * WorkpaperResolution
+         * @description An evidence-linked explanation of one exception, confirmed or rejected by a second person.
+         */
+        WorkpaperResolution: {
+            exceptionKey: components["schemas"]["WorkpaperRef"];
+            fingerprint: components["schemas"]["Digest"];
+            explanation: components["schemas"]["WorkpaperText"];
+            evidence: components["schemas"]["WorkpaperEvidence"];
+            state: components["schemas"]["WorkpaperResolutionState"];
+            proposedAt: components["schemas"]["Timestamp"];
+            proposedBy: components["schemas"]["WorkpaperActor"];
+            decidedAt?: components["schemas"]["Timestamp"];
+            decidedBy?: components["schemas"]["WorkpaperActor"];
+            decisionNote?: components["schemas"]["WorkpaperText"];
+        };
+        /**
+         * WorkpaperException
+         * @description One exception of the latest build and where its resolution stands.
+         */
+        WorkpaperException: {
+            key: components["schemas"]["WorkpaperRef"];
+            code: components["schemas"]["WorkpaperExceptionCode"];
+            currency?: components["schemas"]["CurrencyCode"];
+            difference?: components["schemas"]["WorkpaperAmount"];
+            detail: components["schemas"]["WorkpaperLabel"];
+            resolvable: components["schemas"]["WorkpaperFlag"];
+            fingerprint: components["schemas"]["Digest"];
+            state: components["schemas"]["WorkpaperExceptionState"];
+            resolution?: components["schemas"]["WorkpaperResolution"];
+        };
+        /**
+         * WorkpaperSourceRef
+         * @description Lineage from a schedule line to one source event.
+         */
+        WorkpaperSourceRef: {
+            contributionId: components["schemas"]["ContributionId"];
+            sourceEventId: components["schemas"]["ContributionRef"];
+            sourceVersion: components["schemas"]["WorkpaperCount"];
+            sourceRef: components["schemas"]["ContributionRef"];
+            ruleVersion: components["schemas"]["ContributionRef"];
+            amount: components["schemas"]["WorkpaperAmount"];
+            reverses?: components["schemas"]["WorkpaperLabel"];
+        };
+        /**
+         * WorkpaperRevenueLine
+         * @description One revenue category in one source currency, with its source events.
+         */
+        WorkpaperRevenueLine: {
+            category: components["schemas"]["WorkpaperLabel"];
+            currency: components["schemas"]["CurrencyCode"];
+            count: components["schemas"]["WorkpaperCount"];
+            amount: components["schemas"]["WorkpaperAmount"];
+            converted?: components["schemas"]["WorkpaperAmount"];
+            sources: components["schemas"]["WorkpaperSourceRef"][];
+        };
+        /**
+         * WorkpaperExclusionLine
+         * @description One excluded base, by the reason the rule gave, with its source events.
+         */
+        WorkpaperExclusionLine: {
+            reason: components["schemas"]["WorkpaperLabel"];
+            currency: components["schemas"]["CurrencyCode"];
+            count: components["schemas"]["WorkpaperCount"];
+            amount: components["schemas"]["WorkpaperAmount"];
+            converted?: components["schemas"]["WorkpaperAmount"];
+            sources: components["schemas"]["WorkpaperSourceRef"][];
+        };
+        /** WorkpaperQuantityLine */
+        WorkpaperQuantityLine: {
+            unit: components["schemas"]["WorkpaperLabel"];
+            total: components["schemas"]["WorkpaperAmount"];
+        };
+        /**
+         * WorkpaperSourceTypeLine
+         * @description The BSS control total of one kind of source record in one currency.
+         */
+        WorkpaperSourceTypeLine: {
+            sourceType: components["schemas"]["ContributionSourceType"];
+            currency: components["schemas"]["CurrencyCode"];
+            count: components["schemas"]["WorkpaperCount"];
+            eligible: components["schemas"]["WorkpaperAmount"];
+        };
+        /**
+         * WorkpaperVolumes
+         * @description Volume and transaction counts.
+         */
+        WorkpaperVolumes: {
+            accepted: components["schemas"]["WorkpaperCount"];
+            quarantined: components["schemas"]["WorkpaperCount"];
+            reversals: components["schemas"]["WorkpaperCount"];
+            amendments: components["schemas"]["WorkpaperCount"];
+            quantities: components["schemas"]["WorkpaperQuantityLine"][];
+            bySource: components["schemas"]["WorkpaperSourceTypeLine"][];
+        };
+        /**
+         * WorkpaperAdjustmentLine
+         * @description An approved allowance or adjustment as it entered the build.
+         */
+        WorkpaperAdjustmentLine: {
+            number: components["schemas"]["WorkpaperCount"];
+            category: components["schemas"]["WorkpaperLabel"];
+            amount: components["schemas"]["WorkpaperAmount"];
+            reason: components["schemas"]["WorkpaperText"];
+            evidenceSha256: components["schemas"]["Sha256Hex"];
+            material: components["schemas"]["WorkpaperFlag"];
+        };
+        /**
+         * WorkpaperTotals
+         * @description The report totals in the reporting currency. Absent while a source currency has no documented conversion.
+         */
+        WorkpaperTotals: {
+            currency: components["schemas"]["CurrencyCode"];
+            grossEligible: components["schemas"]["WorkpaperAmount"];
+            excluded: components["schemas"]["WorkpaperAmount"];
+            allowances: components["schemas"]["WorkpaperAmount"];
+            adjustments: components["schemas"]["WorkpaperAmount"];
+            reportableBase: components["schemas"]["WorkpaperAmount"];
+        };
+        /**
+         * WorkpaperControlTotal
+         * @description The contribution ledger's own control total for the filer, duty, period and one currency — the independent expectation the schedules are reconciled to.
+         */
+        WorkpaperControlTotal: {
+            currency: components["schemas"]["CurrencyCode"];
+            accepted: components["schemas"]["WorkpaperCount"];
+            quarantined: components["schemas"]["WorkpaperCount"];
+            reversals: components["schemas"]["WorkpaperCount"];
+            eligible: components["schemas"]["WorkpaperAmount"];
+            excluded: components["schemas"]["WorkpaperAmount"];
+            periodDigest: components["schemas"]["Digest"];
+            incomplete: components["schemas"]["ContributionIncompleteReason"][];
+            sourceChecksums: components["schemas"]["WorkpaperLabel"][];
+        };
+        /**
+         * WorkpaperReconLine
+         * @description One reconciliation — expected against actual in one currency.
+         */
+        WorkpaperReconLine: {
+            code: components["schemas"]["WorkpaperLabel"];
+            currency: components["schemas"]["CurrencyCode"];
+            expected: components["schemas"]["WorkpaperAmount"];
+            actual: components["schemas"]["WorkpaperAmount"];
+            difference: components["schemas"]["WorkpaperAmount"];
+            status: components["schemas"]["WorkpaperReconStatus"];
+        };
+        /**
+         * WorkpaperBalanceLine
+         * @description One Tax Control Subledger balance of the filer in the period, debits and credits apart. Shown beside the schedules, never netted into them.
+         */
+        WorkpaperBalanceLine: {
+            account: components["schemas"]["WorkpaperLabel"];
+            currency: components["schemas"]["CurrencyCode"];
+            debits: components["schemas"]["WorkpaperAmount"];
+            credits: components["schemas"]["WorkpaperAmount"];
+        };
+        /**
+         * WorkpaperConversion
+         * @description A documented FX rate a build converted with.
+         */
+        WorkpaperConversion: {
+            from: components["schemas"]["CurrencyCode"];
+            to: components["schemas"]["CurrencyCode"];
+            rate: components["schemas"]["WorkpaperRate"];
+            rateSource: components["schemas"]["WorkpaperRef"];
+            rateDate: components["schemas"]["CivilDate"];
+            roundingMode: components["schemas"]["WorkpaperRoundingMode"];
+            scale: components["schemas"]["WorkpaperCount"];
+            basis: components["schemas"]["WorkpaperText"];
+        };
+        /**
+         * WorkpaperOutput
+         * @description A build's sealed document — its schedules, control totals and reconciliation. Its exceptions are listed on the workpaper with their resolutions.
+         */
+        WorkpaperOutput: {
+            formulaVersion: components["schemas"]["WorkpaperRef"];
+            contentRelease: components["schemas"]["WorkpaperRef"];
+            reportingCurrency: components["schemas"]["CurrencyCode"];
+            revenue: components["schemas"]["WorkpaperRevenueLine"][];
+            excluded: components["schemas"]["WorkpaperExclusionLine"][];
+            volumes: components["schemas"]["WorkpaperVolumes"];
+            allowances: components["schemas"]["WorkpaperAdjustmentLine"][];
+            adjustments: components["schemas"]["WorkpaperAdjustmentLine"][];
+            totals?: components["schemas"]["WorkpaperTotals"];
+            controlTotals: components["schemas"]["WorkpaperControlTotal"][];
+            reconciliation: components["schemas"]["WorkpaperReconLine"][];
+            subledger: components["schemas"]["WorkpaperBalanceLine"][];
+            conversions: components["schemas"]["WorkpaperConversion"][];
+        };
+        /**
+         * WorkpaperBuild
+         * @description One build version — the hash of what it read, the hash of what it produced. Only the latest build carries its output.
+         */
+        WorkpaperBuild: {
+            version: components["schemas"]["WorkpaperCount"];
+            inputsHash: components["schemas"]["Digest"];
+            outputHash: components["schemas"]["Digest"];
+            basisDigest: components["schemas"]["Digest"];
+            formulaVersion: components["schemas"]["WorkpaperRef"];
+            contentRelease: components["schemas"]["WorkpaperRef"];
+            builtAt: components["schemas"]["Timestamp"];
+            builtBy: components["schemas"]["WorkpaperActor"];
+            output?: components["schemas"]["WorkpaperOutput"];
+        };
+        /** WorkpaperEvent */
+        WorkpaperEvent: {
+            seq: components["schemas"]["WorkpaperCount"];
+            kind: components["schemas"]["WorkpaperEventKind"];
+            status: components["schemas"]["WorkpaperStatus"];
+            note?: components["schemas"]["WorkpaperText"];
+            buildVersion?: components["schemas"]["WorkpaperCount"];
+            contentRelease?: components["schemas"]["WorkpaperRef"];
+            fx?: components["schemas"]["WorkpaperFXRequest"];
+            adjustmentNumber?: components["schemas"]["WorkpaperCount"];
+            adjustmentKind?: components["schemas"]["WorkpaperAdjustmentKind"];
+            adjustmentCategory?: components["schemas"]["WorkpaperRef"];
+            adjustmentAmount?: components["schemas"]["WorkpaperAmount"];
+            decision?: components["schemas"]["WorkpaperDecision"];
+            exceptionKey?: components["schemas"]["WorkpaperRef"];
+            fingerprint?: components["schemas"]["Digest"];
+            evidence?: components["schemas"]["WorkpaperEvidence"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["WorkpaperActor"];
+        };
+        /**
+         * Workpaper
+         * @description A regulatory workpaper (OBL-07): the header, its builds, the latest
+         *     build's schedules and reconciliation, the exceptions and their
+         *     resolutions, the documented FX rates, the adjustments, the history, and
+         *     what it admits now. `eventCount` is the `expectedSeq` an act sends.
+         */
+        Workpaper: {
+            id: components["schemas"]["WorkpaperId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            duty: components["schemas"]["ContributionRegime"];
+            period: components["schemas"]["LegalPeriod"];
+            authority: components["schemas"]["WorkpaperRef"];
+            reportingCurrency: components["schemas"]["CurrencyCode"];
+            materialityThreshold: components["schemas"]["WorkpaperAmount"];
+            obligationId?: components["schemas"]["ObligationId"];
+            initialContentRelease: components["schemas"]["WorkpaperRef"];
+            contentRelease: components["schemas"]["WorkpaperRef"];
+            formulaVersion: components["schemas"]["WorkpaperRef"];
+            status: components["schemas"]["WorkpaperStatus"];
+            eventCount: components["schemas"]["WorkpaperCount"];
+            frozenBuildVersion?: components["schemas"]["WorkpaperCount"];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["WorkpaperActor"];
+            builds: components["schemas"]["WorkpaperBuild"][];
+            latestBuild?: components["schemas"]["WorkpaperBuild"];
+            exceptions: components["schemas"]["WorkpaperException"][];
+            fxRates: components["schemas"]["WorkpaperFXRate"][];
+            adjustments: components["schemas"]["WorkpaperAdjustment"][];
+            resolutions: components["schemas"]["WorkpaperResolution"][];
+            history: components["schemas"]["WorkpaperEvent"][];
+            allowedActions: components["schemas"]["WorkpaperAction"][];
+            blockers: components["schemas"]["WorkpaperBlocker"][];
+        };
+        /** WorkpaperList */
+        WorkpaperList: {
+            workpapers: components["schemas"]["Workpaper"][];
+        };
+        /** WorkpaperRequest */
+        WorkpaperRequest: {
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            duty: components["schemas"]["ContributionRegime"];
+            period: components["schemas"]["LegalPeriod"];
+            authority: components["schemas"]["WorkpaperRef"];
+            reportingCurrency: components["schemas"]["CurrencyCode"];
+            materialityThreshold?: components["schemas"]["WorkpaperAmount"];
+            obligationId?: components["schemas"]["ObligationId"];
+            contentRelease: components["schemas"]["WorkpaperRef"];
+        };
+        /** WorkpaperBuildRequest */
+        WorkpaperBuildRequest: {
+            expectedSeq?: components["schemas"]["WorkpaperCount"];
+        };
+        /**
+         * WorkpaperActionRequest
+         * @description One act. The fields an action does not use are ignored.
+         */
+        WorkpaperActionRequest: {
+            action: components["schemas"]["WorkpaperAction"];
+            expectedSeq?: components["schemas"]["WorkpaperCount"];
+            note?: components["schemas"]["WorkpaperText"];
+            buildVersion?: components["schemas"]["WorkpaperCount"];
+            contentRelease?: components["schemas"]["WorkpaperRef"];
+            fx?: components["schemas"]["WorkpaperFXRequest"];
+            adjustment?: components["schemas"]["WorkpaperAdjustmentRequest"];
+            adjustmentNumber?: components["schemas"]["WorkpaperCount"];
+            decision?: components["schemas"]["WorkpaperDecision"];
+            exceptionKey?: components["schemas"]["WorkpaperRef"];
+            fingerprint?: components["schemas"]["Digest"];
+            evidence?: components["schemas"]["WorkpaperEvidence"];
+        };
+        /**
+         * WorkpaperSourceCheck
+         * @description The latest build compared with what the sources would build now. Nothing is recorded.
+         */
+        WorkpaperSourceCheck: {
+            workpaperId: components["schemas"]["WorkpaperId"];
+            latestBuildVersion?: components["schemas"]["WorkpaperCount"];
+            latestInputsHash?: components["schemas"]["Digest"];
+            latestOutputHash?: components["schemas"]["Digest"];
+            currentInputsHash: components["schemas"]["Digest"];
+            currentOutputHash: components["schemas"]["Digest"];
+            frozenBuildVersion?: components["schemas"]["WorkpaperCount"];
+            matches: components["schemas"]["WorkpaperFlag"];
+            checkedAt: components["schemas"]["Timestamp"];
+        };
+        /**
+         * RegistrationId
+         * Format: uuid
+         * @example 01920d20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        RegistrationId: string;
+        /**
+         * ExemptionEvidenceId
+         * Format: uuid
+         * @description An exemption certificate held as evidence.
+         * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ExemptionEvidenceId: string;
+        /**
+         * EvidenceActor
+         * Format: uuid
+         * @description The person who recorded an act.
+         * @example 01920a4c-0000-7000-8000-0000000000a1
+         */
+        EvidenceActor: string;
+        /**
+         * EvidenceJurisdiction
+         * @description A country, or a country and one subdivision, upper case.
+         * @example US-NY
+         */
+        EvidenceJurisdiction: string;
+        /**
+         * EvidenceText
+         * @description A reason, rationale or note from the person recording an act.
+         */
+        EvidenceText: string;
+        /**
+         * EvidenceFilename
+         * @description A document's file name, as given. It may name a person.
+         */
+        EvidenceFilename: string;
+        /**
+         * EvidenceMediaType
+         * @description A document's media type. Only a PDF or an image is accepted.
+         * @example application/pdf
+         */
+        EvidenceMediaType: string;
+        /**
+         * EvidenceDocument
+         * @description A document recorded as evidence by its SHA-256, hashed in the browser.
+         *     The file itself is not uploaded, scanned or stored.
+         */
+        EvidenceDocument: {
+            sha256: components["schemas"]["Sha256Hex"];
+            filename: components["schemas"]["EvidenceFilename"];
+            mediaType: components["schemas"]["EvidenceMediaType"];
+            /** Format: int64 */
+            bytes: number;
+        };
+        /**
+         * EvidenceFlag
+         * @description Something about a registration or certificate a person should look at, as of `asOf`.
+         * @enum {string}
+         */
+        EvidenceFlag: "EXPIRING_SOON" | "PAST_EXPIRY" | "NOT_YET_EFFECTIVE" | "PENDING_VALIDATION" | "AUTHORITY_NEGATIVE" | "AWAITING_ACTIVATION" | "CORRECTION_REQUESTED" | "AWAITING_SECOND_REVIEW";
+        /**
+         * RegistrationScheme
+         * @description The kind of registration. Each has its own identifier, never converted
+         *     into another's: an FCC FRN, a USAC 499 Filer ID and a USAC 498 ID are
+         *     distinct (Doc 17 §02).
+         * @enum {string}
+         */
+        RegistrationScheme: "US_FCC_FRN" | "US_USAC_499_FILER_ID" | "US_USAC_498_ID" | "US_STATE_SALES_TAX_PERMIT" | "US_STATE_TELECOM_REGISTRATION" | "UK_VAT" | "EU_VAT" | "CA_GST_HST" | "OTHER_REGISTRATION";
+        /**
+         * RegistrationStatus
+         * @description `SUBMITTED` is not `VERIFIED`, `VERIFIED` is not `ACTIVE`, and `ACTIVE`
+         *     is not authority to file (Doc 17 §02, §07).
+         * @enum {string}
+         */
+        RegistrationStatus: "DRAFT" | "SUBMITTED" | "VERIFIED" | "ACTIVE" | "SUSPENDED" | "EXPIRED" | "REVOKED" | "WITHDRAWN";
+        /**
+         * RegistrationEventKind
+         * @enum {string}
+         */
+        RegistrationEventKind: "CREATED" | "SUBMITTED" | "WITHDRAWN" | "RETURNED" | "CHECK_RECORDED" | "ACTIVATED" | "SUSPENDED" | "REINSTATED" | "EXPIRED" | "REVOKED" | "ATTACHMENT_RECORDED";
+        /**
+         * RegistrationAuthority
+         * @description The authority the registration is held with, by name.
+         * @example USAC
+         */
+        RegistrationAuthority: string;
+        /**
+         * RegistrationNumber
+         * @description The authority's number for the registration. Masked to its last four
+         *     characters (`****2345`) wherever `numberMasked` is true.
+         * @example 812345
+         */
+        RegistrationNumber: string;
+        /**
+         * AuthorityCheckSource
+         * @description The authority service a number was checked against. VIES does not validate GB numbers; HMRC does not validate EU ones.
+         * @enum {string}
+         */
+        AuthorityCheckSource: "FCC" | "USAC" | "HMRC" | "VIES" | "CRA" | "STATE_REVENUE_AUTHORITY" | "OTHER_AUTHORITY";
+        /**
+         * AuthorityCheckMethod
+         * @description How the check was made. No authority adapter is connected, so the only
+         *     method is a named person's lookup with the authority.
+         * @enum {string}
+         */
+        AuthorityCheckMethod: "MANUAL_LOOKUP";
+        /**
+         * AuthorityCheckOutcome
+         * @description What the authority returned. Only `VERIFIED` is positive; `INCONCLUSIVE` and `UNAVAILABLE` are never valid.
+         * @enum {string}
+         */
+        AuthorityCheckOutcome: "VERIFIED" | "NEGATIVE" | "INCONCLUSIVE" | "UNAVAILABLE";
+        /**
+         * AuthorityCheckReference
+         * @description The authority's own reference or receipt for a check, as returned.
+         */
+        AuthorityCheckReference: string;
+        /**
+         * AuthorityCheck
+         * @description One authority check of a registration's number, as a person recorded it.
+         */
+        AuthorityCheck: {
+            source: components["schemas"]["AuthorityCheckSource"];
+            method: components["schemas"]["AuthorityCheckMethod"];
+            outcome: components["schemas"]["AuthorityCheckOutcome"];
+            reference?: components["schemas"]["AuthorityCheckReference"];
+            checkedAt: components["schemas"]["Timestamp"];
+            receiptSha256?: components["schemas"]["Sha256Hex"];
+        };
+        /** RegistrationEvent */
+        RegistrationEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["RegistrationEventKind"];
+            status: components["schemas"]["RegistrationStatus"];
+            reason?: components["schemas"]["EvidenceText"];
+            check?: components["schemas"]["AuthorityCheck"];
+            attachment?: components["schemas"]["EvidenceDocument"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * Registration
+         * @description A registration a legal entity holds or is applying for, as of `asOf`.
+         *     Evidence of status: it changes no tax result, and `inForce` is
+         *     `ACTIVE` within its effective dates, nothing more.
+         */
+        Registration: {
+            id: components["schemas"]["RegistrationId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            scheme: components["schemas"]["RegistrationScheme"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            authority: components["schemas"]["RegistrationAuthority"];
+            registrationNumber: components["schemas"]["RegistrationNumber"];
+            /** @description True when `registrationNumber` shows only its last four characters. */
+            numberMasked: boolean;
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            supersedes?: components["schemas"]["RegistrationId"];
+            status: components["schemas"]["RegistrationStatus"];
+            /**
+             * Format: int32
+             * @description The number of events recorded. An activation names it.
+             */
+            version: number;
+            /** @description ACTIVE and within its effective dates on `asOf`'s UTC date. */
+            inForce: boolean;
+            flags: components["schemas"]["EvidenceFlag"][];
+            lastCheck?: components["schemas"]["AuthorityCheck"];
+            submittedBy?: components["schemas"]["EvidenceActor"];
+            attachments: components["schemas"]["EvidenceDocument"][];
+            history: components["schemas"]["RegistrationEvent"][];
+            asOf: components["schemas"]["Timestamp"];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /** RegistrationList */
+        RegistrationList: {
+            registrations: components["schemas"]["Registration"][];
+        };
+        /** RegistrationRequest */
+        RegistrationRequest: {
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            scheme: components["schemas"]["RegistrationScheme"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            authority: components["schemas"]["RegistrationAuthority"];
+            registrationNumber: components["schemas"]["RegistrationNumber"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            supersedes?: components["schemas"]["RegistrationId"];
+            attachments?: components["schemas"]["EvidenceDocument"][];
+            /** @description Submit for review now. Otherwise the registration is kept as a DRAFT. */
+            submit?: boolean;
+        };
+        /** RegistrationTransitionRequest */
+        RegistrationTransitionRequest: {
+            to: components["schemas"]["RegistrationStatus"];
+            /**
+             * Format: int32
+             * @description The `version` that was read. Anything recorded since is `VERSION_CONFLICT`.
+             */
+            expectedVersion: number;
+            reason?: components["schemas"]["EvidenceText"];
+        };
+        /** RegistrationCheckRequest */
+        RegistrationCheckRequest: {
+            source: components["schemas"]["AuthorityCheckSource"];
+            method: components["schemas"]["AuthorityCheckMethod"];
+            outcome: components["schemas"]["AuthorityCheckOutcome"];
+            reference?: components["schemas"]["AuthorityCheckReference"];
+            checkedAt: components["schemas"]["Timestamp"];
+            receiptSha256?: components["schemas"]["Sha256Hex"];
+            note?: components["schemas"]["EvidenceText"];
+        };
+        /**
+         * ExemptionEvidenceType
+         * @description The kind of exemption claimed. A resale or wholesale certificate is not an unconditional exemption and relieves no provider-side duty.
+         * @enum {string}
+         */
+        ExemptionEvidenceType: "RESALE" | "WHOLESALE_TELECOM" | "EXEMPT_ORGANIZATION" | "GOVERNMENT_ENTITY" | "DIPLOMATIC" | "DIRECT_PAY_PERMIT" | "OTHER_EXEMPTION";
+        /**
+         * ExemptionEvidenceStatus
+         * @description `SCREENING` waits for a corrected document. `APPROVED` is evidence
+         *     approved for its scope and dates; it is not a tax exemption.
+         * @enum {string}
+         */
+        ExemptionEvidenceStatus: "SUBMITTED" | "SCREENING" | "REVIEW_REQUIRED" | "APPROVED" | "REJECTED" | "EXPIRED" | "SUSPENDED" | "REVOKED" | "SUPERSEDED";
+        /**
+         * ExemptionEvidenceEventKind
+         * @enum {string}
+         */
+        ExemptionEvidenceEventKind: "RECEIVED" | "VERSION_ADDED" | "SCREENED" | "RECOMMENDED" | "CONFIRMED" | "RETURNED" | "SUSPENDED" | "REINSTATED" | "EXPIRED" | "REVOKED" | "SUPERSEDED";
+        /**
+         * BuyerRef
+         * @description The buyer's identifier in the tenant's own customer system.
+         * @example CUST-0042
+         */
+        BuyerRef: string;
+        /**
+         * BuyerName
+         * @description The buyer's name as written on the certificate.
+         */
+        BuyerName: string;
+        /**
+         * ExemptionReasonText
+         * @description The exemption the buyer claims, in the words of the certificate.
+         */
+        ExemptionReasonText: string;
+        /**
+         * CertificateNumberText
+         * @description The certificate or exemption permit number.
+         */
+        CertificateNumberText: string;
+        /**
+         * ProductScopeEntry
+         * @description A product family or classification pattern the certificate claims, as written. Never interpreted as a rule.
+         */
+        ProductScopeEntry: string;
+        /**
+         * ScreeningCheckResult
+         * @enum {string}
+         */
+        ScreeningCheckResult: "PASS" | "FAIL" | "NOT_APPLICABLE";
+        /**
+         * ScreeningResult
+         * @description `DOCUMENT_COMPLETE` is not approved for use, and not a legal
+         *     applicability pass (Doc 17 §02).
+         * @enum {string}
+         */
+        ScreeningResult: "DOCUMENT_COMPLETE" | "INCOMPLETE" | "INCONSISTENT" | "NEEDS_LEGAL_DECISION";
+        /**
+         * ExemptionScreening
+         * @description The completeness checklist against one evidence version (Doc 17 EER-10).
+         */
+        ExemptionScreening: {
+            sellerMatches: components["schemas"]["ScreeningCheckResult"];
+            buyerMatches: components["schemas"]["ScreeningCheckResult"];
+            jurisdictionMatches: components["schemas"]["ScreeningCheckResult"];
+            formAccepted: components["schemas"]["ScreeningCheckResult"];
+            signaturePresent: components["schemas"]["ScreeningCheckResult"];
+            datesValid: components["schemas"]["ScreeningCheckResult"];
+            numberPresent: components["schemas"]["ScreeningCheckResult"];
+            result: components["schemas"]["ScreeningResult"];
+        };
+        /**
+         * ExemptionRecommendationOutcome
+         * @enum {string}
+         */
+        ExemptionRecommendationOutcome: "APPROVE" | "REJECT";
+        /**
+         * ExemptionDecision
+         * @description The checker's act on a pending recommendation.
+         * @enum {string}
+         */
+        ExemptionDecision: "CONFIRM" | "RETURN";
+        /**
+         * ExemptionRecommendation
+         * @description A recommendation awaiting a different person's confirmation.
+         */
+        ExemptionRecommendation: {
+            recommendation: components["schemas"]["ExemptionRecommendationOutcome"];
+            effectiveFrom?: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            /** Format: int32 */
+            evidenceVersion: number;
+            rationale: components["schemas"]["EvidenceText"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * ExemptionApproval
+         * @description The confirmed approval, with its maker and checker.
+         */
+        ExemptionApproval: {
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            recommendedBy: components["schemas"]["EvidenceActor"];
+            confirmedBy: components["schemas"]["EvidenceActor"];
+            confirmedAt: components["schemas"]["Timestamp"];
+        };
+        /** ExemptionEvidenceEvent */
+        ExemptionEvidenceEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["ExemptionEvidenceEventKind"];
+            status: components["schemas"]["ExemptionEvidenceStatus"];
+            /** Format: int32 */
+            evidenceVersion: number;
+            note?: components["schemas"]["EvidenceText"];
+            document?: components["schemas"]["EvidenceDocument"];
+            screening?: components["schemas"]["ExemptionScreening"];
+            recommendation?: components["schemas"]["ExemptionRecommendationOutcome"];
+            effectiveFrom?: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            decision?: components["schemas"]["ExemptionDecision"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * ExemptionEvidence
+         * @description An exemption certificate held as evidence, as of `asOf`. `inForce` is
+         *     `APPROVED` within its approved period: a statement about the document,
+         *     never a tax treatment.
+         */
+        ExemptionEvidence: {
+            id: components["schemas"]["ExemptionEvidenceId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            buyerRef: components["schemas"]["BuyerRef"];
+            buyerName: components["schemas"]["BuyerName"];
+            certificateType: components["schemas"]["ExemptionEvidenceType"];
+            exemptionReason: components["schemas"]["ExemptionReasonText"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            certificateNumber?: components["schemas"]["CertificateNumberText"];
+            productScope: components["schemas"]["ProductScopeEntry"][];
+            issuedOn: components["schemas"]["CivilDate"];
+            expiresOn?: components["schemas"]["CivilDate"];
+            supersedes?: components["schemas"]["ExemptionEvidenceId"];
+            status: components["schemas"]["ExemptionEvidenceStatus"];
+            /**
+             * Format: int32
+             * @description The current document version. A checker's decision names it.
+             */
+            evidenceVersion: number;
+            inForce: boolean;
+            flags: components["schemas"]["EvidenceFlag"][];
+            document: components["schemas"]["EvidenceDocument"];
+            screening?: components["schemas"]["ExemptionScreening"];
+            pendingRecommendation?: components["schemas"]["ExemptionRecommendation"];
+            approval?: components["schemas"]["ExemptionApproval"];
+            history: components["schemas"]["ExemptionEvidenceEvent"][];
+            asOf: components["schemas"]["Timestamp"];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /** ExemptionEvidenceList */
+        ExemptionEvidenceList: {
+            certificates: components["schemas"]["ExemptionEvidence"][];
+        };
+        /** ExemptionEvidenceRequest */
+        ExemptionEvidenceRequest: {
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            buyerRef: components["schemas"]["BuyerRef"];
+            buyerName: components["schemas"]["BuyerName"];
+            certificateType: components["schemas"]["ExemptionEvidenceType"];
+            exemptionReason: components["schemas"]["ExemptionReasonText"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            certificateNumber?: components["schemas"]["CertificateNumberText"];
+            productScope?: components["schemas"]["ProductScopeEntry"][];
+            issuedOn: components["schemas"]["CivilDate"];
+            expiresOn?: components["schemas"]["CivilDate"];
+            supersedes?: components["schemas"]["ExemptionEvidenceId"];
+            document: components["schemas"]["EvidenceDocument"];
+        };
+        /** ExemptionVersionRequest */
+        ExemptionVersionRequest: {
+            document: components["schemas"]["EvidenceDocument"];
+            note?: components["schemas"]["EvidenceText"];
+        };
+        /** ExemptionScreeningRequest */
+        ExemptionScreeningRequest: {
+            screening: components["schemas"]["ExemptionScreening"];
+            note?: components["schemas"]["EvidenceText"];
+        };
+        /** ExemptionRecommendationRequest */
+        ExemptionRecommendationRequest: {
+            recommendation: components["schemas"]["ExemptionRecommendationOutcome"];
+            effectiveFrom?: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            rationale: components["schemas"]["EvidenceText"];
+        };
+        /** ExemptionDecisionRequest */
+        ExemptionDecisionRequest: {
+            decision: components["schemas"]["ExemptionDecision"];
+            /**
+             * Format: int32
+             * @description The evidence version that was reviewed. Any other is `VERSION_CONFLICT`.
+             */
+            expectedEvidenceVersion: number;
+            note?: components["schemas"]["EvidenceText"];
+        };
+        /** ExemptionTransitionRequest */
+        ExemptionTransitionRequest: {
+            to: components["schemas"]["ExemptionEvidenceStatus"];
+            reason?: components["schemas"]["EvidenceText"];
+        };
     };
     responses: {
         /**
@@ -8266,6 +10448,33 @@ export interface components {
                 "application/json": components["schemas"]["Notice"];
             };
         };
+        /** @description The workpaper as it stands now. */
+        WorkpaperResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Workpaper"];
+            };
+        };
+        /** @description The registration as it stands now. */
+        RegistrationResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Registration"];
+            };
+        };
+        /** @description The certificate as it stands now. */
+        ExemptionEvidenceResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ExemptionEvidence"];
+            };
+        };
     };
     parameters: {
         /**
@@ -8326,6 +10535,21 @@ export interface components {
          * @example 01920b80-1a2b-7c3d-8e4f-5a6b7c8d9e01
          */
         ContributionId: components["schemas"]["ContributionId"];
+        /**
+         * @description The workpaper identifier.
+         * @example 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        WorkpaperId: components["schemas"]["WorkpaperId"];
+        /**
+         * @description The ERP journal bridge identifier.
+         * @example 01920c20-0000-7000-8000-0000000000b1
+         */
+        ERPBridgeId: components["schemas"]["ERPBridgeId"];
+        /**
+         * @description The ERP export batch identifier.
+         * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+         */
+        ERPExportId: components["schemas"]["ERPExportId"];
         /**
          * @description The shadow run identifier.
          * @example 01920b50-1a2b-7c3d-8e4f-5a6b7c8d9e01
@@ -8417,6 +10641,16 @@ export interface components {
          * @example ztu_01JBQ0S9C3X8Q1H6M2KX5R7F4C
          */
         UserId: components["schemas"]["UserId"];
+        /**
+         * @description The registration identifier.
+         * @example 01920d20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        RegistrationId: components["schemas"]["RegistrationId"];
+        /**
+         * @description The exemption certificate identifier.
+         * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        ExemptionEvidenceId: components["schemas"]["ExemptionEvidenceId"];
     };
     requestBodies: never;
     headers: never;
@@ -12369,6 +14603,529 @@ export interface operations {
             503: components["responses"]["Unavailable"];
         };
     };
+    listERPBridges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The bridges. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPBridgeList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createERPBridge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ERPBridgeRequest"];
+            };
+        };
+        responses: {
+            /** @description The bridge, recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPBridge"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordERPMapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ERPMappingRequest"];
+            };
+        };
+        responses: {
+            /** @description The mapping is the current one already; nothing was recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPBridge"];
+                };
+            };
+            /** @description The bridge, with the new mapping version current. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPBridge"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listERPExports: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only batches of this legal period.
+                 * @example 2026-09
+                 */
+                period?: components["schemas"]["LegalPeriod"];
+                /**
+                 * @description Only batches in this currency.
+                 * @example USD
+                 */
+                currency?: components["schemas"]["CurrencyCode"];
+                /**
+                 * @description Only batches in this transfer state.
+                 * @example REJECTED
+                 */
+                status?: components["schemas"]["ERPExportStatus"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The batches. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExportList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    prepareERPExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ERPExportRequest"];
+            };
+        };
+        responses: {
+            /** @description The prepared batch that already holds these journals. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExport"];
+                };
+            };
+            /** @description The batch, prepared and sealed. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExport"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getERPExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+                /**
+                 * @description The ERP export batch identifier.
+                 * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                 */
+                batchId: components["parameters"]["ERPExportId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The batch. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExport"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    dispatchERPExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+                /**
+                 * @description The ERP export batch identifier.
+                 * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                 */
+                batchId: components["parameters"]["ERPExportId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ERPDispatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Already transmitted, acknowledged or posted; no new attempt. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExport"];
+                };
+            };
+            /** @description Dispatched — one new attempt, accepted into the outbox for transmission. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExport"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordERPResponse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+                /**
+                 * @description The ERP export batch identifier.
+                 * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                 */
+                batchId: components["parameters"]["ERPExportId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ERPResponseRequest"];
+            };
+        };
+        responses: {
+            /** @description The same answer was already recorded; nothing changed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExport"];
+                };
+            };
+            /** @description The answer, recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExport"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    withdrawERPExport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+                /**
+                 * @description The ERP export batch identifier.
+                 * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+                 */
+                batchId: components["parameters"]["ERPExportId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ERPWithdrawalRequest"];
+            };
+        };
+        responses: {
+            /** @description The batch, withdrawn. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ERPExport"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listGLSnapshots: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only snapshots of this legal period.
+                 * @example 2026-09
+                 */
+                period?: components["schemas"]["LegalPeriod"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The snapshots. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GLSnapshotList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordGLSnapshot: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GLSnapshotRequest"];
+            };
+        };
+        responses: {
+            /** @description The snapshot, recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GLSnapshot"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listGLReconciliations: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only reconciliations of this legal period.
+                 * @example 2026-09
+                 */
+                period?: components["schemas"]["LegalPeriod"];
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The reconciliations. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GLReconciliationList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    runGLReconciliation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The ERP journal bridge identifier.
+                 * @example 01920c20-0000-7000-8000-0000000000b1
+                 */
+                bridgeId: components["parameters"]["ERPBridgeId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GLReconciliationRequest"];
+            };
+        };
+        responses: {
+            /** @description The reconciliation, recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GLReconciliation"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
     listNotices: {
         parameters: {
             query?: {
@@ -12902,6 +15659,196 @@ export interface operations {
             503: components["responses"]["Unavailable"];
         };
     };
+    listWorkpapers: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only workpapers of this period.
+                 * @example 2026-09
+                 */
+                period?: components["schemas"]["LegalPeriod"];
+                /**
+                 * @description Only workpapers of this duty.
+                 * @example US_USF
+                 */
+                duty?: components["schemas"]["ContributionRegime"];
+                /**
+                 * @description Only workpapers in this status.
+                 * @example DATA_INCOMPLETE
+                 */
+                status?: components["schemas"]["WorkpaperStatus"];
+                /**
+                 * @description Only workpapers of this legal filer.
+                 * @example 01920a4c-0000-7000-8000-00000000e001
+                 */
+                legalEntityId?: components["schemas"]["LegalEntityId"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The workpapers. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkpaperList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createWorkpaper: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkpaperRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["WorkpaperResult"];
+            201: components["responses"]["WorkpaperResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getWorkpaper: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The workpaper identifier.
+                 * @example 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                workpaperId: components["parameters"]["WorkpaperId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["WorkpaperResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    buildWorkpaper: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The workpaper identifier.
+                 * @example 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                workpaperId: components["parameters"]["WorkpaperId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkpaperBuildRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["WorkpaperResult"];
+            201: components["responses"]["WorkpaperResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    checkWorkpaperSources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The workpaper identifier.
+                 * @example 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                workpaperId: components["parameters"]["WorkpaperId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The comparison. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkpaperSourceCheck"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    actOnWorkpaper: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The workpaper identifier.
+                 * @example 01920c40-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                workpaperId: components["parameters"]["WorkpaperId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkpaperActionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["WorkpaperResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
     listComparators: {
         parameters: {
             query?: never;
@@ -13386,6 +16333,464 @@ export interface operations {
                     "application/json": components["schemas"]["MigrationException"];
                 };
             };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listRegistrations: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only registrations in this status.
+                 * @example ACTIVE
+                 */
+                status?: components["schemas"]["RegistrationStatus"];
+                /**
+                 * @description Only registrations of this scheme.
+                 * @example US_USAC_499_FILER_ID
+                 */
+                scheme?: components["schemas"]["RegistrationScheme"];
+                /**
+                 * @description Only registrations of this legal entity.
+                 * @example 01920a4c-0000-7000-8000-00000000e001
+                 */
+                legalEntityId?: components["schemas"]["LegalEntityId"];
+                /**
+                 * @description Only registrations in this jurisdiction; a country matches its subdivisions.
+                 * @example US
+                 */
+                jurisdiction?: components["schemas"]["EvidenceJurisdiction"];
+                /**
+                 * @description Only registrations carrying this flag now.
+                 * @example EXPIRING_SOON
+                 */
+                flag?: components["schemas"]["EvidenceFlag"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The registrations. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createRegistration: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistrationRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RegistrationResult"];
+            201: components["responses"]["RegistrationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getRegistration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The registration identifier.
+                 * @example 01920d20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                registrationId: components["parameters"]["RegistrationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["RegistrationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    transitionRegistration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The registration identifier.
+                 * @example 01920d20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                registrationId: components["parameters"]["RegistrationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistrationTransitionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RegistrationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordRegistrationCheck: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The registration identifier.
+                 * @example 01920d20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                registrationId: components["parameters"]["RegistrationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistrationCheckRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RegistrationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordRegistrationAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The registration identifier.
+                 * @example 01920d20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                registrationId: components["parameters"]["RegistrationId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvidenceDocument"];
+            };
+        };
+        responses: {
+            200: components["responses"]["RegistrationResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listExemptionCertificates: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only certificates in this status.
+                 * @example REVIEW_REQUIRED
+                 */
+                status?: components["schemas"]["ExemptionEvidenceStatus"];
+                /**
+                 * @description Only certificates given to this seller entity.
+                 * @example 01920a4c-0000-7000-8000-00000000e001
+                 */
+                legalEntityId?: components["schemas"]["LegalEntityId"];
+                /**
+                 * @description Only certificates of this buyer.
+                 * @example CUST-0042
+                 */
+                buyerRef?: components["schemas"]["BuyerRef"];
+                /**
+                 * @description Only certificates for this jurisdiction; a country matches its subdivisions.
+                 * @example US-NY
+                 */
+                jurisdiction?: components["schemas"]["EvidenceJurisdiction"];
+                /**
+                 * @description Only certificates carrying this flag now.
+                 * @example EXPIRING_SOON
+                 */
+                flag?: components["schemas"]["EvidenceFlag"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The certificates. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExemptionEvidenceList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    receiveExemptionCertificate: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExemptionEvidenceRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ExemptionEvidenceResult"];
+            201: components["responses"]["ExemptionEvidenceResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getExemptionCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The exemption certificate identifier.
+                 * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                certificateId: components["parameters"]["ExemptionEvidenceId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["ExemptionEvidenceResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    addExemptionCertificateVersion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The exemption certificate identifier.
+                 * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                certificateId: components["parameters"]["ExemptionEvidenceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExemptionVersionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ExemptionEvidenceResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    screenExemptionCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The exemption certificate identifier.
+                 * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                certificateId: components["parameters"]["ExemptionEvidenceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExemptionScreeningRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ExemptionEvidenceResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recommendExemptionCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The exemption certificate identifier.
+                 * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                certificateId: components["parameters"]["ExemptionEvidenceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExemptionRecommendationRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ExemptionEvidenceResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    decideExemptionCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The exemption certificate identifier.
+                 * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                certificateId: components["parameters"]["ExemptionEvidenceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExemptionDecisionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ExemptionEvidenceResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    transitionExemptionCertificate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The exemption certificate identifier.
+                 * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                certificateId: components["parameters"]["ExemptionEvidenceId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExemptionTransitionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["ExemptionEvidenceResult"];
             400: components["responses"]["Validation"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
