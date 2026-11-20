@@ -593,15 +593,19 @@ func TestTwoUseCasesCalledAtOnceKeepSeparateBreakers(t *testing.T) {
 	failOnly(h, explainUC)
 	const rounds = 200
 	var wg sync.WaitGroup
+	// Every write to this map finishes before the first goroutine starts; the
+	// goroutines only read it, and each adds to its own counter.
 	errsBy := make(map[ai.AiUseCase]*atomic.Int64)
 	for _, uc := range []ai.AiUseCase{explainUC, classifyUC} {
 		errsBy[uc] = new(atomic.Int64)
+	}
+	for uc, failed := range errsBy {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			for range rounds {
 				if ask(h, uc) != nil {
-					errsBy[uc].Add(1)
+					failed.Add(1)
 				}
 			}
 		}()
