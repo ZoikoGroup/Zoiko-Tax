@@ -133,8 +133,17 @@ type Config struct {
 	AIGatewayTarget   string
 	AIGatewayTLSDir   string
 	AIGatewayInsecure bool
+	// AIGatewayDeadline defaults to 5s. The layers must keep this order, outside
+	// to inside: the screen's request limit (frontend platform/client.ts) > this
+	// deadline > the screen's "still waiting" line (frontend viewOfProposal.ts).
+	// A hosted model answers in under a second, so 5s holds. A self-hosted model
+	// must be measured before this changes; do not guess a larger number.
 	AIGatewayDeadline time.Duration
 	AIPolicyFile      string
+	// OntologyApprovedList, when set, names an approved-ontology list file (the
+	// format the Python Gateway reads). A proposed code not on it at decision
+	// time is set aside for a person. Empty: no check.
+	OntologyApprovedList string
 
 	// Webhooks (W2 lane K). WebhookKeyRef names where the key that encrypts
 	// webhook signing secrets at rest lives — a reference resolved through
@@ -235,8 +244,9 @@ var known = map[string]struct {
 	"ZTAX_AI_GATEWAY_TARGET":            {def: ""},
 	"ZTAX_AI_GATEWAY_TLS_DIR":           {def: ""},
 	"ZTAX_AI_GATEWAY_INSECURE":          {def: "false"},
-	"ZTAX_AI_GATEWAY_DEADLINE":          {def: "5s"},
+	"ZTAX_AI_GATEWAY_DEADLINE":          {def: "5s"}, // order: screen limit > this > slow line; see Config.AIGatewayDeadline
 	"ZTAX_AI_POLICY_FILE":               {def: ""},
+	"ZTAX_ONTOLOGY_APPROVED_LIST":       {def: ""},
 	"ZTAX_WEBHOOK_KEY_REF":              {def: ""},
 	"ZTAX_WEBHOOK_ALLOW_PRIVATE":        {def: "false"},
 	"ZTAX_SEAL_KEYRING":                 {def: ""},
@@ -374,6 +384,8 @@ func Load() (Config, error) {
 		AIGatewayInsecure: boolean("ZTAX_AI_GATEWAY_INSECURE"),
 		AIGatewayDeadline: duration("ZTAX_AI_GATEWAY_DEADLINE"),
 		AIPolicyFile:      get("ZTAX_AI_POLICY_FILE"),
+
+		OntologyApprovedList: get("ZTAX_ONTOLOGY_APPROVED_LIST"),
 
 		WebhookKeyRef:       get("ZTAX_WEBHOOK_KEY_REF"),
 		WebhookAllowPrivate: boolean("ZTAX_WEBHOOK_ALLOW_PRIVATE"),

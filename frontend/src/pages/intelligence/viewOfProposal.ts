@@ -12,10 +12,11 @@
 
 /**
  * How long the call may run before the screen says it is still waiting. It is
- * below the client's real limit (10 s, platform/client.ts), so the person sees
- * the line before the call is ended. It is a display threshold only.
+ * below the Go gateway deadline (5 s default, backend config.go) and the
+ * client's limit (10 s, platform/client.ts), so the person sees the line before
+ * either ends the call. It is a display threshold only.
  */
-export const SLOW_AFTER_MS = 5000
+export const SLOW_AFTER_MS = 3000
 
 /**
  * The longest description the service accepts: `len(in.Description) > 2000` is
@@ -24,6 +25,32 @@ export const SLOW_AFTER_MS = 5000
  * multi-byte characters can reach it over the limit and gets the 400 sentence.
  */
 export const DESCRIPTION_MAX = 2000
+
+/**
+ * The longest subject reference the service accepts, counted in bytes after
+ * trimming: `len(in.SubjectRef) > 512` is refused
+ * (backend/internal/app/classification.go:88). The box stops at this many
+ * characters; text with multi-byte characters can still be over in bytes, so
+ * the check below counts bytes, as the service does.
+ */
+export const SUBJECT_REF_MAX = 512
+
+export const SUBJECT_REF_SENTENCE = `The subject reference can be at most ${String(SUBJECT_REF_MAX)} characters. Shorten it and try again.`
+
+/** True when the trimmed value is longer than the service accepts (in UTF-8 bytes). */
+export function subjectRefTooLong(value: string): boolean {
+  return new TextEncoder().encode(value.trim()).length > SUBJECT_REF_MAX
+}
+
+/** The sentence to show under the box: when the limit is reached or passed, otherwise null. */
+export function subjectRefNote(value: string): string | null {
+  return value.length >= SUBJECT_REF_MAX || subjectRefTooLong(value) ? SUBJECT_REF_SENTENCE : null
+}
+
+/** The value to send (trimmed), or null when it is over the limit and nothing may be sent. */
+export function subjectRefToSend(value: string): string | null {
+  return subjectRefTooLong(value) ? null : value.trim()
+}
 
 export type ViewState = 'proposed' | 'review' | 'unavailable' | 'slow'
 
@@ -83,6 +110,10 @@ export function viewOfWaiting(elapsedMs: number): ProposalView | null {
 // `reviewReason` values (backend/internal/app/classification.go); they are
 // read here and never shown.
 const UNREACHED_REASONS: ReadonlySet<string> = new Set(['AI_GATEWAY_NOT_CONFIGURED', 'AI_GATEWAY_UNAVAILABLE'])
+
+// The AI answered with a well-formed code that cannot be used today. That is a
+// person's review, not a failure: no code, no retry (backend ReasonProposalCodeNotApproved).
+const NOT_APPROVED_REASON = 'AI_PROPOSAL_CODE_NOT_APPROVED'
 
 function statusOf(error: unknown): number | null {
   if (typeof error === 'object' && error !== null && 'status' in error) {
@@ -168,6 +199,13 @@ export function viewOfProposal(ending: Ending, elapsedMs: number): ProposalView 
   }
   if (p.disposition === 'REVIEW_REQUIRED' && p.reviewReason !== undefined && UNREACHED_REASONS.has(p.reviewReason)) {
     return unavailable(elapsedMs)
+  }
+  if (p.disposition === 'REVIEW_REQUIRED' && p.reviewReason === NOT_APPROVED_REASON) {
+    return review(
+      elapsedMs,
+      `The AI's suggestion is not a code that can be used today, so it is not shown. A person classifies this item. Nothing was changed. ${UNAFFECTED}`,
+      'A person needs to review this item',
+    )
   }
   // The AI answered and the answer was set aside, or the outcome is one this
   // screen does not know: either way there is no suggestion, so a person decides.

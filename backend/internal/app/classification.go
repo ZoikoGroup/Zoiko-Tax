@@ -11,6 +11,7 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/privacy"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/canonical"
+	"github.com/zoikogroup/zoikotax/backend/internal/platform/clock"
 	"github.com/zoikogroup/zoikotax/backend/internal/port"
 )
 
@@ -26,11 +27,23 @@ const ClassificationReviewUseCase ai.AiUseCase = "classification-review"
 // (ADR-0006 §2.6). Confirming a proposal is a human act recorded elsewhere.
 type ClassificationService struct {
 	models port.ModelGateway
+	// approved and clk are optional; with no list the check is off.
+	approved ApprovedCodes
+	clk      clock.Clock
 }
 
 // NewClassificationService wires the service.
 func NewClassificationService(models port.ModelGateway) *ClassificationService {
 	return &ClassificationService{models: models}
+}
+
+// WithApprovedCodes turns on the approved-list check: a proposed code that is
+// not approved at the current time is set aside for a person. The check runs
+// here, after the Gateway has answered, so it never reaches the Gateway
+// client or its circuit breaker.
+func (s *ClassificationService) WithApprovedCodes(c ApprovedCodes, clk clock.Clock) *ClassificationService {
+	s.approved, s.clk = c, clk
+	return s
 }
 
 // ProposeInput is one item to map.
@@ -118,6 +131,11 @@ func (s *ClassificationService) Propose(ctx context.Context, in ProposeInput) (P
 	// else is discarded rather than put in front of a reviewer as a suggestion.
 	if classification.OntologyID(p.ProposedCode()).Validate() != nil {
 		return reviewRequired(in.SubjectRef, ai.ReasonProposalNotAnOntologyNode), nil
+	}
+	// An unlisted, expired or not-yet-effective code is not a failure: it is set
+	// aside for a person, with no proposal and no code.
+	if s.approved != nil && !s.approved.Approved(p.ProposedCode(), s.clk.Now()) {
+		return reviewRequired(in.SubjectRef, ai.ReasonProposalCodeNotApproved), nil
 	}
 	return ProposeOutcome{SubjectRef: p.SubjectRef(), Disposition: DispositionProposed, Proposal: p}, nil
 }

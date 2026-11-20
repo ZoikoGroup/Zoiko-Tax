@@ -114,8 +114,8 @@ type Reply struct {
 	// InvocationID is the Gateway's ai_invocation_id for this call, read from
 	// the "ztax-invocation-id" trailer (grpc.go). Optional: empty means none
 	// (no trailer, or one that failed the shape check). It is not part of the
-	// wire body, is never logged, and is not copied into Provenance or the
-	// transfer record.
+	// wire body and is never logged. It is copied into Provenance on success
+	// and not into the transfer record.
 	InvocationID string
 }
 
@@ -355,6 +355,7 @@ func (c *Client) invoke(ctx context.Context, kind Kind, inv ai.Invocation) (Repl
 		RiskTier:         g.RiskTier,
 		AuthorityOutcome: g.AuthorityOutcome,
 		AiTrainVersion:   reply.AiTrainVersion,
+		InvocationID:     reply.InvocationID,
 	}
 
 	// 5. Evidence. An output whose crossing could not be recorded is not

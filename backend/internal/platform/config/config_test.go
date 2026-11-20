@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/platform/config"
 )
@@ -258,5 +259,40 @@ func TestEmailedLinksAreHTTPSOutsideDevelopment(t *testing.T) {
 	})
 	if _, err := config.Load(); err == nil || !strings.Contains(err.Error(), "ZTAX_PUBLIC_URL") {
 		t.Fatalf("error %v; want plain-HTTP links refused outside development", err)
+	}
+}
+
+// The approved-ontology list is optional: unset means no check, and the
+// variable is a recognised ZTAX_ name rather than a refused typo.
+func TestTheApprovedOntologyListIsOptional(t *testing.T) {
+	withEnv(t, nil)
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.OntologyApprovedList != "" {
+		t.Fatalf("OntologyApprovedList = %q, want empty by default", cfg.OntologyApprovedList)
+	}
+	withEnv(t, map[string]string{"ZTAX_ONTOLOGY_APPROVED_LIST": "/srv/approved.json"})
+	cfg, err = config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.OntologyApprovedList != "/srv/approved.json" {
+		t.Fatalf("OntologyApprovedList = %q", cfg.OntologyApprovedList)
+	}
+}
+
+// The Gateway deadline default is 5s. The screen's request limit must stay above
+// it and the "still waiting" line below it (frontend/tests/intelligence.test.mjs
+// reads this default). Change it only after measuring the model.
+func TestTheGatewayDeadlineDefaultIsFiveSeconds(t *testing.T) {
+	withEnv(t, nil)
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.AIGatewayDeadline != 5*time.Second {
+		t.Fatalf("AIGatewayDeadline = %s, want 5s", cfg.AIGatewayDeadline)
 	}
 }

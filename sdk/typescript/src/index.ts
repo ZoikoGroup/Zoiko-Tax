@@ -771,6 +771,86 @@ export class ZoikoTaxClient {
     return this.#send<S<"ProviderContribution">>("POST", `/v1/contributions/${encodeURIComponent(contributionId)}/release`, body, signal);
   }
 
+  // --- ERP journal bridge and GL reconciliation ------------------------------
+  /** List the ERP journal bridges with their mapping versions. `GET /v1/erp-bridges`. */
+  listERPBridges(signal?: AbortSignal): Promise<Result<S<"ERPBridgeList">>> {
+    return this.#send<S<"ERPBridgeList">>("GET", `/v1/erp-bridges`, undefined, signal);
+  }
+
+  /** Connect a legal entity's subledger to a customer general ledger. `POST /v1/erp-bridges`. */
+  createERPBridge(body: S<"ERPBridgeRequest">, signal?: AbortSignal): Promise<Result<S<"ERPBridge">>> {
+    return this.#send<S<"ERPBridge">>("POST", `/v1/erp-bridges`, body, signal);
+  }
+
+  /**
+   * Record the bridge's next account mapping version; `200` when it is the
+   * current one already. `POST /v1/erp-bridges/{bridgeId}/mappings`.
+   */
+  recordERPMapping(bridgeId: string, body: S<"ERPMappingRequest">, signal?: AbortSignal): Promise<Result<S<"ERPBridge">>> {
+    return this.#send<S<"ERPBridge">>("POST", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/mappings`, body, signal);
+  }
+
+  /** A bridge's export batches, newest first. `GET /v1/erp-bridges/{bridgeId}/exports`. */
+  listERPExports(
+    bridgeId: string,
+    params: { period?: string; currency?: string; status?: string } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"ERPExportList">>> {
+    return this.#send<S<"ERPExportList">>("GET", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/exports${query(params)}`, undefined, signal);
+  }
+
+  /**
+   * Prepare and seal an export batch; `200` returns the prepared batch that
+   * already holds the journals. `POST /v1/erp-bridges/{bridgeId}/exports`.
+   */
+  prepareERPExport(bridgeId: string, body: S<"ERPExportRequest">, signal?: AbortSignal): Promise<Result<S<"ERPExport">>> {
+    return this.#send<S<"ERPExport">>("POST", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/exports`, body, signal);
+  }
+
+  /** One batch with its lines and delivery evidence. `GET /v1/erp-bridges/{bridgeId}/exports/{batchId}`. */
+  getERPExport(bridgeId: string, batchId: string, signal?: AbortSignal): Promise<Result<S<"ERPExport">>> {
+    return this.#send<S<"ERPExport">>("GET", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/exports/${encodeURIComponent(batchId)}`, undefined, signal);
+  }
+
+  /**
+   * Authorise and dispatch a sealed batch: `202` with a new attempt, `200`
+   * when it was already sent. Idempotent on the batch, not on an
+   * Idempotency-Key. `POST /v1/erp-bridges/{bridgeId}/exports/{batchId}/dispatch`.
+   */
+  dispatchERPExport(bridgeId: string, batchId: string, body: S<"ERPDispatchRequest">, signal?: AbortSignal): Promise<Result<S<"ERPExport">>> {
+    return this.#send<S<"ERPExport">>("POST", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/exports/${encodeURIComponent(batchId)}/dispatch`, body, signal);
+  }
+
+  /** Record what the ERP answered about an attempt. `POST /v1/erp-bridges/{bridgeId}/exports/{batchId}/responses`. */
+  recordERPResponse(bridgeId: string, batchId: string, body: S<"ERPResponseRequest">, signal?: AbortSignal): Promise<Result<S<"ERPExport">>> {
+    return this.#send<S<"ERPExport">>("POST", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/exports/${encodeURIComponent(batchId)}/responses`, body, signal);
+  }
+
+  /** Withdraw a prepared batch that was never dispatched. `POST /v1/erp-bridges/{bridgeId}/exports/{batchId}/withdrawal`. */
+  withdrawERPExport(bridgeId: string, batchId: string, body: S<"ERPWithdrawalRequest">, signal?: AbortSignal): Promise<Result<S<"ERPExport">>> {
+    return this.#send<S<"ERPExport">>("POST", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/exports/${encodeURIComponent(batchId)}/withdrawal`, body, signal);
+  }
+
+  /** The GL balances the ERP reported. `GET /v1/erp-bridges/{bridgeId}/gl-balances`. */
+  listGLSnapshots(bridgeId: string, params: { period?: string } = {}, signal?: AbortSignal): Promise<Result<S<"GLSnapshotList">>> {
+    return this.#send<S<"GLSnapshotList">>("GET", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/gl-balances${query(params)}`, undefined, signal);
+  }
+
+  /** Record the GL balances an ERP reported for a period. `POST /v1/erp-bridges/{bridgeId}/gl-balances`. */
+  recordGLSnapshot(bridgeId: string, body: S<"GLSnapshotRequest">, signal?: AbortSignal): Promise<Result<S<"GLSnapshot">>> {
+    return this.#send<S<"GLSnapshot">>("POST", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/gl-balances`, body, signal);
+  }
+
+  /** The subledger-to-GL reconciliations. `GET /v1/erp-bridges/{bridgeId}/gl-reconciliations`. */
+  listGLReconciliations(bridgeId: string, params: { period?: string } = {}, signal?: AbortSignal): Promise<Result<S<"GLReconciliationList">>> {
+    return this.#send<S<"GLReconciliationList">>("GET", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/gl-reconciliations${query(params)}`, undefined, signal);
+  }
+
+  /** Reconcile the subledger with an ERP's GL balances. `POST /v1/erp-bridges/{bridgeId}/gl-reconciliations`. */
+  runGLReconciliation(bridgeId: string, body: S<"GLReconciliationRequest">, signal?: AbortSignal): Promise<Result<S<"GLReconciliation">>> {
+    return this.#send<S<"GLReconciliation">>("POST", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/gl-reconciliations`, body, signal);
+  }
+
   // --- regulatory notices ---------------------------------------------------
   /**
    * List the regulatory notice register, in working order. `GET /v1/notices`.
@@ -858,6 +938,131 @@ export class ZoikoTaxClient {
   /** Lodge an appeal against the outcome. `POST /v1/notices/{noticeId}/appeal`. */
   lodgeNoticeAppeal(noticeId: string, body: S<"NoticeAppealRequest">, signal?: AbortSignal): Promise<Result<S<"Notice">>> {
     return this.#send<S<"Notice">>("POST", `/v1/notices/${encodeURIComponent(noticeId)}/appeal`, body, signal);
+  }
+
+  // --- regulatory workpapers ------------------------------------------------
+  /** List workpapers, newest period first, with their builds' summaries. `GET /v1/workpapers`. */
+  listWorkpapers(
+    params: { period?: string; duty?: string; status?: string; legalEntityId?: string; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"WorkpaperList">>> {
+    return this.#send<S<"WorkpaperList">>("GET", `/v1/workpapers${query(params)}`, undefined, signal);
+  }
+
+  /**
+   * Open a workpaper for a legal filer, duty and period; `200` returns the one
+   * already open with the same header. Idempotent on the three, not on an
+   * Idempotency-Key. `POST /v1/workpapers`.
+   */
+  createWorkpaper(body: S<"WorkpaperRequest">, signal?: AbortSignal): Promise<Result<S<"Workpaper">>> {
+    return this.#send<S<"Workpaper">>("POST", `/v1/workpapers`, body, signal);
+  }
+
+  /** A workpaper with its latest build, exceptions and history. `GET /v1/workpapers/{workpaperId}`. */
+  getWorkpaper(workpaperId: string, signal?: AbortSignal): Promise<Result<S<"Workpaper">>> {
+    return this.#send<S<"Workpaper">>("GET", `/v1/workpapers/${encodeURIComponent(workpaperId)}`, undefined, signal);
+  }
+
+  /**
+   * Build the workpaper from its sources. Deterministic: the same inputs record
+   * nothing and return the latest build. `POST /v1/workpapers/{workpaperId}/build`.
+   */
+  buildWorkpaper(workpaperId: string, body: S<"WorkpaperBuildRequest"> = {}, signal?: AbortSignal): Promise<Result<S<"Workpaper">>> {
+    return this.#send<S<"Workpaper">>("POST", `/v1/workpapers/${encodeURIComponent(workpaperId)}/build`, body, signal);
+  }
+
+  /** Compare the latest build with what its sources say now. `GET /v1/workpapers/{workpaperId}/source-check`. */
+  checkWorkpaperSources(workpaperId: string, signal?: AbortSignal): Promise<Result<S<"WorkpaperSourceCheck">>> {
+    return this.#send<S<"WorkpaperSourceCheck">>("GET", `/v1/workpapers/${encodeURIComponent(workpaperId)}/source-check`, undefined, signal);
+  }
+
+  /** Freeze, review, approve, or record a rate, adjustment or resolution. `POST /v1/workpapers/{workpaperId}/actions`. */
+  actOnWorkpaper(workpaperId: string, body: S<"WorkpaperActionRequest">, signal?: AbortSignal): Promise<Result<S<"Workpaper">>> {
+    return this.#send<S<"Workpaper">>("POST", `/v1/workpapers/${encodeURIComponent(workpaperId)}/actions`, body, signal);
+  }
+
+  // --- registrations and exemption evidence (Doc 17) --------------------------
+  /** List registrations, newest first, numbers masked. `GET /v1/registrations`. */
+  listRegistrations(
+    params: { status?: string; scheme?: string; legalEntityId?: string; jurisdiction?: string; flag?: string; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"RegistrationList">>> {
+    return this.#send<S<"RegistrationList">>("GET", `/v1/registrations${query(params)}`, undefined, signal);
+  }
+
+  /**
+   * Record a registration as a DRAFT, or SUBMITTED with `submit: true` —
+   * never VERIFIED or ACTIVE. `idempotencyKey` is mandatory; `200` returns the
+   * registration this key already recorded. `POST /v1/registrations`.
+   */
+  createRegistration(idempotencyKey: string, body: S<"RegistrationRequest">, signal?: AbortSignal): Promise<Result<S<"Registration">>> {
+    return this.#send<S<"Registration">>("POST", `/v1/registrations`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** One registration with its history. `GET /v1/registrations/{registrationId}`. */
+  getRegistration(registrationId: string, signal?: AbortSignal): Promise<Result<S<"Registration">>> {
+    return this.#send<S<"Registration">>("GET", `/v1/registrations/${encodeURIComponent(registrationId)}`, undefined, signal);
+  }
+
+  /** Move a registration, against the version read. `POST /v1/registrations/{registrationId}/transitions`. */
+  transitionRegistration(registrationId: string, body: S<"RegistrationTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"Registration">>> {
+    return this.#send<S<"Registration">>("POST", `/v1/registrations/${encodeURIComponent(registrationId)}/transitions`, body, signal);
+  }
+
+  /** Record an authority check a person made. `POST /v1/registrations/{registrationId}/checks`. */
+  recordRegistrationCheck(registrationId: string, body: S<"RegistrationCheckRequest">, signal?: AbortSignal): Promise<Result<S<"Registration">>> {
+    return this.#send<S<"Registration">>("POST", `/v1/registrations/${encodeURIComponent(registrationId)}/checks`, body, signal);
+  }
+
+  /** Record a supporting document by digest. `POST /v1/registrations/{registrationId}/attachments`. */
+  recordRegistrationAttachment(registrationId: string, body: S<"EvidenceDocument">, signal?: AbortSignal): Promise<Result<S<"Registration">>> {
+    return this.#send<S<"Registration">>("POST", `/v1/registrations/${encodeURIComponent(registrationId)}/attachments`, body, signal);
+  }
+
+  /** List exemption certificates held as evidence. `GET /v1/exemptions`. */
+  listExemptionCertificates(
+    params: { status?: string; legalEntityId?: string; buyerRef?: string; jurisdiction?: string; flag?: string; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"ExemptionEvidenceList">>> {
+    return this.#send<S<"ExemptionEvidenceList">>("GET", `/v1/exemptions${query(params)}`, undefined, signal);
+  }
+
+  /**
+   * Receive a certificate with its document by digest, as SUBMITTED evidence
+   * version 1. `idempotencyKey` is mandatory. `POST /v1/exemptions`.
+   */
+  receiveExemptionCertificate(idempotencyKey: string, body: S<"ExemptionEvidenceRequest">, signal?: AbortSignal): Promise<Result<S<"ExemptionEvidence">>> {
+    return this.#send<S<"ExemptionEvidence">>("POST", `/v1/exemptions`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** One certificate with its evidence history. `GET /v1/exemptions/{certificateId}`. */
+  getExemptionCertificate(certificateId: string, signal?: AbortSignal): Promise<Result<S<"ExemptionEvidence">>> {
+    return this.#send<S<"ExemptionEvidence">>("GET", `/v1/exemptions/${encodeURIComponent(certificateId)}`, undefined, signal);
+  }
+
+  /** Replace the document with a corrected version. `POST /v1/exemptions/{certificateId}/versions`. */
+  addExemptionCertificateVersion(certificateId: string, body: S<"ExemptionVersionRequest">, signal?: AbortSignal): Promise<Result<S<"ExemptionEvidence">>> {
+    return this.#send<S<"ExemptionEvidence">>("POST", `/v1/exemptions/${encodeURIComponent(certificateId)}/versions`, body, signal);
+  }
+
+  /** Record the completeness checklist. `POST /v1/exemptions/{certificateId}/screening`. */
+  screenExemptionCertificate(certificateId: string, body: S<"ExemptionScreeningRequest">, signal?: AbortSignal): Promise<Result<S<"ExemptionEvidence">>> {
+    return this.#send<S<"ExemptionEvidence">>("POST", `/v1/exemptions/${encodeURIComponent(certificateId)}/screening`, body, signal);
+  }
+
+  /** Recommend approval or rejection (the maker). `POST /v1/exemptions/{certificateId}/recommendation`. */
+  recommendExemptionCertificate(certificateId: string, body: S<"ExemptionRecommendationRequest">, signal?: AbortSignal): Promise<Result<S<"ExemptionEvidence">>> {
+    return this.#send<S<"ExemptionEvidence">>("POST", `/v1/exemptions/${encodeURIComponent(certificateId)}/recommendation`, body, signal);
+  }
+
+  /** Confirm or return the recommendation (the checker). `POST /v1/exemptions/{certificateId}/decision`. */
+  decideExemptionCertificate(certificateId: string, body: S<"ExemptionDecisionRequest">, signal?: AbortSignal): Promise<Result<S<"ExemptionEvidence">>> {
+    return this.#send<S<"ExemptionEvidence">>("POST", `/v1/exemptions/${encodeURIComponent(certificateId)}/decision`, body, signal);
+  }
+
+  /** Suspend, reinstate, expire or revoke an approved certificate. `POST /v1/exemptions/{certificateId}/transitions`. */
+  transitionExemptionCertificate(certificateId: string, body: S<"ExemptionTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"ExemptionEvidence">>> {
+    return this.#send<S<"ExemptionEvidence">>("POST", `/v1/exemptions/${encodeURIComponent(certificateId)}/transitions`, body, signal);
   }
 
   // --- shadow ----------------------------------------------------------------
@@ -979,6 +1184,16 @@ export class ZoikoTaxClient {
   /** Propose classification. `POST /v1/classifications:propose`. */
   proposeClassification(body: S<"ClassificationProposalRequest">, signal?: AbortSignal): Promise<Result<S<"ClassificationProposal">>> {
     return this.#send<S<"ClassificationProposal">>("POST", `/v1/classifications:propose`, body, signal);
+  }
+
+  /** Record a reviewer's decision on an AI classification proposal. `POST /v1/classifications/decisions`. */
+  recordClassificationDecision(body: S<"ClassificationDecisionRequest">, signal?: AbortSignal): Promise<Result<S<"ClassificationDecision">>> {
+    return this.#send<S<"ClassificationDecision">>("POST", `/v1/classifications/decisions`, body, signal);
+  }
+
+  /** Get the reviewer's decision on one proposal. `GET /v1/classifications/decisions/{proposalId}`. */
+  getClassificationDecision(proposalId: string, signal?: AbortSignal): Promise<Result<S<"ClassificationDecision">>> {
+    return this.#send<S<"ClassificationDecision">>("GET", `/v1/classifications/decisions/${encodeURIComponent(proposalId)}`, undefined, signal);
   }
 
   // --- dashboard ----------------------------------------------------------

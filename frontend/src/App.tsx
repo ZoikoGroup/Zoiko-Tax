@@ -15,9 +15,11 @@ import { SystemHealthPage } from './pages/SystemHealthPage'
 import { HomePage } from './home/HomePage'
 import { CompliancePage } from './pages/CompliancePage'
 import { ContributionsPage } from './pages/ContributionsPage'
+import { RegistrationsPage } from './pages/RegistrationsPage'
 import { ContentPage } from './pages/ContentPage'
 import { DeterminePage } from './pages/DeterminePage'
 import { DocumentsPage } from './pages/DocumentsPage'
+import { ErpReconciliationPage } from './pages/ErpReconciliationPage'
 import { EvidencePage } from './pages/EvidencePage'
 import { IntelligencePage } from './pages/IntelligencePage'
 import { LocationsPage } from './pages/LocationsPage'
@@ -30,6 +32,7 @@ import { ReportsDemoPage } from './pages/ReportsDemoPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { ShadowPage } from './pages/ShadowPage'
 import { SupportCasesPage } from './pages/SupportCasesPage'
+import { WorkpapersPage } from './pages/WorkpapersPage'
 import type { PageProps } from './pages/types'
 import { CellHealth } from './platform/CellHealth'
 import { ztax } from './platform/client'
@@ -197,8 +200,14 @@ export function App() {
             return <FilingRemittancePage {...page} />
           case 'contributions':
             return <ContributionsPage {...page} />
+          case 'registrations':
+            return <RegistrationsPage {...page} />
           case 'notices':
             return <RegulatoryNoticesPage {...page} />
+          case 'workpapers':
+            return <WorkpapersPage {...page} />
+          case 'erp-reconciliation':
+            return <ErpReconciliationPage {...page} />
           case 'dashboard':
             return <HomePage {...page} capabilities={capabilities} />
         }

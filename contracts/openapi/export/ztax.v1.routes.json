@@ -116,6 +116,18 @@
       "public": false
     },
     {
+      "method": "POST",
+      "path": "/v1/classifications/decisions",
+      "operationId": "recordClassificationDecision",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/classifications/decisions/{proposalId}",
+      "operationId": "getClassificationDecision",
+      "public": false
+    },
+    {
       "method": "GET",
       "path": "/v1/compliance/packages",
       "operationId": "listCompliancePackages",
@@ -293,6 +305,132 @@
       "method": "GET",
       "path": "/v1/documents/{documentId}/lineage",
       "operationId": "getDocumentLineage",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/erp-bridges",
+      "operationId": "listERPBridges",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/erp-bridges",
+      "operationId": "createERPBridge",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/erp-bridges/{bridgeId}/exports",
+      "operationId": "listERPExports",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/erp-bridges/{bridgeId}/exports",
+      "operationId": "prepareERPExport",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/erp-bridges/{bridgeId}/exports/{batchId}",
+      "operationId": "getERPExport",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/erp-bridges/{bridgeId}/exports/{batchId}/dispatch",
+      "operationId": "dispatchERPExport",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/erp-bridges/{bridgeId}/exports/{batchId}/responses",
+      "operationId": "recordERPResponse",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/erp-bridges/{bridgeId}/exports/{batchId}/withdrawal",
+      "operationId": "withdrawERPExport",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/erp-bridges/{bridgeId}/gl-balances",
+      "operationId": "listGLSnapshots",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/erp-bridges/{bridgeId}/gl-balances",
+      "operationId": "recordGLSnapshot",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/erp-bridges/{bridgeId}/gl-reconciliations",
+      "operationId": "listGLReconciliations",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/erp-bridges/{bridgeId}/gl-reconciliations",
+      "operationId": "runGLReconciliation",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/erp-bridges/{bridgeId}/mappings",
+      "operationId": "recordERPMapping",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/exemptions",
+      "operationId": "listExemptionCertificates",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/exemptions",
+      "operationId": "receiveExemptionCertificate",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/exemptions/{certificateId}",
+      "operationId": "getExemptionCertificate",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/exemptions/{certificateId}/decision",
+      "operationId": "decideExemptionCertificate",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/exemptions/{certificateId}/recommendation",
+      "operationId": "recommendExemptionCertificate",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/exemptions/{certificateId}/screening",
+      "operationId": "screenExemptionCertificate",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/exemptions/{certificateId}/transitions",
+      "operationId": "transitionExemptionCertificate",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/exemptions/{certificateId}/versions",
+      "operationId": "addExemptionCertificateVersion",
       "public": false
     },
     {
@@ -591,6 +729,42 @@
     },
     {
       "method": "GET",
+      "path": "/v1/registrations",
+      "operationId": "listRegistrations",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/registrations",
+      "operationId": "createRegistration",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/registrations/{registrationId}",
+      "operationId": "getRegistration",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/registrations/{registrationId}/attachments",
+      "operationId": "recordRegistrationAttachment",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/registrations/{registrationId}/checks",
+      "operationId": "recordRegistrationCheck",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/registrations/{registrationId}/transitions",
+      "operationId": "transitionRegistration",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/remittances",
       "operationId": "listRemittances",
       "public": false
@@ -863,6 +1037,42 @@
       "method": "POST",
       "path": "/v1/webhooks/{webhookId}/status",
       "operationId": "setWebhookStatus",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/workpapers",
+      "operationId": "listWorkpapers",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/workpapers",
+      "operationId": "createWorkpaper",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/workpapers/{workpaperId}",
+      "operationId": "getWorkpaper",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/workpapers/{workpaperId}/actions",
+      "operationId": "actOnWorkpaper",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/workpapers/{workpaperId}/build",
+      "operationId": "buildWorkpaper",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/workpapers/{workpaperId}/source-check",
+      "operationId": "checkWorkpaperSources",
       "public": false
     }
   ]

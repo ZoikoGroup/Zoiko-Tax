@@ -37,4 +37,12 @@ var (
 	ReasonProposalNotAnOntologyNode = errs.Register("AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE", errs.CategoryInternal,
 		"lane-l",
 		"The AI Gateway proposed a code that is not an ontology node. The proposal was discarded.")
+
+	// ReasonProposalCodeNotApproved is a well-formed proposal whose code is not
+	// on the approved ontology list at decision time: unlisted, expired or not
+	// yet effective. It is the AI's answer being set aside for a person, not a
+	// service failure, so it never counts toward the Gateway's circuit breaker.
+	ReasonProposalCodeNotApproved = errs.Register("AI_PROPOSAL_CODE_NOT_APPROVED", errs.CategoryInternal,
+		"lane-l",
+		"The AI Gateway proposed a code that is not approved at this time. The proposal was set aside for a person to review.")
 )

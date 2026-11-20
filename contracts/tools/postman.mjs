@@ -213,9 +213,19 @@ const FOLDERS = [
       "recordRemittanceStatus", "resolveRemittance", "returnRemittance", "cancelRemittance",
       "recordContribution", "listContributions", "getContributionTrace", "getContributionSummary",
       "quarantineContribution", "releaseContribution",
+      "createWorkpaper", "getWorkpaper", "buildWorkpaper", "checkWorkpaperSources", "listWorkpapers", "actOnWorkpaper",
+      "createRegistration", "listRegistrations", "getRegistration", "recordRegistrationAttachment",
+      "recordRegistrationCheck", "transitionRegistration",
+      "receiveExemptionCertificate", "listExemptionCertificates", "getExemptionCertificate",
+      "addExemptionCertificateVersion", "screenExemptionCertificate", "recommendExemptionCertificate",
+      "decideExemptionCertificate", "transitionExemptionCertificate",
+      "createERPBridge", "listERPBridges", "recordERPMapping", "prepareERPExport", "listERPExports", "getERPExport",
+      "dispatchERPExport", "recordERPResponse", "withdrawERPExport", "recordGLSnapshot", "listGLSnapshots",
+      "runGLReconciliation", "listGLReconciliations",
       "createComparator", "listComparators", "executeShadowRun", "listShadowRuns", "getShadowRun", "moveDiscrepancy",
       "issueDocument", "getDocument", "correctDocument", "getDocumentLineage", "listDocuments",
       "adjustTransaction", "refundTransaction", "getRefund", "reportRefund", "listRefunds", "proposeClassification",
+      "recordClassificationDecision", "getClassificationDecision",
       "submitBatch", "getJob", "listJobs", "getDecisionInclusion",
       "getSubledgerPeriod", "transitionSubledgerPeriod", "requestPeriodReopen", "approvePeriodReopen",
       "runReconciliation", "getReconciliation", "listReconciliations", "resolveReconciliationItem",
@@ -305,6 +315,11 @@ const VALUE_VARIABLES = {
   "01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{runId}}",
   // The job example's id: the batch the folder just queued.
   "01920a70-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{jobId}}",
+  // The ERP bridge examples' ids: the bridge, batch and GL snapshot folder
+  // 06 just made.
+  "01920c20-0000-7000-8000-0000000000b1": "{{bridgeId}}",
+  "01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10": "{{batchId}}",
+  "01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e30": "{{snapshotId}}",
   // The webhook examples' id: the subscription folder 04 just created.
   "01920a60-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{webhookId}}",
 };
@@ -512,6 +527,64 @@ const OPERATION_TESTS = {
     "  pm.expect(pm.response.json().immutableHash).to.match(/^zt1:[0-9a-f]{64}$/);",
     "});",
     "pm.collectionVariables.set('contributionId', pm.response.json().id);",
+  ],
+  createWorkpaper: [
+    "pm.test('OBL-07 — one workpaper per filer, duty and period: opened, or the one already open', function () {",
+    "  pm.expect([200, 201]).to.include(pm.response.code);",
+    "  pm.expect(pm.response.json().history[0].kind).to.eql('CREATED');",
+    "});",
+    "pm.collectionVariables.set('workpaperId', pm.response.json().id);",
+  ],
+  buildWorkpaper: [
+    "pm.test('OBL-07 — a build is deterministic: a new version, or the latest when nothing changed', function () {",
+    "  pm.expect([200, 201]).to.include(pm.response.code);",
+    "  pm.expect(pm.response.json().latestBuild.inputsHash).to.match(/^zt1:[0-9a-f]{64}$/);",
+    "});",
+  ],
+  createRegistration: [
+    "pm.test('Doc 17 ER-014 — a submitted registration is SUBMITTED, never ACTIVE; or the number is already recorded', function () {",
+    "  pm.expect([200, 201, 409]).to.include(pm.response.code);",
+    "  if (pm.response.code !== 409) { pm.expect(pm.response.json().status).to.eql('SUBMITTED'); }",
+    "});",
+  ],
+  listRegistrations: [
+    "pm.test('Doc 17 EER-04 — a listing masks registration numbers', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.response.json().registrations.forEach(function (r) { pm.expect(r.numberMasked).to.eql(true); });",
+    "});",
+    "const regs = pm.response.json().registrations;",
+    "if (regs.length > 0) { pm.collectionVariables.set('registrationId', regs[0].id); }",
+  ],
+  receiveExemptionCertificate: [
+    "pm.test('Doc 17 EER-09 — a received certificate is SUBMITTED evidence version 1, not approved', function () {",
+    "  pm.expect([200, 201]).to.include(pm.response.code);",
+    "  pm.expect(pm.response.json().status).to.eql('SUBMITTED');",
+    "  pm.expect(pm.response.json().inForce).to.eql(false);",
+    "});",
+    "pm.collectionVariables.set('certificateId', pm.response.json().id);",
+  ],
+  createERPBridge: [
+    "pm.test('the bridge is recorded with no mapping yet', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().mappings).to.eql([]);",
+    "});",
+    "pm.collectionVariables.set('bridgeId', pm.response.json().id);",
+  ],
+  prepareERPExport: [
+    "pm.test('LED-23 — a prepared batch is sealed with its digest, or there is nothing to export', function () {",
+    "  pm.expect([200, 201, 409]).to.include(pm.response.code);",
+    "  if (pm.response.code !== 409) {",
+    "    pm.expect(pm.response.json().batchDigest).to.match(/^zt1:[0-9a-f]{64}$/);",
+    "    pm.collectionVariables.set('batchId', pm.response.json().id);",
+    "  }",
+    "});",
+  ],
+  recordGLSnapshot: [
+    "pm.test('the ERP balances are recorded with their digest', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().digest).to.match(/^zt1:[0-9a-f]{64}$/);",
+    "});",
+    "pm.collectionVariables.set('snapshotId', pm.response.json().id);",
   ],
   createRemittance: [
     "pm.test('ZTAX-REM-REQ-0005 — only an accepted return is paid', function () {",
@@ -916,6 +989,10 @@ function jsonBody(value) {
 // provider, which is every local stack.
 const ACCEPTED_OUTCOMES = {
   proposeClassification: ["422"],
+  // The example proposal id is fixed, so a second run finds its decision already
+  // recorded (409), and a cell with no decision service answers 503.
+  recordClassificationDecision: ["409", "503"],
+  getClassificationDecision: ["404", "503"],
   // A fresh stack has one session, the run's own, which listSessions does not
   // capture; there is then no other session to revoke.
   revokeSession: ["404"],
@@ -980,6 +1057,32 @@ const ACCEPTED_OUTCOMES = {
   // and only an ANALYST other than the quarantiner releases.
   quarantineContribution: ["409"],
   releaseContribution: ["403"],
+  // The example adjustment names the event count of a first run; a later
+  // run finds the workpaper moved on, or frozen, and is refused as stale.
+  actOnWorkpaper: ["409"],
+  // The example registration number is recorded by the first run; later runs
+  // find it already recorded. Its example document is the one recorded with
+  // it, and folder 06 runs as an OPERATOR, while checks, activation,
+  // screening, recommendation, decision and suspension are an ANALYST's.
+  createRegistration: ["409"],
+  recordRegistrationAttachment: ["409"],
+  recordRegistrationCheck: ["403"],
+  transitionRegistration: ["403"],
+  screenExemptionCertificate: ["403"],
+  recommendExemptionCertificate: ["403"],
+  decideExemptionCertificate: ["403"],
+  transitionExemptionCertificate: ["403"],
+  // Folder 06 may post nothing in the example period and currency, so a
+  // prepare can find nothing to export and the batch reads then name the
+  // example batch. One OPERATOR prepares, so its dispatch is refused (the
+  // example digest is not the batch's, and the preparer is not the
+  // checker), the example attempt was never made, and the withdrawal finds
+  // the batch only when the prepare made one.
+  prepareERPExport: ["409"],
+  getERPExport: ["404"],
+  dispatchERPExport: ["403", "404", "409"],
+  recordERPResponse: ["404"],
+  withdrawERPExport: ["404"],
   moveDiscrepancy: ["404"],
 };
 
@@ -1297,6 +1400,25 @@ function variables(overlay, contractDigest, local) {
     { key: "regime", value: "", type: "string" },
     { key: "sourceType", value: "", type: "string" },
     { key: "legalEntityId", value: "", type: "string" },
+    // Captured by createWorkpaper; the duty filter is empty so it lists
+    // every duty.
+    { key: "workpaperId", value: "", type: "string" },
+    { key: "duty", value: "", type: "string" },
+    // Captured by listRegistrations and receiveExemptionCertificate; the
+    // registration and certificate filters are empty so they list everything.
+    { key: "registrationId", value: "", type: "string" },
+    { key: "certificateId", value: "", type: "string" },
+    { key: "scheme", value: "", type: "string" },
+    { key: "jurisdiction", value: "", type: "string" },
+    { key: "flag", value: "", type: "string" },
+    { key: "buyerRef", value: "", type: "string" },
+    // Captured by createERPBridge, prepareERPExport and recordGLSnapshot; the
+    // batch defaults to one that does not exist, for a prepare that found
+    // nothing to export. The currency filter is empty, so it lists all.
+    { key: "bridgeId", value: "", type: "string" },
+    { key: "batchId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
+    { key: "snapshotId", value: "", type: "string" },
+    { key: "currency", value: "", type: "string" },
     { key: "webhookId", value: "", type: "string" },
     { key: "jobId", value: "", type: "string" },
     { key: "sealId", value: "", type: "string" },
