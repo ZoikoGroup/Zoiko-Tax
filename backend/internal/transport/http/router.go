@@ -153,6 +153,12 @@ type Router struct {
 	// records only, so it is served wherever the store is.
 	Registrations *app.RegistrationService
 
+	// Crosswalks serves the vendor crosswalk library and RuleChanges the
+	// rule approval queue (the content workbench). Neither reads or writes a
+	// rule bundle, a pack activation or a tax result.
+	Crosswalks  *app.CrosswalkService
+	RuleChanges *app.RuleChangeService
+
 	// Shadow serves shadow assurance: comparator profiles, comparison runs
 	// and their discrepancies. Nil when the cell has no evidence store to
 	// read committed results from.
@@ -446,6 +452,21 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/exemptions/{certificateId}/recommendation", false, []security.Role{analyst}}, rt.handleRecommendExemptionCertificate},
 		{Route{"POST", "/v1/exemptions/{certificateId}/decision", false, []security.Role{analyst}}, rt.handleDecideExemptionCertificate},
 		{Route{"POST", "/v1/exemptions/{certificateId}/transitions", false, []security.Role{analyst}}, rt.handleTransitionExemptionCertificate},
+		// The content workbench: vendor crosswalks (Doc 02 WF-06/WF-07) and the
+		// rule approval queue (Doc 03 §07, WF-02). OPERATOR and ANALYST write;
+		// ANALYST reviews and approves, and the service compares the people for
+		// the four-eye rules. AUDITOR and ADMIN read.
+		{Route{"GET", "/v1/content/crosswalks", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListCrosswalks},
+		{Route{"POST", "/v1/content/crosswalks", false, []security.Role{operator, analyst}}, rt.handleCreateCrosswalk},
+		{Route{"GET", "/v1/content/crosswalks/{crosswalkId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetCrosswalk},
+		{Route{"POST", "/v1/content/crosswalks/{crosswalkId}/versions", false, []security.Role{operator, analyst}}, rt.handleAddCrosswalkVersion},
+		{Route{"POST", "/v1/content/crosswalks/{crosswalkId}/versions/{version}/transitions", false, []security.Role{operator, analyst}}, rt.handleTransitionCrosswalkVersion},
+		{Route{"GET", "/v1/content/crosswalks/{crosswalkId}/lookup", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleLookupCrosswalk},
+		{Route{"GET", "/v1/content/rule-changes", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListRuleChanges},
+		{Route{"POST", "/v1/content/rule-changes", false, []security.Role{operator, analyst}}, rt.handleProposeRuleChange},
+		{Route{"GET", "/v1/content/rule-changes/{changeId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetRuleChange},
+		{Route{"POST", "/v1/content/rule-changes/{changeId}/test-evidence", false, []security.Role{operator, analyst}}, rt.handleRecordRuleChangeTestEvidence},
+		{Route{"POST", "/v1/content/rule-changes/{changeId}/transitions", false, []security.Role{operator, analyst}}, rt.handleTransitionRuleChange},
 		// Shadow: non-impact reads of committed decisions, compared with
 		// another engine's results (ZTAX-SHD-001).
 		{Route{"GET", "/v1/shadow/comparators", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListComparators},

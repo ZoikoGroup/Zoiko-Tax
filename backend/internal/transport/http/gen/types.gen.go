@@ -867,6 +867,153 @@ func (e CorrectionRequestType) Valid() bool {
 	}
 }
 
+// Defines values for CrosswalkEventKind.
+const (
+	CrosswalkEventKindAPPROVED         CrosswalkEventKind = "APPROVED"
+	CrosswalkEventKindCHANGESREQUESTED CrosswalkEventKind = "CHANGES_REQUESTED"
+	CrosswalkEventKindCREATED          CrosswalkEventKind = "CREATED"
+	CrosswalkEventKindREINSTATED       CrosswalkEventKind = "REINSTATED"
+	CrosswalkEventKindREJECTED         CrosswalkEventKind = "REJECTED"
+	CrosswalkEventKindSUBMITTED        CrosswalkEventKind = "SUBMITTED"
+	CrosswalkEventKindSUPERSEDED       CrosswalkEventKind = "SUPERSEDED"
+	CrosswalkEventKindSUSPENDED        CrosswalkEventKind = "SUSPENDED"
+	CrosswalkEventKindWITHDRAWN        CrosswalkEventKind = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the CrosswalkEventKind enum.
+func (e CrosswalkEventKind) Valid() bool {
+	switch e {
+	case CrosswalkEventKindAPPROVED:
+		return true
+	case CrosswalkEventKindCHANGESREQUESTED:
+		return true
+	case CrosswalkEventKindCREATED:
+		return true
+	case CrosswalkEventKindREINSTATED:
+		return true
+	case CrosswalkEventKindREJECTED:
+		return true
+	case CrosswalkEventKindSUBMITTED:
+		return true
+	case CrosswalkEventKindSUPERSEDED:
+		return true
+	case CrosswalkEventKindSUSPENDED:
+		return true
+	case CrosswalkEventKindWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CrosswalkMatch.
+const (
+	CrosswalkMatchEXACT        CrosswalkMatch = "EXACT"
+	CrosswalkMatchNOEQUIVALENT CrosswalkMatch = "NO_EQUIVALENT"
+	CrosswalkMatchPARTIAL      CrosswalkMatch = "PARTIAL"
+)
+
+// Valid indicates whether the value is a known member of the CrosswalkMatch enum.
+func (e CrosswalkMatch) Valid() bool {
+	switch e {
+	case CrosswalkMatchEXACT:
+		return true
+	case CrosswalkMatchNOEQUIVALENT:
+		return true
+	case CrosswalkMatchPARTIAL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CrosswalkResolution.
+const (
+	CrosswalkResolutionMAPPED         CrosswalkResolution = "MAPPED"
+	CrosswalkResolutionNOEQUIVALENT   CrosswalkResolution = "NO_EQUIVALENT"
+	CrosswalkResolutionNOTINFORCE     CrosswalkResolution = "NOT_IN_FORCE"
+	CrosswalkResolutionQUARANTINED    CrosswalkResolution = "QUARANTINED"
+	CrosswalkResolutionREVIEWREQUIRED CrosswalkResolution = "REVIEW_REQUIRED"
+	CrosswalkResolutionUNMAPPED       CrosswalkResolution = "UNMAPPED"
+)
+
+// Valid indicates whether the value is a known member of the CrosswalkResolution enum.
+func (e CrosswalkResolution) Valid() bool {
+	switch e {
+	case CrosswalkResolutionMAPPED:
+		return true
+	case CrosswalkResolutionNOEQUIVALENT:
+		return true
+	case CrosswalkResolutionNOTINFORCE:
+		return true
+	case CrosswalkResolutionQUARANTINED:
+		return true
+	case CrosswalkResolutionREVIEWREQUIRED:
+		return true
+	case CrosswalkResolutionUNMAPPED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CrosswalkRightsBasis.
+const (
+	CUSTOMERSUPPLIED    CrosswalkRightsBasis = "CUSTOMER_SUPPLIED"
+	PUBLICDOCUMENTATION CrosswalkRightsBasis = "PUBLIC_DOCUMENTATION"
+	VENDORLICENCE       CrosswalkRightsBasis = "VENDOR_LICENCE"
+)
+
+// Valid indicates whether the value is a known member of the CrosswalkRightsBasis enum.
+func (e CrosswalkRightsBasis) Valid() bool {
+	switch e {
+	case CUSTOMERSUPPLIED:
+		return true
+	case PUBLICDOCUMENTATION:
+		return true
+	case VENDORLICENCE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CrosswalkStatus.
+const (
+	CrosswalkStatusAPPROVED         CrosswalkStatus = "APPROVED"
+	CrosswalkStatusCHANGESREQUESTED CrosswalkStatus = "CHANGES_REQUESTED"
+	CrosswalkStatusDRAFT            CrosswalkStatus = "DRAFT"
+	CrosswalkStatusINREVIEW         CrosswalkStatus = "IN_REVIEW"
+	CrosswalkStatusREJECTED         CrosswalkStatus = "REJECTED"
+	CrosswalkStatusSUPERSEDED       CrosswalkStatus = "SUPERSEDED"
+	CrosswalkStatusSUSPENDED        CrosswalkStatus = "SUSPENDED"
+	CrosswalkStatusWITHDRAWN        CrosswalkStatus = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the CrosswalkStatus enum.
+func (e CrosswalkStatus) Valid() bool {
+	switch e {
+	case CrosswalkStatusAPPROVED:
+		return true
+	case CrosswalkStatusCHANGESREQUESTED:
+		return true
+	case CrosswalkStatusDRAFT:
+		return true
+	case CrosswalkStatusINREVIEW:
+		return true
+	case CrosswalkStatusREJECTED:
+		return true
+	case CrosswalkStatusSUPERSEDED:
+		return true
+	case CrosswalkStatusSUSPENDED:
+		return true
+	case CrosswalkStatusWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CustomerAuthorizationStatus.
 const (
 	CustomerAuthorizationStatusACTIVE     CustomerAuthorizationStatus = "ACTIVE"
@@ -3807,6 +3954,117 @@ func (e RootCause) Valid() bool {
 	}
 }
 
+// Defines values for RuleChangeEventKind.
+const (
+	RuleChangeEventKindAPPROVED             RuleChangeEventKind = "APPROVED"
+	RuleChangeEventKindCHANGESREQUESTED     RuleChangeEventKind = "CHANGES_REQUESTED"
+	RuleChangeEventKindPROPOSED             RuleChangeEventKind = "PROPOSED"
+	RuleChangeEventKindRECOMMENDED          RuleChangeEventKind = "RECOMMENDED"
+	RuleChangeEventKindREJECTED             RuleChangeEventKind = "REJECTED"
+	RuleChangeEventKindSUPERSEDED           RuleChangeEventKind = "SUPERSEDED"
+	RuleChangeEventKindTESTEVIDENCERECORDED RuleChangeEventKind = "TEST_EVIDENCE_RECORDED"
+	RuleChangeEventKindWITHDRAWN            RuleChangeEventKind = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the RuleChangeEventKind enum.
+func (e RuleChangeEventKind) Valid() bool {
+	switch e {
+	case RuleChangeEventKindAPPROVED:
+		return true
+	case RuleChangeEventKindCHANGESREQUESTED:
+		return true
+	case RuleChangeEventKindPROPOSED:
+		return true
+	case RuleChangeEventKindRECOMMENDED:
+		return true
+	case RuleChangeEventKindREJECTED:
+		return true
+	case RuleChangeEventKindSUPERSEDED:
+		return true
+	case RuleChangeEventKindTESTEVIDENCERECORDED:
+		return true
+	case RuleChangeEventKindWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RuleChangeStatus.
+const (
+	RuleChangeStatusAPPROVEDFORRELEASE RuleChangeStatus = "APPROVED_FOR_RELEASE"
+	RuleChangeStatusCHANGESREQUESTED   RuleChangeStatus = "CHANGES_REQUESTED"
+	RuleChangeStatusPROPOSED           RuleChangeStatus = "PROPOSED"
+	RuleChangeStatusRECOMMENDED        RuleChangeStatus = "RECOMMENDED"
+	RuleChangeStatusREJECTED           RuleChangeStatus = "REJECTED"
+	RuleChangeStatusSUPERSEDED         RuleChangeStatus = "SUPERSEDED"
+	RuleChangeStatusWITHDRAWN          RuleChangeStatus = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the RuleChangeStatus enum.
+func (e RuleChangeStatus) Valid() bool {
+	switch e {
+	case RuleChangeStatusAPPROVEDFORRELEASE:
+		return true
+	case RuleChangeStatusCHANGESREQUESTED:
+		return true
+	case RuleChangeStatusPROPOSED:
+		return true
+	case RuleChangeStatusRECOMMENDED:
+		return true
+	case RuleChangeStatusREJECTED:
+		return true
+	case RuleChangeStatusSUPERSEDED:
+		return true
+	case RuleChangeStatusWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RuleChangeType.
+const (
+	RuleChangeTypeBASECHANGE           RuleChangeType = "BASE_CHANGE"
+	RuleChangeTypeEXEMPTIONCHANGE      RuleChangeType = "EXEMPTION_CHANGE"
+	RuleChangeTypeLEVYREPEAL           RuleChangeType = "LEVY_REPEAL"
+	RuleChangeTypeNEWLEVY              RuleChangeType = "NEW_LEVY"
+	RuleChangeTypeOBLIGATIONCHANGE     RuleChangeType = "OBLIGATION_CHANGE"
+	RuleChangeTypeOTHER                RuleChangeType = "OTHER"
+	RuleChangeTypeRATECHANGE           RuleChangeType = "RATE_CHANGE"
+	RuleChangeTypeRESPONSIBILITYCHANGE RuleChangeType = "RESPONSIBILITY_CHANGE"
+	RuleChangeTypeSITUSCHANGE          RuleChangeType = "SITUS_CHANGE"
+	RuleChangeTypeTHRESHOLDCHANGE      RuleChangeType = "THRESHOLD_CHANGE"
+)
+
+// Valid indicates whether the value is a known member of the RuleChangeType enum.
+func (e RuleChangeType) Valid() bool {
+	switch e {
+	case RuleChangeTypeBASECHANGE:
+		return true
+	case RuleChangeTypeEXEMPTIONCHANGE:
+		return true
+	case RuleChangeTypeLEVYREPEAL:
+		return true
+	case RuleChangeTypeNEWLEVY:
+		return true
+	case RuleChangeTypeOBLIGATIONCHANGE:
+		return true
+	case RuleChangeTypeOTHER:
+		return true
+	case RuleChangeTypeRATECHANGE:
+		return true
+	case RuleChangeTypeRESPONSIBILITYCHANGE:
+		return true
+	case RuleChangeTypeSITUSCHANGE:
+		return true
+	case RuleChangeTypeTHRESHOLDCHANGE:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ScreeningCheckResult.
 const (
 	ScreeningCheckResultFAIL          ScreeningCheckResult = "FAIL"
@@ -4284,6 +4542,39 @@ func (e SitusEvidenceType) Valid() bool {
 	case SERVICEADDRESS:
 		return true
 	case SIMCOUNTRY:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SourceAuthorityClass.
+const (
+	A0 SourceAuthorityClass = "A0"
+	A1 SourceAuthorityClass = "A1"
+	A2 SourceAuthorityClass = "A2"
+	B1 SourceAuthorityClass = "B1"
+	B2 SourceAuthorityClass = "B2"
+	C1 SourceAuthorityClass = "C1"
+	U  SourceAuthorityClass = "U"
+)
+
+// Valid indicates whether the value is a known member of the SourceAuthorityClass enum.
+func (e SourceAuthorityClass) Valid() bool {
+	switch e {
+	case A0:
+		return true
+	case A1:
+		return true
+	case A2:
+		return true
+	case B1:
+		return true
+	case B2:
+		return true
+	case C1:
+		return true
+	case U:
 		return true
 	default:
 		return false
@@ -5366,6 +5657,9 @@ type BuyerName = string
 // BuyerRef The buyer's identifier in the tenant's own customer system.
 type BuyerRef = string
 
+// CanonicalServiceCode A Zoiko canonical service code in the tax ontology.
+type CanonicalServiceCode = string
+
 // Capabilities defines model for Capabilities.
 type Capabilities struct {
 	// Authoritative **Whether this deployment may produce authoritative fiscal output.**
@@ -5953,6 +6247,16 @@ type ContentLabel = string
 // ContentText Text from the active content, such as a source citation. Not interpreted.
 type ContentText = string
 
+// ContentTransitionRequest A move of a crosswalk version to the status named.
+type ContentTransitionRequest struct {
+	// ExpectedRevision The `revision` that was read. Anything recorded since is `VERSION_CONFLICT`.
+	ExpectedRevision int32 `json:"expectedRevision"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason *EvidenceText   `json:"reason,omitempty"`
+	To     CrosswalkStatus `json:"to"`
+}
+
 // ContributionAmount A provider's contribution base, or a quantity, in canonical decimal string
 // form — never a JSON number, and never computed by a client
 // (UAT-OBL-034). Scale is significant. An operator's own revenue
@@ -6459,6 +6763,259 @@ type CreateUserRequest struct {
 
 // CredentialRef Where the authority credential is held in the secrets vault. Never the credential.
 type CredentialRef = string
+
+// Crosswalk One vendor code namespace at one vendor release, mapped onto Zoiko
+// canonical service codes, with every version. Advisory only: a
+// crosswalk is never fiscal authority.
+type Crosswalk struct {
+	// AdvisoryOnly Always true. A crosswalk translates codes; it never determines tax.
+	AdvisoryOnly bool `json:"advisoryOnly"`
+
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf Timestamp `json:"asOf"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// CreatedBy The person who recorded an act.
+	CreatedBy EvidenceActor `json:"createdBy"`
+
+	// CurrentVersion The version in use — the newest approved or suspended one — if any.
+	CurrentVersion *int32      `json:"currentVersion,omitempty"`
+	ID             CrosswalkID `json:"id"`
+
+	// Namespace The vendor's code namespace, upper case.
+	Namespace CrosswalkNamespace `json:"namespace"`
+
+	// Title A short label — a title, a vendor release, a grant reference.
+	Title CrosswalkLabel `json:"title"`
+
+	// Vendor The vendor or source system, upper case.
+	Vendor CrosswalkVendor `json:"vendor"`
+
+	// VendorRelease A short label — a title, a vendor release, a grant reference.
+	VendorRelease CrosswalkLabel     `json:"vendorRelease"`
+	Versions      []CrosswalkVersion `json:"versions"`
+}
+
+// CrosswalkEntry defines model for CrosswalkEntry.
+type CrosswalkEntry struct {
+	// Description The vendor's meaning of a code, a predicate or a note. Vendor configuration, not personal data.
+	Description CrosswalkText `json:"description"`
+
+	// ExternalCode An external code exactly as the vendor emits it.
+	ExternalCode CrosswalkExternalCode `json:"externalCode"`
+
+	// LevyHint A candidate levy component code for a content researcher. Never creates a levy.
+	LevyHint *CrosswalkLevyHint `json:"levyHint,omitempty"`
+
+	// Match How well the external code corresponds to the target.
+	Match CrosswalkMatch `json:"match"`
+
+	// Note The vendor's meaning of a code, a predicate or a note. Vendor configuration, not personal data.
+	Note *CrosswalkText `json:"note,omitempty"`
+
+	// Predicate The vendor's meaning of a code, a predicate or a note. Vendor configuration, not personal data.
+	Predicate *CrosswalkText `json:"predicate,omitempty"`
+
+	// ServiceTarget A Zoiko canonical service code in the tax ontology.
+	ServiceTarget *CanonicalServiceCode `json:"serviceTarget,omitempty"`
+}
+
+// CrosswalkEvent defines model for CrosswalkEvent.
+type CrosswalkEvent struct {
+	Kind CrosswalkEventKind `json:"kind"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason *EvidenceText `json:"reason,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy The person who recorded an act.
+	RecordedBy EvidenceActor   `json:"recordedBy"`
+	Seq        int32           `json:"seq"`
+	Status     CrosswalkStatus `json:"status"`
+}
+
+// CrosswalkEventKind defines model for CrosswalkEventKind.
+type CrosswalkEventKind string
+
+// CrosswalkExternalCode An external code exactly as the vendor emits it.
+type CrosswalkExternalCode = string
+
+// CrosswalkID defines model for CrosswalkId.
+type CrosswalkID = string
+
+// CrosswalkLabel A short label — a title, a vendor release, a grant reference.
+type CrosswalkLabel = string
+
+// CrosswalkLevyHint A candidate levy component code for a content researcher. Never creates a levy.
+type CrosswalkLevyHint = string
+
+// CrosswalkList defines model for CrosswalkList.
+type CrosswalkList struct {
+	Crosswalks []Crosswalk `json:"crosswalks"`
+}
+
+// CrosswalkLookup One external code translated. Advisory only — never a tax treatment.
+type CrosswalkLookup struct {
+	// AdvisoryOnly Always true.
+	AdvisoryOnly bool `json:"advisoryOnly"`
+
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf       Timestamp        `json:"asOf"`
+	Candidates []CrosswalkEntry `json:"candidates"`
+
+	// Code An external code exactly as the vendor emits it.
+	Code        CrosswalkExternalCode `json:"code"`
+	CrosswalkID CrosswalkID           `json:"crosswalkId"`
+
+	// Detail The vendor's meaning of a code, a predicate or a note. Vendor configuration, not personal data.
+	Detail CrosswalkText `json:"detail"`
+
+	// On A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	On         CivilDate           `json:"on"`
+	Resolution CrosswalkResolution `json:"resolution"`
+
+	// Version The version resolved against; absent when none has been approved.
+	Version *int32 `json:"version,omitempty"`
+}
+
+// CrosswalkMatch How well the external code corresponds to the target.
+type CrosswalkMatch string
+
+// CrosswalkNamespace The vendor's code namespace, upper case.
+type CrosswalkNamespace = string
+
+// CrosswalkRequest defines model for CrosswalkRequest.
+type CrosswalkRequest struct {
+	// Namespace The vendor's code namespace, upper case.
+	Namespace CrosswalkNamespace `json:"namespace"`
+
+	// Title A short label — a title, a vendor release, a grant reference.
+	Title CrosswalkLabel `json:"title"`
+
+	// Vendor The vendor or source system, upper case.
+	Vendor CrosswalkVendor `json:"vendor"`
+
+	// VendorRelease A short label — a title, a vendor release, a grant reference.
+	VendorRelease CrosswalkLabel          `json:"vendorRelease"`
+	Version       CrosswalkVersionRequest `json:"version"`
+}
+
+// CrosswalkResolution defines model for CrosswalkResolution.
+type CrosswalkResolution string
+
+// CrosswalkRights The grant a version's vendor data is held under.
+type CrosswalkRights struct {
+	// Basis On what footing the vendor's code data is held.
+	Basis CrosswalkRightsBasis `json:"basis"`
+
+	// EvidenceSha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	EvidenceSha256 *Sha256Hex `json:"evidenceSha256,omitempty"`
+
+	// ExpiresOn A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	ExpiresOn *CivilDate `json:"expiresOn,omitempty"`
+
+	// Reference A short label — a title, a vendor release, a grant reference.
+	Reference CrosswalkLabel `json:"reference"`
+}
+
+// CrosswalkRightsBasis On what footing the vendor's code data is held.
+type CrosswalkRightsBasis string
+
+// CrosswalkStatus defines model for CrosswalkStatus.
+type CrosswalkStatus string
+
+// CrosswalkText The vendor's meaning of a code, a predicate or a note. Vendor configuration, not personal data.
+type CrosswalkText = string
+
+// CrosswalkVendor The vendor or source system, upper case.
+type CrosswalkVendor = string
+
+// CrosswalkVersion One immutable crosswalk version. Its entries never change; its status is its history.
+type CrosswalkVersion struct {
+	// ApprovedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	ApprovedAt *Timestamp `json:"approvedAt,omitempty"`
+
+	// ApprovedBy The person who recorded an act.
+	ApprovedBy *EvidenceActor `json:"approvedBy,omitempty"`
+
+	// ContentDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	ContentDigest Digest `json:"contentDigest"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// CreatedBy The person who recorded an act.
+	CreatedBy EvidenceActor `json:"createdBy"`
+
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate `json:"effectiveFrom"`
+
+	// EffectiveTo A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveTo *CivilDate       `json:"effectiveTo,omitempty"`
+	Entries     []CrosswalkEntry `json:"entries"`
+	History     []CrosswalkEvent `json:"history"`
+
+	// Revision The number of events recorded. A transition names it.
+	Revision int32 `json:"revision"`
+
+	// Rights The grant a version's vendor data is held under.
+	Rights CrosswalkRights `json:"rights"`
+	Status CrosswalkStatus `json:"status"`
+
+	// SubmittedBy The person who recorded an act.
+	SubmittedBy *EvidenceActor `json:"submittedBy,omitempty"`
+	Version     int32          `json:"version"`
+}
+
+// CrosswalkVersionNumber A crosswalk version number.
+type CrosswalkVersionNumber = int32
+
+// CrosswalkVersionRequest defines model for CrosswalkVersionRequest.
+type CrosswalkVersionRequest struct {
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate `json:"effectiveFrom"`
+
+	// EffectiveTo A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveTo *CivilDate       `json:"effectiveTo,omitempty"`
+	Entries     []CrosswalkEntry `json:"entries"`
+
+	// Rights The grant a version's vendor data is held under.
+	Rights CrosswalkRights `json:"rights"`
+
+	// Submit Submit for review now. Otherwise the version is kept as a DRAFT.
+	Submit *bool `json:"submit,omitempty"`
+}
 
 // CurrencyCode An ISO 4217 alphabetic currency code.
 type CurrencyCode = string
@@ -11324,11 +11881,230 @@ type RoleRequest struct {
 // RootCause FIN-001 §18's root-cause taxonomy (ZTAX-FIN-REQ-0083).
 type RootCause string
 
+// RuleChange A proposed change to a jurisdiction rule pack and its review.
+// `releaseEligible` is true once approved for release; nothing is
+// published or activated by it.
+type RuleChange struct {
+	// ApprovedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	ApprovedAt *Timestamp `json:"approvedAt,omitempty"`
+
+	// ApprovedBy The person who recorded an act.
+	ApprovedBy *EvidenceActor `json:"approvedBy,omitempty"`
+
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf Timestamp `json:"asOf"`
+
+	// BaseVersion A rule pack version, MAJOR.MINOR.PATCH.
+	BaseVersion RulePackVersion    `json:"baseVersion"`
+	ChangeType  RuleChangeType     `json:"changeType"`
+	Citation    RuleChangeCitation `json:"citation"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// CreatedBy The person who recorded an act.
+	CreatedBy EvidenceActor `json:"createdBy"`
+
+	// Detail Legal content text — a summary, the proposed change, its impact. Not personal data.
+	Detail RuleChangeText `json:"detail"`
+
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate `json:"effectiveFrom"`
+
+	// EffectiveTo A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveTo *CivilDate        `json:"effectiveTo,omitempty"`
+	History     []RuleChangeEvent `json:"history"`
+	ID          RuleChangeID      `json:"id"`
+
+	// Impact Legal content text — a summary, the proposed change, its impact. Not personal data.
+	Impact *RuleChangeText `json:"impact,omitempty"`
+
+	// Jurisdiction A country, or a country and one subdivision, upper case.
+	Jurisdiction EvidenceJurisdiction `json:"jurisdiction"`
+
+	// OriginRef A reference — a source id, passage, edition, test run or origin.
+	OriginRef *RuleChangeRef `json:"originRef,omitempty"`
+
+	// PackID A rule pack identity (CONT-001 §11 pack_id).
+	PackID RulePackID `json:"packId"`
+
+	// PublishedOn A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	PublishedOn *CivilDate `json:"publishedOn,omitempty"`
+
+	// RecommendedBy The person who recorded an act.
+	RecommendedBy *EvidenceActor `json:"recommendedBy,omitempty"`
+
+	// ReleaseEligible True once APPROVED_FOR_RELEASE — eligible for a content release, not released.
+	ReleaseEligible bool `json:"releaseEligible"`
+
+	// Revision The number of events recorded. A transition names it.
+	Revision int32 `json:"revision"`
+
+	// RuleID The stable identity of a logical rule across its versions.
+	RuleID *RuleSemanticID  `json:"ruleId,omitempty"`
+	Status RuleChangeStatus `json:"status"`
+
+	// Summary Legal content text — a summary, the proposed change, its impact. Not personal data.
+	Summary      RuleChangeText          `json:"summary"`
+	Supersedes   *RuleChangeID           `json:"supersedes,omitempty"`
+	TestEvidence *RuleChangeTestEvidence `json:"testEvidence,omitempty"`
+}
+
+// RuleChangeCitation defines model for RuleChangeCitation.
+type RuleChangeCitation struct {
+	// AuthorityClass CONT-001 §4's source authority class. Only A0 and A1 ground a production rule by themselves.
+	AuthorityClass SourceAuthorityClass `json:"authorityClass"`
+
+	// Edition A reference — a source id, passage, edition, test run or origin.
+	Edition RuleChangeRef `json:"edition"`
+
+	// Reference A reference — a source id, passage, edition, test run or origin.
+	Reference RuleChangeRef `json:"reference"`
+
+	// SourceID A reference — a source id, passage, edition, test run or origin.
+	SourceID RuleChangeRef `json:"sourceId"`
+}
+
+// RuleChangeEvent defines model for RuleChangeEvent.
+type RuleChangeEvent struct {
+	Kind RuleChangeEventKind `json:"kind"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason *EvidenceText `json:"reason,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy The person who recorded an act.
+	RecordedBy   EvidenceActor           `json:"recordedBy"`
+	Seq          int32                   `json:"seq"`
+	Status       RuleChangeStatus        `json:"status"`
+	TestEvidence *RuleChangeTestEvidence `json:"testEvidence,omitempty"`
+}
+
+// RuleChangeEventKind defines model for RuleChangeEventKind.
+type RuleChangeEventKind string
+
+// RuleChangeID defines model for RuleChangeId.
+type RuleChangeID = string
+
+// RuleChangeList defines model for RuleChangeList.
+type RuleChangeList struct {
+	RuleChanges []RuleChange `json:"ruleChanges"`
+}
+
+// RuleChangeRef A reference — a source id, passage, edition, test run or origin.
+type RuleChangeRef = string
+
+// RuleChangeRequest defines model for RuleChangeRequest.
+type RuleChangeRequest struct {
+	// BaseVersion A rule pack version, MAJOR.MINOR.PATCH.
+	BaseVersion RulePackVersion    `json:"baseVersion"`
+	ChangeType  RuleChangeType     `json:"changeType"`
+	Citation    RuleChangeCitation `json:"citation"`
+
+	// Detail Legal content text — a summary, the proposed change, its impact. Not personal data.
+	Detail RuleChangeText `json:"detail"`
+
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate `json:"effectiveFrom"`
+
+	// EffectiveTo A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveTo *CivilDate `json:"effectiveTo,omitempty"`
+
+	// Impact Legal content text — a summary, the proposed change, its impact. Not personal data.
+	Impact *RuleChangeText `json:"impact,omitempty"`
+
+	// Jurisdiction A country, or a country and one subdivision, upper case.
+	Jurisdiction EvidenceJurisdiction `json:"jurisdiction"`
+
+	// OriginRef A reference — a source id, passage, edition, test run or origin.
+	OriginRef *RuleChangeRef `json:"originRef,omitempty"`
+
+	// PackID A rule pack identity (CONT-001 §11 pack_id).
+	PackID RulePackID `json:"packId"`
+
+	// PublishedOn A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	PublishedOn *CivilDate `json:"publishedOn,omitempty"`
+
+	// RuleID The stable identity of a logical rule across its versions.
+	RuleID *RuleSemanticID `json:"ruleId,omitempty"`
+
+	// Summary Legal content text — a summary, the proposed change, its impact. Not personal data.
+	Summary      RuleChangeText          `json:"summary"`
+	Supersedes   *RuleChangeID           `json:"supersedes,omitempty"`
+	TestEvidence *RuleChangeTestEvidence `json:"testEvidence,omitempty"`
+}
+
+// RuleChangeStatus defines model for RuleChangeStatus.
+type RuleChangeStatus string
+
+// RuleChangeTestEvidence defines model for RuleChangeTestEvidence.
+type RuleChangeTestEvidence struct {
+	// Ref A reference — a source id, passage, edition, test run or origin.
+	Ref RuleChangeRef `json:"ref"`
+
+	// Sha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	Sha256 *Sha256Hex `json:"sha256,omitempty"`
+}
+
+// RuleChangeTestEvidenceRequest defines model for RuleChangeTestEvidenceRequest.
+type RuleChangeTestEvidenceRequest struct {
+	// ExpectedRevision The `revision` that was read.
+	ExpectedRevision int32                  `json:"expectedRevision"`
+	TestEvidence     RuleChangeTestEvidence `json:"testEvidence"`
+}
+
+// RuleChangeText Legal content text — a summary, the proposed change, its impact. Not personal data.
+type RuleChangeText = string
+
+// RuleChangeTransitionRequest defines model for RuleChangeTransitionRequest.
+type RuleChangeTransitionRequest struct {
+	// ExpectedRevision The `revision` that was read. Anything recorded since is `VERSION_CONFLICT`.
+	ExpectedRevision int32 `json:"expectedRevision"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason EvidenceText     `json:"reason"`
+	To     RuleChangeStatus `json:"to"`
+}
+
+// RuleChangeType defines model for RuleChangeType.
+type RuleChangeType string
+
+// RulePackID A rule pack identity (CONT-001 §11 pack_id).
+type RulePackID = string
+
+// RulePackVersion A rule pack version, MAJOR.MINOR.PATCH.
+type RulePackVersion = string
+
 // RuleRef defines model for RuleRef.
 type RuleRef struct {
 	ID      string `json:"id"`
 	Version int32  `json:"version"`
 }
+
+// RuleSemanticID The stable identity of a logical rule across its versions.
+type RuleSemanticID = string
 
 // RunID defines model for RunId.
 type RunID = string
@@ -11860,6 +12636,9 @@ type SitusEvidenceSource string
 // Seller and customer establishment and VAT identification arrive on the
 // parties instead, so one fact cannot arrive twice and disagree.
 type SitusEvidenceType string
+
+// SourceAuthorityClass CONT-001 §4's source authority class. Only A0 and A1 ground a production rule by themselves.
+type SourceAuthorityClass string
 
 // SourceComponent defines model for SourceComponent.
 type SourceComponent struct {
@@ -13531,6 +14310,11 @@ type Limit = int32
 // fetched through an audited path.
 type Conflict = Problem
 
+// CrosswalkResult One vendor code namespace at one vendor release, mapped onto Zoiko
+// canonical service codes, with every version. Advisory only: a
+// crosswalk is never fiscal authority.
+type CrosswalkResult = Crosswalk
+
 // ExemptionEvidenceResult An exemption certificate held as evidence, as of `asOf`. `inForce` is
 // `APPROVED` within its approved period: a statement about the document,
 // never a tax treatment.
@@ -13575,6 +14359,11 @@ type RateLimited = Problem
 // Evidence of status: it changes no tax result, and `inForce` is
 // `ACTIVE` within its effective dates, nothing more.
 type RegistrationResult = Registration
+
+// RuleChangeResult A proposed change to a jurisdiction rule pack and its review.
+// `releaseEligible` is true once approved for release; nothing is
+// published or activated by it.
+type RuleChangeResult = RuleChange
 
 // Unauthenticated RFC 9457 Problem Details, with the `ztx_` extensions from ADR-0016 §2.5.
 // The extensions carry identifiers rather than data: an error that needs
@@ -13653,6 +14442,74 @@ type ListCompliancePackagesParams struct {
 	// Limit Maximum number of items to return. The server caps this independently,
 	// so a larger value is not an error and does not return more.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListCrosswalksParams defines parameters for ListCrosswalks.
+type ListCrosswalksParams struct {
+	// Vendor Only crosswalks of this vendor.
+	Vendor *CrosswalkVendor `form:"vendor,omitempty" json:"vendor,omitempty"`
+
+	// Status Only crosswalks with a version in this status.
+	Status *CrosswalkStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// CreateCrosswalkParams defines parameters for CreateCrosswalk.
+type CreateCrosswalkParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
+// LookupCrosswalkParams defines parameters for LookupCrosswalk.
+type LookupCrosswalkParams struct {
+	// Code The external code, exactly as the vendor emits it.
+	Code CrosswalkExternalCode `form:"code" json:"code"`
+
+	// On The transaction date. Defaults to today.
+	On *CivilDate `form:"on,omitempty" json:"on,omitempty"`
+
+	// AtVersion Resolve against this approved or superseded version instead of the one in use.
+	AtVersion *CrosswalkVersionNumber `form:"atVersion,omitempty" json:"atVersion,omitempty"`
+}
+
+// AddCrosswalkVersionParams defines parameters for AddCrosswalkVersion.
+type AddCrosswalkVersionParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
+// ListRuleChangesParams defines parameters for ListRuleChanges.
+type ListRuleChangesParams struct {
+	// Status Only changes in this status.
+	Status *RuleChangeStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// PackID Only changes against this rule pack.
+	PackID *RulePackID `form:"packId,omitempty" json:"packId,omitempty"`
+
+	// Jurisdiction Only changes in this jurisdiction.
+	Jurisdiction *EvidenceJurisdiction `form:"jurisdiction,omitempty" json:"jurisdiction,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ProposeRuleChangeParams defines parameters for ProposeRuleChange.
+type ProposeRuleChangeParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
 }
 
 // ListContributionsParams defines parameters for ListContributions.
@@ -14082,6 +14939,24 @@ type SubmitCompliancePackageJSONRequestBody = ComplianceSubmissionRequest
 
 // SubmitContactJSONRequestBody defines body for SubmitContact for application/json ContentType.
 type SubmitContactJSONRequestBody = ContactRequest
+
+// CreateCrosswalkJSONRequestBody defines body for CreateCrosswalk for application/json ContentType.
+type CreateCrosswalkJSONRequestBody = CrosswalkRequest
+
+// AddCrosswalkVersionJSONRequestBody defines body for AddCrosswalkVersion for application/json ContentType.
+type AddCrosswalkVersionJSONRequestBody = CrosswalkVersionRequest
+
+// TransitionCrosswalkVersionJSONRequestBody defines body for TransitionCrosswalkVersion for application/json ContentType.
+type TransitionCrosswalkVersionJSONRequestBody = ContentTransitionRequest
+
+// ProposeRuleChangeJSONRequestBody defines body for ProposeRuleChange for application/json ContentType.
+type ProposeRuleChangeJSONRequestBody = RuleChangeRequest
+
+// RecordRuleChangeTestEvidenceJSONRequestBody defines body for RecordRuleChangeTestEvidence for application/json ContentType.
+type RecordRuleChangeTestEvidenceJSONRequestBody = RuleChangeTestEvidenceRequest
+
+// TransitionRuleChangeJSONRequestBody defines body for TransitionRuleChange for application/json ContentType.
+type TransitionRuleChangeJSONRequestBody = RuleChangeTransitionRequest
 
 // RecordContributionJSONRequestBody defines body for RecordContribution for application/json ContentType.
 type RecordContributionJSONRequestBody = ContributionRequest

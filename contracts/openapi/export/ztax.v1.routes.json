@@ -195,6 +195,72 @@
     },
     {
       "method": "GET",
+      "path": "/v1/content/crosswalks",
+      "operationId": "listCrosswalks",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/content/crosswalks",
+      "operationId": "createCrosswalk",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/content/crosswalks/{crosswalkId}",
+      "operationId": "getCrosswalk",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/content/crosswalks/{crosswalkId}/lookup",
+      "operationId": "lookupCrosswalk",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/content/crosswalks/{crosswalkId}/versions",
+      "operationId": "addCrosswalkVersion",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/content/crosswalks/{crosswalkId}/versions/{version}/transitions",
+      "operationId": "transitionCrosswalkVersion",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/content/rule-changes",
+      "operationId": "listRuleChanges",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/content/rule-changes",
+      "operationId": "proposeRuleChange",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/content/rule-changes/{changeId}",
+      "operationId": "getRuleChange",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/content/rule-changes/{changeId}/test-evidence",
+      "operationId": "recordRuleChangeTestEvidence",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/content/rule-changes/{changeId}/transitions",
+      "operationId": "transitionRuleChange",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/contributions",
       "operationId": "listContributions",
       "public": false

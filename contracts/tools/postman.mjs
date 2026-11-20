@@ -219,6 +219,9 @@ const FOLDERS = [
       "receiveExemptionCertificate", "listExemptionCertificates", "getExemptionCertificate",
       "addExemptionCertificateVersion", "screenExemptionCertificate", "recommendExemptionCertificate",
       "decideExemptionCertificate", "transitionExemptionCertificate",
+      "createCrosswalk", "listCrosswalks", "getCrosswalk", "addCrosswalkVersion", "transitionCrosswalkVersion",
+      "lookupCrosswalk", "proposeRuleChange", "listRuleChanges", "getRuleChange", "recordRuleChangeTestEvidence",
+      "transitionRuleChange",
       "createERPBridge", "listERPBridges", "recordERPMapping", "prepareERPExport", "listERPExports", "getERPExport",
       "dispatchERPExport", "recordERPResponse", "withdrawERPExport", "recordGLSnapshot", "listGLSnapshots",
       "runGLReconciliation", "listGLReconciliations",
@@ -540,6 +543,28 @@ const OPERATION_TESTS = {
     "  pm.expect([200, 201]).to.include(pm.response.code);",
     "  pm.expect(pm.response.json().latestBuild.inputsHash).to.match(/^zt1:[0-9a-f]{64}$/);",
     "});",
+  ],
+  createCrosswalk: [
+    "pm.test('Doc 02 WF-06 — a crosswalk version is written in review, never approved; or the vendor release is already mapped', function () {",
+    "  pm.expect([200, 201, 409]).to.include(pm.response.code);",
+    "  if (pm.response.code !== 409) { pm.expect(pm.response.json().advisoryOnly).to.eql(true); pm.expect(pm.response.json().versions[0].status).to.eql('IN_REVIEW'); }",
+    "});",
+  ],
+  listCrosswalks: [
+    "pm.test('Doc 02 §02 — every crosswalk is advisory only', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.response.json().crosswalks.forEach(function (c) { pm.expect(c.advisoryOnly).to.eql(true); });",
+    "});",
+    "const xws = pm.response.json().crosswalks;",
+    "if (xws.length > 0) { pm.collectionVariables.set('crosswalkId', xws[0].id); }",
+  ],
+  proposeRuleChange: [
+    "pm.test('WF-02 — a proposed rule change is PROPOSED and not release-eligible', function () {",
+    "  pm.expect([200, 201]).to.include(pm.response.code);",
+    "  pm.expect(pm.response.json().status).to.eql('PROPOSED');",
+    "  pm.expect(pm.response.json().releaseEligible).to.eql(false);",
+    "});",
+    "pm.collectionVariables.set('changeId', pm.response.json().id);",
   ],
   createRegistration: [
     "pm.test('Doc 17 ER-014 — a submitted registration is SUBMITTED, never ACTIVE; or the number is already recorded', function () {",
@@ -1064,6 +1089,16 @@ const ACCEPTED_OUTCOMES = {
   // find it already recorded. Its example document is the one recorded with
   // it, and folder 06 runs as an OPERATOR, while checks, activation,
   // screening, recommendation, decision and suspension are an ANALYST's.
+  // The example crosswalk is written by the first run; later runs find the
+  // vendor release already mapped, and its first version still in review, so
+  // no second version opens. Folder 06 runs as an OPERATOR, and review is an
+  // ANALYST's. The example proposal is created with its test evidence, so
+  // attaching more against revision 1 is stale.
+  createCrosswalk: ["409"],
+  addCrosswalkVersion: ["409"],
+  transitionCrosswalkVersion: ["403"],
+  recordRuleChangeTestEvidence: ["409"],
+  transitionRuleChange: ["403"],
   createRegistration: ["409"],
   recordRegistrationAttachment: ["409"],
   recordRegistrationCheck: ["403"],
@@ -1406,6 +1441,17 @@ function variables(overlay, contractDigest, local) {
     { key: "duty", value: "", type: "string" },
     // Captured by listRegistrations and receiveExemptionCertificate; the
     // registration and certificate filters are empty so they list everything.
+    // Captured by listCrosswalks and proposeRuleChange. The crosswalk
+    // version is the first; the lookup is of the example code, today, in the
+    // version in use. The queue and library filters are empty.
+    { key: "crosswalkId", value: "", type: "string" },
+    { key: "version", value: "1", type: "string" },
+    { key: "code", value: "010101", type: "string" },
+    { key: "on", value: "", type: "string" },
+    { key: "atVersion", value: "", type: "string" },
+    { key: "vendor", value: "", type: "string" },
+    { key: "packId", value: "", type: "string" },
+    { key: "changeId", value: "", type: "string" },
     { key: "registrationId", value: "", type: "string" },
     { key: "certificateId", value: "", type: "string" },
     { key: "scheme", value: "", type: "string" },

@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:649b91b423a099137f38885f47bd477df4abc4fb3ade0abc2fc0893f087d357d`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:d36c8b64a2bfe07e461b6b08f50979e70ffc43347a7c2a72a19b2154a5d2c678`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -9904,6 +9904,689 @@
           ]
         },
         {
+          "name": "POST /v1/content/crosswalks — Write a vendor crosswalk and its first version",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vendor\": \"SURETAX\",\n  \"namespace\": \"TRANS_TYPE\",\n  \"vendorRelease\": \"2026.10\",\n  \"title\": \"SureTax transaction types, October 2026 codebook\",\n  \"version\": {\n    \"rights\": {\n      \"basis\": \"CUSTOMER_SUPPLIED\",\n      \"reference\": \"Customer configuration export CFG-2026-10\"\n    },\n    \"effectiveFrom\": \"2026-10-01\",\n    \"entries\": [\n      {\n        \"externalCode\": \"010101\",\n        \"description\": \"Local exchange service\",\n        \"match\": \"EXACT\",\n        \"serviceTarget\": \"ontology:telecom/voice/fixed/local\"\n      },\n      {\n        \"externalCode\": \"050101\",\n        \"description\": \"Prepaid wireless\",\n        \"match\": \"PARTIAL\",\n        \"serviceTarget\": \"ontology:telecom/voice/mobile/prepaid\",\n        \"predicate\": \"Sold at retail to the end user\"\n      },\n      {\n        \"externalCode\": \"990101\",\n        \"description\": \"Vendor internal adjustment\",\n        \"match\": \"NO_EQUIVALENT\"\n      }\n    ],\n    \"submit\": true\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/content/crosswalks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "content",
+                "crosswalks"
+              ]
+            },
+            "description": "Write a vendor crosswalk and its first version\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nWrites a crosswalk for one vendor code namespace at one vendor release,\nwith version 1: its mappings, the grant the vendor's code data is held\nunder (`VENDOR_LICENCE`, `CUSTOMER_SUPPLIED` or `PUBLIC_DOCUMENTATION`,\nwith its reference and end date), and its effective window. The version\nis a `DRAFT`, or `IN_REVIEW` with `submit: true` — never `APPROVED`.\n\nEach entry maps an external code exactly as the vendor emits it, with\nthe vendor's own meaning and a match quality: `EXACT`, `PARTIAL` (with\nthe predicate under which it holds) or `NO_EQUIVALENT` (no target). A\ncode mapped twice without a discriminating predicate, or a `PARTIAL`\nentry without one, is `400 CROSSWALK_UNRESOLVED_AMBIGUITY` (WF-07). A\n`levyHint` is a hint for a content researcher, never a levy.\n\nA crosswalk for the same vendor, namespace and release already written\nis `409 ALREADY_EXISTS`: a change is its next version.\n\n**Idempotent on the `Idempotency-Key`**: the same key and request return\nthe crosswalk already written with `200`; the same key with a different\nrequest is `409 IDEMPOTENCY_KEY_REUSE`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('createCrosswalk returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 409]);",
+                  "});",
+                  "pm.test('Doc 02 WF-06 — a crosswalk version is written in review, never approved; or the vendor release is already mapped', function () {",
+                  "  pm.expect([200, 201, 409]).to.include(pm.response.code);",
+                  "  if (pm.response.code !== 409) { pm.expect(pm.response.json().advisoryOnly).to.eql(true); pm.expect(pm.response.json().versions[0].status).to.eql('IN_REVIEW'); }",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/content/crosswalks — The vendor crosswalk library",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/content/crosswalks?vendor={{vendor}}&status={{status}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "content",
+                "crosswalks"
+              ],
+              "query": [
+                {
+                  "key": "vendor",
+                  "value": "{{vendor}}",
+                  "description": "Only crosswalks of this vendor."
+                },
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only crosswalks with a version in this status."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The vendor crosswalk library\n\n`OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.\n\nThe tenant's vendor crosswalks, most recently created first, each with\nevery version. A crosswalk maps one vendor code namespace at one vendor\nrelease onto Zoiko canonical service codes (Doc 02 WF-06). It is a\ntranslation aid: `advisoryOnly` is always `true`, and no crosswalk is\never fiscal authority — the determination engine never reads one."
+          },
+          "response": [
+            {
+              "name": "200 · One crosswalk with an approved version",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/content/crosswalks",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "content",
+                    "crosswalks"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"crosswalks\": [\n    {\n      \"id\": \"01920e10-0000-7000-8000-00000000c001\",\n      \"vendor\": \"SURETAX\",\n      \"namespace\": \"TRANS_TYPE\",\n      \"vendorRelease\": \"2026.10\",\n      \"title\": \"SureTax transaction types, October 2026 codebook\",\n      \"advisoryOnly\": true,\n      \"currentVersion\": 1,\n      \"versions\": [\n        {\n          \"version\": 1,\n          \"status\": \"APPROVED\",\n          \"revision\": 3,\n          \"rights\": {\n            \"basis\": \"CUSTOMER_SUPPLIED\",\n            \"reference\": \"Customer configuration export CFG-2026-10\"\n          },\n          \"effectiveFrom\": \"2026-10-01\",\n          \"contentDigest\": \"zt1:3f1c2a9b8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a\",\n          \"entries\": [\n            {\n              \"externalCode\": \"010101\",\n              \"description\": \"Local exchange service\",\n              \"match\": \"EXACT\",\n              \"serviceTarget\": \"ontology:telecom/voice/fixed/local\"\n            }\n          ],\n          \"history\": [\n            {\n              \"seq\": 1,\n              \"kind\": \"CREATED\",\n              \"status\": \"DRAFT\",\n              \"recordedAt\": \"2026-11-01T09:00:00.000000Z\",\n              \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n            },\n            {\n              \"seq\": 2,\n              \"kind\": \"SUBMITTED\",\n              \"status\": \"IN_REVIEW\",\n              \"recordedAt\": \"2026-11-01T09:00:00.000000Z\",\n              \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n            },\n            {\n              \"seq\": 3,\n              \"kind\": \"APPROVED\",\n              \"status\": \"APPROVED\",\n              \"reason\": \"Codes checked against the customer export\",\n              \"recordedAt\": \"2026-11-02T10:00:00.000000Z\",\n              \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n            }\n          ],\n          \"createdAt\": \"2026-11-01T09:00:00.000000Z\",\n          \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        }\n      ],\n      \"asOf\": \"2026-11-20T09:00:00.000000Z\",\n      \"createdAt\": \"2026-11-01T09:00:00.000000Z\",\n      \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listCrosswalks returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('Doc 02 §02 — every crosswalk is advisory only', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.response.json().crosswalks.forEach(function (c) { pm.expect(c.advisoryOnly).to.eql(true); });",
+                  "});",
+                  "const xws = pm.response.json().crosswalks;",
+                  "if (xws.length > 0) { pm.collectionVariables.set('crosswalkId', xws[0].id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/content/crosswalks/{crosswalkId} — One vendor crosswalk with every version",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/content/crosswalks/{{crosswalkId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "content",
+                "crosswalks",
+                "{{crosswalkId}}"
+              ]
+            },
+            "description": "One vendor crosswalk with every version\n\n`OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.\n\nThe crosswalk with every version, oldest first: entries, grant, window,\ncontent digest and history. A superseded version stays readable so a\nhistorical translation can be reproduced."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getCrosswalk returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/content/crosswalks/{crosswalkId}/versions — Write the next version of a crosswalk",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rights\": {\n    \"basis\": \"CUSTOMER_SUPPLIED\",\n    \"reference\": \"Customer configuration export CFG-2026-11\"\n  },\n  \"effectiveFrom\": \"2026-11-01\",\n  \"entries\": [\n    {\n      \"externalCode\": \"010101\",\n      \"description\": \"Local exchange service\",\n      \"match\": \"EXACT\",\n      \"serviceTarget\": \"ontology:telecom/voice/fixed/local\"\n    },\n    {\n      \"externalCode\": \"010102\",\n      \"description\": \"Intrastate toll\",\n      \"match\": \"EXACT\",\n      \"serviceTarget\": \"ontology:telecom/voice/fixed/toll\"\n    }\n  ],\n  \"submit\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/content/crosswalks/{{crosswalkId}}/versions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "content",
+                "crosswalks",
+                "{{crosswalkId}}",
+                "versions"
+              ]
+            },
+            "description": "Write the next version of a crosswalk\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nA correction or extension of a crosswalk is its next version, written\nwhole; nothing in an earlier version changes. A crosswalk has at most\none version in `DRAFT` or `IN_REVIEW` at a time; another is\n`409 STATE_TRANSITION_INVALID`.\n\n**Idempotent on the `Idempotency-Key`**, as `createCrosswalk`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('addCrosswalkVersion returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/content/crosswalks/{crosswalkId}/versions/{version}/transitions — Submit, withdraw, approve, return, reject, suspend or reinstate a crosswalk version",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"APPROVED\",\n  \"expectedRevision\": 2,\n  \"reason\": \"Codes checked against the customer export\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/content/crosswalks/{{crosswalkId}}/versions/{{version}}/transitions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "content",
+                "crosswalks",
+                "{{crosswalkId}}",
+                "versions",
+                "{{version}}",
+                "transitions"
+              ]
+            },
+            "description": "Submit, withdraw, approve, return, reject, suspend or reinstate a crosswalk version\n\nSigned in as themselves. `IN_REVIEW` and `WITHDRAWN` are `OPERATOR` or\n`ANALYST`; every other move is `ANALYST`.\n\n`IN_REVIEW` from `DRAFT`. `WITHDRAWN` from `DRAFT` or `IN_REVIEW`, by\nthe version's author. From `IN_REVIEW`: `APPROVED`,\n`CHANGES_REQUESTED` or `REJECTED`, each by someone other than the\nversion's author and submitter (`403 MAKER_CHECKER`). `SUSPENDED` from\n`APPROVED`; `APPROVED` from `SUSPENDED` is reinstatement. Approval and\nreinstatement are refused once the grant's end date has passed\n(`403 CROSSWALK_RIGHTS_LAPSED`). Every move but `IN_REVIEW` gives its\nreason, and every move names the `revision` it was decided on —\nanything recorded since is `409 VERSION_CONFLICT`.\n\nApproving a version supersedes the version in use before it, in the\nsame transaction. Approval makes the mapping usable as a translation;\nit does not make it fiscal authority."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('transitionCrosswalkVersion returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/content/crosswalks/{crosswalkId}/lookup — Translate one external code, advisory only",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/content/crosswalks/{{crosswalkId}}/lookup?code={{code}}&on={{on}}&atVersion={{atVersion}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "content",
+                "crosswalks",
+                "{{crosswalkId}}",
+                "lookup"
+              ],
+              "query": [
+                {
+                  "key": "code",
+                  "value": "{{code}}",
+                  "description": "The external code, exactly as the vendor emits it."
+                },
+                {
+                  "key": "on",
+                  "value": "{{on}}",
+                  "description": "The transaction date. Defaults to today."
+                },
+                {
+                  "key": "atVersion",
+                  "value": "{{atVersion}}",
+                  "description": "Resolve against this approved or superseded version instead of the one in use."
+                }
+              ]
+            },
+            "description": "Translate one external code, advisory only\n\n`OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.\n\nLooks one external code up exactly — no case folding, prefix or\nwildcard — in the version in use, or in the approved or superseded\nversion named by `atVersion`, for a transaction on `on` (default today, UTC).\n`MAPPED` is one unconditional exact mapping; `REVIEW_REQUIRED` is a\nconditional or multiple mapping the caller must resolve with facts;\n`NO_EQUIVALENT` was reviewed and maps to nothing; `UNMAPPED` is not in\nthe version, with no default and no nearest match; `NOT_IN_FORCE` is\noutside the window; `QUARANTINED` is a suspended version or a lapsed\ngrant. The answer is a canonical service code for a person to classify\nwith — never a tax treatment."
+          },
+          "response": [
+            {
+              "name": "200 · One exact mapping",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/content/crosswalks/{{crosswalkId}}/lookup",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "content",
+                    "crosswalks",
+                    "{{crosswalkId}}",
+                    "lookup"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"crosswalkId\": \"01920e10-0000-7000-8000-00000000c001\",\n  \"version\": 1,\n  \"code\": \"010101\",\n  \"on\": \"2026-11-20\",\n  \"resolution\": \"MAPPED\",\n  \"advisoryOnly\": true,\n  \"candidates\": [\n    {\n      \"externalCode\": \"010101\",\n      \"description\": \"Local exchange service\",\n      \"match\": \"EXACT\",\n      \"serviceTarget\": \"ontology:telecom/voice/fixed/local\"\n    }\n  ],\n  \"detail\": \"One exact mapping. It names a canonical service, not a tax treatment.\",\n  \"asOf\": \"2026-11-20T09:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('lookupCrosswalk returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/content/rule-changes — Propose a rule change for review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packId\": \"US-NY-TELECOM\",\n  \"baseVersion\": \"3.2.0\",\n  \"ruleId\": \"ZTAX-RULE-NY-MCTD-SURCHARGE\",\n  \"jurisdiction\": \"US-NY\",\n  \"changeType\": \"RATE_CHANGE\",\n  \"summary\": \"MCTD surcharge rate change\",\n  \"detail\": \"Rate 0.34% to 0.36% on gross receipts from local telecommunication services.\",\n  \"citation\": {\n    \"sourceId\": \"NY-TAX-LAW-186-C\",\n    \"reference\": \"NY Tax Law §186-c(1)\",\n    \"edition\": \"2026-09 amendment\",\n    \"authorityClass\": \"A0\"\n  },\n  \"publishedOn\": \"2026-09-15\",\n  \"effectiveFrom\": \"2027-01-01\",\n  \"testEvidence\": {\n    \"ref\": \"golden-suite run GS-2026-1101\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/content/rule-changes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "content",
+                "rule-changes"
+              ]
+            },
+            "description": "Propose a rule change for review\n\n`ANALYST` or `OPERATOR`, signed in as themselves.\n\nRecords a proposed change to a jurisdiction rule pack as `PROPOSED`:\nthe pack and the version it is against, the rule, the change type, the\nproposed change, the source it rests on (registered source, exact\npassage, edition read, authority class) and its three clocks — when the\nauthority published, when it takes legal effect, and (the record's\n`createdAt`) when Zoiko learned of it. Test evidence may be attached now\nor later. `originRef` is an opaque reference to what prompted it — a\nchange-feed item or a review recommendation; it is provenance only and\napproves nothing.\n\nA revision of a change sent back with `CHANGES_REQUESTED` names it in\n`supersedes`, and the old one becomes `SUPERSEDED`.\n\n**Idempotent on the `Idempotency-Key`**: the same key and request return\nthe proposal already recorded with `200`; the same key with a different\nrequest is `409 IDEMPOTENCY_KEY_REUSE`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('proposeRuleChange returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test('WF-02 — a proposed rule change is PROPOSED and not release-eligible', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "  pm.expect(pm.response.json().status).to.eql('PROPOSED');",
+                  "  pm.expect(pm.response.json().releaseEligible).to.eql(false);",
+                  "});",
+                  "pm.collectionVariables.set('changeId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/content/rule-changes — The rule approval queue",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/content/rule-changes?status={{status}}&packId={{packId}}&jurisdiction={{jurisdiction}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "content",
+                "rule-changes"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only changes in this status."
+                },
+                {
+                  "key": "packId",
+                  "value": "{{packId}}",
+                  "description": "Only changes against this rule pack."
+                },
+                {
+                  "key": "jurisdiction",
+                  "value": "{{jurisdiction}}",
+                  "description": "Only changes in this jurisdiction."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The rule approval queue\n\n`OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.\n\nProposed rule changes, newest first, in any status. A change is\n`PROPOSED`, `RECOMMENDED` by a specialist reviewer, and\n`APPROVED_FOR_RELEASE` by an independent approver — eligible for a\ncontent release, and nothing more: no pack is published from this\nqueue (WF-02)."
+          },
+          "response": [
+            {
+              "name": "200 · One change awaiting independent approval",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/content/rule-changes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "content",
+                    "rule-changes"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"ruleChanges\": [\n    {\n      \"id\": \"01920e20-0000-7000-8000-00000000d001\",\n      \"packId\": \"US-NY-TELECOM\",\n      \"baseVersion\": \"3.2.0\",\n      \"ruleId\": \"ZTAX-RULE-NY-MCTD-SURCHARGE\",\n      \"jurisdiction\": \"US-NY\",\n      \"changeType\": \"RATE_CHANGE\",\n      \"summary\": \"MCTD surcharge rate change\",\n      \"detail\": \"Rate 0.34% to 0.36% on gross receipts from local telecommunication services.\",\n      \"citation\": {\n        \"sourceId\": \"NY-TAX-LAW-186-C\",\n        \"reference\": \"NY Tax Law §186-c(1)\",\n        \"edition\": \"2026-09 amendment\",\n        \"authorityClass\": \"A0\"\n      },\n      \"publishedOn\": \"2026-09-15\",\n      \"effectiveFrom\": \"2027-01-01\",\n      \"status\": \"RECOMMENDED\",\n      \"revision\": 3,\n      \"testEvidence\": {\n        \"ref\": \"golden-suite run GS-2026-1101\"\n      },\n      \"releaseEligible\": false,\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"PROPOSED\",\n          \"status\": \"PROPOSED\",\n          \"recordedAt\": \"2026-11-01T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 2,\n          \"kind\": \"TEST_EVIDENCE_RECORDED\",\n          \"status\": \"PROPOSED\",\n          \"testEvidence\": {\n            \"ref\": \"golden-suite run GS-2026-1101\"\n          },\n          \"recordedAt\": \"2026-11-01T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 3,\n          \"kind\": \"RECOMMENDED\",\n          \"status\": \"RECOMMENDED\",\n          \"reason\": \"Matches the amended statute\",\n          \"recordedAt\": \"2026-11-02T10:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        }\n      ],\n      \"asOf\": \"2026-11-20T09:00:00.000000Z\",\n      \"createdAt\": \"2026-11-01T09:00:00.000000Z\",\n      \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listRuleChanges returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/content/rule-changes/{changeId} — One proposed rule change with its review history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/content/rule-changes/{{changeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "content",
+                "rule-changes",
+                "{{changeId}}"
+              ]
+            },
+            "description": "One proposed rule change with its review history\n\n`OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getRuleChange returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/content/rule-changes/{changeId}/test-evidence — Attach test evidence to a proposed rule change",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"testEvidence\": {\n    \"ref\": \"golden-suite run GS-2026-1101\",\n    \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\"\n  },\n  \"expectedRevision\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/content/rule-changes/{{changeId}}/test-evidence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "content",
+                "rule-changes",
+                "{{changeId}}",
+                "test-evidence"
+              ]
+            },
+            "description": "Attach test evidence to a proposed rule change\n\n`ANALYST` or `OPERATOR`, signed in as themselves.\n\nAttaches the reference to the golden-suite run or regression diff the\nchange was verified by, with the optional SHA-256 of its report (hashed\nin the browser, not uploaded). Only while `PROPOSED`: what a reviewer\nrecommends is the change with that evidence. A change is recommended and\napproved only with test evidence (`403 RULE_CHANGE_TEST_EVIDENCE_REQUIRED`)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordRuleChangeTestEvidence returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/content/rule-changes/{changeId}/transitions — Recommend, approve for release, request changes, reject or withdraw a rule change",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"to\": \"APPROVED_FOR_RELEASE\",\n  \"expectedRevision\": 3,\n  \"reason\": \"Statute and effective date confirmed; golden suite passes\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/content/rule-changes/{{changeId}}/transitions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "content",
+                "rule-changes",
+                "{{changeId}}",
+                "transitions"
+              ]
+            },
+            "description": "Recommend, approve for release, request changes, reject or withdraw a rule change\n\nSigned in as themselves. `WITHDRAWN` is the proposer's (`ANALYST` or\n`OPERATOR`); every other move is `ANALYST`.\n\n`RECOMMENDED` from `PROPOSED`: the specialist review, by someone other\nthan the proposer, with test evidence attached.\n`APPROVED_FOR_RELEASE` from `RECOMMENDED`: the independent approval, by\nsomeone who is neither the proposer nor the recommender, of a change\nciting A0 or A1 authority (`403 SOURCE_AUTHORITY_INSUFFICIENT`\notherwise). `CHANGES_REQUESTED` and `REJECTED` from `PROPOSED` or\n`RECOMMENDED`, by someone other than the proposer. Conflicts of interest\nare `403 MAKER_CHECKER`. Every move gives its rationale and names the\n`revision` it was decided on (`409 VERSION_CONFLICT`).\n\n`APPROVED_FOR_RELEASE` makes the change eligible for a content release.\nIt does not compile, sign, publish or activate a rule pack, and changes\nno tax result."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('transitionRuleChange returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "POST /v1/erp-bridges — Connect a legal entity's subledger to a customer general ledger",
           "request": {
             "method": "POST",
@@ -14968,6 +15651,46 @@
       "type": "string"
     },
     {
+      "key": "crosswalkId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "version",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "code",
+      "value": "010101",
+      "type": "string"
+    },
+    {
+      "key": "on",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "atVersion",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "vendor",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "packId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "changeId",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "registrationId",
       "value": "",
       "type": "string"
@@ -15124,7 +15847,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:649b91b423a099137f38885f47bd477df4abc4fb3ade0abc2fc0893f087d357d",
+      "value": "sha256:d36c8b64a2bfe07e461b6b08f50979e70ffc43347a7c2a72a19b2154a5d2c678",
       "type": "string"
     }
   ]

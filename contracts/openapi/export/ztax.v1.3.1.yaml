@@ -112,6 +112,8 @@ tags:
     description: Regulatory workpapers — a legal filer's tax or regulatory base for one duty and period, assembled deterministically from the provider contribution ledger and the subledger, reconciled to control totals, with evidence-linked adjustments and resolutions, a frozen source snapshot and a two-person approval.
   - name: registrations
     description: Legal-entity registrations and exemption certificates held as evidence (Engineering Doc 17). Records, authority checks a person attests, four-eyed activation and approval on an exact version, and expiry. Evidence only — neither changes a tax result.
+  - name: content-workbench
+    description: The content workbench — vendor crosswalks (versioned, rights-referenced, four-eyes-approved mappings from a vendor's codes onto Zoiko canonical service codes; advisory only, never fiscal authority) and the rule approval queue (proposed rule-pack changes with source citations, specialist review and independent approval for release; nothing is published from it).
   - name: erp
     description: The ERP journal bridge — sealed export batches of posted subledger journals, mapped onto the customer's chart of accounts, dispatched through the transactional outbox, with transport receipt kept apart from GL posting — and the subledger-to-GL reconciliation (R6). ZoikoTax is not the customer's general ledger and connects to no real ERP here; the ERP's answers and balances are recorded with their evidence.
   - name: shadow
@@ -13341,6 +13343,707 @@ paths:
           $ref: "#/components/responses/Internal"
         "503":
           $ref: "#/components/responses/Unavailable"
+  /v1/content/crosswalks:
+    get:
+      operationId: listCrosswalks
+      tags:
+        - content-workbench
+      summary: The vendor crosswalk library
+      description: |
+        `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.
+
+        The tenant's vendor crosswalks, most recently created first, each with
+        every version. A crosswalk maps one vendor code namespace at one vendor
+        release onto Zoiko canonical service codes (Doc 02 WF-06). It is a
+        translation aid: `advisoryOnly` is always `true`, and no crosswalk is
+        ever fiscal authority — the determination engine never reads one.
+      parameters:
+        - name: vendor
+          in: query
+          required: false
+          description: Only crosswalks of this vendor.
+          schema:
+            $ref: "#/components/schemas/CrosswalkVendor"
+          example: SURETAX
+        - name: status
+          in: query
+          required: false
+          description: Only crosswalks with a version in this status.
+          schema:
+            $ref: "#/components/schemas/CrosswalkStatus"
+          example: IN_REVIEW
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The crosswalks.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrosswalkList"
+              examples:
+                default:
+                  summary: One crosswalk with an approved version
+                  value:
+                    crosswalks:
+                      - id: 01920e10-0000-7000-8000-00000000c001
+                        vendor: SURETAX
+                        namespace: TRANS_TYPE
+                        vendorRelease: "2026.10"
+                        title: SureTax transaction types, October 2026 codebook
+                        advisoryOnly: true
+                        currentVersion: 1
+                        versions:
+                          - version: 1
+                            status: APPROVED
+                            revision: 3
+                            rights:
+                              basis: CUSTOMER_SUPPLIED
+                              reference: Customer configuration export CFG-2026-10
+                            effectiveFrom: 2026-10-01
+                            contentDigest: zt1:3f1c2a9b8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a
+                            entries:
+                              - externalCode: "010101"
+                                description: Local exchange service
+                                match: EXACT
+                                serviceTarget: ontology:telecom/voice/fixed/local
+                            history:
+                              - seq: 1
+                                kind: CREATED
+                                status: DRAFT
+                                recordedAt: 2026-11-01T09:00:00.000000Z
+                                recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                              - seq: 2
+                                kind: SUBMITTED
+                                status: IN_REVIEW
+                                recordedAt: 2026-11-01T09:00:00.000000Z
+                                recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                              - seq: 3
+                                kind: APPROVED
+                                status: APPROVED
+                                reason: Codes checked against the customer export
+                                recordedAt: 2026-11-02T10:00:00.000000Z
+                                recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                            createdAt: 2026-11-01T09:00:00.000000Z
+                            createdBy: 01920a4c-0000-7000-8000-0000000000a1
+                        asOf: 2026-11-20T09:00:00.000000Z
+                        createdAt: 2026-11-01T09:00:00.000000Z
+                        createdBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: createCrosswalk
+      tags:
+        - content-workbench
+      summary: Write a vendor crosswalk and its first version
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Writes a crosswalk for one vendor code namespace at one vendor release,
+        with version 1: its mappings, the grant the vendor's code data is held
+        under (`VENDOR_LICENCE`, `CUSTOMER_SUPPLIED` or `PUBLIC_DOCUMENTATION`,
+        with its reference and end date), and its effective window. The version
+        is a `DRAFT`, or `IN_REVIEW` with `submit: true` — never `APPROVED`.
+
+        Each entry maps an external code exactly as the vendor emits it, with
+        the vendor's own meaning and a match quality: `EXACT`, `PARTIAL` (with
+        the predicate under which it holds) or `NO_EQUIVALENT` (no target). A
+        code mapped twice without a discriminating predicate, or a `PARTIAL`
+        entry without one, is `400 CROSSWALK_UNRESOLVED_AMBIGUITY` (WF-07). A
+        `levyHint` is a hint for a content researcher, never a levy.
+
+        A crosswalk for the same vendor, namespace and release already written
+        is `409 ALREADY_EXISTS`: a change is its next version.
+
+        **Idempotent on the `Idempotency-Key`**: the same key and request return
+        the crosswalk already written with `200`; the same key with a different
+        request is `409 IDEMPOTENCY_KEY_REUSE`.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrosswalkRequest"
+            examples:
+              default:
+                summary: A customer-supplied SureTax mapping, submitted for review
+                value:
+                  vendor: SURETAX
+                  namespace: TRANS_TYPE
+                  vendorRelease: "2026.10"
+                  title: SureTax transaction types, October 2026 codebook
+                  version:
+                    rights:
+                      basis: CUSTOMER_SUPPLIED
+                      reference: Customer configuration export CFG-2026-10
+                    effectiveFrom: 2026-10-01
+                    entries:
+                      - externalCode: "010101"
+                        description: Local exchange service
+                        match: EXACT
+                        serviceTarget: ontology:telecom/voice/fixed/local
+                      - externalCode: "050101"
+                        description: Prepaid wireless
+                        match: PARTIAL
+                        serviceTarget: ontology:telecom/voice/mobile/prepaid
+                        predicate: Sold at retail to the end user
+                      - externalCode: "990101"
+                        description: Vendor internal adjustment
+                        match: NO_EQUIVALENT
+                    submit: true
+      responses:
+        "200":
+          $ref: "#/components/responses/CrosswalkResult"
+        "201":
+          $ref: "#/components/responses/CrosswalkResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/content/crosswalks/{crosswalkId}:
+    get:
+      operationId: getCrosswalk
+      tags:
+        - content-workbench
+      summary: One vendor crosswalk with every version
+      description: |
+        `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.
+
+        The crosswalk with every version, oldest first: entries, grant, window,
+        content digest and history. A superseded version stays readable so a
+        historical translation can be reproduced.
+      parameters:
+        - $ref: "#/components/parameters/CrosswalkId"
+      responses:
+        "200":
+          $ref: "#/components/responses/CrosswalkResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/content/crosswalks/{crosswalkId}/versions:
+    post:
+      operationId: addCrosswalkVersion
+      tags:
+        - content-workbench
+      summary: Write the next version of a crosswalk
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        A correction or extension of a crosswalk is its next version, written
+        whole; nothing in an earlier version changes. A crosswalk has at most
+        one version in `DRAFT` or `IN_REVIEW` at a time; another is
+        `409 STATE_TRANSITION_INVALID`.
+
+        **Idempotent on the `Idempotency-Key`**, as `createCrosswalk`.
+      parameters:
+        - $ref: "#/components/parameters/CrosswalkId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrosswalkVersionRequest"
+            examples:
+              default:
+                summary: Version 2, adding a code
+                value:
+                  rights:
+                    basis: CUSTOMER_SUPPLIED
+                    reference: Customer configuration export CFG-2026-11
+                  effectiveFrom: 2026-11-01
+                  entries:
+                    - externalCode: "010101"
+                      description: Local exchange service
+                      match: EXACT
+                      serviceTarget: ontology:telecom/voice/fixed/local
+                    - externalCode: "010102"
+                      description: Intrastate toll
+                      match: EXACT
+                      serviceTarget: ontology:telecom/voice/fixed/toll
+                  submit: true
+      responses:
+        "200":
+          $ref: "#/components/responses/CrosswalkResult"
+        "201":
+          $ref: "#/components/responses/CrosswalkResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/content/crosswalks/{crosswalkId}/versions/{version}/transitions:
+    post:
+      operationId: transitionCrosswalkVersion
+      tags:
+        - content-workbench
+      summary: Submit, withdraw, approve, return, reject, suspend or reinstate a crosswalk version
+      description: |
+        Signed in as themselves. `IN_REVIEW` and `WITHDRAWN` are `OPERATOR` or
+        `ANALYST`; every other move is `ANALYST`.
+
+        `IN_REVIEW` from `DRAFT`. `WITHDRAWN` from `DRAFT` or `IN_REVIEW`, by
+        the version's author. From `IN_REVIEW`: `APPROVED`,
+        `CHANGES_REQUESTED` or `REJECTED`, each by someone other than the
+        version's author and submitter (`403 MAKER_CHECKER`). `SUSPENDED` from
+        `APPROVED`; `APPROVED` from `SUSPENDED` is reinstatement. Approval and
+        reinstatement are refused once the grant's end date has passed
+        (`403 CROSSWALK_RIGHTS_LAPSED`). Every move but `IN_REVIEW` gives its
+        reason, and every move names the `revision` it was decided on —
+        anything recorded since is `409 VERSION_CONFLICT`.
+
+        Approving a version supersedes the version in use before it, in the
+        same transaction. Approval makes the mapping usable as a translation;
+        it does not make it fiscal authority.
+      parameters:
+        - $ref: "#/components/parameters/CrosswalkId"
+        - name: version
+          in: path
+          required: true
+          description: The crosswalk version number.
+          schema:
+            $ref: "#/components/schemas/CrosswalkVersionNumber"
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContentTransitionRequest"
+            examples:
+              default:
+                summary: Approve a version in review
+                value:
+                  to: APPROVED
+                  expectedRevision: 2
+                  reason: Codes checked against the customer export
+      responses:
+        "200":
+          $ref: "#/components/responses/CrosswalkResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/content/crosswalks/{crosswalkId}/lookup:
+    get:
+      operationId: lookupCrosswalk
+      tags:
+        - content-workbench
+      summary: Translate one external code, advisory only
+      description: |
+        `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.
+
+        Looks one external code up exactly — no case folding, prefix or
+        wildcard — in the version in use, or in the approved or superseded
+        version named by `atVersion`, for a transaction on `on` (default today, UTC).
+        `MAPPED` is one unconditional exact mapping; `REVIEW_REQUIRED` is a
+        conditional or multiple mapping the caller must resolve with facts;
+        `NO_EQUIVALENT` was reviewed and maps to nothing; `UNMAPPED` is not in
+        the version, with no default and no nearest match; `NOT_IN_FORCE` is
+        outside the window; `QUARANTINED` is a suspended version or a lapsed
+        grant. The answer is a canonical service code for a person to classify
+        with — never a tax treatment.
+      parameters:
+        - $ref: "#/components/parameters/CrosswalkId"
+        - name: code
+          in: query
+          required: true
+          description: The external code, exactly as the vendor emits it.
+          schema:
+            $ref: "#/components/schemas/CrosswalkExternalCode"
+          example: "010101"
+        - name: on
+          in: query
+          required: false
+          description: The transaction date. Defaults to today.
+          schema:
+            $ref: "#/components/schemas/CivilDate"
+          example: 2026-11-20
+        - name: atVersion
+          in: query
+          required: false
+          description: Resolve against this approved or superseded version instead of the one in use.
+          schema:
+            $ref: "#/components/schemas/CrosswalkVersionNumber"
+          example: 1
+      responses:
+        "200":
+          description: The lookup.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrosswalkLookup"
+              examples:
+                default:
+                  summary: One exact mapping
+                  value:
+                    crosswalkId: 01920e10-0000-7000-8000-00000000c001
+                    version: 1
+                    code: "010101"
+                    on: 2026-11-20
+                    resolution: MAPPED
+                    advisoryOnly: true
+                    candidates:
+                      - externalCode: "010101"
+                        description: Local exchange service
+                        match: EXACT
+                        serviceTarget: ontology:telecom/voice/fixed/local
+                    detail: One exact mapping. It names a canonical service, not a tax treatment.
+                    asOf: 2026-11-20T09:00:00.000000Z
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/content/rule-changes:
+    get:
+      operationId: listRuleChanges
+      tags:
+        - content-workbench
+      summary: The rule approval queue
+      description: |
+        `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.
+
+        Proposed rule changes, newest first, in any status. A change is
+        `PROPOSED`, `RECOMMENDED` by a specialist reviewer, and
+        `APPROVED_FOR_RELEASE` by an independent approver — eligible for a
+        content release, and nothing more: no pack is published from this
+        queue (WF-02).
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Only changes in this status.
+          schema:
+            $ref: "#/components/schemas/RuleChangeStatus"
+          example: RECOMMENDED
+        - name: packId
+          in: query
+          required: false
+          description: Only changes against this rule pack.
+          schema:
+            $ref: "#/components/schemas/RulePackId"
+          example: US-NY-TELECOM
+        - name: jurisdiction
+          in: query
+          required: false
+          description: Only changes in this jurisdiction.
+          schema:
+            $ref: "#/components/schemas/EvidenceJurisdiction"
+          example: US-NY
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The queue.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuleChangeList"
+              examples:
+                default:
+                  summary: One change awaiting independent approval
+                  value:
+                    ruleChanges:
+                      - id: 01920e20-0000-7000-8000-00000000d001
+                        packId: US-NY-TELECOM
+                        baseVersion: 3.2.0
+                        ruleId: ZTAX-RULE-NY-MCTD-SURCHARGE
+                        jurisdiction: US-NY
+                        changeType: RATE_CHANGE
+                        summary: MCTD surcharge rate change
+                        detail: Rate 0.34% to 0.36% on gross receipts from local telecommunication services.
+                        citation:
+                          sourceId: NY-TAX-LAW-186-C
+                          reference: NY Tax Law §186-c(1)
+                          edition: 2026-09 amendment
+                          authorityClass: A0
+                        publishedOn: 2026-09-15
+                        effectiveFrom: 2027-01-01
+                        status: RECOMMENDED
+                        revision: 3
+                        testEvidence:
+                          ref: golden-suite run GS-2026-1101
+                        releaseEligible: false
+                        history:
+                          - seq: 1
+                            kind: PROPOSED
+                            status: PROPOSED
+                            recordedAt: 2026-11-01T09:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                          - seq: 2
+                            kind: TEST_EVIDENCE_RECORDED
+                            status: PROPOSED
+                            testEvidence:
+                              ref: golden-suite run GS-2026-1101
+                            recordedAt: 2026-11-01T09:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                          - seq: 3
+                            kind: RECOMMENDED
+                            status: RECOMMENDED
+                            reason: Matches the amended statute
+                            recordedAt: 2026-11-02T10:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                        asOf: 2026-11-20T09:00:00.000000Z
+                        createdAt: 2026-11-01T09:00:00.000000Z
+                        createdBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: proposeRuleChange
+      tags:
+        - content-workbench
+      summary: Propose a rule change for review
+      description: |
+        `ANALYST` or `OPERATOR`, signed in as themselves.
+
+        Records a proposed change to a jurisdiction rule pack as `PROPOSED`:
+        the pack and the version it is against, the rule, the change type, the
+        proposed change, the source it rests on (registered source, exact
+        passage, edition read, authority class) and its three clocks — when the
+        authority published, when it takes legal effect, and (the record's
+        `createdAt`) when Zoiko learned of it. Test evidence may be attached now
+        or later. `originRef` is an opaque reference to what prompted it — a
+        change-feed item or a review recommendation; it is provenance only and
+        approves nothing.
+
+        A revision of a change sent back with `CHANGES_REQUESTED` names it in
+        `supersedes`, and the old one becomes `SUPERSEDED`.
+
+        **Idempotent on the `Idempotency-Key`**: the same key and request return
+        the proposal already recorded with `200`; the same key with a different
+        request is `409 IDEMPOTENCY_KEY_REUSE`.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RuleChangeRequest"
+            examples:
+              default:
+                summary: A rate change citing the amended statute
+                value:
+                  packId: US-NY-TELECOM
+                  baseVersion: 3.2.0
+                  ruleId: ZTAX-RULE-NY-MCTD-SURCHARGE
+                  jurisdiction: US-NY
+                  changeType: RATE_CHANGE
+                  summary: MCTD surcharge rate change
+                  detail: Rate 0.34% to 0.36% on gross receipts from local telecommunication services.
+                  citation:
+                    sourceId: NY-TAX-LAW-186-C
+                    reference: NY Tax Law §186-c(1)
+                    edition: 2026-09 amendment
+                    authorityClass: A0
+                  publishedOn: 2026-09-15
+                  effectiveFrom: 2027-01-01
+                  testEvidence:
+                    ref: golden-suite run GS-2026-1101
+      responses:
+        "200":
+          $ref: "#/components/responses/RuleChangeResult"
+        "201":
+          $ref: "#/components/responses/RuleChangeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/content/rule-changes/{changeId}:
+    get:
+      operationId: getRuleChange
+      tags:
+        - content-workbench
+      summary: One proposed rule change with its review history
+      description: |
+        `OPERATOR`, `ANALYST`, `AUDITOR` or `ADMIN`.
+      parameters:
+        - $ref: "#/components/parameters/RuleChangeId"
+      responses:
+        "200":
+          $ref: "#/components/responses/RuleChangeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/content/rule-changes/{changeId}/test-evidence:
+    post:
+      operationId: recordRuleChangeTestEvidence
+      tags:
+        - content-workbench
+      summary: Attach test evidence to a proposed rule change
+      description: |
+        `ANALYST` or `OPERATOR`, signed in as themselves.
+
+        Attaches the reference to the golden-suite run or regression diff the
+        change was verified by, with the optional SHA-256 of its report (hashed
+        in the browser, not uploaded). Only while `PROPOSED`: what a reviewer
+        recommends is the change with that evidence. A change is recommended and
+        approved only with test evidence (`403 RULE_CHANGE_TEST_EVIDENCE_REQUIRED`).
+      parameters:
+        - $ref: "#/components/parameters/RuleChangeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RuleChangeTestEvidenceRequest"
+            examples:
+              default:
+                summary: A golden-suite run
+                value:
+                  testEvidence:
+                    ref: golden-suite run GS-2026-1101
+                    sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                  expectedRevision: 1
+      responses:
+        "200":
+          $ref: "#/components/responses/RuleChangeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/content/rule-changes/{changeId}/transitions:
+    post:
+      operationId: transitionRuleChange
+      tags:
+        - content-workbench
+      summary: Recommend, approve for release, request changes, reject or withdraw a rule change
+      description: |
+        Signed in as themselves. `WITHDRAWN` is the proposer's (`ANALYST` or
+        `OPERATOR`); every other move is `ANALYST`.
+
+        `RECOMMENDED` from `PROPOSED`: the specialist review, by someone other
+        than the proposer, with test evidence attached.
+        `APPROVED_FOR_RELEASE` from `RECOMMENDED`: the independent approval, by
+        someone who is neither the proposer nor the recommender, of a change
+        citing A0 or A1 authority (`403 SOURCE_AUTHORITY_INSUFFICIENT`
+        otherwise). `CHANGES_REQUESTED` and `REJECTED` from `PROPOSED` or
+        `RECOMMENDED`, by someone other than the proposer. Conflicts of interest
+        are `403 MAKER_CHECKER`. Every move gives its rationale and names the
+        `revision` it was decided on (`409 VERSION_CONFLICT`).
+
+        `APPROVED_FOR_RELEASE` makes the change eligible for a content release.
+        It does not compile, sign, publish or activate a rule pack, and changes
+        no tax result.
+      parameters:
+        - $ref: "#/components/parameters/RuleChangeId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RuleChangeTransitionRequest"
+            examples:
+              default:
+                summary: Independent approval for release
+                value:
+                  to: APPROVED_FOR_RELEASE
+                  expectedRevision: 3
+                  reason: Statute and effective date confirmed; golden suite passes
+      responses:
+        "200":
+          $ref: "#/components/responses/RuleChangeResult"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
 components:
   securitySchemes:
     sessionCookie:
@@ -13642,6 +14345,22 @@ components:
       schema:
         $ref: "#/components/schemas/ExemptionEvidenceId"
       example: 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+    CrosswalkId:
+      name: crosswalkId
+      in: path
+      required: true
+      description: The crosswalk identifier.
+      schema:
+        $ref: "#/components/schemas/CrosswalkId"
+      example: 01920e10-0000-7000-8000-00000000c001
+    RuleChangeId:
+      name: changeId
+      in: path
+      required: true
+      description: The rule change identifier.
+      schema:
+        $ref: "#/components/schemas/RuleChangeId"
+      example: 01920e20-0000-7000-8000-00000000d001
   responses:
     IdempotencyConflict:
       description: |
@@ -14319,6 +15038,116 @@ components:
                     recordedBy: 01920a4c-0000-7000-8000-0000000000a3
                 asOf: 2026-11-18T09:00:00.000000Z
                 createdAt: 2026-11-02T09:00:00.000000Z
+                createdBy: 01920a4c-0000-7000-8000-0000000000a1
+    CrosswalkResult:
+      description: The crosswalk as it stands now, with every version.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Crosswalk"
+          examples:
+            default:
+              summary: A crosswalk whose first version is in review
+              value:
+                id: 01920e10-0000-7000-8000-00000000c001
+                vendor: SURETAX
+                namespace: TRANS_TYPE
+                vendorRelease: "2026.10"
+                title: SureTax transaction types, October 2026 codebook
+                advisoryOnly: true
+                versions:
+                  - version: 1
+                    status: IN_REVIEW
+                    revision: 2
+                    rights:
+                      basis: CUSTOMER_SUPPLIED
+                      reference: Customer configuration export CFG-2026-10
+                    effectiveFrom: 2026-10-01
+                    contentDigest: zt1:3f1c2a9b8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a
+                    entries:
+                      - externalCode: "010101"
+                        description: Local exchange service
+                        match: EXACT
+                        serviceTarget: ontology:telecom/voice/fixed/local
+                      - externalCode: "990101"
+                        description: Vendor internal adjustment
+                        match: NO_EQUIVALENT
+                    history:
+                      - seq: 1
+                        kind: CREATED
+                        status: DRAFT
+                        recordedAt: 2026-11-01T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: SUBMITTED
+                        status: IN_REVIEW
+                        recordedAt: 2026-11-01T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    createdAt: 2026-11-01T09:00:00.000000Z
+                    createdBy: 01920a4c-0000-7000-8000-0000000000a1
+                asOf: 2026-11-20T09:00:00.000000Z
+                createdAt: 2026-11-01T09:00:00.000000Z
+                createdBy: 01920a4c-0000-7000-8000-0000000000a1
+    RuleChangeResult:
+      description: The proposed rule change as it stands now.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RuleChange"
+          examples:
+            default:
+              summary: A change approved for release, not published
+              value:
+                id: 01920e20-0000-7000-8000-00000000d001
+                packId: US-NY-TELECOM
+                baseVersion: 3.2.0
+                ruleId: ZTAX-RULE-NY-MCTD-SURCHARGE
+                jurisdiction: US-NY
+                changeType: RATE_CHANGE
+                summary: MCTD surcharge rate change
+                detail: Rate 0.34% to 0.36% on gross receipts from local telecommunication services.
+                citation:
+                  sourceId: NY-TAX-LAW-186-C
+                  reference: NY Tax Law §186-c(1)
+                  edition: 2026-09 amendment
+                  authorityClass: A0
+                publishedOn: 2026-09-15
+                effectiveFrom: 2027-01-01
+                status: APPROVED_FOR_RELEASE
+                revision: 4
+                testEvidence:
+                  ref: golden-suite run GS-2026-1101
+                recommendedBy: 01920a4c-0000-7000-8000-0000000000a2
+                approvedBy: 01920a4c-0000-7000-8000-0000000000a3
+                approvedAt: 2026-11-03T10:00:00.000000Z
+                releaseEligible: true
+                history:
+                  - seq: 1
+                    kind: PROPOSED
+                    status: PROPOSED
+                    recordedAt: 2026-11-01T09:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                  - seq: 2
+                    kind: TEST_EVIDENCE_RECORDED
+                    status: PROPOSED
+                    testEvidence:
+                      ref: golden-suite run GS-2026-1101
+                    recordedAt: 2026-11-01T09:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                  - seq: 3
+                    kind: RECOMMENDED
+                    status: RECOMMENDED
+                    reason: Matches the amended statute
+                    recordedAt: 2026-11-02T10:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                  - seq: 4
+                    kind: APPROVED
+                    status: APPROVED_FOR_RELEASE
+                    reason: Statute and effective date confirmed; golden suite passes
+                    recordedAt: 2026-11-03T10:00:00.000000Z
+                    recordedBy: 01920a4c-0000-7000-8000-0000000000a3
+                asOf: 2026-11-20T09:00:00.000000Z
+                createdAt: 2026-11-01T09:00:00.000000Z
                 createdBy: 01920a4c-0000-7000-8000-0000000000a1
   schemas:
     Problem:
@@ -28353,3 +29182,779 @@ components:
           $ref: "#/components/schemas/ExemptionEvidenceStatus"
         reason:
           $ref: "#/components/schemas/EvidenceText"
+    CrosswalkId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CrosswalkId
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920e10-0000-7000-8000-00000000c001
+    RuleChangeId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RuleChangeId
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920e20-0000-7000-8000-00000000d001
+    CrosswalkVendor:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CrosswalkVendor
+      description: The vendor or source system, upper case.
+      pattern: ^[A-Z0-9][A-Z0-9_.-]{0,63}$
+      example: SURETAX
+    CrosswalkNamespace:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CrosswalkNamespace
+      description: The vendor's code namespace, upper case.
+      pattern: ^[A-Z0-9][A-Z0-9_.-]{0,63}$
+      example: TRANS_TYPE
+    CrosswalkLabel:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CrosswalkLabel
+      minLength: 1
+      maxLength: 200
+      description: A short label — a title, a vendor release, a grant reference.
+    CrosswalkText:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CrosswalkText
+      minLength: 1
+      maxLength: 500
+      description: The vendor's meaning of a code, a predicate or a note. Vendor configuration, not personal data.
+    CrosswalkExternalCode:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CrosswalkExternalCode
+      minLength: 1
+      maxLength: 128
+      description: An external code exactly as the vendor emits it.
+      example: "010101"
+    CanonicalServiceCode:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CanonicalServiceCode
+      description: A Zoiko canonical service code in the tax ontology.
+      pattern: ^ontology:.+$
+      example: ontology:telecom/voice/fixed/local
+    CrosswalkLevyHint:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CrosswalkLevyHint
+      description: A candidate levy component code for a content researcher. Never creates a levy.
+      pattern: ^[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}$
+      example: US-FUSF
+    CrosswalkMatch:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CrosswalkMatch
+      description: How well the external code corresponds to the target.
+      enum:
+        - EXACT
+        - PARTIAL
+        - NO_EQUIVALENT
+    CrosswalkRightsBasis:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CrosswalkRightsBasis
+      description: On what footing the vendor's code data is held.
+      enum:
+        - VENDOR_LICENCE
+        - CUSTOMER_SUPPLIED
+        - PUBLIC_DOCUMENTATION
+    CrosswalkStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CrosswalkStatus
+      enum:
+        - DRAFT
+        - IN_REVIEW
+        - APPROVED
+        - CHANGES_REQUESTED
+        - REJECTED
+        - WITHDRAWN
+        - SUSPENDED
+        - SUPERSEDED
+    CrosswalkEventKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CrosswalkEventKind
+      enum:
+        - CREATED
+        - SUBMITTED
+        - APPROVED
+        - CHANGES_REQUESTED
+        - REJECTED
+        - WITHDRAWN
+        - SUSPENDED
+        - REINSTATED
+        - SUPERSEDED
+    CrosswalkResolution:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CrosswalkResolution
+      enum:
+        - MAPPED
+        - REVIEW_REQUIRED
+        - NO_EQUIVALENT
+        - UNMAPPED
+        - NOT_IN_FORCE
+        - QUARANTINED
+    CrosswalkRights:
+      type: object
+      title: CrosswalkRights
+      description: The grant a version's vendor data is held under.
+      additionalProperties: false
+      required:
+        - basis
+        - reference
+      properties:
+        basis:
+          $ref: "#/components/schemas/CrosswalkRightsBasis"
+        reference:
+          $ref: "#/components/schemas/CrosswalkLabel"
+        expiresOn:
+          $ref: "#/components/schemas/CivilDate"
+        evidenceSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+    CrosswalkEntry:
+      type: object
+      title: CrosswalkEntry
+      additionalProperties: false
+      required:
+        - externalCode
+        - description
+        - match
+      properties:
+        externalCode:
+          $ref: "#/components/schemas/CrosswalkExternalCode"
+        description:
+          $ref: "#/components/schemas/CrosswalkText"
+        match:
+          $ref: "#/components/schemas/CrosswalkMatch"
+        serviceTarget:
+          $ref: "#/components/schemas/CanonicalServiceCode"
+        levyHint:
+          $ref: "#/components/schemas/CrosswalkLevyHint"
+        predicate:
+          $ref: "#/components/schemas/CrosswalkText"
+        note:
+          $ref: "#/components/schemas/CrosswalkText"
+    CrosswalkEvent:
+      type: object
+      title: CrosswalkEvent
+      additionalProperties: false
+      required:
+        - seq
+        - kind
+        - status
+        - recordedAt
+        - recordedBy
+      properties:
+        seq:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        kind:
+          $ref: "#/components/schemas/CrosswalkEventKind"
+        status:
+          $ref: "#/components/schemas/CrosswalkStatus"
+        reason:
+          $ref: "#/components/schemas/EvidenceText"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          $ref: "#/components/schemas/EvidenceActor"
+    CrosswalkVersion:
+      type: object
+      title: CrosswalkVersion
+      description: One immutable crosswalk version. Its entries never change; its status is its history.
+      additionalProperties: false
+      required:
+        - version
+        - status
+        - revision
+        - rights
+        - effectiveFrom
+        - contentDigest
+        - entries
+        - history
+        - createdAt
+        - createdBy
+      properties:
+        version:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        status:
+          $ref: "#/components/schemas/CrosswalkStatus"
+        revision:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+          description: The number of events recorded. A transition names it.
+        rights:
+          $ref: "#/components/schemas/CrosswalkRights"
+        effectiveFrom:
+          $ref: "#/components/schemas/CivilDate"
+        effectiveTo:
+          $ref: "#/components/schemas/CivilDate"
+        contentDigest:
+          $ref: "#/components/schemas/Digest"
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/CrosswalkEntry"
+        submittedBy:
+          $ref: "#/components/schemas/EvidenceActor"
+        approvedBy:
+          $ref: "#/components/schemas/EvidenceActor"
+        approvedAt:
+          $ref: "#/components/schemas/Timestamp"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/CrosswalkEvent"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        createdBy:
+          $ref: "#/components/schemas/EvidenceActor"
+    Crosswalk:
+      type: object
+      title: Crosswalk
+      description: |
+        One vendor code namespace at one vendor release, mapped onto Zoiko
+        canonical service codes, with every version. Advisory only: a
+        crosswalk is never fiscal authority.
+      additionalProperties: false
+      required:
+        - id
+        - vendor
+        - namespace
+        - vendorRelease
+        - title
+        - advisoryOnly
+        - versions
+        - asOf
+        - createdAt
+        - createdBy
+      properties:
+        id:
+          $ref: "#/components/schemas/CrosswalkId"
+        vendor:
+          $ref: "#/components/schemas/CrosswalkVendor"
+        namespace:
+          $ref: "#/components/schemas/CrosswalkNamespace"
+        vendorRelease:
+          $ref: "#/components/schemas/CrosswalkLabel"
+        title:
+          $ref: "#/components/schemas/CrosswalkLabel"
+        advisoryOnly:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: Always true. A crosswalk translates codes; it never determines tax.
+        currentVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+          description: The version in use — the newest approved or suspended one — if any.
+        versions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CrosswalkVersion"
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        createdBy:
+          $ref: "#/components/schemas/EvidenceActor"
+    CrosswalkList:
+      type: object
+      title: CrosswalkList
+      additionalProperties: false
+      required:
+        - crosswalks
+      properties:
+        crosswalks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Crosswalk"
+    CrosswalkVersionRequest:
+      type: object
+      title: CrosswalkVersionRequest
+      additionalProperties: false
+      required:
+        - rights
+        - effectiveFrom
+        - entries
+      properties:
+        rights:
+          $ref: "#/components/schemas/CrosswalkRights"
+        effectiveFrom:
+          $ref: "#/components/schemas/CivilDate"
+        effectiveTo:
+          $ref: "#/components/schemas/CivilDate"
+        entries:
+          type: array
+          minItems: 1
+          maxItems: 2000
+          items:
+            $ref: "#/components/schemas/CrosswalkEntry"
+        submit:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: Submit for review now. Otherwise the version is kept as a DRAFT.
+    CrosswalkRequest:
+      type: object
+      title: CrosswalkRequest
+      additionalProperties: false
+      required:
+        - vendor
+        - namespace
+        - vendorRelease
+        - title
+        - version
+      properties:
+        vendor:
+          $ref: "#/components/schemas/CrosswalkVendor"
+        namespace:
+          $ref: "#/components/schemas/CrosswalkNamespace"
+        vendorRelease:
+          $ref: "#/components/schemas/CrosswalkLabel"
+        title:
+          $ref: "#/components/schemas/CrosswalkLabel"
+        version:
+          $ref: "#/components/schemas/CrosswalkVersionRequest"
+    ContentTransitionRequest:
+      type: object
+      title: ContentTransitionRequest
+      description: A move of a crosswalk version to the status named.
+      additionalProperties: false
+      required:
+        - to
+        - expectedRevision
+      properties:
+        to:
+          $ref: "#/components/schemas/CrosswalkStatus"
+        expectedRevision:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+          description: The `revision` that was read. Anything recorded since is `VERSION_CONFLICT`.
+        reason:
+          $ref: "#/components/schemas/EvidenceText"
+    CrosswalkLookup:
+      type: object
+      title: CrosswalkLookup
+      description: One external code translated. Advisory only — never a tax treatment.
+      additionalProperties: false
+      required:
+        - crosswalkId
+        - code
+        - on
+        - resolution
+        - advisoryOnly
+        - candidates
+        - detail
+        - asOf
+      properties:
+        crosswalkId:
+          $ref: "#/components/schemas/CrosswalkId"
+        version:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+          description: The version resolved against; absent when none has been approved.
+        code:
+          $ref: "#/components/schemas/CrosswalkExternalCode"
+        on:
+          $ref: "#/components/schemas/CivilDate"
+        resolution:
+          $ref: "#/components/schemas/CrosswalkResolution"
+        advisoryOnly:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: Always true.
+        candidates:
+          type: array
+          items:
+            $ref: "#/components/schemas/CrosswalkEntry"
+        detail:
+          $ref: "#/components/schemas/CrosswalkText"
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+    RulePackId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RulePackId
+      description: A rule pack identity (CONT-001 §11 pack_id).
+      pattern: ^[A-Z]([A-Z0-9-]*[A-Z0-9])?$
+      example: US-NY-TELECOM
+    RulePackVersion:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RulePackVersion
+      description: A rule pack version, MAJOR.MINOR.PATCH.
+      pattern: ^[0-9]+\.[0-9]+\.[0-9]+$
+      example: 3.2.0
+    RuleSemanticId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RuleSemanticId
+      description: The stable identity of a logical rule across its versions.
+      pattern: ^ZTAX-RULE-[A-Z0-9-]+$
+      example: ZTAX-RULE-NY-MCTD-SURCHARGE
+    RuleChangeType:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RuleChangeType
+      enum:
+        - RATE_CHANGE
+        - BASE_CHANGE
+        - NEW_LEVY
+        - LEVY_REPEAL
+        - EXEMPTION_CHANGE
+        - THRESHOLD_CHANGE
+        - SITUS_CHANGE
+        - RESPONSIBILITY_CHANGE
+        - OBLIGATION_CHANGE
+        - OTHER
+    RuleChangeStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RuleChangeStatus
+      enum:
+        - PROPOSED
+        - RECOMMENDED
+        - APPROVED_FOR_RELEASE
+        - CHANGES_REQUESTED
+        - REJECTED
+        - WITHDRAWN
+        - SUPERSEDED
+    RuleChangeEventKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RuleChangeEventKind
+      enum:
+        - PROPOSED
+        - TEST_EVIDENCE_RECORDED
+        - RECOMMENDED
+        - APPROVED
+        - CHANGES_REQUESTED
+        - REJECTED
+        - WITHDRAWN
+        - SUPERSEDED
+    SourceAuthorityClass:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: SourceAuthorityClass
+      description: CONT-001 §4's source authority class. Only A0 and A1 ground a production rule by themselves.
+      enum:
+        - A0
+        - A1
+        - A2
+        - B1
+        - B2
+        - C1
+        - U
+    RuleChangeText:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RuleChangeText
+      minLength: 1
+      maxLength: 8000
+      description: Legal content text — a summary, the proposed change, its impact. Not personal data.
+    RuleChangeRef:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: RuleChangeRef
+      minLength: 1
+      maxLength: 200
+      description: A reference — a source id, passage, edition, test run or origin.
+    RuleChangeCitation:
+      type: object
+      title: RuleChangeCitation
+      additionalProperties: false
+      required:
+        - sourceId
+        - reference
+        - edition
+        - authorityClass
+      properties:
+        sourceId:
+          $ref: "#/components/schemas/RuleChangeRef"
+        reference:
+          $ref: "#/components/schemas/RuleChangeRef"
+        edition:
+          $ref: "#/components/schemas/RuleChangeRef"
+        authorityClass:
+          $ref: "#/components/schemas/SourceAuthorityClass"
+    RuleChangeTestEvidence:
+      type: object
+      title: RuleChangeTestEvidence
+      additionalProperties: false
+      required:
+        - ref
+      properties:
+        ref:
+          $ref: "#/components/schemas/RuleChangeRef"
+        sha256:
+          $ref: "#/components/schemas/Sha256Hex"
+    RuleChangeEvent:
+      type: object
+      title: RuleChangeEvent
+      additionalProperties: false
+      required:
+        - seq
+        - kind
+        - status
+        - recordedAt
+        - recordedBy
+      properties:
+        seq:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        kind:
+          $ref: "#/components/schemas/RuleChangeEventKind"
+        status:
+          $ref: "#/components/schemas/RuleChangeStatus"
+        reason:
+          $ref: "#/components/schemas/EvidenceText"
+        testEvidence:
+          $ref: "#/components/schemas/RuleChangeTestEvidence"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          $ref: "#/components/schemas/EvidenceActor"
+    RuleChange:
+      type: object
+      title: RuleChange
+      description: |
+        A proposed change to a jurisdiction rule pack and its review.
+        `releaseEligible` is true once approved for release; nothing is
+        published or activated by it.
+      additionalProperties: false
+      required:
+        - id
+        - packId
+        - baseVersion
+        - jurisdiction
+        - changeType
+        - summary
+        - detail
+        - citation
+        - effectiveFrom
+        - status
+        - revision
+        - releaseEligible
+        - history
+        - asOf
+        - createdAt
+        - createdBy
+      properties:
+        id:
+          $ref: "#/components/schemas/RuleChangeId"
+        packId:
+          $ref: "#/components/schemas/RulePackId"
+        baseVersion:
+          $ref: "#/components/schemas/RulePackVersion"
+        ruleId:
+          $ref: "#/components/schemas/RuleSemanticId"
+        jurisdiction:
+          $ref: "#/components/schemas/EvidenceJurisdiction"
+        changeType:
+          $ref: "#/components/schemas/RuleChangeType"
+        summary:
+          $ref: "#/components/schemas/RuleChangeText"
+        detail:
+          $ref: "#/components/schemas/RuleChangeText"
+        impact:
+          $ref: "#/components/schemas/RuleChangeText"
+        citation:
+          $ref: "#/components/schemas/RuleChangeCitation"
+        publishedOn:
+          $ref: "#/components/schemas/CivilDate"
+        effectiveFrom:
+          $ref: "#/components/schemas/CivilDate"
+        effectiveTo:
+          $ref: "#/components/schemas/CivilDate"
+        originRef:
+          $ref: "#/components/schemas/RuleChangeRef"
+        supersedes:
+          $ref: "#/components/schemas/RuleChangeId"
+        status:
+          $ref: "#/components/schemas/RuleChangeStatus"
+        revision:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+          description: The number of events recorded. A transition names it.
+        testEvidence:
+          $ref: "#/components/schemas/RuleChangeTestEvidence"
+        recommendedBy:
+          $ref: "#/components/schemas/EvidenceActor"
+        approvedBy:
+          $ref: "#/components/schemas/EvidenceActor"
+        approvedAt:
+          $ref: "#/components/schemas/Timestamp"
+        releaseEligible:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: True once APPROVED_FOR_RELEASE — eligible for a content release, not released.
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/RuleChangeEvent"
+        asOf:
+          $ref: "#/components/schemas/Timestamp"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        createdBy:
+          $ref: "#/components/schemas/EvidenceActor"
+    RuleChangeList:
+      type: object
+      title: RuleChangeList
+      additionalProperties: false
+      required:
+        - ruleChanges
+      properties:
+        ruleChanges:
+          type: array
+          items:
+            $ref: "#/components/schemas/RuleChange"
+    RuleChangeRequest:
+      type: object
+      title: RuleChangeRequest
+      additionalProperties: false
+      required:
+        - packId
+        - baseVersion
+        - jurisdiction
+        - changeType
+        - summary
+        - detail
+        - citation
+        - effectiveFrom
+      properties:
+        packId:
+          $ref: "#/components/schemas/RulePackId"
+        baseVersion:
+          $ref: "#/components/schemas/RulePackVersion"
+        ruleId:
+          $ref: "#/components/schemas/RuleSemanticId"
+        jurisdiction:
+          $ref: "#/components/schemas/EvidenceJurisdiction"
+        changeType:
+          $ref: "#/components/schemas/RuleChangeType"
+        summary:
+          $ref: "#/components/schemas/RuleChangeText"
+        detail:
+          $ref: "#/components/schemas/RuleChangeText"
+        impact:
+          $ref: "#/components/schemas/RuleChangeText"
+        citation:
+          $ref: "#/components/schemas/RuleChangeCitation"
+        publishedOn:
+          $ref: "#/components/schemas/CivilDate"
+        effectiveFrom:
+          $ref: "#/components/schemas/CivilDate"
+        effectiveTo:
+          $ref: "#/components/schemas/CivilDate"
+        originRef:
+          $ref: "#/components/schemas/RuleChangeRef"
+        supersedes:
+          $ref: "#/components/schemas/RuleChangeId"
+        testEvidence:
+          $ref: "#/components/schemas/RuleChangeTestEvidence"
+    RuleChangeTestEvidenceRequest:
+      type: object
+      title: RuleChangeTestEvidenceRequest
+      additionalProperties: false
+      required:
+        - testEvidence
+        - expectedRevision
+      properties:
+        testEvidence:
+          $ref: "#/components/schemas/RuleChangeTestEvidence"
+        expectedRevision:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+          description: The `revision` that was read.
+    RuleChangeTransitionRequest:
+      type: object
+      title: RuleChangeTransitionRequest
+      additionalProperties: false
+      required:
+        - to
+        - expectedRevision
+        - reason
+      properties:
+        to:
+          $ref: "#/components/schemas/RuleChangeStatus"
+        expectedRevision:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+          description: The `revision` that was read. Anything recorded since is `VERSION_CONFLICT`.
+        reason:
+          $ref: "#/components/schemas/EvidenceText"
+    CrosswalkVersionNumber:
+      x-ztax-privacy:
+        class: P0
+      type: integer
+      title: CrosswalkVersionNumber
+      format: int32
+      minimum: 1
+      description: A crosswalk version number.
+      example: 1

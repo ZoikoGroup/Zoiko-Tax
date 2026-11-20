@@ -508,6 +508,50 @@ test("the registration and exemption calls send intake under an Idempotency-Key 
   for (const c of calls.filter((_, i) => i !== 0 && i !== 6)) assert.equal(c.init.headers["Idempotency-Key"], undefined);
 });
 
+test("the content workbench calls send intake under an Idempotency-Key and nothing else", async () => {
+  const { fetch, calls } = stub(json(201, { id: "01920e10-0000-7000-8000-00000000c001" }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+  const xw = "01920e10-0000-7000-8000-00000000c001";
+  const rc = "01920e20-0000-7000-8000-00000000d001";
+  const version = {
+    rights: { basis: "CUSTOMER_SUPPLIED", reference: "CFG-1" }, effectiveFrom: "2026-10-01",
+    entries: [{ externalCode: "010101", description: "Local", match: "EXACT", serviceTarget: "ontology:telecom/voice/fixed/local" }],
+  };
+
+  await client.createCrosswalk("k-xw", { vendor: "SURETAX", namespace: "TRANS_TYPE", vendorRelease: "2026.10", title: "SureTax", version });
+  await client.listCrosswalks({ vendor: "SURETAX", status: "IN_REVIEW" });
+  await client.getCrosswalk(xw);
+  await client.addCrosswalkVersion(xw, "k-v2", version);
+  await client.transitionCrosswalkVersion(xw, 2, { to: "APPROVED", expectedRevision: 2, reason: "ok" });
+  await client.lookupCrosswalk(xw, { code: "010101", on: "2026-11-20" });
+  await client.proposeRuleChange("k-rc", {
+    packId: "US-NY-TELECOM", baseVersion: "3.2.0", jurisdiction: "US-NY", changeType: "RATE_CHANGE", summary: "s", detail: "d",
+    citation: { sourceId: "NY-186-C", reference: "§1", edition: "2026", authorityClass: "A0" }, effectiveFrom: "2027-01-01",
+  });
+  await client.listRuleChanges({ status: "RECOMMENDED" });
+  await client.getRuleChange(rc);
+  await client.recordRuleChangeTestEvidence(rc, { testEvidence: { ref: "GS-1" }, expectedRevision: 1 });
+  await client.transitionRuleChange(rc, { to: "APPROVED_FOR_RELEASE", expectedRevision: 3, reason: "ok" });
+
+  assert.deepEqual(calls.map((c) => `${c.init.method} ${c.url}`), [
+    "POST /api/v1/content/crosswalks",
+    "GET /api/v1/content/crosswalks?vendor=SURETAX&status=IN_REVIEW",
+    `GET /api/v1/content/crosswalks/${xw}`,
+    `POST /api/v1/content/crosswalks/${xw}/versions`,
+    `POST /api/v1/content/crosswalks/${xw}/versions/2/transitions`,
+    `GET /api/v1/content/crosswalks/${xw}/lookup?code=010101&on=2026-11-20`,
+    "POST /api/v1/content/rule-changes",
+    "GET /api/v1/content/rule-changes?status=RECOMMENDED",
+    `GET /api/v1/content/rule-changes/${rc}`,
+    `POST /api/v1/content/rule-changes/${rc}/test-evidence`,
+    `POST /api/v1/content/rule-changes/${rc}/transitions`,
+  ]);
+  assert.equal(calls[0].init.headers["Idempotency-Key"], "k-xw");
+  assert.equal(calls[3].init.headers["Idempotency-Key"], "k-v2");
+  assert.equal(calls[6].init.headers["Idempotency-Key"], "k-rc");
+  for (const c of calls.filter((_, i) => ![0, 3, 6].includes(i))) assert.equal(c.init.headers["Idempotency-Key"], undefined);
+});
+
 test("the ERP bridge calls put ids in the path, amounts as strings and send no Idempotency-Key", async () => {
   const { fetch, calls } = stub(json(201, { id: "01920c20-0000-7000-8000-0000000000b1" }));
   const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
