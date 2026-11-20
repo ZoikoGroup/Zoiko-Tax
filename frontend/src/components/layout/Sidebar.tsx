@@ -51,6 +51,7 @@ export type View =
   | 'notices'
   | 'workpapers'
   | 'erp-reconciliation'
+  | 'einvoicing'
 
 /** A screen: a view, and the tab inside it when the view has tabs. */
 export interface NavTarget {
@@ -156,10 +157,10 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
   },
   {
     id: 'e-invoicing', label: 'E-Invoicing / CTC', icon: <IconFileCheck />, children: [
-      { id: 'ctc.applicability', label: 'Country Applicability' },
+      { id: 'ctc.applicability', label: 'Country Applicability', target: at('einvoicing', 'applicability') },
       { id: 'ctc.processing', label: 'Invoice Processing', target: at('documents', 'issue') },
-      { id: 'ctc.validation', label: 'Format Validation' },
-      { id: 'ctc.submissions', label: 'Authority Submissions' },
+      { id: 'ctc.validation', label: 'Format Validation', target: at('einvoicing', 'validation') },
+      { id: 'ctc.submissions', label: 'Authority Submissions', target: at('einvoicing', 'submissions') },
       { id: 'ctc.rejections', label: 'Rejections & Corrections', target: at('documents', 'corrections') },
       { id: 'ctc.archive', label: 'Fiscal Archive', target: at('documents', 'lookup') },
     ],

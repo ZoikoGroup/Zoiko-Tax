@@ -851,6 +851,92 @@ export class ZoikoTaxClient {
     return this.#send<S<"GLReconciliation">>("POST", `/v1/erp-bridges/${encodeURIComponent(bridgeId)}/gl-reconciliations`, body, signal);
   }
 
+  // --- e-invoicing / CTC (Doc 21) -------------------------------------------
+  /** Country applicability records. `GET /v1/ctc/applicability`. */
+  listCTCApplicability(params: { legalEntityId?: string; country?: string; status?: S<"CTCApplicabilityStatus"> } = {}, signal?: AbortSignal): Promise<Result<S<"CTCApplicabilityList">>> {
+    return this.#send<S<"CTCApplicabilityList">>("GET", `/v1/ctc/applicability${query(params)}`, undefined, signal);
+  }
+
+  /** Record a country applicability record, in DRAFT. `POST /v1/ctc/applicability`. */
+  createCTCApplicability(body: S<"CTCApplicabilityRequest">, signal?: AbortSignal): Promise<Result<S<"CTCApplicability">>> {
+    return this.#send<S<"CTCApplicability">>("POST", `/v1/ctc/applicability`, body, signal);
+  }
+
+  /** One country applicability record. `GET /v1/ctc/applicability/{applicabilityId}`. */
+  getCTCApplicability(applicabilityId: string, signal?: AbortSignal): Promise<Result<S<"CTCApplicability">>> {
+    return this.#send<S<"CTCApplicability">>("GET", `/v1/ctc/applicability/${encodeURIComponent(applicabilityId)}`, undefined, signal);
+  }
+
+  /** Record the next version of a record's terms. `POST /v1/ctc/applicability/{applicabilityId}/versions`. */
+  reviseCTCApplicability(applicabilityId: string, body: S<"CTCTerms">, signal?: AbortSignal): Promise<Result<S<"CTCApplicability">>> {
+    return this.#send<S<"CTCApplicability">>("POST", `/v1/ctc/applicability/${encodeURIComponent(applicabilityId)}/versions`, body, signal);
+  }
+
+  /** Attach an evidence document by its SHA-256. `POST /v1/ctc/applicability/{applicabilityId}/evidence`. */
+  addCTCApplicabilityEvidence(applicabilityId: string, body: S<"EvidenceDocument">, signal?: AbortSignal): Promise<Result<S<"CTCApplicability">>> {
+    return this.#send<S<"CTCApplicability">>("POST", `/v1/ctc/applicability/${encodeURIComponent(applicabilityId)}/evidence`, body, signal);
+  }
+
+  /** Sign a G0–G4 release gate on a record's version. `POST /v1/ctc/applicability/{applicabilityId}/gates`. */
+  signCTCApplicabilityGate(applicabilityId: string, body: S<"CTCGateRequest">, signal?: AbortSignal): Promise<Result<S<"CTCApplicability">>> {
+    return this.#send<S<"CTCApplicability">>("POST", `/v1/ctc/applicability/${encodeURIComponent(applicabilityId)}/gates`, body, signal);
+  }
+
+  /** Submit, return, activate, suspend, resume or retire a record. `POST /v1/ctc/applicability/{applicabilityId}/transitions`. */
+  transitionCTCApplicability(applicabilityId: string, body: S<"CTCTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"CTCApplicability">>> {
+    return this.#send<S<"CTCApplicability">>("POST", `/v1/ctc/applicability/${encodeURIComponent(applicabilityId)}/transitions`, body, signal);
+  }
+
+  /** What a cell owes on a date; REVIEW_BLOCKED when no active record decides. `GET /v1/ctc/resolution`. */
+  resolveCTCApplicability(params: { legalEntityId?: string; country: string; documentType: S<"CTCDocumentType">; buyerKind: S<"CTCBuyerKind">; date: string }, signal?: AbortSignal): Promise<Result<S<"CTCResolution">>> {
+    return this.#send<S<"CTCResolution">>("GET", `/v1/ctc/resolution${query(params)}`, undefined, signal);
+  }
+
+  /** Format validation reports, newest first. `GET /v1/ctc/validations`. */
+  listCTCValidations(params: { documentId?: string; applicabilityId?: string } = {}, signal?: AbortSignal): Promise<Result<S<"CTCValidationList">>> {
+    return this.#send<S<"CTCValidationList">>("GET", `/v1/ctc/validations${query(params)}`, undefined, signal);
+  }
+
+  /** Validate a fiscal document under a record; 200 with the same report when already made. `POST /v1/ctc/validations`. */
+  validateCTCDocument(body: S<"CTCValidationRequest">, signal?: AbortSignal): Promise<Result<S<"CTCValidation">>> {
+    return this.#send<S<"CTCValidation">>("POST", `/v1/ctc/validations`, body, signal);
+  }
+
+  /** One validation report. `GET /v1/ctc/validations/{validationId}`. */
+  getCTCValidation(validationId: string, signal?: AbortSignal): Promise<Result<S<"CTCValidation">>> {
+    return this.#send<S<"CTCValidation">>("GET", `/v1/ctc/validations/${encodeURIComponent(validationId)}`, undefined, signal);
+  }
+
+  /** Authority submissions, newest first. `GET /v1/ctc/submissions`. */
+  listCTCSubmissions(params: { documentId?: string; applicabilityId?: string; status?: S<"CTCSubmissionStatus"> } = {}, signal?: AbortSignal): Promise<Result<S<"CTCSubmissionList">>> {
+    return this.#send<S<"CTCSubmissionList">>("GET", `/v1/ctc/submissions${query(params)}`, undefined, signal);
+  }
+
+  /** Prepare and seal a submission; 200 with the live one when it exists. `POST /v1/ctc/submissions`. */
+  prepareCTCSubmission(body: S<"CTCSubmissionRequest">, signal?: AbortSignal): Promise<Result<S<"CTCSubmission">>> {
+    return this.#send<S<"CTCSubmission">>("POST", `/v1/ctc/submissions`, body, signal);
+  }
+
+  /** One submission with its events. `GET /v1/ctc/submissions/{submissionId}`. */
+  getCTCSubmission(submissionId: string, signal?: AbortSignal): Promise<Result<S<"CTCSubmission">>> {
+    return this.#send<S<"CTCSubmission">>("GET", `/v1/ctc/submissions/${encodeURIComponent(submissionId)}`, undefined, signal);
+  }
+
+  /** Authorise one dispatch attempt on the reviewed payload digest. `POST /v1/ctc/submissions/{submissionId}/dispatch`. */
+  dispatchCTCSubmission(submissionId: string, body: S<"CTCDispatchRequest">, signal?: AbortSignal): Promise<Result<S<"CTCSubmission">>> {
+    return this.#send<S<"CTCSubmission">>("POST", `/v1/ctc/submissions/${encodeURIComponent(submissionId)}/dispatch`, body, signal);
+  }
+
+  /** Record what the rail or the authority answered. `POST /v1/ctc/submissions/{submissionId}/responses`. */
+  recordCTCResponse(submissionId: string, body: S<"CTCResponseRequest">, signal?: AbortSignal): Promise<Result<S<"CTCSubmission">>> {
+    return this.#send<S<"CTCSubmission">>("POST", `/v1/ctc/submissions/${encodeURIComponent(submissionId)}/responses`, body, signal);
+  }
+
+  /** Withdraw a prepared submission never dispatched. `POST /v1/ctc/submissions/{submissionId}/withdrawal`. */
+  withdrawCTCSubmission(submissionId: string, body: S<"CTCWithdrawalRequest">, signal?: AbortSignal): Promise<Result<S<"CTCSubmission">>> {
+    return this.#send<S<"CTCSubmission">>("POST", `/v1/ctc/submissions/${encodeURIComponent(submissionId)}/withdrawal`, body, signal);
+  }
+
   // --- regulatory notices ---------------------------------------------------
   /**
    * List the regulatory notice register, in working order. `GET /v1/notices`.

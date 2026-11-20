@@ -19,6 +19,7 @@ import { RegistrationsPage } from './pages/RegistrationsPage'
 import { ContentPage } from './pages/ContentPage'
 import { DeterminePage } from './pages/DeterminePage'
 import { DocumentsPage } from './pages/DocumentsPage'
+import { EInvoicingPage } from './pages/EInvoicingPage'
 import { ErpReconciliationPage } from './pages/ErpReconciliationPage'
 import { EvidencePage } from './pages/EvidencePage'
 import { IntelligencePage } from './pages/IntelligencePage'
@@ -208,6 +209,8 @@ export function App() {
             return <WorkpapersPage {...page} />
           case 'erp-reconciliation':
             return <ErpReconciliationPage {...page} />
+          case 'einvoicing':
+            return <EInvoicingPage {...page} />
           case 'dashboard':
             return <HomePage {...page} capabilities={capabilities} />
         }

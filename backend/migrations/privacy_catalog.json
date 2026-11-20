@@ -4908,6 +4908,393 @@
       "decided_at": {
         "class": "P0"
       }
+    },
+    "ctc_applicability": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "applicability_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "country": {
+        "class": "P0"
+      },
+      "document_type": {
+        "class": "P0"
+      },
+      "buyer_kind": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the applicability record."
+      }
+    },
+    "ctc_applicability_version": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "applicability_id": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "duty": {
+        "class": "P0"
+      },
+      "model": {
+        "class": "P0"
+      },
+      "profile": {
+        "class": "P0"
+      },
+      "format_version": {
+        "class": "P0"
+      },
+      "authority": {
+        "class": "P0",
+        "note": "The tax authority or rail that receives the documents."
+      },
+      "legal_source": {
+        "class": "P0",
+        "note": "The legal source and reference the duty rests on. Regulatory text and references, not personal data."
+      },
+      "source_as_of": {
+        "class": "P0"
+      },
+      "effective_from": {
+        "class": "P0"
+      },
+      "effective_to": {
+        "class": "P0"
+      },
+      "conditions": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Eligibility conditions as the reviewer stated them; free text."
+      },
+      "digest": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the terms version."
+      }
+    },
+    "ctc_applicability_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "applicability_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "status_after": {
+        "class": "P0"
+      },
+      "version": {
+        "class": "P0"
+      },
+      "gate": {
+        "class": "P0"
+      },
+      "signoff_ref": {
+        "class": "P0",
+        "note": "The sign-off's own reference: an approval ticket, minute or ADR id."
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text from the person recording the event: a sign-off note, a return, suspension or retirement reason."
+      },
+      "evidence_sha256": {
+        "class": "P0",
+        "note": "The SHA-256 of an evidence document, computed in the browser. The document itself is not stored."
+      },
+      "evidence_name": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The file name of the evidence document, as given; it may name a person."
+      },
+      "evidence_media": {
+        "class": "P0"
+      },
+      "evidence_bytes": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the event."
+      }
+    },
+    "ctc_validation": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "validation_id": {
+        "class": "P0"
+      },
+      "document_id": {
+        "class": "P0"
+      },
+      "applicability_id": {
+        "class": "P0"
+      },
+      "applicability_version": {
+        "class": "P0"
+      },
+      "profile": {
+        "class": "P0"
+      },
+      "format_version": {
+        "class": "P0"
+      },
+      "ruleset": {
+        "class": "P0"
+      },
+      "input_digest": {
+        "class": "P0"
+      },
+      "outcome": {
+        "class": "P0"
+      },
+      "report_digest": {
+        "class": "P0"
+      },
+      "validated_at": {
+        "class": "P0"
+      },
+      "validated_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who ran the validation."
+      }
+    },
+    "ctc_validation_result": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "validation_id": {
+        "class": "P0"
+      },
+      "ordinal": {
+        "class": "P0"
+      },
+      "rule_id": {
+        "class": "P0"
+      },
+      "stage": {
+        "class": "P0"
+      },
+      "severity": {
+        "class": "P0"
+      },
+      "outcome": {
+        "class": "P0"
+      },
+      "reason_code": {
+        "class": "P0"
+      },
+      "business_term": {
+        "class": "P0"
+      },
+      "detail": {
+        "class": "P0",
+        "note": "Generated by the ruleset from document identifiers, dates and amounts; no customer data."
+      }
+    },
+    "ctc_submission": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "submission_id": {
+        "class": "P0"
+      },
+      "document_id": {
+        "class": "P0"
+      },
+      "document_number": {
+        "class": "P0",
+        "note": "The legal, customer-visible document number."
+      },
+      "document_type": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0"
+      },
+      "country": {
+        "class": "P0"
+      },
+      "buyer_kind": {
+        "class": "P0"
+      },
+      "applicability_id": {
+        "class": "P0"
+      },
+      "applicability_version": {
+        "class": "P0"
+      },
+      "model": {
+        "class": "P0"
+      },
+      "profile": {
+        "class": "P0"
+      },
+      "format_version": {
+        "class": "P0"
+      },
+      "validation_id": {
+        "class": "P0"
+      },
+      "currency": {
+        "class": "P0"
+      },
+      "gross_total": {
+        "class": "P0",
+        "note": "The committed document's gross total, copied for display."
+      },
+      "payload_digest": {
+        "class": "P0"
+      },
+      "prepared_at": {
+        "class": "P0"
+      },
+      "prepared_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who prepared the submission."
+      }
+    },
+    "ctc_submission_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "submission_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "status_after": {
+        "class": "P0"
+      },
+      "attempt_id": {
+        "class": "P0"
+      },
+      "transport_ref": {
+        "class": "P0",
+        "note": "The partner's or rail's message, receipt or enquiry reference."
+      },
+      "authority_ref": {
+        "class": "P0",
+        "note": "The authority's own document reference: an SdI id, KSeF number, IRN or access key."
+      },
+      "authority_code": {
+        "class": "P0",
+        "note": "The authority's raw rejection code."
+      },
+      "evidence_sha256": {
+        "class": "P0",
+        "note": "The SHA-256 of the raw authority receipt or response, kept as evidence elsewhere."
+      },
+      "detail": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text entered by the person who recorded the answer or withdrew the submission."
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the step."
+      }
     }
   }
 }

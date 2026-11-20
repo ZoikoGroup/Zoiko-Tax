@@ -224,6 +224,10 @@ const FOLDERS = [
       "runGLReconciliation", "listGLReconciliations",
       "createComparator", "listComparators", "executeShadowRun", "listShadowRuns", "getShadowRun", "moveDiscrepancy",
       "issueDocument", "getDocument", "correctDocument", "getDocumentLineage", "listDocuments",
+      "createCTCApplicability", "getCTCApplicability", "listCTCApplicability", "reviseCTCApplicability",
+      "addCTCApplicabilityEvidence", "signCTCApplicabilityGate", "transitionCTCApplicability", "resolveCTCApplicability",
+      "validateCTCDocument", "listCTCValidations", "getCTCValidation", "prepareCTCSubmission", "listCTCSubmissions",
+      "getCTCSubmission", "dispatchCTCSubmission", "recordCTCResponse", "withdrawCTCSubmission",
       "adjustTransaction", "refundTransaction", "getRefund", "reportRefund", "listRefunds", "proposeClassification",
       "recordClassificationDecision", "getClassificationDecision",
       "submitBatch", "getJob", "listJobs", "getDecisionInclusion",
@@ -311,6 +315,8 @@ const VALUE_VARIABLES = {
   "01920a80-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{sealId}}",
   // The document examples' id: the invoice the folder just issued.
   "01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{documentId}}",
+  // The CTC applicability examples' id: the record folder 06 just made.
+  "01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{applicabilityId}}",
   // The reconciliation examples' run id: the run the folder just made.
   "01920ab0-1a2b-7c3d-8e4f-5a6b7c8d9e0f": "{{runId}}",
   // The job example's id: the batch the folder just queued.
@@ -562,6 +568,14 @@ const OPERATION_TESTS = {
     "  pm.expect(pm.response.json().inForce).to.eql(false);",
     "});",
     "pm.collectionVariables.set('certificateId', pm.response.json().id);",
+  ],
+  createCTCApplicability: [
+    "pm.test('Doc 21 W01 — a new applicability record decides nothing until activated', function () {",
+    "  pm.response.to.have.status(201);",
+    "  pm.expect(pm.response.json().status).to.eql('DRAFT');",
+    "  pm.expect(pm.response.json().missingGates.length).to.eql(5);",
+    "});",
+    "pm.collectionVariables.set('applicabilityId', pm.response.json().id);",
   ],
   createERPBridge: [
     "pm.test('the bridge is recorded with no mapping yet', function () {",
@@ -1084,6 +1098,20 @@ const ACCEPTED_OUTCOMES = {
   recordERPResponse: ["404"],
   withdrawERPExport: ["404"],
   moveDiscrepancy: ["404"],
+  // Folder 06 runs as one OPERATOR, the creator of its applicability record:
+  // gate sign-off and activation are another ANALYST's, so the record stays
+  // DRAFT, nothing is validated or prepared under it, and the example
+  // validation, submission and attempt were never made. The document reads
+  // name the invoice the folder issued, absent when determination is not run.
+  signCTCApplicabilityGate: ["403"],
+  transitionCTCApplicability: ["403"],
+  validateCTCDocument: ["404", "409"],
+  getCTCValidation: ["404"],
+  prepareCTCSubmission: ["404", "409"],
+  getCTCSubmission: ["404"],
+  dispatchCTCSubmission: ["404"],
+  recordCTCResponse: ["404"],
+  withdrawCTCSubmission: ["404"],
 };
 
 /** The statuses an operation declares, for the generated status assertion. */
