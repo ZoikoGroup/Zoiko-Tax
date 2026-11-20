@@ -4425,6 +4425,264 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/entitlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The entitlement register, each grant beside the coverage the cell proves
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Every grant, newest first, read now: its stored `lifecycle`, its
+         *     dated `status`, and its `effective` state — `ACTIVE` only when the
+         *     grant is active and the cell's verified coverage proves the operation
+         *     (Doc 18 §02 ALLOW). An active grant the coverage does not prove is
+         *     `RESTRICTED`, never live, and `mismatch` flags it; every reason a grant
+         *     is pending or blocked is listed with a stable code (Doc 18 §06).
+         *
+         *     `markets` is the verified market coverage the grants were read
+         *     against — the same assessment the coverage screens show. A research
+         *     profile is never a live market, and no grant makes it one (T18-02).
+         */
+        get: operations["listEntitlements"];
+        put?: never;
+        /**
+         * Record an entitlement grant
+         * @description `ADMIN`, signed in as themselves.
+         *
+         *     Records a contract right for one of the tenant's legal entities — one
+         *     jurisdiction, service family, mode and operation, between two dates,
+         *     from a named contract — as a `DRAFT`, or `IN_REVIEW` with `submit`. It
+         *     is never recorded approved: a second administrator approves it. Each
+         *     mode is a separate right and carries only its own operations (a
+         *     `SHADOW_ASSURANCE` grant is `SHADOW_COMPARE` only; a `NATIVE` quote
+         *     right is not a commit right). A grant is never backdated: it starts
+         *     today or later.
+         *
+         *     Idempotent on the `Idempotency-Key`: the same key and request returns
+         *     the grant already recorded with `200`; the same key with a different
+         *     request is `409 IDEMPOTENCY_KEY_REUSE`.
+         */
+        post: operations["createEntitlement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/entitlements/{entitlementId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One entitlement grant, its coverage and its history
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The grant read now against the cell's verified coverage. A grant of
+         *     another tenant is `404`, whether or not its identifier is known
+         *     (COV-12).
+         */
+        get: operations["getEntitlement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/entitlements/{entitlementId}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit, approve, reject, withdraw, suspend, resume or revoke a grant
+         * @description `ADMIN`, signed in as themselves. Every action appends one event;
+         *     nothing is edited.
+         *
+         *     `SUBMIT` moves `DRAFT` to `IN_REVIEW`; `WITHDRAW` ends a `DRAFT` or
+         *     `IN_REVIEW` grant. `APPROVE` moves `IN_REVIEW` to `APPROVED`: by an
+         *     administrator other than the one who recorded or submitted it (`403
+         *     MAKER_CHECKER`), on the version read (`409 VERSION_CONFLICT`), not past
+         *     its end date, and not overlapping another approved grant of the same
+         *     legal entity, jurisdiction, service, mode and operation (`409
+         *     ENTITLEMENT_OVERLAP`). An approval never reaches back: the right runs
+         *     from the later of its effective date and the approval day. `REJECT`
+         *     ends an `IN_REVIEW` grant.
+         *
+         *     `SUSPEND` stops an approved grant at once. Suspension trumps approval:
+         *     `REQUEST_RESUME` records a request, and `RESUME` lifts it only on that
+         *     request, by an administrator other than the requester and the
+         *     suspender. `REVOKE` ends an approved or suspended grant for good.
+         *     Every action but `SUBMIT` gives its reason.
+         *
+         *     Approval is a contract right, not coverage: an approved grant over
+         *     coverage the cell does not prove reads `RESTRICTED`.
+         */
+        post: operations["actOnEntitlement"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The tenant's subscription plan revisions and the plan in force
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Every plan revision, newest first, with the one in force today — of
+         *     the approved revisions whose term includes today, the one approved
+         *     last — and the meter definitions usage is counted by. A plan records
+         *     included quantities per meter and no price; it grants no entitlement.
+         */
+        get: operations["listSubscriptionPlans"];
+        put?: never;
+        /**
+         * Propose a subscription plan revision
+         * @description `ADMIN`, signed in as themselves.
+         *
+         *     Records a plan revision as `PROPOSED`: a plan code and name, the
+         *     contract it comes from, its term, and an included monthly quantity and
+         *     overage policy for each metered capability it contracts. A meter it
+         *     does not name is `NOT_CONTRACTED`. The term starts today or later, so a
+         *     new plan never re-reads usage already metered against another. It is in
+         *     force only once a second administrator approves it.
+         *
+         *     Idempotent on the `Idempotency-Key`, as `POST /v1/entitlements` is.
+         */
+        post: operations["proposeSubscriptionPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/subscriptions/{planId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One subscription plan revision
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         */
+        get: operations["getSubscriptionPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/subscriptions/{planId}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve, reject or withdraw a proposed plan revision
+         * @description `ADMIN`, signed in as themselves.
+         *
+         *     Only a `PROPOSED` revision moves, once. `APPROVE` is by an
+         *     administrator other than the proposer (`403 MAKER_CHECKER`), on the
+         *     version read (`409 VERSION_CONFLICT`). `REJECT` and `WITHDRAW` give
+         *     their reason. A change to an approved plan is a new revision.
+         */
+        post: operations["actOnSubscriptionPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A month's metered usage against the plan in force
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Counts the period's usage from the cell's own records, as exact
+         *     integers: recorded tax decisions, fiscal documents, filing submission
+         *     attempts and shadow runs whose instant falls in the UTC month. Each
+         *     line carries the rule it was counted by and `basisDigest`, a SHA-256
+         *     over the sorted identifiers of the rows counted — `GET
+         *     /v1/usage/basis` lists them — so the number is reproducible from the
+         *     records. Nothing is stored or estimated; a retried commit that returned
+         *     its original decision is counted once.
+         *
+         *     Each meter is set against the plan in force on the period's last day
+         *     (today, for the open period): `WITHIN_QUOTA`, `AT_QUOTA` or
+         *     `OVER_QUOTA` with the exact remainder or overage, `NOT_CONTRACTED`
+         *     when the plan does not name it, `NO_PLAN` without one. A `HARD_LIMIT`
+         *     is reported, not enforced, by this cell.
+         */
+        get: operations["getUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/usage/basis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The rows one meter counted in a month
+         * @description `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     One meter's count and `basisDigest` for the period, and the first
+         *     rows it counted in the digest's order — identifiers ascending, compared
+         *     bytewise — each with the instant that placed it in the period. The count,
+         *     the digest and the rows are read in one statement. Joining every row's
+         *     `id` with a newline and hashing with SHA-256 gives `basisDigest`; when
+         *     `truncated` is true, list the rest from the source table by the
+         *     meter's rule.
+         */
+        get: operations["getUsageBasis"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -10323,6 +10581,418 @@ export interface components {
             to: components["schemas"]["ExemptionEvidenceStatus"];
             reason?: components["schemas"]["EvidenceText"];
         };
+        /**
+         * EntitlementId
+         * Format: uuid
+         * @description An entitlement grant.
+         * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        EntitlementId: string;
+        /**
+         * SubscriptionPlanId
+         * Format: uuid
+         * @description A subscription plan revision.
+         * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        SubscriptionPlanId: string;
+        /**
+         * ContractReference
+         * @description The signed contract, schedule or revision a right or plan comes from, as the contract names it.
+         * @example MSA-2026-014
+         */
+        ContractReference: string;
+        /**
+         * CommercialText
+         * @description A reason or note from the administrator acting.
+         */
+        CommercialText: string;
+        /**
+         * EntitlementMode
+         * @description The operating mode (Doc 18 §02). Each is a separate right and none
+         *     implies another: `NATIVE` carries `QUOTE`, `COMMIT`, `FILE`, `REMIT`
+         *     and `E_INVOICE`; `FEDERATED` and `OEM_EMBEDDED` carry `QUOTE` and
+         *     `COMMIT`; `SHADOW_ASSURANCE` carries only `SHADOW_COMPARE`;
+         *     `MANAGED_COMPLIANCE` carries `FILE` and `REMIT`.
+         * @enum {string}
+         */
+        EntitlementMode: "NATIVE" | "FEDERATED" | "SHADOW_ASSURANCE" | "OEM_EMBEDDED" | "MANAGED_COMPLIANCE";
+        /**
+         * EntitlementOperation
+         * @description What the grant permits. A quote right is not a commit right; a calculation right is not a filing right.
+         * @enum {string}
+         */
+        EntitlementOperation: "QUOTE" | "COMMIT" | "FILE" | "REMIT" | "E_INVOICE" | "SHADOW_COMPARE";
+        /**
+         * EntitlementLifecycle
+         * @description The stored state, the fold of the grant's events.
+         * @enum {string}
+         */
+        EntitlementLifecycle: "DRAFT" | "IN_REVIEW" | "APPROVED" | "REJECTED" | "WITHDRAWN" | "SUSPENDED" | "REVOKED";
+        /**
+         * EntitlementStatus
+         * @description The grant read against today's UTC date. An `APPROVED` grant is
+         *     `SCHEDULED` before it runs, `ACTIVE` while it runs and `EXPIRED` after
+         *     its end date; `SUSPENDED` trumps `ACTIVE`.
+         * @enum {string}
+         */
+        EntitlementStatus: "DRAFT" | "IN_REVIEW" | "SCHEDULED" | "ACTIVE" | "SUSPENDED" | "EXPIRED" | "REJECTED" | "WITHDRAWN" | "REVOKED";
+        /**
+         * EntitlementEffective
+         * @description Whether the right can be used now. `ACTIVE` is an active grant over
+         *     coverage the cell proves; `RESTRICTED` is an active grant it does not
+         *     prove; `PENDING` is recorded, in review or scheduled; `ENDED` is
+         *     rejected, withdrawn or revoked.
+         * @enum {string}
+         */
+        EntitlementEffective: "PENDING" | "ACTIVE" | "RESTRICTED" | "SUSPENDED" | "EXPIRED" | "ENDED";
+        /**
+         * EntitlementDecision
+         * @description The effective-capability decision. Anything false, unknown or unproven is `DENY`.
+         * @enum {string}
+         */
+        EntitlementDecision: "ALLOW" | "DENY";
+        /**
+         * EntitlementReason
+         * @description Why a grant is pending or blocked. The coverage reasons are Doc 18
+         *     §06's: `CONTENT_NOT_ACTIVE` (no content in force for the service
+         *     there, or a research profile only), `OPERATION_NOT_SUPPORTED` (the
+         *     filing gate or the e-invoicing adapter is not there),
+         *     `TECHNICALLY_UNAVAILABLE` (an advisory cell cannot commit),
+         *     `GEOGRAPHY_NOT_PROVEN` (coverage is proven per country, not per
+         *     subdivision) and `PROVIDER_EVIDENCE_ABSENT` (a federated provider's
+         *     coverage is not evidenced).
+         * @enum {string}
+         */
+        EntitlementReason: "AWAITING_SUBMISSION" | "AWAITING_SECOND_APPROVAL" | "AWAITING_EFFECTIVE_DATE" | "ENTITLEMENT_SUSPENDED" | "RESUME_AWAITING_APPROVAL" | "ENTITLEMENT_EXPIRED" | "ENTITLEMENT_ENDED" | "CONTENT_NOT_ACTIVE" | "OPERATION_NOT_SUPPORTED" | "TECHNICALLY_UNAVAILABLE" | "GEOGRAPHY_NOT_PROVEN" | "PROVIDER_EVIDENCE_ABSENT";
+        /**
+         * EntitlementCoverageState
+         * @enum {string}
+         */
+        EntitlementCoverageState: "VERIFIED" | "UNPROVEN";
+        /**
+         * EntitlementMarketStatus
+         * @description The market's verified coverage status, or `NOT_LISTED` for a country neither the research catalogue nor content names.
+         * @enum {string}
+         */
+        EntitlementMarketStatus: "ACTIVE" | "PILOT" | "RESEARCH_ONLY" | "NOT_LISTED";
+        /**
+         * EntitlementEventKind
+         * @enum {string}
+         */
+        EntitlementEventKind: "CREATED" | "SUBMITTED" | "APPROVED" | "REJECTED" | "WITHDRAWN" | "SUSPENDED" | "RESUME_REQUESTED" | "RESUMED" | "REVOKED";
+        /**
+         * EntitlementAction
+         * @enum {string}
+         */
+        EntitlementAction: "SUBMIT" | "APPROVE" | "REJECT" | "WITHDRAW" | "SUSPEND" | "REQUEST_RESUME" | "RESUME" | "REVOKE";
+        /**
+         * EntitlementFinding
+         * @description One reason a grant is pending or blocked, with what a person reads about it.
+         */
+        EntitlementFinding: {
+            reason: components["schemas"]["EntitlementReason"];
+            /** @description Plain language, written by the cell. */
+            detail: string;
+        };
+        /**
+         * EntitlementFilingGate
+         * @description The legal filing gate for the grant's legal entity in its country.
+         */
+        EntitlementFilingGate: {
+            ready: boolean;
+            /** @description The authority whose gate is ready, or the first considered when none is. */
+            authority?: string;
+            /** @description The gate's blocking reason when it is not ready. */
+            reason?: string;
+        };
+        /**
+         * EntitlementCoverage
+         * @description What the cell proves for the grant's scope, read now. Never stored; never set by the grant.
+         */
+        EntitlementCoverage: {
+            state: components["schemas"]["EntitlementCoverageState"];
+            marketStatus: components["schemas"]["EntitlementMarketStatus"];
+            marketReason?: components["schemas"]["DashboardMarketReason"];
+            research?: components["schemas"]["DashboardResearch"];
+            servicesInForce: components["schemas"]["ServiceFamily"][];
+            filing?: components["schemas"]["EntitlementFilingGate"];
+            findings: components["schemas"]["EntitlementFinding"][];
+        };
+        /** EntitlementEvent */
+        EntitlementEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["EntitlementEventKind"];
+            lifecycle: components["schemas"]["EntitlementLifecycle"];
+            reason?: components["schemas"]["CommercialText"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * Entitlement
+         * @description One entitlement grant as of `asOf`, beside the coverage the cell
+         *     proves for it. `findings` lists every reason it is pending or
+         *     blocked — its own lifecycle first, then coverage's — and is empty only
+         *     when `decision` is `ALLOW`. `actions` are the actions its lifecycle
+         *     allows; the server still compares the people.
+         */
+        Entitlement: {
+            id: components["schemas"]["EntitlementId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            country: components["schemas"]["CountryCode"];
+            service: components["schemas"]["ServiceFamily"];
+            mode: components["schemas"]["EntitlementMode"];
+            operation: components["schemas"]["EntitlementOperation"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            activeFrom?: components["schemas"]["CivilDate"];
+            contractRef: components["schemas"]["ContractReference"];
+            contractRevision?: components["schemas"]["ContractReference"];
+            lifecycle: components["schemas"]["EntitlementLifecycle"];
+            status: components["schemas"]["EntitlementStatus"];
+            effective: components["schemas"]["EntitlementEffective"];
+            decision: components["schemas"]["EntitlementDecision"];
+            /** @description An approved grant, active or scheduled, whose coverage the cell does not prove. */
+            mismatch: boolean;
+            findings: components["schemas"]["EntitlementFinding"][];
+            coverage: components["schemas"]["EntitlementCoverage"];
+            /**
+             * Format: int32
+             * @description The number of events recorded. An action names it.
+             */
+            version: number;
+            actions: components["schemas"]["EntitlementAction"][];
+            submittedBy?: components["schemas"]["EvidenceActor"];
+            approvedBy?: components["schemas"]["EvidenceActor"];
+            approvedAt?: components["schemas"]["Timestamp"];
+            history: components["schemas"]["EntitlementEvent"][];
+            asOf: components["schemas"]["Timestamp"];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /** EntitlementList */
+        EntitlementList: {
+            entitlements: components["schemas"]["Entitlement"][];
+            markets: components["schemas"]["DashboardMarket"][];
+            /** @description The research catalogue's version, absent when the cell has none. */
+            catalogue?: string;
+            /** @description Whether the cell may emit authoritative output. */
+            authoritative: boolean;
+            asOf: components["schemas"]["Timestamp"];
+        };
+        /** EntitlementRequest */
+        EntitlementRequest: {
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            jurisdiction: components["schemas"]["EvidenceJurisdiction"];
+            service: components["schemas"]["ServiceFamily"];
+            mode: components["schemas"]["EntitlementMode"];
+            operation: components["schemas"]["EntitlementOperation"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            contractRef: components["schemas"]["ContractReference"];
+            contractRevision?: components["schemas"]["ContractReference"];
+            /** @description Submit for review now. Otherwise the grant is kept as a DRAFT. */
+            submit?: boolean;
+        };
+        /** EntitlementActionRequest */
+        EntitlementActionRequest: {
+            action: components["schemas"]["EntitlementAction"];
+            /**
+             * Format: int32
+             * @description The `version` that was read. Anything recorded since is `VERSION_CONFLICT`.
+             */
+            expectedVersion: number;
+            reason?: components["schemas"]["CommercialText"];
+        };
+        /**
+         * UsageMeter
+         * @description A metered capability. Each counts one kind of row the cell itself writes.
+         * @enum {string}
+         */
+        UsageMeter: "COMMITTED_DECISIONS" | "FISCAL_DOCUMENTS" | "FILING_SUBMISSIONS" | "SHADOW_RUNS";
+        /**
+         * UsageOveragePolicy
+         * @description What the contract says happens past the included quantity. Reported, not enforced, by this cell.
+         * @enum {string}
+         */
+        UsageOveragePolicy: "ALLOW_OVERAGE" | "HARD_LIMIT";
+        /**
+         * UsageCount
+         * Format: int64
+         * @description An exact count of rows or an included quantity. Never an amount.
+         * @example 12
+         */
+        UsageCount: number;
+        /**
+         * SubscriptionPlanStatus
+         * @enum {string}
+         */
+        SubscriptionPlanStatus: "PROPOSED" | "APPROVED" | "REJECTED" | "WITHDRAWN";
+        /**
+         * SubscriptionPlanAction
+         * @enum {string}
+         */
+        SubscriptionPlanAction: "APPROVE" | "REJECT" | "WITHDRAW";
+        /**
+         * SubscriptionPlanEventKind
+         * @enum {string}
+         */
+        SubscriptionPlanEventKind: "PROPOSED" | "APPROVED" | "REJECTED" | "WITHDRAWN";
+        /**
+         * SubscriptionPlanCode
+         * @example PILOT-2026
+         */
+        SubscriptionPlanCode: string;
+        /**
+         * SubscriptionPlanName
+         * @example Pilot 2026
+         */
+        SubscriptionPlanName: string;
+        /**
+         * SubscriptionQuota
+         * @description One metered capability's included quantity per monthly period.
+         */
+        SubscriptionQuota: {
+            meter: components["schemas"]["UsageMeter"];
+            included: components["schemas"]["UsageCount"];
+            overage: components["schemas"]["UsageOveragePolicy"];
+        };
+        /** SubscriptionPlanEvent */
+        SubscriptionPlanEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["SubscriptionPlanEventKind"];
+            status: components["schemas"]["SubscriptionPlanStatus"];
+            reason?: components["schemas"]["CommercialText"];
+            recordedAt: components["schemas"]["Timestamp"];
+            recordedBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * SubscriptionPlan
+         * @description A subscription plan revision. No price; it grants no entitlement and changes no tax result.
+         */
+        SubscriptionPlan: {
+            id: components["schemas"]["SubscriptionPlanId"];
+            planCode: components["schemas"]["SubscriptionPlanCode"];
+            planName: components["schemas"]["SubscriptionPlanName"];
+            contractRef: components["schemas"]["ContractReference"];
+            termStart: components["schemas"]["CivilDate"];
+            termEnd?: components["schemas"]["CivilDate"];
+            quotas: components["schemas"]["SubscriptionQuota"][];
+            status: components["schemas"]["SubscriptionPlanStatus"];
+            /** @description Whether this is the plan in force on `asOf`'s UTC date. */
+            inForce: boolean;
+            /** Format: int32 */
+            version: number;
+            approvedBy?: components["schemas"]["EvidenceActor"];
+            approvedAt?: components["schemas"]["Timestamp"];
+            history: components["schemas"]["SubscriptionPlanEvent"][];
+            asOf: components["schemas"]["Timestamp"];
+            createdAt: components["schemas"]["Timestamp"];
+            createdBy: components["schemas"]["EvidenceActor"];
+        };
+        /**
+         * UsageMeterDefinition
+         * @description What a meter counts, from which table, by which rule.
+         */
+        UsageMeterDefinition: {
+            meter: components["schemas"]["UsageMeter"];
+            unit: string;
+            /** @description The table the rows are counted from. */
+            source: string;
+            /** @description The counting rule in words. */
+            rule: string;
+        };
+        /** SubscriptionPlanList */
+        SubscriptionPlanList: {
+            plans: components["schemas"]["SubscriptionPlan"][];
+            inForcePlanId?: components["schemas"]["SubscriptionPlanId"];
+            meters: components["schemas"]["UsageMeterDefinition"][];
+            definitionsVersion: string;
+            asOf: components["schemas"]["Timestamp"];
+        };
+        /** SubscriptionPlanRequest */
+        SubscriptionPlanRequest: {
+            planCode: components["schemas"]["SubscriptionPlanCode"];
+            planName: components["schemas"]["SubscriptionPlanName"];
+            contractRef: components["schemas"]["ContractReference"];
+            termStart: components["schemas"]["CivilDate"];
+            termEnd?: components["schemas"]["CivilDate"];
+            quotas: components["schemas"]["SubscriptionQuota"][];
+        };
+        /** SubscriptionPlanActionRequest */
+        SubscriptionPlanActionRequest: {
+            action: components["schemas"]["SubscriptionPlanAction"];
+            /** Format: int32 */
+            expectedVersion: number;
+            reason?: components["schemas"]["CommercialText"];
+        };
+        /**
+         * UsageState
+         * @description A meter's standing against the plan in force. `NOT_CONTRACTED`: the
+         *     plan does not name the meter, and whether such usage is chargeable is
+         *     for the signed contract, never assumed.
+         * @enum {string}
+         */
+        UsageState: "NO_PLAN" | "NOT_CONTRACTED" | "WITHIN_QUOTA" | "AT_QUOTA" | "OVER_QUOTA";
+        /** UsagePlanRef */
+        UsagePlanRef: {
+            id: components["schemas"]["SubscriptionPlanId"];
+            planCode: components["schemas"]["SubscriptionPlanCode"];
+            planName: components["schemas"]["SubscriptionPlanName"];
+        };
+        /**
+         * UsageLine
+         * @description One meter's count for the period, its basis, and its standing against the plan.
+         */
+        UsageLine: {
+            meter: components["schemas"]["UsageMeter"];
+            unit: string;
+            source: string;
+            rule: string;
+            count: components["schemas"]["UsageCount"];
+            basisDigest: components["schemas"]["Sha256Hex"];
+            state: components["schemas"]["UsageState"];
+            included?: components["schemas"]["UsageCount"];
+            overage?: components["schemas"]["UsageOveragePolicy"];
+            remaining: components["schemas"]["UsageCount"];
+            overageCount: components["schemas"]["UsageCount"];
+        };
+        /** UsageReport */
+        UsageReport: {
+            period: components["schemas"]["LegalPeriod"];
+            from: components["schemas"]["Timestamp"];
+            to: components["schemas"]["Timestamp"];
+            /** @description Whether the period has ended. An open period's counts grow until it does. */
+            complete: boolean;
+            plan?: components["schemas"]["UsagePlanRef"];
+            lines: components["schemas"]["UsageLine"][];
+            definitionsVersion: string;
+            asOf: components["schemas"]["Timestamp"];
+        };
+        /** UsageBasisRow */
+        UsageBasisRow: {
+            /** @description The counted row's identifier, as digested. */
+            id: string;
+            at: components["schemas"]["Timestamp"];
+        };
+        /** UsageBasis */
+        UsageBasis: {
+            period: components["schemas"]["LegalPeriod"];
+            from: components["schemas"]["Timestamp"];
+            to: components["schemas"]["Timestamp"];
+            meter: components["schemas"]["UsageMeter"];
+            unit: string;
+            source: string;
+            rule: string;
+            count: components["schemas"]["UsageCount"];
+            basisDigest: components["schemas"]["Sha256Hex"];
+            rows: components["schemas"]["UsageBasisRow"][];
+            /** @description Whether `rows` stops short of `count`. */
+            truncated: boolean;
+            asOf: components["schemas"]["Timestamp"];
+        };
     };
     responses: {
         /**
@@ -10473,6 +11143,24 @@ export interface components {
             };
             content: {
                 "application/json": components["schemas"]["ExemptionEvidence"];
+            };
+        };
+        /** @description The grant as it reads now. */
+        EntitlementResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Entitlement"];
+            };
+        };
+        /** @description The plan revision as it stands now. */
+        SubscriptionPlanResult: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["SubscriptionPlan"];
             };
         };
     };
@@ -10651,6 +11339,16 @@ export interface components {
          * @example 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
          */
         ExemptionEvidenceId: components["schemas"]["ExemptionEvidenceId"];
+        /**
+         * @description The entitlement grant identifier.
+         * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        EntitlementId: components["schemas"]["EntitlementId"];
+        /**
+         * @description The subscription plan revision identifier.
+         * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        SubscriptionPlanId: components["schemas"]["SubscriptionPlanId"];
     };
     requestBodies: never;
     headers: never;
@@ -16796,6 +17494,340 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listEntitlements: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only grants that read as this status today.
+                 * @example ACTIVE
+                 */
+                status?: components["schemas"]["EntitlementStatus"];
+                /**
+                 * @description Only grants in this effective state.
+                 * @example RESTRICTED
+                 */
+                effective?: components["schemas"]["EntitlementEffective"];
+                /**
+                 * @description Only grants to this legal entity.
+                 * @example 01920a4c-0000-7000-8000-00000000e001
+                 */
+                legalEntityId?: components["schemas"]["LegalEntityId"];
+                /**
+                 * @description Only grants in this country, its subdivisions included.
+                 * @example GB
+                 */
+                country?: components["schemas"]["CountryCode"];
+                /**
+                 * @description Only grants in this mode.
+                 * @example NATIVE
+                 */
+                mode?: components["schemas"]["EntitlementMode"];
+                /**
+                 * @description Only grants for this operation.
+                 * @example FILE
+                 */
+                operation?: components["schemas"]["EntitlementOperation"];
+                /**
+                 * @description Only approved grants whose coverage the cell does not prove.
+                 * @example true
+                 */
+                mismatch?: boolean;
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The register. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntitlementList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createEntitlement: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntitlementRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["EntitlementResult"];
+            201: components["responses"]["EntitlementResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getEntitlement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The entitlement grant identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                entitlementId: components["parameters"]["EntitlementId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["EntitlementResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    actOnEntitlement: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The entitlement grant identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                entitlementId: components["parameters"]["EntitlementId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntitlementActionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["EntitlementResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listSubscriptionPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The plans. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubscriptionPlanList"];
+                };
+            };
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    proposeSubscriptionPlan: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description A key the client mints before the first attempt and reuses, unchanged,
+                 *     on every retry of the same request (ADR-0013). Opaque to the server: it
+                 *     is compared, never parsed. Scoped to the tenant and to this endpoint, so
+                 *     a key used for a commit can never match an adjust.
+                 * @example 5f0c2a1e-commit-INV-0001-1
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscriptionPlanRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["SubscriptionPlanResult"];
+            201: components["responses"]["SubscriptionPlanResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getSubscriptionPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The subscription plan revision identifier.
+                 * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                planId: components["parameters"]["SubscriptionPlanId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["SubscriptionPlanResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    actOnSubscriptionPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The subscription plan revision identifier.
+                 * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                planId: components["parameters"]["SubscriptionPlanId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubscriptionPlanActionRequest"];
+            };
+        };
+        responses: {
+            200: components["responses"]["SubscriptionPlanResult"];
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getUsage: {
+        parameters: {
+            query?: {
+                /**
+                 * @description The month, YYYY-MM. Defaults to the current UTC month; a month not yet started is refused.
+                 * @example 2026-11
+                 */
+                period?: components["schemas"]["LegalPeriod"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The usage report. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageReport"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getUsageBasis: {
+        parameters: {
+            query: {
+                /**
+                 * @description The month, YYYY-MM. Defaults to the current UTC month.
+                 * @example 2026-11
+                 */
+                period?: components["schemas"]["LegalPeriod"];
+                /**
+                 * @description The meter.
+                 * @example COMMITTED_DECISIONS
+                 */
+                meter: components["schemas"]["UsageMeter"];
+                /**
+                 * @description Maximum number of items to return. The server caps this independently,
+                 *     so a larger value is not an error and does not return more.
+                 * @example 50
+                 */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The basis. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageBasis"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };

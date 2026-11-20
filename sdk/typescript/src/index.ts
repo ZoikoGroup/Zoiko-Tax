@@ -1096,6 +1096,64 @@ export class ZoikoTaxClient {
     return this.#send<S<"Discrepancy">>("POST", `/v1/shadow/discrepancies/${encodeURIComponent(discrepancyId)}/transitions`, body, signal);
   }
 
+  // --- entitlements, subscriptions and usage (Doc 18) ------------------------
+  /** The entitlement register, each grant beside the coverage the cell proves. `GET /v1/entitlements`. */
+  listEntitlements(
+    params: { status?: string; effective?: string; legalEntityId?: string; country?: string; mode?: string; operation?: string; mismatch?: "true" | "false"; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"EntitlementList">>> {
+    return this.#send<S<"EntitlementList">>("GET", `/v1/entitlements${query(params)}`, undefined, signal);
+  }
+
+  /**
+   * Record a grant as a DRAFT, or IN_REVIEW with `submit: true` — never
+   * approved. A retry under the same key returns the grant already recorded.
+   * `POST /v1/entitlements`.
+   */
+  createEntitlement(idempotencyKey: string, body: S<"EntitlementRequest">, signal?: AbortSignal): Promise<Result<S<"Entitlement">>> {
+    return this.#send<S<"Entitlement">>("POST", `/v1/entitlements`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** One grant, its coverage and its history. `GET /v1/entitlements/{entitlementId}`. */
+  getEntitlement(entitlementId: string, signal?: AbortSignal): Promise<Result<S<"Entitlement">>> {
+    return this.#send<S<"Entitlement">>("GET", `/v1/entitlements/${encodeURIComponent(entitlementId)}`, undefined, signal);
+  }
+
+  /** Submit, approve, reject, withdraw, suspend, resume or revoke a grant. `POST /v1/entitlements/{entitlementId}/actions`. */
+  actOnEntitlement(entitlementId: string, body: S<"EntitlementActionRequest">, signal?: AbortSignal): Promise<Result<S<"Entitlement">>> {
+    return this.#send<S<"Entitlement">>("POST", `/v1/entitlements/${encodeURIComponent(entitlementId)}/actions`, body, signal);
+  }
+
+  /** Plan revisions, the plan in force and the meter definitions. `GET /v1/subscriptions`. */
+  listSubscriptionPlans(signal?: AbortSignal): Promise<Result<S<"SubscriptionPlanList">>> {
+    return this.#send<S<"SubscriptionPlanList">>("GET", `/v1/subscriptions`, undefined, signal);
+  }
+
+  /** Propose a plan revision. `POST /v1/subscriptions`. */
+  proposeSubscriptionPlan(idempotencyKey: string, body: S<"SubscriptionPlanRequest">, signal?: AbortSignal): Promise<Result<S<"SubscriptionPlan">>> {
+    return this.#send<S<"SubscriptionPlan">>("POST", `/v1/subscriptions`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** One plan revision. `GET /v1/subscriptions/{planId}`. */
+  getSubscriptionPlan(planId: string, signal?: AbortSignal): Promise<Result<S<"SubscriptionPlan">>> {
+    return this.#send<S<"SubscriptionPlan">>("GET", `/v1/subscriptions/${encodeURIComponent(planId)}`, undefined, signal);
+  }
+
+  /** Approve, reject or withdraw a proposed plan revision. `POST /v1/subscriptions/{planId}/actions`. */
+  actOnSubscriptionPlan(planId: string, body: S<"SubscriptionPlanActionRequest">, signal?: AbortSignal): Promise<Result<S<"SubscriptionPlan">>> {
+    return this.#send<S<"SubscriptionPlan">>("POST", `/v1/subscriptions/${encodeURIComponent(planId)}/actions`, body, signal);
+  }
+
+  /** A month's metered usage against the plan in force. `GET /v1/usage`. */
+  getUsage(params: { period?: string } = {}, signal?: AbortSignal): Promise<Result<S<"UsageReport">>> {
+    return this.#send<S<"UsageReport">>("GET", `/v1/usage${query(params)}`, undefined, signal);
+  }
+
+  /** The rows one meter counted in a month. `GET /v1/usage/basis`. */
+  getUsageBasis(params: { meter: string; period?: string; limit?: number }, signal?: AbortSignal): Promise<Result<S<"UsageBasis">>> {
+    return this.#send<S<"UsageBasis">>("GET", `/v1/usage/basis${query(params)}`, undefined, signal);
+  }
+
   // --- support ---------------------------------------------------------------
   /** The support triage queue, soonest due first. `GET /v1/support/cases`. */
   listSupportCases(
