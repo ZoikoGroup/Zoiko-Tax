@@ -637,3 +637,50 @@ test("the entitlement, subscription and usage calls send intake under an Idempot
   assert.equal(JSON.parse(calls[4].init.body).quotas[0].included, 100000);
   for (const c of calls.filter((_, i) => i !== 0 && i !== 4)) assert.equal(c.init.headers["Idempotency-Key"], undefined);
 });
+
+test("the e-invoicing / CTC calls put ids in the path and filters in the query, and send no Idempotency-Key", async () => {
+  const { fetch, calls } = stub(json(201, { id: "01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01" }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+  const rec = "01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+  const doc = "01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f";
+  const sub = "01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+  const terms = { duty: "REQUIRED", model: "CLEARANCE", profile: "IT_FATTURAPA", formatVersion: "FPR12 1.9", authority: "SdI",
+    legalSource: "D.Lgs. 127/2015", sourceAsOf: "2026-10-30", effectiveFrom: "2026-01-01" };
+
+  await client.listCTCApplicability({ country: "IT", status: "ACTIVE" });
+  await client.createCTCApplicability({ country: "IT", documentType: "INVOICE", buyerKind: "B2B", terms });
+  await client.getCTCApplicability(rec);
+  await client.reviseCTCApplicability(rec, terms);
+  await client.addCTCApplicabilityEvidence(rec, { sha256: "a".repeat(64), filename: "o.pdf", mediaType: "application/pdf", bytes: 1 });
+  await client.signCTCApplicabilityGate(rec, { gate: "G0_SCOPE_AUTHORITY", version: 1, signoffRef: "CAB-1" });
+  await client.transitionCTCApplicability(rec, { action: "ACTIVATE", version: 1 });
+  await client.resolveCTCApplicability({ country: "IT", documentType: "INVOICE", buyerKind: "B2B", date: "2026-11-05" });
+  await client.validateCTCDocument({ documentId: doc, applicabilityId: rec });
+  await client.listCTCValidations({ documentId: doc });
+  await client.prepareCTCSubmission({ documentId: doc, applicabilityId: rec });
+  await client.listCTCSubmissions({ status: "AUTHORITY_REJECTED" });
+  await client.getCTCSubmission(sub);
+  await client.dispatchCTCSubmission(sub, { payloadDigest: "zt1:" + "0".repeat(64) });
+  await client.recordCTCResponse(sub, { kind: "TRANSPORT_RECEIVED", attemptId: "01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20", transportRef: "R-1" });
+  await client.withdrawCTCSubmission(sub, { reason: "revised" });
+
+  assert.deepEqual(calls.map((c) => `${c.init.method} ${c.url}`), [
+    "GET /api/v1/ctc/applicability?country=IT&status=ACTIVE",
+    "POST /api/v1/ctc/applicability",
+    `GET /api/v1/ctc/applicability/${rec}`,
+    `POST /api/v1/ctc/applicability/${rec}/versions`,
+    `POST /api/v1/ctc/applicability/${rec}/evidence`,
+    `POST /api/v1/ctc/applicability/${rec}/gates`,
+    `POST /api/v1/ctc/applicability/${rec}/transitions`,
+    "GET /api/v1/ctc/resolution?country=IT&documentType=INVOICE&buyerKind=B2B&date=2026-11-05",
+    "POST /api/v1/ctc/validations",
+    `GET /api/v1/ctc/validations?documentId=${doc}`,
+    "POST /api/v1/ctc/submissions",
+    "GET /api/v1/ctc/submissions?status=AUTHORITY_REJECTED",
+    `GET /api/v1/ctc/submissions/${sub}`,
+    `POST /api/v1/ctc/submissions/${sub}/dispatch`,
+    `POST /api/v1/ctc/submissions/${sub}/responses`,
+    `POST /api/v1/ctc/submissions/${sub}/withdrawal`,
+  ]);
+  for (const c of calls) assert.equal(c.init.headers["Idempotency-Key"], undefined);
+});

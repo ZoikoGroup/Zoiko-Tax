@@ -282,6 +282,465 @@ func (e BeneficiaryState) Valid() bool {
 	}
 }
 
+// Defines values for CTCAction.
+const (
+	CTCActionACTIVATE CTCAction = "ACTIVATE"
+	CTCActionRESUME   CTCAction = "RESUME"
+	CTCActionRETIRE   CTCAction = "RETIRE"
+	CTCActionRETURN   CTCAction = "RETURN"
+	CTCActionSUBMIT   CTCAction = "SUBMIT"
+	CTCActionSUSPEND  CTCAction = "SUSPEND"
+)
+
+// Valid indicates whether the value is a known member of the CTCAction enum.
+func (e CTCAction) Valid() bool {
+	switch e {
+	case CTCActionACTIVATE:
+		return true
+	case CTCActionRESUME:
+		return true
+	case CTCActionRETIRE:
+		return true
+	case CTCActionRETURN:
+		return true
+	case CTCActionSUBMIT:
+		return true
+	case CTCActionSUSPEND:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCApplicabilityEventKind.
+const (
+	CTCApplicabilityEventKindACTIVATED     CTCApplicabilityEventKind = "ACTIVATED"
+	CTCApplicabilityEventKindCREATED       CTCApplicabilityEventKind = "CREATED"
+	CTCApplicabilityEventKindEVIDENCEADDED CTCApplicabilityEventKind = "EVIDENCE_ADDED"
+	CTCApplicabilityEventKindGATESIGNED    CTCApplicabilityEventKind = "GATE_SIGNED"
+	CTCApplicabilityEventKindRESUMED       CTCApplicabilityEventKind = "RESUMED"
+	CTCApplicabilityEventKindRETIRED       CTCApplicabilityEventKind = "RETIRED"
+	CTCApplicabilityEventKindRETURNED      CTCApplicabilityEventKind = "RETURNED"
+	CTCApplicabilityEventKindREVISED       CTCApplicabilityEventKind = "REVISED"
+	CTCApplicabilityEventKindSUBMITTED     CTCApplicabilityEventKind = "SUBMITTED"
+	CTCApplicabilityEventKindSUSPENDED     CTCApplicabilityEventKind = "SUSPENDED"
+)
+
+// Valid indicates whether the value is a known member of the CTCApplicabilityEventKind enum.
+func (e CTCApplicabilityEventKind) Valid() bool {
+	switch e {
+	case CTCApplicabilityEventKindACTIVATED:
+		return true
+	case CTCApplicabilityEventKindCREATED:
+		return true
+	case CTCApplicabilityEventKindEVIDENCEADDED:
+		return true
+	case CTCApplicabilityEventKindGATESIGNED:
+		return true
+	case CTCApplicabilityEventKindRESUMED:
+		return true
+	case CTCApplicabilityEventKindRETIRED:
+		return true
+	case CTCApplicabilityEventKindRETURNED:
+		return true
+	case CTCApplicabilityEventKindREVISED:
+		return true
+	case CTCApplicabilityEventKindSUBMITTED:
+		return true
+	case CTCApplicabilityEventKindSUSPENDED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCApplicabilityStatus.
+const (
+	CTCApplicabilityStatusACTIVE    CTCApplicabilityStatus = "ACTIVE"
+	CTCApplicabilityStatusDRAFT     CTCApplicabilityStatus = "DRAFT"
+	CTCApplicabilityStatusINREVIEW  CTCApplicabilityStatus = "IN_REVIEW"
+	CTCApplicabilityStatusRETIRED   CTCApplicabilityStatus = "RETIRED"
+	CTCApplicabilityStatusSUSPENDED CTCApplicabilityStatus = "SUSPENDED"
+)
+
+// Valid indicates whether the value is a known member of the CTCApplicabilityStatus enum.
+func (e CTCApplicabilityStatus) Valid() bool {
+	switch e {
+	case CTCApplicabilityStatusACTIVE:
+		return true
+	case CTCApplicabilityStatusDRAFT:
+		return true
+	case CTCApplicabilityStatusINREVIEW:
+		return true
+	case CTCApplicabilityStatusRETIRED:
+		return true
+	case CTCApplicabilityStatusSUSPENDED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCBuyerKind.
+const (
+	B2B CTCBuyerKind = "B2B"
+	B2C CTCBuyerKind = "B2C"
+	B2G CTCBuyerKind = "B2G"
+)
+
+// Valid indicates whether the value is a known member of the CTCBuyerKind enum.
+func (e CTCBuyerKind) Valid() bool {
+	switch e {
+	case B2B:
+		return true
+	case B2C:
+		return true
+	case B2G:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCDocumentType.
+const (
+	CTCDocumentTypeADJUSTMENT CTCDocumentType = "ADJUSTMENT"
+	CTCDocumentTypeCREDITNOTE CTCDocumentType = "CREDIT_NOTE"
+	CTCDocumentTypeDEBITNOTE  CTCDocumentType = "DEBIT_NOTE"
+	CTCDocumentTypeINVOICE    CTCDocumentType = "INVOICE"
+	CTCDocumentTypeREBILL     CTCDocumentType = "REBILL"
+)
+
+// Valid indicates whether the value is a known member of the CTCDocumentType enum.
+func (e CTCDocumentType) Valid() bool {
+	switch e {
+	case CTCDocumentTypeADJUSTMENT:
+		return true
+	case CTCDocumentTypeCREDITNOTE:
+		return true
+	case CTCDocumentTypeDEBITNOTE:
+		return true
+	case CTCDocumentTypeINVOICE:
+		return true
+	case CTCDocumentTypeREBILL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCDuty.
+const (
+	CTCDutyOPTIONAL   CTCDuty = "OPTIONAL"
+	CTCDutyPROHIBITED CTCDuty = "PROHIBITED"
+	CTCDutyREQUIRED   CTCDuty = "REQUIRED"
+)
+
+// Valid indicates whether the value is a known member of the CTCDuty enum.
+func (e CTCDuty) Valid() bool {
+	switch e {
+	case CTCDutyOPTIONAL:
+		return true
+	case CTCDutyPROHIBITED:
+		return true
+	case CTCDutyREQUIRED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCGate.
+const (
+	G0SCOPEAUTHORITY       CTCGate = "G0_SCOPE_AUTHORITY"
+	G1LEGALCONTENTRIGHTS   CTCGate = "G1_LEGAL_CONTENT_RIGHTS"
+	G2TECHNICALQA          CTCGate = "G2_TECHNICAL_QA"
+	G3SECURITYOPERATIONS   CTCGate = "G3_SECURITY_OPERATIONS"
+	G4CONTROLLEDPRODUCTION CTCGate = "G4_CONTROLLED_PRODUCTION"
+)
+
+// Valid indicates whether the value is a known member of the CTCGate enum.
+func (e CTCGate) Valid() bool {
+	switch e {
+	case G0SCOPEAUTHORITY:
+		return true
+	case G1LEGALCONTENTRIGHTS:
+		return true
+	case G2TECHNICALQA:
+		return true
+	case G3SECURITYOPERATIONS:
+		return true
+	case G4CONTROLLEDPRODUCTION:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCModel.
+const (
+	CTCModelCLEARANCE         CTCModel = "CLEARANCE"
+	CTCModelNETWORKEXCHANGE   CTCModel = "NETWORK_EXCHANGE"
+	CTCModelNONE              CTCModel = "NONE"
+	CTCModelPOSTAUDIT         CTCModel = "POST_AUDIT"
+	CTCModelREALTIMEREPORTING CTCModel = "REAL_TIME_REPORTING"
+)
+
+// Valid indicates whether the value is a known member of the CTCModel enum.
+func (e CTCModel) Valid() bool {
+	switch e {
+	case CTCModelCLEARANCE:
+		return true
+	case CTCModelNETWORKEXCHANGE:
+		return true
+	case CTCModelNONE:
+		return true
+	case CTCModelPOSTAUDIT:
+		return true
+	case CTCModelREALTIMEREPORTING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCProfile.
+const (
+	CTCProfileBRNFCOM62   CTCProfile = "BR_NFCOM_62"
+	CTCProfileFREN16931   CTCProfile = "FR_EN16931"
+	CTCProfileINGSTIRP    CTCProfile = "IN_GST_IRP"
+	CTCProfileITFATTURAPA CTCProfile = "IT_FATTURAPA"
+	CTCProfileNONE        CTCProfile = "NONE"
+	CTCProfilePEPPOLBIS3  CTCProfile = "PEPPOL_BIS_3"
+	CTCProfilePLKSEFFA    CTCProfile = "PL_KSEF_FA"
+	CTCProfileSAZATCAUBL  CTCProfile = "SA_ZATCA_UBL"
+)
+
+// Valid indicates whether the value is a known member of the CTCProfile enum.
+func (e CTCProfile) Valid() bool {
+	switch e {
+	case CTCProfileBRNFCOM62:
+		return true
+	case CTCProfileFREN16931:
+		return true
+	case CTCProfileINGSTIRP:
+		return true
+	case CTCProfileITFATTURAPA:
+		return true
+	case CTCProfileNONE:
+		return true
+	case CTCProfilePEPPOLBIS3:
+		return true
+	case CTCProfilePLKSEFFA:
+		return true
+	case CTCProfileSAZATCAUBL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCResolvedDuty.
+const (
+	CTCResolvedDutyOPTIONAL      CTCResolvedDuty = "OPTIONAL"
+	CTCResolvedDutyPROHIBITED    CTCResolvedDuty = "PROHIBITED"
+	CTCResolvedDutyREQUIRED      CTCResolvedDuty = "REQUIRED"
+	CTCResolvedDutyREVIEWBLOCKED CTCResolvedDuty = "REVIEW_BLOCKED"
+)
+
+// Valid indicates whether the value is a known member of the CTCResolvedDuty enum.
+func (e CTCResolvedDuty) Valid() bool {
+	switch e {
+	case CTCResolvedDutyOPTIONAL:
+		return true
+	case CTCResolvedDutyPROHIBITED:
+		return true
+	case CTCResolvedDutyREQUIRED:
+		return true
+	case CTCResolvedDutyREVIEWBLOCKED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCResponseKind.
+const (
+	CTCResponseKindAUTHORITYACCEPTED CTCResponseKind = "AUTHORITY_ACCEPTED"
+	CTCResponseKindAUTHORITYREJECTED CTCResponseKind = "AUTHORITY_REJECTED"
+	CTCResponseKindOUTCOMEUNKNOWN    CTCResponseKind = "OUTCOME_UNKNOWN"
+	CTCResponseKindSTATUSNOTFOUND    CTCResponseKind = "STATUS_NOT_FOUND"
+	CTCResponseKindTRANSPORTRECEIVED CTCResponseKind = "TRANSPORT_RECEIVED"
+)
+
+// Valid indicates whether the value is a known member of the CTCResponseKind enum.
+func (e CTCResponseKind) Valid() bool {
+	switch e {
+	case CTCResponseKindAUTHORITYACCEPTED:
+		return true
+	case CTCResponseKindAUTHORITYREJECTED:
+		return true
+	case CTCResponseKindOUTCOMEUNKNOWN:
+		return true
+	case CTCResponseKindSTATUSNOTFOUND:
+		return true
+	case CTCResponseKindTRANSPORTRECEIVED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCRuleOutcome.
+const (
+	CTCRuleOutcomeFAIL         CTCRuleOutcome = "FAIL"
+	CTCRuleOutcomeNOTEVALUATED CTCRuleOutcome = "NOT_EVALUATED"
+	CTCRuleOutcomePASS         CTCRuleOutcome = "PASS"
+)
+
+// Valid indicates whether the value is a known member of the CTCRuleOutcome enum.
+func (e CTCRuleOutcome) Valid() bool {
+	switch e {
+	case CTCRuleOutcomeFAIL:
+		return true
+	case CTCRuleOutcomeNOTEVALUATED:
+		return true
+	case CTCRuleOutcomePASS:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCRuleSeverity.
+const (
+	FATAL   CTCRuleSeverity = "FATAL"
+	WARNING CTCRuleSeverity = "WARNING"
+)
+
+// Valid indicates whether the value is a known member of the CTCRuleSeverity enum.
+func (e CTCRuleSeverity) Valid() bool {
+	switch e {
+	case FATAL:
+		return true
+	case WARNING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCRuleStage.
+const (
+	APPLICABILITY CTCRuleStage = "APPLICABILITY"
+	REGIME        CTCRuleStage = "REGIME"
+	SEMANTIC      CTCRuleStage = "SEMANTIC"
+	SYNTAX        CTCRuleStage = "SYNTAX"
+)
+
+// Valid indicates whether the value is a known member of the CTCRuleStage enum.
+func (e CTCRuleStage) Valid() bool {
+	switch e {
+	case APPLICABILITY:
+		return true
+	case REGIME:
+		return true
+	case SEMANTIC:
+		return true
+	case SYNTAX:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCSubmissionEventKind.
+const (
+	CTCSubmissionEventKindAUTHORITYACCEPTED CTCSubmissionEventKind = "AUTHORITY_ACCEPTED"
+	CTCSubmissionEventKindAUTHORITYREJECTED CTCSubmissionEventKind = "AUTHORITY_REJECTED"
+	CTCSubmissionEventKindDISPATCHED        CTCSubmissionEventKind = "DISPATCHED"
+	CTCSubmissionEventKindOUTCOMEUNKNOWN    CTCSubmissionEventKind = "OUTCOME_UNKNOWN"
+	CTCSubmissionEventKindPREPARED          CTCSubmissionEventKind = "PREPARED"
+	CTCSubmissionEventKindSTATUSNOTFOUND    CTCSubmissionEventKind = "STATUS_NOT_FOUND"
+	CTCSubmissionEventKindTRANSPORTRECEIVED CTCSubmissionEventKind = "TRANSPORT_RECEIVED"
+	CTCSubmissionEventKindWITHDRAWN         CTCSubmissionEventKind = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the CTCSubmissionEventKind enum.
+func (e CTCSubmissionEventKind) Valid() bool {
+	switch e {
+	case CTCSubmissionEventKindAUTHORITYACCEPTED:
+		return true
+	case CTCSubmissionEventKindAUTHORITYREJECTED:
+		return true
+	case CTCSubmissionEventKindDISPATCHED:
+		return true
+	case CTCSubmissionEventKindOUTCOMEUNKNOWN:
+		return true
+	case CTCSubmissionEventKindPREPARED:
+		return true
+	case CTCSubmissionEventKindSTATUSNOTFOUND:
+		return true
+	case CTCSubmissionEventKindTRANSPORTRECEIVED:
+		return true
+	case CTCSubmissionEventKindWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCSubmissionStatus.
+const (
+	CTCSubmissionStatusAUTHORITYACCEPTED      CTCSubmissionStatus = "AUTHORITY_ACCEPTED"
+	CTCSubmissionStatusAUTHORITYREJECTED      CTCSubmissionStatus = "AUTHORITY_REJECTED"
+	CTCSubmissionStatusPREPARED               CTCSubmissionStatus = "PREPARED"
+	CTCSubmissionStatusSENT                   CTCSubmissionStatus = "SENT"
+	CTCSubmissionStatusTRANSPORTRECEIVED      CTCSubmissionStatus = "TRANSPORT_RECEIVED"
+	CTCSubmissionStatusUNCERTAINEXTERNALSTATE CTCSubmissionStatus = "UNCERTAIN_EXTERNAL_STATE"
+	CTCSubmissionStatusWITHDRAWN              CTCSubmissionStatus = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the CTCSubmissionStatus enum.
+func (e CTCSubmissionStatus) Valid() bool {
+	switch e {
+	case CTCSubmissionStatusAUTHORITYACCEPTED:
+		return true
+	case CTCSubmissionStatusAUTHORITYREJECTED:
+		return true
+	case CTCSubmissionStatusPREPARED:
+		return true
+	case CTCSubmissionStatusSENT:
+		return true
+	case CTCSubmissionStatusTRANSPORTRECEIVED:
+		return true
+	case CTCSubmissionStatusUNCERTAINEXTERNALSTATE:
+		return true
+	case CTCSubmissionStatusWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCValidationOutcome.
+const (
+	CTCValidationOutcomeFAILED CTCValidationOutcome = "FAILED"
+	CTCValidationOutcomePASSED CTCValidationOutcome = "PASSED"
+)
+
+// Valid indicates whether the value is a known member of the CTCValidationOutcome enum.
+func (e CTCValidationOutcome) Valid() bool {
+	switch e {
+	case CTCValidationOutcomeFAILED:
+		return true
+	case CTCValidationOutcomePASSED:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CertificateVerification.
 const (
 	CertificateVerificationUNAVAILABLE CertificateVerification = "UNAVAILABLE"
@@ -6136,6 +6595,597 @@ type BuyerName = string
 
 // BuyerRef The buyer's identifier in the tenant's own customer system.
 type BuyerRef = string
+
+// CTCAction A move of a record a person asks for.
+type CTCAction string
+
+// CTCAmount A committed fiscal document's figure in canonical decimal string form — never a JSON number, never computed by a client.
+type CTCAmount = string
+
+// CTCApplicability A country applicability record (Doc 21 W01, W20): one legal entity, country, document type and buyer kind, with versioned terms, sign-offs, evidence and history.
+type CTCApplicability struct {
+	// BuyerKind Who receives the document. A B2C document is never forced through a B2B rail.
+	BuyerKind CTCBuyerKind `json:"buyerKind"`
+
+	// Country An ISO 3166-1 alpha-2 country code.
+	Country CTCCountry `json:"country"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt      Timestamp `json:"createdAt"`
+	CreatedBy      string    `json:"createdBy"`
+	CurrentVersion int32     `json:"currentVersion"`
+
+	// DocumentType The fiscal document types an applicability record may name: billing documents and their corrections that a regime projects into an electronic document.
+	DocumentType CTCDocumentType         `json:"documentType"`
+	Evidence     []EvidenceDocument      `json:"evidence"`
+	History      []CTCApplicabilityEvent `json:"history"`
+
+	// ID A country applicability record.
+	ID CTCApplicabilityID `json:"id"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// MissingGates The required gates not yet signed on the current version.
+	MissingGates []CTCGate `json:"missingGates"`
+
+	// RequiredGates The gates the current version's duty needs.
+	RequiredGates []CTCGate `json:"requiredGates"`
+
+	// Signoffs The sign-offs on the current version.
+	Signoffs []CTCGateSignoff `json:"signoffs"`
+
+	// Status Where a record stands. DRAFT and IN_REVIEW are NOT_ACTIVATED; only ACTIVE decides a duty.
+	Status CTCApplicabilityStatus `json:"status"`
+
+	// Terms One version of what a cell owes.
+	Terms    CTCTerms          `json:"terms"`
+	Versions []CTCTermsVersion `json:"versions"`
+}
+
+// CTCApplicabilityEvent One appended act on a record.
+type CTCApplicabilityEvent struct {
+	// Evidence A document recorded as evidence by its SHA-256, hashed in the browser.
+	// The file itself is not uploaded, scanned or stored.
+	Evidence *EvidenceDocument `json:"evidence,omitempty"`
+
+	// Gate Doc 21 §11's release gates.
+	Gate *CTCGate `json:"gate,omitempty"`
+
+	// Kind What happened to a record.
+	Kind CTCApplicabilityEventKind `json:"kind"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason *EvidenceText `json:"reason,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+	RecordedBy string    `json:"recordedBy"`
+	Seq        int32     `json:"seq"`
+
+	// SignoffRef Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	SignoffRef *CTCReference `json:"signoffRef,omitempty"`
+
+	// Status Where a record stands. DRAFT and IN_REVIEW are NOT_ACTIVATED; only ACTIVE decides a duty.
+	Status  CTCApplicabilityStatus `json:"status"`
+	Version *int32                 `json:"version,omitempty"`
+}
+
+// CTCApplicabilityEventKind What happened to a record.
+type CTCApplicabilityEventKind string
+
+// CTCApplicabilityID A country applicability record.
+type CTCApplicabilityID = string
+
+// CTCApplicabilityList Country applicability records.
+type CTCApplicabilityList struct {
+	Records []CTCApplicability `json:"records"`
+}
+
+// CTCApplicabilityRequest A record to create.
+type CTCApplicabilityRequest struct {
+	// BuyerKind Who receives the document. A B2C document is never forced through a B2B rail.
+	BuyerKind CTCBuyerKind `json:"buyerKind"`
+
+	// Country An ISO 3166-1 alpha-2 country code.
+	Country CTCCountry `json:"country"`
+
+	// DocumentType The fiscal document types an applicability record may name: billing documents and their corrections that a regime projects into an electronic document.
+	DocumentType CTCDocumentType `json:"documentType"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID *LegalEntityID `json:"legalEntityId,omitempty"`
+
+	// Terms One version of what a cell owes.
+	Terms CTCTerms `json:"terms"`
+}
+
+// CTCApplicabilityStatus Where a record stands. DRAFT and IN_REVIEW are NOT_ACTIVATED; only ACTIVE decides a duty.
+type CTCApplicabilityStatus string
+
+// CTCAttemptID One dispatch attempt of a submission.
+type CTCAttemptID = string
+
+// CTCBuyerKind Who receives the document. A B2C document is never forced through a B2B rail.
+type CTCBuyerKind string
+
+// CTCCorrectionTask What an authority rejection opens: the rejected document is corrected through the fiscal corrections flow by a new document naming it, never edited. Open until one exists.
+type CTCCorrectionTask struct {
+	// AuthorityCode Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	AuthorityCode *CTCReference `json:"authorityCode,omitempty"`
+
+	// CorrectedBy Committed documents naming the rejected one as their predecessor.
+	CorrectedBy []DocumentID `json:"correctedBy"`
+
+	// DocumentID A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+	DocumentID DocumentID `json:"documentId"`
+	Open       bool       `json:"open"`
+
+	// OpenedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	OpenedAt Timestamp `json:"openedAt"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason *EvidenceText `json:"reason,omitempty"`
+}
+
+// CTCCountry An ISO 3166-1 alpha-2 country code.
+type CTCCountry = string
+
+// CTCDispatchRequest A checker's authorisation of a dispatch.
+type CTCDispatchRequest struct {
+	// PayloadDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	PayloadDigest Digest `json:"payloadDigest"`
+}
+
+// CTCDocumentType The fiscal document types an applicability record may name: billing documents and their corrections that a regime projects into an electronic document.
+type CTCDocumentType string
+
+// CTCDuty What a record says a cell owes. A PROHIBITED duty has model NONE and profile NONE.
+type CTCDuty string
+
+// CTCGate Doc 21 §11's release gates.
+type CTCGate string
+
+// CTCGateRequest A gate sign-off.
+type CTCGateRequest struct {
+	// Gate Doc 21 §11's release gates.
+	Gate CTCGate `json:"gate"`
+
+	// Note A reason, rationale or note from the person recording an act.
+	Note *EvidenceText `json:"note,omitempty"`
+
+	// SignoffRef Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	SignoffRef CTCReference `json:"signoffRef"`
+
+	// Version The version reviewed. Any other is VERSION_CONFLICT.
+	Version int32 `json:"version"`
+}
+
+// CTCGateSignoff A gate signed on an exact version.
+type CTCGateSignoff struct {
+	// Gate Doc 21 §11's release gates.
+	Gate CTCGate `json:"gate"`
+
+	// Note A reason, rationale or note from the person recording an act.
+	Note *EvidenceText `json:"note,omitempty"`
+
+	// SignedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	SignedAt Timestamp `json:"signedAt"`
+	SignedBy string    `json:"signedBy"`
+
+	// SignoffRef Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	SignoffRef CTCReference `json:"signoffRef"`
+	Version    int32        `json:"version"`
+}
+
+// CTCLegalSource The legal source and reference a duty rests on. Regulatory text, not personal data.
+type CTCLegalSource = string
+
+// CTCModel The control model (Doc 21 §02 clearance_model).
+type CTCModel string
+
+// CTCProfile The format profile a document is projected into (Doc 21 §08). National profiles are used only in their own country; PEPPOL_BIS_3 is a network profile.
+type CTCProfile string
+
+// CTCReference Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+type CTCReference = string
+
+// CTCResolution What a cell owes on a date. No side effect.
+type CTCResolution struct {
+	// ApplicabilityID A country applicability record.
+	ApplicabilityID *CTCApplicabilityID `json:"applicabilityId,omitempty"`
+
+	// ApplicabilityStatus Where a record stands. DRAFT and IN_REVIEW are NOT_ACTIVATED; only ACTIVE decides a duty.
+	ApplicabilityStatus  *CTCApplicabilityStatus `json:"applicabilityStatus,omitempty"`
+	ApplicabilityVersion *int32                  `json:"applicabilityVersion,omitempty"`
+
+	// BuyerKind Who receives the document. A B2C document is never forced through a B2B rail.
+	BuyerKind CTCBuyerKind `json:"buyerKind"`
+
+	// Country An ISO 3166-1 alpha-2 country code.
+	Country CTCCountry `json:"country"`
+
+	// Date A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	Date   CivilDate `json:"date"`
+	Detail string    `json:"detail"`
+
+	// DispatchPermitted Whether documents of the cell may be validated and submitted: the duty is REQUIRED or OPTIONAL.
+	DispatchPermitted bool `json:"dispatchPermitted"`
+
+	// DocumentType The fiscal document types an applicability record may name: billing documents and their corrections that a regime projects into an electronic document.
+	DocumentType CTCDocumentType `json:"documentType"`
+
+	// Duty What resolution answers: an active record's duty, or REVIEW_BLOCKED.
+	Duty CTCResolvedDuty `json:"duty"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// ReasonCode A registered code from a closed vocabulary (ADR-0016 §2.4). Codes are
+	// never renumbered, never reused and never redefined; a retired code stops
+	// being emitted and keeps its meaning so historical evidence still
+	// resolves.
+	//
+	// This is the field to branch on. The set this deployment can emit is
+	// reported by `GET /v1/capabilities`; the enum is deliberately not closed
+	// here, because the register grows by addition and a client that rejects
+	// an unrecognised code would break on an additive change (ADR-0010 §2.6).
+	ReasonCode *ReasonCode `json:"reasonCode,omitempty"`
+
+	// Terms One version of what a cell owes.
+	Terms *CTCTerms `json:"terms,omitempty"`
+}
+
+// CTCResolvedDuty What resolution answers: an active record's duty, or REVIEW_BLOCKED.
+type CTCResolvedDuty string
+
+// CTCResponseKind An answer a person records.
+type CTCResponseKind string
+
+// CTCResponseRequest An answer, as a person records it.
+type CTCResponseRequest struct {
+	// AttemptID One dispatch attempt of a submission.
+	AttemptID CTCAttemptID `json:"attemptId"`
+
+	// AuthorityCode Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	AuthorityCode *CTCReference `json:"authorityCode,omitempty"`
+
+	// AuthorityRef Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	AuthorityRef *CTCReference `json:"authorityRef,omitempty"`
+
+	// Detail A reason, rationale or note from the person recording an act.
+	Detail *EvidenceText `json:"detail,omitempty"`
+
+	// EvidenceSha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	EvidenceSha256 *Sha256Hex `json:"evidenceSha256,omitempty"`
+
+	// Kind An answer a person records.
+	Kind CTCResponseKind `json:"kind"`
+
+	// TransportRef Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	TransportRef *CTCReference `json:"transportRef,omitempty"`
+}
+
+// CTCRuleOutcome One rule's result. NOT_EVALUATED is never a pass.
+type CTCRuleOutcome string
+
+// CTCRuleResult One rule's result on one document.
+type CTCRuleResult struct {
+	BusinessTerm *string `json:"businessTerm,omitempty"`
+	Detail       *string `json:"detail,omitempty"`
+
+	// Outcome One rule's result. NOT_EVALUATED is never a pass.
+	Outcome CTCRuleOutcome `json:"outcome"`
+
+	// ReasonCode A registered code from a closed vocabulary (ADR-0016 §2.4). Codes are
+	// never renumbered, never reused and never redefined; a retired code stops
+	// being emitted and keeps its meaning so historical evidence still
+	// resolves.
+	//
+	// This is the field to branch on. The set this deployment can emit is
+	// reported by `GET /v1/capabilities`; the enum is deliberately not closed
+	// here, because the register grows by addition and a client that rejects
+	// an unrecognised code would break on an additive change (ADR-0010 §2.6).
+	ReasonCode *ReasonCode `json:"reasonCode,omitempty"`
+	RuleID     string      `json:"ruleId"`
+
+	// Severity FATAL blocks submission and is never waived; WARNING is reported.
+	Severity CTCRuleSeverity `json:"severity"`
+
+	// Stage The validation stage a rule belongs to.
+	Stage CTCRuleStage `json:"stage"`
+}
+
+// CTCRuleSeverity FATAL blocks submission and is never waived; WARNING is reported.
+type CTCRuleSeverity string
+
+// CTCRuleStage The validation stage a rule belongs to.
+type CTCRuleStage string
+
+// CTCSubmission An authority submission of a fiscal document under a record version (Doc 21 W14, W15).
+type CTCSubmission struct {
+	// ApplicabilityID A country applicability record.
+	ApplicabilityID      CTCApplicabilityID `json:"applicabilityId"`
+	ApplicabilityVersion int32              `json:"applicabilityVersion"`
+
+	// BuyerKind Who receives the document. A B2C document is never forced through a B2B rail.
+	BuyerKind CTCBuyerKind `json:"buyerKind"`
+
+	// Correction What an authority rejection opens: the rejected document is corrected through the fiscal corrections flow by a new document naming it, never edited. Open until one exists.
+	Correction *CTCCorrectionTask `json:"correction,omitempty"`
+
+	// Country An ISO 3166-1 alpha-2 country code.
+	Country CTCCountry `json:"country"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// DocumentID A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+	DocumentID DocumentID `json:"documentId"`
+
+	// DocumentNumber The legal, customer-visible document number.
+	DocumentNumber *string `json:"documentNumber,omitempty"`
+
+	// DocumentType The fiscal document types an applicability record may name: billing documents and their corrections that a regime projects into an electronic document.
+	DocumentType CTCDocumentType `json:"documentType"`
+
+	// ExternalRef The reference every attempt carries, and a status enquiry asks by. Never changes across attempts.
+	ExternalRef string `json:"externalRef"`
+
+	// FormatVersion A short regulatory label: an authority, a format version.
+	FormatVersion *CTCText `json:"formatVersion,omitempty"`
+
+	// Gross A committed fiscal document's figure in canonical decimal string form — never a JSON number, never computed by a client.
+	Gross   CTCAmount            `json:"gross"`
+	History []CTCSubmissionEvent `json:"history"`
+
+	// ID An authority submission. Also the reference every dispatch attempt carries.
+	ID CTCSubmissionID `json:"id"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// Model The control model (Doc 21 §02 clearance_model).
+	Model CTCModel `json:"model"`
+
+	// PayloadDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	PayloadDigest Digest `json:"payloadDigest"`
+
+	// PreparedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	PreparedAt Timestamp `json:"preparedAt"`
+	PreparedBy string    `json:"preparedBy"`
+
+	// Profile The format profile a document is projected into (Doc 21 §08). National profiles are used only in their own country; PEPPOL_BIS_3 is a network profile.
+	Profile CTCProfile `json:"profile"`
+
+	// Status Where a submission stands (Doc 21 §06). TRANSPORT_RECEIVED is not acceptance.
+	Status CTCSubmissionStatus `json:"status"`
+
+	// ValidationID An immutable format validation report.
+	ValidationID CTCValidationID `json:"validationId"`
+}
+
+// CTCSubmissionEvent One appended act on a submission.
+type CTCSubmissionEvent struct {
+	// AttemptID One dispatch attempt of a submission.
+	AttemptID *CTCAttemptID `json:"attemptId,omitempty"`
+
+	// AuthorityCode Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	AuthorityCode *CTCReference `json:"authorityCode,omitempty"`
+
+	// AuthorityRef Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	AuthorityRef *CTCReference `json:"authorityRef,omitempty"`
+
+	// Detail A reason, rationale or note from the person recording an act.
+	Detail *EvidenceText `json:"detail,omitempty"`
+
+	// EvidenceSha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	EvidenceSha256 *Sha256Hex `json:"evidenceSha256,omitempty"`
+
+	// Kind What happened to a submission.
+	Kind CTCSubmissionEventKind `json:"kind"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+	RecordedBy string    `json:"recordedBy"`
+	Seq        int32     `json:"seq"`
+
+	// Status Where a submission stands (Doc 21 §06). TRANSPORT_RECEIVED is not acceptance.
+	Status CTCSubmissionStatus `json:"status"`
+
+	// TransportRef Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	TransportRef *CTCReference `json:"transportRef,omitempty"`
+}
+
+// CTCSubmissionEventKind What happened to a submission.
+type CTCSubmissionEventKind string
+
+// CTCSubmissionID An authority submission. Also the reference every dispatch attempt carries.
+type CTCSubmissionID = string
+
+// CTCSubmissionList Submissions.
+type CTCSubmissionList struct {
+	Submissions []CTCSubmission `json:"submissions"`
+}
+
+// CTCSubmissionRequest A document to submit under a record.
+type CTCSubmissionRequest struct {
+	// ApplicabilityID A country applicability record.
+	ApplicabilityID CTCApplicabilityID `json:"applicabilityId"`
+
+	// DocumentID A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+	DocumentID DocumentID `json:"documentId"`
+}
+
+// CTCSubmissionStatus Where a submission stands (Doc 21 §06). TRANSPORT_RECEIVED is not acceptance.
+type CTCSubmissionStatus string
+
+// CTCTerms One version of what a cell owes.
+type CTCTerms struct {
+	// Authority A short regulatory label: an authority, a format version.
+	Authority CTCText `json:"authority"`
+
+	// Conditions A reason, rationale or note from the person recording an act.
+	Conditions *EvidenceText `json:"conditions,omitempty"`
+
+	// Duty What a record says a cell owes. A PROHIBITED duty has model NONE and profile NONE.
+	Duty CTCDuty `json:"duty"`
+
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate `json:"effectiveFrom"`
+
+	// EffectiveTo A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveTo *CivilDate `json:"effectiveTo,omitempty"`
+
+	// FormatVersion A short regulatory label: an authority, a format version.
+	FormatVersion *CTCText `json:"formatVersion,omitempty"`
+
+	// LegalSource The legal source and reference a duty rests on. Regulatory text, not personal data.
+	LegalSource CTCLegalSource `json:"legalSource"`
+
+	// Model The control model (Doc 21 §02 clearance_model).
+	Model CTCModel `json:"model"`
+
+	// Profile The format profile a document is projected into (Doc 21 §08). National profiles are used only in their own country; PEPPOL_BIS_3 is a network profile.
+	Profile CTCProfile `json:"profile"`
+
+	// SourceAsOf A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	SourceAsOf CivilDate `json:"sourceAsOf"`
+}
+
+// CTCTermsVersion A recorded version of a record's terms. Never edited.
+type CTCTermsVersion struct {
+	// Digest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	Digest Digest `json:"digest"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+	RecordedBy string    `json:"recordedBy"`
+
+	// Terms One version of what a cell owes.
+	Terms   CTCTerms `json:"terms"`
+	Version int32    `json:"version"`
+}
+
+// CTCText A short regulatory label: an authority, a format version.
+type CTCText = string
+
+// CTCTransitionRequest A move of a record.
+type CTCTransitionRequest struct {
+	// Action A move of a record a person asks for.
+	Action CTCAction `json:"action"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason *EvidenceText `json:"reason,omitempty"`
+
+	// Version The version an activation is on.
+	Version *int32 `json:"version,omitempty"`
+}
+
+// CTCValidation An immutable format validation report (Doc 21 W06).
+type CTCValidation struct {
+	// ApplicabilityID A country applicability record.
+	ApplicabilityID      CTCApplicabilityID `json:"applicabilityId"`
+	ApplicabilityVersion int32              `json:"applicabilityVersion"`
+
+	// Digest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	Digest Digest `json:"digest"`
+
+	// DocumentID A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+	DocumentID    DocumentID `json:"documentId"`
+	FatalFailures int32      `json:"fatalFailures"`
+
+	// FormatVersion A short regulatory label: an authority, a format version.
+	FormatVersion *CTCText `json:"formatVersion,omitempty"`
+
+	// ID An immutable format validation report.
+	ID CTCValidationID `json:"id"`
+
+	// InputDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	InputDigest Digest `json:"inputDigest"`
+
+	// Outcome PASSED means no FATAL rule failed. It is not certification.
+	Outcome CTCValidationOutcome `json:"outcome"`
+
+	// Profile The format profile a document is projected into (Doc 21 §08). National profiles are used only in their own country; PEPPOL_BIS_3 is a network profile.
+	Profile CTCProfile      `json:"profile"`
+	Results []CTCRuleResult `json:"results"`
+
+	// Ruleset The ruleset version the rules ran under.
+	Ruleset string `json:"ruleset"`
+
+	// SchemaValidated Whether the official schema and Schematron stage ran. Always false here: no licensed bundle is installed.
+	SchemaValidated bool `json:"schemaValidated"`
+
+	// ValidatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	ValidatedAt Timestamp `json:"validatedAt"`
+	ValidatedBy string    `json:"validatedBy"`
+}
+
+// CTCValidationID An immutable format validation report.
+type CTCValidationID = string
+
+// CTCValidationList Validation reports.
+type CTCValidationList struct {
+	Validations []CTCValidation `json:"validations"`
+}
+
+// CTCValidationOutcome PASSED means no FATAL rule failed. It is not certification.
+type CTCValidationOutcome string
+
+// CTCValidationRequest A document to validate under a record.
+type CTCValidationRequest struct {
+	// ApplicabilityID A country applicability record.
+	ApplicabilityID CTCApplicabilityID `json:"applicabilityId"`
+
+	// DocumentID A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+	DocumentID DocumentID `json:"documentId"`
+}
+
+// CTCWithdrawalRequest Why a prepared submission is withdrawn.
+type CTCWithdrawalRequest struct {
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason EvidenceText `json:"reason"`
+}
 
 // CanonicalServiceCode A Zoiko canonical service code in the tax ontology.
 type CanonicalServiceCode = string
@@ -15618,6 +16668,57 @@ type GetCoverageParams struct {
 	At *Timestamp `form:"at,omitempty" json:"at,omitempty"`
 }
 
+// ListCTCApplicabilityParams defines parameters for ListCTCApplicability.
+type ListCTCApplicabilityParams struct {
+	// LegalEntityID Only records of this legal entity.
+	LegalEntityID *LegalEntityID `form:"legalEntityId,omitempty" json:"legalEntityId,omitempty"`
+
+	// Country Only records for this country.
+	Country *CTCCountry `form:"country,omitempty" json:"country,omitempty"`
+
+	// Status Only records in this status.
+	Status *CTCApplicabilityStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// ResolveCTCApplicabilityParams defines parameters for ResolveCTCApplicability.
+type ResolveCTCApplicabilityParams struct {
+	// LegalEntityID The legal entity.
+	LegalEntityID *LegalEntityID `form:"legalEntityId,omitempty" json:"legalEntityId,omitempty"`
+
+	// Country The country.
+	Country CTCCountry `form:"country" json:"country"`
+
+	// DocumentType The document type.
+	DocumentType CTCDocumentType `form:"documentType" json:"documentType"`
+
+	// BuyerKind The kind of buyer.
+	BuyerKind CTCBuyerKind `form:"buyerKind" json:"buyerKind"`
+
+	// Date The document's issue date.
+	Date CivilDate `form:"date" json:"date"`
+}
+
+// ListCTCSubmissionsParams defines parameters for ListCTCSubmissions.
+type ListCTCSubmissionsParams struct {
+	// DocumentID Only submissions of this fiscal document.
+	DocumentID *DocumentID `form:"documentId,omitempty" json:"documentId,omitempty"`
+
+	// ApplicabilityID Only submissions under this record.
+	ApplicabilityID *CTCApplicabilityID `form:"applicabilityId,omitempty" json:"applicabilityId,omitempty"`
+
+	// Status Only submissions in this status.
+	Status *CTCSubmissionStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// ListCTCValidationsParams defines parameters for ListCTCValidations.
+type ListCTCValidationsParams struct {
+	// DocumentID Only reports of this fiscal document.
+	DocumentID *DocumentID `form:"documentId,omitempty" json:"documentId,omitempty"`
+
+	// ApplicabilityID Only reports under this record.
+	ApplicabilityID *CTCApplicabilityID `form:"applicabilityId,omitempty" json:"applicabilityId,omitempty"`
+}
+
 // GetDashboardParams defines parameters for GetDashboard.
 type GetDashboardParams struct {
 	// Period The legal period to report, a month. Defaults to the current month in UTC.
@@ -16103,6 +17204,36 @@ type QuarantineContributionJSONRequestBody = ContributionTransitionRequest
 
 // ReleaseContributionJSONRequestBody defines body for ReleaseContribution for application/json ContentType.
 type ReleaseContributionJSONRequestBody = ContributionTransitionRequest
+
+// CreateCTCApplicabilityJSONRequestBody defines body for CreateCTCApplicability for application/json ContentType.
+type CreateCTCApplicabilityJSONRequestBody = CTCApplicabilityRequest
+
+// AddCTCApplicabilityEvidenceJSONRequestBody defines body for AddCTCApplicabilityEvidence for application/json ContentType.
+type AddCTCApplicabilityEvidenceJSONRequestBody = EvidenceDocument
+
+// SignCTCApplicabilityGateJSONRequestBody defines body for SignCTCApplicabilityGate for application/json ContentType.
+type SignCTCApplicabilityGateJSONRequestBody = CTCGateRequest
+
+// TransitionCTCApplicabilityJSONRequestBody defines body for TransitionCTCApplicability for application/json ContentType.
+type TransitionCTCApplicabilityJSONRequestBody = CTCTransitionRequest
+
+// ReviseCTCApplicabilityJSONRequestBody defines body for ReviseCTCApplicability for application/json ContentType.
+type ReviseCTCApplicabilityJSONRequestBody = CTCTerms
+
+// PrepareCTCSubmissionJSONRequestBody defines body for PrepareCTCSubmission for application/json ContentType.
+type PrepareCTCSubmissionJSONRequestBody = CTCSubmissionRequest
+
+// DispatchCTCSubmissionJSONRequestBody defines body for DispatchCTCSubmission for application/json ContentType.
+type DispatchCTCSubmissionJSONRequestBody = CTCDispatchRequest
+
+// RecordCTCResponseJSONRequestBody defines body for RecordCTCResponse for application/json ContentType.
+type RecordCTCResponseJSONRequestBody = CTCResponseRequest
+
+// WithdrawCTCSubmissionJSONRequestBody defines body for WithdrawCTCSubmission for application/json ContentType.
+type WithdrawCTCSubmissionJSONRequestBody = CTCWithdrawalRequest
+
+// ValidateCTCDocumentJSONRequestBody defines body for ValidateCTCDocument for application/json ContentType.
+type ValidateCTCDocumentJSONRequestBody = CTCValidationRequest
 
 // IssueDocumentJSONRequestBody defines body for IssueDocument for application/json ContentType.
 type IssueDocumentJSONRequestBody = DocumentRequest

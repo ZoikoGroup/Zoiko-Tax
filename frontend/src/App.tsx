@@ -20,6 +20,7 @@ import { ContentPage } from './pages/ContentPage'
 import { DeterminePage } from './pages/DeterminePage'
 import { DocumentsPage } from './pages/DocumentsPage'
 import { EntitlementsPage } from './pages/EntitlementsPage'
+import { EInvoicingPage } from './pages/EInvoicingPage'
 import { ErpReconciliationPage } from './pages/ErpReconciliationPage'
 import { EvidencePage } from './pages/EvidencePage'
 import { IntelligencePage } from './pages/IntelligencePage'
@@ -214,6 +215,8 @@ export function App() {
             return <EntitlementsPage {...page} />
           case 'subscriptions':
             return <SubscriptionsPage {...page} />
+          case 'einvoicing':
+            return <EInvoicingPage {...page} />
           case 'dashboard':
             return <HomePage {...page} capabilities={capabilities} />
         }

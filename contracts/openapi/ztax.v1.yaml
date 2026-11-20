@@ -140,6 +140,8 @@ tags:
     description: Commercial entitlements and subscriptions (Engineering Doc 18) — contract-to-capability grants per legal entity, jurisdiction, service, mode and operation, approved by a second administrator and read beside the coverage the cell proves; subscription plan revisions with included quotas; and usage counted exactly from the cell's own records. An entitlement never makes a market live and changes no tax result.
   - name: erp
     description: The ERP journal bridge — sealed export batches of posted subledger journals, mapped onto the customer's chart of accounts, dispatched through the transactional outbox, with transport receipt kept apart from GL posting — and the subledger-to-GL reconciliation (R6). ZoikoTax is not the customer's general ledger and connects to no real ERP here; the ERP's answers and balances are recorded with their evidence.
+  - name: ctc
+    description: Global e-invoicing and continuous transaction controls (Engineering Doc 21, G-030) — country applicability per legal entity, country, document type and buyer kind with G0–G4 sign-offs, deterministic versioned format validation of committed fiscal documents, and authority submissions with transport receipt kept apart from authority outcome. No country is active because a format exists; no authority connector is wired, and the authority's answers are recorded with their evidence.
   - name: shadow
     description: Shadow assurance — another engine's results compared with ZoikoTax's decisions, component by component. Non-impact; matching a comparator is not verified correctness.
   - name: migration
@@ -11629,6 +11631,2869 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "500": { $ref: "#/components/responses/Internal" }
         "503": { $ref: "#/components/responses/Unavailable" }
+  /v1/ctc/applicability:
+    get:
+      operationId: listCTCApplicability
+      tags:
+        - ctc
+      summary: Country applicability records
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        The tenant's country applicability records (Doc 21 W01), oldest first, in any
+        status, each with its terms versions, G0–G4 sign-offs, evidence and history.
+        A record decides a duty only while it is `ACTIVE`.
+      parameters:
+        - name: legalEntityId
+          in: query
+          required: false
+          description: Only records of this legal entity.
+          schema:
+            $ref: "#/components/schemas/LegalEntityId"
+          example: 01920a4c-0000-7000-8000-00000000e001
+        - name: country
+          in: query
+          required: false
+          description: Only records for this country.
+          schema:
+            $ref: "#/components/schemas/CTCCountry"
+          example: IT
+        - name: status
+          in: query
+          required: false
+          description: Only records in this status.
+          schema:
+            $ref: "#/components/schemas/CTCApplicabilityStatus"
+          example: ACTIVE
+      responses:
+        "200":
+          description: The records.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCApplicabilityList"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    records:
+                      - id: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        country: IT
+                        documentType: INVOICE
+                        buyerKind: B2B
+                        status: ACTIVE
+                        currentVersion: 1
+                        terms:
+                          duty: REQUIRED
+                          model: CLEARANCE
+                          profile: IT_FATTURAPA
+                          formatVersion: FPR12 1.9
+                          authority: Agenzia delle Entrate — SdI
+                          legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                          sourceAsOf: 2026-10-30
+                          effectiveFrom: 2026-01-01
+                          conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                        versions:
+                          - version: 1
+                            terms:
+                              duty: REQUIRED
+                              model: CLEARANCE
+                              profile: IT_FATTURAPA
+                              formatVersion: FPR12 1.9
+                              authority: Agenzia delle Entrate — SdI
+                              legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                              sourceAsOf: 2026-10-30
+                              effectiveFrom: 2026-01-01
+                              conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                            digest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                            recordedAt: 2026-11-02T09:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                        requiredGates:
+                          - G0_SCOPE_AUTHORITY
+                          - G1_LEGAL_CONTENT_RIGHTS
+                          - G2_TECHNICAL_QA
+                          - G3_SECURITY_OPERATIONS
+                          - G4_CONTROLLED_PRODUCTION
+                        missingGates: []
+                        signoffs:
+                          - gate: G0_SCOPE_AUTHORITY
+                            version: 1
+                            signoffRef: CAB-2026-11-01
+                            signedAt: 2026-11-03T10:00:00.000000Z
+                            signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                          - gate: G1_LEGAL_CONTENT_RIGHTS
+                            version: 1
+                            signoffRef: CAB-2026-11-02
+                            signedAt: 2026-11-03T11:00:00.000000Z
+                            signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                          - gate: G2_TECHNICAL_QA
+                            version: 1
+                            signoffRef: CAB-2026-11-03
+                            signedAt: 2026-11-03T12:00:00.000000Z
+                            signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                          - gate: G3_SECURITY_OPERATIONS
+                            version: 1
+                            signoffRef: CAB-2026-11-04
+                            signedAt: 2026-11-03T13:00:00.000000Z
+                            signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                          - gate: G4_CONTROLLED_PRODUCTION
+                            version: 1
+                            signoffRef: CAB-2026-11-05
+                            signedAt: 2026-11-03T14:00:00.000000Z
+                            signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                        evidence:
+                          - sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                            filename: it-sdi-legal-opinion.pdf
+                            mediaType: application/pdf
+                            bytes: 48213
+                        history:
+                          - seq: 1
+                            kind: CREATED
+                            status: DRAFT
+                            version: 1
+                            recordedAt: 2026-11-02T09:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                          - seq: 2
+                            kind: EVIDENCE_ADDED
+                            status: DRAFT
+                            evidence:
+                              sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                              filename: it-sdi-legal-opinion.pdf
+                              mediaType: application/pdf
+                              bytes: 48213
+                            recordedAt: 2026-11-02T09:05:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                          - seq: 3
+                            kind: SUBMITTED
+                            status: IN_REVIEW
+                            version: 1
+                            recordedAt: 2026-11-02T09:10:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                          - seq: 4
+                            kind: GATE_SIGNED
+                            status: IN_REVIEW
+                            version: 1
+                            gate: G0_SCOPE_AUTHORITY
+                            signoffRef: CAB-2026-11-01
+                            recordedAt: 2026-11-03T10:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                          - seq: 5
+                            kind: GATE_SIGNED
+                            status: IN_REVIEW
+                            version: 1
+                            gate: G1_LEGAL_CONTENT_RIGHTS
+                            signoffRef: CAB-2026-11-02
+                            recordedAt: 2026-11-03T11:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                          - seq: 6
+                            kind: GATE_SIGNED
+                            status: IN_REVIEW
+                            version: 1
+                            gate: G2_TECHNICAL_QA
+                            signoffRef: CAB-2026-11-03
+                            recordedAt: 2026-11-03T12:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                          - seq: 7
+                            kind: GATE_SIGNED
+                            status: IN_REVIEW
+                            version: 1
+                            gate: G3_SECURITY_OPERATIONS
+                            signoffRef: CAB-2026-11-04
+                            recordedAt: 2026-11-03T13:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                          - seq: 8
+                            kind: GATE_SIGNED
+                            status: IN_REVIEW
+                            version: 1
+                            gate: G4_CONTROLLED_PRODUCTION
+                            signoffRef: CAB-2026-11-05
+                            recordedAt: 2026-11-03T14:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                          - seq: 9
+                            kind: ACTIVATED
+                            status: ACTIVE
+                            version: 1
+                            recordedAt: 2026-11-04T09:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a3
+                        createdAt: 2026-11-02T09:00:00.000000Z
+                        createdBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: createCTCApplicability
+      tags:
+        - ctc
+      summary: Record a country applicability record
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Records one cell — legal entity, country, document type, buyer kind — and
+        the first version of its terms, in `DRAFT`. It decides nothing until it is
+        submitted, every G0–G4 gate its duty needs is signed on its current version
+        by someone other than its authors, evidence is attached and another person
+        activates it. A national format profile is only used in its own country
+        (`400 CTC_PROFILE_COUNTRY_MISMATCH`). An absent `legalEntityId` is the
+        tenant's default entity.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CTCApplicabilityRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  country: IT
+                  documentType: INVOICE
+                  buyerKind: B2B
+                  terms:
+                    duty: REQUIRED
+                    model: CLEARANCE
+                    profile: IT_FATTURAPA
+                    formatVersion: FPR12 1.9
+                    authority: Agenzia delle Entrate — SdI
+                    legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                    sourceAsOf: 2026-10-30
+                    effectiveFrom: 2026-01-01
+                    conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+      responses:
+        "201":
+          description: The record, in DRAFT.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCApplicability"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    documentType: INVOICE
+                    buyerKind: B2B
+                    status: DRAFT
+                    currentVersion: 1
+                    terms:
+                      duty: REQUIRED
+                      model: CLEARANCE
+                      profile: IT_FATTURAPA
+                      formatVersion: FPR12 1.9
+                      authority: Agenzia delle Entrate — SdI
+                      legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                      sourceAsOf: 2026-10-30
+                      effectiveFrom: 2026-01-01
+                      conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                    versions:
+                      - version: 1
+                        terms:
+                          duty: REQUIRED
+                          model: CLEARANCE
+                          profile: IT_FATTURAPA
+                          formatVersion: FPR12 1.9
+                          authority: Agenzia delle Entrate — SdI
+                          legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                          sourceAsOf: 2026-10-30
+                          effectiveFrom: 2026-01-01
+                          conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                        digest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    requiredGates:
+                      - G0_SCOPE_AUTHORITY
+                      - G1_LEGAL_CONTENT_RIGHTS
+                      - G2_TECHNICAL_QA
+                      - G3_SECURITY_OPERATIONS
+                      - G4_CONTROLLED_PRODUCTION
+                    missingGates:
+                      - G0_SCOPE_AUTHORITY
+                      - G1_LEGAL_CONTENT_RIGHTS
+                      - G2_TECHNICAL_QA
+                      - G3_SECURITY_OPERATIONS
+                      - G4_CONTROLLED_PRODUCTION
+                    signoffs: []
+                    evidence: []
+                    history:
+                      - seq: 1
+                        kind: CREATED
+                        status: DRAFT
+                        version: 1
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    createdAt: 2026-11-02T09:00:00.000000Z
+                    createdBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/ctc/applicability/{applicabilityId}:
+    get:
+      operationId: getCTCApplicability
+      tags:
+        - ctc
+      summary: One country applicability record
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+      parameters:
+        - $ref: "#/components/parameters/CTCApplicabilityId"
+      responses:
+        "200":
+          description: The record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCApplicability"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    documentType: INVOICE
+                    buyerKind: B2B
+                    status: ACTIVE
+                    currentVersion: 1
+                    terms:
+                      duty: REQUIRED
+                      model: CLEARANCE
+                      profile: IT_FATTURAPA
+                      formatVersion: FPR12 1.9
+                      authority: Agenzia delle Entrate — SdI
+                      legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                      sourceAsOf: 2026-10-30
+                      effectiveFrom: 2026-01-01
+                      conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                    versions:
+                      - version: 1
+                        terms:
+                          duty: REQUIRED
+                          model: CLEARANCE
+                          profile: IT_FATTURAPA
+                          formatVersion: FPR12 1.9
+                          authority: Agenzia delle Entrate — SdI
+                          legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                          sourceAsOf: 2026-10-30
+                          effectiveFrom: 2026-01-01
+                          conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                        digest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    requiredGates:
+                      - G0_SCOPE_AUTHORITY
+                      - G1_LEGAL_CONTENT_RIGHTS
+                      - G2_TECHNICAL_QA
+                      - G3_SECURITY_OPERATIONS
+                      - G4_CONTROLLED_PRODUCTION
+                    missingGates: []
+                    signoffs:
+                      - gate: G0_SCOPE_AUTHORITY
+                        version: 1
+                        signoffRef: CAB-2026-11-01
+                        signedAt: 2026-11-03T10:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G1_LEGAL_CONTENT_RIGHTS
+                        version: 1
+                        signoffRef: CAB-2026-11-02
+                        signedAt: 2026-11-03T11:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G2_TECHNICAL_QA
+                        version: 1
+                        signoffRef: CAB-2026-11-03
+                        signedAt: 2026-11-03T12:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G3_SECURITY_OPERATIONS
+                        version: 1
+                        signoffRef: CAB-2026-11-04
+                        signedAt: 2026-11-03T13:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G4_CONTROLLED_PRODUCTION
+                        version: 1
+                        signoffRef: CAB-2026-11-05
+                        signedAt: 2026-11-03T14:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                    evidence:
+                      - sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                        filename: it-sdi-legal-opinion.pdf
+                        mediaType: application/pdf
+                        bytes: 48213
+                    history:
+                      - seq: 1
+                        kind: CREATED
+                        status: DRAFT
+                        version: 1
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: EVIDENCE_ADDED
+                        status: DRAFT
+                        evidence:
+                          sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                          filename: it-sdi-legal-opinion.pdf
+                          mediaType: application/pdf
+                          bytes: 48213
+                        recordedAt: 2026-11-02T09:05:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 3
+                        kind: SUBMITTED
+                        status: IN_REVIEW
+                        version: 1
+                        recordedAt: 2026-11-02T09:10:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 4
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G0_SCOPE_AUTHORITY
+                        signoffRef: CAB-2026-11-01
+                        recordedAt: 2026-11-03T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 5
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G1_LEGAL_CONTENT_RIGHTS
+                        signoffRef: CAB-2026-11-02
+                        recordedAt: 2026-11-03T11:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 6
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G2_TECHNICAL_QA
+                        signoffRef: CAB-2026-11-03
+                        recordedAt: 2026-11-03T12:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 7
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G3_SECURITY_OPERATIONS
+                        signoffRef: CAB-2026-11-04
+                        recordedAt: 2026-11-03T13:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 8
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G4_CONTROLLED_PRODUCTION
+                        signoffRef: CAB-2026-11-05
+                        recordedAt: 2026-11-03T14:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 9
+                        kind: ACTIVATED
+                        status: ACTIVE
+                        version: 1
+                        recordedAt: 2026-11-04T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a3
+                    createdAt: 2026-11-02T09:00:00.000000Z
+                    createdBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/ctc/applicability/{applicabilityId}/versions:
+    post:
+      operationId: reviseCTCApplicability
+      tags:
+        - ctc
+      summary: Record the next version of a record's terms
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Terms are never edited: a change is the next version, and a record in review
+        returns to `DRAFT` — sign-offs given on an earlier version do not carry over.
+        Only a `DRAFT` or `IN_REVIEW` record is revised; an active one is retired and
+        replaced. Terms identical to the current version record nothing and answer
+        `200`.
+      parameters:
+        - $ref: "#/components/parameters/CTCApplicabilityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CTCTerms"
+            examples:
+              default:
+                summary: Example
+                value:
+                  duty: REQUIRED
+                  model: CLEARANCE
+                  profile: IT_FATTURAPA
+                  formatVersion: FPR12 1.9.1
+                  authority: Agenzia delle Entrate — SdI
+                  legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                  sourceAsOf: 2026-10-30
+                  effectiveFrom: 2026-01-01
+                  conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+      responses:
+        "200":
+          description: The terms were already the current version's; nothing was recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCApplicability"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    documentType: INVOICE
+                    buyerKind: B2B
+                    status: DRAFT
+                    currentVersion: 1
+                    terms:
+                      duty: REQUIRED
+                      model: CLEARANCE
+                      profile: IT_FATTURAPA
+                      formatVersion: FPR12 1.9
+                      authority: Agenzia delle Entrate — SdI
+                      legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                      sourceAsOf: 2026-10-30
+                      effectiveFrom: 2026-01-01
+                      conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                    versions:
+                      - version: 1
+                        terms:
+                          duty: REQUIRED
+                          model: CLEARANCE
+                          profile: IT_FATTURAPA
+                          formatVersion: FPR12 1.9
+                          authority: Agenzia delle Entrate — SdI
+                          legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                          sourceAsOf: 2026-10-30
+                          effectiveFrom: 2026-01-01
+                          conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                        digest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    requiredGates:
+                      - G0_SCOPE_AUTHORITY
+                      - G1_LEGAL_CONTENT_RIGHTS
+                      - G2_TECHNICAL_QA
+                      - G3_SECURITY_OPERATIONS
+                      - G4_CONTROLLED_PRODUCTION
+                    missingGates:
+                      - G0_SCOPE_AUTHORITY
+                      - G1_LEGAL_CONTENT_RIGHTS
+                      - G2_TECHNICAL_QA
+                      - G3_SECURITY_OPERATIONS
+                      - G4_CONTROLLED_PRODUCTION
+                    signoffs: []
+                    evidence: []
+                    history:
+                      - seq: 1
+                        kind: CREATED
+                        status: DRAFT
+                        version: 1
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    createdAt: 2026-11-02T09:00:00.000000Z
+                    createdBy: 01920a4c-0000-7000-8000-0000000000a1
+        "201":
+          description: The record, with its new version.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCApplicability"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    documentType: INVOICE
+                    buyerKind: B2B
+                    status: DRAFT
+                    currentVersion: 1
+                    terms:
+                      duty: REQUIRED
+                      model: CLEARANCE
+                      profile: IT_FATTURAPA
+                      formatVersion: FPR12 1.9
+                      authority: Agenzia delle Entrate — SdI
+                      legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                      sourceAsOf: 2026-10-30
+                      effectiveFrom: 2026-01-01
+                      conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                    versions:
+                      - version: 1
+                        terms:
+                          duty: REQUIRED
+                          model: CLEARANCE
+                          profile: IT_FATTURAPA
+                          formatVersion: FPR12 1.9
+                          authority: Agenzia delle Entrate — SdI
+                          legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                          sourceAsOf: 2026-10-30
+                          effectiveFrom: 2026-01-01
+                          conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                        digest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    requiredGates:
+                      - G0_SCOPE_AUTHORITY
+                      - G1_LEGAL_CONTENT_RIGHTS
+                      - G2_TECHNICAL_QA
+                      - G3_SECURITY_OPERATIONS
+                      - G4_CONTROLLED_PRODUCTION
+                    missingGates:
+                      - G0_SCOPE_AUTHORITY
+                      - G1_LEGAL_CONTENT_RIGHTS
+                      - G2_TECHNICAL_QA
+                      - G3_SECURITY_OPERATIONS
+                      - G4_CONTROLLED_PRODUCTION
+                    signoffs: []
+                    evidence: []
+                    history:
+                      - seq: 1
+                        kind: CREATED
+                        status: DRAFT
+                        version: 1
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    createdAt: 2026-11-02T09:00:00.000000Z
+                    createdBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/ctc/applicability/{applicabilityId}/evidence:
+    post:
+      operationId: addCTCApplicabilityEvidence
+      tags:
+        - ctc
+      summary: Attach an evidence document to a record
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        The legal source evidence, recorded by the SHA-256 the browser computed. The
+        file itself is not uploaded. A record is activated only with evidence
+        attached. The same document again records nothing and answers `200`.
+      parameters:
+        - $ref: "#/components/parameters/CTCApplicabilityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvidenceDocument"
+            examples:
+              default:
+                summary: Example
+                value:
+                  sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                  filename: it-sdi-legal-opinion.pdf
+                  mediaType: application/pdf
+                  bytes: 48213
+      responses:
+        "200":
+          description: The document was already attached.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCApplicability"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    documentType: INVOICE
+                    buyerKind: B2B
+                    status: ACTIVE
+                    currentVersion: 1
+                    terms:
+                      duty: REQUIRED
+                      model: CLEARANCE
+                      profile: IT_FATTURAPA
+                      formatVersion: FPR12 1.9
+                      authority: Agenzia delle Entrate — SdI
+                      legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                      sourceAsOf: 2026-10-30
+                      effectiveFrom: 2026-01-01
+                      conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                    versions:
+                      - version: 1
+                        terms:
+                          duty: REQUIRED
+                          model: CLEARANCE
+                          profile: IT_FATTURAPA
+                          formatVersion: FPR12 1.9
+                          authority: Agenzia delle Entrate — SdI
+                          legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                          sourceAsOf: 2026-10-30
+                          effectiveFrom: 2026-01-01
+                          conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                        digest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    requiredGates:
+                      - G0_SCOPE_AUTHORITY
+                      - G1_LEGAL_CONTENT_RIGHTS
+                      - G2_TECHNICAL_QA
+                      - G3_SECURITY_OPERATIONS
+                      - G4_CONTROLLED_PRODUCTION
+                    missingGates: []
+                    signoffs:
+                      - gate: G0_SCOPE_AUTHORITY
+                        version: 1
+                        signoffRef: CAB-2026-11-01
+                        signedAt: 2026-11-03T10:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G1_LEGAL_CONTENT_RIGHTS
+                        version: 1
+                        signoffRef: CAB-2026-11-02
+                        signedAt: 2026-11-03T11:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G2_TECHNICAL_QA
+                        version: 1
+                        signoffRef: CAB-2026-11-03
+                        signedAt: 2026-11-03T12:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G3_SECURITY_OPERATIONS
+                        version: 1
+                        signoffRef: CAB-2026-11-04
+                        signedAt: 2026-11-03T13:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G4_CONTROLLED_PRODUCTION
+                        version: 1
+                        signoffRef: CAB-2026-11-05
+                        signedAt: 2026-11-03T14:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                    evidence:
+                      - sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                        filename: it-sdi-legal-opinion.pdf
+                        mediaType: application/pdf
+                        bytes: 48213
+                    history:
+                      - seq: 1
+                        kind: CREATED
+                        status: DRAFT
+                        version: 1
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: EVIDENCE_ADDED
+                        status: DRAFT
+                        evidence:
+                          sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                          filename: it-sdi-legal-opinion.pdf
+                          mediaType: application/pdf
+                          bytes: 48213
+                        recordedAt: 2026-11-02T09:05:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 3
+                        kind: SUBMITTED
+                        status: IN_REVIEW
+                        version: 1
+                        recordedAt: 2026-11-02T09:10:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 4
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G0_SCOPE_AUTHORITY
+                        signoffRef: CAB-2026-11-01
+                        recordedAt: 2026-11-03T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 5
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G1_LEGAL_CONTENT_RIGHTS
+                        signoffRef: CAB-2026-11-02
+                        recordedAt: 2026-11-03T11:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 6
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G2_TECHNICAL_QA
+                        signoffRef: CAB-2026-11-03
+                        recordedAt: 2026-11-03T12:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 7
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G3_SECURITY_OPERATIONS
+                        signoffRef: CAB-2026-11-04
+                        recordedAt: 2026-11-03T13:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 8
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G4_CONTROLLED_PRODUCTION
+                        signoffRef: CAB-2026-11-05
+                        recordedAt: 2026-11-03T14:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 9
+                        kind: ACTIVATED
+                        status: ACTIVE
+                        version: 1
+                        recordedAt: 2026-11-04T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a3
+                    createdAt: 2026-11-02T09:00:00.000000Z
+                    createdBy: 01920a4c-0000-7000-8000-0000000000a1
+        "201":
+          description: The record, with the document attached.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCApplicability"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    documentType: INVOICE
+                    buyerKind: B2B
+                    status: ACTIVE
+                    currentVersion: 1
+                    terms:
+                      duty: REQUIRED
+                      model: CLEARANCE
+                      profile: IT_FATTURAPA
+                      formatVersion: FPR12 1.9
+                      authority: Agenzia delle Entrate — SdI
+                      legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                      sourceAsOf: 2026-10-30
+                      effectiveFrom: 2026-01-01
+                      conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                    versions:
+                      - version: 1
+                        terms:
+                          duty: REQUIRED
+                          model: CLEARANCE
+                          profile: IT_FATTURAPA
+                          formatVersion: FPR12 1.9
+                          authority: Agenzia delle Entrate — SdI
+                          legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                          sourceAsOf: 2026-10-30
+                          effectiveFrom: 2026-01-01
+                          conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                        digest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    requiredGates:
+                      - G0_SCOPE_AUTHORITY
+                      - G1_LEGAL_CONTENT_RIGHTS
+                      - G2_TECHNICAL_QA
+                      - G3_SECURITY_OPERATIONS
+                      - G4_CONTROLLED_PRODUCTION
+                    missingGates: []
+                    signoffs:
+                      - gate: G0_SCOPE_AUTHORITY
+                        version: 1
+                        signoffRef: CAB-2026-11-01
+                        signedAt: 2026-11-03T10:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G1_LEGAL_CONTENT_RIGHTS
+                        version: 1
+                        signoffRef: CAB-2026-11-02
+                        signedAt: 2026-11-03T11:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G2_TECHNICAL_QA
+                        version: 1
+                        signoffRef: CAB-2026-11-03
+                        signedAt: 2026-11-03T12:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G3_SECURITY_OPERATIONS
+                        version: 1
+                        signoffRef: CAB-2026-11-04
+                        signedAt: 2026-11-03T13:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G4_CONTROLLED_PRODUCTION
+                        version: 1
+                        signoffRef: CAB-2026-11-05
+                        signedAt: 2026-11-03T14:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                    evidence:
+                      - sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                        filename: it-sdi-legal-opinion.pdf
+                        mediaType: application/pdf
+                        bytes: 48213
+                    history:
+                      - seq: 1
+                        kind: CREATED
+                        status: DRAFT
+                        version: 1
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: EVIDENCE_ADDED
+                        status: DRAFT
+                        evidence:
+                          sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                          filename: it-sdi-legal-opinion.pdf
+                          mediaType: application/pdf
+                          bytes: 48213
+                        recordedAt: 2026-11-02T09:05:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 3
+                        kind: SUBMITTED
+                        status: IN_REVIEW
+                        version: 1
+                        recordedAt: 2026-11-02T09:10:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 4
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G0_SCOPE_AUTHORITY
+                        signoffRef: CAB-2026-11-01
+                        recordedAt: 2026-11-03T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 5
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G1_LEGAL_CONTENT_RIGHTS
+                        signoffRef: CAB-2026-11-02
+                        recordedAt: 2026-11-03T11:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 6
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G2_TECHNICAL_QA
+                        signoffRef: CAB-2026-11-03
+                        recordedAt: 2026-11-03T12:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 7
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G3_SECURITY_OPERATIONS
+                        signoffRef: CAB-2026-11-04
+                        recordedAt: 2026-11-03T13:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 8
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G4_CONTROLLED_PRODUCTION
+                        signoffRef: CAB-2026-11-05
+                        recordedAt: 2026-11-03T14:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 9
+                        kind: ACTIVATED
+                        status: ACTIVE
+                        version: 1
+                        recordedAt: 2026-11-04T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a3
+                    createdAt: 2026-11-02T09:00:00.000000Z
+                    createdBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/ctc/applicability/{applicabilityId}/gates:
+    post:
+      operationId: signCTCApplicabilityGate
+      tags:
+        - ctc
+      summary: Sign a G0–G4 release gate on a record's version
+      description: |
+        `ANALYST`, signed in as themselves, who is neither the record's creator nor
+        the author of its current version (`403 MAKER_CHECKER`).
+
+        Doc 21 §11's release gates. Every record needs `G0_SCOPE_AUTHORITY` and
+        `G1_LEGAL_CONTENT_RIGHTS`; a record that dispatches documents also needs
+        `G2_TECHNICAL_QA`, `G3_SECURITY_OPERATIONS` and `G4_CONTROLLED_PRODUCTION`.
+        A sign-off names the version reviewed (`409 VERSION_CONFLICT` otherwise) and
+        its own reference. A gate already signed on the version answers `200`.
+      parameters:
+        - $ref: "#/components/parameters/CTCApplicabilityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CTCGateRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  gate: G1_LEGAL_CONTENT_RIGHTS
+                  version: 1
+                  signoffRef: CAB-2026-11-02
+                  note: Local counsel opinion on file.
+      responses:
+        "200":
+          description: The gate was already signed on this version.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCApplicability"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    documentType: INVOICE
+                    buyerKind: B2B
+                    status: ACTIVE
+                    currentVersion: 1
+                    terms:
+                      duty: REQUIRED
+                      model: CLEARANCE
+                      profile: IT_FATTURAPA
+                      formatVersion: FPR12 1.9
+                      authority: Agenzia delle Entrate — SdI
+                      legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                      sourceAsOf: 2026-10-30
+                      effectiveFrom: 2026-01-01
+                      conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                    versions:
+                      - version: 1
+                        terms:
+                          duty: REQUIRED
+                          model: CLEARANCE
+                          profile: IT_FATTURAPA
+                          formatVersion: FPR12 1.9
+                          authority: Agenzia delle Entrate — SdI
+                          legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                          sourceAsOf: 2026-10-30
+                          effectiveFrom: 2026-01-01
+                          conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                        digest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    requiredGates:
+                      - G0_SCOPE_AUTHORITY
+                      - G1_LEGAL_CONTENT_RIGHTS
+                      - G2_TECHNICAL_QA
+                      - G3_SECURITY_OPERATIONS
+                      - G4_CONTROLLED_PRODUCTION
+                    missingGates: []
+                    signoffs:
+                      - gate: G0_SCOPE_AUTHORITY
+                        version: 1
+                        signoffRef: CAB-2026-11-01
+                        signedAt: 2026-11-03T10:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G1_LEGAL_CONTENT_RIGHTS
+                        version: 1
+                        signoffRef: CAB-2026-11-02
+                        signedAt: 2026-11-03T11:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G2_TECHNICAL_QA
+                        version: 1
+                        signoffRef: CAB-2026-11-03
+                        signedAt: 2026-11-03T12:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G3_SECURITY_OPERATIONS
+                        version: 1
+                        signoffRef: CAB-2026-11-04
+                        signedAt: 2026-11-03T13:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G4_CONTROLLED_PRODUCTION
+                        version: 1
+                        signoffRef: CAB-2026-11-05
+                        signedAt: 2026-11-03T14:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                    evidence:
+                      - sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                        filename: it-sdi-legal-opinion.pdf
+                        mediaType: application/pdf
+                        bytes: 48213
+                    history:
+                      - seq: 1
+                        kind: CREATED
+                        status: DRAFT
+                        version: 1
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: EVIDENCE_ADDED
+                        status: DRAFT
+                        evidence:
+                          sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                          filename: it-sdi-legal-opinion.pdf
+                          mediaType: application/pdf
+                          bytes: 48213
+                        recordedAt: 2026-11-02T09:05:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 3
+                        kind: SUBMITTED
+                        status: IN_REVIEW
+                        version: 1
+                        recordedAt: 2026-11-02T09:10:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 4
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G0_SCOPE_AUTHORITY
+                        signoffRef: CAB-2026-11-01
+                        recordedAt: 2026-11-03T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 5
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G1_LEGAL_CONTENT_RIGHTS
+                        signoffRef: CAB-2026-11-02
+                        recordedAt: 2026-11-03T11:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 6
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G2_TECHNICAL_QA
+                        signoffRef: CAB-2026-11-03
+                        recordedAt: 2026-11-03T12:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 7
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G3_SECURITY_OPERATIONS
+                        signoffRef: CAB-2026-11-04
+                        recordedAt: 2026-11-03T13:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 8
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G4_CONTROLLED_PRODUCTION
+                        signoffRef: CAB-2026-11-05
+                        recordedAt: 2026-11-03T14:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 9
+                        kind: ACTIVATED
+                        status: ACTIVE
+                        version: 1
+                        recordedAt: 2026-11-04T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a3
+                    createdAt: 2026-11-02T09:00:00.000000Z
+                    createdBy: 01920a4c-0000-7000-8000-0000000000a1
+        "201":
+          description: The record, with the sign-off.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCApplicability"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    documentType: INVOICE
+                    buyerKind: B2B
+                    status: ACTIVE
+                    currentVersion: 1
+                    terms:
+                      duty: REQUIRED
+                      model: CLEARANCE
+                      profile: IT_FATTURAPA
+                      formatVersion: FPR12 1.9
+                      authority: Agenzia delle Entrate — SdI
+                      legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                      sourceAsOf: 2026-10-30
+                      effectiveFrom: 2026-01-01
+                      conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                    versions:
+                      - version: 1
+                        terms:
+                          duty: REQUIRED
+                          model: CLEARANCE
+                          profile: IT_FATTURAPA
+                          formatVersion: FPR12 1.9
+                          authority: Agenzia delle Entrate — SdI
+                          legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                          sourceAsOf: 2026-10-30
+                          effectiveFrom: 2026-01-01
+                          conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                        digest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    requiredGates:
+                      - G0_SCOPE_AUTHORITY
+                      - G1_LEGAL_CONTENT_RIGHTS
+                      - G2_TECHNICAL_QA
+                      - G3_SECURITY_OPERATIONS
+                      - G4_CONTROLLED_PRODUCTION
+                    missingGates: []
+                    signoffs:
+                      - gate: G0_SCOPE_AUTHORITY
+                        version: 1
+                        signoffRef: CAB-2026-11-01
+                        signedAt: 2026-11-03T10:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G1_LEGAL_CONTENT_RIGHTS
+                        version: 1
+                        signoffRef: CAB-2026-11-02
+                        signedAt: 2026-11-03T11:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G2_TECHNICAL_QA
+                        version: 1
+                        signoffRef: CAB-2026-11-03
+                        signedAt: 2026-11-03T12:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G3_SECURITY_OPERATIONS
+                        version: 1
+                        signoffRef: CAB-2026-11-04
+                        signedAt: 2026-11-03T13:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G4_CONTROLLED_PRODUCTION
+                        version: 1
+                        signoffRef: CAB-2026-11-05
+                        signedAt: 2026-11-03T14:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                    evidence:
+                      - sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                        filename: it-sdi-legal-opinion.pdf
+                        mediaType: application/pdf
+                        bytes: 48213
+                    history:
+                      - seq: 1
+                        kind: CREATED
+                        status: DRAFT
+                        version: 1
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: EVIDENCE_ADDED
+                        status: DRAFT
+                        evidence:
+                          sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                          filename: it-sdi-legal-opinion.pdf
+                          mediaType: application/pdf
+                          bytes: 48213
+                        recordedAt: 2026-11-02T09:05:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 3
+                        kind: SUBMITTED
+                        status: IN_REVIEW
+                        version: 1
+                        recordedAt: 2026-11-02T09:10:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 4
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G0_SCOPE_AUTHORITY
+                        signoffRef: CAB-2026-11-01
+                        recordedAt: 2026-11-03T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 5
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G1_LEGAL_CONTENT_RIGHTS
+                        signoffRef: CAB-2026-11-02
+                        recordedAt: 2026-11-03T11:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 6
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G2_TECHNICAL_QA
+                        signoffRef: CAB-2026-11-03
+                        recordedAt: 2026-11-03T12:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 7
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G3_SECURITY_OPERATIONS
+                        signoffRef: CAB-2026-11-04
+                        recordedAt: 2026-11-03T13:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 8
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G4_CONTROLLED_PRODUCTION
+                        signoffRef: CAB-2026-11-05
+                        recordedAt: 2026-11-03T14:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 9
+                        kind: ACTIVATED
+                        status: ACTIVE
+                        version: 1
+                        recordedAt: 2026-11-04T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a3
+                    createdAt: 2026-11-02T09:00:00.000000Z
+                    createdBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/ctc/applicability/{applicabilityId}/transitions:
+    post:
+      operationId: transitionCTCApplicability
+      tags:
+        - ctc
+      summary: Submit, return, activate, suspend, resume or retire a record
+      description: |
+        `SUBMIT` and `SUSPEND`: `OPERATOR` or `ANALYST`. `RETURN`, `ACTIVATE`,
+        `RESUME` and `RETIRE`: `ANALYST`. Signed in as themselves.
+
+        `ACTIVATE` names the version reviewed and needs every required gate signed
+        on it (`409 CTC_GATE_SIGNOFF_MISSING`, naming the gates), evidence attached
+        (`409 CTC_EVIDENCE_MISSING`), an activator who is neither the creator nor the
+        current version's author (`403 MAKER_CHECKER`), and no other active or
+        suspended record for an overlapping part of the same cell
+        (`409 CTC_APPLICABILITY_CONFLICT`). `SUSPEND` stops new validation and
+        dispatch at once and keeps what was submitted; the suspender does not also
+        `RESUME`. Return, suspension, resumption and retirement give a reason.
+      parameters:
+        - $ref: "#/components/parameters/CTCApplicabilityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CTCTransitionRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  action: ACTIVATE
+                  version: 1
+      responses:
+        "200":
+          description: The record, moved.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCApplicability"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    documentType: INVOICE
+                    buyerKind: B2B
+                    status: ACTIVE
+                    currentVersion: 1
+                    terms:
+                      duty: REQUIRED
+                      model: CLEARANCE
+                      profile: IT_FATTURAPA
+                      formatVersion: FPR12 1.9
+                      authority: Agenzia delle Entrate — SdI
+                      legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                      sourceAsOf: 2026-10-30
+                      effectiveFrom: 2026-01-01
+                      conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                    versions:
+                      - version: 1
+                        terms:
+                          duty: REQUIRED
+                          model: CLEARANCE
+                          profile: IT_FATTURAPA
+                          formatVersion: FPR12 1.9
+                          authority: Agenzia delle Entrate — SdI
+                          legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                          sourceAsOf: 2026-10-30
+                          effectiveFrom: 2026-01-01
+                          conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+                        digest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    requiredGates:
+                      - G0_SCOPE_AUTHORITY
+                      - G1_LEGAL_CONTENT_RIGHTS
+                      - G2_TECHNICAL_QA
+                      - G3_SECURITY_OPERATIONS
+                      - G4_CONTROLLED_PRODUCTION
+                    missingGates: []
+                    signoffs:
+                      - gate: G0_SCOPE_AUTHORITY
+                        version: 1
+                        signoffRef: CAB-2026-11-01
+                        signedAt: 2026-11-03T10:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G1_LEGAL_CONTENT_RIGHTS
+                        version: 1
+                        signoffRef: CAB-2026-11-02
+                        signedAt: 2026-11-03T11:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G2_TECHNICAL_QA
+                        version: 1
+                        signoffRef: CAB-2026-11-03
+                        signedAt: 2026-11-03T12:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G3_SECURITY_OPERATIONS
+                        version: 1
+                        signoffRef: CAB-2026-11-04
+                        signedAt: 2026-11-03T13:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - gate: G4_CONTROLLED_PRODUCTION
+                        version: 1
+                        signoffRef: CAB-2026-11-05
+                        signedAt: 2026-11-03T14:00:00.000000Z
+                        signedBy: 01920a4c-0000-7000-8000-0000000000a2
+                    evidence:
+                      - sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                        filename: it-sdi-legal-opinion.pdf
+                        mediaType: application/pdf
+                        bytes: 48213
+                    history:
+                      - seq: 1
+                        kind: CREATED
+                        status: DRAFT
+                        version: 1
+                        recordedAt: 2026-11-02T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: EVIDENCE_ADDED
+                        status: DRAFT
+                        evidence:
+                          sha256: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+                          filename: it-sdi-legal-opinion.pdf
+                          mediaType: application/pdf
+                          bytes: 48213
+                        recordedAt: 2026-11-02T09:05:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 3
+                        kind: SUBMITTED
+                        status: IN_REVIEW
+                        version: 1
+                        recordedAt: 2026-11-02T09:10:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 4
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G0_SCOPE_AUTHORITY
+                        signoffRef: CAB-2026-11-01
+                        recordedAt: 2026-11-03T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 5
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G1_LEGAL_CONTENT_RIGHTS
+                        signoffRef: CAB-2026-11-02
+                        recordedAt: 2026-11-03T11:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 6
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G2_TECHNICAL_QA
+                        signoffRef: CAB-2026-11-03
+                        recordedAt: 2026-11-03T12:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 7
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G3_SECURITY_OPERATIONS
+                        signoffRef: CAB-2026-11-04
+                        recordedAt: 2026-11-03T13:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 8
+                        kind: GATE_SIGNED
+                        status: IN_REVIEW
+                        version: 1
+                        gate: G4_CONTROLLED_PRODUCTION
+                        signoffRef: CAB-2026-11-05
+                        recordedAt: 2026-11-03T14:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 9
+                        kind: ACTIVATED
+                        status: ACTIVE
+                        version: 1
+                        recordedAt: 2026-11-04T09:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a3
+                    createdAt: 2026-11-02T09:00:00.000000Z
+                    createdBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/ctc/resolution:
+    get:
+      operationId: resolveCTCApplicability
+      tags:
+        - ctc
+      summary: What a cell owes on a date
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        `REQUIRED`, `OPTIONAL` or `PROHIBITED` from the one `ACTIVE` record of the
+        cell in effect on the date, with its source; otherwise `REVIEW_BLOCKED` with
+        the reason: `CTC_NO_APPLICABILITY` when nothing covers the cell,
+        `CTC_APPLICABILITY_NOT_ACTIVE` when the record covering it is in draft, in
+        review or suspended, `CTC_APPLICABILITY_CONFLICT` when two claim it. Nothing
+        is assumed and nothing is recorded (Doc 21 W01). An absent `legalEntityId` is
+        the tenant's default entity.
+      parameters:
+        - name: legalEntityId
+          in: query
+          required: false
+          description: The legal entity.
+          schema:
+            $ref: "#/components/schemas/LegalEntityId"
+          example: 01920a4c-0000-7000-8000-00000000e001
+        - name: country
+          in: query
+          required: true
+          description: The country.
+          schema:
+            $ref: "#/components/schemas/CTCCountry"
+          example: IT
+        - name: documentType
+          in: query
+          required: true
+          description: The document type.
+          schema:
+            $ref: "#/components/schemas/CTCDocumentType"
+          example: INVOICE
+        - name: buyerKind
+          in: query
+          required: true
+          description: The kind of buyer.
+          schema:
+            $ref: "#/components/schemas/CTCBuyerKind"
+          example: B2B
+        - name: date
+          in: query
+          required: true
+          description: The document's issue date.
+          schema:
+            $ref: "#/components/schemas/CivilDate"
+          example: 2026-11-05
+      responses:
+        "200":
+          description: The resolution.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCResolution"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    documentType: INVOICE
+                    buyerKind: B2B
+                    date: 2026-11-05
+                    duty: REQUIRED
+                    dispatchPermitted: true
+                    detail: Decided by version 1 of record 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01, in effect from 2026-01-01.
+                    applicabilityId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    applicabilityVersion: 1
+                    applicabilityStatus: ACTIVE
+                    terms:
+                      duty: REQUIRED
+                      model: CLEARANCE
+                      profile: IT_FATTURAPA
+                      formatVersion: FPR12 1.9
+                      authority: Agenzia delle Entrate — SdI
+                      legalSource: D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)
+                      sourceAsOf: 2026-10-30
+                      effectiveFrom: 2026-01-01
+                      conditions: Domestic B2B supply by an Italian-established, VAT-registered issuer.
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/ctc/validations:
+    get:
+      operationId: listCTCValidations
+      tags:
+        - ctc
+      summary: Format validation reports
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        Immutable validation reports, newest first, with every rule's result.
+      parameters:
+        - name: documentId
+          in: query
+          required: false
+          description: Only reports of this fiscal document.
+          schema:
+            $ref: "#/components/schemas/DocumentId"
+          example: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+        - name: applicabilityId
+          in: query
+          required: false
+          description: Only reports under this record.
+          schema:
+            $ref: "#/components/schemas/CTCApplicabilityId"
+          example: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+      responses:
+        "200":
+          description: The reports.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCValidationList"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    validations:
+                      - id: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        documentId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        applicabilityId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        applicabilityVersion: 1
+                        profile: IT_FATTURAPA
+                        formatVersion: FPR12 1.9
+                        ruleset: ztax-ctc-structural/2026.11.1
+                        inputDigest: zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c
+                        outcome: PASSED
+                        fatalFailures: 0
+                        schemaValidated: false
+                        results:
+                          - ruleId: ZT-CTC-A01
+                            stage: APPLICABILITY
+                            severity: FATAL
+                            outcome: PASS
+                            businessTerm: Seller legal entity
+                          - ruleId: ZT-CTC-A02
+                            stage: APPLICABILITY
+                            severity: FATAL
+                            outcome: PASS
+                            businessTerm: Document type
+                          - ruleId: ZT-CTC-A03
+                            stage: APPLICABILITY
+                            severity: FATAL
+                            outcome: PASS
+                            businessTerm: Issue date (BT-2)
+                          - ruleId: ZT-CTC-S01
+                            stage: SEMANTIC
+                            severity: FATAL
+                            outcome: PASS
+                            businessTerm: Fiscal commitment
+                          - ruleId: ZT-CTC-S02
+                            stage: SEMANTIC
+                            severity: FATAL
+                            outcome: PASS
+                            businessTerm: Invoice number (BT-1)
+                          - ruleId: ZT-CTC-S03
+                            stage: SEMANTIC
+                            severity: FATAL
+                            outcome: PASS
+                            businessTerm: Invoice line (BG-25)
+                          - ruleId: ZT-CTC-S04
+                            stage: SEMANTIC
+                            severity: WARNING
+                            outcome: PASS
+                            businessTerm: Source line reference
+                          - ruleId: ZT-CTC-S05
+                            stage: SEMANTIC
+                            severity: FATAL
+                            outcome: PASS
+                            businessTerm: Tax decision reference
+                          - ruleId: ZT-CTC-S06
+                            stage: SEMANTIC
+                            severity: FATAL
+                            outcome: PASS
+                            businessTerm: Document totals (BT-106, BT-110, BT-112)
+                          - ruleId: ZT-CTC-S07
+                            stage: SEMANTIC
+                            severity: FATAL
+                            outcome: PASS
+                            businessTerm: Preceding invoice reference (BG-3)
+                          - ruleId: ZT-CTC-IT01
+                            stage: REGIME
+                            severity: FATAL
+                            outcome: PASS
+                            businessTerm: FatturaPA 2.1.1.4 Numero
+                          - ruleId: ZT-CTC-X01
+                            stage: SYNTAX
+                            severity: FATAL
+                            outcome: NOT_EVALUATED
+                            reasonCode: CTC_RULE_SCHEMA_NOT_EVALUATED
+                            businessTerm: IT_FATTURAPA FPR12 1.9
+                            detail: No licensed schema or Schematron bundle for this profile version is installed. Syntax validation belongs to the accredited adapter and is not claimed here.
+                        digest: zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b
+                        validatedAt: 2026-11-05T09:00:00.000000Z
+                        validatedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: validateCTCDocument
+      tags:
+        - ctc
+      summary: Validate a fiscal document against a record's format profile
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        Runs the current ruleset over a committed fiscal document under an `ACTIVE`
+        record's current terms (Doc 21 W06): the record's cell, canonical invoice
+        semantics (number, lines, tax pinned to decisions, exact totals, the
+        preceding-document reference of a correction) and the profile's structural
+        constraints. Every rule's result is stored with the ruleset version. The
+        official schema and Schematron stage is reported `NOT_EVALUATED`: no licensed
+        bundle is installed, so `PASSED` is a pre-dispatch structural check, never
+        certification. Validating again with the same document state, record version
+        and ruleset returns the same report with `200`. A `PROHIBITED` record has no
+        profile (`409 CTC_SUBMISSION_PROHIBITED`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CTCValidationRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  documentId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                  applicabilityId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+      responses:
+        "200":
+          description: The same report, already recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCValidation"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    documentId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    applicabilityId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    applicabilityVersion: 1
+                    profile: IT_FATTURAPA
+                    formatVersion: FPR12 1.9
+                    ruleset: ztax-ctc-structural/2026.11.1
+                    inputDigest: zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c
+                    outcome: PASSED
+                    fatalFailures: 0
+                    schemaValidated: false
+                    results:
+                      - ruleId: ZT-CTC-A01
+                        stage: APPLICABILITY
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Seller legal entity
+                      - ruleId: ZT-CTC-A02
+                        stage: APPLICABILITY
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Document type
+                      - ruleId: ZT-CTC-A03
+                        stage: APPLICABILITY
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Issue date (BT-2)
+                      - ruleId: ZT-CTC-S01
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Fiscal commitment
+                      - ruleId: ZT-CTC-S02
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Invoice number (BT-1)
+                      - ruleId: ZT-CTC-S03
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Invoice line (BG-25)
+                      - ruleId: ZT-CTC-S04
+                        stage: SEMANTIC
+                        severity: WARNING
+                        outcome: PASS
+                        businessTerm: Source line reference
+                      - ruleId: ZT-CTC-S05
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Tax decision reference
+                      - ruleId: ZT-CTC-S06
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Document totals (BT-106, BT-110, BT-112)
+                      - ruleId: ZT-CTC-S07
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Preceding invoice reference (BG-3)
+                      - ruleId: ZT-CTC-IT01
+                        stage: REGIME
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: FatturaPA 2.1.1.4 Numero
+                      - ruleId: ZT-CTC-X01
+                        stage: SYNTAX
+                        severity: FATAL
+                        outcome: NOT_EVALUATED
+                        reasonCode: CTC_RULE_SCHEMA_NOT_EVALUATED
+                        businessTerm: IT_FATTURAPA FPR12 1.9
+                        detail: No licensed schema or Schematron bundle for this profile version is installed. Syntax validation belongs to the accredited adapter and is not claimed here.
+                    digest: zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b
+                    validatedAt: 2026-11-05T09:00:00.000000Z
+                    validatedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "201":
+          description: The report.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCValidation"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    documentId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    applicabilityId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    applicabilityVersion: 1
+                    profile: IT_FATTURAPA
+                    formatVersion: FPR12 1.9
+                    ruleset: ztax-ctc-structural/2026.11.1
+                    inputDigest: zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c
+                    outcome: PASSED
+                    fatalFailures: 0
+                    schemaValidated: false
+                    results:
+                      - ruleId: ZT-CTC-A01
+                        stage: APPLICABILITY
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Seller legal entity
+                      - ruleId: ZT-CTC-A02
+                        stage: APPLICABILITY
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Document type
+                      - ruleId: ZT-CTC-A03
+                        stage: APPLICABILITY
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Issue date (BT-2)
+                      - ruleId: ZT-CTC-S01
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Fiscal commitment
+                      - ruleId: ZT-CTC-S02
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Invoice number (BT-1)
+                      - ruleId: ZT-CTC-S03
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Invoice line (BG-25)
+                      - ruleId: ZT-CTC-S04
+                        stage: SEMANTIC
+                        severity: WARNING
+                        outcome: PASS
+                        businessTerm: Source line reference
+                      - ruleId: ZT-CTC-S05
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Tax decision reference
+                      - ruleId: ZT-CTC-S06
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Document totals (BT-106, BT-110, BT-112)
+                      - ruleId: ZT-CTC-S07
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Preceding invoice reference (BG-3)
+                      - ruleId: ZT-CTC-IT01
+                        stage: REGIME
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: FatturaPA 2.1.1.4 Numero
+                      - ruleId: ZT-CTC-X01
+                        stage: SYNTAX
+                        severity: FATAL
+                        outcome: NOT_EVALUATED
+                        reasonCode: CTC_RULE_SCHEMA_NOT_EVALUATED
+                        businessTerm: IT_FATTURAPA FPR12 1.9
+                        detail: No licensed schema or Schematron bundle for this profile version is installed. Syntax validation belongs to the accredited adapter and is not claimed here.
+                    digest: zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b
+                    validatedAt: 2026-11-05T09:00:00.000000Z
+                    validatedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/ctc/validations/{validationId}:
+    get:
+      operationId: getCTCValidation
+      tags:
+        - ctc
+      summary: One format validation report
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+      parameters:
+        - $ref: "#/components/parameters/CTCValidationId"
+      responses:
+        "200":
+          description: The report.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCValidation"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    documentId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    applicabilityId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    applicabilityVersion: 1
+                    profile: IT_FATTURAPA
+                    formatVersion: FPR12 1.9
+                    ruleset: ztax-ctc-structural/2026.11.1
+                    inputDigest: zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c
+                    outcome: PASSED
+                    fatalFailures: 0
+                    schemaValidated: false
+                    results:
+                      - ruleId: ZT-CTC-A01
+                        stage: APPLICABILITY
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Seller legal entity
+                      - ruleId: ZT-CTC-A02
+                        stage: APPLICABILITY
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Document type
+                      - ruleId: ZT-CTC-A03
+                        stage: APPLICABILITY
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Issue date (BT-2)
+                      - ruleId: ZT-CTC-S01
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Fiscal commitment
+                      - ruleId: ZT-CTC-S02
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Invoice number (BT-1)
+                      - ruleId: ZT-CTC-S03
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Invoice line (BG-25)
+                      - ruleId: ZT-CTC-S04
+                        stage: SEMANTIC
+                        severity: WARNING
+                        outcome: PASS
+                        businessTerm: Source line reference
+                      - ruleId: ZT-CTC-S05
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Tax decision reference
+                      - ruleId: ZT-CTC-S06
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Document totals (BT-106, BT-110, BT-112)
+                      - ruleId: ZT-CTC-S07
+                        stage: SEMANTIC
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: Preceding invoice reference (BG-3)
+                      - ruleId: ZT-CTC-IT01
+                        stage: REGIME
+                        severity: FATAL
+                        outcome: PASS
+                        businessTerm: FatturaPA 2.1.1.4 Numero
+                      - ruleId: ZT-CTC-X01
+                        stage: SYNTAX
+                        severity: FATAL
+                        outcome: NOT_EVALUATED
+                        reasonCode: CTC_RULE_SCHEMA_NOT_EVALUATED
+                        businessTerm: IT_FATTURAPA FPR12 1.9
+                        detail: No licensed schema or Schematron bundle for this profile version is installed. Syntax validation belongs to the accredited adapter and is not claimed here.
+                    digest: zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b
+                    validatedAt: 2026-11-05T09:00:00.000000Z
+                    validatedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/ctc/submissions:
+    get:
+      operationId: listCTCSubmissions
+      tags:
+        - ctc
+      summary: Authority submissions
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        Submissions, newest first, each with its events. A rejected submission
+        carries its correction task, open until a committed fiscal document names the
+        rejected one as its predecessor.
+      parameters:
+        - name: documentId
+          in: query
+          required: false
+          description: Only submissions of this fiscal document.
+          schema:
+            $ref: "#/components/schemas/DocumentId"
+          example: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+        - name: applicabilityId
+          in: query
+          required: false
+          description: Only submissions under this record.
+          schema:
+            $ref: "#/components/schemas/CTCApplicabilityId"
+          example: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+        - name: status
+          in: query
+          required: false
+          description: Only submissions in this status.
+          schema:
+            $ref: "#/components/schemas/CTCSubmissionStatus"
+          example: AUTHORITY_REJECTED
+      responses:
+        "200":
+          description: The submissions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCSubmissionList"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    submissions:
+                      - id: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        documentId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        documentNumber: FT-2026-000184
+                        documentType: INVOICE
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        country: IT
+                        buyerKind: B2B
+                        applicabilityId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        applicabilityVersion: 1
+                        model: CLEARANCE
+                        profile: IT_FATTURAPA
+                        formatVersion: FPR12 1.9
+                        validationId: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        currency: EUR
+                        gross: "122.00"
+                        payloadDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                        externalRef: ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        preparedAt: 2026-11-05T10:00:00.000000Z
+                        preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                        status: AUTHORITY_REJECTED
+                        history:
+                          - seq: 1
+                            kind: PREPARED
+                            status: PREPARED
+                            recordedAt: 2026-11-05T10:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                          - seq: 2
+                            kind: DISPATCHED
+                            status: SENT
+                            attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                            recordedAt: 2026-11-05T11:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                          - seq: 3
+                            kind: TRANSPORT_RECEIVED
+                            status: TRANSPORT_RECEIVED
+                            attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                            transportRef: SDI-RICEVUTA-7731902
+                            recordedAt: 2026-11-05T11:02:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                          - seq: 4
+                            kind: AUTHORITY_REJECTED
+                            status: AUTHORITY_REJECTED
+                            attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                            authorityCode: "00404"
+                            evidenceSha256: 3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a
+                            detail: "Notifica di scarto: fattura duplicata."
+                            recordedAt: 2026-11-05T13:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                        correction:
+                          documentId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                          open: true
+                          openedAt: 2026-11-05T13:00:00.000000Z
+                          authorityCode: "00404"
+                          reason: "Notifica di scarto: fattura duplicata."
+                          correctedBy: []
+                      - id: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        documentId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                        documentNumber: FT-2026-000184
+                        documentType: INVOICE
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        country: IT
+                        buyerKind: B2B
+                        applicabilityId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        applicabilityVersion: 1
+                        model: CLEARANCE
+                        profile: IT_FATTURAPA
+                        formatVersion: FPR12 1.9
+                        validationId: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        currency: EUR
+                        gross: "122.00"
+                        payloadDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                        externalRef: ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        preparedAt: 2026-11-05T10:00:00.000000Z
+                        preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                        status: AUTHORITY_ACCEPTED
+                        history:
+                          - seq: 1
+                            kind: PREPARED
+                            status: PREPARED
+                            recordedAt: 2026-11-05T10:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                          - seq: 2
+                            kind: DISPATCHED
+                            status: SENT
+                            attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                            recordedAt: 2026-11-05T11:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                          - seq: 3
+                            kind: TRANSPORT_RECEIVED
+                            status: TRANSPORT_RECEIVED
+                            attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                            transportRef: SDI-RICEVUTA-7731902
+                            recordedAt: 2026-11-05T11:02:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                          - seq: 4
+                            kind: AUTHORITY_ACCEPTED
+                            status: AUTHORITY_ACCEPTED
+                            attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                            authorityRef: IdSdI 11223344556
+                            evidenceSha256: 3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a
+                            recordedAt: 2026-11-05T13:00:00.000000Z
+                            recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+    post:
+      operationId: prepareCTCSubmission
+      tags:
+        - ctc
+      summary: Prepare and seal a submission
+      description: |
+        `OPERATOR`, signed in as themselves.
+
+        Seals a committed fiscal document under an `ACTIVE` record whose duty is
+        `REQUIRED` or `OPTIONAL`, covering the document's legal entity, type and
+        issue date (`409 CTC_DOCUMENT_MISMATCH`, `409 CTC_RULE_OUT_OF_EFFECT`). The
+        newest validation of the document under the record must have `PASSED` and
+        still speak for the document, the record's current version and the current
+        ruleset (`409 CTC_VALIDATION_REQUIRED`, `409 CTC_VALIDATION_STALE`). The
+        document projection, record version and report are sealed under one payload
+        digest. **Idempotent per document and record**: while a submission of the
+        document under the record is live — anything but `WITHDRAWN` — preparing
+        again returns it with `200`. Nothing is sent here.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CTCSubmissionRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  documentId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                  applicabilityId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+      responses:
+        "200":
+          description: The live submission of this document under this record.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCSubmission"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    documentId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    documentNumber: FT-2026-000184
+                    documentType: INVOICE
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    buyerKind: B2B
+                    applicabilityId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    applicabilityVersion: 1
+                    model: CLEARANCE
+                    profile: IT_FATTURAPA
+                    formatVersion: FPR12 1.9
+                    validationId: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    currency: EUR
+                    gross: "122.00"
+                    payloadDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                    externalRef: ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    preparedAt: 2026-11-05T10:00:00.000000Z
+                    preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    status: SENT
+                    history:
+                      - seq: 1
+                        kind: PREPARED
+                        status: PREPARED
+                        recordedAt: 2026-11-05T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: DISPATCHED
+                        status: SENT
+                        attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        recordedAt: 2026-11-05T11:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+        "201":
+          description: The submission, prepared and sealed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCSubmission"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    documentId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    documentNumber: FT-2026-000184
+                    documentType: INVOICE
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    buyerKind: B2B
+                    applicabilityId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    applicabilityVersion: 1
+                    model: CLEARANCE
+                    profile: IT_FATTURAPA
+                    formatVersion: FPR12 1.9
+                    validationId: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    currency: EUR
+                    gross: "122.00"
+                    payloadDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                    externalRef: ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    preparedAt: 2026-11-05T10:00:00.000000Z
+                    preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    status: PREPARED
+                    history:
+                      - seq: 1
+                        kind: PREPARED
+                        status: PREPARED
+                        recordedAt: 2026-11-05T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/ctc/submissions/{submissionId}:
+    get:
+      operationId: getCTCSubmission
+      tags:
+        - ctc
+      summary: One submission with its events
+      description: |
+        `OPERATOR`, `ANALYST` or `AUDITOR`.
+      parameters:
+        - $ref: "#/components/parameters/CTCSubmissionId"
+      responses:
+        "200":
+          description: The submission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCSubmission"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    documentId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    documentNumber: FT-2026-000184
+                    documentType: INVOICE
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    buyerKind: B2B
+                    applicabilityId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    applicabilityVersion: 1
+                    model: CLEARANCE
+                    profile: IT_FATTURAPA
+                    formatVersion: FPR12 1.9
+                    validationId: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    currency: EUR
+                    gross: "122.00"
+                    payloadDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                    externalRef: ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    preparedAt: 2026-11-05T10:00:00.000000Z
+                    preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    status: AUTHORITY_ACCEPTED
+                    history:
+                      - seq: 1
+                        kind: PREPARED
+                        status: PREPARED
+                        recordedAt: 2026-11-05T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: DISPATCHED
+                        status: SENT
+                        attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        recordedAt: 2026-11-05T11:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 3
+                        kind: TRANSPORT_RECEIVED
+                        status: TRANSPORT_RECEIVED
+                        attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        transportRef: SDI-RICEVUTA-7731902
+                        recordedAt: 2026-11-05T11:02:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 4
+                        kind: AUTHORITY_ACCEPTED
+                        status: AUTHORITY_ACCEPTED
+                        attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        authorityRef: IdSdI 11223344556
+                        evidenceSha256: 3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a
+                        recordedAt: 2026-11-05T13:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/ctc/submissions/{submissionId}/dispatch:
+    post:
+      operationId: dispatchCTCSubmission
+      tags:
+        - ctc
+      summary: Authorise one dispatch attempt
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves, who did not prepare the
+        submission (`403 MAKER_CHECKER`).
+
+        Records one attempt under the submission's fixed `externalRef`. The checker
+        names the payload digest reviewed (`409 CTC_PAYLOAD_DIGEST_MISMATCH`); the
+        payload is recomputed from the document, record and report as they stand and
+        must still match the seal, under a record still `ACTIVE` on the sealed
+        version (`409 CTC_VALIDATION_STALE`, `409 CTC_APPLICABILITY_NOT_ACTIVE`). A
+        submission whose outcome is unknown is sent again only after a status enquiry
+        found nothing (`409 CTC_OUTCOME_UNCERTAIN`). A submission already sent or
+        answered is returned as it is with `200` — never a second fiscal document. No
+        authority or partner connector is wired here: the transmission itself happens
+        through the approved channel and its answers are recorded.
+      parameters:
+        - $ref: "#/components/parameters/CTCSubmissionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CTCDispatchRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  payloadDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+      responses:
+        "200":
+          description: Already sent or answered; nothing was recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCSubmission"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    documentId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    documentNumber: FT-2026-000184
+                    documentType: INVOICE
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    buyerKind: B2B
+                    applicabilityId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    applicabilityVersion: 1
+                    model: CLEARANCE
+                    profile: IT_FATTURAPA
+                    formatVersion: FPR12 1.9
+                    validationId: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    currency: EUR
+                    gross: "122.00"
+                    payloadDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                    externalRef: ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    preparedAt: 2026-11-05T10:00:00.000000Z
+                    preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    status: AUTHORITY_ACCEPTED
+                    history:
+                      - seq: 1
+                        kind: PREPARED
+                        status: PREPARED
+                        recordedAt: 2026-11-05T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: DISPATCHED
+                        status: SENT
+                        attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        recordedAt: 2026-11-05T11:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 3
+                        kind: TRANSPORT_RECEIVED
+                        status: TRANSPORT_RECEIVED
+                        attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        transportRef: SDI-RICEVUTA-7731902
+                        recordedAt: 2026-11-05T11:02:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 4
+                        kind: AUTHORITY_ACCEPTED
+                        status: AUTHORITY_ACCEPTED
+                        attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        authorityRef: IdSdI 11223344556
+                        evidenceSha256: 3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a
+                        recordedAt: 2026-11-05T13:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "201":
+          description: The submission, with the attempt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCSubmission"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    documentId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    documentNumber: FT-2026-000184
+                    documentType: INVOICE
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    buyerKind: B2B
+                    applicabilityId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    applicabilityVersion: 1
+                    model: CLEARANCE
+                    profile: IT_FATTURAPA
+                    formatVersion: FPR12 1.9
+                    validationId: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    currency: EUR
+                    gross: "122.00"
+                    payloadDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                    externalRef: ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    preparedAt: 2026-11-05T10:00:00.000000Z
+                    preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    status: SENT
+                    history:
+                      - seq: 1
+                        kind: PREPARED
+                        status: PREPARED
+                        recordedAt: 2026-11-05T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: DISPATCHED
+                        status: SENT
+                        attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        recordedAt: 2026-11-05T11:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/ctc/submissions/{submissionId}/responses:
+    post:
+      operationId: recordCTCResponse
+      tags:
+        - ctc
+      summary: Record what the rail or the authority answered
+      description: |
+        `OPERATOR` or `ANALYST`, signed in as themselves.
+
+        ZoikoTax does not invent the authority's answer. `TRANSPORT_RECEIVED` is a
+        rail or partner receipt and names its `transportRef`; it leaves the
+        authority outcome pending. `AUTHORITY_ACCEPTED` names the authority's own
+        reference; `AUTHORITY_REJECTED` keeps the authority's raw code and says why,
+        and opens a correction task that a new fiscal document naming the rejected
+        one closes. Both carry the SHA-256 of the raw receipt. `OUTCOME_UNKNOWN` says
+        why nobody knows; `STATUS_NOT_FOUND` records a status enquiry, by
+        `transportRef`, that found nothing — the only thing that lets a submission of
+        unknown outcome be sent again. Once accepted or rejected, a later answer is
+        `409 CTC_FINAL_OUTCOME_RECORDED`. **Idempotent on the answer**: the same
+        answer again records nothing and answers `200`.
+      parameters:
+        - $ref: "#/components/parameters/CTCSubmissionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CTCResponseRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  kind: AUTHORITY_ACCEPTED
+                  attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                  authorityRef: IdSdI 11223344556
+                  evidenceSha256: 3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a
+      responses:
+        "200":
+          description: The same answer was already recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCSubmission"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    documentId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    documentNumber: FT-2026-000184
+                    documentType: INVOICE
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    buyerKind: B2B
+                    applicabilityId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    applicabilityVersion: 1
+                    model: CLEARANCE
+                    profile: IT_FATTURAPA
+                    formatVersion: FPR12 1.9
+                    validationId: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    currency: EUR
+                    gross: "122.00"
+                    payloadDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                    externalRef: ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    preparedAt: 2026-11-05T10:00:00.000000Z
+                    preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    status: AUTHORITY_ACCEPTED
+                    history:
+                      - seq: 1
+                        kind: PREPARED
+                        status: PREPARED
+                        recordedAt: 2026-11-05T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: DISPATCHED
+                        status: SENT
+                        attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        recordedAt: 2026-11-05T11:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 3
+                        kind: TRANSPORT_RECEIVED
+                        status: TRANSPORT_RECEIVED
+                        attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        transportRef: SDI-RICEVUTA-7731902
+                        recordedAt: 2026-11-05T11:02:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 4
+                        kind: AUTHORITY_ACCEPTED
+                        status: AUTHORITY_ACCEPTED
+                        attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        authorityRef: IdSdI 11223344556
+                        evidenceSha256: 3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a
+                        recordedAt: 2026-11-05T13:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "201":
+          description: The answer, recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCSubmission"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    documentId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    documentNumber: FT-2026-000184
+                    documentType: INVOICE
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    buyerKind: B2B
+                    applicabilityId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    applicabilityVersion: 1
+                    model: CLEARANCE
+                    profile: IT_FATTURAPA
+                    formatVersion: FPR12 1.9
+                    validationId: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    currency: EUR
+                    gross: "122.00"
+                    payloadDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                    externalRef: ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    preparedAt: 2026-11-05T10:00:00.000000Z
+                    preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    status: AUTHORITY_ACCEPTED
+                    history:
+                      - seq: 1
+                        kind: PREPARED
+                        status: PREPARED
+                        recordedAt: 2026-11-05T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: DISPATCHED
+                        status: SENT
+                        attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        recordedAt: 2026-11-05T11:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a2
+                      - seq: 3
+                        kind: TRANSPORT_RECEIVED
+                        status: TRANSPORT_RECEIVED
+                        attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        transportRef: SDI-RICEVUTA-7731902
+                        recordedAt: 2026-11-05T11:02:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 4
+                        kind: AUTHORITY_ACCEPTED
+                        status: AUTHORITY_ACCEPTED
+                        attemptId: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+                        authorityRef: IdSdI 11223344556
+                        evidenceSha256: 3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a
+                        recordedAt: 2026-11-05T13:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+  /v1/ctc/submissions/{submissionId}/withdrawal:
+    post:
+      operationId: withdrawCTCSubmission
+      tags:
+        - ctc
+      summary: Withdraw a prepared submission never dispatched
+      description: |
+        `OPERATOR`, signed in as themselves.
+
+        Releases a `PREPARED` submission with the reason, so the document can be
+        validated and prepared again. A submission once dispatched is never
+        withdrawn.
+      parameters:
+        - $ref: "#/components/parameters/CTCSubmissionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CTCWithdrawalRequest"
+            examples:
+              default:
+                summary: Example
+                value:
+                  reason: Record revised to FPR12 1.9.1 before dispatch.
+      responses:
+        "200":
+          description: The submission, withdrawn.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CTCSubmission"
+              examples:
+                default:
+                  summary: Example
+                  value:
+                    id: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    documentId: 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                    documentNumber: FT-2026-000184
+                    documentType: INVOICE
+                    legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                    country: IT
+                    buyerKind: B2B
+                    applicabilityId: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    applicabilityVersion: 1
+                    model: CLEARANCE
+                    profile: IT_FATTURAPA
+                    formatVersion: FPR12 1.9
+                    validationId: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    currency: EUR
+                    gross: "122.00"
+                    payloadDigest: zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f
+                    externalRef: ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    preparedAt: 2026-11-05T10:00:00.000000Z
+                    preparedBy: 01920a4c-0000-7000-8000-0000000000a1
+                    status: WITHDRAWN
+                    history:
+                      - seq: 1
+                        kind: PREPARED
+                        status: PREPARED
+                        recordedAt: 2026-11-05T10:00:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+                      - seq: 2
+                        kind: WITHDRAWN
+                        status: WITHDRAWN
+                        detail: Record revised to FPR12 1.9.1 before dispatch.
+                        recordedAt: 2026-11-05T10:30:00.000000Z
+                        recordedBy: 01920a4c-0000-7000-8000-0000000000a1
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/Internal"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+
 components:
   securitySchemes:
     sessionCookie:
@@ -11765,6 +14630,33 @@ components:
       description: The ERP export batch identifier.
       schema: { $ref: "#/components/schemas/ERPExportId" }
       example: 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
+
+    CTCApplicabilityId:
+      name: applicabilityId
+      in: path
+      required: true
+      description: The country applicability record identifier.
+      schema:
+        $ref: "#/components/schemas/CTCApplicabilityId"
+      example: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+
+    CTCValidationId:
+      name: validationId
+      in: path
+      required: true
+      description: The validation report identifier.
+      schema:
+        $ref: "#/components/schemas/CTCValidationId"
+      example: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+
+    CTCSubmissionId:
+      name: submissionId
+      in: path
+      required: true
+      description: The submission identifier.
+      schema:
+        $ref: "#/components/schemas/CTCSubmissionId"
+      example: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
 
     ShadowRunId:
       name: shadowRunId
@@ -22726,3 +25618,1054 @@ components:
           type: boolean
           description: Whether `rows` stops short of `count`.
         asOf: { $ref: "#/components/schemas/Timestamp" }
+
+    CTCApplicabilityId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCApplicabilityId
+      description: A country applicability record.
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+
+    CTCValidationId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCValidationId
+      description: An immutable format validation report.
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+
+    CTCSubmissionId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCSubmissionId
+      description: An authority submission. Also the reference every dispatch attempt carries.
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+
+    CTCAttemptId:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCAttemptId
+      description: One dispatch attempt of a submission.
+      format: uuid
+      pattern: ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
+      example: 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+
+    CTCCountry:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCCountry
+      description: An ISO 3166-1 alpha-2 country code.
+      pattern: ^[A-Z]{2}$
+      example: IT
+
+    CTCDocumentType:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCDocumentType
+      description: "The fiscal document types an applicability record may name: billing documents and their corrections that a regime projects into an electronic document."
+      enum:
+        - INVOICE
+        - CREDIT_NOTE
+        - DEBIT_NOTE
+        - REBILL
+        - ADJUSTMENT
+
+    CTCBuyerKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCBuyerKind
+      description: Who receives the document. A B2C document is never forced through a B2B rail.
+      enum:
+        - B2B
+        - B2G
+        - B2C
+
+    CTCDuty:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCDuty
+      description: What a record says a cell owes. A PROHIBITED duty has model NONE and profile NONE.
+      enum:
+        - REQUIRED
+        - OPTIONAL
+        - PROHIBITED
+
+    CTCResolvedDuty:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCResolvedDuty
+      description: "What resolution answers: an active record's duty, or REVIEW_BLOCKED."
+      enum:
+        - REQUIRED
+        - OPTIONAL
+        - PROHIBITED
+        - REVIEW_BLOCKED
+
+    CTCModel:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCModel
+      description: The control model (Doc 21 §02 clearance_model).
+      enum:
+        - CLEARANCE
+        - REAL_TIME_REPORTING
+        - POST_AUDIT
+        - NETWORK_EXCHANGE
+        - NONE
+
+    CTCProfile:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCProfile
+      description: The format profile a document is projected into (Doc 21 §08). National profiles are used only in their own country; PEPPOL_BIS_3 is a network profile.
+      enum:
+        - PEPPOL_BIS_3
+        - FR_EN16931
+        - IT_FATTURAPA
+        - PL_KSEF_FA
+        - BR_NFCOM_62
+        - SA_ZATCA_UBL
+        - IN_GST_IRP
+        - NONE
+
+    CTCApplicabilityStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCApplicabilityStatus
+      description: Where a record stands. DRAFT and IN_REVIEW are NOT_ACTIVATED; only ACTIVE decides a duty.
+      enum:
+        - DRAFT
+        - IN_REVIEW
+        - ACTIVE
+        - SUSPENDED
+        - RETIRED
+
+    CTCGate:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCGate
+      description: Doc 21 §11's release gates.
+      enum:
+        - G0_SCOPE_AUTHORITY
+        - G1_LEGAL_CONTENT_RIGHTS
+        - G2_TECHNICAL_QA
+        - G3_SECURITY_OPERATIONS
+        - G4_CONTROLLED_PRODUCTION
+
+    CTCApplicabilityEventKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCApplicabilityEventKind
+      description: What happened to a record.
+      enum:
+        - CREATED
+        - REVISED
+        - EVIDENCE_ADDED
+        - SUBMITTED
+        - RETURNED
+        - GATE_SIGNED
+        - ACTIVATED
+        - SUSPENDED
+        - RESUMED
+        - RETIRED
+
+    CTCAction:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCAction
+      description: A move of a record a person asks for.
+      enum:
+        - SUBMIT
+        - RETURN
+        - ACTIVATE
+        - SUSPEND
+        - RESUME
+        - RETIRE
+
+    CTCText:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCText
+      description: "A short regulatory label: an authority, a format version."
+      minLength: 1
+      maxLength: 200
+
+    CTCLegalSource:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCLegalSource
+      description: The legal source and reference a duty rests on. Regulatory text, not personal data.
+      minLength: 1
+      maxLength: 2000
+
+    CTCReference:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCReference
+      description: "Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code."
+      minLength: 1
+      maxLength: 200
+
+    CTCAmount:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCAmount
+      description: A committed fiscal document's figure in canonical decimal string form — never a JSON number, never computed by a client.
+      pattern: ^-?(0|[1-9][0-9]*)(\.[0-9]+)?$
+      maxLength: 64
+      example: "122.00"
+
+    CTCTerms:
+      type: object
+      title: CTCTerms
+      description: One version of what a cell owes.
+      additionalProperties: false
+      required:
+        - duty
+        - model
+        - profile
+        - authority
+        - legalSource
+        - sourceAsOf
+        - effectiveFrom
+      properties:
+        duty:
+          $ref: "#/components/schemas/CTCDuty"
+        model:
+          $ref: "#/components/schemas/CTCModel"
+        profile:
+          $ref: "#/components/schemas/CTCProfile"
+        formatVersion:
+          $ref: "#/components/schemas/CTCText"
+        authority:
+          $ref: "#/components/schemas/CTCText"
+        legalSource:
+          $ref: "#/components/schemas/CTCLegalSource"
+        sourceAsOf:
+          $ref: "#/components/schemas/CivilDate"
+        effectiveFrom:
+          $ref: "#/components/schemas/CivilDate"
+        effectiveTo:
+          $ref: "#/components/schemas/CivilDate"
+        conditions:
+          $ref: "#/components/schemas/EvidenceText"
+
+    CTCTermsVersion:
+      type: object
+      title: CTCTermsVersion
+      description: A recorded version of a record's terms. Never edited.
+      additionalProperties: false
+      required:
+        - version
+        - terms
+        - digest
+        - recordedAt
+        - recordedBy
+      properties:
+        version:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        terms:
+          $ref: "#/components/schemas/CTCTerms"
+        digest:
+          $ref: "#/components/schemas/Digest"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+
+    CTCGateSignoff:
+      type: object
+      title: CTCGateSignoff
+      description: A gate signed on an exact version.
+      additionalProperties: false
+      required:
+        - gate
+        - version
+        - signoffRef
+        - signedAt
+        - signedBy
+      properties:
+        gate:
+          $ref: "#/components/schemas/CTCGate"
+        version:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        signoffRef:
+          $ref: "#/components/schemas/CTCReference"
+        note:
+          $ref: "#/components/schemas/EvidenceText"
+        signedAt:
+          $ref: "#/components/schemas/Timestamp"
+        signedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+
+    CTCApplicabilityEvent:
+      type: object
+      title: CTCApplicabilityEvent
+      description: One appended act on a record.
+      additionalProperties: false
+      required:
+        - seq
+        - kind
+        - status
+        - recordedAt
+        - recordedBy
+      properties:
+        seq:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        kind:
+          $ref: "#/components/schemas/CTCApplicabilityEventKind"
+        status:
+          $ref: "#/components/schemas/CTCApplicabilityStatus"
+        version:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        gate:
+          $ref: "#/components/schemas/CTCGate"
+        signoffRef:
+          $ref: "#/components/schemas/CTCReference"
+        reason:
+          $ref: "#/components/schemas/EvidenceText"
+        evidence:
+          $ref: "#/components/schemas/EvidenceDocument"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+
+    CTCApplicability:
+      type: object
+      title: CTCApplicability
+      description: "A country applicability record (Doc 21 W01, W20): one legal entity, country, document type and buyer kind, with versioned terms, sign-offs, evidence and history."
+      additionalProperties: false
+      required:
+        - id
+        - legalEntityId
+        - country
+        - documentType
+        - buyerKind
+        - status
+        - currentVersion
+        - terms
+        - versions
+        - requiredGates
+        - missingGates
+        - signoffs
+        - evidence
+        - history
+        - createdAt
+        - createdBy
+      properties:
+        id:
+          $ref: "#/components/schemas/CTCApplicabilityId"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        country:
+          $ref: "#/components/schemas/CTCCountry"
+        documentType:
+          $ref: "#/components/schemas/CTCDocumentType"
+        buyerKind:
+          $ref: "#/components/schemas/CTCBuyerKind"
+        status:
+          $ref: "#/components/schemas/CTCApplicabilityStatus"
+        currentVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        terms:
+          $ref: "#/components/schemas/CTCTerms"
+        versions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CTCTermsVersion"
+        requiredGates:
+          type: array
+          description: The gates the current version's duty needs.
+          items:
+            $ref: "#/components/schemas/CTCGate"
+        missingGates:
+          type: array
+          description: The required gates not yet signed on the current version.
+          items:
+            $ref: "#/components/schemas/CTCGate"
+        signoffs:
+          type: array
+          description: The sign-offs on the current version.
+          items:
+            $ref: "#/components/schemas/CTCGateSignoff"
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/EvidenceDocument"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/CTCApplicabilityEvent"
+        createdAt:
+          $ref: "#/components/schemas/Timestamp"
+        createdBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+
+    CTCApplicabilityList:
+      type: object
+      title: CTCApplicabilityList
+      description: Country applicability records.
+      additionalProperties: false
+      required:
+        - records
+      properties:
+        records:
+          type: array
+          items:
+            $ref: "#/components/schemas/CTCApplicability"
+
+    CTCApplicabilityRequest:
+      type: object
+      title: CTCApplicabilityRequest
+      description: A record to create.
+      additionalProperties: false
+      required:
+        - country
+        - documentType
+        - buyerKind
+        - terms
+      properties:
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        country:
+          $ref: "#/components/schemas/CTCCountry"
+        documentType:
+          $ref: "#/components/schemas/CTCDocumentType"
+        buyerKind:
+          $ref: "#/components/schemas/CTCBuyerKind"
+        terms:
+          $ref: "#/components/schemas/CTCTerms"
+
+    CTCGateRequest:
+      type: object
+      title: CTCGateRequest
+      description: A gate sign-off.
+      additionalProperties: false
+      required:
+        - gate
+        - version
+        - signoffRef
+      properties:
+        gate:
+          $ref: "#/components/schemas/CTCGate"
+        version:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+          description: The version reviewed. Any other is VERSION_CONFLICT.
+        signoffRef:
+          $ref: "#/components/schemas/CTCReference"
+        note:
+          $ref: "#/components/schemas/EvidenceText"
+
+    CTCTransitionRequest:
+      type: object
+      title: CTCTransitionRequest
+      description: A move of a record.
+      additionalProperties: false
+      required:
+        - action
+      properties:
+        action:
+          $ref: "#/components/schemas/CTCAction"
+        version:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+          description: The version an activation is on.
+        reason:
+          $ref: "#/components/schemas/EvidenceText"
+
+    CTCResolution:
+      type: object
+      title: CTCResolution
+      description: What a cell owes on a date. No side effect.
+      additionalProperties: false
+      required:
+        - legalEntityId
+        - country
+        - documentType
+        - buyerKind
+        - date
+        - duty
+        - dispatchPermitted
+        - detail
+      properties:
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        country:
+          $ref: "#/components/schemas/CTCCountry"
+        documentType:
+          $ref: "#/components/schemas/CTCDocumentType"
+        buyerKind:
+          $ref: "#/components/schemas/CTCBuyerKind"
+        date:
+          $ref: "#/components/schemas/CivilDate"
+        duty:
+          $ref: "#/components/schemas/CTCResolvedDuty"
+        dispatchPermitted:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: "Whether documents of the cell may be validated and submitted: the duty is REQUIRED or OPTIONAL."
+        reasonCode:
+          $ref: "#/components/schemas/ReasonCode"
+        detail:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        applicabilityId:
+          $ref: "#/components/schemas/CTCApplicabilityId"
+        applicabilityVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        applicabilityStatus:
+          $ref: "#/components/schemas/CTCApplicabilityStatus"
+        terms:
+          $ref: "#/components/schemas/CTCTerms"
+
+    CTCRuleStage:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCRuleStage
+      description: The validation stage a rule belongs to.
+      enum:
+        - APPLICABILITY
+        - SEMANTIC
+        - REGIME
+        - SYNTAX
+
+    CTCRuleSeverity:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCRuleSeverity
+      description: FATAL blocks submission and is never waived; WARNING is reported.
+      enum:
+        - FATAL
+        - WARNING
+
+    CTCRuleOutcome:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCRuleOutcome
+      description: One rule's result. NOT_EVALUATED is never a pass.
+      enum:
+        - PASS
+        - FAIL
+        - NOT_EVALUATED
+
+    CTCValidationOutcome:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCValidationOutcome
+      description: PASSED means no FATAL rule failed. It is not certification.
+      enum:
+        - PASSED
+        - FAILED
+
+    CTCRuleResult:
+      type: object
+      title: CTCRuleResult
+      description: One rule's result on one document.
+      additionalProperties: false
+      required:
+        - ruleId
+        - stage
+        - severity
+        - outcome
+      properties:
+        ruleId:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        stage:
+          $ref: "#/components/schemas/CTCRuleStage"
+        severity:
+          $ref: "#/components/schemas/CTCRuleSeverity"
+        outcome:
+          $ref: "#/components/schemas/CTCRuleOutcome"
+        reasonCode:
+          $ref: "#/components/schemas/ReasonCode"
+        businessTerm:
+          x-ztax-privacy:
+            class: P0
+          type: string
+        detail:
+          x-ztax-privacy:
+            class: P0
+          type: string
+
+    CTCValidation:
+      type: object
+      title: CTCValidation
+      description: An immutable format validation report (Doc 21 W06).
+      additionalProperties: false
+      required:
+        - id
+        - documentId
+        - applicabilityId
+        - applicabilityVersion
+        - profile
+        - ruleset
+        - inputDigest
+        - outcome
+        - fatalFailures
+        - schemaValidated
+        - results
+        - digest
+        - validatedAt
+        - validatedBy
+      properties:
+        id:
+          $ref: "#/components/schemas/CTCValidationId"
+        documentId:
+          $ref: "#/components/schemas/DocumentId"
+        applicabilityId:
+          $ref: "#/components/schemas/CTCApplicabilityId"
+        applicabilityVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        profile:
+          $ref: "#/components/schemas/CTCProfile"
+        formatVersion:
+          $ref: "#/components/schemas/CTCText"
+        ruleset:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The ruleset version the rules ran under.
+        inputDigest:
+          $ref: "#/components/schemas/Digest"
+        outcome:
+          $ref: "#/components/schemas/CTCValidationOutcome"
+        fatalFailures:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 0
+        schemaValidated:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+          description: "Whether the official schema and Schematron stage ran. Always false here: no licensed bundle is installed."
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/CTCRuleResult"
+        digest:
+          $ref: "#/components/schemas/Digest"
+        validatedAt:
+          $ref: "#/components/schemas/Timestamp"
+        validatedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+
+    CTCValidationList:
+      type: object
+      title: CTCValidationList
+      description: Validation reports.
+      additionalProperties: false
+      required:
+        - validations
+      properties:
+        validations:
+          type: array
+          items:
+            $ref: "#/components/schemas/CTCValidation"
+
+    CTCValidationRequest:
+      type: object
+      title: CTCValidationRequest
+      description: A document to validate under a record.
+      additionalProperties: false
+      required:
+        - documentId
+        - applicabilityId
+      properties:
+        documentId:
+          $ref: "#/components/schemas/DocumentId"
+        applicabilityId:
+          $ref: "#/components/schemas/CTCApplicabilityId"
+
+    CTCSubmissionStatus:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCSubmissionStatus
+      description: Where a submission stands (Doc 21 §06). TRANSPORT_RECEIVED is not acceptance.
+      enum:
+        - PREPARED
+        - SENT
+        - TRANSPORT_RECEIVED
+        - AUTHORITY_ACCEPTED
+        - AUTHORITY_REJECTED
+        - UNCERTAIN_EXTERNAL_STATE
+        - WITHDRAWN
+
+    CTCSubmissionEventKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCSubmissionEventKind
+      description: What happened to a submission.
+      enum:
+        - PREPARED
+        - DISPATCHED
+        - TRANSPORT_RECEIVED
+        - AUTHORITY_ACCEPTED
+        - AUTHORITY_REJECTED
+        - OUTCOME_UNKNOWN
+        - STATUS_NOT_FOUND
+        - WITHDRAWN
+
+    CTCResponseKind:
+      x-ztax-privacy:
+        class: P0
+      type: string
+      title: CTCResponseKind
+      description: An answer a person records.
+      enum:
+        - TRANSPORT_RECEIVED
+        - AUTHORITY_ACCEPTED
+        - AUTHORITY_REJECTED
+        - OUTCOME_UNKNOWN
+        - STATUS_NOT_FOUND
+
+    CTCSubmissionEvent:
+      type: object
+      title: CTCSubmissionEvent
+      description: One appended act on a submission.
+      additionalProperties: false
+      required:
+        - seq
+        - kind
+        - status
+        - recordedAt
+        - recordedBy
+      properties:
+        seq:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        kind:
+          $ref: "#/components/schemas/CTCSubmissionEventKind"
+        status:
+          $ref: "#/components/schemas/CTCSubmissionStatus"
+        attemptId:
+          $ref: "#/components/schemas/CTCAttemptId"
+        transportRef:
+          $ref: "#/components/schemas/CTCReference"
+        authorityRef:
+          $ref: "#/components/schemas/CTCReference"
+        authorityCode:
+          $ref: "#/components/schemas/CTCReference"
+        evidenceSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+        detail:
+          $ref: "#/components/schemas/EvidenceText"
+        recordedAt:
+          $ref: "#/components/schemas/Timestamp"
+        recordedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+
+    CTCCorrectionTask:
+      type: object
+      title: CTCCorrectionTask
+      description: "What an authority rejection opens: the rejected document is corrected through the fiscal corrections flow by a new document naming it, never edited. Open until one exists."
+      additionalProperties: false
+      required:
+        - documentId
+        - open
+        - openedAt
+        - correctedBy
+      properties:
+        documentId:
+          $ref: "#/components/schemas/DocumentId"
+        open:
+          x-ztax-privacy:
+            class: P0
+          type: boolean
+        openedAt:
+          $ref: "#/components/schemas/Timestamp"
+        authorityCode:
+          $ref: "#/components/schemas/CTCReference"
+        reason:
+          $ref: "#/components/schemas/EvidenceText"
+        correctedBy:
+          type: array
+          description: Committed documents naming the rejected one as their predecessor.
+          items:
+            $ref: "#/components/schemas/DocumentId"
+
+    CTCSubmission:
+      type: object
+      title: CTCSubmission
+      description: An authority submission of a fiscal document under a record version (Doc 21 W14, W15).
+      additionalProperties: false
+      required:
+        - id
+        - documentId
+        - documentType
+        - legalEntityId
+        - country
+        - buyerKind
+        - applicabilityId
+        - applicabilityVersion
+        - model
+        - profile
+        - validationId
+        - currency
+        - gross
+        - payloadDigest
+        - externalRef
+        - preparedAt
+        - preparedBy
+        - status
+        - history
+      properties:
+        id:
+          $ref: "#/components/schemas/CTCSubmissionId"
+        documentId:
+          $ref: "#/components/schemas/DocumentId"
+        documentNumber:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The legal, customer-visible document number.
+        documentType:
+          $ref: "#/components/schemas/CTCDocumentType"
+        legalEntityId:
+          $ref: "#/components/schemas/LegalEntityId"
+        country:
+          $ref: "#/components/schemas/CTCCountry"
+        buyerKind:
+          $ref: "#/components/schemas/CTCBuyerKind"
+        applicabilityId:
+          $ref: "#/components/schemas/CTCApplicabilityId"
+        applicabilityVersion:
+          x-ztax-privacy:
+            class: P0
+          type: integer
+          format: int32
+          minimum: 1
+        model:
+          $ref: "#/components/schemas/CTCModel"
+        profile:
+          $ref: "#/components/schemas/CTCProfile"
+        formatVersion:
+          $ref: "#/components/schemas/CTCText"
+        validationId:
+          $ref: "#/components/schemas/CTCValidationId"
+        currency:
+          $ref: "#/components/schemas/CurrencyCode"
+        gross:
+          $ref: "#/components/schemas/CTCAmount"
+        payloadDigest:
+          $ref: "#/components/schemas/Digest"
+        externalRef:
+          x-ztax-privacy:
+            class: P0
+          type: string
+          description: The reference every attempt carries, and a status enquiry asks by. Never changes across attempts.
+        preparedAt:
+          $ref: "#/components/schemas/Timestamp"
+        preparedBy:
+          x-ztax-privacy:
+            class: P1
+            purposes:
+              - PURP-SEC
+              - PURP-EVID
+            retention: RET-EVIDENCE
+            redaction: NONE
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/CTCSubmissionStatus"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/CTCSubmissionEvent"
+        correction:
+          $ref: "#/components/schemas/CTCCorrectionTask"
+
+    CTCSubmissionList:
+      type: object
+      title: CTCSubmissionList
+      description: Submissions.
+      additionalProperties: false
+      required:
+        - submissions
+      properties:
+        submissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CTCSubmission"
+
+    CTCSubmissionRequest:
+      type: object
+      title: CTCSubmissionRequest
+      description: A document to submit under a record.
+      additionalProperties: false
+      required:
+        - documentId
+        - applicabilityId
+      properties:
+        documentId:
+          $ref: "#/components/schemas/DocumentId"
+        applicabilityId:
+          $ref: "#/components/schemas/CTCApplicabilityId"
+
+    CTCDispatchRequest:
+      type: object
+      title: CTCDispatchRequest
+      description: A checker's authorisation of a dispatch.
+      additionalProperties: false
+      required:
+        - payloadDigest
+      properties:
+        payloadDigest:
+          $ref: "#/components/schemas/Digest"
+
+    CTCResponseRequest:
+      type: object
+      title: CTCResponseRequest
+      description: An answer, as a person records it.
+      additionalProperties: false
+      required:
+        - kind
+        - attemptId
+      properties:
+        kind:
+          $ref: "#/components/schemas/CTCResponseKind"
+        attemptId:
+          $ref: "#/components/schemas/CTCAttemptId"
+        transportRef:
+          $ref: "#/components/schemas/CTCReference"
+        authorityRef:
+          $ref: "#/components/schemas/CTCReference"
+        authorityCode:
+          $ref: "#/components/schemas/CTCReference"
+        evidenceSha256:
+          $ref: "#/components/schemas/Sha256Hex"
+        detail:
+          $ref: "#/components/schemas/EvidenceText"
+
+    CTCWithdrawalRequest:
+      type: object
+      title: CTCWithdrawalRequest
+      description: Why a prepared submission is withdrawn.
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          $ref: "#/components/schemas/EvidenceText"

@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:e5cfae3c5dad428ce8828f0d7e4919dc5888f0a74c118be81ae1437b1920072e`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:5d218bdacaf95efc549b4a4f95ff8b366515543ceafe1fbed368cc5763662672`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -13237,6 +13237,1570 @@
           ]
         },
         {
+          "name": "POST /v1/ctc/applicability — Record a country applicability record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"country\": \"IT\",\n  \"documentType\": \"INVOICE\",\n  \"buyerKind\": \"B2B\",\n  \"terms\": {\n    \"duty\": \"REQUIRED\",\n    \"model\": \"CLEARANCE\",\n    \"profile\": \"IT_FATTURAPA\",\n    \"formatVersion\": \"FPR12 1.9\",\n    \"authority\": \"Agenzia delle Entrate — SdI\",\n    \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n    \"sourceAsOf\": \"2026-10-30\",\n    \"effectiveFrom\": \"2026-01-01\",\n    \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/ctc/applicability",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "ctc",
+                "applicability"
+              ]
+            },
+            "description": "Record a country applicability record\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nRecords one cell — legal entity, country, document type, buyer kind — and\nthe first version of its terms, in `DRAFT`. It decides nothing until it is\nsubmitted, every G0–G4 gate its duty needs is signed on its current version\nby someone other than its authors, evidence is attached and another person\nactivates it. A national format profile is only used in its own country\n(`400 CTC_PROFILE_COUNTRY_MISMATCH`). An absent `legalEntityId` is the\ntenant's default entity."
+          },
+          "response": [
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/applicability",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "applicability"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"documentType\": \"INVOICE\",\n  \"buyerKind\": \"B2B\",\n  \"status\": \"DRAFT\",\n  \"currentVersion\": 1,\n  \"terms\": {\n    \"duty\": \"REQUIRED\",\n    \"model\": \"CLEARANCE\",\n    \"profile\": \"IT_FATTURAPA\",\n    \"formatVersion\": \"FPR12 1.9\",\n    \"authority\": \"Agenzia delle Entrate — SdI\",\n    \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n    \"sourceAsOf\": \"2026-10-30\",\n    \"effectiveFrom\": \"2026-01-01\",\n    \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n  },\n  \"versions\": [\n    {\n      \"version\": 1,\n      \"terms\": {\n        \"duty\": \"REQUIRED\",\n        \"model\": \"CLEARANCE\",\n        \"profile\": \"IT_FATTURAPA\",\n        \"formatVersion\": \"FPR12 1.9\",\n        \"authority\": \"Agenzia delle Entrate — SdI\",\n        \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n        \"sourceAsOf\": \"2026-10-30\",\n        \"effectiveFrom\": \"2026-01-01\",\n        \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n      },\n      \"digest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ],\n  \"requiredGates\": [\n    \"G0_SCOPE_AUTHORITY\",\n    \"G1_LEGAL_CONTENT_RIGHTS\",\n    \"G2_TECHNICAL_QA\",\n    \"G3_SECURITY_OPERATIONS\",\n    \"G4_CONTROLLED_PRODUCTION\"\n  ],\n  \"missingGates\": [\n    \"G0_SCOPE_AUTHORITY\",\n    \"G1_LEGAL_CONTENT_RIGHTS\",\n    \"G2_TECHNICAL_QA\",\n    \"G3_SECURITY_OPERATIONS\",\n    \"G4_CONTROLLED_PRODUCTION\"\n  ],\n  \"signoffs\": [],\n  \"evidence\": [],\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"CREATED\",\n      \"status\": \"DRAFT\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ],\n  \"createdAt\": \"2026-11-02T09:00:00.000000Z\",\n  \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('createCTCApplicability returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([201]);",
+                  "});",
+                  "pm.test('Doc 21 W01 — a new applicability record decides nothing until activated', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "  pm.expect(pm.response.json().status).to.eql('DRAFT');",
+                  "  pm.expect(pm.response.json().missingGates.length).to.eql(5);",
+                  "});",
+                  "pm.collectionVariables.set('applicabilityId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/ctc/applicability/{applicabilityId} — One country applicability record",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/ctc/applicability/{{applicabilityId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "ctc",
+                "applicability",
+                "{{applicabilityId}}"
+              ]
+            },
+            "description": "One country applicability record\n\n`OPERATOR`, `ANALYST` or `AUDITOR`."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/applicability/{{applicabilityId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "applicability",
+                    "{{applicabilityId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"documentType\": \"INVOICE\",\n  \"buyerKind\": \"B2B\",\n  \"status\": \"ACTIVE\",\n  \"currentVersion\": 1,\n  \"terms\": {\n    \"duty\": \"REQUIRED\",\n    \"model\": \"CLEARANCE\",\n    \"profile\": \"IT_FATTURAPA\",\n    \"formatVersion\": \"FPR12 1.9\",\n    \"authority\": \"Agenzia delle Entrate — SdI\",\n    \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n    \"sourceAsOf\": \"2026-10-30\",\n    \"effectiveFrom\": \"2026-01-01\",\n    \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n  },\n  \"versions\": [\n    {\n      \"version\": 1,\n      \"terms\": {\n        \"duty\": \"REQUIRED\",\n        \"model\": \"CLEARANCE\",\n        \"profile\": \"IT_FATTURAPA\",\n        \"formatVersion\": \"FPR12 1.9\",\n        \"authority\": \"Agenzia delle Entrate — SdI\",\n        \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n        \"sourceAsOf\": \"2026-10-30\",\n        \"effectiveFrom\": \"2026-01-01\",\n        \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n      },\n      \"digest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ],\n  \"requiredGates\": [\n    \"G0_SCOPE_AUTHORITY\",\n    \"G1_LEGAL_CONTENT_RIGHTS\",\n    \"G2_TECHNICAL_QA\",\n    \"G3_SECURITY_OPERATIONS\",\n    \"G4_CONTROLLED_PRODUCTION\"\n  ],\n  \"missingGates\": [],\n  \"signoffs\": [\n    {\n      \"gate\": \"G0_SCOPE_AUTHORITY\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-01\",\n      \"signedAt\": \"2026-11-03T10:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G1_LEGAL_CONTENT_RIGHTS\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-02\",\n      \"signedAt\": \"2026-11-03T11:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G2_TECHNICAL_QA\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-03\",\n      \"signedAt\": \"2026-11-03T12:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G3_SECURITY_OPERATIONS\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-04\",\n      \"signedAt\": \"2026-11-03T13:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G4_CONTROLLED_PRODUCTION\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-05\",\n      \"signedAt\": \"2026-11-03T14:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n      \"filename\": \"it-sdi-legal-opinion.pdf\",\n      \"mediaType\": \"application/pdf\",\n      \"bytes\": 48213\n    }\n  ],\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"CREATED\",\n      \"status\": \"DRAFT\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"EVIDENCE_ADDED\",\n      \"status\": \"DRAFT\",\n      \"evidence\": {\n        \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n        \"filename\": \"it-sdi-legal-opinion.pdf\",\n        \"mediaType\": \"application/pdf\",\n        \"bytes\": 48213\n      },\n      \"recordedAt\": \"2026-11-02T09:05:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 3,\n      \"kind\": \"SUBMITTED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-02T09:10:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 4,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G0_SCOPE_AUTHORITY\",\n      \"signoffRef\": \"CAB-2026-11-01\",\n      \"recordedAt\": \"2026-11-03T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 5,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G1_LEGAL_CONTENT_RIGHTS\",\n      \"signoffRef\": \"CAB-2026-11-02\",\n      \"recordedAt\": \"2026-11-03T11:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 6,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G2_TECHNICAL_QA\",\n      \"signoffRef\": \"CAB-2026-11-03\",\n      \"recordedAt\": \"2026-11-03T12:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 7,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G3_SECURITY_OPERATIONS\",\n      \"signoffRef\": \"CAB-2026-11-04\",\n      \"recordedAt\": \"2026-11-03T13:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 8,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G4_CONTROLLED_PRODUCTION\",\n      \"signoffRef\": \"CAB-2026-11-05\",\n      \"recordedAt\": \"2026-11-03T14:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 9,\n      \"kind\": \"ACTIVATED\",\n      \"status\": \"ACTIVE\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-04T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a3\"\n    }\n  ],\n  \"createdAt\": \"2026-11-02T09:00:00.000000Z\",\n  \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getCTCApplicability returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/ctc/applicability — Country applicability records",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/ctc/applicability?legalEntityId={{legalEntityId}}&country={{country}}&status={{status}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "ctc",
+                "applicability"
+              ],
+              "query": [
+                {
+                  "key": "legalEntityId",
+                  "value": "{{legalEntityId}}",
+                  "description": "Only records of this legal entity."
+                },
+                {
+                  "key": "country",
+                  "value": "{{country}}",
+                  "description": "Only records for this country."
+                },
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only records in this status."
+                }
+              ]
+            },
+            "description": "Country applicability records\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nThe tenant's country applicability records (Doc 21 W01), oldest first, in any\nstatus, each with its terms versions, G0–G4 sign-offs, evidence and history.\nA record decides a duty only while it is `ACTIVE`."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/applicability",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "applicability"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"records\": [\n    {\n      \"id\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"country\": \"IT\",\n      \"documentType\": \"INVOICE\",\n      \"buyerKind\": \"B2B\",\n      \"status\": \"ACTIVE\",\n      \"currentVersion\": 1,\n      \"terms\": {\n        \"duty\": \"REQUIRED\",\n        \"model\": \"CLEARANCE\",\n        \"profile\": \"IT_FATTURAPA\",\n        \"formatVersion\": \"FPR12 1.9\",\n        \"authority\": \"Agenzia delle Entrate — SdI\",\n        \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n        \"sourceAsOf\": \"2026-10-30\",\n        \"effectiveFrom\": \"2026-01-01\",\n        \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n      },\n      \"versions\": [\n        {\n          \"version\": 1,\n          \"terms\": {\n            \"duty\": \"REQUIRED\",\n            \"model\": \"CLEARANCE\",\n            \"profile\": \"IT_FATTURAPA\",\n            \"formatVersion\": \"FPR12 1.9\",\n            \"authority\": \"Agenzia delle Entrate — SdI\",\n            \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n            \"sourceAsOf\": \"2026-10-30\",\n            \"effectiveFrom\": \"2026-01-01\",\n            \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n          },\n          \"digest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n          \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        }\n      ],\n      \"requiredGates\": [\n        \"G0_SCOPE_AUTHORITY\",\n        \"G1_LEGAL_CONTENT_RIGHTS\",\n        \"G2_TECHNICAL_QA\",\n        \"G3_SECURITY_OPERATIONS\",\n        \"G4_CONTROLLED_PRODUCTION\"\n      ],\n      \"missingGates\": [],\n      \"signoffs\": [\n        {\n          \"gate\": \"G0_SCOPE_AUTHORITY\",\n          \"version\": 1,\n          \"signoffRef\": \"CAB-2026-11-01\",\n          \"signedAt\": \"2026-11-03T10:00:00.000000Z\",\n          \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        },\n        {\n          \"gate\": \"G1_LEGAL_CONTENT_RIGHTS\",\n          \"version\": 1,\n          \"signoffRef\": \"CAB-2026-11-02\",\n          \"signedAt\": \"2026-11-03T11:00:00.000000Z\",\n          \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        },\n        {\n          \"gate\": \"G2_TECHNICAL_QA\",\n          \"version\": 1,\n          \"signoffRef\": \"CAB-2026-11-03\",\n          \"signedAt\": \"2026-11-03T12:00:00.000000Z\",\n          \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        },\n        {\n          \"gate\": \"G3_SECURITY_OPERATIONS\",\n          \"version\": 1,\n          \"signoffRef\": \"CAB-2026-11-04\",\n          \"signedAt\": \"2026-11-03T13:00:00.000000Z\",\n          \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        },\n        {\n          \"gate\": \"G4_CONTROLLED_PRODUCTION\",\n          \"version\": 1,\n          \"signoffRef\": \"CAB-2026-11-05\",\n          \"signedAt\": \"2026-11-03T14:00:00.000000Z\",\n          \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        }\n      ],\n      \"evidence\": [\n        {\n          \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n          \"filename\": \"it-sdi-legal-opinion.pdf\",\n          \"mediaType\": \"application/pdf\",\n          \"bytes\": 48213\n        }\n      ],\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"CREATED\",\n          \"status\": \"DRAFT\",\n          \"version\": 1,\n          \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 2,\n          \"kind\": \"EVIDENCE_ADDED\",\n          \"status\": \"DRAFT\",\n          \"evidence\": {\n            \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n            \"filename\": \"it-sdi-legal-opinion.pdf\",\n            \"mediaType\": \"application/pdf\",\n            \"bytes\": 48213\n          },\n          \"recordedAt\": \"2026-11-02T09:05:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 3,\n          \"kind\": \"SUBMITTED\",\n          \"status\": \"IN_REVIEW\",\n          \"version\": 1,\n          \"recordedAt\": \"2026-11-02T09:10:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 4,\n          \"kind\": \"GATE_SIGNED\",\n          \"status\": \"IN_REVIEW\",\n          \"version\": 1,\n          \"gate\": \"G0_SCOPE_AUTHORITY\",\n          \"signoffRef\": \"CAB-2026-11-01\",\n          \"recordedAt\": \"2026-11-03T10:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        },\n        {\n          \"seq\": 5,\n          \"kind\": \"GATE_SIGNED\",\n          \"status\": \"IN_REVIEW\",\n          \"version\": 1,\n          \"gate\": \"G1_LEGAL_CONTENT_RIGHTS\",\n          \"signoffRef\": \"CAB-2026-11-02\",\n          \"recordedAt\": \"2026-11-03T11:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        },\n        {\n          \"seq\": 6,\n          \"kind\": \"GATE_SIGNED\",\n          \"status\": \"IN_REVIEW\",\n          \"version\": 1,\n          \"gate\": \"G2_TECHNICAL_QA\",\n          \"signoffRef\": \"CAB-2026-11-03\",\n          \"recordedAt\": \"2026-11-03T12:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        },\n        {\n          \"seq\": 7,\n          \"kind\": \"GATE_SIGNED\",\n          \"status\": \"IN_REVIEW\",\n          \"version\": 1,\n          \"gate\": \"G3_SECURITY_OPERATIONS\",\n          \"signoffRef\": \"CAB-2026-11-04\",\n          \"recordedAt\": \"2026-11-03T13:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        },\n        {\n          \"seq\": 8,\n          \"kind\": \"GATE_SIGNED\",\n          \"status\": \"IN_REVIEW\",\n          \"version\": 1,\n          \"gate\": \"G4_CONTROLLED_PRODUCTION\",\n          \"signoffRef\": \"CAB-2026-11-05\",\n          \"recordedAt\": \"2026-11-03T14:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        },\n        {\n          \"seq\": 9,\n          \"kind\": \"ACTIVATED\",\n          \"status\": \"ACTIVE\",\n          \"version\": 1,\n          \"recordedAt\": \"2026-11-04T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a3\"\n        }\n      ],\n      \"createdAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listCTCApplicability returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/ctc/applicability/{applicabilityId}/versions — Record the next version of a record's terms",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"duty\": \"REQUIRED\",\n  \"model\": \"CLEARANCE\",\n  \"profile\": \"IT_FATTURAPA\",\n  \"formatVersion\": \"FPR12 1.9.1\",\n  \"authority\": \"Agenzia delle Entrate — SdI\",\n  \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n  \"sourceAsOf\": \"2026-10-30\",\n  \"effectiveFrom\": \"2026-01-01\",\n  \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/ctc/applicability/{{applicabilityId}}/versions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "ctc",
+                "applicability",
+                "{{applicabilityId}}",
+                "versions"
+              ]
+            },
+            "description": "Record the next version of a record's terms\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nTerms are never edited: a change is the next version, and a record in review\nreturns to `DRAFT` — sign-offs given on an earlier version do not carry over.\nOnly a `DRAFT` or `IN_REVIEW` record is revised; an active one is retired and\nreplaced. Terms identical to the current version record nothing and answer\n`200`."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/applicability/{{applicabilityId}}/versions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "applicability",
+                    "{{applicabilityId}}",
+                    "versions"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"documentType\": \"INVOICE\",\n  \"buyerKind\": \"B2B\",\n  \"status\": \"DRAFT\",\n  \"currentVersion\": 1,\n  \"terms\": {\n    \"duty\": \"REQUIRED\",\n    \"model\": \"CLEARANCE\",\n    \"profile\": \"IT_FATTURAPA\",\n    \"formatVersion\": \"FPR12 1.9\",\n    \"authority\": \"Agenzia delle Entrate — SdI\",\n    \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n    \"sourceAsOf\": \"2026-10-30\",\n    \"effectiveFrom\": \"2026-01-01\",\n    \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n  },\n  \"versions\": [\n    {\n      \"version\": 1,\n      \"terms\": {\n        \"duty\": \"REQUIRED\",\n        \"model\": \"CLEARANCE\",\n        \"profile\": \"IT_FATTURAPA\",\n        \"formatVersion\": \"FPR12 1.9\",\n        \"authority\": \"Agenzia delle Entrate — SdI\",\n        \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n        \"sourceAsOf\": \"2026-10-30\",\n        \"effectiveFrom\": \"2026-01-01\",\n        \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n      },\n      \"digest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ],\n  \"requiredGates\": [\n    \"G0_SCOPE_AUTHORITY\",\n    \"G1_LEGAL_CONTENT_RIGHTS\",\n    \"G2_TECHNICAL_QA\",\n    \"G3_SECURITY_OPERATIONS\",\n    \"G4_CONTROLLED_PRODUCTION\"\n  ],\n  \"missingGates\": [\n    \"G0_SCOPE_AUTHORITY\",\n    \"G1_LEGAL_CONTENT_RIGHTS\",\n    \"G2_TECHNICAL_QA\",\n    \"G3_SECURITY_OPERATIONS\",\n    \"G4_CONTROLLED_PRODUCTION\"\n  ],\n  \"signoffs\": [],\n  \"evidence\": [],\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"CREATED\",\n      \"status\": \"DRAFT\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ],\n  \"createdAt\": \"2026-11-02T09:00:00.000000Z\",\n  \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n}"
+            },
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/applicability/{{applicabilityId}}/versions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "applicability",
+                    "{{applicabilityId}}",
+                    "versions"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"documentType\": \"INVOICE\",\n  \"buyerKind\": \"B2B\",\n  \"status\": \"DRAFT\",\n  \"currentVersion\": 1,\n  \"terms\": {\n    \"duty\": \"REQUIRED\",\n    \"model\": \"CLEARANCE\",\n    \"profile\": \"IT_FATTURAPA\",\n    \"formatVersion\": \"FPR12 1.9\",\n    \"authority\": \"Agenzia delle Entrate — SdI\",\n    \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n    \"sourceAsOf\": \"2026-10-30\",\n    \"effectiveFrom\": \"2026-01-01\",\n    \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n  },\n  \"versions\": [\n    {\n      \"version\": 1,\n      \"terms\": {\n        \"duty\": \"REQUIRED\",\n        \"model\": \"CLEARANCE\",\n        \"profile\": \"IT_FATTURAPA\",\n        \"formatVersion\": \"FPR12 1.9\",\n        \"authority\": \"Agenzia delle Entrate — SdI\",\n        \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n        \"sourceAsOf\": \"2026-10-30\",\n        \"effectiveFrom\": \"2026-01-01\",\n        \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n      },\n      \"digest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ],\n  \"requiredGates\": [\n    \"G0_SCOPE_AUTHORITY\",\n    \"G1_LEGAL_CONTENT_RIGHTS\",\n    \"G2_TECHNICAL_QA\",\n    \"G3_SECURITY_OPERATIONS\",\n    \"G4_CONTROLLED_PRODUCTION\"\n  ],\n  \"missingGates\": [\n    \"G0_SCOPE_AUTHORITY\",\n    \"G1_LEGAL_CONTENT_RIGHTS\",\n    \"G2_TECHNICAL_QA\",\n    \"G3_SECURITY_OPERATIONS\",\n    \"G4_CONTROLLED_PRODUCTION\"\n  ],\n  \"signoffs\": [],\n  \"evidence\": [],\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"CREATED\",\n      \"status\": \"DRAFT\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ],\n  \"createdAt\": \"2026-11-02T09:00:00.000000Z\",\n  \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('reviseCTCApplicability returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/ctc/applicability/{applicabilityId}/evidence — Attach an evidence document to a record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n  \"filename\": \"it-sdi-legal-opinion.pdf\",\n  \"mediaType\": \"application/pdf\",\n  \"bytes\": 48213\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/ctc/applicability/{{applicabilityId}}/evidence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "ctc",
+                "applicability",
+                "{{applicabilityId}}",
+                "evidence"
+              ]
+            },
+            "description": "Attach an evidence document to a record\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nThe legal source evidence, recorded by the SHA-256 the browser computed. The\nfile itself is not uploaded. A record is activated only with evidence\nattached. The same document again records nothing and answers `200`."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/applicability/{{applicabilityId}}/evidence",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "applicability",
+                    "{{applicabilityId}}",
+                    "evidence"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"documentType\": \"INVOICE\",\n  \"buyerKind\": \"B2B\",\n  \"status\": \"ACTIVE\",\n  \"currentVersion\": 1,\n  \"terms\": {\n    \"duty\": \"REQUIRED\",\n    \"model\": \"CLEARANCE\",\n    \"profile\": \"IT_FATTURAPA\",\n    \"formatVersion\": \"FPR12 1.9\",\n    \"authority\": \"Agenzia delle Entrate — SdI\",\n    \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n    \"sourceAsOf\": \"2026-10-30\",\n    \"effectiveFrom\": \"2026-01-01\",\n    \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n  },\n  \"versions\": [\n    {\n      \"version\": 1,\n      \"terms\": {\n        \"duty\": \"REQUIRED\",\n        \"model\": \"CLEARANCE\",\n        \"profile\": \"IT_FATTURAPA\",\n        \"formatVersion\": \"FPR12 1.9\",\n        \"authority\": \"Agenzia delle Entrate — SdI\",\n        \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n        \"sourceAsOf\": \"2026-10-30\",\n        \"effectiveFrom\": \"2026-01-01\",\n        \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n      },\n      \"digest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ],\n  \"requiredGates\": [\n    \"G0_SCOPE_AUTHORITY\",\n    \"G1_LEGAL_CONTENT_RIGHTS\",\n    \"G2_TECHNICAL_QA\",\n    \"G3_SECURITY_OPERATIONS\",\n    \"G4_CONTROLLED_PRODUCTION\"\n  ],\n  \"missingGates\": [],\n  \"signoffs\": [\n    {\n      \"gate\": \"G0_SCOPE_AUTHORITY\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-01\",\n      \"signedAt\": \"2026-11-03T10:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G1_LEGAL_CONTENT_RIGHTS\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-02\",\n      \"signedAt\": \"2026-11-03T11:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G2_TECHNICAL_QA\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-03\",\n      \"signedAt\": \"2026-11-03T12:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G3_SECURITY_OPERATIONS\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-04\",\n      \"signedAt\": \"2026-11-03T13:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G4_CONTROLLED_PRODUCTION\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-05\",\n      \"signedAt\": \"2026-11-03T14:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n      \"filename\": \"it-sdi-legal-opinion.pdf\",\n      \"mediaType\": \"application/pdf\",\n      \"bytes\": 48213\n    }\n  ],\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"CREATED\",\n      \"status\": \"DRAFT\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"EVIDENCE_ADDED\",\n      \"status\": \"DRAFT\",\n      \"evidence\": {\n        \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n        \"filename\": \"it-sdi-legal-opinion.pdf\",\n        \"mediaType\": \"application/pdf\",\n        \"bytes\": 48213\n      },\n      \"recordedAt\": \"2026-11-02T09:05:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 3,\n      \"kind\": \"SUBMITTED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-02T09:10:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 4,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G0_SCOPE_AUTHORITY\",\n      \"signoffRef\": \"CAB-2026-11-01\",\n      \"recordedAt\": \"2026-11-03T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 5,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G1_LEGAL_CONTENT_RIGHTS\",\n      \"signoffRef\": \"CAB-2026-11-02\",\n      \"recordedAt\": \"2026-11-03T11:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 6,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G2_TECHNICAL_QA\",\n      \"signoffRef\": \"CAB-2026-11-03\",\n      \"recordedAt\": \"2026-11-03T12:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 7,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G3_SECURITY_OPERATIONS\",\n      \"signoffRef\": \"CAB-2026-11-04\",\n      \"recordedAt\": \"2026-11-03T13:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 8,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G4_CONTROLLED_PRODUCTION\",\n      \"signoffRef\": \"CAB-2026-11-05\",\n      \"recordedAt\": \"2026-11-03T14:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 9,\n      \"kind\": \"ACTIVATED\",\n      \"status\": \"ACTIVE\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-04T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a3\"\n    }\n  ],\n  \"createdAt\": \"2026-11-02T09:00:00.000000Z\",\n  \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n}"
+            },
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/applicability/{{applicabilityId}}/evidence",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "applicability",
+                    "{{applicabilityId}}",
+                    "evidence"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"documentType\": \"INVOICE\",\n  \"buyerKind\": \"B2B\",\n  \"status\": \"ACTIVE\",\n  \"currentVersion\": 1,\n  \"terms\": {\n    \"duty\": \"REQUIRED\",\n    \"model\": \"CLEARANCE\",\n    \"profile\": \"IT_FATTURAPA\",\n    \"formatVersion\": \"FPR12 1.9\",\n    \"authority\": \"Agenzia delle Entrate — SdI\",\n    \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n    \"sourceAsOf\": \"2026-10-30\",\n    \"effectiveFrom\": \"2026-01-01\",\n    \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n  },\n  \"versions\": [\n    {\n      \"version\": 1,\n      \"terms\": {\n        \"duty\": \"REQUIRED\",\n        \"model\": \"CLEARANCE\",\n        \"profile\": \"IT_FATTURAPA\",\n        \"formatVersion\": \"FPR12 1.9\",\n        \"authority\": \"Agenzia delle Entrate — SdI\",\n        \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n        \"sourceAsOf\": \"2026-10-30\",\n        \"effectiveFrom\": \"2026-01-01\",\n        \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n      },\n      \"digest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ],\n  \"requiredGates\": [\n    \"G0_SCOPE_AUTHORITY\",\n    \"G1_LEGAL_CONTENT_RIGHTS\",\n    \"G2_TECHNICAL_QA\",\n    \"G3_SECURITY_OPERATIONS\",\n    \"G4_CONTROLLED_PRODUCTION\"\n  ],\n  \"missingGates\": [],\n  \"signoffs\": [\n    {\n      \"gate\": \"G0_SCOPE_AUTHORITY\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-01\",\n      \"signedAt\": \"2026-11-03T10:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G1_LEGAL_CONTENT_RIGHTS\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-02\",\n      \"signedAt\": \"2026-11-03T11:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G2_TECHNICAL_QA\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-03\",\n      \"signedAt\": \"2026-11-03T12:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G3_SECURITY_OPERATIONS\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-04\",\n      \"signedAt\": \"2026-11-03T13:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G4_CONTROLLED_PRODUCTION\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-05\",\n      \"signedAt\": \"2026-11-03T14:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n      \"filename\": \"it-sdi-legal-opinion.pdf\",\n      \"mediaType\": \"application/pdf\",\n      \"bytes\": 48213\n    }\n  ],\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"CREATED\",\n      \"status\": \"DRAFT\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"EVIDENCE_ADDED\",\n      \"status\": \"DRAFT\",\n      \"evidence\": {\n        \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n        \"filename\": \"it-sdi-legal-opinion.pdf\",\n        \"mediaType\": \"application/pdf\",\n        \"bytes\": 48213\n      },\n      \"recordedAt\": \"2026-11-02T09:05:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 3,\n      \"kind\": \"SUBMITTED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-02T09:10:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 4,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G0_SCOPE_AUTHORITY\",\n      \"signoffRef\": \"CAB-2026-11-01\",\n      \"recordedAt\": \"2026-11-03T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 5,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G1_LEGAL_CONTENT_RIGHTS\",\n      \"signoffRef\": \"CAB-2026-11-02\",\n      \"recordedAt\": \"2026-11-03T11:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 6,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G2_TECHNICAL_QA\",\n      \"signoffRef\": \"CAB-2026-11-03\",\n      \"recordedAt\": \"2026-11-03T12:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 7,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G3_SECURITY_OPERATIONS\",\n      \"signoffRef\": \"CAB-2026-11-04\",\n      \"recordedAt\": \"2026-11-03T13:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 8,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G4_CONTROLLED_PRODUCTION\",\n      \"signoffRef\": \"CAB-2026-11-05\",\n      \"recordedAt\": \"2026-11-03T14:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 9,\n      \"kind\": \"ACTIVATED\",\n      \"status\": \"ACTIVE\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-04T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a3\"\n    }\n  ],\n  \"createdAt\": \"2026-11-02T09:00:00.000000Z\",\n  \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('addCTCApplicabilityEvidence returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/ctc/applicability/{applicabilityId}/gates — Sign a G0–G4 release gate on a record's version",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gate\": \"G1_LEGAL_CONTENT_RIGHTS\",\n  \"version\": 1,\n  \"signoffRef\": \"CAB-2026-11-02\",\n  \"note\": \"Local counsel opinion on file.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/ctc/applicability/{{applicabilityId}}/gates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "ctc",
+                "applicability",
+                "{{applicabilityId}}",
+                "gates"
+              ]
+            },
+            "description": "Sign a G0–G4 release gate on a record's version\n\n`ANALYST`, signed in as themselves, who is neither the record's creator nor\nthe author of its current version (`403 MAKER_CHECKER`).\n\nDoc 21 §11's release gates. Every record needs `G0_SCOPE_AUTHORITY` and\n`G1_LEGAL_CONTENT_RIGHTS`; a record that dispatches documents also needs\n`G2_TECHNICAL_QA`, `G3_SECURITY_OPERATIONS` and `G4_CONTROLLED_PRODUCTION`.\nA sign-off names the version reviewed (`409 VERSION_CONFLICT` otherwise) and\nits own reference. A gate already signed on the version answers `200`."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/applicability/{{applicabilityId}}/gates",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "applicability",
+                    "{{applicabilityId}}",
+                    "gates"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"documentType\": \"INVOICE\",\n  \"buyerKind\": \"B2B\",\n  \"status\": \"ACTIVE\",\n  \"currentVersion\": 1,\n  \"terms\": {\n    \"duty\": \"REQUIRED\",\n    \"model\": \"CLEARANCE\",\n    \"profile\": \"IT_FATTURAPA\",\n    \"formatVersion\": \"FPR12 1.9\",\n    \"authority\": \"Agenzia delle Entrate — SdI\",\n    \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n    \"sourceAsOf\": \"2026-10-30\",\n    \"effectiveFrom\": \"2026-01-01\",\n    \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n  },\n  \"versions\": [\n    {\n      \"version\": 1,\n      \"terms\": {\n        \"duty\": \"REQUIRED\",\n        \"model\": \"CLEARANCE\",\n        \"profile\": \"IT_FATTURAPA\",\n        \"formatVersion\": \"FPR12 1.9\",\n        \"authority\": \"Agenzia delle Entrate — SdI\",\n        \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n        \"sourceAsOf\": \"2026-10-30\",\n        \"effectiveFrom\": \"2026-01-01\",\n        \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n      },\n      \"digest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ],\n  \"requiredGates\": [\n    \"G0_SCOPE_AUTHORITY\",\n    \"G1_LEGAL_CONTENT_RIGHTS\",\n    \"G2_TECHNICAL_QA\",\n    \"G3_SECURITY_OPERATIONS\",\n    \"G4_CONTROLLED_PRODUCTION\"\n  ],\n  \"missingGates\": [],\n  \"signoffs\": [\n    {\n      \"gate\": \"G0_SCOPE_AUTHORITY\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-01\",\n      \"signedAt\": \"2026-11-03T10:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G1_LEGAL_CONTENT_RIGHTS\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-02\",\n      \"signedAt\": \"2026-11-03T11:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G2_TECHNICAL_QA\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-03\",\n      \"signedAt\": \"2026-11-03T12:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G3_SECURITY_OPERATIONS\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-04\",\n      \"signedAt\": \"2026-11-03T13:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G4_CONTROLLED_PRODUCTION\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-05\",\n      \"signedAt\": \"2026-11-03T14:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n      \"filename\": \"it-sdi-legal-opinion.pdf\",\n      \"mediaType\": \"application/pdf\",\n      \"bytes\": 48213\n    }\n  ],\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"CREATED\",\n      \"status\": \"DRAFT\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"EVIDENCE_ADDED\",\n      \"status\": \"DRAFT\",\n      \"evidence\": {\n        \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n        \"filename\": \"it-sdi-legal-opinion.pdf\",\n        \"mediaType\": \"application/pdf\",\n        \"bytes\": 48213\n      },\n      \"recordedAt\": \"2026-11-02T09:05:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 3,\n      \"kind\": \"SUBMITTED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-02T09:10:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 4,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G0_SCOPE_AUTHORITY\",\n      \"signoffRef\": \"CAB-2026-11-01\",\n      \"recordedAt\": \"2026-11-03T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 5,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G1_LEGAL_CONTENT_RIGHTS\",\n      \"signoffRef\": \"CAB-2026-11-02\",\n      \"recordedAt\": \"2026-11-03T11:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 6,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G2_TECHNICAL_QA\",\n      \"signoffRef\": \"CAB-2026-11-03\",\n      \"recordedAt\": \"2026-11-03T12:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 7,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G3_SECURITY_OPERATIONS\",\n      \"signoffRef\": \"CAB-2026-11-04\",\n      \"recordedAt\": \"2026-11-03T13:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 8,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G4_CONTROLLED_PRODUCTION\",\n      \"signoffRef\": \"CAB-2026-11-05\",\n      \"recordedAt\": \"2026-11-03T14:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 9,\n      \"kind\": \"ACTIVATED\",\n      \"status\": \"ACTIVE\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-04T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a3\"\n    }\n  ],\n  \"createdAt\": \"2026-11-02T09:00:00.000000Z\",\n  \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n}"
+            },
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/applicability/{{applicabilityId}}/gates",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "applicability",
+                    "{{applicabilityId}}",
+                    "gates"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"documentType\": \"INVOICE\",\n  \"buyerKind\": \"B2B\",\n  \"status\": \"ACTIVE\",\n  \"currentVersion\": 1,\n  \"terms\": {\n    \"duty\": \"REQUIRED\",\n    \"model\": \"CLEARANCE\",\n    \"profile\": \"IT_FATTURAPA\",\n    \"formatVersion\": \"FPR12 1.9\",\n    \"authority\": \"Agenzia delle Entrate — SdI\",\n    \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n    \"sourceAsOf\": \"2026-10-30\",\n    \"effectiveFrom\": \"2026-01-01\",\n    \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n  },\n  \"versions\": [\n    {\n      \"version\": 1,\n      \"terms\": {\n        \"duty\": \"REQUIRED\",\n        \"model\": \"CLEARANCE\",\n        \"profile\": \"IT_FATTURAPA\",\n        \"formatVersion\": \"FPR12 1.9\",\n        \"authority\": \"Agenzia delle Entrate — SdI\",\n        \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n        \"sourceAsOf\": \"2026-10-30\",\n        \"effectiveFrom\": \"2026-01-01\",\n        \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n      },\n      \"digest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ],\n  \"requiredGates\": [\n    \"G0_SCOPE_AUTHORITY\",\n    \"G1_LEGAL_CONTENT_RIGHTS\",\n    \"G2_TECHNICAL_QA\",\n    \"G3_SECURITY_OPERATIONS\",\n    \"G4_CONTROLLED_PRODUCTION\"\n  ],\n  \"missingGates\": [],\n  \"signoffs\": [\n    {\n      \"gate\": \"G0_SCOPE_AUTHORITY\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-01\",\n      \"signedAt\": \"2026-11-03T10:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G1_LEGAL_CONTENT_RIGHTS\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-02\",\n      \"signedAt\": \"2026-11-03T11:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G2_TECHNICAL_QA\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-03\",\n      \"signedAt\": \"2026-11-03T12:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G3_SECURITY_OPERATIONS\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-04\",\n      \"signedAt\": \"2026-11-03T13:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G4_CONTROLLED_PRODUCTION\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-05\",\n      \"signedAt\": \"2026-11-03T14:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n      \"filename\": \"it-sdi-legal-opinion.pdf\",\n      \"mediaType\": \"application/pdf\",\n      \"bytes\": 48213\n    }\n  ],\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"CREATED\",\n      \"status\": \"DRAFT\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"EVIDENCE_ADDED\",\n      \"status\": \"DRAFT\",\n      \"evidence\": {\n        \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n        \"filename\": \"it-sdi-legal-opinion.pdf\",\n        \"mediaType\": \"application/pdf\",\n        \"bytes\": 48213\n      },\n      \"recordedAt\": \"2026-11-02T09:05:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 3,\n      \"kind\": \"SUBMITTED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-02T09:10:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 4,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G0_SCOPE_AUTHORITY\",\n      \"signoffRef\": \"CAB-2026-11-01\",\n      \"recordedAt\": \"2026-11-03T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 5,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G1_LEGAL_CONTENT_RIGHTS\",\n      \"signoffRef\": \"CAB-2026-11-02\",\n      \"recordedAt\": \"2026-11-03T11:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 6,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G2_TECHNICAL_QA\",\n      \"signoffRef\": \"CAB-2026-11-03\",\n      \"recordedAt\": \"2026-11-03T12:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 7,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G3_SECURITY_OPERATIONS\",\n      \"signoffRef\": \"CAB-2026-11-04\",\n      \"recordedAt\": \"2026-11-03T13:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 8,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G4_CONTROLLED_PRODUCTION\",\n      \"signoffRef\": \"CAB-2026-11-05\",\n      \"recordedAt\": \"2026-11-03T14:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 9,\n      \"kind\": \"ACTIVATED\",\n      \"status\": \"ACTIVE\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-04T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a3\"\n    }\n  ],\n  \"createdAt\": \"2026-11-02T09:00:00.000000Z\",\n  \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('signCTCApplicabilityGate returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/ctc/applicability/{applicabilityId}/transitions — Submit, return, activate, suspend, resume or retire a record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"ACTIVATE\",\n  \"version\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/ctc/applicability/{{applicabilityId}}/transitions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "ctc",
+                "applicability",
+                "{{applicabilityId}}",
+                "transitions"
+              ]
+            },
+            "description": "Submit, return, activate, suspend, resume or retire a record\n\n`SUBMIT` and `SUSPEND`: `OPERATOR` or `ANALYST`. `RETURN`, `ACTIVATE`,\n`RESUME` and `RETIRE`: `ANALYST`. Signed in as themselves.\n\n`ACTIVATE` names the version reviewed and needs every required gate signed\non it (`409 CTC_GATE_SIGNOFF_MISSING`, naming the gates), evidence attached\n(`409 CTC_EVIDENCE_MISSING`), an activator who is neither the creator nor the\ncurrent version's author (`403 MAKER_CHECKER`), and no other active or\nsuspended record for an overlapping part of the same cell\n(`409 CTC_APPLICABILITY_CONFLICT`). `SUSPEND` stops new validation and\ndispatch at once and keeps what was submitted; the suspender does not also\n`RESUME`. Return, suspension, resumption and retirement give a reason."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/applicability/{{applicabilityId}}/transitions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "applicability",
+                    "{{applicabilityId}}",
+                    "transitions"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"documentType\": \"INVOICE\",\n  \"buyerKind\": \"B2B\",\n  \"status\": \"ACTIVE\",\n  \"currentVersion\": 1,\n  \"terms\": {\n    \"duty\": \"REQUIRED\",\n    \"model\": \"CLEARANCE\",\n    \"profile\": \"IT_FATTURAPA\",\n    \"formatVersion\": \"FPR12 1.9\",\n    \"authority\": \"Agenzia delle Entrate — SdI\",\n    \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n    \"sourceAsOf\": \"2026-10-30\",\n    \"effectiveFrom\": \"2026-01-01\",\n    \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n  },\n  \"versions\": [\n    {\n      \"version\": 1,\n      \"terms\": {\n        \"duty\": \"REQUIRED\",\n        \"model\": \"CLEARANCE\",\n        \"profile\": \"IT_FATTURAPA\",\n        \"formatVersion\": \"FPR12 1.9\",\n        \"authority\": \"Agenzia delle Entrate — SdI\",\n        \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n        \"sourceAsOf\": \"2026-10-30\",\n        \"effectiveFrom\": \"2026-01-01\",\n        \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n      },\n      \"digest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ],\n  \"requiredGates\": [\n    \"G0_SCOPE_AUTHORITY\",\n    \"G1_LEGAL_CONTENT_RIGHTS\",\n    \"G2_TECHNICAL_QA\",\n    \"G3_SECURITY_OPERATIONS\",\n    \"G4_CONTROLLED_PRODUCTION\"\n  ],\n  \"missingGates\": [],\n  \"signoffs\": [\n    {\n      \"gate\": \"G0_SCOPE_AUTHORITY\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-01\",\n      \"signedAt\": \"2026-11-03T10:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G1_LEGAL_CONTENT_RIGHTS\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-02\",\n      \"signedAt\": \"2026-11-03T11:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G2_TECHNICAL_QA\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-03\",\n      \"signedAt\": \"2026-11-03T12:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G3_SECURITY_OPERATIONS\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-04\",\n      \"signedAt\": \"2026-11-03T13:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"gate\": \"G4_CONTROLLED_PRODUCTION\",\n      \"version\": 1,\n      \"signoffRef\": \"CAB-2026-11-05\",\n      \"signedAt\": \"2026-11-03T14:00:00.000000Z\",\n      \"signedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    }\n  ],\n  \"evidence\": [\n    {\n      \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n      \"filename\": \"it-sdi-legal-opinion.pdf\",\n      \"mediaType\": \"application/pdf\",\n      \"bytes\": 48213\n    }\n  ],\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"CREATED\",\n      \"status\": \"DRAFT\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-02T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"EVIDENCE_ADDED\",\n      \"status\": \"DRAFT\",\n      \"evidence\": {\n        \"sha256\": \"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\",\n        \"filename\": \"it-sdi-legal-opinion.pdf\",\n        \"mediaType\": \"application/pdf\",\n        \"bytes\": 48213\n      },\n      \"recordedAt\": \"2026-11-02T09:05:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 3,\n      \"kind\": \"SUBMITTED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-02T09:10:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 4,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G0_SCOPE_AUTHORITY\",\n      \"signoffRef\": \"CAB-2026-11-01\",\n      \"recordedAt\": \"2026-11-03T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 5,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G1_LEGAL_CONTENT_RIGHTS\",\n      \"signoffRef\": \"CAB-2026-11-02\",\n      \"recordedAt\": \"2026-11-03T11:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 6,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G2_TECHNICAL_QA\",\n      \"signoffRef\": \"CAB-2026-11-03\",\n      \"recordedAt\": \"2026-11-03T12:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 7,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G3_SECURITY_OPERATIONS\",\n      \"signoffRef\": \"CAB-2026-11-04\",\n      \"recordedAt\": \"2026-11-03T13:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 8,\n      \"kind\": \"GATE_SIGNED\",\n      \"status\": \"IN_REVIEW\",\n      \"version\": 1,\n      \"gate\": \"G4_CONTROLLED_PRODUCTION\",\n      \"signoffRef\": \"CAB-2026-11-05\",\n      \"recordedAt\": \"2026-11-03T14:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 9,\n      \"kind\": \"ACTIVATED\",\n      \"status\": \"ACTIVE\",\n      \"version\": 1,\n      \"recordedAt\": \"2026-11-04T09:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a3\"\n    }\n  ],\n  \"createdAt\": \"2026-11-02T09:00:00.000000Z\",\n  \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('transitionCTCApplicability returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/ctc/resolution — What a cell owes on a date",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/ctc/resolution?legalEntityId={{legalEntityId}}&country={{country}}&documentType={{documentType}}&buyerKind={{buyerKind}}&date={{date}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "ctc",
+                "resolution"
+              ],
+              "query": [
+                {
+                  "key": "legalEntityId",
+                  "value": "{{legalEntityId}}",
+                  "description": "The legal entity."
+                },
+                {
+                  "key": "country",
+                  "value": "{{country}}",
+                  "description": "The country."
+                },
+                {
+                  "key": "documentType",
+                  "value": "{{documentType}}",
+                  "description": "The document type."
+                },
+                {
+                  "key": "buyerKind",
+                  "value": "{{buyerKind}}",
+                  "description": "The kind of buyer."
+                },
+                {
+                  "key": "date",
+                  "value": "{{date}}",
+                  "description": "The document's issue date."
+                }
+              ]
+            },
+            "description": "What a cell owes on a date\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\n`REQUIRED`, `OPTIONAL` or `PROHIBITED` from the one `ACTIVE` record of the\ncell in effect on the date, with its source; otherwise `REVIEW_BLOCKED` with\nthe reason: `CTC_NO_APPLICABILITY` when nothing covers the cell,\n`CTC_APPLICABILITY_NOT_ACTIVE` when the record covering it is in draft, in\nreview or suspended, `CTC_APPLICABILITY_CONFLICT` when two claim it. Nothing\nis assumed and nothing is recorded (Doc 21 W01). An absent `legalEntityId` is\nthe tenant's default entity."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/resolution",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "resolution"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"documentType\": \"INVOICE\",\n  \"buyerKind\": \"B2B\",\n  \"date\": \"2026-11-05\",\n  \"duty\": \"REQUIRED\",\n  \"dispatchPermitted\": true,\n  \"detail\": \"Decided by version 1 of record 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01, in effect from 2026-01-01.\",\n  \"applicabilityId\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"applicabilityVersion\": 1,\n  \"applicabilityStatus\": \"ACTIVE\",\n  \"terms\": {\n    \"duty\": \"REQUIRED\",\n    \"model\": \"CLEARANCE\",\n    \"profile\": \"IT_FATTURAPA\",\n    \"formatVersion\": \"FPR12 1.9\",\n    \"authority\": \"Agenzia delle Entrate — SdI\",\n    \"legalSource\": \"D.Lgs. 127/2015 art. 1; Provv. AdE 89757/2018 (Doc 21 R09)\",\n    \"sourceAsOf\": \"2026-10-30\",\n    \"effectiveFrom\": \"2026-01-01\",\n    \"conditions\": \"Domestic B2B supply by an Italian-established, VAT-registered issuer.\"\n  }\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('resolveCTCApplicability returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/ctc/validations — Validate a fiscal document against a record's format profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentId\": \"{{documentId}}\",\n  \"applicabilityId\": \"{{applicabilityId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/ctc/validations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "ctc",
+                "validations"
+              ]
+            },
+            "description": "Validate a fiscal document against a record's format profile\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nRuns the current ruleset over a committed fiscal document under an `ACTIVE`\nrecord's current terms (Doc 21 W06): the record's cell, canonical invoice\nsemantics (number, lines, tax pinned to decisions, exact totals, the\npreceding-document reference of a correction) and the profile's structural\nconstraints. Every rule's result is stored with the ruleset version. The\nofficial schema and Schematron stage is reported `NOT_EVALUATED`: no licensed\nbundle is installed, so `PASSED` is a pre-dispatch structural check, never\ncertification. Validating again with the same document state, record version\nand ruleset returns the same report with `200`. A `PROHIBITED` record has no\nprofile (`409 CTC_SUBMISSION_PROHIBITED`)."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/validations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "validations"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"documentId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"applicabilityId\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"applicabilityVersion\": 1,\n  \"profile\": \"IT_FATTURAPA\",\n  \"formatVersion\": \"FPR12 1.9\",\n  \"ruleset\": \"ztax-ctc-structural/2026.11.1\",\n  \"inputDigest\": \"zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c\",\n  \"outcome\": \"PASSED\",\n  \"fatalFailures\": 0,\n  \"schemaValidated\": false,\n  \"results\": [\n    {\n      \"ruleId\": \"ZT-CTC-A01\",\n      \"stage\": \"APPLICABILITY\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Seller legal entity\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-A02\",\n      \"stage\": \"APPLICABILITY\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Document type\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-A03\",\n      \"stage\": \"APPLICABILITY\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Issue date (BT-2)\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S01\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Fiscal commitment\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S02\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Invoice number (BT-1)\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S03\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Invoice line (BG-25)\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S04\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"WARNING\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Source line reference\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S05\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Tax decision reference\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S06\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Document totals (BT-106, BT-110, BT-112)\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S07\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Preceding invoice reference (BG-3)\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-IT01\",\n      \"stage\": \"REGIME\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"FatturaPA 2.1.1.4 Numero\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-X01\",\n      \"stage\": \"SYNTAX\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"NOT_EVALUATED\",\n      \"reasonCode\": \"CTC_RULE_SCHEMA_NOT_EVALUATED\",\n      \"businessTerm\": \"IT_FATTURAPA FPR12 1.9\",\n      \"detail\": \"No licensed schema or Schematron bundle for this profile version is installed. Syntax validation belongs to the accredited adapter and is not claimed here.\"\n    }\n  ],\n  \"digest\": \"zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b\",\n  \"validatedAt\": \"2026-11-05T09:00:00.000000Z\",\n  \"validatedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n}"
+            },
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/validations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "validations"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"documentId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"applicabilityId\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"applicabilityVersion\": 1,\n  \"profile\": \"IT_FATTURAPA\",\n  \"formatVersion\": \"FPR12 1.9\",\n  \"ruleset\": \"ztax-ctc-structural/2026.11.1\",\n  \"inputDigest\": \"zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c\",\n  \"outcome\": \"PASSED\",\n  \"fatalFailures\": 0,\n  \"schemaValidated\": false,\n  \"results\": [\n    {\n      \"ruleId\": \"ZT-CTC-A01\",\n      \"stage\": \"APPLICABILITY\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Seller legal entity\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-A02\",\n      \"stage\": \"APPLICABILITY\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Document type\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-A03\",\n      \"stage\": \"APPLICABILITY\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Issue date (BT-2)\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S01\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Fiscal commitment\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S02\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Invoice number (BT-1)\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S03\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Invoice line (BG-25)\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S04\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"WARNING\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Source line reference\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S05\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Tax decision reference\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S06\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Document totals (BT-106, BT-110, BT-112)\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S07\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Preceding invoice reference (BG-3)\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-IT01\",\n      \"stage\": \"REGIME\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"FatturaPA 2.1.1.4 Numero\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-X01\",\n      \"stage\": \"SYNTAX\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"NOT_EVALUATED\",\n      \"reasonCode\": \"CTC_RULE_SCHEMA_NOT_EVALUATED\",\n      \"businessTerm\": \"IT_FATTURAPA FPR12 1.9\",\n      \"detail\": \"No licensed schema or Schematron bundle for this profile version is installed. Syntax validation belongs to the accredited adapter and is not claimed here.\"\n    }\n  ],\n  \"digest\": \"zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b\",\n  \"validatedAt\": \"2026-11-05T09:00:00.000000Z\",\n  \"validatedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('validateCTCDocument returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 404, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/ctc/validations — Format validation reports",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/ctc/validations?documentId={{documentId}}&applicabilityId={{applicabilityId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "ctc",
+                "validations"
+              ],
+              "query": [
+                {
+                  "key": "documentId",
+                  "value": "{{documentId}}",
+                  "description": "Only reports of this fiscal document."
+                },
+                {
+                  "key": "applicabilityId",
+                  "value": "{{applicabilityId}}",
+                  "description": "Only reports under this record."
+                }
+              ]
+            },
+            "description": "Format validation reports\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nImmutable validation reports, newest first, with every rule's result."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/validations",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "validations"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"validations\": [\n    {\n      \"id\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"documentId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"applicabilityId\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"applicabilityVersion\": 1,\n      \"profile\": \"IT_FATTURAPA\",\n      \"formatVersion\": \"FPR12 1.9\",\n      \"ruleset\": \"ztax-ctc-structural/2026.11.1\",\n      \"inputDigest\": \"zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c\",\n      \"outcome\": \"PASSED\",\n      \"fatalFailures\": 0,\n      \"schemaValidated\": false,\n      \"results\": [\n        {\n          \"ruleId\": \"ZT-CTC-A01\",\n          \"stage\": \"APPLICABILITY\",\n          \"severity\": \"FATAL\",\n          \"outcome\": \"PASS\",\n          \"businessTerm\": \"Seller legal entity\"\n        },\n        {\n          \"ruleId\": \"ZT-CTC-A02\",\n          \"stage\": \"APPLICABILITY\",\n          \"severity\": \"FATAL\",\n          \"outcome\": \"PASS\",\n          \"businessTerm\": \"Document type\"\n        },\n        {\n          \"ruleId\": \"ZT-CTC-A03\",\n          \"stage\": \"APPLICABILITY\",\n          \"severity\": \"FATAL\",\n          \"outcome\": \"PASS\",\n          \"businessTerm\": \"Issue date (BT-2)\"\n        },\n        {\n          \"ruleId\": \"ZT-CTC-S01\",\n          \"stage\": \"SEMANTIC\",\n          \"severity\": \"FATAL\",\n          \"outcome\": \"PASS\",\n          \"businessTerm\": \"Fiscal commitment\"\n        },\n        {\n          \"ruleId\": \"ZT-CTC-S02\",\n          \"stage\": \"SEMANTIC\",\n          \"severity\": \"FATAL\",\n          \"outcome\": \"PASS\",\n          \"businessTerm\": \"Invoice number (BT-1)\"\n        },\n        {\n          \"ruleId\": \"ZT-CTC-S03\",\n          \"stage\": \"SEMANTIC\",\n          \"severity\": \"FATAL\",\n          \"outcome\": \"PASS\",\n          \"businessTerm\": \"Invoice line (BG-25)\"\n        },\n        {\n          \"ruleId\": \"ZT-CTC-S04\",\n          \"stage\": \"SEMANTIC\",\n          \"severity\": \"WARNING\",\n          \"outcome\": \"PASS\",\n          \"businessTerm\": \"Source line reference\"\n        },\n        {\n          \"ruleId\": \"ZT-CTC-S05\",\n          \"stage\": \"SEMANTIC\",\n          \"severity\": \"FATAL\",\n          \"outcome\": \"PASS\",\n          \"businessTerm\": \"Tax decision reference\"\n        },\n        {\n          \"ruleId\": \"ZT-CTC-S06\",\n          \"stage\": \"SEMANTIC\",\n          \"severity\": \"FATAL\",\n          \"outcome\": \"PASS\",\n          \"businessTerm\": \"Document totals (BT-106, BT-110, BT-112)\"\n        },\n        {\n          \"ruleId\": \"ZT-CTC-S07\",\n          \"stage\": \"SEMANTIC\",\n          \"severity\": \"FATAL\",\n          \"outcome\": \"PASS\",\n          \"businessTerm\": \"Preceding invoice reference (BG-3)\"\n        },\n        {\n          \"ruleId\": \"ZT-CTC-IT01\",\n          \"stage\": \"REGIME\",\n          \"severity\": \"FATAL\",\n          \"outcome\": \"PASS\",\n          \"businessTerm\": \"FatturaPA 2.1.1.4 Numero\"\n        },\n        {\n          \"ruleId\": \"ZT-CTC-X01\",\n          \"stage\": \"SYNTAX\",\n          \"severity\": \"FATAL\",\n          \"outcome\": \"NOT_EVALUATED\",\n          \"reasonCode\": \"CTC_RULE_SCHEMA_NOT_EVALUATED\",\n          \"businessTerm\": \"IT_FATTURAPA FPR12 1.9\",\n          \"detail\": \"No licensed schema or Schematron bundle for this profile version is installed. Syntax validation belongs to the accredited adapter and is not claimed here.\"\n        }\n      ],\n      \"digest\": \"zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b\",\n      \"validatedAt\": \"2026-11-05T09:00:00.000000Z\",\n      \"validatedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listCTCValidations returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/ctc/validations/{validationId} — One format validation report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/ctc/validations/{{validationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "ctc",
+                "validations",
+                "{{validationId}}"
+              ]
+            },
+            "description": "One format validation report\n\n`OPERATOR`, `ANALYST` or `AUDITOR`."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/validations/{{validationId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "validations",
+                    "{{validationId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"documentId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"applicabilityId\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"applicabilityVersion\": 1,\n  \"profile\": \"IT_FATTURAPA\",\n  \"formatVersion\": \"FPR12 1.9\",\n  \"ruleset\": \"ztax-ctc-structural/2026.11.1\",\n  \"inputDigest\": \"zt1:9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c\",\n  \"outcome\": \"PASSED\",\n  \"fatalFailures\": 0,\n  \"schemaValidated\": false,\n  \"results\": [\n    {\n      \"ruleId\": \"ZT-CTC-A01\",\n      \"stage\": \"APPLICABILITY\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Seller legal entity\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-A02\",\n      \"stage\": \"APPLICABILITY\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Document type\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-A03\",\n      \"stage\": \"APPLICABILITY\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Issue date (BT-2)\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S01\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Fiscal commitment\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S02\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Invoice number (BT-1)\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S03\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Invoice line (BG-25)\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S04\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"WARNING\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Source line reference\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S05\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Tax decision reference\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S06\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Document totals (BT-106, BT-110, BT-112)\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-S07\",\n      \"stage\": \"SEMANTIC\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"Preceding invoice reference (BG-3)\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-IT01\",\n      \"stage\": \"REGIME\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"PASS\",\n      \"businessTerm\": \"FatturaPA 2.1.1.4 Numero\"\n    },\n    {\n      \"ruleId\": \"ZT-CTC-X01\",\n      \"stage\": \"SYNTAX\",\n      \"severity\": \"FATAL\",\n      \"outcome\": \"NOT_EVALUATED\",\n      \"reasonCode\": \"CTC_RULE_SCHEMA_NOT_EVALUATED\",\n      \"businessTerm\": \"IT_FATTURAPA FPR12 1.9\",\n      \"detail\": \"No licensed schema or Schematron bundle for this profile version is installed. Syntax validation belongs to the accredited adapter and is not claimed here.\"\n    }\n  ],\n  \"digest\": \"zt1:be8651b55057f0f11f2a39820495b373417e5aa81b122f61b9fcb79faaf86c7b\",\n  \"validatedAt\": \"2026-11-05T09:00:00.000000Z\",\n  \"validatedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getCTCValidation returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/ctc/submissions — Prepare and seal a submission",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentId\": \"{{documentId}}\",\n  \"applicabilityId\": \"{{applicabilityId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/ctc/submissions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "ctc",
+                "submissions"
+              ]
+            },
+            "description": "Prepare and seal a submission\n\n`OPERATOR`, signed in as themselves.\n\nSeals a committed fiscal document under an `ACTIVE` record whose duty is\n`REQUIRED` or `OPTIONAL`, covering the document's legal entity, type and\nissue date (`409 CTC_DOCUMENT_MISMATCH`, `409 CTC_RULE_OUT_OF_EFFECT`). The\nnewest validation of the document under the record must have `PASSED` and\nstill speak for the document, the record's current version and the current\nruleset (`409 CTC_VALIDATION_REQUIRED`, `409 CTC_VALIDATION_STALE`). The\ndocument projection, record version and report are sealed under one payload\ndigest. **Idempotent per document and record**: while a submission of the\ndocument under the record is live — anything but `WITHDRAWN` — preparing\nagain returns it with `200`. Nothing is sent here."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/submissions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "submissions"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"documentId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"documentNumber\": \"FT-2026-000184\",\n  \"documentType\": \"INVOICE\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"buyerKind\": \"B2B\",\n  \"applicabilityId\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"applicabilityVersion\": 1,\n  \"model\": \"CLEARANCE\",\n  \"profile\": \"IT_FATTURAPA\",\n  \"formatVersion\": \"FPR12 1.9\",\n  \"validationId\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"currency\": \"EUR\",\n  \"gross\": \"122.00\",\n  \"payloadDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n  \"externalRef\": \"ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"preparedAt\": \"2026-11-05T10:00:00.000000Z\",\n  \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"status\": \"SENT\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PREPARED\",\n      \"status\": \"PREPARED\",\n      \"recordedAt\": \"2026-11-05T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"DISPATCHED\",\n      \"status\": \"SENT\",\n      \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"recordedAt\": \"2026-11-05T11:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/submissions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "submissions"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"documentId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"documentNumber\": \"FT-2026-000184\",\n  \"documentType\": \"INVOICE\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"buyerKind\": \"B2B\",\n  \"applicabilityId\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"applicabilityVersion\": 1,\n  \"model\": \"CLEARANCE\",\n  \"profile\": \"IT_FATTURAPA\",\n  \"formatVersion\": \"FPR12 1.9\",\n  \"validationId\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"currency\": \"EUR\",\n  \"gross\": \"122.00\",\n  \"payloadDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n  \"externalRef\": \"ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"preparedAt\": \"2026-11-05T10:00:00.000000Z\",\n  \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"status\": \"PREPARED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PREPARED\",\n      \"status\": \"PREPARED\",\n      \"recordedAt\": \"2026-11-05T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('prepareCTCSubmission returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 404, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/ctc/submissions — Authority submissions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/ctc/submissions?documentId={{documentId}}&applicabilityId={{applicabilityId}}&status={{status}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "ctc",
+                "submissions"
+              ],
+              "query": [
+                {
+                  "key": "documentId",
+                  "value": "{{documentId}}",
+                  "description": "Only submissions of this fiscal document."
+                },
+                {
+                  "key": "applicabilityId",
+                  "value": "{{applicabilityId}}",
+                  "description": "Only submissions under this record."
+                },
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only submissions in this status."
+                }
+              ]
+            },
+            "description": "Authority submissions\n\n`OPERATOR`, `ANALYST` or `AUDITOR`.\n\nSubmissions, newest first, each with its events. A rejected submission\ncarries its correction task, open until a committed fiscal document names the\nrejected one as its predecessor."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/submissions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "submissions"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"submissions\": [\n    {\n      \"id\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"documentId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"documentNumber\": \"FT-2026-000184\",\n      \"documentType\": \"INVOICE\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"country\": \"IT\",\n      \"buyerKind\": \"B2B\",\n      \"applicabilityId\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"applicabilityVersion\": 1,\n      \"model\": \"CLEARANCE\",\n      \"profile\": \"IT_FATTURAPA\",\n      \"formatVersion\": \"FPR12 1.9\",\n      \"validationId\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"currency\": \"EUR\",\n      \"gross\": \"122.00\",\n      \"payloadDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n      \"externalRef\": \"ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"preparedAt\": \"2026-11-05T10:00:00.000000Z\",\n      \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n      \"status\": \"AUTHORITY_REJECTED\",\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"PREPARED\",\n          \"status\": \"PREPARED\",\n          \"recordedAt\": \"2026-11-05T10:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 2,\n          \"kind\": \"DISPATCHED\",\n          \"status\": \"SENT\",\n          \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n          \"recordedAt\": \"2026-11-05T11:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        },\n        {\n          \"seq\": 3,\n          \"kind\": \"TRANSPORT_RECEIVED\",\n          \"status\": \"TRANSPORT_RECEIVED\",\n          \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n          \"transportRef\": \"SDI-RICEVUTA-7731902\",\n          \"recordedAt\": \"2026-11-05T11:02:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 4,\n          \"kind\": \"AUTHORITY_REJECTED\",\n          \"status\": \"AUTHORITY_REJECTED\",\n          \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n          \"authorityCode\": \"00404\",\n          \"evidenceSha256\": \"3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a\",\n          \"detail\": \"Notifica di scarto: fattura duplicata.\",\n          \"recordedAt\": \"2026-11-05T13:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        }\n      ],\n      \"correction\": {\n        \"documentId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n        \"open\": true,\n        \"openedAt\": \"2026-11-05T13:00:00.000000Z\",\n        \"authorityCode\": \"00404\",\n        \"reason\": \"Notifica di scarto: fattura duplicata.\",\n        \"correctedBy\": []\n      }\n    },\n    {\n      \"id\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"documentId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n      \"documentNumber\": \"FT-2026-000184\",\n      \"documentType\": \"INVOICE\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"country\": \"IT\",\n      \"buyerKind\": \"B2B\",\n      \"applicabilityId\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"applicabilityVersion\": 1,\n      \"model\": \"CLEARANCE\",\n      \"profile\": \"IT_FATTURAPA\",\n      \"formatVersion\": \"FPR12 1.9\",\n      \"validationId\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"currency\": \"EUR\",\n      \"gross\": \"122.00\",\n      \"payloadDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n      \"externalRef\": \"ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"preparedAt\": \"2026-11-05T10:00:00.000000Z\",\n      \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n      \"status\": \"AUTHORITY_ACCEPTED\",\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"PREPARED\",\n          \"status\": \"PREPARED\",\n          \"recordedAt\": \"2026-11-05T10:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 2,\n          \"kind\": \"DISPATCHED\",\n          \"status\": \"SENT\",\n          \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n          \"recordedAt\": \"2026-11-05T11:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        },\n        {\n          \"seq\": 3,\n          \"kind\": \"TRANSPORT_RECEIVED\",\n          \"status\": \"TRANSPORT_RECEIVED\",\n          \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n          \"transportRef\": \"SDI-RICEVUTA-7731902\",\n          \"recordedAt\": \"2026-11-05T11:02:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 4,\n          \"kind\": \"AUTHORITY_ACCEPTED\",\n          \"status\": \"AUTHORITY_ACCEPTED\",\n          \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n          \"authorityRef\": \"IdSdI 11223344556\",\n          \"evidenceSha256\": \"3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a\",\n          \"recordedAt\": \"2026-11-05T13:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        }\n      ]\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listCTCSubmissions returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/ctc/submissions/{submissionId} — One submission with its events",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/ctc/submissions/{{submissionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "ctc",
+                "submissions",
+                "{{submissionId}}"
+              ]
+            },
+            "description": "One submission with its events\n\n`OPERATOR`, `ANALYST` or `AUDITOR`."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/submissions/{{submissionId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "submissions",
+                    "{{submissionId}}"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"documentId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"documentNumber\": \"FT-2026-000184\",\n  \"documentType\": \"INVOICE\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"buyerKind\": \"B2B\",\n  \"applicabilityId\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"applicabilityVersion\": 1,\n  \"model\": \"CLEARANCE\",\n  \"profile\": \"IT_FATTURAPA\",\n  \"formatVersion\": \"FPR12 1.9\",\n  \"validationId\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"currency\": \"EUR\",\n  \"gross\": \"122.00\",\n  \"payloadDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n  \"externalRef\": \"ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"preparedAt\": \"2026-11-05T10:00:00.000000Z\",\n  \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"status\": \"AUTHORITY_ACCEPTED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PREPARED\",\n      \"status\": \"PREPARED\",\n      \"recordedAt\": \"2026-11-05T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"DISPATCHED\",\n      \"status\": \"SENT\",\n      \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"recordedAt\": \"2026-11-05T11:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 3,\n      \"kind\": \"TRANSPORT_RECEIVED\",\n      \"status\": \"TRANSPORT_RECEIVED\",\n      \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"transportRef\": \"SDI-RICEVUTA-7731902\",\n      \"recordedAt\": \"2026-11-05T11:02:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 4,\n      \"kind\": \"AUTHORITY_ACCEPTED\",\n      \"status\": \"AUTHORITY_ACCEPTED\",\n      \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"authorityRef\": \"IdSdI 11223344556\",\n      \"evidenceSha256\": \"3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a\",\n      \"recordedAt\": \"2026-11-05T13:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getCTCSubmission returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/ctc/submissions/{submissionId}/dispatch — Authorise one dispatch attempt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payloadDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/ctc/submissions/{{submissionId}}/dispatch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "ctc",
+                "submissions",
+                "{{submissionId}}",
+                "dispatch"
+              ]
+            },
+            "description": "Authorise one dispatch attempt\n\n`OPERATOR` or `ANALYST`, signed in as themselves, who did not prepare the\nsubmission (`403 MAKER_CHECKER`).\n\nRecords one attempt under the submission's fixed `externalRef`. The checker\nnames the payload digest reviewed (`409 CTC_PAYLOAD_DIGEST_MISMATCH`); the\npayload is recomputed from the document, record and report as they stand and\nmust still match the seal, under a record still `ACTIVE` on the sealed\nversion (`409 CTC_VALIDATION_STALE`, `409 CTC_APPLICABILITY_NOT_ACTIVE`). A\nsubmission whose outcome is unknown is sent again only after a status enquiry\nfound nothing (`409 CTC_OUTCOME_UNCERTAIN`). A submission already sent or\nanswered is returned as it is with `200` — never a second fiscal document. No\nauthority or partner connector is wired here: the transmission itself happens\nthrough the approved channel and its answers are recorded."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/submissions/{{submissionId}}/dispatch",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "submissions",
+                    "{{submissionId}}",
+                    "dispatch"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"documentId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"documentNumber\": \"FT-2026-000184\",\n  \"documentType\": \"INVOICE\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"buyerKind\": \"B2B\",\n  \"applicabilityId\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"applicabilityVersion\": 1,\n  \"model\": \"CLEARANCE\",\n  \"profile\": \"IT_FATTURAPA\",\n  \"formatVersion\": \"FPR12 1.9\",\n  \"validationId\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"currency\": \"EUR\",\n  \"gross\": \"122.00\",\n  \"payloadDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n  \"externalRef\": \"ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"preparedAt\": \"2026-11-05T10:00:00.000000Z\",\n  \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"status\": \"AUTHORITY_ACCEPTED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PREPARED\",\n      \"status\": \"PREPARED\",\n      \"recordedAt\": \"2026-11-05T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"DISPATCHED\",\n      \"status\": \"SENT\",\n      \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"recordedAt\": \"2026-11-05T11:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 3,\n      \"kind\": \"TRANSPORT_RECEIVED\",\n      \"status\": \"TRANSPORT_RECEIVED\",\n      \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"transportRef\": \"SDI-RICEVUTA-7731902\",\n      \"recordedAt\": \"2026-11-05T11:02:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 4,\n      \"kind\": \"AUTHORITY_ACCEPTED\",\n      \"status\": \"AUTHORITY_ACCEPTED\",\n      \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"authorityRef\": \"IdSdI 11223344556\",\n      \"evidenceSha256\": \"3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a\",\n      \"recordedAt\": \"2026-11-05T13:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/submissions/{{submissionId}}/dispatch",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "submissions",
+                    "{{submissionId}}",
+                    "dispatch"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"documentId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"documentNumber\": \"FT-2026-000184\",\n  \"documentType\": \"INVOICE\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"buyerKind\": \"B2B\",\n  \"applicabilityId\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"applicabilityVersion\": 1,\n  \"model\": \"CLEARANCE\",\n  \"profile\": \"IT_FATTURAPA\",\n  \"formatVersion\": \"FPR12 1.9\",\n  \"validationId\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"currency\": \"EUR\",\n  \"gross\": \"122.00\",\n  \"payloadDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n  \"externalRef\": \"ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"preparedAt\": \"2026-11-05T10:00:00.000000Z\",\n  \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"status\": \"SENT\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PREPARED\",\n      \"status\": \"PREPARED\",\n      \"recordedAt\": \"2026-11-05T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"DISPATCHED\",\n      \"status\": \"SENT\",\n      \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"recordedAt\": \"2026-11-05T11:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('dispatchCTCSubmission returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/ctc/submissions/{submissionId}/responses — Record what the rail or the authority answered",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kind\": \"AUTHORITY_ACCEPTED\",\n  \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n  \"authorityRef\": \"IdSdI 11223344556\",\n  \"evidenceSha256\": \"3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/ctc/submissions/{{submissionId}}/responses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "ctc",
+                "submissions",
+                "{{submissionId}}",
+                "responses"
+              ]
+            },
+            "description": "Record what the rail or the authority answered\n\n`OPERATOR` or `ANALYST`, signed in as themselves.\n\nZoikoTax does not invent the authority's answer. `TRANSPORT_RECEIVED` is a\nrail or partner receipt and names its `transportRef`; it leaves the\nauthority outcome pending. `AUTHORITY_ACCEPTED` names the authority's own\nreference; `AUTHORITY_REJECTED` keeps the authority's raw code and says why,\nand opens a correction task that a new fiscal document naming the rejected\none closes. Both carry the SHA-256 of the raw receipt. `OUTCOME_UNKNOWN` says\nwhy nobody knows; `STATUS_NOT_FOUND` records a status enquiry, by\n`transportRef`, that found nothing — the only thing that lets a submission of\nunknown outcome be sent again. Once accepted or rejected, a later answer is\n`409 CTC_FINAL_OUTCOME_RECORDED`. **Idempotent on the answer**: the same\nanswer again records nothing and answers `200`."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/submissions/{{submissionId}}/responses",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "submissions",
+                    "{{submissionId}}",
+                    "responses"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"documentId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"documentNumber\": \"FT-2026-000184\",\n  \"documentType\": \"INVOICE\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"buyerKind\": \"B2B\",\n  \"applicabilityId\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"applicabilityVersion\": 1,\n  \"model\": \"CLEARANCE\",\n  \"profile\": \"IT_FATTURAPA\",\n  \"formatVersion\": \"FPR12 1.9\",\n  \"validationId\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"currency\": \"EUR\",\n  \"gross\": \"122.00\",\n  \"payloadDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n  \"externalRef\": \"ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"preparedAt\": \"2026-11-05T10:00:00.000000Z\",\n  \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"status\": \"AUTHORITY_ACCEPTED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PREPARED\",\n      \"status\": \"PREPARED\",\n      \"recordedAt\": \"2026-11-05T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"DISPATCHED\",\n      \"status\": \"SENT\",\n      \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"recordedAt\": \"2026-11-05T11:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 3,\n      \"kind\": \"TRANSPORT_RECEIVED\",\n      \"status\": \"TRANSPORT_RECEIVED\",\n      \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"transportRef\": \"SDI-RICEVUTA-7731902\",\n      \"recordedAt\": \"2026-11-05T11:02:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 4,\n      \"kind\": \"AUTHORITY_ACCEPTED\",\n      \"status\": \"AUTHORITY_ACCEPTED\",\n      \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"authorityRef\": \"IdSdI 11223344556\",\n      \"evidenceSha256\": \"3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a\",\n      \"recordedAt\": \"2026-11-05T13:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "201 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/submissions/{{submissionId}}/responses",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "submissions",
+                    "{{submissionId}}",
+                    "responses"
+                  ]
+                }
+              },
+              "status": "201",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"documentId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"documentNumber\": \"FT-2026-000184\",\n  \"documentType\": \"INVOICE\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"buyerKind\": \"B2B\",\n  \"applicabilityId\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"applicabilityVersion\": 1,\n  \"model\": \"CLEARANCE\",\n  \"profile\": \"IT_FATTURAPA\",\n  \"formatVersion\": \"FPR12 1.9\",\n  \"validationId\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"currency\": \"EUR\",\n  \"gross\": \"122.00\",\n  \"payloadDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n  \"externalRef\": \"ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"preparedAt\": \"2026-11-05T10:00:00.000000Z\",\n  \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"status\": \"AUTHORITY_ACCEPTED\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PREPARED\",\n      \"status\": \"PREPARED\",\n      \"recordedAt\": \"2026-11-05T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"DISPATCHED\",\n      \"status\": \"SENT\",\n      \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"recordedAt\": \"2026-11-05T11:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n    },\n    {\n      \"seq\": 3,\n      \"kind\": \"TRANSPORT_RECEIVED\",\n      \"status\": \"TRANSPORT_RECEIVED\",\n      \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"transportRef\": \"SDI-RICEVUTA-7731902\",\n      \"recordedAt\": \"2026-11-05T11:02:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 4,\n      \"kind\": \"AUTHORITY_ACCEPTED\",\n      \"status\": \"AUTHORITY_ACCEPTED\",\n      \"attemptId\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20\",\n      \"authorityRef\": \"IdSdI 11223344556\",\n      \"evidenceSha256\": \"3f5a7c9e1b3d5f7a9c2e4b6d8f0a1c3e5b7d9f2a4c6e8b0d1f3a5c7e9b2d4f6a\",\n      \"recordedAt\": \"2026-11-05T13:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('recordCTCResponse returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/ctc/submissions/{submissionId}/withdrawal — Withdraw a prepared submission never dispatched",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Record revised to FPR12 1.9.1 before dispatch.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/ctc/submissions/{{submissionId}}/withdrawal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "ctc",
+                "submissions",
+                "{{submissionId}}",
+                "withdrawal"
+              ]
+            },
+            "description": "Withdraw a prepared submission never dispatched\n\n`OPERATOR`, signed in as themselves.\n\nReleases a `PREPARED` submission with the reason, so the document can be\nvalidated and prepared again. A submission once dispatched is never\nwithdrawn."
+          },
+          "response": [
+            {
+              "name": "200 · Example",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/ctc/submissions/{{submissionId}}/withdrawal",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "ctc",
+                    "submissions",
+                    "{{submissionId}}",
+                    "withdrawal"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"id\": \"01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"documentId\": \"01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f\",\n  \"documentNumber\": \"FT-2026-000184\",\n  \"documentType\": \"INVOICE\",\n  \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n  \"country\": \"IT\",\n  \"buyerKind\": \"B2B\",\n  \"applicabilityId\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"applicabilityVersion\": 1,\n  \"model\": \"CLEARANCE\",\n  \"profile\": \"IT_FATTURAPA\",\n  \"formatVersion\": \"FPR12 1.9\",\n  \"validationId\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"currency\": \"EUR\",\n  \"gross\": \"122.00\",\n  \"payloadDigest\": \"zt1:5d7f9a2c4e6b8d0f1a3c5e7b9d2f4a6c8e0b1d3f5a7c9e1b3d5f7a9c2e4b6d8f\",\n  \"externalRef\": \"ztax-ctc:01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"preparedAt\": \"2026-11-05T10:00:00.000000Z\",\n  \"preparedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n  \"status\": \"WITHDRAWN\",\n  \"history\": [\n    {\n      \"seq\": 1,\n      \"kind\": \"PREPARED\",\n      \"status\": \"PREPARED\",\n      \"recordedAt\": \"2026-11-05T10:00:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    },\n    {\n      \"seq\": 2,\n      \"kind\": \"WITHDRAWN\",\n      \"status\": \"WITHDRAWN\",\n      \"detail\": \"Record revised to FPR12 1.9.1 before dispatch.\",\n      \"recordedAt\": \"2026-11-05T10:30:00.000000Z\",\n      \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ]\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('withdrawCTCSubmission returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 404]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "POST /v1/transactions:adjust — Correct a recorded decision under the content that made it",
           "request": {
             "method": "POST",
@@ -16492,7 +18056,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:e5cfae3c5dad428ce8828f0d7e4919dc5888f0a74c118be81ae1437b1920072e",
+      "value": "sha256:5d218bdacaf95efc549b4a4f95ff8b366515543ceafe1fbed368cc5763662672",
       "type": "string"
     }
   ]

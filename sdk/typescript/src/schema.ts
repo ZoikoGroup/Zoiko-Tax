@@ -4978,6 +4978,401 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/ctc/applicability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Country applicability records
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     The tenant's country applicability records (Doc 21 W01), oldest first, in any
+         *     status, each with its terms versions, G0–G4 sign-offs, evidence and history.
+         *     A record decides a duty only while it is `ACTIVE`.
+         */
+        get: operations["listCTCApplicability"];
+        put?: never;
+        /**
+         * Record a country applicability record
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Records one cell — legal entity, country, document type, buyer kind — and
+         *     the first version of its terms, in `DRAFT`. It decides nothing until it is
+         *     submitted, every G0–G4 gate its duty needs is signed on its current version
+         *     by someone other than its authors, evidence is attached and another person
+         *     activates it. A national format profile is only used in its own country
+         *     (`400 CTC_PROFILE_COUNTRY_MISMATCH`). An absent `legalEntityId` is the
+         *     tenant's default entity.
+         */
+        post: operations["createCTCApplicability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/applicability/{applicabilityId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One country applicability record
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         */
+        get: operations["getCTCApplicability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/applicability/{applicabilityId}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the next version of a record's terms
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Terms are never edited: a change is the next version, and a record in review
+         *     returns to `DRAFT` — sign-offs given on an earlier version do not carry over.
+         *     Only a `DRAFT` or `IN_REVIEW` record is revised; an active one is retired and
+         *     replaced. Terms identical to the current version record nothing and answer
+         *     `200`.
+         */
+        post: operations["reviseCTCApplicability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/applicability/{applicabilityId}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attach an evidence document to a record
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     The legal source evidence, recorded by the SHA-256 the browser computed. The
+         *     file itself is not uploaded. A record is activated only with evidence
+         *     attached. The same document again records nothing and answers `200`.
+         */
+        post: operations["addCTCApplicabilityEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/applicability/{applicabilityId}/gates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign a G0–G4 release gate on a record's version
+         * @description `ANALYST`, signed in as themselves, who is neither the record's creator nor
+         *     the author of its current version (`403 MAKER_CHECKER`).
+         *
+         *     Doc 21 §11's release gates. Every record needs `G0_SCOPE_AUTHORITY` and
+         *     `G1_LEGAL_CONTENT_RIGHTS`; a record that dispatches documents also needs
+         *     `G2_TECHNICAL_QA`, `G3_SECURITY_OPERATIONS` and `G4_CONTROLLED_PRODUCTION`.
+         *     A sign-off names the version reviewed (`409 VERSION_CONFLICT` otherwise) and
+         *     its own reference. A gate already signed on the version answers `200`.
+         */
+        post: operations["signCTCApplicabilityGate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/applicability/{applicabilityId}/transitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit, return, activate, suspend, resume or retire a record
+         * @description `SUBMIT` and `SUSPEND`: `OPERATOR` or `ANALYST`. `RETURN`, `ACTIVATE`,
+         *     `RESUME` and `RETIRE`: `ANALYST`. Signed in as themselves.
+         *
+         *     `ACTIVATE` names the version reviewed and needs every required gate signed
+         *     on it (`409 CTC_GATE_SIGNOFF_MISSING`, naming the gates), evidence attached
+         *     (`409 CTC_EVIDENCE_MISSING`), an activator who is neither the creator nor the
+         *     current version's author (`403 MAKER_CHECKER`), and no other active or
+         *     suspended record for an overlapping part of the same cell
+         *     (`409 CTC_APPLICABILITY_CONFLICT`). `SUSPEND` stops new validation and
+         *     dispatch at once and keeps what was submitted; the suspender does not also
+         *     `RESUME`. Return, suspension, resumption and retirement give a reason.
+         */
+        post: operations["transitionCTCApplicability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/resolution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What a cell owes on a date
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     `REQUIRED`, `OPTIONAL` or `PROHIBITED` from the one `ACTIVE` record of the
+         *     cell in effect on the date, with its source; otherwise `REVIEW_BLOCKED` with
+         *     the reason: `CTC_NO_APPLICABILITY` when nothing covers the cell,
+         *     `CTC_APPLICABILITY_NOT_ACTIVE` when the record covering it is in draft, in
+         *     review or suspended, `CTC_APPLICABILITY_CONFLICT` when two claim it. Nothing
+         *     is assumed and nothing is recorded (Doc 21 W01). An absent `legalEntityId` is
+         *     the tenant's default entity.
+         */
+        get: operations["resolveCTCApplicability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/validations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Format validation reports
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Immutable validation reports, newest first, with every rule's result.
+         */
+        get: operations["listCTCValidations"];
+        put?: never;
+        /**
+         * Validate a fiscal document against a record's format profile
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     Runs the current ruleset over a committed fiscal document under an `ACTIVE`
+         *     record's current terms (Doc 21 W06): the record's cell, canonical invoice
+         *     semantics (number, lines, tax pinned to decisions, exact totals, the
+         *     preceding-document reference of a correction) and the profile's structural
+         *     constraints. Every rule's result is stored with the ruleset version. The
+         *     official schema and Schematron stage is reported `NOT_EVALUATED`: no licensed
+         *     bundle is installed, so `PASSED` is a pre-dispatch structural check, never
+         *     certification. Validating again with the same document state, record version
+         *     and ruleset returns the same report with `200`. A `PROHIBITED` record has no
+         *     profile (`409 CTC_SUBMISSION_PROHIBITED`).
+         */
+        post: operations["validateCTCDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/validations/{validationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One format validation report
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         */
+        get: operations["getCTCValidation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Authority submissions
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         *
+         *     Submissions, newest first, each with its events. A rejected submission
+         *     carries its correction task, open until a committed fiscal document names the
+         *     rejected one as its predecessor.
+         */
+        get: operations["listCTCSubmissions"];
+        put?: never;
+        /**
+         * Prepare and seal a submission
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Seals a committed fiscal document under an `ACTIVE` record whose duty is
+         *     `REQUIRED` or `OPTIONAL`, covering the document's legal entity, type and
+         *     issue date (`409 CTC_DOCUMENT_MISMATCH`, `409 CTC_RULE_OUT_OF_EFFECT`). The
+         *     newest validation of the document under the record must have `PASSED` and
+         *     still speak for the document, the record's current version and the current
+         *     ruleset (`409 CTC_VALIDATION_REQUIRED`, `409 CTC_VALIDATION_STALE`). The
+         *     document projection, record version and report are sealed under one payload
+         *     digest. **Idempotent per document and record**: while a submission of the
+         *     document under the record is live — anything but `WITHDRAWN` — preparing
+         *     again returns it with `200`. Nothing is sent here.
+         */
+        post: operations["prepareCTCSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/submissions/{submissionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One submission with its events
+         * @description `OPERATOR`, `ANALYST` or `AUDITOR`.
+         */
+        get: operations["getCTCSubmission"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/submissions/{submissionId}/dispatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Authorise one dispatch attempt
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves, who did not prepare the
+         *     submission (`403 MAKER_CHECKER`).
+         *
+         *     Records one attempt under the submission's fixed `externalRef`. The checker
+         *     names the payload digest reviewed (`409 CTC_PAYLOAD_DIGEST_MISMATCH`); the
+         *     payload is recomputed from the document, record and report as they stand and
+         *     must still match the seal, under a record still `ACTIVE` on the sealed
+         *     version (`409 CTC_VALIDATION_STALE`, `409 CTC_APPLICABILITY_NOT_ACTIVE`). A
+         *     submission whose outcome is unknown is sent again only after a status enquiry
+         *     found nothing (`409 CTC_OUTCOME_UNCERTAIN`). A submission already sent or
+         *     answered is returned as it is with `200` — never a second fiscal document. No
+         *     authority or partner connector is wired here: the transmission itself happens
+         *     through the approved channel and its answers are recorded.
+         */
+        post: operations["dispatchCTCSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/submissions/{submissionId}/responses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record what the rail or the authority answered
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves.
+         *
+         *     ZoikoTax does not invent the authority's answer. `TRANSPORT_RECEIVED` is a
+         *     rail or partner receipt and names its `transportRef`; it leaves the
+         *     authority outcome pending. `AUTHORITY_ACCEPTED` names the authority's own
+         *     reference; `AUTHORITY_REJECTED` keeps the authority's raw code and says why,
+         *     and opens a correction task that a new fiscal document naming the rejected
+         *     one closes. Both carry the SHA-256 of the raw receipt. `OUTCOME_UNKNOWN` says
+         *     why nobody knows; `STATUS_NOT_FOUND` records a status enquiry, by
+         *     `transportRef`, that found nothing — the only thing that lets a submission of
+         *     unknown outcome be sent again. Once accepted or rejected, a later answer is
+         *     `409 CTC_FINAL_OUTCOME_RECORDED`. **Idempotent on the answer**: the same
+         *     answer again records nothing and answers `200`.
+         */
+        post: operations["recordCTCResponse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ctc/submissions/{submissionId}/withdrawal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw a prepared submission never dispatched
+         * @description `OPERATOR`, signed in as themselves.
+         *
+         *     Releases a `PREPARED` submission with the reason, so the document can be
+         *     validated and prepared again. A submission once dispatched is never
+         *     withdrawn.
+         */
+        post: operations["withdrawCTCSubmission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -11659,6 +12054,478 @@ export interface components {
             truncated: boolean;
             asOf: components["schemas"]["Timestamp"];
         };
+        /**
+         * CTCApplicabilityId
+         * Format: uuid
+         * @description A country applicability record.
+         * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        CTCApplicabilityId: string;
+        /**
+         * CTCValidationId
+         * Format: uuid
+         * @description An immutable format validation report.
+         * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        CTCValidationId: string;
+        /**
+         * CTCSubmissionId
+         * Format: uuid
+         * @description An authority submission. Also the reference every dispatch attempt carries.
+         * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        CTCSubmissionId: string;
+        /**
+         * CTCAttemptId
+         * Format: uuid
+         * @description One dispatch attempt of a submission.
+         * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20
+         */
+        CTCAttemptId: string;
+        /**
+         * CTCCountry
+         * @description An ISO 3166-1 alpha-2 country code.
+         * @example IT
+         */
+        CTCCountry: string;
+        /**
+         * CTCDocumentType
+         * @description The fiscal document types an applicability record may name: billing documents and their corrections that a regime projects into an electronic document.
+         * @enum {string}
+         */
+        CTCDocumentType: "INVOICE" | "CREDIT_NOTE" | "DEBIT_NOTE" | "REBILL" | "ADJUSTMENT";
+        /**
+         * CTCBuyerKind
+         * @description Who receives the document. A B2C document is never forced through a B2B rail.
+         * @enum {string}
+         */
+        CTCBuyerKind: "B2B" | "B2G" | "B2C";
+        /**
+         * CTCDuty
+         * @description What a record says a cell owes. A PROHIBITED duty has model NONE and profile NONE.
+         * @enum {string}
+         */
+        CTCDuty: "REQUIRED" | "OPTIONAL" | "PROHIBITED";
+        /**
+         * CTCResolvedDuty
+         * @description What resolution answers: an active record's duty, or REVIEW_BLOCKED.
+         * @enum {string}
+         */
+        CTCResolvedDuty: "REQUIRED" | "OPTIONAL" | "PROHIBITED" | "REVIEW_BLOCKED";
+        /**
+         * CTCModel
+         * @description The control model (Doc 21 §02 clearance_model).
+         * @enum {string}
+         */
+        CTCModel: "CLEARANCE" | "REAL_TIME_REPORTING" | "POST_AUDIT" | "NETWORK_EXCHANGE" | "NONE";
+        /**
+         * CTCProfile
+         * @description The format profile a document is projected into (Doc 21 §08). National profiles are used only in their own country; PEPPOL_BIS_3 is a network profile.
+         * @enum {string}
+         */
+        CTCProfile: "PEPPOL_BIS_3" | "FR_EN16931" | "IT_FATTURAPA" | "PL_KSEF_FA" | "BR_NFCOM_62" | "SA_ZATCA_UBL" | "IN_GST_IRP" | "NONE";
+        /**
+         * CTCApplicabilityStatus
+         * @description Where a record stands. DRAFT and IN_REVIEW are NOT_ACTIVATED; only ACTIVE decides a duty.
+         * @enum {string}
+         */
+        CTCApplicabilityStatus: "DRAFT" | "IN_REVIEW" | "ACTIVE" | "SUSPENDED" | "RETIRED";
+        /**
+         * CTCGate
+         * @description Doc 21 §11's release gates.
+         * @enum {string}
+         */
+        CTCGate: "G0_SCOPE_AUTHORITY" | "G1_LEGAL_CONTENT_RIGHTS" | "G2_TECHNICAL_QA" | "G3_SECURITY_OPERATIONS" | "G4_CONTROLLED_PRODUCTION";
+        /**
+         * CTCApplicabilityEventKind
+         * @description What happened to a record.
+         * @enum {string}
+         */
+        CTCApplicabilityEventKind: "CREATED" | "REVISED" | "EVIDENCE_ADDED" | "SUBMITTED" | "RETURNED" | "GATE_SIGNED" | "ACTIVATED" | "SUSPENDED" | "RESUMED" | "RETIRED";
+        /**
+         * CTCAction
+         * @description A move of a record a person asks for.
+         * @enum {string}
+         */
+        CTCAction: "SUBMIT" | "RETURN" | "ACTIVATE" | "SUSPEND" | "RESUME" | "RETIRE";
+        /**
+         * CTCText
+         * @description A short regulatory label: an authority, a format version.
+         */
+        CTCText: string;
+        /**
+         * CTCLegalSource
+         * @description The legal source and reference a duty rests on. Regulatory text, not personal data.
+         */
+        CTCLegalSource: string;
+        /**
+         * CTCReference
+         * @description Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+         */
+        CTCReference: string;
+        /**
+         * CTCAmount
+         * @description A committed fiscal document's figure in canonical decimal string form — never a JSON number, never computed by a client.
+         * @example 122.00
+         */
+        CTCAmount: string;
+        /**
+         * CTCTerms
+         * @description One version of what a cell owes.
+         */
+        CTCTerms: {
+            duty: components["schemas"]["CTCDuty"];
+            model: components["schemas"]["CTCModel"];
+            profile: components["schemas"]["CTCProfile"];
+            formatVersion?: components["schemas"]["CTCText"];
+            authority: components["schemas"]["CTCText"];
+            legalSource: components["schemas"]["CTCLegalSource"];
+            sourceAsOf: components["schemas"]["CivilDate"];
+            effectiveFrom: components["schemas"]["CivilDate"];
+            effectiveTo?: components["schemas"]["CivilDate"];
+            conditions?: components["schemas"]["EvidenceText"];
+        };
+        /**
+         * CTCTermsVersion
+         * @description A recorded version of a record's terms. Never edited.
+         */
+        CTCTermsVersion: {
+            /** Format: int32 */
+            version: number;
+            terms: components["schemas"]["CTCTerms"];
+            digest: components["schemas"]["Digest"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /**
+         * CTCGateSignoff
+         * @description A gate signed on an exact version.
+         */
+        CTCGateSignoff: {
+            gate: components["schemas"]["CTCGate"];
+            /** Format: int32 */
+            version: number;
+            signoffRef: components["schemas"]["CTCReference"];
+            note?: components["schemas"]["EvidenceText"];
+            signedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            signedBy: string;
+        };
+        /**
+         * CTCApplicabilityEvent
+         * @description One appended act on a record.
+         */
+        CTCApplicabilityEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["CTCApplicabilityEventKind"];
+            status: components["schemas"]["CTCApplicabilityStatus"];
+            /** Format: int32 */
+            version?: number;
+            gate?: components["schemas"]["CTCGate"];
+            signoffRef?: components["schemas"]["CTCReference"];
+            reason?: components["schemas"]["EvidenceText"];
+            evidence?: components["schemas"]["EvidenceDocument"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /**
+         * CTCApplicability
+         * @description A country applicability record (Doc 21 W01, W20): one legal entity, country, document type and buyer kind, with versioned terms, sign-offs, evidence and history.
+         */
+        CTCApplicability: {
+            id: components["schemas"]["CTCApplicabilityId"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            country: components["schemas"]["CTCCountry"];
+            documentType: components["schemas"]["CTCDocumentType"];
+            buyerKind: components["schemas"]["CTCBuyerKind"];
+            status: components["schemas"]["CTCApplicabilityStatus"];
+            /** Format: int32 */
+            currentVersion: number;
+            terms: components["schemas"]["CTCTerms"];
+            versions: components["schemas"]["CTCTermsVersion"][];
+            /** @description The gates the current version's duty needs. */
+            requiredGates: components["schemas"]["CTCGate"][];
+            /** @description The required gates not yet signed on the current version. */
+            missingGates: components["schemas"]["CTCGate"][];
+            /** @description The sign-offs on the current version. */
+            signoffs: components["schemas"]["CTCGateSignoff"][];
+            evidence: components["schemas"]["EvidenceDocument"][];
+            history: components["schemas"]["CTCApplicabilityEvent"][];
+            createdAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            createdBy: string;
+        };
+        /**
+         * CTCApplicabilityList
+         * @description Country applicability records.
+         */
+        CTCApplicabilityList: {
+            records: components["schemas"]["CTCApplicability"][];
+        };
+        /**
+         * CTCApplicabilityRequest
+         * @description A record to create.
+         */
+        CTCApplicabilityRequest: {
+            legalEntityId?: components["schemas"]["LegalEntityId"];
+            country: components["schemas"]["CTCCountry"];
+            documentType: components["schemas"]["CTCDocumentType"];
+            buyerKind: components["schemas"]["CTCBuyerKind"];
+            terms: components["schemas"]["CTCTerms"];
+        };
+        /**
+         * CTCGateRequest
+         * @description A gate sign-off.
+         */
+        CTCGateRequest: {
+            gate: components["schemas"]["CTCGate"];
+            /**
+             * Format: int32
+             * @description The version reviewed. Any other is VERSION_CONFLICT.
+             */
+            version: number;
+            signoffRef: components["schemas"]["CTCReference"];
+            note?: components["schemas"]["EvidenceText"];
+        };
+        /**
+         * CTCTransitionRequest
+         * @description A move of a record.
+         */
+        CTCTransitionRequest: {
+            action: components["schemas"]["CTCAction"];
+            /**
+             * Format: int32
+             * @description The version an activation is on.
+             */
+            version?: number;
+            reason?: components["schemas"]["EvidenceText"];
+        };
+        /**
+         * CTCResolution
+         * @description What a cell owes on a date. No side effect.
+         */
+        CTCResolution: {
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            country: components["schemas"]["CTCCountry"];
+            documentType: components["schemas"]["CTCDocumentType"];
+            buyerKind: components["schemas"]["CTCBuyerKind"];
+            date: components["schemas"]["CivilDate"];
+            duty: components["schemas"]["CTCResolvedDuty"];
+            /** @description Whether documents of the cell may be validated and submitted: the duty is REQUIRED or OPTIONAL. */
+            dispatchPermitted: boolean;
+            reasonCode?: components["schemas"]["ReasonCode"];
+            detail: string;
+            applicabilityId?: components["schemas"]["CTCApplicabilityId"];
+            /** Format: int32 */
+            applicabilityVersion?: number;
+            applicabilityStatus?: components["schemas"]["CTCApplicabilityStatus"];
+            terms?: components["schemas"]["CTCTerms"];
+        };
+        /**
+         * CTCRuleStage
+         * @description The validation stage a rule belongs to.
+         * @enum {string}
+         */
+        CTCRuleStage: "APPLICABILITY" | "SEMANTIC" | "REGIME" | "SYNTAX";
+        /**
+         * CTCRuleSeverity
+         * @description FATAL blocks submission and is never waived; WARNING is reported.
+         * @enum {string}
+         */
+        CTCRuleSeverity: "FATAL" | "WARNING";
+        /**
+         * CTCRuleOutcome
+         * @description One rule's result. NOT_EVALUATED is never a pass.
+         * @enum {string}
+         */
+        CTCRuleOutcome: "PASS" | "FAIL" | "NOT_EVALUATED";
+        /**
+         * CTCValidationOutcome
+         * @description PASSED means no FATAL rule failed. It is not certification.
+         * @enum {string}
+         */
+        CTCValidationOutcome: "PASSED" | "FAILED";
+        /**
+         * CTCRuleResult
+         * @description One rule's result on one document.
+         */
+        CTCRuleResult: {
+            ruleId: string;
+            stage: components["schemas"]["CTCRuleStage"];
+            severity: components["schemas"]["CTCRuleSeverity"];
+            outcome: components["schemas"]["CTCRuleOutcome"];
+            reasonCode?: components["schemas"]["ReasonCode"];
+            businessTerm?: string;
+            detail?: string;
+        };
+        /**
+         * CTCValidation
+         * @description An immutable format validation report (Doc 21 W06).
+         */
+        CTCValidation: {
+            id: components["schemas"]["CTCValidationId"];
+            documentId: components["schemas"]["DocumentId"];
+            applicabilityId: components["schemas"]["CTCApplicabilityId"];
+            /** Format: int32 */
+            applicabilityVersion: number;
+            profile: components["schemas"]["CTCProfile"];
+            formatVersion?: components["schemas"]["CTCText"];
+            /** @description The ruleset version the rules ran under. */
+            ruleset: string;
+            inputDigest: components["schemas"]["Digest"];
+            outcome: components["schemas"]["CTCValidationOutcome"];
+            /** Format: int32 */
+            fatalFailures: number;
+            /** @description Whether the official schema and Schematron stage ran. Always false here: no licensed bundle is installed. */
+            schemaValidated: boolean;
+            results: components["schemas"]["CTCRuleResult"][];
+            digest: components["schemas"]["Digest"];
+            validatedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            validatedBy: string;
+        };
+        /**
+         * CTCValidationList
+         * @description Validation reports.
+         */
+        CTCValidationList: {
+            validations: components["schemas"]["CTCValidation"][];
+        };
+        /**
+         * CTCValidationRequest
+         * @description A document to validate under a record.
+         */
+        CTCValidationRequest: {
+            documentId: components["schemas"]["DocumentId"];
+            applicabilityId: components["schemas"]["CTCApplicabilityId"];
+        };
+        /**
+         * CTCSubmissionStatus
+         * @description Where a submission stands (Doc 21 §06). TRANSPORT_RECEIVED is not acceptance.
+         * @enum {string}
+         */
+        CTCSubmissionStatus: "PREPARED" | "SENT" | "TRANSPORT_RECEIVED" | "AUTHORITY_ACCEPTED" | "AUTHORITY_REJECTED" | "UNCERTAIN_EXTERNAL_STATE" | "WITHDRAWN";
+        /**
+         * CTCSubmissionEventKind
+         * @description What happened to a submission.
+         * @enum {string}
+         */
+        CTCSubmissionEventKind: "PREPARED" | "DISPATCHED" | "TRANSPORT_RECEIVED" | "AUTHORITY_ACCEPTED" | "AUTHORITY_REJECTED" | "OUTCOME_UNKNOWN" | "STATUS_NOT_FOUND" | "WITHDRAWN";
+        /**
+         * CTCResponseKind
+         * @description An answer a person records.
+         * @enum {string}
+         */
+        CTCResponseKind: "TRANSPORT_RECEIVED" | "AUTHORITY_ACCEPTED" | "AUTHORITY_REJECTED" | "OUTCOME_UNKNOWN" | "STATUS_NOT_FOUND";
+        /**
+         * CTCSubmissionEvent
+         * @description One appended act on a submission.
+         */
+        CTCSubmissionEvent: {
+            /** Format: int32 */
+            seq: number;
+            kind: components["schemas"]["CTCSubmissionEventKind"];
+            status: components["schemas"]["CTCSubmissionStatus"];
+            attemptId?: components["schemas"]["CTCAttemptId"];
+            transportRef?: components["schemas"]["CTCReference"];
+            authorityRef?: components["schemas"]["CTCReference"];
+            authorityCode?: components["schemas"]["CTCReference"];
+            evidenceSha256?: components["schemas"]["Sha256Hex"];
+            detail?: components["schemas"]["EvidenceText"];
+            recordedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            recordedBy: string;
+        };
+        /**
+         * CTCCorrectionTask
+         * @description What an authority rejection opens: the rejected document is corrected through the fiscal corrections flow by a new document naming it, never edited. Open until one exists.
+         */
+        CTCCorrectionTask: {
+            documentId: components["schemas"]["DocumentId"];
+            open: boolean;
+            openedAt: components["schemas"]["Timestamp"];
+            authorityCode?: components["schemas"]["CTCReference"];
+            reason?: components["schemas"]["EvidenceText"];
+            /** @description Committed documents naming the rejected one as their predecessor. */
+            correctedBy: components["schemas"]["DocumentId"][];
+        };
+        /**
+         * CTCSubmission
+         * @description An authority submission of a fiscal document under a record version (Doc 21 W14, W15).
+         */
+        CTCSubmission: {
+            id: components["schemas"]["CTCSubmissionId"];
+            documentId: components["schemas"]["DocumentId"];
+            /** @description The legal, customer-visible document number. */
+            documentNumber?: string;
+            documentType: components["schemas"]["CTCDocumentType"];
+            legalEntityId: components["schemas"]["LegalEntityId"];
+            country: components["schemas"]["CTCCountry"];
+            buyerKind: components["schemas"]["CTCBuyerKind"];
+            applicabilityId: components["schemas"]["CTCApplicabilityId"];
+            /** Format: int32 */
+            applicabilityVersion: number;
+            model: components["schemas"]["CTCModel"];
+            profile: components["schemas"]["CTCProfile"];
+            formatVersion?: components["schemas"]["CTCText"];
+            validationId: components["schemas"]["CTCValidationId"];
+            currency: components["schemas"]["CurrencyCode"];
+            gross: components["schemas"]["CTCAmount"];
+            payloadDigest: components["schemas"]["Digest"];
+            /** @description The reference every attempt carries, and a status enquiry asks by. Never changes across attempts. */
+            externalRef: string;
+            preparedAt: components["schemas"]["Timestamp"];
+            /** Format: uuid */
+            preparedBy: string;
+            status: components["schemas"]["CTCSubmissionStatus"];
+            history: components["schemas"]["CTCSubmissionEvent"][];
+            correction?: components["schemas"]["CTCCorrectionTask"];
+        };
+        /**
+         * CTCSubmissionList
+         * @description Submissions.
+         */
+        CTCSubmissionList: {
+            submissions: components["schemas"]["CTCSubmission"][];
+        };
+        /**
+         * CTCSubmissionRequest
+         * @description A document to submit under a record.
+         */
+        CTCSubmissionRequest: {
+            documentId: components["schemas"]["DocumentId"];
+            applicabilityId: components["schemas"]["CTCApplicabilityId"];
+        };
+        /**
+         * CTCDispatchRequest
+         * @description A checker's authorisation of a dispatch.
+         */
+        CTCDispatchRequest: {
+            payloadDigest: components["schemas"]["Digest"];
+        };
+        /**
+         * CTCResponseRequest
+         * @description An answer, as a person records it.
+         */
+        CTCResponseRequest: {
+            kind: components["schemas"]["CTCResponseKind"];
+            attemptId: components["schemas"]["CTCAttemptId"];
+            transportRef?: components["schemas"]["CTCReference"];
+            authorityRef?: components["schemas"]["CTCReference"];
+            authorityCode?: components["schemas"]["CTCReference"];
+            evidenceSha256?: components["schemas"]["Sha256Hex"];
+            detail?: components["schemas"]["EvidenceText"];
+        };
+        /**
+         * CTCWithdrawalRequest
+         * @description Why a prepared submission is withdrawn.
+         */
+        CTCWithdrawalRequest: {
+            reason: components["schemas"]["EvidenceText"];
+        };
     };
     responses: {
         /**
@@ -11922,6 +12789,21 @@ export interface components {
          * @example 01920c20-1a2b-7c3d-8e4f-5a6b7c8d9e10
          */
         ERPExportId: components["schemas"]["ERPExportId"];
+        /**
+         * @description The country applicability record identifier.
+         * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        CTCApplicabilityId: components["schemas"]["CTCApplicabilityId"];
+        /**
+         * @description The validation report identifier.
+         * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        CTCValidationId: components["schemas"]["CTCValidationId"];
+        /**
+         * @description The submission identifier.
+         * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+         */
+        CTCSubmissionId: components["schemas"]["CTCSubmissionId"];
         /**
          * @description The shadow run identifier.
          * @example 01920b50-1a2b-7c3d-8e4f-5a6b7c8d9e01
@@ -18902,6 +19784,686 @@ export interface operations {
             400: components["responses"]["Validation"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listCTCApplicability: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only records of this legal entity.
+                 * @example 01920a4c-0000-7000-8000-00000000e001
+                 */
+                legalEntityId?: components["schemas"]["LegalEntityId"];
+                /**
+                 * @description Only records for this country.
+                 * @example IT
+                 */
+                country?: components["schemas"]["CTCCountry"];
+                /**
+                 * @description Only records in this status.
+                 * @example ACTIVE
+                 */
+                status?: components["schemas"]["CTCApplicabilityStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The records. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicabilityList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    createCTCApplicability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCApplicabilityRequest"];
+            };
+        };
+        responses: {
+            /** @description The record, in DRAFT. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getCTCApplicability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The country applicability record identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                applicabilityId: components["parameters"]["CTCApplicabilityId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The record. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    reviseCTCApplicability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The country applicability record identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                applicabilityId: components["parameters"]["CTCApplicabilityId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCTerms"];
+            };
+        };
+        responses: {
+            /** @description The terms were already the current version's; nothing was recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            /** @description The record, with its new version. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    addCTCApplicabilityEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The country applicability record identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                applicabilityId: components["parameters"]["CTCApplicabilityId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvidenceDocument"];
+            };
+        };
+        responses: {
+            /** @description The document was already attached. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            /** @description The record, with the document attached. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    signCTCApplicabilityGate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The country applicability record identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                applicabilityId: components["parameters"]["CTCApplicabilityId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCGateRequest"];
+            };
+        };
+        responses: {
+            /** @description The gate was already signed on this version. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            /** @description The record, with the sign-off. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    transitionCTCApplicability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The country applicability record identifier.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                applicabilityId: components["parameters"]["CTCApplicabilityId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCTransitionRequest"];
+            };
+        };
+        responses: {
+            /** @description The record, moved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCApplicability"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    resolveCTCApplicability: {
+        parameters: {
+            query: {
+                /**
+                 * @description The legal entity.
+                 * @example 01920a4c-0000-7000-8000-00000000e001
+                 */
+                legalEntityId?: components["schemas"]["LegalEntityId"];
+                /**
+                 * @description The country.
+                 * @example IT
+                 */
+                country: components["schemas"]["CTCCountry"];
+                /**
+                 * @description The document type.
+                 * @example INVOICE
+                 */
+                documentType: components["schemas"]["CTCDocumentType"];
+                /**
+                 * @description The kind of buyer.
+                 * @example B2B
+                 */
+                buyerKind: components["schemas"]["CTCBuyerKind"];
+                /**
+                 * @description The document's issue date.
+                 * @example 2026-11-05
+                 */
+                date: components["schemas"]["CivilDate"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The resolution. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCResolution"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listCTCValidations: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only reports of this fiscal document.
+                 * @example 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                documentId?: components["schemas"]["DocumentId"];
+                /**
+                 * @description Only reports under this record.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                applicabilityId?: components["schemas"]["CTCApplicabilityId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The reports. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCValidationList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    validateCTCDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCValidationRequest"];
+            };
+        };
+        responses: {
+            /** @description The same report, already recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCValidation"];
+                };
+            };
+            /** @description The report. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCValidation"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getCTCValidation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The validation report identifier.
+                 * @example 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                validationId: components["parameters"]["CTCValidationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The report. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCValidation"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    listCTCSubmissions: {
+        parameters: {
+            query?: {
+                /**
+                 * @description Only submissions of this fiscal document.
+                 * @example 01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f
+                 */
+                documentId?: components["schemas"]["DocumentId"];
+                /**
+                 * @description Only submissions under this record.
+                 * @example 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                applicabilityId?: components["schemas"]["CTCApplicabilityId"];
+                /**
+                 * @description Only submissions in this status.
+                 * @example AUTHORITY_REJECTED
+                 */
+                status?: components["schemas"]["CTCSubmissionStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The submissions. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmissionList"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    prepareCTCSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCSubmissionRequest"];
+            };
+        };
+        responses: {
+            /** @description The live submission of this document under this record. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmission"];
+                };
+            };
+            /** @description The submission, prepared and sealed. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmission"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getCTCSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The submission identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                submissionId: components["parameters"]["CTCSubmissionId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The submission. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmission"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    dispatchCTCSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The submission identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                submissionId: components["parameters"]["CTCSubmissionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCDispatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Already sent or answered; nothing was recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmission"];
+                };
+            };
+            /** @description The submission, with the attempt. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmission"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordCTCResponse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The submission identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                submissionId: components["parameters"]["CTCSubmissionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCResponseRequest"];
+            };
+        };
+        responses: {
+            /** @description The same answer was already recorded. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmission"];
+                };
+            };
+            /** @description The answer, recorded. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmission"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    withdrawCTCSubmission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The submission identifier.
+                 * @example 01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                 */
+                submissionId: components["parameters"]["CTCSubmissionId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CTCWithdrawalRequest"];
+            };
+        };
+        responses: {
+            /** @description The submission, withdrawn. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CTCSubmission"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };

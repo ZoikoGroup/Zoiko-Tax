@@ -303,6 +303,108 @@
     },
     {
       "method": "GET",
+      "path": "/v1/ctc/applicability",
+      "operationId": "listCTCApplicability",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/applicability",
+      "operationId": "createCTCApplicability",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/ctc/applicability/{applicabilityId}",
+      "operationId": "getCTCApplicability",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/applicability/{applicabilityId}/evidence",
+      "operationId": "addCTCApplicabilityEvidence",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/applicability/{applicabilityId}/gates",
+      "operationId": "signCTCApplicabilityGate",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/applicability/{applicabilityId}/transitions",
+      "operationId": "transitionCTCApplicability",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/applicability/{applicabilityId}/versions",
+      "operationId": "reviseCTCApplicability",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/ctc/resolution",
+      "operationId": "resolveCTCApplicability",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/ctc/submissions",
+      "operationId": "listCTCSubmissions",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/submissions",
+      "operationId": "prepareCTCSubmission",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/ctc/submissions/{submissionId}",
+      "operationId": "getCTCSubmission",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/submissions/{submissionId}/dispatch",
+      "operationId": "dispatchCTCSubmission",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/submissions/{submissionId}/responses",
+      "operationId": "recordCTCResponse",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/submissions/{submissionId}/withdrawal",
+      "operationId": "withdrawCTCSubmission",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/ctc/validations",
+      "operationId": "listCTCValidations",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/validations",
+      "operationId": "validateCTCDocument",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/ctc/validations/{validationId}",
+      "operationId": "getCTCValidation",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/dashboard",
       "operationId": "getDashboard",
       "public": false
