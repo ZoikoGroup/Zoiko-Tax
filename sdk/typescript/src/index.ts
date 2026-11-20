@@ -481,6 +481,11 @@ export class ZoikoTaxClient {
     return this.#send<S<"Obligation">>("GET", `/v1/obligations/${encodeURIComponent(obligationId)}`, undefined, signal);
   }
 
+  /** Ask the AI plane to explain one obligation. `POST /v1/obligations/{obligationId}/explanation`. */
+  explainObligation(obligationId: string, signal?: AbortSignal): Promise<Result<S<"ObligationExplanation">>> {
+    return this.#send<S<"ObligationExplanation">>("POST", `/v1/obligations/${encodeURIComponent(obligationId)}/explanation`, undefined, signal);
+  }
+
   /** Transition obligation. `POST /v1/obligations/{obligationId}/transitions`. */
   transitionObligation(obligationId: string, body: S<"ObligationTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"Obligation">>> {
     return this.#send<S<"Obligation">>("POST", `/v1/obligations/${encodeURIComponent(obligationId)}/transitions`, body, signal);

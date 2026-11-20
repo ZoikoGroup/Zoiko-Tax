@@ -45,4 +45,27 @@ var (
 	ReasonProposalCodeNotApproved = errs.Register("AI_PROPOSAL_CODE_NOT_APPROVED", errs.CategoryInternal,
 		"lane-l",
 		"The AI Gateway proposed a code that is not approved at this time. The proposal was set aside for a person to review.")
+
+	// The three explanation codes. They are fixed: the text a model wrote is
+	// never put in a reason, and none of them counts toward the Gateway's
+	// circuit breaker, because each is decided after the Gateway has answered.
+
+	// ReasonExplanationAbstained is an explanation the Gateway set aside: the
+	// model abstained or the Gateway's answer check did not pass it.
+	ReasonExplanationAbstained = errs.Register("AI_EXPLANATION_ABSTAINED", errs.CategoryInternal,
+		"lane-l",
+		"The AI Gateway set the explanation aside. A person should review the obligation.")
+
+	// ReasonExplanationRefused is an explanation the Gateway refused to give
+	// after taking the call.
+	ReasonExplanationRefused = errs.Register("AI_EXPLANATION_REFUSED", errs.CategoryInternal,
+		"lane-l",
+		"The AI Gateway declined to explain this obligation. A person should review it.")
+
+	// ReasonExplanationReplyUnusable is a reply that cannot be used: no known
+	// status, no usable citation, a citation to a row that was not sent, or no
+	// text. The reply is discarded rather than guessed at.
+	ReasonExplanationReplyUnusable = errs.Register("AI_EXPLANATION_REPLY_UNUSABLE", errs.CategoryInternal,
+		"lane-l",
+		"The AI Gateway's answer could not be used. The explanation was discarded.")
 )

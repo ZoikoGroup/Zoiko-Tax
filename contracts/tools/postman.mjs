@@ -201,7 +201,7 @@ const FOLDERS = [
     operations: [
       "getCoverage",
       "createQuote", "commitTransaction", "getDecision", "listDecisions", "replayDecision", "listDecisionJournals", "listDecisionResponsibility",
-      "getSubledgerBalances", "listObligations", "getObligation", "transitionObligation",
+      "getSubledgerBalances", "listObligations", "getObligation", "explainObligation", "transitionObligation",
       "createCompliancePackage", "getCompliancePackage", "listCompliancePackages", "prepareCompliancePackage",
       "reviewCompliancePackage", "approveCompliancePackage", "submitCompliancePackage",
       "acknowledgeCompliancePackage", "resolveCompliancePackage", "cancelCompliancePackage",
@@ -421,6 +421,13 @@ const OPERATION_TESTS = {
     "  const o = pm.response.json();",
     "  pm.expect(o.definition.id).to.be.a('string');",
     "  pm.expect(o.content.bundleDigest).to.match(/^zt1:[0-9a-f]{64}$/);",
+    "});",
+  ],
+  explainObligation: [
+    "pm.test('ADR-0006 — advisory, refused for its data class, or not available here; never authoritative', function () {",
+    "  pm.expect([200, 403, 503]).to.include(pm.response.code);",
+    "  if (pm.response.code === 200) { pm.expect(pm.response.json().authoritative).to.eql(false); }",
+    "  if (pm.response.code === 403) { pm.expect(pm.response.json().ztx_reason_code).to.eql('AI_DATA_CLASS_REFUSED'); }",
     "});",
   ],
   transitionObligation: [
@@ -989,6 +996,9 @@ function jsonBody(value) {
 // provider, which is every local stack.
 const ACCEPTED_OUTCOMES = {
   proposeClassification: ["422"],
+  // The row carries a P5 amount, so a Gateway whose registry does not approve
+  // that class refuses the call (403), and a cell with no service answers 503.
+  explainObligation: ["403", "503"],
   // The example proposal id is fixed, so a second run finds its decision already
   // recorded (409), and a cell with no decision service answers 503.
   recordClassificationDecision: ["409", "503"],

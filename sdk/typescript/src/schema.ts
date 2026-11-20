@@ -1906,6 +1906,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/obligations/{obligationId}/explanation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the AI plane to explain one obligation
+         * @description `OPERATOR` or `ANALYST`. Sends one obligation row of the caller's own
+         *     tenant to the Governed Model Gateway under the `explain-obligation-row`
+         *     use case (ADR-0006) and returns the explanation it gives. The request
+         *     has no body: the tenant comes from the session and the row from the
+         *     store, so a caller cannot choose what is sent.
+         *
+         *     The explanation is **advisory and never authoritative**. It is not a
+         *     determination, an assessment or tax advice, and nothing in this
+         *     response changes an obligation. A person must read it against the row.
+         *
+         *     The answer is checked by the AI Gateway, not here. The service reads
+         *     the checked answer and fails closed: `explanation` is returned only
+         *     when the Gateway reports `ANSWERED` and every id in `citedIds` is the
+         *     row that was sent. Any other answer carries no explanation text.
+         *
+         *     The row carries the assessed amount, which is class P5 fiscal data. A
+         *     use case is refused data classes it is not approved for, so until
+         *     `explain-obligation-row` is approved for P5 the Gateway refuses the
+         *     call with `403` `AI_DATA_CLASS_REFUSED` before anything leaves the
+         *     process. That is the intended state of a cell whose use case is not
+         *     approved.
+         *
+         *     When the AI plane cannot help, the answer is still `200`: a Gateway
+         *     with no approved provider, one that is down or slow, a reply without
+         *     its provenance, or a reply that cannot be used all give
+         *     `status: REVIEW_REQUIRED` with the reason in `reviewReason` and no
+         *     explanation. `status: ABSTAINED` means the Gateway answered and set the
+         *     explanation aside. Deterministic processing is unaffected by any of
+         *     them. An obligation of another tenant, or one that does not exist, is
+         *     `404`. A cell with no obligation or no explanation service wired
+         *     answers `503`. A governance refusal (kill switch, residency,
+         *     authority, data class) is a `403` with the Gateway's reason code.
+         */
+        post: operations["explainObligation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/obligations/{obligationId}/transitions": {
         parameters: {
             query?: never;
@@ -5820,6 +5871,37 @@ export interface components {
             proposedCode?: string;
             /** @description The model's own score as a canonical decimal in [0, 1]. Never a threshold that makes the proposal authoritative. */
             confidence?: string;
+            /** @enum {boolean} */
+            authoritative: false;
+            provenance?: components["schemas"]["AiProvenance"];
+        };
+        /**
+         * ObligationExplanation
+         * @description An advisory explanation of one obligation row. `authoritative` is always false; a person reads it against the row.
+         *
+         *     `status` says what the AI plane contributed. `ANSWERED` carries the explanation and the ids it cites; every
+         *     cited id is the row that was sent. `ABSTAINED` means the Gateway answered and set the explanation aside.
+         *     `REVIEW_REQUIRED` means the AI plane was unavailable, not configured in this cell, or answered with something
+         *     that cannot be used. Only `ANSWERED` carries `explanation`. `reviewReason` is a fixed reason code and never
+         *     holds model text.
+         */
+        ObligationExplanation: {
+            obligationId: components["schemas"]["ObligationId"];
+            /** @enum {string} */
+            status: "ANSWERED" | "ABSTAINED" | "REVIEW_REQUIRED";
+            /**
+             * @description Present unless `status` is `ANSWERED`. With `REVIEW_REQUIRED`: `AI_GATEWAY_UNAVAILABLE`,
+             *     `AI_GATEWAY_NOT_CONFIGURED`, `AI_GATEWAY_REPLY_UNEVIDENCED` or `AI_EXPLANATION_REPLY_UNUSABLE`
+             *     (a reply with no usable status, no citation, or a citation to a row that was not sent). With
+             *     `ABSTAINED`: `AI_EXPLANATION_ABSTAINED` or `AI_EXPLANATION_REFUSED`.
+             */
+            reviewReason?: string;
+            /** @description Plain-language text. Present only when `status` is `ANSWERED`. It quotes figures from the row, so it is held at the row's highest class. */
+            explanation?: string;
+            /** @description The ids the explanation cites. Each is the obligation that was sent. Empty unless `status` is `ANSWERED`. */
+            citedIds: components["schemas"]["ObligationId"][];
+            /** @description The version of the answer check that passed the explanation, as the Gateway reported it. Absent when none was reported. */
+            validatorVersion?: string;
             /** @enum {boolean} */
             authoritative: false;
             provenance?: components["schemas"]["AiProvenance"];
@@ -13191,6 +13273,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Obligation"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    explainObligation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The obligation row identifier.
+                 * @example 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                 */
+                obligationId: components["parameters"]["ObligationId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The advisory explanation with the provenance that produced it, or why there is none. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObligationExplanation"];
                 };
             };
             400: components["responses"]["Validation"];

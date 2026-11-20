@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:649b91b423a099137f38885f47bd477df4abc4fb3ade0abc2fc0893f087d357d`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:b91499558b08ba9482bf17ff28d99a4f40f70a4c3e26133420699c43a039b8f2`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -5594,6 +5594,135 @@
                   "  const o = pm.response.json();",
                   "  pm.expect(o.definition.id).to.be.a('string');",
                   "  pm.expect(o.content.bundleDigest).to.match(/^zt1:[0-9a-f]{64}$/);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/obligations/{obligationId}/explanation — Ask the AI plane to explain one obligation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/obligations/{{obligationId}}/explanation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "obligations",
+                "{{obligationId}}",
+                "explanation"
+              ]
+            },
+            "description": "Ask the AI plane to explain one obligation\n\n`OPERATOR` or `ANALYST`. Sends one obligation row of the caller's own\ntenant to the Governed Model Gateway under the `explain-obligation-row`\nuse case (ADR-0006) and returns the explanation it gives. The request\nhas no body: the tenant comes from the session and the row from the\nstore, so a caller cannot choose what is sent.\n\nThe explanation is **advisory and never authoritative**. It is not a\ndetermination, an assessment or tax advice, and nothing in this\nresponse changes an obligation. A person must read it against the row.\n\nThe answer is checked by the AI Gateway, not here. The service reads\nthe checked answer and fails closed: `explanation` is returned only\nwhen the Gateway reports `ANSWERED` and every id in `citedIds` is the\nrow that was sent. Any other answer carries no explanation text.\n\nThe row carries the assessed amount, which is class P5 fiscal data. A\nuse case is refused data classes it is not approved for, so until\n`explain-obligation-row` is approved for P5 the Gateway refuses the\ncall with `403` `AI_DATA_CLASS_REFUSED` before anything leaves the\nprocess. That is the intended state of a cell whose use case is not\napproved.\n\nWhen the AI plane cannot help, the answer is still `200`: a Gateway\nwith no approved provider, one that is down or slow, a reply without\nits provenance, or a reply that cannot be used all give\n`status: REVIEW_REQUIRED` with the reason in `reviewReason` and no\nexplanation. `status: ABSTAINED` means the Gateway answered and set the\nexplanation aside. Deterministic processing is unaffected by any of\nthem. An obligation of another tenant, or one that does not exist, is\n`404`. A cell with no obligation or no explanation service wired\nanswers `503`. A governance refusal (kill switch, residency,\nauthority, data class) is a `403` with the Gateway's reason code."
+          },
+          "response": [
+            {
+              "name": "200 · An explanation that cites the row it was given",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/obligations/{{obligationId}}/explanation",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "obligations",
+                    "{{obligationId}}",
+                    "explanation"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"obligationId\": \"01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01\",\n  \"status\": \"ANSWERED\",\n  \"explanation\": \"This VAT return for 2026-07-01 to 2026-09-30 is open and due on 2026-10-20. The assessed amount is 42.00 EUR.\",\n  \"citedIds\": [\n    \"01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01\"\n  ],\n  \"validatorVersion\": \"explanation_guard@1\",\n  \"authoritative\": false,\n  \"provenance\": {\n    \"useCase\": \"explain-obligation-row\",\n    \"modelProfile\": \"model:explain-2027.03\",\n    \"providerProfile\": \"provider:approved-a\",\n    \"promptProfile\": \"prompt:explain-obligation-row-v1\",\n    \"aiTrainVersion\": \"ai-2027.03.1\",\n    \"invocationId\": \"call-id-1\"\n  }\n}"
+            },
+            {
+              "name": "200 · The Gateway set the answer aside",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/obligations/{{obligationId}}/explanation",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "obligations",
+                    "{{obligationId}}",
+                    "explanation"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"obligationId\": \"01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01\",\n  \"status\": \"ABSTAINED\",\n  \"reviewReason\": \"AI_EXPLANATION_ABSTAINED\",\n  \"citedIds\": [],\n  \"authoritative\": false\n}"
+            },
+            {
+              "name": "200 · The AI plane could not help",
+              "originalRequest": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/obligations/{{obligationId}}/explanation",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "obligations",
+                    "{{obligationId}}",
+                    "explanation"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"obligationId\": \"01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01\",\n  \"status\": \"REVIEW_REQUIRED\",\n  \"reviewReason\": \"AI_GATEWAY_UNAVAILABLE\",\n  \"citedIds\": [],\n  \"authoritative\": false\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('explainObligation returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 403, 503]);",
+                  "});",
+                  "pm.test('ADR-0006 — advisory, refused for its data class, or not available here; never authoritative', function () {",
+                  "  pm.expect([200, 403, 503]).to.include(pm.response.code);",
+                  "  if (pm.response.code === 200) { pm.expect(pm.response.json().authoritative).to.eql(false); }",
+                  "  if (pm.response.code === 403) { pm.expect(pm.response.json().ztx_reason_code).to.eql('AI_DATA_CLASS_REFUSED'); }",
                   "});"
                 ]
               }
@@ -15124,7 +15253,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:649b91b423a099137f38885f47bd477df4abc4fb3ade0abc2fc0893f087d357d",
+      "value": "sha256:b91499558b08ba9482bf17ff28d99a4f40f70a4c3e26133420699c43a039b8f2",
       "type": "string"
     }
   ]

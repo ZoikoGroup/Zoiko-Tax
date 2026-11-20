@@ -329,13 +329,13 @@ func (e ClassificationDecisionAction) Valid() bool {
 
 // Defines values for ClassificationProposalAuthoritative.
 const (
-	False ClassificationProposalAuthoritative = false
+	ClassificationProposalAuthoritativeFalse ClassificationProposalAuthoritative = false
 )
 
 // Valid indicates whether the value is a known member of the ClassificationProposalAuthoritative enum.
 func (e ClassificationProposalAuthoritative) Valid() bool {
 	switch e {
-	case False:
+	case ClassificationProposalAuthoritativeFalse:
 		return true
 	default:
 		return false
@@ -2730,6 +2730,42 @@ func (e ObligationDuty) Valid() bool {
 	case REGISTRATION:
 		return true
 	case TRANSACTIONMONETARY:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ObligationExplanationAuthoritative.
+const (
+	ObligationExplanationAuthoritativeFalse ObligationExplanationAuthoritative = false
+)
+
+// Valid indicates whether the value is a known member of the ObligationExplanationAuthoritative enum.
+func (e ObligationExplanationAuthoritative) Valid() bool {
+	switch e {
+	case ObligationExplanationAuthoritativeFalse:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ObligationExplanationStatus.
+const (
+	ObligationExplanationStatusABSTAINED      ObligationExplanationStatus = "ABSTAINED"
+	ObligationExplanationStatusANSWERED       ObligationExplanationStatus = "ANSWERED"
+	ObligationExplanationStatusREVIEWREQUIRED ObligationExplanationStatus = "REVIEW_REQUIRED"
+)
+
+// Valid indicates whether the value is a known member of the ObligationExplanationStatus enum.
+func (e ObligationExplanationStatus) Valid() bool {
+	switch e {
+	case ObligationExplanationStatusABSTAINED:
+		return true
+	case ObligationExplanationStatusANSWERED:
+		return true
+	case ObligationExplanationStatusREVIEWREQUIRED:
 		return true
 	default:
 		return false
@@ -9912,6 +9948,45 @@ type Obligation_Definition struct {
 
 // ObligationDuty defines model for Obligation.Duty.
 type ObligationDuty string
+
+// ObligationExplanation An advisory explanation of one obligation row. `authoritative` is always false; a person reads it against the row.
+//
+// `status` says what the AI plane contributed. `ANSWERED` carries the explanation and the ids it cites; every
+// cited id is the row that was sent. `ABSTAINED` means the Gateway answered and set the explanation aside.
+// `REVIEW_REQUIRED` means the AI plane was unavailable, not configured in this cell, or answered with something
+// that cannot be used. Only `ANSWERED` carries `explanation`. `reviewReason` is a fixed reason code and never
+// holds model text.
+type ObligationExplanation struct {
+	Authoritative ObligationExplanationAuthoritative `json:"authoritative"`
+
+	// CitedIds The ids the explanation cites. Each is the obligation that was sent. Empty unless `status` is `ANSWERED`.
+	CitedIds []ObligationID `json:"citedIds"`
+
+	// Explanation Plain-language text. Present only when `status` is `ANSWERED`. It quotes figures from the row, so it is held at the row's highest class.
+	Explanation *string `json:"explanation,omitempty"`
+
+	// ObligationID One row of an obligation's history. A UUID in lowercase canonical form.
+	ObligationID ObligationID `json:"obligationId"`
+
+	// Provenance Which governed use case, model, provider, prompt and AI train produced an output (ADR-0006 §2.7).
+	Provenance *AiProvenance `json:"provenance,omitempty"`
+
+	// ReviewReason Present unless `status` is `ANSWERED`. With `REVIEW_REQUIRED`: `AI_GATEWAY_UNAVAILABLE`,
+	// `AI_GATEWAY_NOT_CONFIGURED`, `AI_GATEWAY_REPLY_UNEVIDENCED` or `AI_EXPLANATION_REPLY_UNUSABLE`
+	// (a reply with no usable status, no citation, or a citation to a row that was not sent). With
+	// `ABSTAINED`: `AI_EXPLANATION_ABSTAINED` or `AI_EXPLANATION_REFUSED`.
+	ReviewReason *string                     `json:"reviewReason,omitempty"`
+	Status       ObligationExplanationStatus `json:"status"`
+
+	// ValidatorVersion The version of the answer check that passed the explanation, as the Gateway reported it. Absent when none was reported.
+	ValidatorVersion *string `json:"validatorVersion,omitempty"`
+}
+
+// ObligationExplanationAuthoritative defines model for ObligationExplanation.Authoritative.
+type ObligationExplanationAuthoritative bool
+
+// ObligationExplanationStatus defines model for ObligationExplanation.Status.
+type ObligationExplanationStatus string
 
 // ObligationID One row of an obligation's history. A UUID in lowercase canonical form.
 type ObligationID = string
