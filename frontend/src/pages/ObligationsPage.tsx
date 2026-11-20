@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { Fragment, useEffect, useRef, useState, type FormEvent } from 'react'
 
 import { ZoikoTaxError, type S } from '@zoikotax/sdk'
 
@@ -22,6 +22,7 @@ import {
   useLoad,
 } from '../ui/kit'
 import { TabBar } from './determine/shared'
+import { ObligationExplainPanel } from './obligations/ObligationExplainPanel'
 import { useRoutedTab } from './routedTab'
 import type { PageProps } from './types'
 import { Tiles, words } from './workspace'
@@ -235,6 +236,22 @@ const Register = ({ session, selected, setSelected }: {
     [status],
   )
   const canMove = session.user.roles.includes('OPERATOR')
+  // Asking the AI to explain a row is open to the roles that may ask it to propose.
+  const canExplain = session.user.roles.some((r) => r === 'OPERATOR' || r === 'ANALYST')
+  // The one row whose explanation is open. Closing it gives focus back to that row's button.
+  const [explaining, setExplaining] = useState<string | null>(null)
+  const openers = useRef(new Map<string, HTMLButtonElement>())
+  const returnFocus = useRef<string | null>(null)
+  const closeExplain = () => {
+    returnFocus.current = explaining
+    setExplaining(null)
+  }
+  useEffect(() => {
+    if (explaining === null && returnFocus.current !== null) {
+      openers.current.get(returnFocus.current)?.focus()
+      returnFocus.current = null
+    }
+  }, [explaining])
 
   return (
     <>
@@ -287,7 +304,8 @@ const Register = ({ session, selected, setSelected }: {
                   </thead>
                   <tbody>
                     {data.obligations.map((o) => (
-                      <tr key={o.id} className={o.id === selected ? 'ztax-row-selected' : undefined}>
+                      <Fragment key={o.id}>
+                      <tr className={o.id === selected ? 'ztax-row-selected' : undefined}>
                         <td style={{ fontWeight: 500, color: '#111827', paddingRight: 8 }}>{o.type}</td>
                         <td className="mono" style={{ paddingRight: 8 }}>{o.jurisdiction}</td>
                         <td className="mono" style={{ paddingRight: 8 }}>{o.authority}</td>
@@ -310,8 +328,34 @@ const Register = ({ session, selected, setSelected }: {
                           >
                             Open
                           </button>
+                          {canExplain ? (
+                            <>
+                              {' '}
+                              <button
+                                type="button"
+                                className="ztax-table-action-btn"
+                                aria-expanded={explaining === o.id}
+                                aria-label={`Explain ${o.type} due ${civilDate(o.dueDate)}`}
+                                ref={(el) => {
+                                  if (el === null) openers.current.delete(o.id)
+                                  else openers.current.set(o.id, el)
+                                }}
+                                onClick={() => { setExplaining(o.id) }}
+                              >
+                                Explain
+                              </button>
+                            </>
+                          ) : null}
                         </td>
                       </tr>
+                      {explaining === o.id ? (
+                        <tr>
+                          <td colSpan={8}>
+                            <ObligationExplainPanel obligationId={o.id} onClose={closeExplain} />
+                          </td>
+                        </tr>
+                      ) : null}
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
@@ -319,6 +363,9 @@ const Register = ({ session, selected, setSelected }: {
             )
           }
         </Loaded>
+        {canExplain ? null : (
+          <p className="ztax-note">Asking the AI to explain an obligation needs the Operator or Analyst role.</p>
+        )}
       </Card>
 
       {selected === null ? null : (
