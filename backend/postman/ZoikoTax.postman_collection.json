@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cb905e88-84e9-5651-855b-29c48a58fd33",
     "name": "ZoikoTax API (v1)",
-    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:649b91b423a099137f38885f47bd477df4abc4fb3ade0abc2fc0893f087d357d`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
+    "description": "**Generated from `contracts/openapi/ztax.v1.yaml` — do not edit.**\n\nRun `npm run postman` in `contracts/` after changing the contract or the overlay. A hand edit fails CI (ADR-0010 §2.1): a hand-maintained collection is a second, kinder statement of what the API is.\n\nContract digest: `sha256:5988d181d7e6af4cfc780f48c6c2de4af606e75bc1373e7a63eb4f006cbdbab9`\n\nImport and run; there is no environment to select. `baseUrl` defaults to the local cell and every other value rides along as a collection variable.\n\n## Before you run it\n\nBring the stack up (`docker compose up --build`), which bootstraps the `acme` tenant and its administrator. Then run the whole collection: `02 · Sign in` opens the session everything below depends on.\n\nFolders `05`, `07` and `90` are the ones worth reading. Each request there sends something a well-behaved client would never send, and each asserts a control from the ADRs against an endpoint that exists today.\n\nFolders `06` and `07` exercise the determination surface and are skipped unless `runDetermination` is `true`: they need a cell with a content bundle and a session holding `OPERATOR`, which the local stack's bootstrap administrator does not have. `98 · Destructive` is skipped unless `runDestructive` is `true`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -438,7 +438,7 @@
     },
     {
       "name": "04 · Administration",
-      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked. Then payee master data: `createBeneficiary` records an authority's payee details and captures `beneficiaryId`; the same administrator verifying them is refused with `MAKER_CHECKER` (ZTAX-REM-REQ-0014), and the version is suspended. Then support: `openSupportCase` opens a LEGAL case and captures `caseId`; the queue and the case are read, and `actOnSupportCase` verifies the requester, which moves the case to `VERIFIED` as one more event in its history. Then a migration: `createMigrationProgram` creates a program for 2025 and captures `migrationProgramId`; a snapshot of two historical results is registered, a mapping that names only one of their legacy codes is recorded, and `executeMigrationRun` converts the snapshot AS_KNOWN — one record converts, the other raises an `UNMAPPED_CODE` exception, captured into `migrationExceptionId`, and the monetary reconciliation does not pass. The exception is accepted as a known residual and the cutover moves to `PRECHECK`.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
+      "description": "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked. Then payee master data: `createBeneficiary` records an authority's payee details and captures `beneficiaryId`; the same administrator verifying them is refused with `MAKER_CHECKER` (ZTAX-REM-REQ-0014), and the version is suspended. Then support: `openSupportCase` opens a LEGAL case and captures `caseId`; the queue and the case are read, and `actOnSupportCase` verifies the requester, which moves the case to `VERIFIED` as one more event in its history. Then entitlements: `createEntitlement` records a UK filing right from today, submitted for review, and captures `entitlementId`; the same administrator approving it is refused with `MAKER_CHECKER` (Doc 18 W07), so it stays `PENDING`. `proposeSubscriptionPlan` proposes a plan and captures `planId`, and its proposer approving it is refused the same way. `getUsage` counts the month from the cell's own records, exact integers with a basis digest each, and `getUsageBasis` lists the rows one meter counted. Then a migration: `createMigrationProgram` creates a program for 2025 and captures `migrationProgramId`; a snapshot of two historical results is registered, a mapping that names only one of their legacy codes is recorded, and `executeMigrationRun` converts the snapshot AS_KNOWN — one record converts, the other raises an `UNMAPPED_CODE` exception, captured into `migrationExceptionId`, and the monetary reconciliation does not pass. The exception is accepted as a known residual and the cutover moves to `PRECHECK`.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
       "item": [
         {
           "name": "GET /v1/admin/users — List the tenant's users",
@@ -3645,6 +3645,648 @@
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.json().status).to.eql('VERIFIED');",
                   "  pm.expect(pm.response.json().history.length).to.eql(2);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/entitlements — The entitlement register, each grant beside the coverage the cell proves",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/entitlements?status={{status}}&effective={{effective}}&legalEntityId={{legalEntityId}}&country={{country}}&mode={{mode}}&operation={{operation}}&mismatch={{mismatch}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "entitlements"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "{{status}}",
+                  "description": "Only grants that read as this status today."
+                },
+                {
+                  "key": "effective",
+                  "value": "{{effective}}",
+                  "description": "Only grants in this effective state."
+                },
+                {
+                  "key": "legalEntityId",
+                  "value": "{{legalEntityId}}",
+                  "description": "Only grants to this legal entity."
+                },
+                {
+                  "key": "country",
+                  "value": "{{country}}",
+                  "description": "Only grants in this country, its subdivisions included."
+                },
+                {
+                  "key": "mode",
+                  "value": "{{mode}}",
+                  "description": "Only grants in this mode."
+                },
+                {
+                  "key": "operation",
+                  "value": "{{operation}}",
+                  "description": "Only grants for this operation."
+                },
+                {
+                  "key": "mismatch",
+                  "value": "{{mismatch}}",
+                  "description": "Only approved grants whose coverage the cell does not prove."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The entitlement register, each grant beside the coverage the cell proves\n\n`ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.\n\nEvery grant, newest first, read now: its stored `lifecycle`, its\ndated `status`, and its `effective` state — `ACTIVE` only when the\ngrant is active and the cell's verified coverage proves the operation\n(Doc 18 §02 ALLOW). An active grant the coverage does not prove is\n`RESTRICTED`, never live, and `mismatch` flags it; every reason a grant\nis pending or blocked is listed with a stable code (Doc 18 §06).\n\n`markets` is the verified market coverage the grants were read\nagainst — the same assessment the coverage screens show. A research\nprofile is never a live market, and no grant makes it one (T18-02)."
+          },
+          "response": [
+            {
+              "name": "200 · A filing right the cell cannot yet back",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/entitlements",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "entitlements"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"entitlements\": [\n    {\n      \"id\": \"01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"legalEntityId\": \"01920a4c-0000-7000-8000-00000000e001\",\n      \"jurisdiction\": \"GB\",\n      \"country\": \"GB\",\n      \"service\": \"MOBILE_VOICE\",\n      \"mode\": \"NATIVE\",\n      \"operation\": \"FILE\",\n      \"effectiveFrom\": \"2026-11-20\",\n      \"activeFrom\": \"2026-11-20\",\n      \"contractRef\": \"MSA-2026-014\",\n      \"contractRevision\": \"Schedule 2 rev 3\",\n      \"lifecycle\": \"APPROVED\",\n      \"status\": \"ACTIVE\",\n      \"effective\": \"RESTRICTED\",\n      \"decision\": \"DENY\",\n      \"mismatch\": true,\n      \"findings\": [\n        {\n          \"reason\": \"OPERATION_NOT_SUPPORTED\",\n          \"detail\": {\n            \"No filing gate in GB is ready for this legal entity (HMRC VAT\": \"AUTHORIZATION_MISSING). The calculation may be covered while the right to file a return is not.\"\n          }\n        }\n      ],\n      \"coverage\": {\n        \"state\": \"UNPROVEN\",\n        \"marketStatus\": \"PILOT\",\n        \"marketReason\": \"FILING_NOT_READY\",\n        \"research\": \"EVIDENCE_REVIEWED\",\n        \"servicesInForce\": [\n          \"MOBILE_VOICE\",\n          \"MOBILE_DATA\"\n        ],\n        \"filing\": {\n          \"ready\": false,\n          \"authority\": \"HMRC VAT\",\n          \"reason\": \"AUTHORIZATION_MISSING\"\n        },\n        \"findings\": [\n          {\n            \"reason\": \"OPERATION_NOT_SUPPORTED\",\n            \"detail\": {\n              \"No filing gate in GB is ready for this legal entity (HMRC VAT\": \"AUTHORIZATION_MISSING). The calculation may be covered while the right to file a return is not.\"\n            }\n          }\n        ]\n      },\n      \"version\": 3,\n      \"actions\": [\n        \"SUSPEND\",\n        \"REVOKE\"\n      ],\n      \"submittedBy\": \"01920a4c-0000-7000-8000-0000000000a1\",\n      \"approvedBy\": \"01920a4c-0000-7000-8000-0000000000a2\",\n      \"approvedAt\": \"2026-11-20T10:00:00.000000Z\",\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"CREATED\",\n          \"lifecycle\": \"DRAFT\",\n          \"recordedAt\": \"2026-11-20T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 2,\n          \"kind\": \"SUBMITTED\",\n          \"lifecycle\": \"IN_REVIEW\",\n          \"recordedAt\": \"2026-11-20T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 3,\n          \"kind\": \"APPROVED\",\n          \"lifecycle\": \"APPROVED\",\n          \"reason\": \"Schedule 2 signed by both parties\",\n          \"recordedAt\": \"2026-11-20T10:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        }\n      ],\n      \"asOf\": \"2026-11-20T11:00:00.000000Z\",\n      \"createdAt\": \"2026-11-20T09:00:00.000000Z\",\n      \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ],\n  \"markets\": [\n    {\n      \"country\": \"GB\",\n      \"name\": \"United Kingdom\",\n      \"region\": \"Europe\",\n      \"status\": \"PILOT\",\n      \"reason\": \"FILING_NOT_READY\",\n      \"research\": \"EVIDENCE_REVIEWED\",\n      \"services\": [\n        \"MOBILE_VOICE\",\n        \"MOBILE_DATA\"\n      ]\n    },\n    {\n      \"country\": \"FR\",\n      \"name\": \"France\",\n      \"region\": \"Europe\",\n      \"status\": \"RESEARCH_ONLY\",\n      \"reason\": \"NO_CONTENT_IN_FORCE\",\n      \"research\": \"RESEARCH_ONLY\",\n      \"services\": []\n    }\n  ],\n  \"catalogue\": \"2026-10-30\",\n  \"authoritative\": false,\n  \"asOf\": \"2026-11-20T11:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listEntitlements returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/entitlements — Record an entitlement grant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jurisdiction\": \"GB\",\n  \"service\": \"MOBILE_VOICE\",\n  \"mode\": \"NATIVE\",\n  \"operation\": \"FILE\",\n  \"effectiveFrom\": \"{{today}}\",\n  \"contractRef\": \"MSA-2026-014\",\n  \"contractRevision\": \"Schedule 2 rev 3\",\n  \"submit\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/entitlements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "entitlements"
+              ]
+            },
+            "description": "Record an entitlement grant\n\n`ADMIN`, signed in as themselves.\n\nRecords a contract right for one of the tenant's legal entities — one\njurisdiction, service family, mode and operation, between two dates,\nfrom a named contract — as a `DRAFT`, or `IN_REVIEW` with `submit`. It\nis never recorded approved: a second administrator approves it. Each\nmode is a separate right and carries only its own operations (a\n`SHADOW_ASSURANCE` grant is `SHADOW_COMPARE` only; a `NATIVE` quote\nright is not a commit right). A grant is never backdated: it starts\ntoday or later.\n\nIdempotent on the `Idempotency-Key`: the same key and request returns\nthe grant already recorded with `200`; the same key with a different\nrequest is `409 IDEMPOTENCY_KEY_REUSE`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('createEntitlement returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test('Doc 18 §07 — a grant is recorded for review, never approved: it is PENDING with a reason', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "  pm.expect(pm.response.json().lifecycle).to.eql('IN_REVIEW');",
+                  "  pm.expect(pm.response.json().effective).to.eql('PENDING');",
+                  "  pm.expect(pm.response.json().findings[0].reason).to.eql('AWAITING_SECOND_APPROVAL');",
+                  "});",
+                  "pm.collectionVariables.set('entitlementId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/entitlements/{entitlementId} — One entitlement grant, its coverage and its history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/entitlements/{{entitlementId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "entitlements",
+                "{{entitlementId}}"
+              ]
+            },
+            "description": "One entitlement grant, its coverage and its history\n\n`ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.\n\nThe grant read now against the cell's verified coverage. A grant of\nanother tenant is `404`, whether or not its identifier is known\n(COV-12)."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getEntitlement returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/entitlements/{entitlementId}/actions — Submit, approve, reject, withdraw, suspend, resume or revoke a grant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"APPROVE\",\n  \"expectedVersion\": 2,\n  \"reason\": \"Schedule 2 signed by both parties\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/entitlements/{{entitlementId}}/actions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "entitlements",
+                "{{entitlementId}}",
+                "actions"
+              ]
+            },
+            "description": "Submit, approve, reject, withdraw, suspend, resume or revoke a grant\n\n`ADMIN`, signed in as themselves. Every action appends one event;\nnothing is edited.\n\n`SUBMIT` moves `DRAFT` to `IN_REVIEW`; `WITHDRAW` ends a `DRAFT` or\n`IN_REVIEW` grant. `APPROVE` moves `IN_REVIEW` to `APPROVED`: by an\nadministrator other than the one who recorded or submitted it (`403\nMAKER_CHECKER`), on the version read (`409 VERSION_CONFLICT`), not past\nits end date, and not overlapping another approved grant of the same\nlegal entity, jurisdiction, service, mode and operation (`409\nENTITLEMENT_OVERLAP`). An approval never reaches back: the right runs\nfrom the later of its effective date and the approval day. `REJECT`\nends an `IN_REVIEW` grant.\n\n`SUSPEND` stops an approved grant at once. Suspension trumps approval:\n`REQUEST_RESUME` records a request, and `RESUME` lifts it only on that\nrequest, by an administrator other than the requester and the\nsuspender. `REVOKE` ends an approved or suspended grant for good.\nEvery action but `SUBMIT` gives its reason.\n\nApproval is a contract right, not coverage: an approved grant over\ncoverage the cell does not prove reads `RESTRICTED`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('actOnEntitlement returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('Doc 18 W07 — the submitter cannot approve their own grant', function () {",
+                  "  pm.response.to.have.status(403);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql('MAKER_CHECKER');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/subscriptions — The tenant's subscription plan revisions and the plan in force",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/subscriptions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subscriptions"
+              ]
+            },
+            "description": "The tenant's subscription plan revisions and the plan in force\n\n`ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.\n\nEvery plan revision, newest first, with the one in force today — of\nthe approved revisions whose term includes today, the one approved\nlast — and the meter definitions usage is counted by. A plan records\nincluded quantities per meter and no price; it grants no entitlement."
+          },
+          "response": [
+            {
+              "name": "200 · One approved plan in force",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/subscriptions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "subscriptions"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"plans\": [\n    {\n      \"id\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n      \"planCode\": \"PILOT-2026\",\n      \"planName\": \"Pilot 2026\",\n      \"contractRef\": \"MSA-2026-014\",\n      \"termStart\": \"2026-11-20\",\n      \"termEnd\": \"2027-11-19\",\n      \"quotas\": [\n        {\n          \"meter\": \"COMMITTED_DECISIONS\",\n          \"included\": 100000,\n          \"overage\": \"ALLOW_OVERAGE\"\n        },\n        {\n          \"meter\": \"FILING_SUBMISSIONS\",\n          \"included\": 12,\n          \"overage\": \"HARD_LIMIT\"\n        }\n      ],\n      \"status\": \"APPROVED\",\n      \"inForce\": true,\n      \"version\": 2,\n      \"approvedBy\": \"01920a4c-0000-7000-8000-0000000000a2\",\n      \"approvedAt\": \"2026-11-20T10:00:00.000000Z\",\n      \"history\": [\n        {\n          \"seq\": 1,\n          \"kind\": \"PROPOSED\",\n          \"status\": \"PROPOSED\",\n          \"recordedAt\": \"2026-11-20T09:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n        },\n        {\n          \"seq\": 2,\n          \"kind\": \"APPROVED\",\n          \"status\": \"APPROVED\",\n          \"recordedAt\": \"2026-11-20T10:00:00.000000Z\",\n          \"recordedBy\": \"01920a4c-0000-7000-8000-0000000000a2\"\n        }\n      ],\n      \"asOf\": \"2026-11-20T11:00:00.000000Z\",\n      \"createdAt\": \"2026-11-20T09:00:00.000000Z\",\n      \"createdBy\": \"01920a4c-0000-7000-8000-0000000000a1\"\n    }\n  ],\n  \"inForcePlanId\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n  \"meters\": [\n    {\n      \"meter\": \"COMMITTED_DECISIONS\",\n      \"unit\": \"decision\",\n      \"source\": \"ztax.tax_decision\",\n      \"rule\": \"One per recorded tax decision whose recorded_at falls in the period. Digest over decision_id.\"\n    }\n  ],\n  \"definitionsVersion\": \"ztax-meters-2026.11\",\n  \"asOf\": \"2026-11-20T11:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('listSubscriptionPlans returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/subscriptions — Propose a subscription plan revision",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}",
+                "description": "A key the client mints before the first attempt and reuses, unchanged,\non every retry of the same request (ADR-0013). Opaque to the server: it\nis compared, never parsed. Scoped to the tenant and to this endpoint, so\na key used for a commit can never match an adjust."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planCode\": \"PILOT-2026\",\n  \"planName\": \"Pilot 2026\",\n  \"contractRef\": \"MSA-2026-014\",\n  \"termStart\": \"{{today}}\",\n  \"quotas\": [\n    {\n      \"meter\": \"COMMITTED_DECISIONS\",\n      \"included\": 100000,\n      \"overage\": \"ALLOW_OVERAGE\"\n    },\n    {\n      \"meter\": \"FILING_SUBMISSIONS\",\n      \"included\": 12,\n      \"overage\": \"HARD_LIMIT\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/subscriptions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subscriptions"
+              ]
+            },
+            "description": "Propose a subscription plan revision\n\n`ADMIN`, signed in as themselves.\n\nRecords a plan revision as `PROPOSED`: a plan code and name, the\ncontract it comes from, its term, and an included monthly quantity and\noverage policy for each metered capability it contracts. A meter it\ndoes not name is `NOT_CONTRACTED`. The term starts today or later, so a\nnew plan never re-reads usage already metered against another. It is in\nforce only once a second administrator approves it.\n\nIdempotent on the `Idempotency-Key`, as `POST /v1/entitlements` is."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('proposeSubscriptionPlan returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "pm.test('Doc 18 W04 — a plan is proposed, not in force', function () {",
+                  "  pm.expect([200, 201]).to.include(pm.response.code);",
+                  "  pm.expect(pm.response.json().status).to.eql('PROPOSED');",
+                  "  pm.expect(pm.response.json().inForce).to.eql(false);",
+                  "});",
+                  "pm.collectionVariables.set('planId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/subscriptions/{planId} — One subscription plan revision",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/subscriptions/{{planId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subscriptions",
+                "{{planId}}"
+              ]
+            },
+            "description": "One subscription plan revision\n\n`ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getSubscriptionPlan returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /v1/subscriptions/{planId}/actions — Approve, reject or withdraw a proposed plan revision",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"APPROVE\",\n  \"expectedVersion\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/subscriptions/{{planId}}/actions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "subscriptions",
+                "{{planId}}",
+                "actions"
+              ]
+            },
+            "description": "Approve, reject or withdraw a proposed plan revision\n\n`ADMIN`, signed in as themselves.\n\nOnly a `PROPOSED` revision moves, once. `APPROVE` is by an\nadministrator other than the proposer (`403 MAKER_CHECKER`), on the\nversion read (`409 VERSION_CONFLICT`). `REJECT` and `WITHDRAW` give\ntheir reason. A change to an approved plan is a new revision."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('actOnSubscriptionPlan returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('the proposer cannot approve their own plan', function () {",
+                  "  pm.response.to.have.status(403);",
+                  "  pm.expect(pm.response.json().ztx_reason_code).to.eql('MAKER_CHECKER');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/usage — A month's metered usage against the plan in force",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/usage?period={{period}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "usage"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "{{period}}",
+                  "description": "The month, YYYY-MM. Defaults to the current UTC month; a month not yet started is refused."
+                }
+              ]
+            },
+            "description": "A month's metered usage against the plan in force\n\n`ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.\n\nCounts the period's usage from the cell's own records, as exact\nintegers: recorded tax decisions, fiscal documents, filing submission\nattempts and shadow runs whose instant falls in the UTC month. Each\nline carries the rule it was counted by and `basisDigest`, a SHA-256\nover the sorted identifiers of the rows counted — `GET\n/v1/usage/basis` lists them — so the number is reproducible from the\nrecords. Nothing is stored or estimated; a retried commit that returned\nits original decision is counted once.\n\nEach meter is set against the plan in force on the period's last day\n(today, for the open period): `WITHIN_QUOTA`, `AT_QUOTA` or\n`OVER_QUOTA` with the exact remainder or overage, `NOT_CONTRACTED`\nwhen the plan does not name it, `NO_PLAN` without one. A `HARD_LIMIT`\nis reported, not enforced, by this cell."
+          },
+          "response": [
+            {
+              "name": "200 · An open month",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/usage",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "usage"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"period\": \"2026-11\",\n  \"from\": \"2026-11-01T00:00:00.000000Z\",\n  \"to\": \"2026-12-01T00:00:00.000000Z\",\n  \"complete\": false,\n  \"plan\": {\n    \"id\": \"01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01\",\n    \"planCode\": \"PILOT-2026\",\n    \"planName\": \"Pilot 2026\"\n  },\n  \"lines\": [\n    {\n      \"meter\": \"COMMITTED_DECISIONS\",\n      \"unit\": \"decision\",\n      \"source\": \"ztax.tax_decision\",\n      \"rule\": \"One per recorded tax decision whose recorded_at falls in the period. Digest over decision_id.\",\n      \"count\": 3,\n      \"basisDigest\": \"3b7a7ac9dd8c3ff2ab4ccf1e1c7f7ef0a1b9d45be6c1d0b37f0b6a3e0c1f2d4a\",\n      \"state\": \"WITHIN_QUOTA\",\n      \"included\": 100000,\n      \"overage\": \"ALLOW_OVERAGE\",\n      \"remaining\": 99997,\n      \"overageCount\": 0\n    }\n  ],\n  \"definitionsVersion\": \"ztax-meters-2026.11\",\n  \"asOf\": \"2026-11-20T11:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getUsage returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
+                  "});",
+                  "pm.test('Doc 18 W09 — usage is exact counts, each with its basis digest', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.response.json().lines.forEach(function (l) {",
+                  "    pm.expect(Number.isInteger(l.count)).to.eql(true);",
+                  "    pm.expect(l.basisDigest).to.match(/^[0-9a-f]{64}$/);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /v1/usage/basis — The rows one meter counted in a month",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/problem+json, application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/usage/basis?period={{period}}&meter={{meter}}&limit={{limit}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "usage",
+                "basis"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "{{period}}",
+                  "description": "The month, YYYY-MM. Defaults to the current UTC month."
+                },
+                {
+                  "key": "meter",
+                  "value": "{{meter}}",
+                  "description": "The meter."
+                },
+                {
+                  "key": "limit",
+                  "value": "{{limit}}",
+                  "description": "Maximum number of items to return. The server caps this independently,\nso a larger value is not an error and does not return more.\n"
+                }
+              ]
+            },
+            "description": "The rows one meter counted in a month\n\n`ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.\n\nOne meter's count and `basisDigest` for the period, and the first\nrows it counted in the digest's order — identifiers ascending, compared\nbytewise — each with the instant that placed it in the period. The count,\nthe digest and the rows are read in one statement. Joining every row's\n`id` with a newline and hashing with SHA-256 gives `basisDigest`; when\n`truncated` is true, list the rest from the source table by the\nmeter's rule."
+          },
+          "response": [
+            {
+              "name": "200 · Three decisions",
+              "originalRequest": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/v1/usage/basis",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "usage",
+                    "basis"
+                  ]
+                }
+              },
+              "status": "200",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"period\": \"2026-11\",\n  \"from\": \"2026-11-01T00:00:00.000000Z\",\n  \"to\": \"2026-12-01T00:00:00.000000Z\",\n  \"meter\": \"COMMITTED_DECISIONS\",\n  \"unit\": \"decision\",\n  \"source\": \"ztax.tax_decision\",\n  \"rule\": \"One per recorded tax decision whose recorded_at falls in the period. Digest over decision_id.\",\n  \"count\": 3,\n  \"basisDigest\": \"3b7a7ac9dd8c3ff2ab4ccf1e1c7f7ef0a1b9d45be6c1d0b37f0b6a3e0c1f2d4a\",\n  \"rows\": [\n    {\n      \"id\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f\",\n      \"at\": \"2026-11-02T10:00:00.000000Z\"\n    },\n    {\n      \"id\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e70\",\n      \"at\": \"2026-11-03T10:00:00.000000Z\"\n    },\n    {\n      \"id\": \"01920a4b-7c3e-7d21-9f40-3c1a2b4d5e71\",\n      \"at\": \"2026-11-04T10:00:00.000000Z\"\n    }\n  ],\n  \"truncated\": false,\n  \"asOf\": \"2026-11-20T11:00:00.000000Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('getUsageBasis returns a status the contract declares', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200]);",
                   "});"
                 ]
               }
@@ -14636,6 +15278,9 @@
           "const now = new Date();",
           "pm.collectionVariables.set('decisionTime', canonical(now));",
           "pm.collectionVariables.set('eventTime', canonical(new Date(now.getTime() - 2000)));",
+          "// Today's UTC date, for records that are never backdated (an entitlement grant,",
+          "// a subscription plan's term).",
+          "pm.collectionVariables.set('today', now.toISOString().slice(0, 10));",
           "",
           "// A fresh address per run, so `POST /v1/admin/users` does not fail with",
           "// ALREADY_EXISTS the second time somebody runs the collection. It is set once",
@@ -15124,7 +15769,7 @@
     },
     {
       "key": "contractDigest",
-      "value": "sha256:649b91b423a099137f38885f47bd477df4abc4fb3ade0abc2fc0893f087d357d",
+      "value": "sha256:5988d181d7e6af4cfc780f48c6c2de4af606e75bc1373e7a63eb4f006cbdbab9",
       "type": "string"
     }
   ]

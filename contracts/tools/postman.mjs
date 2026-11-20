@@ -99,7 +99,7 @@ const FOLDERS = [
   {
     name: "04 · Administration",
     description:
-      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked. Then payee master data: `createBeneficiary` records an authority's payee details and captures `beneficiaryId`; the same administrator verifying them is refused with `MAKER_CHECKER` (ZTAX-REM-REQ-0014), and the version is suspended. Then support: `openSupportCase` opens a LEGAL case and captures `caseId`; the queue and the case are read, and `actOnSupportCase` verifies the requester, which moves the case to `VERIFIED` as one more event in its history. Then a migration: `createMigrationProgram` creates a program for 2025 and captures `migrationProgramId`; a snapshot of two historical results is registered, a mapping that names only one of their legacy codes is recorded, and `executeMigrationRun` converts the snapshot AS_KNOWN — one record converts, the other raises an `UNMAPPED_CODE` exception, captured into `migrationExceptionId`, and the monetary reconciliation does not pass. The exception is accepted as a known residual and the cutover moves to `PRECHECK`.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
+      "Runs in order: list, create, grant, disable, then read the sessions and the audit trail, then undo. `createUser` captures the new user's id into `userId`, so the requests after it act on something that exists.\n\nThen webhooks: `createWebhook` subscribes an endpoint and captures `webhookId`; the secret is shown once and asserted to be in the Standard Webhooks form. A fresh run has delivered nothing, so the delivery read and replay answer `404` for the example delivery id, and the run ends by pausing the webhook. The local stack sets `ZTAX_WEBHOOK_KEY_REF`; a cell without one answers `503`.\n\nLast, period seals: `sealPeriod` seals the example day and captures `sealId`, then the seal is read with its signed payload and verified. A cell with no seal keyring answers `503`, one with a keyring and no signer refuses the seal with `503`, and a period sealed already answers `409`.\n\nThen retention: `recordRetentionPolicy` records the next version of the example policy, so each run adds one. `placeLegalHold` places a hold on the example line and captures `holdId`; the hold is read, its scope widened and then released, which is final — the next run places a new one. Each hold read is written to the audit trail as privileged evidence access. `getDecisionRetention` asks for the verdict on `{{decisionId}}`, which this folder has not made, so it answers `404`.\n\nLast, legal authorization: the matrix the cell loaded is read — the local stack mounts the development one, a draft — then `grantAuthorization` records a filing mandate for the tenant's default legal entity and captures `authorizationId`. `checkAuthorization` asks whether September may be filed with the authority under it, and `revokeAuthorization` revokes it, after which the same check would be blocked. Then payee master data: `createBeneficiary` records an authority's payee details and captures `beneficiaryId`; the same administrator verifying them is refused with `MAKER_CHECKER` (ZTAX-REM-REQ-0014), and the version is suspended. Then support: `openSupportCase` opens a LEGAL case and captures `caseId`; the queue and the case are read, and `actOnSupportCase` verifies the requester, which moves the case to `VERIFIED` as one more event in its history. Then entitlements: `createEntitlement` records a UK filing right from today, submitted for review, and captures `entitlementId`; the same administrator approving it is refused with `MAKER_CHECKER` (Doc 18 W07), so it stays `PENDING`. `proposeSubscriptionPlan` proposes a plan and captures `planId`, and its proposer approving it is refused the same way. `getUsage` counts the month from the cell's own records, exact integers with a basis digest each, and `getUsageBasis` lists the rows one meter counted. Then a migration: `createMigrationProgram` creates a program for 2025 and captures `migrationProgramId`; a snapshot of two historical results is registered, a mapping that names only one of their legacy codes is recorded, and `executeMigrationRun` converts the snapshot AS_KNOWN — one record converts, the other raises an `UNMAPPED_CODE` exception, captured into `migrationExceptionId`, and the monetary reconciliation does not pass. The exception is accepted as a known residual and the cutover moves to `PRECHECK`.\n\nLast, the dashboard: `getDashboard` reads the Tax Command Center for the current month. It needs `OPERATOR`, `ANALYST` or `AUDITOR`; the local stack grants its bootstrap administrator `ANALYST` for exactly this, and a cell that does not answers `403`.",
     operations: [
       "listUsers",
       "createUser",
@@ -144,6 +144,16 @@ const FOLDERS = [
       "listSupportCases",
       "getSupportCase",
       "actOnSupportCase",
+      "listEntitlements",
+      "createEntitlement",
+      "getEntitlement",
+      "actOnEntitlement",
+      "listSubscriptionPlans",
+      "proposeSubscriptionPlan",
+      "getSubscriptionPlan",
+      "actOnSubscriptionPlan",
+      "getUsage",
+      "getUsageBasis",
       "listMigrationPrograms",
       "createMigrationProgram",
       "registerMigrationSnapshot",
@@ -295,6 +305,11 @@ const VALUE_VARIABLES = {
   "01920b40-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{comparatorId}}",
   "01920b50-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{shadowRunId}}",
   "01920b60-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{discrepancyId}}",
+  // The entitlement and plan examples' ids, and their start date: what
+  // folder 04 just recorded, from today.
+  "01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{entitlementId}}",
+  "01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{planId}}",
+  "2026-11-20": "{{today}}",
   // The migration examples' ids: what folder 04 just made.
   "01920b70-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{migrationProgramId}}",
   "01920b71-1a2b-7c3d-8e4f-5a6b7c8d9e01": "{{migrationSnapshotId}}",
@@ -539,6 +554,44 @@ const OPERATION_TESTS = {
     "pm.test('OBL-07 — a build is deterministic: a new version, or the latest when nothing changed', function () {",
     "  pm.expect([200, 201]).to.include(pm.response.code);",
     "  pm.expect(pm.response.json().latestBuild.inputsHash).to.match(/^zt1:[0-9a-f]{64}$/);",
+    "});",
+  ],
+  createEntitlement: [
+    "pm.test('Doc 18 §07 — a grant is recorded for review, never approved: it is PENDING with a reason', function () {",
+    "  pm.expect([200, 201]).to.include(pm.response.code);",
+    "  pm.expect(pm.response.json().lifecycle).to.eql('IN_REVIEW');",
+    "  pm.expect(pm.response.json().effective).to.eql('PENDING');",
+    "  pm.expect(pm.response.json().findings[0].reason).to.eql('AWAITING_SECOND_APPROVAL');",
+    "});",
+    "pm.collectionVariables.set('entitlementId', pm.response.json().id);",
+  ],
+  actOnEntitlement: [
+    "pm.test('Doc 18 W07 — the submitter cannot approve their own grant', function () {",
+    "  pm.response.to.have.status(403);",
+    "  pm.expect(pm.response.json().ztx_reason_code).to.eql('MAKER_CHECKER');",
+    "});",
+  ],
+  proposeSubscriptionPlan: [
+    "pm.test('Doc 18 W04 — a plan is proposed, not in force', function () {",
+    "  pm.expect([200, 201]).to.include(pm.response.code);",
+    "  pm.expect(pm.response.json().status).to.eql('PROPOSED');",
+    "  pm.expect(pm.response.json().inForce).to.eql(false);",
+    "});",
+    "pm.collectionVariables.set('planId', pm.response.json().id);",
+  ],
+  actOnSubscriptionPlan: [
+    "pm.test('the proposer cannot approve their own plan', function () {",
+    "  pm.response.to.have.status(403);",
+    "  pm.expect(pm.response.json().ztx_reason_code).to.eql('MAKER_CHECKER');",
+    "});",
+  ],
+  getUsage: [
+    "pm.test('Doc 18 W09 — usage is exact counts, each with its basis digest', function () {",
+    "  pm.response.to.have.status(200);",
+    "  pm.response.json().lines.forEach(function (l) {",
+    "    pm.expect(Number.isInteger(l.count)).to.eql(true);",
+    "    pm.expect(l.basisDigest).to.match(/^[0-9a-f]{64}$/);",
+    "  });",
     "});",
   ],
   createRegistration: [

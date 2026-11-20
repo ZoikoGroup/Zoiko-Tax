@@ -309,6 +309,30 @@
     },
     {
       "method": "GET",
+      "path": "/v1/entitlements",
+      "operationId": "listEntitlements",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/entitlements",
+      "operationId": "createEntitlement",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/entitlements/{entitlementId}",
+      "operationId": "getEntitlement",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/entitlements/{entitlementId}/actions",
+      "operationId": "actOnEntitlement",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/erp-bridges",
       "operationId": "listERPBridges",
       "public": false
@@ -951,6 +975,30 @@
     },
     {
       "method": "GET",
+      "path": "/v1/subscriptions",
+      "operationId": "listSubscriptionPlans",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/subscriptions",
+      "operationId": "proposeSubscriptionPlan",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/subscriptions/{planId}",
+      "operationId": "getSubscriptionPlan",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/subscriptions/{planId}/actions",
+      "operationId": "actOnSubscriptionPlan",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/support/cases",
       "operationId": "listSupportCases",
       "public": false
@@ -989,6 +1037,18 @@
       "method": "POST",
       "path": "/v1/transactions:refund",
       "operationId": "refundTransaction",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/usage",
+      "operationId": "getUsage",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/usage/basis",
+      "operationId": "getUsageBasis",
       "public": false
     },
     {

@@ -15,6 +15,9 @@ const canonical = function (d) {
 const now = new Date();
 pm.collectionVariables.set('decisionTime', canonical(now));
 pm.collectionVariables.set('eventTime', canonical(new Date(now.getTime() - 2000)));
+// Today's UTC date, for records that are never backdated (an entitlement grant,
+// a subscription plan's term).
+pm.collectionVariables.set('today', now.toISOString().slice(0, 10));
 
 // A fresh address per run, so `POST /v1/admin/users` does not fail with
 // ALREADY_EXISTS the second time somebody runs the collection. It is set once

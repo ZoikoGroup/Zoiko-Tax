@@ -134,6 +134,8 @@ tags:
     description: Regulatory workpapers — a legal filer's tax or regulatory base for one duty and period, assembled deterministically from the provider contribution ledger and the subledger, reconciled to control totals, with evidence-linked adjustments and resolutions, a frozen source snapshot and a two-person approval.
   - name: registrations
     description: Legal-entity registrations and exemption certificates held as evidence (Engineering Doc 17). Records, authority checks a person attests, four-eyed activation and approval on an exact version, and expiry. Evidence only — neither changes a tax result.
+  - name: entitlements
+    description: Commercial entitlements and subscriptions (Engineering Doc 18) — contract-to-capability grants per legal entity, jurisdiction, service, mode and operation, approved by a second administrator and read beside the coverage the cell proves; subscription plan revisions with included quotas; and usage counted exactly from the cell's own records. An entitlement never makes a market live and changes no tax result.
   - name: erp
     description: The ERP journal bridge — sealed export batches of posted subledger journals, mapped onto the customer's chart of accounts, dispatched through the transactional outbox, with transport receipt kept apart from GL posting — and the subledger-to-GL reconciliation (R6). ZoikoTax is not the customer's general ledger and connects to no real ERP here; the ERP's answers and balances are recorded with their evidence.
   - name: shadow
@@ -10527,6 +10529,549 @@ paths:
         "500": { $ref: "#/components/responses/Internal" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
+  /v1/entitlements:
+    get:
+      operationId: listEntitlements
+      tags: [entitlements]
+      summary: The entitlement register, each grant beside the coverage the cell proves
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        Every grant, newest first, read now: its stored `lifecycle`, its
+        dated `status`, and its `effective` state — `ACTIVE` only when the
+        grant is active and the cell's verified coverage proves the operation
+        (Doc 18 §02 ALLOW). An active grant the coverage does not prove is
+        `RESTRICTED`, never live, and `mismatch` flags it; every reason a grant
+        is pending or blocked is listed with a stable code (Doc 18 §06).
+
+        `markets` is the verified market coverage the grants were read
+        against — the same assessment the coverage screens show. A research
+        profile is never a live market, and no grant makes it one (T18-02).
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Only grants that read as this status today.
+          schema: { $ref: "#/components/schemas/EntitlementStatus" }
+          example: ACTIVE
+        - name: effective
+          in: query
+          required: false
+          description: Only grants in this effective state.
+          schema: { $ref: "#/components/schemas/EntitlementEffective" }
+          example: RESTRICTED
+        - name: legalEntityId
+          in: query
+          required: false
+          description: Only grants to this legal entity.
+          schema: { $ref: "#/components/schemas/LegalEntityId" }
+          example: 01920a4c-0000-7000-8000-00000000e001
+        - name: country
+          in: query
+          required: false
+          description: Only grants in this country, its subdivisions included.
+          schema: { $ref: "#/components/schemas/CountryCode" }
+          example: GB
+        - name: mode
+          in: query
+          required: false
+          description: Only grants in this mode.
+          schema: { $ref: "#/components/schemas/EntitlementMode" }
+          example: NATIVE
+        - name: operation
+          in: query
+          required: false
+          description: Only grants for this operation.
+          schema: { $ref: "#/components/schemas/EntitlementOperation" }
+          example: FILE
+        - name: mismatch
+          in: query
+          required: false
+          description: Only approved grants whose coverage the cell does not prove.
+          schema:
+            type: boolean
+          example: true
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The register.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntitlementList"
+              examples:
+                default:
+                  summary: A filing right the cell cannot yet back
+                  value:
+                    entitlements:
+                      - id: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                        jurisdiction: GB
+                        country: GB
+                        service: MOBILE_VOICE
+                        mode: NATIVE
+                        operation: FILE
+                        effectiveFrom: "2026-11-20"
+                        activeFrom: "2026-11-20"
+                        contractRef: MSA-2026-014
+                        contractRevision: Schedule 2 rev 3
+                        lifecycle: APPROVED
+                        status: ACTIVE
+                        effective: RESTRICTED
+                        decision: DENY
+                        mismatch: true
+                        findings:
+                          - reason: OPERATION_NOT_SUPPORTED
+                            detail: No filing gate in GB is ready for this legal entity (HMRC VAT: AUTHORIZATION_MISSING). The calculation may be covered while the right to file a return is not.
+                        coverage:
+                          state: UNPROVEN
+                          marketStatus: PILOT
+                          marketReason: FILING_NOT_READY
+                          research: EVIDENCE_REVIEWED
+                          servicesInForce: [MOBILE_VOICE, MOBILE_DATA]
+                          filing: { ready: false, authority: HMRC VAT, reason: AUTHORIZATION_MISSING }
+                          findings:
+                            - reason: OPERATION_NOT_SUPPORTED
+                              detail: No filing gate in GB is ready for this legal entity (HMRC VAT: AUTHORIZATION_MISSING). The calculation may be covered while the right to file a return is not.
+                        version: 3
+                        actions: [SUSPEND, REVOKE]
+                        submittedBy: 01920a4c-0000-7000-8000-0000000000a1
+                        approvedBy: 01920a4c-0000-7000-8000-0000000000a2
+                        approvedAt: "2026-11-20T10:00:00.000000Z"
+                        history:
+                          - { seq: 1, kind: CREATED, lifecycle: DRAFT, recordedAt: "2026-11-20T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                          - { seq: 2, kind: SUBMITTED, lifecycle: IN_REVIEW, recordedAt: "2026-11-20T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                          - { seq: 3, kind: APPROVED, lifecycle: APPROVED, reason: Schedule 2 signed by both parties, recordedAt: "2026-11-20T10:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a2 }
+                        asOf: "2026-11-20T11:00:00.000000Z"
+                        createdAt: "2026-11-20T09:00:00.000000Z"
+                        createdBy: 01920a4c-0000-7000-8000-0000000000a1
+                    markets:
+                      - { country: GB, name: United Kingdom, region: Europe, status: PILOT, reason: FILING_NOT_READY, research: EVIDENCE_REVIEWED, services: [MOBILE_VOICE, MOBILE_DATA] }
+                      - { country: FR, name: France, region: Europe, status: RESEARCH_ONLY, reason: NO_CONTENT_IN_FORCE, research: RESEARCH_ONLY, services: [] }
+                    catalogue: "2026-10-30"
+                    authoritative: false
+                    asOf: "2026-11-20T11:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: createEntitlement
+      tags: [entitlements]
+      summary: Record an entitlement grant
+      description: |
+        `ADMIN`, signed in as themselves.
+
+        Records a contract right for one of the tenant's legal entities — one
+        jurisdiction, service family, mode and operation, between two dates,
+        from a named contract — as a `DRAFT`, or `IN_REVIEW` with `submit`. It
+        is never recorded approved: a second administrator approves it. Each
+        mode is a separate right and carries only its own operations (a
+        `SHADOW_ASSURANCE` grant is `SHADOW_COMPARE` only; a `NATIVE` quote
+        right is not a commit right). A grant is never backdated: it starts
+        today or later.
+
+        Idempotent on the `Idempotency-Key`: the same key and request returns
+        the grant already recorded with `200`; the same key with a different
+        request is `409 IDEMPOTENCY_KEY_REUSE`.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntitlementRequest"
+            examples:
+              default:
+                summary: A native filing right for the UK
+                value:
+                  jurisdiction: GB
+                  service: MOBILE_VOICE
+                  mode: NATIVE
+                  operation: FILE
+                  effectiveFrom: "2026-11-20"
+                  contractRef: MSA-2026-014
+                  contractRevision: Schedule 2 rev 3
+                  submit: true
+      responses:
+        "200":
+          $ref: "#/components/responses/EntitlementResult"
+        "201":
+          $ref: "#/components/responses/EntitlementResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/entitlements/{entitlementId}:
+    get:
+      operationId: getEntitlement
+      tags: [entitlements]
+      summary: One entitlement grant, its coverage and its history
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        The grant read now against the cell's verified coverage. A grant of
+        another tenant is `404`, whether or not its identifier is known
+        (COV-12).
+      parameters:
+        - $ref: "#/components/parameters/EntitlementId"
+      responses:
+        "200":
+          $ref: "#/components/responses/EntitlementResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/entitlements/{entitlementId}/actions:
+    post:
+      operationId: actOnEntitlement
+      tags: [entitlements]
+      summary: Submit, approve, reject, withdraw, suspend, resume or revoke a grant
+      description: |
+        `ADMIN`, signed in as themselves. Every action appends one event;
+        nothing is edited.
+
+        `SUBMIT` moves `DRAFT` to `IN_REVIEW`; `WITHDRAW` ends a `DRAFT` or
+        `IN_REVIEW` grant. `APPROVE` moves `IN_REVIEW` to `APPROVED`: by an
+        administrator other than the one who recorded or submitted it (`403
+        MAKER_CHECKER`), on the version read (`409 VERSION_CONFLICT`), not past
+        its end date, and not overlapping another approved grant of the same
+        legal entity, jurisdiction, service, mode and operation (`409
+        ENTITLEMENT_OVERLAP`). An approval never reaches back: the right runs
+        from the later of its effective date and the approval day. `REJECT`
+        ends an `IN_REVIEW` grant.
+
+        `SUSPEND` stops an approved grant at once. Suspension trumps approval:
+        `REQUEST_RESUME` records a request, and `RESUME` lifts it only on that
+        request, by an administrator other than the requester and the
+        suspender. `REVOKE` ends an approved or suspended grant for good.
+        Every action but `SUBMIT` gives its reason.
+
+        Approval is a contract right, not coverage: an approved grant over
+        coverage the cell does not prove reads `RESTRICTED`.
+      parameters:
+        - $ref: "#/components/parameters/EntitlementId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntitlementActionRequest"
+            examples:
+              approve:
+                summary: A second administrator approves
+                value:
+                  action: APPROVE
+                  expectedVersion: 2
+                  reason: Schedule 2 signed by both parties
+              suspend:
+                summary: Emergency suspension
+                value:
+                  action: SUSPEND
+                  expectedVersion: 3
+                  reason: Contract dispute pending; stop new filings
+      responses:
+        "200":
+          $ref: "#/components/responses/EntitlementResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/subscriptions:
+    get:
+      operationId: listSubscriptionPlans
+      tags: [entitlements]
+      summary: The tenant's subscription plan revisions and the plan in force
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        Every plan revision, newest first, with the one in force today — of
+        the approved revisions whose term includes today, the one approved
+        last — and the meter definitions usage is counted by. A plan records
+        included quantities per meter and no price; it grants no entitlement.
+      responses:
+        "200":
+          description: The plans.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionPlanList"
+              examples:
+                default:
+                  summary: One approved plan in force
+                  value:
+                    plans:
+                      - id: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                        planCode: PILOT-2026
+                        planName: Pilot 2026
+                        contractRef: MSA-2026-014
+                        termStart: "2026-11-20"
+                        termEnd: "2027-11-19"
+                        quotas:
+                          - { meter: COMMITTED_DECISIONS, included: 100000, overage: ALLOW_OVERAGE }
+                          - { meter: FILING_SUBMISSIONS, included: 12, overage: HARD_LIMIT }
+                        status: APPROVED
+                        inForce: true
+                        version: 2
+                        approvedBy: 01920a4c-0000-7000-8000-0000000000a2
+                        approvedAt: "2026-11-20T10:00:00.000000Z"
+                        history:
+                          - { seq: 1, kind: PROPOSED, status: PROPOSED, recordedAt: "2026-11-20T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                          - { seq: 2, kind: APPROVED, status: APPROVED, recordedAt: "2026-11-20T10:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a2 }
+                        asOf: "2026-11-20T11:00:00.000000Z"
+                        createdAt: "2026-11-20T09:00:00.000000Z"
+                        createdBy: 01920a4c-0000-7000-8000-0000000000a1
+                    inForcePlanId: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                    meters:
+                      - meter: COMMITTED_DECISIONS
+                        unit: decision
+                        source: ztax.tax_decision
+                        rule: One per recorded tax decision whose recorded_at falls in the period. Digest over decision_id.
+                    definitionsVersion: ztax-meters-2026.11
+                    asOf: "2026-11-20T11:00:00.000000Z"
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    post:
+      operationId: proposeSubscriptionPlan
+      tags: [entitlements]
+      summary: Propose a subscription plan revision
+      description: |
+        `ADMIN`, signed in as themselves.
+
+        Records a plan revision as `PROPOSED`: a plan code and name, the
+        contract it comes from, its term, and an included monthly quantity and
+        overage policy for each metered capability it contracts. A meter it
+        does not name is `NOT_CONTRACTED`. The term starts today or later, so a
+        new plan never re-reads usage already metered against another. It is in
+        force only once a second administrator approves it.
+
+        Idempotent on the `Idempotency-Key`, as `POST /v1/entitlements` is.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionPlanRequest"
+            examples:
+              default:
+                summary: A pilot plan
+                value:
+                  planCode: PILOT-2026
+                  planName: Pilot 2026
+                  contractRef: MSA-2026-014
+                  termStart: "2026-11-20"
+                  quotas:
+                    - { meter: COMMITTED_DECISIONS, included: 100000, overage: ALLOW_OVERAGE }
+                    - { meter: FILING_SUBMISSIONS, included: 12, overage: HARD_LIMIT }
+      responses:
+        "200":
+          $ref: "#/components/responses/SubscriptionPlanResult"
+        "201":
+          $ref: "#/components/responses/SubscriptionPlanResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/subscriptions/{planId}:
+    get:
+      operationId: getSubscriptionPlan
+      tags: [entitlements]
+      summary: One subscription plan revision
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+      parameters:
+        - $ref: "#/components/parameters/SubscriptionPlanId"
+      responses:
+        "200":
+          $ref: "#/components/responses/SubscriptionPlanResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/subscriptions/{planId}/actions:
+    post:
+      operationId: actOnSubscriptionPlan
+      tags: [entitlements]
+      summary: Approve, reject or withdraw a proposed plan revision
+      description: |
+        `ADMIN`, signed in as themselves.
+
+        Only a `PROPOSED` revision moves, once. `APPROVE` is by an
+        administrator other than the proposer (`403 MAKER_CHECKER`), on the
+        version read (`409 VERSION_CONFLICT`). `REJECT` and `WITHDRAW` give
+        their reason. A change to an approved plan is a new revision.
+      parameters:
+        - $ref: "#/components/parameters/SubscriptionPlanId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubscriptionPlanActionRequest"
+            examples:
+              default:
+                summary: A second administrator approves
+                value:
+                  action: APPROVE
+                  expectedVersion: 1
+      responses:
+        "200":
+          $ref: "#/components/responses/SubscriptionPlanResult"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/usage:
+    get:
+      operationId: getUsage
+      tags: [entitlements]
+      summary: A month's metered usage against the plan in force
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        Counts the period's usage from the cell's own records, as exact
+        integers: recorded tax decisions, fiscal documents, filing submission
+        attempts and shadow runs whose instant falls in the UTC month. Each
+        line carries the rule it was counted by and `basisDigest`, a SHA-256
+        over the sorted identifiers of the rows counted — `GET
+        /v1/usage/basis` lists them — so the number is reproducible from the
+        records. Nothing is stored or estimated; a retried commit that returned
+        its original decision is counted once.
+
+        Each meter is set against the plan in force on the period's last day
+        (today, for the open period): `WITHIN_QUOTA`, `AT_QUOTA` or
+        `OVER_QUOTA` with the exact remainder or overage, `NOT_CONTRACTED`
+        when the plan does not name it, `NO_PLAN` without one. A `HARD_LIMIT`
+        is reported, not enforced, by this cell.
+      parameters:
+        - name: period
+          in: query
+          required: false
+          description: The month, YYYY-MM. Defaults to the current UTC month; a month not yet started is refused.
+          schema: { $ref: "#/components/schemas/LegalPeriod" }
+          example: "2026-11"
+      responses:
+        "200":
+          description: The usage report.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageReport"
+              examples:
+                default:
+                  summary: An open month
+                  value:
+                    period: "2026-11"
+                    from: "2026-11-01T00:00:00.000000Z"
+                    to: "2026-12-01T00:00:00.000000Z"
+                    complete: false
+                    plan: { id: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01, planCode: PILOT-2026, planName: Pilot 2026 }
+                    lines:
+                      - meter: COMMITTED_DECISIONS
+                        unit: decision
+                        source: ztax.tax_decision
+                        rule: One per recorded tax decision whose recorded_at falls in the period. Digest over decision_id.
+                        count: 3
+                        basisDigest: 3b7a7ac9dd8c3ff2ab4ccf1e1c7f7ef0a1b9d45be6c1d0b37f0b6a3e0c1f2d4a
+                        state: WITHIN_QUOTA
+                        included: 100000
+                        overage: ALLOW_OVERAGE
+                        remaining: 99997
+                        overageCount: 0
+                    definitionsVersion: ztax-meters-2026.11
+                    asOf: "2026-11-20T11:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /v1/usage/basis:
+    get:
+      operationId: getUsageBasis
+      tags: [entitlements]
+      summary: The rows one meter counted in a month
+      description: |
+        `ADMIN`, `OPERATOR`, `ANALYST` or `AUDITOR`.
+
+        One meter's count and `basisDigest` for the period, and the first
+        rows it counted in the digest's order — identifiers ascending, compared
+        bytewise — each with the instant that placed it in the period. The count,
+        the digest and the rows are read in one statement. Joining every row's
+        `id` with a newline and hashing with SHA-256 gives `basisDigest`; when
+        `truncated` is true, list the rest from the source table by the
+        meter's rule.
+      parameters:
+        - name: period
+          in: query
+          required: false
+          description: The month, YYYY-MM. Defaults to the current UTC month.
+          schema: { $ref: "#/components/schemas/LegalPeriod" }
+          example: "2026-11"
+        - name: meter
+          in: query
+          required: true
+          description: The meter.
+          schema: { $ref: "#/components/schemas/UsageMeter" }
+          example: COMMITTED_DECISIONS
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: The basis.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageBasis"
+              examples:
+                default:
+                  summary: Three decisions
+                  value:
+                    period: "2026-11"
+                    from: "2026-11-01T00:00:00.000000Z"
+                    to: "2026-12-01T00:00:00.000000Z"
+                    meter: COMMITTED_DECISIONS
+                    unit: decision
+                    source: ztax.tax_decision
+                    rule: One per recorded tax decision whose recorded_at falls in the period. Digest over decision_id.
+                    count: 3
+                    basisDigest: 3b7a7ac9dd8c3ff2ab4ccf1e1c7f7ef0a1b9d45be6c1d0b37f0b6a3e0c1f2d4a
+                    rows:
+                      - { id: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e6f, at: "2026-11-02T10:00:00.000000Z" }
+                      - { id: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e70, at: "2026-11-03T10:00:00.000000Z" }
+                      - { id: 01920a4b-7c3e-7d21-9f40-3c1a2b4d5e71, at: "2026-11-04T10:00:00.000000Z" }
+                    truncated: false
+                    asOf: "2026-11-20T11:00:00.000000Z"
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
 components:
   securitySchemes:
     sessionCookie:
@@ -10831,6 +11376,21 @@ components:
       schema: { $ref: "#/components/schemas/ExemptionEvidenceId" }
       example: 01920d30-1a2b-7c3d-8e4f-5a6b7c8d9e01
 
+    EntitlementId:
+      name: entitlementId
+      in: path
+      required: true
+      description: The entitlement grant identifier.
+      schema: { $ref: "#/components/schemas/EntitlementId" }
+      example: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+
+    SubscriptionPlanId:
+      name: planId
+      in: path
+      required: true
+      description: The subscription plan revision identifier.
+      schema: { $ref: "#/components/schemas/SubscriptionPlanId" }
+      example: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
   responses:
     IdempotencyConflict:
       description: |
@@ -11280,6 +11840,76 @@ components:
                 createdAt: "2026-11-02T09:00:00.000000Z"
                 createdBy: 01920a4c-0000-7000-8000-0000000000a1
 
+    EntitlementResult:
+      description: The grant as it reads now.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Entitlement"
+          examples:
+            default:
+              summary: A grant awaiting its second administrator
+              value:
+                id: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                legalEntityId: 01920a4c-0000-7000-8000-00000000e001
+                jurisdiction: GB
+                country: GB
+                service: MOBILE_VOICE
+                mode: NATIVE
+                operation: QUOTE
+                effectiveFrom: "2026-11-20"
+                contractRef: MSA-2026-014
+                lifecycle: IN_REVIEW
+                status: IN_REVIEW
+                effective: PENDING
+                decision: DENY
+                mismatch: false
+                findings:
+                  - reason: AWAITING_SECOND_APPROVAL
+                    detail: Submitted. A second administrator — not the one who recorded or submitted it — approves it before it has any effect.
+                coverage:
+                  state: VERIFIED
+                  marketStatus: PILOT
+                  marketReason: FILING_NOT_READY
+                  research: EVIDENCE_REVIEWED
+                  servicesInForce: [MOBILE_VOICE, MOBILE_DATA]
+                  findings: []
+                version: 2
+                actions: [APPROVE, REJECT, WITHDRAW]
+                submittedBy: 01920a4c-0000-7000-8000-0000000000a1
+                history:
+                  - { seq: 1, kind: CREATED, lifecycle: DRAFT, recordedAt: "2026-11-20T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                  - { seq: 2, kind: SUBMITTED, lifecycle: IN_REVIEW, recordedAt: "2026-11-20T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                asOf: "2026-11-20T09:00:00.000000Z"
+                createdAt: "2026-11-20T09:00:00.000000Z"
+                createdBy: 01920a4c-0000-7000-8000-0000000000a1
+
+    SubscriptionPlanResult:
+      description: The plan revision as it stands now.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SubscriptionPlan"
+          examples:
+            default:
+              summary: A proposed plan
+              value:
+                id: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+                planCode: PILOT-2026
+                planName: Pilot 2026
+                contractRef: MSA-2026-014
+                termStart: "2026-11-20"
+                termEnd: "2027-11-19"
+                quotas:
+                  - { meter: COMMITTED_DECISIONS, included: 100000, overage: ALLOW_OVERAGE }
+                status: PROPOSED
+                inForce: false
+                version: 1
+                history:
+                  - { seq: 1, kind: PROPOSED, status: PROPOSED, recordedAt: "2026-11-20T09:00:00.000000Z", recordedBy: 01920a4c-0000-7000-8000-0000000000a1 }
+                asOf: "2026-11-20T09:00:00.000000Z"
+                createdAt: "2026-11-20T09:00:00.000000Z"
+                createdBy: 01920a4c-0000-7000-8000-0000000000a1
   schemas:
     Problem:
       type: object
@@ -20321,3 +20951,612 @@ components:
       properties:
         to: { $ref: "#/components/schemas/ExemptionEvidenceStatus" }
         reason: { $ref: "#/components/schemas/EvidenceText" }
+
+    EntitlementId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: EntitlementId
+      description: An entitlement grant.
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01
+
+    SubscriptionPlanId:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SubscriptionPlanId
+      description: A subscription plan revision.
+      format: uuid
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+      example: 01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01
+
+    ContractReference:
+      x-ztax-privacy: { class: P2, purposes: [PURP-SVCOPS, PURP-EVID], retention: RET-EVIDENCE, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: ContractReference
+      minLength: 1
+      maxLength: 128
+      description: The signed contract, schedule or revision a right or plan comes from, as the contract names it.
+      example: MSA-2026-014
+
+    CommercialText:
+      x-ztax-privacy: { class: P2, purposes: [PURP-SVCOPS, PURP-EVID], retention: RET-EVIDENCE, redaction: REDACT, aiAllowed: NONE }
+      type: string
+      title: CommercialText
+      minLength: 1
+      maxLength: 2000
+      description: A reason or note from the administrator acting.
+
+    EntitlementMode:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: EntitlementMode
+      description: |
+        The operating mode (Doc 18 §02). Each is a separate right and none
+        implies another: `NATIVE` carries `QUOTE`, `COMMIT`, `FILE`, `REMIT`
+        and `E_INVOICE`; `FEDERATED` and `OEM_EMBEDDED` carry `QUOTE` and
+        `COMMIT`; `SHADOW_ASSURANCE` carries only `SHADOW_COMPARE`;
+        `MANAGED_COMPLIANCE` carries `FILE` and `REMIT`.
+      enum: [NATIVE, FEDERATED, SHADOW_ASSURANCE, OEM_EMBEDDED, MANAGED_COMPLIANCE]
+
+    EntitlementOperation:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: EntitlementOperation
+      description: What the grant permits. A quote right is not a commit right; a calculation right is not a filing right.
+      enum: [QUOTE, COMMIT, FILE, REMIT, E_INVOICE, SHADOW_COMPARE]
+
+    EntitlementLifecycle:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: EntitlementLifecycle
+      description: The stored state, the fold of the grant's events.
+      enum: [DRAFT, IN_REVIEW, APPROVED, REJECTED, WITHDRAWN, SUSPENDED, REVOKED]
+
+    EntitlementStatus:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: EntitlementStatus
+      description: |
+        The grant read against today's UTC date. An `APPROVED` grant is
+        `SCHEDULED` before it runs, `ACTIVE` while it runs and `EXPIRED` after
+        its end date; `SUSPENDED` trumps `ACTIVE`.
+      enum: [DRAFT, IN_REVIEW, SCHEDULED, ACTIVE, SUSPENDED, EXPIRED, REJECTED, WITHDRAWN, REVOKED]
+
+    EntitlementEffective:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: EntitlementEffective
+      description: |
+        Whether the right can be used now. `ACTIVE` is an active grant over
+        coverage the cell proves; `RESTRICTED` is an active grant it does not
+        prove; `PENDING` is recorded, in review or scheduled; `ENDED` is
+        rejected, withdrawn or revoked.
+      enum: [PENDING, ACTIVE, RESTRICTED, SUSPENDED, EXPIRED, ENDED]
+
+    EntitlementDecision:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: EntitlementDecision
+      description: The effective-capability decision. Anything false, unknown or unproven is `DENY`.
+      enum: [ALLOW, DENY]
+
+    EntitlementReason:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: EntitlementReason
+      description: |
+        Why a grant is pending or blocked. The coverage reasons are Doc 18
+        §06's: `CONTENT_NOT_ACTIVE` (no content in force for the service
+        there, or a research profile only), `OPERATION_NOT_SUPPORTED` (the
+        filing gate or the e-invoicing adapter is not there),
+        `TECHNICALLY_UNAVAILABLE` (an advisory cell cannot commit),
+        `GEOGRAPHY_NOT_PROVEN` (coverage is proven per country, not per
+        subdivision) and `PROVIDER_EVIDENCE_ABSENT` (a federated provider's
+        coverage is not evidenced).
+      enum: [AWAITING_SUBMISSION, AWAITING_SECOND_APPROVAL, AWAITING_EFFECTIVE_DATE, ENTITLEMENT_SUSPENDED,
+        RESUME_AWAITING_APPROVAL, ENTITLEMENT_EXPIRED, ENTITLEMENT_ENDED, CONTENT_NOT_ACTIVE, OPERATION_NOT_SUPPORTED,
+        TECHNICALLY_UNAVAILABLE, GEOGRAPHY_NOT_PROVEN, PROVIDER_EVIDENCE_ABSENT]
+
+    EntitlementCoverageState:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: EntitlementCoverageState
+      enum: [VERIFIED, UNPROVEN]
+
+    EntitlementMarketStatus:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: EntitlementMarketStatus
+      description: The market's verified coverage status, or `NOT_LISTED` for a country neither the research catalogue nor content names.
+      enum: [ACTIVE, PILOT, RESEARCH_ONLY, NOT_LISTED]
+
+    EntitlementEventKind:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: EntitlementEventKind
+      enum: [CREATED, SUBMITTED, APPROVED, REJECTED, WITHDRAWN, SUSPENDED, RESUME_REQUESTED, RESUMED, REVOKED]
+
+    EntitlementAction:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: EntitlementAction
+      enum: [SUBMIT, APPROVE, REJECT, WITHDRAW, SUSPEND, REQUEST_RESUME, RESUME, REVOKE]
+
+    EntitlementFinding:
+      type: object
+      title: EntitlementFinding
+      description: One reason a grant is pending or blocked, with what a person reads about it.
+      additionalProperties: false
+      required: [reason, detail]
+      properties:
+        reason: { $ref: "#/components/schemas/EntitlementReason" }
+        detail:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: Plain language, written by the cell.
+
+    EntitlementFilingGate:
+      type: object
+      title: EntitlementFilingGate
+      description: The legal filing gate for the grant's legal entity in its country.
+      additionalProperties: false
+      required: [ready]
+      properties:
+        ready:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+        authority:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The authority whose gate is ready, or the first considered when none is.
+        reason:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The gate's blocking reason when it is not ready.
+
+    EntitlementCoverage:
+      type: object
+      title: EntitlementCoverage
+      description: What the cell proves for the grant's scope, read now. Never stored; never set by the grant.
+      additionalProperties: false
+      required: [state, marketStatus, servicesInForce, findings]
+      properties:
+        state: { $ref: "#/components/schemas/EntitlementCoverageState" }
+        marketStatus: { $ref: "#/components/schemas/EntitlementMarketStatus" }
+        marketReason: { $ref: "#/components/schemas/DashboardMarketReason" }
+        research: { $ref: "#/components/schemas/DashboardResearch" }
+        servicesInForce:
+          type: array
+          items: { $ref: "#/components/schemas/ServiceFamily" }
+        filing: { $ref: "#/components/schemas/EntitlementFilingGate" }
+        findings:
+          type: array
+          items: { $ref: "#/components/schemas/EntitlementFinding" }
+
+    EntitlementEvent:
+      type: object
+      title: EntitlementEvent
+      additionalProperties: false
+      required: [seq, kind, lifecycle, recordedAt, recordedBy]
+      properties:
+        seq:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        kind: { $ref: "#/components/schemas/EntitlementEventKind" }
+        lifecycle: { $ref: "#/components/schemas/EntitlementLifecycle" }
+        reason: { $ref: "#/components/schemas/CommercialText" }
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy: { $ref: "#/components/schemas/EvidenceActor" }
+
+    Entitlement:
+      type: object
+      title: Entitlement
+      description: |
+        One entitlement grant as of `asOf`, beside the coverage the cell
+        proves for it. `findings` lists every reason it is pending or
+        blocked — its own lifecycle first, then coverage's — and is empty only
+        when `decision` is `ALLOW`. `actions` are the actions its lifecycle
+        allows; the server still compares the people.
+      additionalProperties: false
+      required: [id, legalEntityId, jurisdiction, country, service, mode, operation, effectiveFrom, contractRef, lifecycle,
+        status, effective, decision, mismatch, findings, coverage, version, actions, history, asOf, createdAt, createdBy]
+      properties:
+        id: { $ref: "#/components/schemas/EntitlementId" }
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        jurisdiction: { $ref: "#/components/schemas/EvidenceJurisdiction" }
+        country: { $ref: "#/components/schemas/CountryCode" }
+        service: { $ref: "#/components/schemas/ServiceFamily" }
+        mode: { $ref: "#/components/schemas/EntitlementMode" }
+        operation: { $ref: "#/components/schemas/EntitlementOperation" }
+        effectiveFrom: { $ref: "#/components/schemas/CivilDate" }
+        effectiveTo: { $ref: "#/components/schemas/CivilDate" }
+        activeFrom: { $ref: "#/components/schemas/CivilDate" }
+        contractRef: { $ref: "#/components/schemas/ContractReference" }
+        contractRevision: { $ref: "#/components/schemas/ContractReference" }
+        lifecycle: { $ref: "#/components/schemas/EntitlementLifecycle" }
+        status: { $ref: "#/components/schemas/EntitlementStatus" }
+        effective: { $ref: "#/components/schemas/EntitlementEffective" }
+        decision: { $ref: "#/components/schemas/EntitlementDecision" }
+        mismatch:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: An approved grant, active or scheduled, whose coverage the cell does not prove.
+        findings:
+          type: array
+          items: { $ref: "#/components/schemas/EntitlementFinding" }
+        coverage: { $ref: "#/components/schemas/EntitlementCoverage" }
+        version:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+          description: The number of events recorded. An action names it.
+        actions:
+          type: array
+          items: { $ref: "#/components/schemas/EntitlementAction" }
+        submittedBy: { $ref: "#/components/schemas/EvidenceActor" }
+        approvedBy: { $ref: "#/components/schemas/EvidenceActor" }
+        approvedAt: { $ref: "#/components/schemas/Timestamp" }
+        history:
+          type: array
+          items: { $ref: "#/components/schemas/EntitlementEvent" }
+        asOf: { $ref: "#/components/schemas/Timestamp" }
+        createdAt: { $ref: "#/components/schemas/Timestamp" }
+        createdBy: { $ref: "#/components/schemas/EvidenceActor" }
+
+    EntitlementList:
+      type: object
+      title: EntitlementList
+      additionalProperties: false
+      required: [entitlements, markets, authoritative, asOf]
+      properties:
+        entitlements:
+          type: array
+          items: { $ref: "#/components/schemas/Entitlement" }
+        markets:
+          type: array
+          items: { $ref: "#/components/schemas/DashboardMarket" }
+        catalogue:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The research catalogue's version, absent when the cell has none.
+        authoritative:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: Whether the cell may emit authoritative output.
+        asOf: { $ref: "#/components/schemas/Timestamp" }
+
+    EntitlementRequest:
+      type: object
+      title: EntitlementRequest
+      additionalProperties: false
+      required: [jurisdiction, service, mode, operation, effectiveFrom, contractRef]
+      properties:
+        legalEntityId: { $ref: "#/components/schemas/LegalEntityId" }
+        jurisdiction: { $ref: "#/components/schemas/EvidenceJurisdiction" }
+        service: { $ref: "#/components/schemas/ServiceFamily" }
+        mode: { $ref: "#/components/schemas/EntitlementMode" }
+        operation: { $ref: "#/components/schemas/EntitlementOperation" }
+        effectiveFrom: { $ref: "#/components/schemas/CivilDate" }
+        effectiveTo: { $ref: "#/components/schemas/CivilDate" }
+        contractRef: { $ref: "#/components/schemas/ContractReference" }
+        contractRevision: { $ref: "#/components/schemas/ContractReference" }
+        submit:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: Submit for review now. Otherwise the grant is kept as a DRAFT.
+
+    EntitlementActionRequest:
+      type: object
+      title: EntitlementActionRequest
+      additionalProperties: false
+      required: [action, expectedVersion]
+      properties:
+        action: { $ref: "#/components/schemas/EntitlementAction" }
+        expectedVersion:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+          description: The `version` that was read. Anything recorded since is `VERSION_CONFLICT`.
+        reason: { $ref: "#/components/schemas/CommercialText" }
+
+    UsageMeter:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: UsageMeter
+      description: A metered capability. Each counts one kind of row the cell itself writes.
+      enum: [COMMITTED_DECISIONS, FISCAL_DOCUMENTS, FILING_SUBMISSIONS, SHADOW_RUNS]
+
+    UsageOveragePolicy:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: UsageOveragePolicy
+      description: What the contract says happens past the included quantity. Reported, not enforced, by this cell.
+      enum: [ALLOW_OVERAGE, HARD_LIMIT]
+
+    UsageCount:
+      x-ztax-privacy: { class: P0 }
+      type: integer
+      format: int64
+      minimum: 0
+      title: UsageCount
+      description: An exact count of rows or an included quantity. Never an amount.
+      example: 12
+
+    SubscriptionPlanStatus:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SubscriptionPlanStatus
+      enum: [PROPOSED, APPROVED, REJECTED, WITHDRAWN]
+
+    SubscriptionPlanAction:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SubscriptionPlanAction
+      enum: [APPROVE, REJECT, WITHDRAW]
+
+    SubscriptionPlanEventKind:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SubscriptionPlanEventKind
+      enum: [PROPOSED, APPROVED, REJECTED, WITHDRAWN]
+
+    SubscriptionPlanCode:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SubscriptionPlanCode
+      pattern: "^[A-Z0-9][A-Z0-9_.-]{0,63}$"
+      example: PILOT-2026
+
+    SubscriptionPlanName:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: SubscriptionPlanName
+      minLength: 1
+      maxLength: 128
+      example: Pilot 2026
+
+    SubscriptionQuota:
+      type: object
+      title: SubscriptionQuota
+      description: One metered capability's included quantity per monthly period.
+      additionalProperties: false
+      required: [meter, included, overage]
+      properties:
+        meter: { $ref: "#/components/schemas/UsageMeter" }
+        included: { $ref: "#/components/schemas/UsageCount" }
+        overage: { $ref: "#/components/schemas/UsageOveragePolicy" }
+
+    SubscriptionPlanEvent:
+      type: object
+      title: SubscriptionPlanEvent
+      additionalProperties: false
+      required: [seq, kind, status, recordedAt, recordedBy]
+      properties:
+        seq:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        kind: { $ref: "#/components/schemas/SubscriptionPlanEventKind" }
+        status: { $ref: "#/components/schemas/SubscriptionPlanStatus" }
+        reason: { $ref: "#/components/schemas/CommercialText" }
+        recordedAt: { $ref: "#/components/schemas/Timestamp" }
+        recordedBy: { $ref: "#/components/schemas/EvidenceActor" }
+
+    SubscriptionPlan:
+      type: object
+      title: SubscriptionPlan
+      description: A subscription plan revision. No price; it grants no entitlement and changes no tax result.
+      additionalProperties: false
+      required: [id, planCode, planName, contractRef, termStart, quotas, status, inForce, version, history, asOf, createdAt, createdBy]
+      properties:
+        id: { $ref: "#/components/schemas/SubscriptionPlanId" }
+        planCode: { $ref: "#/components/schemas/SubscriptionPlanCode" }
+        planName: { $ref: "#/components/schemas/SubscriptionPlanName" }
+        contractRef: { $ref: "#/components/schemas/ContractReference" }
+        termStart: { $ref: "#/components/schemas/CivilDate" }
+        termEnd: { $ref: "#/components/schemas/CivilDate" }
+        quotas:
+          type: array
+          items: { $ref: "#/components/schemas/SubscriptionQuota" }
+        status: { $ref: "#/components/schemas/SubscriptionPlanStatus" }
+        inForce:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: Whether this is the plan in force on `asOf`'s UTC date.
+        version:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        approvedBy: { $ref: "#/components/schemas/EvidenceActor" }
+        approvedAt: { $ref: "#/components/schemas/Timestamp" }
+        history:
+          type: array
+          items: { $ref: "#/components/schemas/SubscriptionPlanEvent" }
+        asOf: { $ref: "#/components/schemas/Timestamp" }
+        createdAt: { $ref: "#/components/schemas/Timestamp" }
+        createdBy: { $ref: "#/components/schemas/EvidenceActor" }
+
+    UsageMeterDefinition:
+      type: object
+      title: UsageMeterDefinition
+      description: What a meter counts, from which table, by which rule.
+      additionalProperties: false
+      required: [meter, unit, source, rule]
+      properties:
+        meter: { $ref: "#/components/schemas/UsageMeter" }
+        unit:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        source:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The table the rows are counted from.
+        rule:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The counting rule in words.
+
+    SubscriptionPlanList:
+      type: object
+      title: SubscriptionPlanList
+      additionalProperties: false
+      required: [plans, meters, definitionsVersion, asOf]
+      properties:
+        plans:
+          type: array
+          items: { $ref: "#/components/schemas/SubscriptionPlan" }
+        inForcePlanId: { $ref: "#/components/schemas/SubscriptionPlanId" }
+        meters:
+          type: array
+          items: { $ref: "#/components/schemas/UsageMeterDefinition" }
+        definitionsVersion:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        asOf: { $ref: "#/components/schemas/Timestamp" }
+
+    SubscriptionPlanRequest:
+      type: object
+      title: SubscriptionPlanRequest
+      additionalProperties: false
+      required: [planCode, planName, contractRef, termStart, quotas]
+      properties:
+        planCode: { $ref: "#/components/schemas/SubscriptionPlanCode" }
+        planName: { $ref: "#/components/schemas/SubscriptionPlanName" }
+        contractRef: { $ref: "#/components/schemas/ContractReference" }
+        termStart: { $ref: "#/components/schemas/CivilDate" }
+        termEnd: { $ref: "#/components/schemas/CivilDate" }
+        quotas:
+          type: array
+          minItems: 1
+          maxItems: 4
+          items: { $ref: "#/components/schemas/SubscriptionQuota" }
+
+    SubscriptionPlanActionRequest:
+      type: object
+      title: SubscriptionPlanActionRequest
+      additionalProperties: false
+      required: [action, expectedVersion]
+      properties:
+        action: { $ref: "#/components/schemas/SubscriptionPlanAction" }
+        expectedVersion:
+          x-ztax-privacy: { class: P0 }
+          type: integer
+          format: int32
+          minimum: 1
+        reason: { $ref: "#/components/schemas/CommercialText" }
+
+    UsageState:
+      x-ztax-privacy: { class: P0 }
+      type: string
+      title: UsageState
+      description: |
+        A meter's standing against the plan in force. `NOT_CONTRACTED`: the
+        plan does not name the meter, and whether such usage is chargeable is
+        for the signed contract, never assumed.
+      enum: [NO_PLAN, NOT_CONTRACTED, WITHIN_QUOTA, AT_QUOTA, OVER_QUOTA]
+
+    UsagePlanRef:
+      type: object
+      title: UsagePlanRef
+      additionalProperties: false
+      required: [id, planCode, planName]
+      properties:
+        id: { $ref: "#/components/schemas/SubscriptionPlanId" }
+        planCode: { $ref: "#/components/schemas/SubscriptionPlanCode" }
+        planName: { $ref: "#/components/schemas/SubscriptionPlanName" }
+
+    UsageLine:
+      type: object
+      title: UsageLine
+      description: One meter's count for the period, its basis, and its standing against the plan.
+      additionalProperties: false
+      required: [meter, unit, source, rule, count, basisDigest, state, remaining, overageCount]
+      properties:
+        meter: { $ref: "#/components/schemas/UsageMeter" }
+        unit:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        source:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        rule:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        count: { $ref: "#/components/schemas/UsageCount" }
+        basisDigest: { $ref: "#/components/schemas/Sha256Hex" }
+        state: { $ref: "#/components/schemas/UsageState" }
+        included: { $ref: "#/components/schemas/UsageCount" }
+        overage: { $ref: "#/components/schemas/UsageOveragePolicy" }
+        remaining: { $ref: "#/components/schemas/UsageCount" }
+        overageCount: { $ref: "#/components/schemas/UsageCount" }
+
+    UsageReport:
+      type: object
+      title: UsageReport
+      additionalProperties: false
+      required: [period, from, to, complete, lines, definitionsVersion, asOf]
+      properties:
+        period: { $ref: "#/components/schemas/LegalPeriod" }
+        from: { $ref: "#/components/schemas/Timestamp" }
+        to: { $ref: "#/components/schemas/Timestamp" }
+        complete:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: Whether the period has ended. An open period's counts grow until it does.
+        plan: { $ref: "#/components/schemas/UsagePlanRef" }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/UsageLine" }
+        definitionsVersion:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        asOf: { $ref: "#/components/schemas/Timestamp" }
+
+    UsageBasisRow:
+      type: object
+      title: UsageBasisRow
+      additionalProperties: false
+      required: [id, at]
+      properties:
+        id:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The counted row's identifier, as digested.
+        at: { $ref: "#/components/schemas/Timestamp" }
+
+    UsageBasis:
+      type: object
+      title: UsageBasis
+      additionalProperties: false
+      required: [period, from, to, meter, unit, source, rule, count, basisDigest, rows, truncated, asOf]
+      properties:
+        period: { $ref: "#/components/schemas/LegalPeriod" }
+        from: { $ref: "#/components/schemas/Timestamp" }
+        to: { $ref: "#/components/schemas/Timestamp" }
+        meter: { $ref: "#/components/schemas/UsageMeter" }
+        unit:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        source:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        rule:
+          x-ztax-privacy: { class: P0 }
+          type: string
+        count: { $ref: "#/components/schemas/UsageCount" }
+        basisDigest: { $ref: "#/components/schemas/Sha256Hex" }
+        rows:
+          type: array
+          items: { $ref: "#/components/schemas/UsageBasisRow" }
+        truncated:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          description: Whether `rows` stops short of `count`.
+        asOf: { $ref: "#/components/schemas/Timestamp" }
