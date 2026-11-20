@@ -86,6 +86,9 @@ type Provenance struct {
 	RiskTier         RiskTier
 	AuthorityOutcome AuthorityOutcome
 	AiTrainVersion   string // the AI release-train version, ADR-0006 §2.7 / ADR-0015 §2.6
+
+	// InvocationID is the Gateway's evidence record id: optional, not validated, not hashed, not stored.
+	InvocationID string
 }
 
 func (p Provenance) validate() error {

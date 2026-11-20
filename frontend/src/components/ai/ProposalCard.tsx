@@ -1,103 +1,146 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 
 import type { S } from '@zoikotax/sdk'
 
 import '../../pages/obligations.css'
+import { ztax } from '../../platform/client'
 import { Field, Id, Submit } from '../../ui/kit'
+import { CODE_MAX, NOTE_MAX, REASON_MAX, buildDecisionRequest } from './decisionRequest'
+import { evidenceIdText } from './evidenceId'
 import { provenanceKind } from './provenanceKind'
 import { provenanceNote } from './provenanceNote'
 import {
   acceptedCode,
   canRecordDecision,
   reviewerActions,
-  reviewerReasonCodes,
   type ReviewerActionKind,
 } from './reviewDecision'
+import { viewOfDecision, type DecisionView } from './viewOfDecision'
 
 type Proposal = S<'ClassificationProposal'>
 
-type ReviewerDecision = { action: ReviewerActionKind; reasonCode: string; note: string; modifiedCode: string }
+// ---------------------------------------------------------------------------
+// Reviewer panel: ACCEPT / REJECT / MODIFY / ESCALATE, each with a reason and
+// an optional note. Recording sends the decision to the service, which saves it
+// with who decided and when (the session names the reviewer; this screen never
+// sends one). One decision is kept per proposal and it cannot be changed. The
+// original AI proposal stays visible and unchanged above it. Starts with
+// nothing preselected. `onAccept`, when given, is called with the proposed code
+// only after an Accept was saved; Reject, Modify and Escalate never call it.
+// ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// Reviewer panel: ACCEPT / REJECT / MODIFY / ESCALATE, each with a reason code
-// and a note. Demo only: nothing here calls a backend endpoint or is saved
-// anywhere; it only shows how the review step would apply to the proposal
-// already on screen, which stays visible and unchanged above it (the original
-// AI proposal is immutable evidence). Starts with nothing preselected.
-// `onAccept`, when given, is called with the proposed code only when a
-// decision recorded as Accept; Reject, Modify and Escalate never call it.
-// ---------------------------------------------------------------------------
+type Saved = S<'ClassificationDecision'>
 
 const ReviewerPanel = ({ proposal, onAccept }: { proposal: Proposal; onAccept?: (code: string) => void }) => {
   const [pending, setPending] = useState<ReviewerActionKind | null>(null)
-  const [reasonCode, setReasonCode] = useState('')
+  const [reason, setReason] = useState('')
   const [note, setNote] = useState('')
   const [modifiedCode, setModifiedCode] = useState('')
-  const [decision, setDecision] = useState<ReviewerDecision | null>(null)
+  const [saving, setSaving] = useState(false)
+  const inFlight = useRef(false)
+  const [problem, setProblem] = useState<string | null>(null)
+  const [failure, setFailure] = useState<DecisionView | null>(null)
+  // Set once a decision is on record: the view, and the saved record when this screen saved it.
+  const [onRecord, setOnRecord] = useState<{ view: DecisionView; saved: Saved | null } | null>(null)
 
   const startAction = (kind: ReviewerActionKind) => {
     setPending(kind)
-    setReasonCode('')
+    setReason('')
     setNote('')
     setModifiedCode('')
+    setProblem(null)
+    setFailure(null)
   }
 
-  const canRecord = canRecordDecision(pending, reasonCode, note, modifiedCode)
+  const canRecord = canRecordDecision(pending, reason, modifiedCode)
 
-  const record = (e: FormEvent) => {
+  const record = async (e: FormEvent) => {
     e.preventDefault()
-    if (pending === null || !canRecord) {
+    if (pending === null || !canRecord || inFlight.current) {
       return
     }
-    setDecision({ action: pending, reasonCode, note: note.trim(), modifiedCode: modifiedCode.trim() })
-    const code = acceptedCode(pending, proposal.proposedCode)
-    if (code !== null && onAccept !== undefined) {
-      onAccept(code)
+    const built = buildDecisionRequest(proposal, { action: pending, reason, note, modifiedCode })
+    if (!built.ok) {
+      setProblem(built.sentence)
+      return
     }
-    setPending(null)
+    inFlight.current = true
+    setSaving(true)
+    setProblem(null)
+    setFailure(null)
+    try {
+      const result = await ztax.recordClassificationDecision(built.request)
+      const view = viewOfDecision(result.ok ? { ok: true } : { ok: false, error: result.error })
+      if (!view.locked) {
+        setFailure(view)
+        return
+      }
+      setOnRecord({ view, saved: result.ok ? result.data : null })
+      setPending(null)
+      const code = result.ok ? acceptedCode(pending, proposal.proposedCode) : null
+      if (code !== null && onAccept !== undefined) {
+        onAccept(code)
+      }
+    } catch {
+      setFailure(viewOfDecision({ ok: false, error: null }))
+    } finally {
+      inFlight.current = false
+      setSaving(false)
+    }
   }
 
   return (
     <>
-      {decision === null ? null : (
+      {onRecord === null ? null : (
         <>
-          <span className="ztax-advisory-badge">Demo only: decision is not saved</span>
-          <dl className="ztax-kv" style={{ marginTop: 8 }}>
-            <dt>Action</dt>
-            <dd>{reviewerActions.find((a) => a.kind === decision.action)?.label ?? decision.action}</dd>
-            <dt>Reason</dt>
-            <dd>{reviewerReasonCodes.find((c) => c.value === decision.reasonCode)?.label ?? decision.reasonCode}</dd>
-            {decision.action === 'MODIFY' ? (
-              <>
-                <dt>Original code (unchanged)</dt>
-                <dd className="mono">{proposal.proposedCode}</dd>
-                <dt>Reviewer&apos;s code</dt>
-                <dd className="mono">{decision.modifiedCode}</dd>
-              </>
-            ) : null}
-            <dt>Note</dt>
-            <dd>{decision.note}</dd>
-          </dl>
+          <p className="ztax-note" style={{ fontWeight: 600, marginBottom: 4 }}>{onRecord.view.headline}</p>
+          <p className="ztax-note" style={{ marginTop: 0 }}>{onRecord.view.sentence}</p>
+          {onRecord.saved === null ? null : (
+            <dl className="ztax-kv" style={{ marginTop: 8 }}>
+              <dt>Action</dt>
+              <dd>{reviewerActions.find((a) => a.kind === onRecord.saved?.action)?.label ?? onRecord.saved.action}</dd>
+              <dt>Reason</dt>
+              <dd>{onRecord.saved.reason}</dd>
+              {onRecord.saved.action === 'MODIFY' ? (
+                <>
+                  <dt>Original code (unchanged)</dt>
+                  <dd className="mono">{proposal.proposedCode}</dd>
+                  <dt>Reviewer&apos;s code</dt>
+                  <dd className="mono">{onRecord.saved.modifiedCode}</dd>
+                </>
+              ) : null}
+              {onRecord.saved.note === undefined ? null : (
+                <>
+                  <dt>Note</dt>
+                  <dd>{onRecord.saved.note}</dd>
+                </>
+              )}
+              <dt>Decided</dt>
+              <dd className="mono">{onRecord.saved.decidedAt}</dd>
+            </dl>
+          )}
         </>
       )}
 
-      {pending === null ? (
-        <div className="ztax-form-actions" style={{ justifyContent: 'flex-start', gap: 8, marginTop: decision === null ? 0 : 16 }}>
+      {onRecord !== null ? null : pending === null ? (
+        <div className="ztax-form-actions" style={{ justifyContent: 'flex-start', gap: 8, marginTop: 0 }}>
           {reviewerActions.map((a) => (
-            <button key={a.kind} type="button" className="ztax-btn-quiet" onClick={() => { startAction(a.kind) }}>
+            <button key={a.kind} type="button" className="ztax-btn-quiet" disabled={saving} onClick={() => { startAction(a.kind) }}>
               {a.label}
             </button>
           ))}
         </div>
       ) : (
-        <form className="ztax-form" onSubmit={record} style={{ marginTop: 12 }}>
-          <Field label="Reason code">
-            <select value={reasonCode} required onChange={(e) => { setReasonCode(e.target.value) }}>
-              <option value="">Choose a reason…</option>
-              {reviewerReasonCodes.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
-            </select>
+        <form className="ztax-form" onSubmit={(e) => { void record(e) }} style={{ marginTop: 12 }}>
+          <Field label="Reason" help={`Required. At most ${String(REASON_MAX)} characters.`}>
+            <textarea
+              value={reason}
+              required
+              rows={2}
+              maxLength={REASON_MAX}
+              placeholder="Why this decision"
+              onChange={(e) => { setReason(e.target.value) }}
+            />
           </Field>
           {pending === 'MODIFY' ? (
             <Field label="Reviewer's ontology code" help="A code in ontology format, e.g. ontology:telecom/voice/mobile. Whether it exists is not verified here.">
@@ -105,26 +148,60 @@ const ReviewerPanel = ({ proposal, onAccept }: { proposal: Proposal; onAccept?: 
                 type="text"
                 value={modifiedCode}
                 required
-                placeholder="ontology:…"
+                maxLength={CODE_MAX}
+                placeholder="ontology:â€¦"
                 onChange={(e) => { setModifiedCode(e.target.value) }}
               />
             </Field>
           ) : null}
-          <Field label="Note">
+          <Field label="Note (optional)" help={`At most ${String(NOTE_MAX)} characters.`}>
             <textarea
               value={note}
-              required
               rows={2}
-              placeholder="Why this decision"
+              maxLength={NOTE_MAX}
               onChange={(e) => { setNote(e.target.value) }}
             />
           </Field>
+          {problem === null ? null : <p className="ztax-error-note" role="alert">{problem}</p>}
+          {failure === null ? null : (
+            <div className="ztax-error-note" role="alert">
+              <strong>{failure.headline}</strong>
+              <p style={{ margin: 0 }}>{failure.sentence}</p>
+            </div>
+          )}
           <div className="ztax-form-actions">
-            <button type="button" className="ztax-btn-quiet" onClick={() => { setPending(null) }}>Cancel</button>
-            <Submit busy={false}>Record decision</Submit>
+            <button type="button" className="ztax-btn-quiet" disabled={saving} onClick={() => { setPending(null) }}>Cancel</button>
+            <Submit busy={saving}>Record decision</Submit>
           </div>
         </form>
       )}
+    </>
+  )
+}
+
+const COPY_RESET_MS = 2000
+
+/** The evidence id and a Copy button. The id is never put in any message. */
+const EvidenceIdValue = ({ id }: { id: string }) => {
+  const [label, setLabel] = useState('Copy')
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (timer.current !== null) clearTimeout(timer.current) }, [])
+  const show = (text: string) => {
+    setLabel(text)
+    if (timer.current !== null) clearTimeout(timer.current)
+    timer.current = setTimeout(() => { setLabel('Copy') }, COPY_RESET_MS)
+  }
+  const copy = () => {
+    try {
+      navigator.clipboard.writeText(id).then(() => { show('Copied') }, () => { show('Could not copy') })
+    } catch {
+      show('Could not copy')
+    }
+  }
+  return (
+    <>
+      {id}{' '}
+      <button type="button" className="ztax-btn-quiet" onClick={copy}>{label}</button>
     </>
   )
 }
@@ -140,6 +217,7 @@ export const ProposalCard = ({ proposal, onAccept }: { proposal: Proposal; onAcc
     return null
   }
   const note = provenanceNote(provenanceKind(provenance))
+  const evidenceId = evidenceIdText(provenance)
   return (
     <div className="ztax-stepper">
       <p className="ztax-note" style={{ fontWeight: 600 }}>
@@ -164,7 +242,7 @@ export const ProposalCard = ({ proposal, onAccept }: { proposal: Proposal; onAcc
       </dl>
       <p className="ztax-note">
         No measured accuracy exists for this proposal yet, so no confidence figure is shown. The code is checked for
-        ontology format only; whether it is an approved ontology node is not verified here. A person confirms or
+        ontology format; whether it is an approved ontology node is checked only when an approved list is configured. A person confirms or
         rejects the mapping before anything relies on it.
       </p>
       <table className="ztax-action-table" style={{ marginTop: 8 }}>
@@ -174,6 +252,9 @@ export const ProposalCard = ({ proposal, onAccept }: { proposal: Proposal; onAcc
           <tr><th scope="row">Provider profile</th><td className="mono">{provenance.providerProfile}</td></tr>
           <tr><th scope="row">Prompt profile</th><td className="mono">{provenance.promptProfile}</td></tr>
           <tr><th scope="row">AI train</th><td className="mono">{provenance.aiTrainVersion}</td></tr>
+          {evidenceId === null ? null : (
+            <tr><th scope="row">Evidence id</th><td className="mono"><EvidenceIdValue id={evidenceId} /></td></tr>
+          )}
         </tbody>
       </table>
       <p className="ztax-note">The full audit record is kept by the AI service and is not shown on this page.</p>
@@ -181,7 +262,7 @@ export const ProposalCard = ({ proposal, onAccept }: { proposal: Proposal; onAcc
       <h3 className="ztax-card-title" style={{ marginTop: 16 }}>Review</h3>
       <p className="ztax-note">
         A qualified person reviews the proposal and records Accept, Reject, Modify or Escalate with a reason.
-        Demo only: nothing below is sent anywhere or saved.
+        The decision is saved with who decided and when. Saving a decision does not change the item&apos;s classification.
       </p>
       <ReviewerPanel key={proposal.id} proposal={proposal} {...(onAccept === undefined ? {} : { onAccept })} />
     </div>

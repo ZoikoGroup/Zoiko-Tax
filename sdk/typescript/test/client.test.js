@@ -200,6 +200,7 @@ test("the fiscal surface is reachable: paths, query strings and idempotency keys
     "listRetentionPolicies", "recordRetentionPolicy", "listLegalHolds", "placeLegalHold", "getLegalHold",
     "changeLegalHoldScope", "releaseLegalHold", "getDecisionRetention", "getLegalMatrix", "listAuthorizations",
     "grantAuthorization", "getAuthorization", "revokeAuthorization", "checkAuthorization", "proposeClassification",
+    "recordClassificationDecision", "getClassificationDecision",
     "listCompliancePackages", "createCompliancePackage", "getCompliancePackage", "prepareCompliancePackage",
     "reviewCompliancePackage", "approveCompliancePackage", "submitCompliancePackage", "acknowledgeCompliancePackage",
     "resolveCompliancePackage", "cancelCompliancePackage",
@@ -385,6 +386,36 @@ test("regulatory notices: register filters in the query, actions on the notice's
   // The due date travels as the civil date it was given, never as an instant.
   assert.equal(JSON.parse(calls[4].init.body).dueDate, "2026-11-30");
   assert.deepEqual(JSON.parse(calls[5].init.body), { version: 1 });
+});
+
+test("a classification decision is posted and read back by proposal id", async () => {
+  const proposalId = "01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f";
+  const saved = { proposalId, action: "REJECT", reason: "Not a fit", tenantId: "t", reviewerUserId: "u", decidedAt: "" };
+  const { fetch, calls } = stub(json(201, saved));
+  const client = new ZoikoTaxClient({ baseUrl: "https://eu-west-1.zoikotax.com", fetch });
+
+  const body = { proposalId, subjectRef: "sku:PLAN-UNL-5G", proposedCode: "ontology:telecom/voice/mobile", action: "REJECT", reason: "Not a fit" };
+  const result = await client.recordClassificationDecision(body);
+  await client.getClassificationDecision(proposalId);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.action, "REJECT");
+  assert.equal(calls[0].url, "https://eu-west-1.zoikotax.com/v1/classifications/decisions");
+  assert.equal(calls[0].init.method, "POST");
+  assert.deepEqual(JSON.parse(calls[0].init.body), body);
+  assert.equal(calls[1].url, `https://eu-west-1.zoikotax.com/v1/classifications/decisions/${proposalId}`);
+  assert.equal(calls[1].init.method, "GET");
+});
+
+test("a second classification decision is a 409 error value, not an exception", async () => {
+  const { fetch } = stub(json(409, problem({ status: 409, ztx_reason_code: "ALREADY_EXISTS" })));
+  const client = new ZoikoTaxClient({ baseUrl: "https://eu-west-1.zoikotax.com", fetch });
+
+  const result = await client.recordClassificationDecision({ proposalId: "p", subjectRef: "s", proposedCode: "c", action: "ACCEPT", reason: "r" });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.error.status, 409);
+  assert.equal(result.error.reasonCode, "ALREADY_EXISTS");
 });
 
 test("the workpaper calls send amounts as strings and no Idempotency-Key", async () => {

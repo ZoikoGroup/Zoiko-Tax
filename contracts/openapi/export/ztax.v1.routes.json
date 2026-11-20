@@ -116,6 +116,18 @@
       "public": false
     },
     {
+      "method": "POST",
+      "path": "/v1/classifications/decisions",
+      "operationId": "recordClassificationDecision",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/classifications/decisions/{proposalId}",
+      "operationId": "getClassificationDecision",
+      "public": false
+    },
+    {
       "method": "GET",
       "path": "/v1/compliance/packages",
       "operationId": "listCompliancePackages",

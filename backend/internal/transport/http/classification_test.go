@@ -83,6 +83,11 @@ func testClassificationProposal(t *testing.T) ai.AiClassificationProposal {
 
 func testClassificationProposalWithCode(t *testing.T, code string) ai.AiClassificationProposal {
 	t.Helper()
+	return testClassificationProposalWith(t, code, "")
+}
+
+func testClassificationProposalWith(t *testing.T, code, invocationID string) ai.AiClassificationProposal {
+	t.Helper()
 	id, err := ai.NewAiClassificationProposalID("01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f")
 	if err != nil {
 		t.Fatalf("NewAiClassificationProposalID: %v", err)
@@ -97,6 +102,7 @@ func testClassificationProposalWithCode(t *testing.T, code string) ai.AiClassifi
 		RiskTier:         ai.RiskTierT1,
 		AuthorityOutcome: ai.AuthorityOutcomeA1,
 		AiTrainVersion:   "ai-test-1",
+		InvocationID:     invocationID,
 	}
 	p, err := ai.NewAiClassificationProposal(id, "sku:PLAN-UNL-5G", code, "0.97", prov)
 	if err != nil {
@@ -338,6 +344,50 @@ func TestProposeClassificationSuccess(t *testing.T) {
 	}
 }
 
+// proposeProvenance runs one successful propose call and returns the
+// "provenance" object of the reply.
+func proposeProvenance(t *testing.T, proposal ai.AiClassificationProposal) map[string]any {
+	t.Helper()
+	rt := NewRouter(nil, nil, nil, nil, slog.New(slog.DiscardHandler), idgen.V7{})
+	rt.Cell = testCell
+	rt.Classification = app.NewClassificationService(&fakeModelGateway{proposal: proposal})
+	body := `{"subjectRef":"sku:PLAN-UNL-5G","description":"Unlimited 5G mobile plan with 20 GB hotspot"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/classifications:propose", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(security.Into(req.Context(), testClassificationContext(security.RoleOperator)))
+	rec := httptest.NewRecorder()
+	rt.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	var out map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode: %v; body=%s", err, rec.Body.String())
+	}
+	prov, ok := out["provenance"].(map[string]any)
+	if !ok {
+		t.Fatalf("no provenance object: %s", rec.Body.String())
+	}
+	return prov
+}
+
+func TestProposeClassificationCarriesTheInvocationID(t *testing.T) {
+	prov := proposeProvenance(t, testClassificationProposalWith(t, "ontology:telecom/voice/mobile", "call-id-1"))
+	if prov["invocationId"] != "call-id-1" {
+		t.Fatalf("provenance = %v, want invocationId call-id-1", prov)
+	}
+}
+
+func TestProposeClassificationOmitsTheInvocationIDWhenAbsent(t *testing.T) {
+	prov := proposeProvenance(t, testClassificationProposal(t))
+	if _, ok := prov["invocationId"]; ok {
+		t.Fatalf("the key invocationId is present with no id: %v", prov)
+	}
+	if prov["modelProfile"] != "model:cls-test" {
+		t.Fatalf("provenance lost its other fields: %v", prov)
+	}
+}
+
 // C9: when the AI plane cannot help, the caller gets a 200 that sends the item
 // to a person, with the reason and no proposal -- not a Problem to recover
 // from. Deterministic processing never depended on it either way.
@@ -456,5 +506,46 @@ func TestKilledUseCaseNeverReachesTransport(t *testing.T) {
 	}
 	if len(transport.Calls()) != 0 {
 		t.Fatalf("a killed use case reached the transport: %d call(s)", len(transport.Calls()))
+	}
+}
+
+// An unlisted code is a 200 that sends the item to a person: the reason, and
+// none of the proposal keys. The code never reaches the reply.
+func TestProposeClassificationUnlistedCodeIsReviewRequired(t *testing.T) {
+	list, err := app.ParseApprovedList([]byte(`{"list_version":"test-list-1","approved":[{"code":"ontology:telecom/voice/mobile","effective_from":"2024-01-01"}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	unlisted := "ontology:telecom/made-up/node"
+	fake := &fakeModelGateway{proposal: testClassificationProposalWithCode(t, unlisted)}
+	rt := NewRouter(nil, nil, nil, nil, slog.New(slog.DiscardHandler), idgen.V7{})
+	rt.Cell = testCell
+	rt.Classification = app.NewClassificationService(fake).
+		WithApprovedCodes(list, clock.Fixed{Instant: time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)})
+
+	body := `{"subjectRef":"sku:PLAN-UNL-5G","description":"Unlimited 5G mobile plan with 20 GB hotspot"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/classifications:propose", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(security.Into(req.Context(), testClassificationContext(security.RoleOperator)))
+	rec := httptest.NewRecorder()
+	rt.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	var out map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode: %v; body=%s", err, rec.Body.String())
+	}
+	if out["disposition"] != "REVIEW_REQUIRED" || out["reviewReason"] != string(ai.ReasonProposalCodeNotApproved) {
+		t.Fatalf("body = %s", rec.Body.String())
+	}
+	for _, absent := range []string{"id", "proposedCode", "confidence", "provenance"} {
+		if _, ok := out[absent]; ok {
+			t.Fatalf("an unlisted code answer carries %q: %s", absent, rec.Body.String())
+		}
+	}
+	if strings.Contains(rec.Body.String(), unlisted) {
+		t.Fatalf("the unlisted code is in the reply: %s", rec.Body.String())
 	}
 }

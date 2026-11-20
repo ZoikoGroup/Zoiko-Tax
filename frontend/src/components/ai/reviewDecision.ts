@@ -1,6 +1,6 @@
 /**
  * The reviewer's choices and the rules about them. Pure: no React, no I/O.
- * Nothing here is sent or saved; the buttons are UI only.
+ * The request that saves a decision is built in decisionRequest.ts.
  */
 export type ReviewerActionKind = 'ACCEPT' | 'REJECT' | 'MODIFY' | 'ESCALATE'
 
@@ -11,24 +11,10 @@ export const reviewerActions: ReadonlyArray<{ kind: ReviewerActionKind; label: s
   { kind: 'ESCALATE', label: 'Escalate' },
 ]
 
-/** A short list for the demo; the governance model asks for reason codes but does not enumerate them. */
-export const reviewerReasonCodes: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'MATCHES_CATALOG_DESCRIPTION', label: 'Matches the catalog description' },
-  { value: 'ONTOLOGY_NODE_LOOKS_WRONG', label: 'The proposed ontology node looks wrong' },
-  { value: 'DESCRIPTION_WAS_AMBIGUOUS', label: 'The item description was ambiguous' },
-  { value: 'NEEDS_SPECIALIST_REVIEW', label: 'Needs a tax specialist to confirm' },
-  { value: 'OTHER', label: 'Other (see note)' },
-]
-
-/** A decision may be recorded once it has a reason and a note (and, for Modify, a code). */
-export function canRecordDecision(
-  action: ReviewerActionKind | null,
-  reasonCode: string,
-  note: string,
-  modifiedCode: string,
-): boolean {
+/** A decision may be recorded once it has a reason (and, for Modify, a code). */
+export function canRecordDecision(action: ReviewerActionKind | null, reason: string, modifiedCode: string): boolean {
   if (action === null) return false
-  return reasonCode !== '' && note.trim() !== '' && (action !== 'MODIFY' || modifiedCode.trim() !== '')
+  return reason.trim() !== '' && (action !== 'MODIFY' || modifiedCode.trim() !== '')
 }
 
 /**

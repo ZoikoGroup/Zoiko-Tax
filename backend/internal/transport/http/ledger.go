@@ -125,6 +125,9 @@ func (rt *Router) handleProposeClassification(w http.ResponseWriter, r *http.Req
 		UseCase: string(prov.UseCase), ModelProfile: prov.ModelProfile, ProviderProfile: prov.ProviderProfile,
 		PromptProfile: prov.PromptProfile, AiTrainVersion: prov.AiTrainVersion,
 	}
+	if prov.InvocationID != "" {
+		out.Provenance.InvocationID = &prov.InvocationID
+	}
 	if c := p.Confidence(); c != "" {
 		out.Confidence = &c
 	}

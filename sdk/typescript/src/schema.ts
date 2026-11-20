@@ -1976,6 +1976,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/classifications/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record what a reviewer decided about an AI classification proposal
+         * @description `OPERATOR` or `ANALYST`, signed in as themselves. Saves the reviewer's
+         *     decision on one proposal: `ACCEPT`, `REJECT`, `MODIFY` or `ESCALATE`,
+         *     with a reason. The proposal itself is advisory and is not stored, so the
+         *     body carries what the record needs of it: the proposal id, the subject
+         *     reference, the proposed code and, when the proposal had one, its
+         *     `evidenceId`. The proposal id, subject reference, proposed code and evidence id are stated by the caller; the service does not store or verify the proposal they refer to.
+         *
+         *     The reviewer and the tenant are taken from the session, never from the
+         *     body; a body that names either is refused. The decision is append-only:
+         *     one per proposal per tenant, and a second decision for the same proposal
+         *     is `409 ALREADY_EXISTS` with nothing changed. `MODIFY` needs a
+         *     `modifiedCode` in ontology format, and no other action may carry one.
+         *     `reason` and `note` are free text: they are never logged and never
+         *     appear in an error. How long a decision is kept is set by the evidence
+         *     retention decision, which is not yet made.
+         *
+         *     A cell with no decision service wired answers `503`.
+         */
+        post: operations["recordClassificationDecision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/classifications/decisions/{proposalId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The reviewer's decision on one AI classification proposal
+         * @description `OPERATOR` or `ANALYST`. The decision recorded for the proposal in the
+         *     caller's tenant. `404` when there is none, and also for a proposal whose
+         *     decision belongs to another tenant. Reading changes nothing.
+         */
+        get: operations["getClassificationDecision"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/dashboard": {
         parameters: {
             query?: never;
@@ -5674,6 +5732,65 @@ export interface components {
             providerProfile: string;
             promptProfile: string;
             aiTrainVersion: string;
+            /** @description The Gateway's evidence record id for this call. Absent when the Gateway sent none. */
+            invocationId?: string;
+        };
+        /**
+         * ClassificationProposalId
+         * Format: uuid
+         * @example 01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f
+         */
+        ClassificationProposalId: string;
+        /**
+         * ClassificationDecisionAction
+         * @enum {string}
+         */
+        ClassificationDecisionAction: "ACCEPT" | "REJECT" | "MODIFY" | "ESCALATE";
+        /**
+         * ClassificationDecisionRequest
+         * @description A reviewer's decision. It names no reviewer and no tenant: both come from the session.
+         *     `modifiedCode` is required for `MODIFY` and refused for every other action.
+         *     The proposal id, subject reference, proposed code and evidence id are stated by the caller; the service does not store or verify the proposal they refer to.
+         */
+        ClassificationDecisionRequest: {
+            proposalId: components["schemas"]["ClassificationProposalId"];
+            subjectRef: string;
+            /** @description The code the AI proposed, `ontology:...`. */
+            proposedCode: string;
+            action: components["schemas"]["ClassificationDecisionAction"];
+            /** @description Why the reviewer decided this. Free text; never logged. Retention is set by the evidence retention decision, not yet decided. */
+            reason: string;
+            /** @description An optional note. Free text; never logged. Retention is set by the evidence retention decision, not yet decided. */
+            note?: string;
+            /** @description The reviewer's own code in ontology format. Only for `MODIFY`. */
+            modifiedCode?: string;
+            /** @description The Gateway's evidence record id for the proposal call, when the proposal had one. */
+            evidenceId?: string;
+        };
+        /**
+         * ClassificationDecision
+         * @description A saved reviewer decision. Append-only. The proposal id, subject reference, proposed code and evidence id are stated by the caller; the service does not store or verify the proposal they refer to.
+         */
+        ClassificationDecision: {
+            proposalId: components["schemas"]["ClassificationProposalId"];
+            subjectRef: string;
+            proposedCode: string;
+            action: components["schemas"]["ClassificationDecisionAction"];
+            reason: string;
+            note?: string;
+            modifiedCode?: string;
+            evidenceId?: string;
+            /**
+             * Format: uuid
+             * @description The tenant of the session that recorded the decision.
+             */
+            tenantId: string;
+            /**
+             * Format: uuid
+             * @description The person who decided, from the session.
+             */
+            reviewerUserId: string;
+            decidedAt: components["schemas"]["Timestamp"];
         };
         /**
          * ClassificationProposal
@@ -5695,7 +5812,8 @@ export interface components {
             disposition: "PROPOSED" | "REVIEW_REQUIRED";
             /**
              * @description Present when `disposition` is `REVIEW_REQUIRED`: `AI_GATEWAY_UNAVAILABLE`, `AI_GATEWAY_NOT_CONFIGURED`,
-             *     `AI_GATEWAY_REPLY_UNEVIDENCED` or `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`.
+             *     `AI_GATEWAY_REPLY_UNEVIDENCED`, `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE` or `AI_PROPOSAL_CODE_NOT_APPROVED`
+             *     (the code is not on the approved ontology list at this time, so it is set aside for a person).
              */
             reviewReason?: string;
             /** @description An existing ontology node, `ontology:...`. Present when `disposition` is `PROPOSED`. */
@@ -10403,6 +10521,11 @@ export interface components {
          */
         RemittanceId: components["schemas"]["RemittanceId"];
         /**
+         * @description The identifier of the AI classification proposal the decision is about.
+         * @example 01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f
+         */
+        ClassificationProposalId: components["schemas"]["ClassificationProposalId"];
+        /**
          * @description The support case identifier.
          * @example 01920c10-1a2b-7c3d-8e4f-5a6b7c8d9e01
          */
@@ -13140,6 +13263,68 @@ export interface operations {
             400: components["responses"]["Validation"];
             401: components["responses"]["Unauthenticated"];
             403: components["responses"]["Forbidden"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    recordClassificationDecision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassificationDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description The saved decision, with the reviewer and tenant from the session. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassificationDecision"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["Internal"];
+            503: components["responses"]["Unavailable"];
+        };
+    };
+    getClassificationDecision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The identifier of the AI classification proposal the decision is about.
+                 * @example 01920a4d-5a6b-7c8d-9e0f-1a2b3c4d5e6f
+                 */
+                proposalId: components["parameters"]["ClassificationProposalId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The decision. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassificationDecision"];
+                };
+            };
+            400: components["responses"]["Validation"];
+            401: components["responses"]["Unauthenticated"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             500: components["responses"]["Internal"];
             503: components["responses"]["Unavailable"];
         };

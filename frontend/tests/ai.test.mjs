@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 
+import { evidenceIdText } from '../src/components/ai/evidenceId.ts'
 import { provenanceKind } from '../src/components/ai/provenanceKind.ts'
 import { TEST_RUNTIME_TEXT, UNKNOWN_SOURCE_TEXT, provenanceNote } from '../src/components/ai/provenanceNote.ts'
 import { acceptedCode, canRecordDecision, reviewerActions } from '../src/components/ai/reviewDecision.ts'
@@ -64,15 +65,15 @@ describe('the reviewer decision rules', () => {
     assert.deepEqual(reviewerActions.map((a) => a.kind), ['ACCEPT', 'REJECT', 'MODIFY', 'ESCALATE'])
   })
 
-  test('a decision needs a reason and a note; Modify also needs a code; nothing without an action', () => {
-    assert.equal(canRecordDecision(null, 'OTHER', 'why', ''), false)
-    assert.equal(canRecordDecision('ACCEPT', '', 'why', ''), false)
-    assert.equal(canRecordDecision('ACCEPT', 'OTHER', '   ', ''), false)
-    assert.equal(canRecordDecision('ACCEPT', 'OTHER', 'why', ''), true)
-    assert.equal(canRecordDecision('REJECT', 'OTHER', 'why', ''), true)
-    assert.equal(canRecordDecision('MODIFY', 'OTHER', 'why', ''), false)
-    assert.equal(canRecordDecision('MODIFY', 'OTHER', 'why', '  '), false)
-    assert.equal(canRecordDecision('MODIFY', 'OTHER', 'why', 'ontology:a/b'), true)
+  test('a decision needs a reason; Modify also needs a code; nothing without an action', () => {
+    assert.equal(canRecordDecision(null, 'why', ''), false)
+    assert.equal(canRecordDecision('ACCEPT', '', ''), false)
+    assert.equal(canRecordDecision('ACCEPT', '   ', ''), false)
+    assert.equal(canRecordDecision('ACCEPT', 'why', ''), true)
+    assert.equal(canRecordDecision('REJECT', 'why', ''), true)
+    assert.equal(canRecordDecision('MODIFY', 'why', ''), false)
+    assert.equal(canRecordDecision('MODIFY', 'why', '  '), false)
+    assert.equal(canRecordDecision('MODIFY', 'why', 'ontology:a/b'), true)
   })
 })
 
@@ -105,5 +106,44 @@ describe('provenanceNote', () => {
     assert.equal(noteFor({ modelProfile: 'model:fake-v1', providerProfile: 'provider:fake' }).tone, 'badge')
     assert.equal(noteFor({ modelProfile: 'model:classifier', providerProfile: 'provider:eu-hosted' }).tone, 'quiet')
     assert.equal(noteFor({ modelProfile: 'model:groq-live-demo', providerProfile: 'provider:groq-demo' }), null)
+  })
+})
+
+describe('evidenceIdText', () => {
+  test('a valid id is returned as it is', () => {
+    assert.equal(evidenceIdText({ invocationId: 'call-id-1' }), 'call-id-1')
+  })
+
+  test('spaces around the id are trimmed', () => {
+    assert.equal(evidenceIdText({ invocationId: '  call-id-1 	' }), 'call-id-1')
+  })
+
+  test('a 64-character id is kept', () => {
+    assert.equal(evidenceIdText({ invocationId: 'a'.repeat(64) }), 'a'.repeat(64))
+  })
+
+  test('no provenance, no field, empty or blank gives null', () => {
+    assert.equal(evidenceIdText(undefined), null)
+    assert.equal(evidenceIdText(null), null)
+    assert.equal(evidenceIdText({}), null)
+    assert.equal(evidenceIdText({ invocationId: '' }), null)
+    assert.equal(evidenceIdText({ invocationId: '   ' }), null)
+  })
+
+  test('a value that is not a string gives null', () => {
+    assert.equal(evidenceIdText({ invocationId: 12345 }), null)
+    assert.equal(evidenceIdText({ invocationId: null }), null)
+    assert.equal(evidenceIdText({ invocationId: ['call-id-1'] }), null)
+  })
+
+  test('a wrong shape gives null: a space, a slash, other marks', () => {
+    assert.equal(evidenceIdText({ invocationId: 'call id' }), null)
+    assert.equal(evidenceIdText({ invocationId: 'call/id' }), null)
+    assert.equal(evidenceIdText({ invocationId: 'call_id' }), null)
+    assert.equal(evidenceIdText({ invocationId: '<b>x</b>' }), null)
+  })
+
+  test('a 65-character id gives null', () => {
+    assert.equal(evidenceIdText({ invocationId: 'a'.repeat(65) }), null)
   })
 })

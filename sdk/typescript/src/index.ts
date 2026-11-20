@@ -1186,6 +1186,16 @@ export class ZoikoTaxClient {
     return this.#send<S<"ClassificationProposal">>("POST", `/v1/classifications:propose`, body, signal);
   }
 
+  /** Record a reviewer's decision on an AI classification proposal. `POST /v1/classifications/decisions`. */
+  recordClassificationDecision(body: S<"ClassificationDecisionRequest">, signal?: AbortSignal): Promise<Result<S<"ClassificationDecision">>> {
+    return this.#send<S<"ClassificationDecision">>("POST", `/v1/classifications/decisions`, body, signal);
+  }
+
+  /** Get the reviewer's decision on one proposal. `GET /v1/classifications/decisions/{proposalId}`. */
+  getClassificationDecision(proposalId: string, signal?: AbortSignal): Promise<Result<S<"ClassificationDecision">>> {
+    return this.#send<S<"ClassificationDecision">>("GET", `/v1/classifications/decisions/${encodeURIComponent(proposalId)}`, undefined, signal);
+  }
+
   // --- dashboard ----------------------------------------------------------
 
   /**

@@ -6,7 +6,7 @@ import { ProposalCard } from '../components/ai/ProposalCard'
 import { ztax } from '../platform/client'
 import { Card, Columns, Field, PageHeader, Submit, useAction } from '../ui/kit'
 import {
-  DESCRIPTION_MAX, emptyNoteVisible, viewOfProposal, viewOfWaiting, type ProposalView,
+  DESCRIPTION_MAX, SUBJECT_REF_MAX, emptyNoteVisible, subjectRefNote, subjectRefToSend, viewOfProposal, viewOfWaiting, type ProposalView,
 } from './intelligence/viewOfProposal'
 import type { PageProps } from './types'
 import './obligations.css'
@@ -57,6 +57,9 @@ export const IntelligencePage = ({ session, route }: PageProps) => {
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
+    // Over the service limit: nothing is sent. The sentence is already under the box.
+    const ref = subjectRefToSend(subjectRef)
+    if (ref === null) return
     startedAt.current = Date.now()
     setWaitedMs(0)
     setTookMs(null)
@@ -64,7 +67,7 @@ export const IntelligencePage = ({ session, route }: PageProps) => {
     // result, so the screen never shows a gap between the two.
     void action.run(async () => {
       try {
-        return await ztax.proposeClassification({ subjectRef: subjectRef.trim(), description: description.trim() })
+        return await ztax.proposeClassification({ subjectRef: ref, description: description.trim() })
       } finally {
         setTookMs(Date.now() - startedAt.current)
       }
@@ -120,9 +123,11 @@ export const IntelligencePage = ({ session, route }: PageProps) => {
                 type="text"
                 value={subjectRef}
                 required
+                maxLength={SUBJECT_REF_MAX}
                 placeholder="sku:PLAN-UNL-5G"
                 onChange={(e) => { setSubjectRef(e.target.value) }}
               />
+              {subjectRefNote(subjectRef) === null ? null : <span className="field__help" role="note">{subjectRefNote(subjectRef)}</span>}
             </Field>
             <Field label="Description" help="The item's commercial description. Catalog text, never customer data.">
               <textarea
