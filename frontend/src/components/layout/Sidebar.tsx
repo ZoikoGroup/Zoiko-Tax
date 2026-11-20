@@ -51,6 +51,8 @@ export type View =
   | 'notices'
   | 'workpapers'
   | 'erp-reconciliation'
+  | 'entitlements'
+  | 'subscriptions'
 
 /** A screen: a view, and the tab inside it when the view has tabs. */
 export interface NavTarget {
@@ -224,9 +226,9 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
     id: 'administration', label: 'Administration', icon: <IconSettings />, children: [
       { id: 'admin.organisation', label: 'Organisation & Legal Entities', target: at('admin', 'organisation') },
       { id: 'admin.users', label: 'Users & Permissions', target: at('admin', 'users') },
-      { id: 'admin.entitlements', label: 'Entitlements' },
+      { id: 'admin.entitlements', label: 'Entitlements', target: at('entitlements') },
       { id: 'admin.integrations', label: 'Integrations & APIs', target: at('admin', 'integrations') },
-      { id: 'admin.subscriptions', label: 'Subscriptions & Usage' },
+      { id: 'admin.subscriptions', label: 'Subscriptions & Usage', target: at('subscriptions') },
       { id: 'admin.security', label: 'Security Settings', target: at('admin', 'security') },
     ],
   },

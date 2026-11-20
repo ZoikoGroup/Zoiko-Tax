@@ -596,3 +596,44 @@ test("the ERP bridge calls put ids in the path, amounts as strings and send no I
   assert.equal(JSON.parse(calls[9].init.body).balances[0].credits, "10.00");
   for (const c of calls) assert.equal(c.init.headers["Idempotency-Key"], undefined);
 });
+
+test("the entitlement, subscription and usage calls send intake under an Idempotency-Key and nothing else", async () => {
+  const { fetch, calls } = stub(json(201, { id: "01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01" }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+  const gid = "01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+  const pid = "01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+
+  await client.createEntitlement("k-ent", {
+    jurisdiction: "GB", service: "MOBILE_VOICE", mode: "NATIVE", operation: "FILE", effectiveFrom: "2026-11-20",
+    contractRef: "MSA-2026-014", submit: true,
+  });
+  await client.listEntitlements({ effective: "RESTRICTED", mismatch: "true" });
+  await client.getEntitlement(gid);
+  await client.actOnEntitlement(gid, { action: "APPROVE", expectedVersion: 2, reason: "signed" });
+  await client.proposeSubscriptionPlan("k-plan", {
+    planCode: "PILOT-2026", planName: "Pilot 2026", contractRef: "MSA-2026-014", termStart: "2026-11-20",
+    quotas: [{ meter: "COMMITTED_DECISIONS", included: 100000, overage: "ALLOW_OVERAGE" }],
+  });
+  await client.listSubscriptionPlans();
+  await client.getSubscriptionPlan(pid);
+  await client.actOnSubscriptionPlan(pid, { action: "APPROVE", expectedVersion: 1 });
+  await client.getUsage({ period: "2026-11" });
+  await client.getUsageBasis({ meter: "COMMITTED_DECISIONS", period: "2026-11", limit: 50 });
+
+  assert.deepEqual(calls.map((c) => `${c.init.method} ${c.url}`), [
+    "POST /api/v1/entitlements",
+    "GET /api/v1/entitlements?effective=RESTRICTED&mismatch=true",
+    `GET /api/v1/entitlements/${gid}`,
+    `POST /api/v1/entitlements/${gid}/actions`,
+    "POST /api/v1/subscriptions",
+    "GET /api/v1/subscriptions",
+    `GET /api/v1/subscriptions/${pid}`,
+    `POST /api/v1/subscriptions/${pid}/actions`,
+    "GET /api/v1/usage?period=2026-11",
+    "GET /api/v1/usage/basis?meter=COMMITTED_DECISIONS&period=2026-11&limit=50",
+  ]);
+  assert.equal(calls[0].init.headers["Idempotency-Key"], "k-ent");
+  assert.equal(calls[4].init.headers["Idempotency-Key"], "k-plan");
+  assert.equal(JSON.parse(calls[4].init.body).quotas[0].included, 100000);
+  for (const c of calls.filter((_, i) => i !== 0 && i !== 4)) assert.equal(c.init.headers["Idempotency-Key"], undefined);
+});

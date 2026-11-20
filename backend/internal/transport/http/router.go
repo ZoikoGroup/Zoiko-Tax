@@ -159,6 +159,11 @@ type Router struct {
 	Crosswalks  *app.CrosswalkService
 	RuleChanges *app.RuleChangeService
 
+	// Entitlements serves the commercial entitlement register, subscription
+	// plans and metered usage (Doc 18). It reads the cell's coverage and
+	// its own records, so it is served wherever the store is.
+	Entitlements *app.EntitlementService
+
 	// Shadow serves shadow assurance: comparator profiles, comparison runs
 	// and their discrepancies. Nil when the cell has no evidence store to
 	// read committed results from.
@@ -467,6 +472,19 @@ func (rt *Router) routes() []struct {
 		{Route{"GET", "/v1/content/rule-changes/{changeId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetRuleChange},
 		{Route{"POST", "/v1/content/rule-changes/{changeId}/test-evidence", false, []security.Role{operator, analyst}}, rt.handleRecordRuleChangeTestEvidence},
 		{Route{"POST", "/v1/content/rule-changes/{changeId}/transitions", false, []security.Role{operator, analyst}}, rt.handleTransitionRuleChange},
+		// Commercial entitlements, subscriptions and usage (Doc 18, G-004,
+		// G-049): every role reads; ADMIN records and acts, and the service
+		// compares the people for the second-administrator approvals.
+		{Route{"GET", "/v1/entitlements", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListEntitlements},
+		{Route{"POST", "/v1/entitlements", false, []security.Role{admin}}, rt.handleCreateEntitlement},
+		{Route{"GET", "/v1/entitlements/{entitlementId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetEntitlement},
+		{Route{"POST", "/v1/entitlements/{entitlementId}/actions", false, []security.Role{admin}}, rt.handleActOnEntitlement},
+		{Route{"GET", "/v1/subscriptions", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListSubscriptionPlans},
+		{Route{"POST", "/v1/subscriptions", false, []security.Role{admin}}, rt.handleProposeSubscriptionPlan},
+		{Route{"GET", "/v1/subscriptions/{planId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetSubscriptionPlan},
+		{Route{"POST", "/v1/subscriptions/{planId}/actions", false, []security.Role{admin}}, rt.handleActOnSubscriptionPlan},
+		{Route{"GET", "/v1/usage", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetUsage},
+		{Route{"GET", "/v1/usage/basis", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetUsageBasis},
 		// Shadow: non-impact reads of committed decisions, compared with
 		// another engine's results (ZTAX-SHD-001).
 		{Route{"GET", "/v1/shadow/comparators", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListComparators},

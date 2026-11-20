@@ -1593,6 +1593,348 @@ func (e EffectiveObligationStatus) Valid() bool {
 	}
 }
 
+// Defines values for EntitlementAction.
+const (
+	EntitlementActionAPPROVE       EntitlementAction = "APPROVE"
+	EntitlementActionREJECT        EntitlementAction = "REJECT"
+	EntitlementActionREQUESTRESUME EntitlementAction = "REQUEST_RESUME"
+	EntitlementActionRESUME        EntitlementAction = "RESUME"
+	EntitlementActionREVOKE        EntitlementAction = "REVOKE"
+	EntitlementActionSUBMIT        EntitlementAction = "SUBMIT"
+	EntitlementActionSUSPEND       EntitlementAction = "SUSPEND"
+	EntitlementActionWITHDRAW      EntitlementAction = "WITHDRAW"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementAction enum.
+func (e EntitlementAction) Valid() bool {
+	switch e {
+	case EntitlementActionAPPROVE:
+		return true
+	case EntitlementActionREJECT:
+		return true
+	case EntitlementActionREQUESTRESUME:
+		return true
+	case EntitlementActionRESUME:
+		return true
+	case EntitlementActionREVOKE:
+		return true
+	case EntitlementActionSUBMIT:
+		return true
+	case EntitlementActionSUSPEND:
+		return true
+	case EntitlementActionWITHDRAW:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementCoverageState.
+const (
+	EntitlementCoverageStateUNPROVEN EntitlementCoverageState = "UNPROVEN"
+	EntitlementCoverageStateVERIFIED EntitlementCoverageState = "VERIFIED"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementCoverageState enum.
+func (e EntitlementCoverageState) Valid() bool {
+	switch e {
+	case EntitlementCoverageStateUNPROVEN:
+		return true
+	case EntitlementCoverageStateVERIFIED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementDecision.
+const (
+	ALLOW EntitlementDecision = "ALLOW"
+	DENY  EntitlementDecision = "DENY"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementDecision enum.
+func (e EntitlementDecision) Valid() bool {
+	switch e {
+	case ALLOW:
+		return true
+	case DENY:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementEffective.
+const (
+	EntitlementEffectiveACTIVE     EntitlementEffective = "ACTIVE"
+	EntitlementEffectiveENDED      EntitlementEffective = "ENDED"
+	EntitlementEffectiveEXPIRED    EntitlementEffective = "EXPIRED"
+	EntitlementEffectivePENDING    EntitlementEffective = "PENDING"
+	EntitlementEffectiveRESTRICTED EntitlementEffective = "RESTRICTED"
+	EntitlementEffectiveSUSPENDED  EntitlementEffective = "SUSPENDED"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementEffective enum.
+func (e EntitlementEffective) Valid() bool {
+	switch e {
+	case EntitlementEffectiveACTIVE:
+		return true
+	case EntitlementEffectiveENDED:
+		return true
+	case EntitlementEffectiveEXPIRED:
+		return true
+	case EntitlementEffectivePENDING:
+		return true
+	case EntitlementEffectiveRESTRICTED:
+		return true
+	case EntitlementEffectiveSUSPENDED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementEventKind.
+const (
+	EntitlementEventKindAPPROVED        EntitlementEventKind = "APPROVED"
+	EntitlementEventKindCREATED         EntitlementEventKind = "CREATED"
+	EntitlementEventKindREJECTED        EntitlementEventKind = "REJECTED"
+	EntitlementEventKindRESUMED         EntitlementEventKind = "RESUMED"
+	EntitlementEventKindRESUMEREQUESTED EntitlementEventKind = "RESUME_REQUESTED"
+	EntitlementEventKindREVOKED         EntitlementEventKind = "REVOKED"
+	EntitlementEventKindSUBMITTED       EntitlementEventKind = "SUBMITTED"
+	EntitlementEventKindSUSPENDED       EntitlementEventKind = "SUSPENDED"
+	EntitlementEventKindWITHDRAWN       EntitlementEventKind = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementEventKind enum.
+func (e EntitlementEventKind) Valid() bool {
+	switch e {
+	case EntitlementEventKindAPPROVED:
+		return true
+	case EntitlementEventKindCREATED:
+		return true
+	case EntitlementEventKindREJECTED:
+		return true
+	case EntitlementEventKindRESUMED:
+		return true
+	case EntitlementEventKindRESUMEREQUESTED:
+		return true
+	case EntitlementEventKindREVOKED:
+		return true
+	case EntitlementEventKindSUBMITTED:
+		return true
+	case EntitlementEventKindSUSPENDED:
+		return true
+	case EntitlementEventKindWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementLifecycle.
+const (
+	EntitlementLifecycleAPPROVED  EntitlementLifecycle = "APPROVED"
+	EntitlementLifecycleDRAFT     EntitlementLifecycle = "DRAFT"
+	EntitlementLifecycleINREVIEW  EntitlementLifecycle = "IN_REVIEW"
+	EntitlementLifecycleREJECTED  EntitlementLifecycle = "REJECTED"
+	EntitlementLifecycleREVOKED   EntitlementLifecycle = "REVOKED"
+	EntitlementLifecycleSUSPENDED EntitlementLifecycle = "SUSPENDED"
+	EntitlementLifecycleWITHDRAWN EntitlementLifecycle = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementLifecycle enum.
+func (e EntitlementLifecycle) Valid() bool {
+	switch e {
+	case EntitlementLifecycleAPPROVED:
+		return true
+	case EntitlementLifecycleDRAFT:
+		return true
+	case EntitlementLifecycleINREVIEW:
+		return true
+	case EntitlementLifecycleREJECTED:
+		return true
+	case EntitlementLifecycleREVOKED:
+		return true
+	case EntitlementLifecycleSUSPENDED:
+		return true
+	case EntitlementLifecycleWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementMarketStatus.
+const (
+	EntitlementMarketStatusACTIVE       EntitlementMarketStatus = "ACTIVE"
+	EntitlementMarketStatusNOTLISTED    EntitlementMarketStatus = "NOT_LISTED"
+	EntitlementMarketStatusPILOT        EntitlementMarketStatus = "PILOT"
+	EntitlementMarketStatusRESEARCHONLY EntitlementMarketStatus = "RESEARCH_ONLY"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementMarketStatus enum.
+func (e EntitlementMarketStatus) Valid() bool {
+	switch e {
+	case EntitlementMarketStatusACTIVE:
+		return true
+	case EntitlementMarketStatusNOTLISTED:
+		return true
+	case EntitlementMarketStatusPILOT:
+		return true
+	case EntitlementMarketStatusRESEARCHONLY:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementMode.
+const (
+	FEDERATED         EntitlementMode = "FEDERATED"
+	MANAGEDCOMPLIANCE EntitlementMode = "MANAGED_COMPLIANCE"
+	NATIVE            EntitlementMode = "NATIVE"
+	OEMEMBEDDED       EntitlementMode = "OEM_EMBEDDED"
+	SHADOWASSURANCE   EntitlementMode = "SHADOW_ASSURANCE"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementMode enum.
+func (e EntitlementMode) Valid() bool {
+	switch e {
+	case FEDERATED:
+		return true
+	case MANAGEDCOMPLIANCE:
+		return true
+	case NATIVE:
+		return true
+	case OEMEMBEDDED:
+		return true
+	case SHADOWASSURANCE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementOperation.
+const (
+	EntitlementOperationCOMMIT        EntitlementOperation = "COMMIT"
+	EntitlementOperationEINVOICE      EntitlementOperation = "E_INVOICE"
+	EntitlementOperationFILE          EntitlementOperation = "FILE"
+	EntitlementOperationQUOTE         EntitlementOperation = "QUOTE"
+	EntitlementOperationREMIT         EntitlementOperation = "REMIT"
+	EntitlementOperationSHADOWCOMPARE EntitlementOperation = "SHADOW_COMPARE"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementOperation enum.
+func (e EntitlementOperation) Valid() bool {
+	switch e {
+	case EntitlementOperationCOMMIT:
+		return true
+	case EntitlementOperationEINVOICE:
+		return true
+	case EntitlementOperationFILE:
+		return true
+	case EntitlementOperationQUOTE:
+		return true
+	case EntitlementOperationREMIT:
+		return true
+	case EntitlementOperationSHADOWCOMPARE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementReason.
+const (
+	AWAITINGEFFECTIVEDATE  EntitlementReason = "AWAITING_EFFECTIVE_DATE"
+	AWAITINGSECONDAPPROVAL EntitlementReason = "AWAITING_SECOND_APPROVAL"
+	AWAITINGSUBMISSION     EntitlementReason = "AWAITING_SUBMISSION"
+	CONTENTNOTACTIVE       EntitlementReason = "CONTENT_NOT_ACTIVE"
+	ENTITLEMENTENDED       EntitlementReason = "ENTITLEMENT_ENDED"
+	ENTITLEMENTEXPIRED     EntitlementReason = "ENTITLEMENT_EXPIRED"
+	ENTITLEMENTSUSPENDED   EntitlementReason = "ENTITLEMENT_SUSPENDED"
+	GEOGRAPHYNOTPROVEN     EntitlementReason = "GEOGRAPHY_NOT_PROVEN"
+	OPERATIONNOTSUPPORTED  EntitlementReason = "OPERATION_NOT_SUPPORTED"
+	PROVIDEREVIDENCEABSENT EntitlementReason = "PROVIDER_EVIDENCE_ABSENT"
+	RESUMEAWAITINGAPPROVAL EntitlementReason = "RESUME_AWAITING_APPROVAL"
+	TECHNICALLYUNAVAILABLE EntitlementReason = "TECHNICALLY_UNAVAILABLE"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementReason enum.
+func (e EntitlementReason) Valid() bool {
+	switch e {
+	case AWAITINGEFFECTIVEDATE:
+		return true
+	case AWAITINGSECONDAPPROVAL:
+		return true
+	case AWAITINGSUBMISSION:
+		return true
+	case CONTENTNOTACTIVE:
+		return true
+	case ENTITLEMENTENDED:
+		return true
+	case ENTITLEMENTEXPIRED:
+		return true
+	case ENTITLEMENTSUSPENDED:
+		return true
+	case GEOGRAPHYNOTPROVEN:
+		return true
+	case OPERATIONNOTSUPPORTED:
+		return true
+	case PROVIDEREVIDENCEABSENT:
+		return true
+	case RESUMEAWAITINGAPPROVAL:
+		return true
+	case TECHNICALLYUNAVAILABLE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementStatus.
+const (
+	EntitlementStatusACTIVE    EntitlementStatus = "ACTIVE"
+	EntitlementStatusDRAFT     EntitlementStatus = "DRAFT"
+	EntitlementStatusEXPIRED   EntitlementStatus = "EXPIRED"
+	EntitlementStatusINREVIEW  EntitlementStatus = "IN_REVIEW"
+	EntitlementStatusREJECTED  EntitlementStatus = "REJECTED"
+	EntitlementStatusREVOKED   EntitlementStatus = "REVOKED"
+	EntitlementStatusSCHEDULED EntitlementStatus = "SCHEDULED"
+	EntitlementStatusSUSPENDED EntitlementStatus = "SUSPENDED"
+	EntitlementStatusWITHDRAWN EntitlementStatus = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementStatus enum.
+func (e EntitlementStatus) Valid() bool {
+	switch e {
+	case EntitlementStatusACTIVE:
+		return true
+	case EntitlementStatusDRAFT:
+		return true
+	case EntitlementStatusEXPIRED:
+		return true
+	case EntitlementStatusINREVIEW:
+		return true
+	case EntitlementStatusREJECTED:
+		return true
+	case EntitlementStatusREVOKED:
+		return true
+	case EntitlementStatusSCHEDULED:
+		return true
+	case EntitlementStatusSUSPENDED:
+		return true
+	case EntitlementStatusWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EventType.
 const (
 	ComZoikotaxAccumulatorThresholdCrossed EventType = "com.zoikotax.accumulator.threshold-crossed"
@@ -4581,6 +4923,75 @@ func (e SourceAuthorityClass) Valid() bool {
 	}
 }
 
+// Defines values for SubscriptionPlanAction.
+const (
+	SubscriptionPlanActionAPPROVE  SubscriptionPlanAction = "APPROVE"
+	SubscriptionPlanActionREJECT   SubscriptionPlanAction = "REJECT"
+	SubscriptionPlanActionWITHDRAW SubscriptionPlanAction = "WITHDRAW"
+)
+
+// Valid indicates whether the value is a known member of the SubscriptionPlanAction enum.
+func (e SubscriptionPlanAction) Valid() bool {
+	switch e {
+	case SubscriptionPlanActionAPPROVE:
+		return true
+	case SubscriptionPlanActionREJECT:
+		return true
+	case SubscriptionPlanActionWITHDRAW:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SubscriptionPlanEventKind.
+const (
+	SubscriptionPlanEventKindAPPROVED  SubscriptionPlanEventKind = "APPROVED"
+	SubscriptionPlanEventKindPROPOSED  SubscriptionPlanEventKind = "PROPOSED"
+	SubscriptionPlanEventKindREJECTED  SubscriptionPlanEventKind = "REJECTED"
+	SubscriptionPlanEventKindWITHDRAWN SubscriptionPlanEventKind = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the SubscriptionPlanEventKind enum.
+func (e SubscriptionPlanEventKind) Valid() bool {
+	switch e {
+	case SubscriptionPlanEventKindAPPROVED:
+		return true
+	case SubscriptionPlanEventKindPROPOSED:
+		return true
+	case SubscriptionPlanEventKindREJECTED:
+		return true
+	case SubscriptionPlanEventKindWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SubscriptionPlanStatus.
+const (
+	SubscriptionPlanStatusAPPROVED  SubscriptionPlanStatus = "APPROVED"
+	SubscriptionPlanStatusPROPOSED  SubscriptionPlanStatus = "PROPOSED"
+	SubscriptionPlanStatusREJECTED  SubscriptionPlanStatus = "REJECTED"
+	SubscriptionPlanStatusWITHDRAWN SubscriptionPlanStatus = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the SubscriptionPlanStatus enum.
+func (e SubscriptionPlanStatus) Valid() bool {
+	switch e {
+	case SubscriptionPlanStatusAPPROVED:
+		return true
+	case SubscriptionPlanStatusPROPOSED:
+		return true
+	case SubscriptionPlanStatusREJECTED:
+		return true
+	case SubscriptionPlanStatusWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SupportCaseAction.
 const (
 	SupportCaseActionADDEVIDENCE      SupportCaseAction = "ADD_EVIDENCE"
@@ -4890,6 +5301,75 @@ func (e Treatment) Valid() bool {
 	case TreatmentPROVIDERCOST:
 		return true
 	case TreatmentREVERSECHARGE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UsageMeter.
+const (
+	COMMITTEDDECISIONS UsageMeter = "COMMITTED_DECISIONS"
+	FILINGSUBMISSIONS  UsageMeter = "FILING_SUBMISSIONS"
+	FISCALDOCUMENTS    UsageMeter = "FISCAL_DOCUMENTS"
+	SHADOWRUNS         UsageMeter = "SHADOW_RUNS"
+)
+
+// Valid indicates whether the value is a known member of the UsageMeter enum.
+func (e UsageMeter) Valid() bool {
+	switch e {
+	case COMMITTEDDECISIONS:
+		return true
+	case FILINGSUBMISSIONS:
+		return true
+	case FISCALDOCUMENTS:
+		return true
+	case SHADOWRUNS:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UsageOveragePolicy.
+const (
+	ALLOWOVERAGE UsageOveragePolicy = "ALLOW_OVERAGE"
+	HARDLIMIT    UsageOveragePolicy = "HARD_LIMIT"
+)
+
+// Valid indicates whether the value is a known member of the UsageOveragePolicy enum.
+func (e UsageOveragePolicy) Valid() bool {
+	switch e {
+	case ALLOWOVERAGE:
+		return true
+	case HARDLIMIT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UsageState.
+const (
+	ATQUOTA       UsageState = "AT_QUOTA"
+	NOPLAN        UsageState = "NO_PLAN"
+	NOTCONTRACTED UsageState = "NOT_CONTRACTED"
+	OVERQUOTA     UsageState = "OVER_QUOTA"
+	WITHINQUOTA   UsageState = "WITHIN_QUOTA"
+)
+
+// Valid indicates whether the value is a known member of the UsageState enum.
+func (e UsageState) Valid() bool {
+	switch e {
+	case ATQUOTA:
+		return true
+	case NOPLAN:
+		return true
+	case NOTCONTRACTED:
+		return true
+	case OVERQUOTA:
+		return true
+	case WITHINQUOTA:
 		return true
 	default:
 		return false
@@ -5837,6 +6317,9 @@ type CodeMapping struct {
 	Slot ZoikoSlot `json:"slot"`
 }
 
+// CommercialText A reason or note from the administrator acting.
+type CommercialText = string
+
 // CommitRequest Exactly one of `input` and `document` is required, as for a quote.
 // `eventTime` is the tax point: every effective date and legal period is
 // resolved at it, in the authority's own calendar.
@@ -6256,6 +6739,9 @@ type ContentTransitionRequest struct {
 	Reason *EvidenceText   `json:"reason,omitempty"`
 	To     CrosswalkStatus `json:"to"`
 }
+
+// ContractReference The signed contract, schedule or revision a right or plan comes from, as the contract names it.
+type ContractReference = string
 
 // ContributionAmount A provider's contribution base, or a quantity, in canonical decimal string
 // form — never a JSON number, and never computed by a client
@@ -8322,6 +8808,301 @@ type EffectiveObligationStatus string
 
 // Emitted What the content emitted, by result slot. The slots are the pack's.
 type Emitted map[string]ResultValue
+
+// Entitlement One entitlement grant as of `asOf`, beside the coverage the cell
+// proves for it. `findings` lists every reason it is pending or
+// blocked — its own lifecycle first, then coverage's — and is empty only
+// when `decision` is `ALLOW`. `actions` are the actions its lifecycle
+// allows; the server still compares the people.
+type Entitlement struct {
+	Actions []EntitlementAction `json:"actions"`
+
+	// ActiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	ActiveFrom *CivilDate `json:"activeFrom,omitempty"`
+
+	// ApprovedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	ApprovedAt *Timestamp `json:"approvedAt,omitempty"`
+
+	// ApprovedBy The person who recorded an act.
+	ApprovedBy *EvidenceActor `json:"approvedBy,omitempty"`
+
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf Timestamp `json:"asOf"`
+
+	// ContractRef The signed contract, schedule or revision a right or plan comes from, as the contract names it.
+	ContractRef ContractReference `json:"contractRef"`
+
+	// ContractRevision The signed contract, schedule or revision a right or plan comes from, as the contract names it.
+	ContractRevision *ContractReference `json:"contractRevision,omitempty"`
+
+	// Country ISO 3166-1 alpha-2.
+	Country CountryCode `json:"country"`
+
+	// Coverage What the cell proves for the grant's scope, read now. Never stored; never set by the grant.
+	Coverage EntitlementCoverage `json:"coverage"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// CreatedBy The person who recorded an act.
+	CreatedBy EvidenceActor `json:"createdBy"`
+
+	// Decision The effective-capability decision. Anything false, unknown or unproven is `DENY`.
+	Decision EntitlementDecision `json:"decision"`
+
+	// Effective Whether the right can be used now. `ACTIVE` is an active grant over
+	// coverage the cell proves; `RESTRICTED` is an active grant it does not
+	// prove; `PENDING` is recorded, in review or scheduled; `ENDED` is
+	// rejected, withdrawn or revoked.
+	Effective EntitlementEffective `json:"effective"`
+
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate `json:"effectiveFrom"`
+
+	// EffectiveTo A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveTo *CivilDate           `json:"effectiveTo,omitempty"`
+	Findings    []EntitlementFinding `json:"findings"`
+	History     []EntitlementEvent   `json:"history"`
+
+	// ID An entitlement grant.
+	ID EntitlementID `json:"id"`
+
+	// Jurisdiction A country, or a country and one subdivision, upper case.
+	Jurisdiction EvidenceJurisdiction `json:"jurisdiction"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// Lifecycle The stored state, the fold of the grant's events.
+	Lifecycle EntitlementLifecycle `json:"lifecycle"`
+
+	// Mismatch An approved grant, active or scheduled, whose coverage the cell does not prove.
+	Mismatch bool `json:"mismatch"`
+
+	// Mode The operating mode (Doc 18 §02). Each is a separate right and none
+	// implies another: `NATIVE` carries `QUOTE`, `COMMIT`, `FILE`, `REMIT`
+	// and `E_INVOICE`; `FEDERATED` and `OEM_EMBEDDED` carry `QUOTE` and
+	// `COMMIT`; `SHADOW_ASSURANCE` carries only `SHADOW_COMPARE`;
+	// `MANAGED_COMPLIANCE` carries `FILE` and `REMIT`.
+	Mode EntitlementMode `json:"mode"`
+
+	// Operation What the grant permits. A quote right is not a commit right; a calculation right is not a filing right.
+	Operation EntitlementOperation `json:"operation"`
+
+	// Service A ZTAX-CLS-001 ontology family. A tenant's SKU is mapped to one before
+	// determination; a line without one is held as `CLASSIFICATION_REQUIRED`
+	// rather than guessed at.
+	Service ServiceFamily `json:"service"`
+
+	// Status The grant read against today's UTC date. An `APPROVED` grant is
+	// `SCHEDULED` before it runs, `ACTIVE` while it runs and `EXPIRED` after
+	// its end date; `SUSPENDED` trumps `ACTIVE`.
+	Status EntitlementStatus `json:"status"`
+
+	// SubmittedBy The person who recorded an act.
+	SubmittedBy *EvidenceActor `json:"submittedBy,omitempty"`
+
+	// Version The number of events recorded. An action names it.
+	Version int32 `json:"version"`
+}
+
+// EntitlementAction defines model for EntitlementAction.
+type EntitlementAction string
+
+// EntitlementActionRequest defines model for EntitlementActionRequest.
+type EntitlementActionRequest struct {
+	Action EntitlementAction `json:"action"`
+
+	// ExpectedVersion The `version` that was read. Anything recorded since is `VERSION_CONFLICT`.
+	ExpectedVersion int32 `json:"expectedVersion"`
+
+	// Reason A reason or note from the administrator acting.
+	Reason *CommercialText `json:"reason,omitempty"`
+}
+
+// EntitlementCoverage What the cell proves for the grant's scope, read now. Never stored; never set by the grant.
+type EntitlementCoverage struct {
+	// Filing The legal filing gate for the grant's legal entity in its country.
+	Filing   *EntitlementFilingGate `json:"filing,omitempty"`
+	Findings []EntitlementFinding   `json:"findings"`
+
+	// MarketReason What keeps the market from the next state.
+	MarketReason *DashboardMarketReason `json:"marketReason,omitempty"`
+
+	// MarketStatus The market's verified coverage status, or `NOT_LISTED` for a country neither the research catalogue nor content names.
+	MarketStatus EntitlementMarketStatus `json:"marketStatus"`
+
+	// Research How far the research behind a catalogue profile has got. Research is never coverage.
+	Research        *DashboardResearch       `json:"research,omitempty"`
+	ServicesInForce []ServiceFamily          `json:"servicesInForce"`
+	State           EntitlementCoverageState `json:"state"`
+}
+
+// EntitlementCoverageState defines model for EntitlementCoverageState.
+type EntitlementCoverageState string
+
+// EntitlementDecision The effective-capability decision. Anything false, unknown or unproven is `DENY`.
+type EntitlementDecision string
+
+// EntitlementEffective Whether the right can be used now. `ACTIVE` is an active grant over
+// coverage the cell proves; `RESTRICTED` is an active grant it does not
+// prove; `PENDING` is recorded, in review or scheduled; `ENDED` is
+// rejected, withdrawn or revoked.
+type EntitlementEffective string
+
+// EntitlementEvent defines model for EntitlementEvent.
+type EntitlementEvent struct {
+	Kind EntitlementEventKind `json:"kind"`
+
+	// Lifecycle The stored state, the fold of the grant's events.
+	Lifecycle EntitlementLifecycle `json:"lifecycle"`
+
+	// Reason A reason or note from the administrator acting.
+	Reason *CommercialText `json:"reason,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy The person who recorded an act.
+	RecordedBy EvidenceActor `json:"recordedBy"`
+	Seq        int32         `json:"seq"`
+}
+
+// EntitlementEventKind defines model for EntitlementEventKind.
+type EntitlementEventKind string
+
+// EntitlementFilingGate The legal filing gate for the grant's legal entity in its country.
+type EntitlementFilingGate struct {
+	// Authority The authority whose gate is ready, or the first considered when none is.
+	Authority *string `json:"authority,omitempty"`
+	Ready     bool    `json:"ready"`
+
+	// Reason The gate's blocking reason when it is not ready.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// EntitlementFinding One reason a grant is pending or blocked, with what a person reads about it.
+type EntitlementFinding struct {
+	// Detail Plain language, written by the cell.
+	Detail string `json:"detail"`
+
+	// Reason Why a grant is pending or blocked. The coverage reasons are Doc 18
+	// §06's: `CONTENT_NOT_ACTIVE` (no content in force for the service
+	// there, or a research profile only), `OPERATION_NOT_SUPPORTED` (the
+	// filing gate or the e-invoicing adapter is not there),
+	// `TECHNICALLY_UNAVAILABLE` (an advisory cell cannot commit),
+	// `GEOGRAPHY_NOT_PROVEN` (coverage is proven per country, not per
+	// subdivision) and `PROVIDER_EVIDENCE_ABSENT` (a federated provider's
+	// coverage is not evidenced).
+	Reason EntitlementReason `json:"reason"`
+}
+
+// EntitlementID An entitlement grant.
+type EntitlementID = string
+
+// EntitlementLifecycle The stored state, the fold of the grant's events.
+type EntitlementLifecycle string
+
+// EntitlementList defines model for EntitlementList.
+type EntitlementList struct {
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf Timestamp `json:"asOf"`
+
+	// Authoritative Whether the cell may emit authoritative output.
+	Authoritative bool `json:"authoritative"`
+
+	// Catalogue The research catalogue's version, absent when the cell has none.
+	Catalogue    *string           `json:"catalogue,omitempty"`
+	Entitlements []Entitlement     `json:"entitlements"`
+	Markets      []DashboardMarket `json:"markets"`
+}
+
+// EntitlementMarketStatus The market's verified coverage status, or `NOT_LISTED` for a country neither the research catalogue nor content names.
+type EntitlementMarketStatus string
+
+// EntitlementMode The operating mode (Doc 18 §02). Each is a separate right and none
+// implies another: `NATIVE` carries `QUOTE`, `COMMIT`, `FILE`, `REMIT`
+// and `E_INVOICE`; `FEDERATED` and `OEM_EMBEDDED` carry `QUOTE` and
+// `COMMIT`; `SHADOW_ASSURANCE` carries only `SHADOW_COMPARE`;
+// `MANAGED_COMPLIANCE` carries `FILE` and `REMIT`.
+type EntitlementMode string
+
+// EntitlementOperation What the grant permits. A quote right is not a commit right; a calculation right is not a filing right.
+type EntitlementOperation string
+
+// EntitlementReason Why a grant is pending or blocked. The coverage reasons are Doc 18
+// §06's: `CONTENT_NOT_ACTIVE` (no content in force for the service
+// there, or a research profile only), `OPERATION_NOT_SUPPORTED` (the
+// filing gate or the e-invoicing adapter is not there),
+// `TECHNICALLY_UNAVAILABLE` (an advisory cell cannot commit),
+// `GEOGRAPHY_NOT_PROVEN` (coverage is proven per country, not per
+// subdivision) and `PROVIDER_EVIDENCE_ABSENT` (a federated provider's
+// coverage is not evidenced).
+type EntitlementReason string
+
+// EntitlementRequest defines model for EntitlementRequest.
+type EntitlementRequest struct {
+	// ContractRef The signed contract, schedule or revision a right or plan comes from, as the contract names it.
+	ContractRef ContractReference `json:"contractRef"`
+
+	// ContractRevision The signed contract, schedule or revision a right or plan comes from, as the contract names it.
+	ContractRevision *ContractReference `json:"contractRevision,omitempty"`
+
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate `json:"effectiveFrom"`
+
+	// EffectiveTo A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveTo *CivilDate `json:"effectiveTo,omitempty"`
+
+	// Jurisdiction A country, or a country and one subdivision, upper case.
+	Jurisdiction EvidenceJurisdiction `json:"jurisdiction"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID *LegalEntityID `json:"legalEntityId,omitempty"`
+
+	// Mode The operating mode (Doc 18 §02). Each is a separate right and none
+	// implies another: `NATIVE` carries `QUOTE`, `COMMIT`, `FILE`, `REMIT`
+	// and `E_INVOICE`; `FEDERATED` and `OEM_EMBEDDED` carry `QUOTE` and
+	// `COMMIT`; `SHADOW_ASSURANCE` carries only `SHADOW_COMPARE`;
+	// `MANAGED_COMPLIANCE` carries `FILE` and `REMIT`.
+	Mode EntitlementMode `json:"mode"`
+
+	// Operation What the grant permits. A quote right is not a commit right; a calculation right is not a filing right.
+	Operation EntitlementOperation `json:"operation"`
+
+	// Service A ZTAX-CLS-001 ontology family. A tenant's SKU is mapped to one before
+	// determination; a line without one is held as `CLASSIFICATION_REQUIRED`
+	// rather than guessed at.
+	Service ServiceFamily `json:"service"`
+
+	// Submit Submit for review now. Otherwise the grant is kept as a DRAFT.
+	Submit *bool `json:"submit,omitempty"`
+}
+
+// EntitlementStatus The grant read against today's UTC date. An `APPROVED` grant is
+// `SCHEDULED` before it runs, `ACTIVE` while it runs and `EXPIRED` after
+// its end date; `SUSPENDED` trumps `ACTIVE`.
+type EntitlementStatus string
 
 // EventType An event type this cell emits, as the AsyncAPI contract names it.
 type EventType string
@@ -12681,6 +13462,145 @@ type SubledgerPeriod struct {
 	State  PeriodState `json:"state"`
 }
 
+// SubscriptionPlan A subscription plan revision. No price; it grants no entitlement and changes no tax result.
+type SubscriptionPlan struct {
+	// ApprovedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	ApprovedAt *Timestamp `json:"approvedAt,omitempty"`
+
+	// ApprovedBy The person who recorded an act.
+	ApprovedBy *EvidenceActor `json:"approvedBy,omitempty"`
+
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf Timestamp `json:"asOf"`
+
+	// ContractRef The signed contract, schedule or revision a right or plan comes from, as the contract names it.
+	ContractRef ContractReference `json:"contractRef"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// CreatedBy The person who recorded an act.
+	CreatedBy EvidenceActor           `json:"createdBy"`
+	History   []SubscriptionPlanEvent `json:"history"`
+
+	// ID A subscription plan revision.
+	ID SubscriptionPlanID `json:"id"`
+
+	// InForce Whether this is the plan in force on `asOf`'s UTC date.
+	InForce  bool                   `json:"inForce"`
+	PlanCode SubscriptionPlanCode   `json:"planCode"`
+	PlanName SubscriptionPlanName   `json:"planName"`
+	Quotas   []SubscriptionQuota    `json:"quotas"`
+	Status   SubscriptionPlanStatus `json:"status"`
+
+	// TermEnd A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	TermEnd *CivilDate `json:"termEnd,omitempty"`
+
+	// TermStart A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	TermStart CivilDate `json:"termStart"`
+	Version   int32     `json:"version"`
+}
+
+// SubscriptionPlanAction defines model for SubscriptionPlanAction.
+type SubscriptionPlanAction string
+
+// SubscriptionPlanActionRequest defines model for SubscriptionPlanActionRequest.
+type SubscriptionPlanActionRequest struct {
+	Action          SubscriptionPlanAction `json:"action"`
+	ExpectedVersion int32                  `json:"expectedVersion"`
+
+	// Reason A reason or note from the administrator acting.
+	Reason *CommercialText `json:"reason,omitempty"`
+}
+
+// SubscriptionPlanCode defines model for SubscriptionPlanCode.
+type SubscriptionPlanCode = string
+
+// SubscriptionPlanEvent defines model for SubscriptionPlanEvent.
+type SubscriptionPlanEvent struct {
+	Kind SubscriptionPlanEventKind `json:"kind"`
+
+	// Reason A reason or note from the administrator acting.
+	Reason *CommercialText `json:"reason,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy The person who recorded an act.
+	RecordedBy EvidenceActor          `json:"recordedBy"`
+	Seq        int32                  `json:"seq"`
+	Status     SubscriptionPlanStatus `json:"status"`
+}
+
+// SubscriptionPlanEventKind defines model for SubscriptionPlanEventKind.
+type SubscriptionPlanEventKind string
+
+// SubscriptionPlanID A subscription plan revision.
+type SubscriptionPlanID = string
+
+// SubscriptionPlanList defines model for SubscriptionPlanList.
+type SubscriptionPlanList struct {
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf               Timestamp `json:"asOf"`
+	DefinitionsVersion string    `json:"definitionsVersion"`
+
+	// InForcePlanID A subscription plan revision.
+	InForcePlanID *SubscriptionPlanID    `json:"inForcePlanId,omitempty"`
+	Meters        []UsageMeterDefinition `json:"meters"`
+	Plans         []SubscriptionPlan     `json:"plans"`
+}
+
+// SubscriptionPlanName defines model for SubscriptionPlanName.
+type SubscriptionPlanName = string
+
+// SubscriptionPlanRequest defines model for SubscriptionPlanRequest.
+type SubscriptionPlanRequest struct {
+	// ContractRef The signed contract, schedule or revision a right or plan comes from, as the contract names it.
+	ContractRef ContractReference    `json:"contractRef"`
+	PlanCode    SubscriptionPlanCode `json:"planCode"`
+	PlanName    SubscriptionPlanName `json:"planName"`
+	Quotas      []SubscriptionQuota  `json:"quotas"`
+
+	// TermEnd A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	TermEnd *CivilDate `json:"termEnd,omitempty"`
+
+	// TermStart A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	TermStart CivilDate `json:"termStart"`
+}
+
+// SubscriptionPlanStatus defines model for SubscriptionPlanStatus.
+type SubscriptionPlanStatus string
+
+// SubscriptionQuota One metered capability's included quantity per monthly period.
+type SubscriptionQuota struct {
+	// Included An exact count of rows or an included quantity. Never an amount.
+	Included UsageCount `json:"included"`
+
+	// Meter A metered capability. Each counts one kind of row the cell itself writes.
+	Meter UsageMeter `json:"meter"`
+
+	// Overage What the contract says happens past the included quantity. Reported, not enforced, by this cell.
+	Overage UsageOveragePolicy `json:"overage"`
+}
+
 // SupportCase A support case, folded from its history. Not a fiscal record.
 type SupportCase struct {
 	// Actions The actions the case's status allows now. `CLOSE` is listed only once its guards pass; the server checks every guard again when an action is taken.
@@ -13266,6 +14186,148 @@ type Treatment string
 
 // UnitCode A unit of measure, as the content pack names it.
 type UnitCode = string
+
+// UsageBasis defines model for UsageBasis.
+type UsageBasis struct {
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf Timestamp `json:"asOf"`
+
+	// BasisDigest A document's SHA-256, lowercase hex. The document itself is not stored.
+	BasisDigest Sha256Hex `json:"basisDigest"`
+
+	// Count An exact count of rows or an included quantity. Never an amount.
+	Count UsageCount `json:"count"`
+
+	// From RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	From Timestamp `json:"from"`
+
+	// Meter A metered capability. Each counts one kind of row the cell itself writes.
+	Meter UsageMeter `json:"meter"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod     `json:"period"`
+	Rows   []UsageBasisRow `json:"rows"`
+	Rule   string          `json:"rule"`
+	Source string          `json:"source"`
+
+	// To RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	To Timestamp `json:"to"`
+
+	// Truncated Whether `rows` stops short of `count`.
+	Truncated bool   `json:"truncated"`
+	Unit      string `json:"unit"`
+}
+
+// UsageBasisRow defines model for UsageBasisRow.
+type UsageBasisRow struct {
+	// At RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	At Timestamp `json:"at"`
+
+	// ID The counted row's identifier, as digested.
+	ID string `json:"id"`
+}
+
+// UsageCount An exact count of rows or an included quantity. Never an amount.
+type UsageCount = int64
+
+// UsageLine One meter's count for the period, its basis, and its standing against the plan.
+type UsageLine struct {
+	// BasisDigest A document's SHA-256, lowercase hex. The document itself is not stored.
+	BasisDigest Sha256Hex `json:"basisDigest"`
+
+	// Count An exact count of rows or an included quantity. Never an amount.
+	Count UsageCount `json:"count"`
+
+	// Included An exact count of rows or an included quantity. Never an amount.
+	Included *UsageCount `json:"included,omitempty"`
+
+	// Meter A metered capability. Each counts one kind of row the cell itself writes.
+	Meter UsageMeter `json:"meter"`
+
+	// Overage What the contract says happens past the included quantity. Reported, not enforced, by this cell.
+	Overage *UsageOveragePolicy `json:"overage,omitempty"`
+
+	// OverageCount An exact count of rows or an included quantity. Never an amount.
+	OverageCount UsageCount `json:"overageCount"`
+
+	// Remaining An exact count of rows or an included quantity. Never an amount.
+	Remaining UsageCount `json:"remaining"`
+	Rule      string     `json:"rule"`
+	Source    string     `json:"source"`
+
+	// State A meter's standing against the plan in force. `NOT_CONTRACTED`: the
+	// plan does not name the meter, and whether such usage is chargeable is
+	// for the signed contract, never assumed.
+	State UsageState `json:"state"`
+	Unit  string     `json:"unit"`
+}
+
+// UsageMeter A metered capability. Each counts one kind of row the cell itself writes.
+type UsageMeter string
+
+// UsageMeterDefinition What a meter counts, from which table, by which rule.
+type UsageMeterDefinition struct {
+	// Meter A metered capability. Each counts one kind of row the cell itself writes.
+	Meter UsageMeter `json:"meter"`
+
+	// Rule The counting rule in words.
+	Rule string `json:"rule"`
+
+	// Source The table the rows are counted from.
+	Source string `json:"source"`
+	Unit   string `json:"unit"`
+}
+
+// UsageOveragePolicy What the contract says happens past the included quantity. Reported, not enforced, by this cell.
+type UsageOveragePolicy string
+
+// UsagePlanRef defines model for UsagePlanRef.
+type UsagePlanRef struct {
+	// ID A subscription plan revision.
+	ID       SubscriptionPlanID   `json:"id"`
+	PlanCode SubscriptionPlanCode `json:"planCode"`
+	PlanName SubscriptionPlanName `json:"planName"`
+}
+
+// UsageReport defines model for UsageReport.
+type UsageReport struct {
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf Timestamp `json:"asOf"`
+
+	// Complete Whether the period has ended. An open period's counts grow until it does.
+	Complete           bool   `json:"complete"`
+	DefinitionsVersion string `json:"definitionsVersion"`
+
+	// From RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	From  Timestamp   `json:"from"`
+	Lines []UsageLine `json:"lines"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod   `json:"period"`
+	Plan   *UsagePlanRef `json:"plan,omitempty"`
+
+	// To RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	To Timestamp `json:"to"`
+}
+
+// UsageState A meter's standing against the plan in force. `NOT_CONTRACTED`: the
+// plan does not name the meter, and whether such usage is chargeable is
+// for the signed contract, never assumed.
+type UsageState string
 
 // User A user as this API represents one. Note what is absent and always will
 // be: there is no password, no verifier, no salt and no parameter set. A
@@ -14315,6 +15377,13 @@ type Conflict = Problem
 // crosswalk is never fiscal authority.
 type CrosswalkResult = Crosswalk
 
+// EntitlementResult One entitlement grant as of `asOf`, beside the coverage the cell
+// proves for it. `findings` lists every reason it is pending or
+// blocked — its own lifecycle first, then coverage's — and is empty only
+// when `decision` is `ALLOW`. `actions` are the actions its lifecycle
+// allows; the server still compares the people.
+type EntitlementResult = Entitlement
+
 // ExemptionEvidenceResult An exemption certificate held as evidence, as of `asOf`. `inForce` is
 // `APPROVED` within its approved period: a statement about the document,
 // never a tax treatment.
@@ -14364,6 +15433,9 @@ type RegistrationResult = Registration
 // `releaseEligible` is true once approved for release; nothing is
 // published or activated by it.
 type RuleChangeResult = RuleChange
+
+// SubscriptionPlanResult A subscription plan revision. No price; it grants no entitlement and changes no tax result.
+type SubscriptionPlanResult = SubscriptionPlan
 
 // Unauthenticated RFC 9457 Problem Details, with the `ztx_` extensions from ADR-0016 §2.5.
 // The extensions carry identifiers rather than data: an error that needs
@@ -14590,6 +15662,43 @@ type CorrectDocumentParams struct {
 	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
 }
 
+// ListEntitlementsParams defines parameters for ListEntitlements.
+type ListEntitlementsParams struct {
+	// Status Only grants that read as this status today.
+	Status *EntitlementStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Effective Only grants in this effective state.
+	Effective *EntitlementEffective `form:"effective,omitempty" json:"effective,omitempty"`
+
+	// LegalEntityID Only grants to this legal entity.
+	LegalEntityID *LegalEntityID `form:"legalEntityId,omitempty" json:"legalEntityId,omitempty"`
+
+	// Country Only grants in this country, its subdivisions included.
+	Country *CountryCode `form:"country,omitempty" json:"country,omitempty"`
+
+	// Mode Only grants in this mode.
+	Mode *EntitlementMode `form:"mode,omitempty" json:"mode,omitempty"`
+
+	// Operation Only grants for this operation.
+	Operation *EntitlementOperation `form:"operation,omitempty" json:"operation,omitempty"`
+
+	// Mismatch Only approved grants whose coverage the cell does not prove.
+	Mismatch *bool `form:"mismatch,omitempty" json:"mismatch,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// CreateEntitlementParams defines parameters for CreateEntitlement.
+type CreateEntitlementParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
 // ListERPExportsParams defines parameters for ListERPExports.
 type ListERPExportsParams struct {
 	// Period Only batches of this legal period.
@@ -14783,6 +15892,15 @@ type ListShadowRunsParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// ProposeSubscriptionPlanParams defines parameters for ProposeSubscriptionPlan.
+type ProposeSubscriptionPlanParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
 // ListSupportCasesParams defines parameters for ListSupportCases.
 type ListSupportCasesParams struct {
 	// Type Only cases of this type.
@@ -14845,6 +15963,25 @@ type RefundTransactionParams struct {
 	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
 	// a key used for a commit can never match an adjust.
 	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
+// GetUsageParams defines parameters for GetUsage.
+type GetUsageParams struct {
+	// Period The month, YYYY-MM. Defaults to the current UTC month; a month not yet started is refused.
+	Period *LegalPeriod `form:"period,omitempty" json:"period,omitempty"`
+}
+
+// GetUsageBasisParams defines parameters for GetUsageBasis.
+type GetUsageBasisParams struct {
+	// Period The month, YYYY-MM. Defaults to the current UTC month.
+	Period *LegalPeriod `form:"period,omitempty" json:"period,omitempty"`
+
+	// Meter The meter.
+	Meter UsageMeter `form:"meter" json:"meter"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListWebhooksParams defines parameters for ListWebhooks.
@@ -14972,6 +16109,12 @@ type IssueDocumentJSONRequestBody = DocumentRequest
 
 // CorrectDocumentJSONRequestBody defines body for CorrectDocument for application/json ContentType.
 type CorrectDocumentJSONRequestBody = CorrectionRequest
+
+// CreateEntitlementJSONRequestBody defines body for CreateEntitlement for application/json ContentType.
+type CreateEntitlementJSONRequestBody = EntitlementRequest
+
+// ActOnEntitlementJSONRequestBody defines body for ActOnEntitlement for application/json ContentType.
+type ActOnEntitlementJSONRequestBody = EntitlementActionRequest
 
 // CreateERPBridgeJSONRequestBody defines body for CreateERPBridge for application/json ContentType.
 type CreateERPBridgeJSONRequestBody = ERPBridgeRequest
@@ -15167,6 +16310,12 @@ type RequestPeriodReopenJSONRequestBody = ReopenRequestBody
 
 // TransitionSubledgerPeriodJSONRequestBody defines body for TransitionSubledgerPeriod for application/json ContentType.
 type TransitionSubledgerPeriodJSONRequestBody = PeriodTransitionRequest
+
+// ProposeSubscriptionPlanJSONRequestBody defines body for ProposeSubscriptionPlan for application/json ContentType.
+type ProposeSubscriptionPlanJSONRequestBody = SubscriptionPlanRequest
+
+// ActOnSubscriptionPlanJSONRequestBody defines body for ActOnSubscriptionPlan for application/json ContentType.
+type ActOnSubscriptionPlanJSONRequestBody = SubscriptionPlanActionRequest
 
 // OpenSupportCaseJSONRequestBody defines body for OpenSupportCase for application/json ContentType.
 type OpenSupportCaseJSONRequestBody = SupportCaseRequest

@@ -217,6 +217,10 @@ func run() error {
 		return err
 	}
 	router.Dashboard.WithMarkets(catalogue, contentInForce(content), cfg.Authoritative)
+	// Entitlements are read against the same verified coverage the dashboard
+	// reports, and change none of it; usage is counted from the store.
+	router.Entitlements = app.NewEntitlementService(store.Entitlements(), store.Usage(), store.LegalEntities(), store, clk, ids).
+		WithCoverage(catalogue, contentInForce(content), cfg.Authoritative, matrix, store.Authorizations())
 	models, closeModels, err := wireModelGateway(cfg, clk, ids, log)
 	if err != nil {
 		return err

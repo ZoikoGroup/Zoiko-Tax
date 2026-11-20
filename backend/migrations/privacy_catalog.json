@@ -5220,6 +5220,236 @@
         "aiAllowed": "NONE",
         "note": "The person who recorded the event."
       }
+    },
+    "entitlement_grant": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "entitlement_id": {
+        "class": "P0"
+      },
+      "legal_entity_id": {
+        "class": "P0",
+        "note": "The legal entity the right is granted to, by identifier."
+      },
+      "jurisdiction": {
+        "class": "P0"
+      },
+      "service": {
+        "class": "P0"
+      },
+      "mode": {
+        "class": "P0"
+      },
+      "operation": {
+        "class": "P0"
+      },
+      "effective_from": {
+        "class": "P0"
+      },
+      "effective_to": {
+        "class": "P0"
+      },
+      "contract_ref": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SVCOPS",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The customer's contract or schedule reference, as the contract states it."
+      },
+      "contract_revision": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SVCOPS",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The contract revision or amendment the right comes from, as the contract states it."
+      },
+      "intake_key": {
+        "class": "P0",
+        "note": "The client-minted Idempotency-Key the grant was recorded under; opaque."
+      },
+      "intake_hash": {
+        "class": "P0",
+        "note": "The canonical digest of the request, compared on a retry."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who recorded the grant."
+      }
+    },
+    "entitlement_grant_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "entitlement_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "lifecycle_after": {
+        "class": "P0"
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SVCOPS",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text from the administrator acting: why a grant was approved, rejected, withdrawn, suspended, resumed or revoked."
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who acted."
+      }
+    },
+    "subscription_plan": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "plan_id": {
+        "class": "P0"
+      },
+      "plan_code": {
+        "class": "P0"
+      },
+      "plan_name": {
+        "class": "P0",
+        "note": "The plan name as the contract states it. Commercial, not personal."
+      },
+      "contract_ref": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SVCOPS",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The customer's contract or schedule reference, as the contract states it."
+      },
+      "term_start": {
+        "class": "P0"
+      },
+      "term_end": {
+        "class": "P0"
+      },
+      "intake_key": {
+        "class": "P0",
+        "note": "The client-minted Idempotency-Key the plan was proposed under; opaque."
+      },
+      "intake_hash": {
+        "class": "P0",
+        "note": "The canonical digest of the request, compared on a retry."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who proposed the plan."
+      }
+    },
+    "subscription_plan_quota": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "plan_id": {
+        "class": "P0"
+      },
+      "meter": {
+        "class": "P0"
+      },
+      "included": {
+        "class": "P0",
+        "note": "An included count per monthly period, not an amount."
+      },
+      "overage_policy": {
+        "class": "P0"
+      }
+    },
+    "subscription_plan_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "plan_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "status_after": {
+        "class": "P0"
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-SVCOPS",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free text from the administrator acting: why a plan was rejected or withdrawn, or an approval note."
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The administrator who acted."
+      }
     }
   }
 }
