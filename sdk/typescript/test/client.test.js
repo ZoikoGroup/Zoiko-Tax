@@ -552,6 +552,53 @@ test("the content workbench calls send intake under an Idempotency-Key and nothi
   for (const c of calls.filter((_, i) => ![0, 3, 6].includes(i))) assert.equal(c.init.headers["Idempotency-Key"], undefined);
 });
 
+test("the regulatory change calls send intake and drafting under an Idempotency-Key and nothing else", async () => {
+  const { fetch, calls } = stub(json(201, { id: "01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01" }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+  const ch = "01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+  const as = "01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+  const rec = "01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+
+  await client.recordRegulatoryChange("k-chg", {
+    jurisdiction: "US-NY", kind: "RATE_CHANGE", title: "NY excise rises", detectedBy: "HUMAN",
+    source: { authority: "NY DTF", citation: "N.Y. Tax Law §186-e", edition: "TB-ST-2026-11", documentSha256: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08" },
+    publishedOn: "2026-11-01", effectiveFrom: "2027-01-01",
+  });
+  await client.listRegulatoryChanges({ status: "TRIAGED", jurisdiction: "US" });
+  await client.getRegulatoryChange(ch);
+  await client.transitionRegulatoryChange(ch, { to: "TRIAGED", priority: "MATERIAL", reason: "ok", expectedVersion: 1 });
+  await client.assessRegulatoryChange(ch);
+  await client.listImpactAssessments({ changeId: ch, minSeverity: "HIGH" });
+  await client.getImpactAssessment(as);
+  await client.draftReviewRecommendation("k-rec", { assessmentId: as, origin: "HUMAN", action: "MONITOR", rationale: "watch", targets: [] });
+  await client.listReviewRecommendations({ status: "RECOMMENDED" });
+  await client.getReviewRecommendation(rec);
+  await client.reviseReviewRecommendation(rec, { action: "NO_ACTION", rationale: "below threshold", targets: [], expectedVersion: 1 });
+  await client.recommendReviewRecommendation(rec, { reason: "checked", expectedVersion: 2 });
+  await client.reviewReviewRecommendation(rec, { decision: "ACCEPT", reason: "agreed", expectedVersion: 3 });
+  await client.withdrawReviewRecommendation(rec, { reason: "superseded", expectedVersion: 1 });
+
+  assert.deepEqual(calls.map((c) => `${c.init.method} ${c.url}`), [
+    "POST /api/v1/regulatory-changes",
+    "GET /api/v1/regulatory-changes?status=TRIAGED&jurisdiction=US",
+    `GET /api/v1/regulatory-changes/${ch}`,
+    `POST /api/v1/regulatory-changes/${ch}/transitions`,
+    `POST /api/v1/regulatory-changes/${ch}/assessments`,
+    `GET /api/v1/impact-assessments?changeId=${ch}&minSeverity=HIGH`,
+    `GET /api/v1/impact-assessments/${as}`,
+    "POST /api/v1/review-recommendations",
+    "GET /api/v1/review-recommendations?status=RECOMMENDED",
+    `GET /api/v1/review-recommendations/${rec}`,
+    `POST /api/v1/review-recommendations/${rec}/revisions`,
+    `POST /api/v1/review-recommendations/${rec}/recommend`,
+    `POST /api/v1/review-recommendations/${rec}/review`,
+    `POST /api/v1/review-recommendations/${rec}/withdrawal`,
+  ]);
+  assert.equal(calls[0].init.headers["Idempotency-Key"], "k-chg");
+  assert.equal(calls[7].init.headers["Idempotency-Key"], "k-rec");
+  for (const c of calls.filter((_, i) => i !== 0 && i !== 7)) assert.equal(c.init.headers["Idempotency-Key"], undefined);
+});
+
 test("the ERP bridge calls put ids in the path, amounts as strings and send no Idempotency-Key", async () => {
   const { fetch, calls } = stub(json(201, { id: "01920c20-0000-7000-8000-0000000000b1" }));
   const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });

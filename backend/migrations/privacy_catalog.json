@@ -5837,6 +5837,366 @@
         "aiAllowed": "NONE",
         "note": "The person who recorded the step."
       }
+    },
+    "regulatory_change": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "change_id": {
+        "class": "P0"
+      },
+      "jurisdiction": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "title": {
+        "class": "P0",
+        "note": "A headline for the change, as an analyst or a watcher alert wrote it. About law, not about a person."
+      },
+      "summary": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "Free-text summary of the legal change from the person recording it."
+      },
+      "source_authority": {
+        "class": "P0",
+        "note": "The publishing authority, by name."
+      },
+      "source_citation": {
+        "class": "P0",
+        "note": "The legal citation of the source."
+      },
+      "source_url": {
+        "class": "P0",
+        "note": "The official URL of the source, when one exists."
+      },
+      "source_edition": {
+        "class": "P0",
+        "note": "The edition or version label of the source as published."
+      },
+      "source_sha256": {
+        "class": "P0",
+        "note": "The SHA-256 of the captured source document, hashed in the browser. The document itself is not stored."
+      },
+      "published_on": {
+        "class": "P0"
+      },
+      "effective_from": {
+        "class": "P0"
+      },
+      "discovered_at": {
+        "class": "P0"
+      },
+      "detected_by": {
+        "class": "P0"
+      },
+      "monitor_ref": {
+        "class": "P0",
+        "note": "The watcher alert reference a monitor-detected change was recorded from."
+      },
+      "service_families": {
+        "class": "P0"
+      },
+      "tax_types": {
+        "class": "P0"
+      },
+      "source_key": {
+        "class": "P0",
+        "note": "Digest of the source identity and version, linking the changes of one source edition."
+      },
+      "dedupe_key": {
+        "class": "P0",
+        "note": "Digest of the source identity, version and change kind; unique per tenant."
+      },
+      "intake_key": {
+        "class": "P0",
+        "note": "The client-minted Idempotency-Key the change was recorded under; opaque."
+      },
+      "intake_hash": {
+        "class": "P0",
+        "note": "The canonical digest of the request, compared on a retry."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who recorded the change."
+      }
+    },
+    "regulatory_change_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "change_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "status_after": {
+        "class": "P0"
+      },
+      "priority": {
+        "class": "P0"
+      },
+      "disposition": {
+        "class": "P0"
+      },
+      "hold_reason": {
+        "class": "P0"
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The rationale of a triage, hold or disposition, free text from the person deciding."
+      },
+      "assessment_id": {
+        "class": "P0"
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who acted on the change."
+      }
+    },
+    "impact_assessment": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "assessment_id": {
+        "class": "P0"
+      },
+      "change_id": {
+        "class": "P0"
+      },
+      "bundle_id": {
+        "class": "P0"
+      },
+      "bundle_digest": {
+        "class": "P0"
+      },
+      "as_of": {
+        "class": "P0"
+      },
+      "severity": {
+        "class": "P0"
+      },
+      "retroactive": {
+        "class": "P0"
+      },
+      "items": {
+        "class": "P1",
+        "purposes": [
+          "PURP-OBL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The impacted items with their basis: content component ids, and references to the tenant's own registrations and obligations (ids, schemes, business keys, jurisdictions). No registration number and no amount."
+      },
+      "inputs_digest": {
+        "class": "P0"
+      },
+      "assessment_digest": {
+        "class": "P0"
+      },
+      "components_read": {
+        "class": "P0"
+      },
+      "registrations_read": {
+        "class": "P0"
+      },
+      "obligations_read": {
+        "class": "P0"
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who ran the assessment."
+      }
+    },
+    "review_recommendation": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "recommendation_id": {
+        "class": "P0"
+      },
+      "change_id": {
+        "class": "P0"
+      },
+      "assessment_id": {
+        "class": "P0"
+      },
+      "assessment_digest": {
+        "class": "P0"
+      },
+      "origin": {
+        "class": "P0"
+      },
+      "ai_use_case": {
+        "class": "P0"
+      },
+      "ai_model_profile": {
+        "class": "P0"
+      },
+      "ai_provider_profile": {
+        "class": "P0"
+      },
+      "ai_prompt_profile": {
+        "class": "P0"
+      },
+      "ai_train_version": {
+        "class": "P0"
+      },
+      "ai_authority_outcome": {
+        "class": "P0"
+      },
+      "ai_invocation_id": {
+        "class": "P0",
+        "note": "The Gateway evidence record id of the AI call, when known. Opaque."
+      },
+      "ai_draft": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The model's original draft text, kept unchanged as evidence (AIGOV-001 §12)."
+      },
+      "intake_key": {
+        "class": "P0",
+        "note": "The client-minted Idempotency-Key the recommendation was drafted under; opaque."
+      },
+      "intake_hash": {
+        "class": "P0",
+        "note": "The canonical digest of the request, compared on a retry."
+      },
+      "created_at": {
+        "class": "P0"
+      },
+      "created_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who drafted the recommendation."
+      }
+    },
+    "review_recommendation_event": {
+      "tenant_id": {
+        "class": "P0"
+      },
+      "recommendation_id": {
+        "class": "P0"
+      },
+      "seq": {
+        "class": "P0"
+      },
+      "kind": {
+        "class": "P0"
+      },
+      "status_after": {
+        "class": "P0"
+      },
+      "action": {
+        "class": "P0"
+      },
+      "rationale": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The recommendation's rationale, free text from its author."
+      },
+      "targets": {
+        "class": "P0",
+        "note": "The impacted items the recommendation is about, by kind and reference."
+      },
+      "reason": {
+        "class": "P2",
+        "purposes": [
+          "PURP-LEGAL",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "REDACT",
+        "aiAllowed": "NONE",
+        "note": "The reason a specialist recommended, or a reviewer decided or a person withdrew, free text."
+      },
+      "handoff_ref": {
+        "class": "P0",
+        "note": "The opaque hand-off reference an accepted recommendation records."
+      },
+      "recorded_at": {
+        "class": "P0"
+      },
+      "recorded_by": {
+        "class": "P1",
+        "purposes": [
+          "PURP-SEC",
+          "PURP-EVID"
+        ],
+        "retention": "RET-EVIDENCE",
+        "redaction": "NONE",
+        "aiAllowed": "NONE",
+        "note": "The person who acted on the recommendation."
+      }
     }
   }
 }

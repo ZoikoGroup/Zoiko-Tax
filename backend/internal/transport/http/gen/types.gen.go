@@ -2853,6 +2853,54 @@ func (e GLReconciliationItemStatus) Valid() bool {
 	}
 }
 
+// Defines values for ImpactItemKind.
+const (
+	CONTENTCOMPONENT   ImpactItemKind = "CONTENT_COMPONENT"
+	COVERAGEGAP        ImpactItemKind = "COVERAGE_GAP"
+	TENANTOBLIGATION   ImpactItemKind = "TENANT_OBLIGATION"
+	TENANTREGISTRATION ImpactItemKind = "TENANT_REGISTRATION"
+)
+
+// Valid indicates whether the value is a known member of the ImpactItemKind enum.
+func (e ImpactItemKind) Valid() bool {
+	switch e {
+	case CONTENTCOMPONENT:
+		return true
+	case COVERAGEGAP:
+		return true
+	case TENANTOBLIGATION:
+		return true
+	case TENANTREGISTRATION:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImpactSeverity.
+const (
+	ImpactSeverityCRITICAL ImpactSeverity = "CRITICAL"
+	ImpactSeverityHIGH     ImpactSeverity = "HIGH"
+	ImpactSeverityLOW      ImpactSeverity = "LOW"
+	ImpactSeverityMEDIUM   ImpactSeverity = "MEDIUM"
+)
+
+// Valid indicates whether the value is a known member of the ImpactSeverity enum.
+func (e ImpactSeverity) Valid() bool {
+	switch e {
+	case ImpactSeverityCRITICAL:
+		return true
+	case ImpactSeverityHIGH:
+		return true
+	case ImpactSeverityLOW:
+		return true
+	case ImpactSeverityMEDIUM:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for JobOperation.
 const (
 	JobOperationCOMMIT JobOperation = "COMMIT"
@@ -3194,19 +3242,19 @@ func (e MigrationRunMode) Valid() bool {
 
 // Defines values for MigrationSeverity.
 const (
-	HIGH   MigrationSeverity = "HIGH"
-	LOW    MigrationSeverity = "LOW"
-	MEDIUM MigrationSeverity = "MEDIUM"
+	MigrationSeverityHIGH   MigrationSeverity = "HIGH"
+	MigrationSeverityLOW    MigrationSeverity = "LOW"
+	MigrationSeverityMEDIUM MigrationSeverity = "MEDIUM"
 )
 
 // Valid indicates whether the value is a known member of the MigrationSeverity enum.
 func (e MigrationSeverity) Valid() bool {
 	switch e {
-	case HIGH:
+	case MigrationSeverityHIGH:
 		return true
-	case LOW:
+	case MigrationSeverityLOW:
 		return true
-	case MEDIUM:
+	case MigrationSeverityMEDIUM:
 		return true
 	default:
 		return false
@@ -4020,6 +4068,21 @@ func (e RateBasis) Valid() bool {
 	}
 }
 
+// Defines values for RecommendationAuthorityOutcome.
+const (
+	RecommendationAuthorityOutcomeA1 RecommendationAuthorityOutcome = "A1"
+)
+
+// Valid indicates whether the value is a known member of the RecommendationAuthorityOutcome enum.
+func (e RecommendationAuthorityOutcome) Valid() bool {
+	switch e {
+	case RecommendationAuthorityOutcomeA1:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReconResolutionAction.
 const (
 	ReconResolutionActionADJUST             ReconResolutionAction = "ADJUST"
@@ -4052,16 +4115,16 @@ func (e ReconResolutionAction) Valid() bool {
 
 // Defines values for ReconResolutionActor.
 const (
-	AIA3  ReconResolutionActor = "AI_A3"
-	HUMAN ReconResolutionActor = "HUMAN"
+	ReconResolutionActorAIA3  ReconResolutionActor = "AI_A3"
+	ReconResolutionActorHUMAN ReconResolutionActor = "HUMAN"
 )
 
 // Valid indicates whether the value is a known member of the ReconResolutionActor enum.
 func (e ReconResolutionActor) Valid() bool {
 	switch e {
-	case AIA3:
+	case ReconResolutionActorAIA3:
 		return true
-	case HUMAN:
+	case ReconResolutionActorHUMAN:
 		return true
 	default:
 		return false
@@ -4311,6 +4374,195 @@ func (e RegistrationStatus) Valid() bool {
 	case RegistrationStatusVERIFIED:
 		return true
 	case RegistrationStatusWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RegulatoryChangeDetector.
+const (
+	RegulatoryChangeDetectorHUMAN   RegulatoryChangeDetector = "HUMAN"
+	RegulatoryChangeDetectorMONITOR RegulatoryChangeDetector = "MONITOR"
+)
+
+// Valid indicates whether the value is a known member of the RegulatoryChangeDetector enum.
+func (e RegulatoryChangeDetector) Valid() bool {
+	switch e {
+	case RegulatoryChangeDetectorHUMAN:
+		return true
+	case RegulatoryChangeDetectorMONITOR:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RegulatoryChangeDisposition.
+const (
+	RegulatoryChangeDispositionCHANGENEEDED  RegulatoryChangeDisposition = "CHANGE_NEEDED"
+	RegulatoryChangeDispositionMONITOR       RegulatoryChangeDisposition = "MONITOR"
+	RegulatoryChangeDispositionNOTAPPLICABLE RegulatoryChangeDisposition = "NOT_APPLICABLE"
+)
+
+// Valid indicates whether the value is a known member of the RegulatoryChangeDisposition enum.
+func (e RegulatoryChangeDisposition) Valid() bool {
+	switch e {
+	case RegulatoryChangeDispositionCHANGENEEDED:
+		return true
+	case RegulatoryChangeDispositionMONITOR:
+		return true
+	case RegulatoryChangeDispositionNOTAPPLICABLE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RegulatoryChangeEventKind.
+const (
+	RegulatoryChangeEventKindASSESSMENTSTARTED RegulatoryChangeEventKind = "ASSESSMENT_STARTED"
+	RegulatoryChangeEventKindCLOSED            RegulatoryChangeEventKind = "CLOSED"
+	RegulatoryChangeEventKindHELD              RegulatoryChangeEventKind = "HELD"
+	RegulatoryChangeEventKindNOIMPACT          RegulatoryChangeEventKind = "NO_IMPACT"
+	RegulatoryChangeEventKindRECORDED          RegulatoryChangeEventKind = "RECORDED"
+	RegulatoryChangeEventKindRESUMED           RegulatoryChangeEventKind = "RESUMED"
+	RegulatoryChangeEventKindTRIAGED           RegulatoryChangeEventKind = "TRIAGED"
+)
+
+// Valid indicates whether the value is a known member of the RegulatoryChangeEventKind enum.
+func (e RegulatoryChangeEventKind) Valid() bool {
+	switch e {
+	case RegulatoryChangeEventKindASSESSMENTSTARTED:
+		return true
+	case RegulatoryChangeEventKindCLOSED:
+		return true
+	case RegulatoryChangeEventKindHELD:
+		return true
+	case RegulatoryChangeEventKindNOIMPACT:
+		return true
+	case RegulatoryChangeEventKindRECORDED:
+		return true
+	case RegulatoryChangeEventKindRESUMED:
+		return true
+	case RegulatoryChangeEventKindTRIAGED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RegulatoryChangeHoldReason.
+const (
+	COUNSELQUESTION RegulatoryChangeHoldReason = "COUNSEL_QUESTION"
+	MISSINGFACTS    RegulatoryChangeHoldReason = "MISSING_FACTS"
+	MONITORFAILURE  RegulatoryChangeHoldReason = "MONITOR_FAILURE"
+	RIGHTSHOLD      RegulatoryChangeHoldReason = "RIGHTS_HOLD"
+	SOURCEDISPUTED  RegulatoryChangeHoldReason = "SOURCE_DISPUTED"
+)
+
+// Valid indicates whether the value is a known member of the RegulatoryChangeHoldReason enum.
+func (e RegulatoryChangeHoldReason) Valid() bool {
+	switch e {
+	case COUNSELQUESTION:
+		return true
+	case MISSINGFACTS:
+		return true
+	case MONITORFAILURE:
+		return true
+	case RIGHTSHOLD:
+		return true
+	case SOURCEDISPUTED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RegulatoryChangeKind.
+const (
+	RegulatoryChangeKindBACKDATEDRULE      RegulatoryChangeKind = "BACKDATED_RULE"
+	RegulatoryChangeKindBASECHANGE         RegulatoryChangeKind = "BASE_CHANGE"
+	RegulatoryChangeKindCLASSCHANGE        RegulatoryChangeKind = "CLASS_CHANGE"
+	RegulatoryChangeKindJURISDICTIONCHANGE RegulatoryChangeKind = "JURISDICTION_CHANGE"
+	RegulatoryChangeKindNEWLEVY            RegulatoryChangeKind = "NEW_LEVY"
+	RegulatoryChangeKindRATECHANGE         RegulatoryChangeKind = "RATE_CHANGE"
+	RegulatoryChangeKindREPEALSUNSET       RegulatoryChangeKind = "REPEAL_SUNSET"
+	RegulatoryChangeKindRIGHTSWITHDRAWAL   RegulatoryChangeKind = "RIGHTS_WITHDRAWAL"
+	RegulatoryChangeKindSOURCEDISPUTE      RegulatoryChangeKind = "SOURCE_DISPUTE"
+)
+
+// Valid indicates whether the value is a known member of the RegulatoryChangeKind enum.
+func (e RegulatoryChangeKind) Valid() bool {
+	switch e {
+	case RegulatoryChangeKindBACKDATEDRULE:
+		return true
+	case RegulatoryChangeKindBASECHANGE:
+		return true
+	case RegulatoryChangeKindCLASSCHANGE:
+		return true
+	case RegulatoryChangeKindJURISDICTIONCHANGE:
+		return true
+	case RegulatoryChangeKindNEWLEVY:
+		return true
+	case RegulatoryChangeKindRATECHANGE:
+		return true
+	case RegulatoryChangeKindREPEALSUNSET:
+		return true
+	case RegulatoryChangeKindRIGHTSWITHDRAWAL:
+		return true
+	case RegulatoryChangeKindSOURCEDISPUTE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RegulatoryChangePriority.
+const (
+	MATERIAL RegulatoryChangePriority = "MATERIAL"
+	ORDINARY RegulatoryChangePriority = "ORDINARY"
+	URGENT   RegulatoryChangePriority = "URGENT"
+)
+
+// Valid indicates whether the value is a known member of the RegulatoryChangePriority enum.
+func (e RegulatoryChangePriority) Valid() bool {
+	switch e {
+	case MATERIAL:
+		return true
+	case ORDINARY:
+		return true
+	case URGENT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RegulatoryChangeStatus.
+const (
+	RegulatoryChangeStatusCLOSED             RegulatoryChangeStatus = "CLOSED"
+	RegulatoryChangeStatusINIMPACTASSESSMENT RegulatoryChangeStatus = "IN_IMPACT_ASSESSMENT"
+	RegulatoryChangeStatusNEW                RegulatoryChangeStatus = "NEW"
+	RegulatoryChangeStatusNOIMPACT           RegulatoryChangeStatus = "NO_IMPACT"
+	RegulatoryChangeStatusONHOLD             RegulatoryChangeStatus = "ON_HOLD"
+	RegulatoryChangeStatusTRIAGED            RegulatoryChangeStatus = "TRIAGED"
+)
+
+// Valid indicates whether the value is a known member of the RegulatoryChangeStatus enum.
+func (e RegulatoryChangeStatus) Valid() bool {
+	switch e {
+	case RegulatoryChangeStatusCLOSED:
+		return true
+	case RegulatoryChangeStatusINIMPACTASSESSMENT:
+		return true
+	case RegulatoryChangeStatusNEW:
+		return true
+	case RegulatoryChangeStatusNOIMPACT:
+		return true
+	case RegulatoryChangeStatusONHOLD:
+		return true
+	case RegulatoryChangeStatusTRIAGED:
 		return true
 	default:
 		return false
@@ -4614,6 +4866,141 @@ func (e RetentionVerdictOutcome) Valid() bool {
 	case RetentionVerdictOutcomeNOPOLICY:
 		return true
 	case RetentionVerdictOutcomeRETAIN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReviewDecision.
+const (
+	ReviewDecisionACCEPT         ReviewDecision = "ACCEPT"
+	ReviewDecisionREJECT         ReviewDecision = "REJECT"
+	ReviewDecisionREQUESTCHANGES ReviewDecision = "REQUEST_CHANGES"
+)
+
+// Valid indicates whether the value is a known member of the ReviewDecision enum.
+func (e ReviewDecision) Valid() bool {
+	switch e {
+	case ReviewDecisionACCEPT:
+		return true
+	case ReviewDecisionREJECT:
+		return true
+	case ReviewDecisionREQUESTCHANGES:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReviewRecommendationAction.
+const (
+	ReviewRecommendationActionADDRULE                   ReviewRecommendationAction = "ADD_RULE"
+	ReviewRecommendationActionMONITOR                   ReviewRecommendationAction = "MONITOR"
+	ReviewRecommendationActionNOACTION                  ReviewRecommendationAction = "NO_ACTION"
+	ReviewRecommendationActionNOTIFYCUSTOMERS           ReviewRecommendationAction = "NOTIFY_CUSTOMERS"
+	ReviewRecommendationActionRETIRERULE                ReviewRecommendationAction = "RETIRE_RULE"
+	ReviewRecommendationActionRETROSPECTIVEREASSESSMENT ReviewRecommendationAction = "RETROSPECTIVE_REASSESSMENT"
+	ReviewRecommendationActionUPDATERULE                ReviewRecommendationAction = "UPDATE_RULE"
+)
+
+// Valid indicates whether the value is a known member of the ReviewRecommendationAction enum.
+func (e ReviewRecommendationAction) Valid() bool {
+	switch e {
+	case ReviewRecommendationActionADDRULE:
+		return true
+	case ReviewRecommendationActionMONITOR:
+		return true
+	case ReviewRecommendationActionNOACTION:
+		return true
+	case ReviewRecommendationActionNOTIFYCUSTOMERS:
+		return true
+	case ReviewRecommendationActionRETIRERULE:
+		return true
+	case ReviewRecommendationActionRETROSPECTIVEREASSESSMENT:
+		return true
+	case ReviewRecommendationActionUPDATERULE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReviewRecommendationEventKind.
+const (
+	ReviewRecommendationEventKindACCEPTED         ReviewRecommendationEventKind = "ACCEPTED"
+	ReviewRecommendationEventKindCHANGESREQUESTED ReviewRecommendationEventKind = "CHANGES_REQUESTED"
+	ReviewRecommendationEventKindDRAFTED          ReviewRecommendationEventKind = "DRAFTED"
+	ReviewRecommendationEventKindRECOMMENDED      ReviewRecommendationEventKind = "RECOMMENDED"
+	ReviewRecommendationEventKindREJECTED         ReviewRecommendationEventKind = "REJECTED"
+	ReviewRecommendationEventKindREVISED          ReviewRecommendationEventKind = "REVISED"
+	ReviewRecommendationEventKindWITHDRAWN        ReviewRecommendationEventKind = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the ReviewRecommendationEventKind enum.
+func (e ReviewRecommendationEventKind) Valid() bool {
+	switch e {
+	case ReviewRecommendationEventKindACCEPTED:
+		return true
+	case ReviewRecommendationEventKindCHANGESREQUESTED:
+		return true
+	case ReviewRecommendationEventKindDRAFTED:
+		return true
+	case ReviewRecommendationEventKindRECOMMENDED:
+		return true
+	case ReviewRecommendationEventKindREJECTED:
+		return true
+	case ReviewRecommendationEventKindREVISED:
+		return true
+	case ReviewRecommendationEventKindWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReviewRecommendationOrigin.
+const (
+	ReviewRecommendationOriginAIASSISTED ReviewRecommendationOrigin = "AI_ASSISTED"
+	ReviewRecommendationOriginHUMAN      ReviewRecommendationOrigin = "HUMAN"
+)
+
+// Valid indicates whether the value is a known member of the ReviewRecommendationOrigin enum.
+func (e ReviewRecommendationOrigin) Valid() bool {
+	switch e {
+	case ReviewRecommendationOriginAIASSISTED:
+		return true
+	case ReviewRecommendationOriginHUMAN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReviewRecommendationStatus.
+const (
+	ReviewRecommendationStatusACCEPTED         ReviewRecommendationStatus = "ACCEPTED"
+	ReviewRecommendationStatusCHANGESREQUESTED ReviewRecommendationStatus = "CHANGES_REQUESTED"
+	ReviewRecommendationStatusDRAFT            ReviewRecommendationStatus = "DRAFT"
+	ReviewRecommendationStatusRECOMMENDED      ReviewRecommendationStatus = "RECOMMENDED"
+	ReviewRecommendationStatusREJECTED         ReviewRecommendationStatus = "REJECTED"
+	ReviewRecommendationStatusWITHDRAWN        ReviewRecommendationStatus = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the ReviewRecommendationStatus enum.
+func (e ReviewRecommendationStatus) Valid() bool {
+	switch e {
+	case ReviewRecommendationStatusACCEPTED:
+		return true
+	case ReviewRecommendationStatusCHANGESREQUESTED:
+		return true
+	case ReviewRecommendationStatusDRAFT:
+		return true
+	case ReviewRecommendationStatusRECOMMENDED:
+		return true
+	case ReviewRecommendationStatusREJECTED:
+		return true
+	case ReviewRecommendationStatusWITHDRAWN:
 		return true
 	default:
 		return false
@@ -5351,31 +5738,31 @@ func (e SitusEvidenceType) Valid() bool {
 
 // Defines values for SourceAuthorityClass.
 const (
-	A0 SourceAuthorityClass = "A0"
-	A1 SourceAuthorityClass = "A1"
-	A2 SourceAuthorityClass = "A2"
-	B1 SourceAuthorityClass = "B1"
-	B2 SourceAuthorityClass = "B2"
-	C1 SourceAuthorityClass = "C1"
-	U  SourceAuthorityClass = "U"
+	SourceAuthorityClassA0 SourceAuthorityClass = "A0"
+	SourceAuthorityClassA1 SourceAuthorityClass = "A1"
+	SourceAuthorityClassA2 SourceAuthorityClass = "A2"
+	SourceAuthorityClassB1 SourceAuthorityClass = "B1"
+	SourceAuthorityClassB2 SourceAuthorityClass = "B2"
+	SourceAuthorityClassC1 SourceAuthorityClass = "C1"
+	SourceAuthorityClassU  SourceAuthorityClass = "U"
 )
 
 // Valid indicates whether the value is a known member of the SourceAuthorityClass enum.
 func (e SourceAuthorityClass) Valid() bool {
 	switch e {
-	case A0:
+	case SourceAuthorityClassA0:
 		return true
-	case A1:
+	case SourceAuthorityClassA1:
 		return true
-	case A2:
+	case SourceAuthorityClassA2:
 		return true
-	case B1:
+	case SourceAuthorityClassB1:
 		return true
-	case B2:
+	case SourceAuthorityClassB2:
 		return true
-	case C1:
+	case SourceAuthorityClassC1:
 		return true
-	case U:
+	case SourceAuthorityClassU:
 		return true
 	default:
 		return false
@@ -10859,6 +11246,104 @@ type GLSnapshotRequest struct {
 	SourceRef ERPRef `json:"sourceRef"`
 }
 
+// HandoffRef The opaque reference an accepted recommendation hands a later workflow.
+type HandoffRef = string
+
+// ImpactAssessment A deterministic impact assessment: the same inputs give the same
+// `inputsDigest` and `assessmentDigest`. Advisory; it writes nothing.
+type ImpactAssessment struct {
+	// AsOf A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	AsOf CivilDate `json:"asOf"`
+
+	// AssessmentDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	AssessmentDigest Digest `json:"assessmentDigest"`
+
+	// BundleDigest A reference, label or basis the assessment generated from content and record identifiers.
+	BundleDigest ImpactText `json:"bundleDigest"`
+
+	// BundleID A reference, label or basis the assessment generated from content and record identifiers.
+	BundleID ImpactText `json:"bundleId"`
+
+	// ChangeID A recorded regulatory change. A later rule-approval workflow may reference it.
+	ChangeID       RegulatoryChangeID `json:"changeId"`
+	ComponentsRead int32              `json:"componentsRead"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// CreatedBy The person who recorded an act.
+	CreatedBy EvidenceActor `json:"createdBy"`
+
+	// Current This is the change's newest assessment.
+	Current bool               `json:"current"`
+	ID      ImpactAssessmentID `json:"id"`
+
+	// InputsDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	InputsDigest      Digest       `json:"inputsDigest"`
+	Items             []ImpactItem `json:"items"`
+	ObligationsRead   int32        `json:"obligationsRead"`
+	RegistrationsRead int32        `json:"registrationsRead"`
+	Retroactive       bool         `json:"retroactive"`
+
+	// Severity How much an impacted item, or a whole assessment, matters. Advisory triage, never an amount.
+	Severity ImpactSeverity `json:"severity"`
+}
+
+// ImpactAssessmentID defines model for ImpactAssessmentId.
+type ImpactAssessmentID = string
+
+// ImpactAssessmentList defines model for ImpactAssessmentList.
+type ImpactAssessmentList struct {
+	Assessments []ImpactAssessment `json:"assessments"`
+}
+
+// ImpactItem defines model for ImpactItem.
+type ImpactItem struct {
+	// Basis A reference, label or basis the assessment generated from content and record identifiers.
+	Basis ImpactText `json:"basis"`
+
+	// Jurisdiction A reference, label or basis the assessment generated from content and record identifiers.
+	Jurisdiction ImpactText `json:"jurisdiction"`
+
+	// Kind `CONTENT_COMPONENT` is a component of the active content in scope;
+	// `COVERAGE_GAP` is the jurisdiction with none; `TENANT_REGISTRATION` and
+	// `TENANT_OBLIGATION` are the tenant's own records in scope.
+	Kind ImpactItemKind `json:"kind"`
+
+	// Label A reference, label or basis the assessment generated from content and record identifiers.
+	Label ImpactText `json:"label"`
+
+	// Ref A reference, label or basis the assessment generated from content and record identifiers.
+	Ref ImpactText `json:"ref"`
+
+	// Retrospective An obligation period a backdated change reaches back into.
+	Retrospective bool `json:"retrospective"`
+
+	// Severity How much an impacted item, or a whole assessment, matters. Advisory triage, never an amount.
+	Severity ImpactSeverity `json:"severity"`
+}
+
+// ImpactItemKind `CONTENT_COMPONENT` is a component of the active content in scope;
+// `COVERAGE_GAP` is the jurisdiction with none; `TENANT_REGISTRATION` and
+// `TENANT_OBLIGATION` are the tenant's own records in scope.
+type ImpactItemKind string
+
+// ImpactSeverity How much an impacted item, or a whole assessment, matters. Advisory triage, never an amount.
+type ImpactSeverity string
+
+// ImpactText A reference, label or basis the assessment generated from content and record identifiers.
+type ImpactText = string
+
 // InclusionProof defines model for InclusionProof.
 type InclusionProof struct {
 	// AuditPath Sibling node hashes from the leaf's level to the root, in the digest form.
@@ -12737,6 +13222,50 @@ type ReadSet map[string]MoneyValue
 // an unrecognised code would break on an additive change (ADR-0010 §2.6).
 type ReasonCode = string
 
+// RecommendationAiDraft The model's original text, kept unchanged as evidence.
+type RecommendationAiDraft = string
+
+// RecommendationAiProvenance What ZTAX-AIGOV-001 §14 requires recorded of an AI-assisted draft.
+type RecommendationAiProvenance struct {
+	// AiTrainVersion An authority, citation, edition or reference, as published.
+	AiTrainVersion RegulatoryChangeSourceText `json:"aiTrainVersion"`
+
+	// AuthorityOutcome The AI authority outcome of the draft. Only A1 (propose) is accepted (ZTAX-AIGOV-001 §4).
+	AuthorityOutcome RecommendationAuthorityOutcome `json:"authorityOutcome"`
+
+	// Draft The model's original text, kept unchanged as evidence.
+	Draft RecommendationAiDraft `json:"draft"`
+
+	// InvocationID An authority, citation, edition or reference, as published.
+	InvocationID *RegulatoryChangeSourceText `json:"invocationId,omitempty"`
+
+	// ModelProfile An authority, citation, edition or reference, as published.
+	ModelProfile RegulatoryChangeSourceText `json:"modelProfile"`
+
+	// PromptProfile An authority, citation, edition or reference, as published.
+	PromptProfile RegulatoryChangeSourceText `json:"promptProfile"`
+
+	// ProviderProfile An authority, citation, edition or reference, as published.
+	ProviderProfile RegulatoryChangeSourceText `json:"providerProfile"`
+
+	// UseCase An authority, citation, edition or reference, as published.
+	UseCase RegulatoryChangeSourceText `json:"useCase"`
+}
+
+// RecommendationAuthorityOutcome The AI authority outcome of the draft. Only A1 (propose) is accepted (ZTAX-AIGOV-001 §4).
+type RecommendationAuthorityOutcome string
+
+// RecommendationTarget defines model for RecommendationTarget.
+type RecommendationTarget struct {
+	// Kind `CONTENT_COMPONENT` is a component of the active content in scope;
+	// `COVERAGE_GAP` is the jurisdiction with none; `TENANT_REGISTRATION` and
+	// `TENANT_OBLIGATION` are the tenant's own records in scope.
+	Kind ImpactItemKind `json:"kind"`
+
+	// Ref A reference, label or basis the assessment generated from content and record identifiers.
+	Ref ImpactText `json:"ref"`
+}
+
 // ReconResolution defines model for ReconResolution.
 type ReconResolution struct {
 	Action   ReconResolutionAction `json:"action"`
@@ -13145,6 +13674,263 @@ type RegistrationTransitionRequest struct {
 	// To `SUBMITTED` is not `VERIFIED`, `VERIFIED` is not `ACTIVE`, and `ACTIVE`
 	// is not authority to file (Doc 17 §02, §07).
 	To RegistrationStatus `json:"to"`
+}
+
+// RegulatoryChange A regulatory change as reported, with its triage and disposition. A
+// reported change is not a confirmed legal effect, and nothing about it
+// changes content or a tax result.
+type RegulatoryChange struct {
+	// AcceptedRecommendationCount Recommendations accepted on the current assessment.
+	AcceptedRecommendationCount int32 `json:"acceptedRecommendationCount"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// CreatedBy The person who recorded an act.
+	CreatedBy           EvidenceActor       `json:"createdBy"`
+	CurrentAssessmentID *ImpactAssessmentID `json:"currentAssessmentId,omitempty"`
+
+	// CurrentSeverity How much an impacted item, or a whole assessment, matters. Advisory triage, never an amount.
+	CurrentSeverity *ImpactSeverity `json:"currentSeverity,omitempty"`
+
+	// DetectedBy Human legal intake, or a watcher's alert a person recorded. No watcher is connected to this cell.
+	DetectedBy RegulatoryChangeDetector `json:"detectedBy"`
+
+	// DiscoveredAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	DiscoveredAt Timestamp `json:"discoveredAt"`
+
+	// Disposition The decision every change ends with (Doc 03 WF-05).
+	Disposition *RegulatoryChangeDisposition `json:"disposition,omitempty"`
+
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate                   `json:"effectiveFrom"`
+	History       []RegulatoryChangeEvent     `json:"history"`
+	HoldReason    *RegulatoryChangeHoldReason `json:"holdReason,omitempty"`
+
+	// ID A recorded regulatory change. A later rule-approval workflow may reference it.
+	ID RegulatoryChangeID `json:"id"`
+
+	// Jurisdiction A country, or a country and one subdivision, upper case.
+	Jurisdiction EvidenceJurisdiction `json:"jurisdiction"`
+
+	// Kind The class of legal change (Doc 03 §06). A source with several effects is recorded as one change per kind.
+	Kind RegulatoryChangeKind `json:"kind"`
+
+	// MonitorRef An authority, citation, edition or reference, as published.
+	MonitorRef *RegulatoryChangeSourceText `json:"monitorRef,omitempty"`
+
+	// Priority Triage's urgency (Doc 03 §06 monitoring targets).
+	Priority *RegulatoryChangePriority `json:"priority,omitempty"`
+
+	// PublishedOn A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	PublishedOn         CivilDate `json:"publishedOn"`
+	RecommendationCount int32     `json:"recommendationCount"`
+
+	// RelatedChangeIds The other changes recorded from the same source edition. Empty in a listing.
+	RelatedChangeIds []RegulatoryChangeID `json:"relatedChangeIds"`
+
+	// ResumesTo `NEW` until triaged; `IN_IMPACT_ASSESSMENT` only by an assessment;
+	// `ON_HOLD` with a tracked reason; `CLOSED` and `NO_IMPACT` are final, each
+	// with a disposition and rationale (Doc 03 Z03-AT-09).
+	ResumesTo *RegulatoryChangeStatus `json:"resumesTo,omitempty"`
+
+	// Retroactive Effective before it was published.
+	Retroactive     bool            `json:"retroactive"`
+	ServiceFamilies []ServiceFamily `json:"serviceFamilies"`
+
+	// Source The source edition a change is reported from: its identity (authority,
+	// citation) and version (edition, the captured document's SHA-256, hashed
+	// in the browser — the document is not uploaded or stored).
+	Source RegulatoryChangeSource `json:"source"`
+
+	// SourceKey A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	SourceKey Digest `json:"sourceKey"`
+
+	// Status `NEW` until triaged; `IN_IMPACT_ASSESSMENT` only by an assessment;
+	// `ON_HOLD` with a tracked reason; `CLOSED` and `NO_IMPACT` are final, each
+	// with a disposition and rationale (Doc 03 Z03-AT-09).
+	Status RegulatoryChangeStatus `json:"status"`
+
+	// Summary Free-text summary of the change from the person recording it.
+	Summary  *RegulatoryChangeSummary `json:"summary,omitempty"`
+	TaxTypes []RegulatoryChangeCode   `json:"taxTypes"`
+
+	// Title A headline for the change. About law, not about a person.
+	Title RegulatoryChangeTitle `json:"title"`
+
+	// Version The number of events recorded. An act names it.
+	Version int32 `json:"version"`
+}
+
+// RegulatoryChangeCode A tax type code, as the content packs name them.
+type RegulatoryChangeCode = string
+
+// RegulatoryChangeDetector Human legal intake, or a watcher's alert a person recorded. No watcher is connected to this cell.
+type RegulatoryChangeDetector string
+
+// RegulatoryChangeDisposition The decision every change ends with (Doc 03 WF-05).
+type RegulatoryChangeDisposition string
+
+// RegulatoryChangeEvent defines model for RegulatoryChangeEvent.
+type RegulatoryChangeEvent struct {
+	AssessmentID *ImpactAssessmentID `json:"assessmentId,omitempty"`
+
+	// Disposition The decision every change ends with (Doc 03 WF-05).
+	Disposition *RegulatoryChangeDisposition `json:"disposition,omitempty"`
+	HoldReason  *RegulatoryChangeHoldReason  `json:"holdReason,omitempty"`
+	Kind        RegulatoryChangeEventKind    `json:"kind"`
+
+	// Priority Triage's urgency (Doc 03 §06 monitoring targets).
+	Priority *RegulatoryChangePriority `json:"priority,omitempty"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason *EvidenceText `json:"reason,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy The person who recorded an act.
+	RecordedBy EvidenceActor `json:"recordedBy"`
+	Seq        int32         `json:"seq"`
+
+	// Status `NEW` until triaged; `IN_IMPACT_ASSESSMENT` only by an assessment;
+	// `ON_HOLD` with a tracked reason; `CLOSED` and `NO_IMPACT` are final, each
+	// with a disposition and rationale (Doc 03 Z03-AT-09).
+	Status RegulatoryChangeStatus `json:"status"`
+}
+
+// RegulatoryChangeEventKind defines model for RegulatoryChangeEventKind.
+type RegulatoryChangeEventKind string
+
+// RegulatoryChangeHoldReason defines model for RegulatoryChangeHoldReason.
+type RegulatoryChangeHoldReason string
+
+// RegulatoryChangeID A recorded regulatory change. A later rule-approval workflow may reference it.
+type RegulatoryChangeID = string
+
+// RegulatoryChangeKind The class of legal change (Doc 03 §06). A source with several effects is recorded as one change per kind.
+type RegulatoryChangeKind string
+
+// RegulatoryChangeList defines model for RegulatoryChangeList.
+type RegulatoryChangeList struct {
+	Changes []RegulatoryChange `json:"changes"`
+}
+
+// RegulatoryChangePriority Triage's urgency (Doc 03 §06 monitoring targets).
+type RegulatoryChangePriority string
+
+// RegulatoryChangeRequest defines model for RegulatoryChangeRequest.
+type RegulatoryChangeRequest struct {
+	// DetectedBy Human legal intake, or a watcher's alert a person recorded. No watcher is connected to this cell.
+	DetectedBy RegulatoryChangeDetector `json:"detectedBy"`
+
+	// DiscoveredAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	DiscoveredAt *Timestamp `json:"discoveredAt,omitempty"`
+
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate `json:"effectiveFrom"`
+
+	// Jurisdiction A country, or a country and one subdivision, upper case.
+	Jurisdiction EvidenceJurisdiction `json:"jurisdiction"`
+
+	// Kind The class of legal change (Doc 03 §06). A source with several effects is recorded as one change per kind.
+	Kind RegulatoryChangeKind `json:"kind"`
+
+	// MonitorRef An authority, citation, edition or reference, as published.
+	MonitorRef *RegulatoryChangeSourceText `json:"monitorRef,omitempty"`
+
+	// PublishedOn A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	PublishedOn     CivilDate       `json:"publishedOn"`
+	ServiceFamilies []ServiceFamily `json:"serviceFamilies,omitempty"`
+
+	// Source The source edition a change is reported from: its identity (authority,
+	// citation) and version (edition, the captured document's SHA-256, hashed
+	// in the browser — the document is not uploaded or stored).
+	Source RegulatoryChangeSource `json:"source"`
+
+	// Summary Free-text summary of the change from the person recording it.
+	Summary  *RegulatoryChangeSummary `json:"summary,omitempty"`
+	TaxTypes []RegulatoryChangeCode   `json:"taxTypes,omitempty"`
+
+	// Title A headline for the change. About law, not about a person.
+	Title RegulatoryChangeTitle `json:"title"`
+}
+
+// RegulatoryChangeSource The source edition a change is reported from: its identity (authority,
+// citation) and version (edition, the captured document's SHA-256, hashed
+// in the browser — the document is not uploaded or stored).
+type RegulatoryChangeSource struct {
+	// Authority An authority, citation, edition or reference, as published.
+	Authority RegulatoryChangeSourceText `json:"authority"`
+
+	// Citation An authority, citation, edition or reference, as published.
+	Citation RegulatoryChangeSourceText `json:"citation"`
+
+	// DocumentSha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	DocumentSha256 Sha256Hex `json:"documentSha256"`
+
+	// Edition An authority, citation, edition or reference, as published.
+	Edition RegulatoryChangeSourceText `json:"edition"`
+
+	// URL The source's official https URL.
+	URL *RegulatoryChangeSourceURL `json:"url,omitempty"`
+}
+
+// RegulatoryChangeSourceText An authority, citation, edition or reference, as published.
+type RegulatoryChangeSourceText = string
+
+// RegulatoryChangeSourceURL The source's official https URL.
+type RegulatoryChangeSourceURL = string
+
+// RegulatoryChangeStatus `NEW` until triaged; `IN_IMPACT_ASSESSMENT` only by an assessment;
+// `ON_HOLD` with a tracked reason; `CLOSED` and `NO_IMPACT` are final, each
+// with a disposition and rationale (Doc 03 Z03-AT-09).
+type RegulatoryChangeStatus string
+
+// RegulatoryChangeSummary Free-text summary of the change from the person recording it.
+type RegulatoryChangeSummary = string
+
+// RegulatoryChangeTitle A headline for the change. About law, not about a person.
+type RegulatoryChangeTitle = string
+
+// RegulatoryChangeTransitionRequest defines model for RegulatoryChangeTransitionRequest.
+type RegulatoryChangeTransitionRequest struct {
+	// Disposition The decision every change ends with (Doc 03 WF-05).
+	Disposition *RegulatoryChangeDisposition `json:"disposition,omitempty"`
+
+	// ExpectedVersion The `version` that was read. Anything recorded since is `VERSION_CONFLICT`.
+	ExpectedVersion int32                       `json:"expectedVersion"`
+	HoldReason      *RegulatoryChangeHoldReason `json:"holdReason,omitempty"`
+
+	// Priority Triage's urgency (Doc 03 §06 monitoring targets).
+	Priority *RegulatoryChangePriority `json:"priority,omitempty"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason EvidenceText `json:"reason"`
+
+	// To `NEW` until triaged; `IN_IMPACT_ASSESSMENT` only by an assessment;
+	// `ON_HOLD` with a tracked reason; `CLOSED` and `NO_IMPACT` are final, each
+	// with a disposition and rationale (Doc 03 Z03-AT-09).
+	To RegulatoryChangeStatus `json:"to"`
 }
 
 // Remittance defines model for Remittance.
@@ -13657,6 +14443,155 @@ type RetentionVerdict struct {
 
 // RetentionVerdictOutcome defines model for RetentionVerdict.Outcome.
 type RetentionVerdictOutcome string
+
+// ReviewDecision defines model for ReviewDecision.
+type ReviewDecision string
+
+// ReviewRecommendation A recommendation derived from one assessment, bound to its digest.
+// Advisory: acceptance yields `handoffRef` and publishes or changes
+// nothing.
+type ReviewRecommendation struct {
+	Action ReviewRecommendationAction `json:"action"`
+
+	// Ai What ZTAX-AIGOV-001 §14 requires recorded of an AI-assisted draft.
+	Ai *RecommendationAiProvenance `json:"ai,omitempty"`
+
+	// AssessmentDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	AssessmentDigest Digest             `json:"assessmentDigest"`
+	AssessmentID     ImpactAssessmentID `json:"assessmentId"`
+
+	// ChangeID A recorded regulatory change. A later rule-approval workflow may reference it.
+	ChangeID RegulatoryChangeID `json:"changeId"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// CreatedBy The person who recorded an act.
+	CreatedBy           EvidenceActor       `json:"createdBy"`
+	CurrentAssessmentID *ImpactAssessmentID `json:"currentAssessmentId,omitempty"`
+
+	// HandoffRef The opaque reference an accepted recommendation hands a later workflow.
+	HandoffRef *HandoffRef                 `json:"handoffRef,omitempty"`
+	History    []ReviewRecommendationEvent `json:"history"`
+
+	// ID A review recommendation. This is the id a later rule-approval workflow names.
+	ID     ReviewRecommendationID     `json:"id"`
+	Origin ReviewRecommendationOrigin `json:"origin"`
+
+	// Rationale A reason, rationale or note from the person recording an act.
+	Rationale EvidenceText `json:"rationale"`
+
+	// RecommendedBy The person who recorded an act.
+	RecommendedBy *EvidenceActor `json:"recommendedBy,omitempty"`
+
+	// ReviewedBy The person who recorded an act.
+	ReviewedBy *EvidenceActor `json:"reviewedBy,omitempty"`
+
+	// Stale Open, and the change has been reassessed since.
+	Stale bool `json:"stale"`
+
+	// Status `ACCEPTED` is an independent reviewer's acceptance and yields a
+	// hand-off reference only; it is not a rule approval or a release.
+	Status  ReviewRecommendationStatus `json:"status"`
+	Targets []RecommendationTarget     `json:"targets"`
+	Version int32                      `json:"version"`
+}
+
+// ReviewRecommendationActRequest defines model for ReviewRecommendationActRequest.
+type ReviewRecommendationActRequest struct {
+	ExpectedVersion int32 `json:"expectedVersion"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason EvidenceText `json:"reason"`
+}
+
+// ReviewRecommendationAction defines model for ReviewRecommendationAction.
+type ReviewRecommendationAction string
+
+// ReviewRecommendationEvent defines model for ReviewRecommendationEvent.
+type ReviewRecommendationEvent struct {
+	Action *ReviewRecommendationAction `json:"action,omitempty"`
+
+	// HandoffRef The opaque reference an accepted recommendation hands a later workflow.
+	HandoffRef *HandoffRef                   `json:"handoffRef,omitempty"`
+	Kind       ReviewRecommendationEventKind `json:"kind"`
+
+	// Rationale A reason, rationale or note from the person recording an act.
+	Rationale *EvidenceText `json:"rationale,omitempty"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason *EvidenceText `json:"reason,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy The person who recorded an act.
+	RecordedBy EvidenceActor `json:"recordedBy"`
+	Seq        int32         `json:"seq"`
+
+	// Status `ACCEPTED` is an independent reviewer's acceptance and yields a
+	// hand-off reference only; it is not a rule approval or a release.
+	Status  ReviewRecommendationStatus `json:"status"`
+	Targets []RecommendationTarget     `json:"targets,omitempty"`
+}
+
+// ReviewRecommendationEventKind defines model for ReviewRecommendationEventKind.
+type ReviewRecommendationEventKind string
+
+// ReviewRecommendationID A review recommendation. This is the id a later rule-approval workflow names.
+type ReviewRecommendationID = string
+
+// ReviewRecommendationList defines model for ReviewRecommendationList.
+type ReviewRecommendationList struct {
+	Recommendations []ReviewRecommendation `json:"recommendations"`
+}
+
+// ReviewRecommendationOrigin defines model for ReviewRecommendationOrigin.
+type ReviewRecommendationOrigin string
+
+// ReviewRecommendationRequest defines model for ReviewRecommendationRequest.
+type ReviewRecommendationRequest struct {
+	Action ReviewRecommendationAction `json:"action"`
+
+	// Ai What ZTAX-AIGOV-001 §14 requires recorded of an AI-assisted draft.
+	Ai           *RecommendationAiProvenance `json:"ai,omitempty"`
+	AssessmentID ImpactAssessmentID          `json:"assessmentId"`
+	Origin       ReviewRecommendationOrigin  `json:"origin"`
+
+	// Rationale A reason, rationale or note from the person recording an act.
+	Rationale EvidenceText           `json:"rationale"`
+	Targets   []RecommendationTarget `json:"targets"`
+}
+
+// ReviewRecommendationReviewRequest defines model for ReviewRecommendationReviewRequest.
+type ReviewRecommendationReviewRequest struct {
+	Decision        ReviewDecision `json:"decision"`
+	ExpectedVersion int32          `json:"expectedVersion"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason EvidenceText `json:"reason"`
+}
+
+// ReviewRecommendationRevisionRequest defines model for ReviewRecommendationRevisionRequest.
+type ReviewRecommendationRevisionRequest struct {
+	Action          ReviewRecommendationAction `json:"action"`
+	ExpectedVersion int32                      `json:"expectedVersion"`
+
+	// Rationale A reason, rationale or note from the person recording an act.
+	Rationale EvidenceText           `json:"rationale"`
+	Targets   []RecommendationTarget `json:"targets"`
+}
+
+// ReviewRecommendationStatus `ACCEPTED` is an independent reviewer's acceptance and yields a
+// hand-off reference only; it is not a rule approval or a release.
+type ReviewRecommendationStatus string
 
 // RevocationRequest defines model for RevocationRequest.
 type RevocationRequest struct {
@@ -16451,6 +17386,10 @@ type Forbidden = Problem
 // fetched through an audited path.
 type IdempotencyConflict = Problem
 
+// ImpactAssessmentResult A deterministic impact assessment: the same inputs give the same
+// `inputsDigest` and `assessmentDigest`. Advisory; it writes nothing.
+type ImpactAssessmentResult = ImpactAssessment
+
 // Internal RFC 9457 Problem Details, with the `ztx_` extensions from ADR-0016 §2.5.
 // The extensions carry identifiers rather than data: an error that needs
 // data to be understood names a decision or a request, and the data is
@@ -16478,6 +17417,16 @@ type RateLimited = Problem
 // Evidence of status: it changes no tax result, and `inForce` is
 // `ACTIVE` within its effective dates, nothing more.
 type RegistrationResult = Registration
+
+// RegulatoryChangeResult A regulatory change as reported, with its triage and disposition. A
+// reported change is not a confirmed legal effect, and nothing about it
+// changes content or a tax result.
+type RegulatoryChangeResult = RegulatoryChange
+
+// ReviewRecommendationResult A recommendation derived from one assessment, bound to its digest.
+// Advisory: acceptance yields `handoffRef` and publishes or changes
+// nothing.
+type ReviewRecommendationResult = ReviewRecommendation
 
 // RuleChangeResult A proposed change to a jurisdiction rule pack and its review.
 // `releaseEligible` is true once approved for release; nothing is
@@ -16855,6 +17804,19 @@ type ReceiveExemptionCertificateParams struct {
 	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
 }
 
+// ListImpactAssessmentsParams defines parameters for ListImpactAssessments.
+type ListImpactAssessmentsParams struct {
+	// ChangeID Only the assessments of this change.
+	ChangeID *RegulatoryChangeID `form:"changeId,omitempty" json:"changeId,omitempty"`
+
+	// MinSeverity Only assessments of at least this severity.
+	MinSeverity *ImpactSeverity `form:"minSeverity,omitempty" json:"minSeverity,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // ListJobsParams defines parameters for ListJobs.
 type ListJobsParams struct {
 	// Limit Maximum number of items to return. The server caps this independently,
@@ -16969,6 +17931,34 @@ type CreateRegistrationParams struct {
 	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
 }
 
+// ListRegulatoryChangesParams defines parameters for ListRegulatoryChanges.
+type ListRegulatoryChangesParams struct {
+	// Status Only changes in this status.
+	Status *RegulatoryChangeStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Kind Only changes of this kind.
+	Kind *RegulatoryChangeKind `form:"kind,omitempty" json:"kind,omitempty"`
+
+	// Jurisdiction Only changes in this jurisdiction; a country matches its subdivisions.
+	Jurisdiction *EvidenceJurisdiction `form:"jurisdiction,omitempty" json:"jurisdiction,omitempty"`
+
+	// Priority Only changes triaged at this priority.
+	Priority *RegulatoryChangePriority `form:"priority,omitempty" json:"priority,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// RecordRegulatoryChangeParams defines parameters for RecordRegulatoryChange.
+type RecordRegulatoryChangeParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
 // ListRemittancesParams defines parameters for ListRemittances.
 type ListRemittancesParams struct {
 	// Status Only payments in this status.
@@ -16977,6 +17967,31 @@ type ListRemittancesParams struct {
 	// Limit Maximum number of items to return. The server caps this independently,
 	// so a larger value is not an error and does not return more.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListReviewRecommendationsParams defines parameters for ListReviewRecommendations.
+type ListReviewRecommendationsParams struct {
+	// Status Only recommendations in this status.
+	Status *ReviewRecommendationStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// ChangeID Only the recommendations on this change.
+	ChangeID *RegulatoryChangeID `form:"changeId,omitempty" json:"changeId,omitempty"`
+
+	// Origin Only HUMAN or only AI_ASSISTED recommendations.
+	Origin *ReviewRecommendationOrigin `form:"origin,omitempty" json:"origin,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// DraftReviewRecommendationParams defines parameters for DraftReviewRecommendation.
+type DraftReviewRecommendationParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
 }
 
 // ListSealsParams defines parameters for ListSeals.
@@ -17391,6 +18406,12 @@ type RecordRegistrationCheckJSONRequestBody = RegistrationCheckRequest
 // TransitionRegistrationJSONRequestBody defines body for TransitionRegistration for application/json ContentType.
 type TransitionRegistrationJSONRequestBody = RegistrationTransitionRequest
 
+// RecordRegulatoryChangeJSONRequestBody defines body for RecordRegulatoryChange for application/json ContentType.
+type RecordRegulatoryChangeJSONRequestBody = RegulatoryChangeRequest
+
+// TransitionRegulatoryChangeJSONRequestBody defines body for TransitionRegulatoryChange for application/json ContentType.
+type TransitionRegulatoryChangeJSONRequestBody = RegulatoryChangeTransitionRequest
+
 // CreateRemittanceJSONRequestBody defines body for CreateRemittance for application/json ContentType.
 type CreateRemittanceJSONRequestBody = RemittanceRequest
 
@@ -17423,6 +18444,21 @@ type SubmitRemittanceJSONRequestBody = RemittanceSubmissionRequest
 
 // RecordRetentionPolicyJSONRequestBody defines body for RecordRetentionPolicy for application/json ContentType.
 type RecordRetentionPolicyJSONRequestBody = RetentionPolicyRequest
+
+// DraftReviewRecommendationJSONRequestBody defines body for DraftReviewRecommendation for application/json ContentType.
+type DraftReviewRecommendationJSONRequestBody = ReviewRecommendationRequest
+
+// RecommendReviewRecommendationJSONRequestBody defines body for RecommendReviewRecommendation for application/json ContentType.
+type RecommendReviewRecommendationJSONRequestBody = ReviewRecommendationActRequest
+
+// ReviewReviewRecommendationJSONRequestBody defines body for ReviewReviewRecommendation for application/json ContentType.
+type ReviewReviewRecommendationJSONRequestBody = ReviewRecommendationReviewRequest
+
+// ReviseReviewRecommendationJSONRequestBody defines body for ReviseReviewRecommendation for application/json ContentType.
+type ReviseReviewRecommendationJSONRequestBody = ReviewRecommendationRevisionRequest
+
+// WithdrawReviewRecommendationJSONRequestBody defines body for WithdrawReviewRecommendation for application/json ContentType.
+type WithdrawReviewRecommendationJSONRequestBody = ReviewRecommendationActRequest
 
 // SealPeriodJSONRequestBody defines body for SealPeriod for application/json ContentType.
 type SealPeriodJSONRequestBody = SealRequest

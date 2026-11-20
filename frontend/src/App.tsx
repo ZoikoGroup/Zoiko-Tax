@@ -16,6 +16,7 @@ import { HomePage } from './home/HomePage'
 import { CompliancePage } from './pages/CompliancePage'
 import { ContributionsPage } from './pages/ContributionsPage'
 import { RegistrationsPage } from './pages/RegistrationsPage'
+import { RegulatoryIntelligencePage } from './pages/RegulatoryIntelligencePage'
 import { ContentPage } from './pages/ContentPage'
 import { DeterminePage } from './pages/DeterminePage'
 import { DocumentsPage } from './pages/DocumentsPage'
@@ -209,6 +210,8 @@ export function App() {
             return <RegulatoryNoticesPage {...page} />
           case 'workpapers':
             return <WorkpapersPage {...page} />
+          case 'regulatory-intelligence':
+            return <RegulatoryIntelligencePage {...page} />
           case 'erp-reconciliation':
             return <ErpReconciliationPage {...page} />
           case 'entitlements':

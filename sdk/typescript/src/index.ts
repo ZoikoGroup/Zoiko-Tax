@@ -1207,6 +1207,90 @@ export class ZoikoTaxClient {
     return this.#send<S<"ExemptionEvidence">>("POST", `/v1/exemptions/${encodeURIComponent(certificateId)}/transitions`, body, signal);
   }
 
+  // --- regulatory change intelligence (Doc 03 WF-05, WF-09; Sidebar WF-02) ---
+  /** The regulatory change feed, newest first. `GET /v1/regulatory-changes`. */
+  listRegulatoryChanges(
+    params: { status?: string; kind?: string; jurisdiction?: string; priority?: string; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"RegulatoryChangeList">>> {
+    return this.#send<S<"RegulatoryChangeList">>("GET", `/v1/regulatory-changes${query(params)}`, undefined, signal);
+  }
+
+  /**
+   * Record a reported change as NEW. A retry under the same key, or the same
+   * source edition's change of the same kind, returns the change already
+   * recorded. `POST /v1/regulatory-changes`.
+   */
+  recordRegulatoryChange(idempotencyKey: string, body: S<"RegulatoryChangeRequest">, signal?: AbortSignal): Promise<Result<S<"RegulatoryChange">>> {
+    return this.#send<S<"RegulatoryChange">>("POST", `/v1/regulatory-changes`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** One change with its history. `GET /v1/regulatory-changes/{changeId}`. */
+  getRegulatoryChange(changeId: string, signal?: AbortSignal): Promise<Result<S<"RegulatoryChange">>> {
+    return this.#send<S<"RegulatoryChange">>("GET", `/v1/regulatory-changes/${encodeURIComponent(changeId)}`, undefined, signal);
+  }
+
+  /** Triage, hold, resume or decide a change. `POST /v1/regulatory-changes/{changeId}/transitions`. */
+  transitionRegulatoryChange(changeId: string, body: S<"RegulatoryChangeTransitionRequest">, signal?: AbortSignal): Promise<Result<S<"RegulatoryChange">>> {
+    return this.#send<S<"RegulatoryChange">>("POST", `/v1/regulatory-changes/${encodeURIComponent(changeId)}/transitions`, body, signal);
+  }
+
+  /** Run the deterministic impact assessment. `POST /v1/regulatory-changes/{changeId}/assessments`. */
+  assessRegulatoryChange(changeId: string, signal?: AbortSignal): Promise<Result<S<"ImpactAssessment">>> {
+    return this.#send<S<"ImpactAssessment">>("POST", `/v1/regulatory-changes/${encodeURIComponent(changeId)}/assessments`, undefined, signal);
+  }
+
+  /** Impact assessments, newest first. `GET /v1/impact-assessments`. */
+  listImpactAssessments(
+    params: { changeId?: string; minSeverity?: string; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"ImpactAssessmentList">>> {
+    return this.#send<S<"ImpactAssessmentList">>("GET", `/v1/impact-assessments${query(params)}`, undefined, signal);
+  }
+
+  /** One impact assessment. `GET /v1/impact-assessments/{assessmentId}`. */
+  getImpactAssessment(assessmentId: string, signal?: AbortSignal): Promise<Result<S<"ImpactAssessment">>> {
+    return this.#send<S<"ImpactAssessment">>("GET", `/v1/impact-assessments/${encodeURIComponent(assessmentId)}`, undefined, signal);
+  }
+
+  /** Review recommendations, newest first. `GET /v1/review-recommendations`. */
+  listReviewRecommendations(
+    params: { status?: string; changeId?: string; origin?: string; limit?: number } = {},
+    signal?: AbortSignal,
+  ): Promise<Result<S<"ReviewRecommendationList">>> {
+    return this.#send<S<"ReviewRecommendationList">>("GET", `/v1/review-recommendations${query(params)}`, undefined, signal);
+  }
+
+  /** Draft a recommendation on a change's current assessment. `POST /v1/review-recommendations`. */
+  draftReviewRecommendation(idempotencyKey: string, body: S<"ReviewRecommendationRequest">, signal?: AbortSignal): Promise<Result<S<"ReviewRecommendation">>> {
+    return this.#send<S<"ReviewRecommendation">>("POST", `/v1/review-recommendations`, body, signal, { "Idempotency-Key": idempotencyKey });
+  }
+
+  /** One recommendation with its history. `GET /v1/review-recommendations/{recommendationId}`. */
+  getReviewRecommendation(recommendationId: string, signal?: AbortSignal): Promise<Result<S<"ReviewRecommendation">>> {
+    return this.#send<S<"ReviewRecommendation">>("GET", `/v1/review-recommendations/${encodeURIComponent(recommendationId)}`, undefined, signal);
+  }
+
+  /** Revise a draft or a returned recommendation. `POST /v1/review-recommendations/{recommendationId}/revisions`. */
+  reviseReviewRecommendation(recommendationId: string, body: S<"ReviewRecommendationRevisionRequest">, signal?: AbortSignal): Promise<Result<S<"ReviewRecommendation">>> {
+    return this.#send<S<"ReviewRecommendation">>("POST", `/v1/review-recommendations/${encodeURIComponent(recommendationId)}/revisions`, body, signal);
+  }
+
+  /** Recommend a draft for independent review. `POST /v1/review-recommendations/{recommendationId}/recommend`. */
+  recommendReviewRecommendation(recommendationId: string, body: S<"ReviewRecommendationActRequest">, signal?: AbortSignal): Promise<Result<S<"ReviewRecommendation">>> {
+    return this.#send<S<"ReviewRecommendation">>("POST", `/v1/review-recommendations/${encodeURIComponent(recommendationId)}/recommend`, body, signal);
+  }
+
+  /** Independently review a recommendation. `POST /v1/review-recommendations/{recommendationId}/review`. */
+  reviewReviewRecommendation(recommendationId: string, body: S<"ReviewRecommendationReviewRequest">, signal?: AbortSignal): Promise<Result<S<"ReviewRecommendation">>> {
+    return this.#send<S<"ReviewRecommendation">>("POST", `/v1/review-recommendations/${encodeURIComponent(recommendationId)}/review`, body, signal);
+  }
+
+  /** Withdraw an open recommendation. `POST /v1/review-recommendations/{recommendationId}/withdrawal`. */
+  withdrawReviewRecommendation(recommendationId: string, body: S<"ReviewRecommendationActRequest">, signal?: AbortSignal): Promise<Result<S<"ReviewRecommendation">>> {
+    return this.#send<S<"ReviewRecommendation">>("POST", `/v1/review-recommendations/${encodeURIComponent(recommendationId)}/withdrawal`, body, signal);
+  }
+
   // --- shadow ----------------------------------------------------------------
   /** List comparator profiles. `GET /v1/shadow/comparators`. */
   listComparators(signal?: AbortSignal): Promise<Result<S<"ComparatorList">>> {

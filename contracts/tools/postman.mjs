@@ -232,6 +232,10 @@ const FOLDERS = [
       "createCrosswalk", "listCrosswalks", "getCrosswalk", "addCrosswalkVersion", "transitionCrosswalkVersion",
       "lookupCrosswalk", "proposeRuleChange", "listRuleChanges", "getRuleChange", "recordRuleChangeTestEvidence",
       "transitionRuleChange",
+      "recordRegulatoryChange", "listRegulatoryChanges", "getRegulatoryChange", "transitionRegulatoryChange",
+      "assessRegulatoryChange", "listImpactAssessments", "getImpactAssessment", "draftReviewRecommendation",
+      "listReviewRecommendations", "getReviewRecommendation", "reviseReviewRecommendation",
+      "recommendReviewRecommendation", "reviewReviewRecommendation", "withdrawReviewRecommendation",
       "createERPBridge", "listERPBridges", "recordERPMapping", "prepareERPExport", "listERPExports", "getERPExport",
       "dispatchERPExport", "recordERPResponse", "withdrawERPExport", "recordGLSnapshot", "listGLSnapshots",
       "runGLReconciliation", "listGLReconciliations",
@@ -638,6 +642,13 @@ const OPERATION_TESTS = {
     "});",
     "const regs = pm.response.json().registrations;",
     "if (regs.length > 0) { pm.collectionVariables.set('registrationId', regs[0].id); }",
+  ],
+  recordRegulatoryChange: [
+    "pm.test('Doc 03 WF-05 — a reported change is recorded, or found already recorded for its source edition', function () {",
+    "  pm.expect([200, 201]).to.include(pm.response.code);",
+    "  pm.expect(pm.response.json().sourceKey).to.match(/^zt1:/);",
+    "});",
+    "pm.collectionVariables.set('changeId', pm.response.json().id);",
   ],
   receiveExemptionCertificate: [
     "pm.test('Doc 17 EER-09 — a received certificate is SUBMITTED evidence version 1, not approved', function () {",
@@ -1174,6 +1185,19 @@ const ACCEPTED_OUTCOMES = {
   recommendExemptionCertificate: ["403"],
   decideExemptionCertificate: ["403"],
   transitionExemptionCertificate: ["403"],
+  // Regulatory change intelligence: folder 06 runs as an OPERATOR, which
+  // records and reads changes; triage, assessment, drafting, recommending
+  // and review are an ANALYST's. The example assessment and recommendation
+  // ids are nothing's.
+  transitionRegulatoryChange: ["403"],
+  assessRegulatoryChange: ["403"],
+  getImpactAssessment: ["404"],
+  draftReviewRecommendation: ["403"],
+  getReviewRecommendation: ["404"],
+  reviseReviewRecommendation: ["403"],
+  recommendReviewRecommendation: ["403"],
+  reviewReviewRecommendation: ["403"],
+  withdrawReviewRecommendation: ["403"],
   // Folder 06 may post nothing in the example period and currency, so a
   // prepare can find nothing to export and the batch reads then name the
   // example batch. One OPERATOR prepares, so its dispatch is refused (the
@@ -1539,6 +1563,16 @@ function variables(overlay, contractDigest, local) {
     { key: "jurisdiction", value: "", type: "string" },
     { key: "flag", value: "", type: "string" },
     { key: "buyerRef", value: "", type: "string" },
+    // Captured by recordRegulatoryChange. Assessments and recommendations are
+    // an ANALYST's, so their ids default to well-formed ids of nothing; the
+    // listing filters are empty so they list everything.
+    { key: "changeId", value: "", type: "string" },
+    { key: "assessmentId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
+    { key: "recommendationId", value: "00000000-0000-7000-8000-000000000000", type: "string" },
+    { key: "kind", value: "", type: "string" },
+    { key: "priority", value: "", type: "string" },
+    { key: "minSeverity", value: "", type: "string" },
+    { key: "origin", value: "", type: "string" },
     // Captured by createERPBridge, prepareERPExport and recordGLSnapshot; the
     // batch defaults to one that does not exist, for a prepare that found
     // nothing to export. The currency filter is empty, so it lists all.

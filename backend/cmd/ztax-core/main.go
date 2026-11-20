@@ -195,6 +195,10 @@ func run() error {
 	// E-invoicing / CTC reads committed fiscal documents and writes only its
 	// own records; it recomputes no tax, so it needs only the store.
 	router.CTC = app.NewCTCService(store.CTC(), store.Documents(), store.LegalEntities(), store, clk, ids)
+	// Regulatory change intelligence reads the active content's coverage,
+	// registrations and obligations, and writes only its own ledgers.
+	router.RegulatoryChanges = app.NewRegulatoryChangeService(store.RegulatoryChanges(), app.BundleCoverage{Holder: content},
+		store.Registrations(), store.Obligations(), store, clk, ids)
 	if router.Determination != nil {
 		// Compliance packages execute the obligations commits assess, and
 		// move them only on filing evidence, so they are served wherever the
