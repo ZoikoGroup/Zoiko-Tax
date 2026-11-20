@@ -60,12 +60,16 @@ to the Model Gateway and, this time, on to Groq).
   On this
   main Intelligence page (the Go-to-gRPC path), the output check is
   **format-only**: the code must start with `ontology:` and name something
-  after it; it does **not** check that the code is on an approved list (the Go
-  core holds no such list, and the screen note "whether that code is a real
-  ontology node is not verified here" is accurate). For the approved-list check
-  that validates proposed codes against an approved list and yields `ABSTAIN`
-  on unknown codes, see [Section 6](#6-optional-classification-with-the-approved-list-check-democlassify)
-  below (`POST /demo/classify`).
+  after it. The Go path has an approved-list check built in
+  `backend/internal/app/classification.go`, but that check is **off** unless the
+  environment variable `ZTAX_ONTOLOGY_APPROVED_LIST` names a file; no demo stack
+  sets that variable on the Go path, so no stack runs it. The check applies to the
+  synthetic list only. The screen note "whether that code is a real ontology node
+  is not verified here" remains accurate for all current demo stacks. For the
+  approved-list check that is active on the HTTP demo route, see
+  [Section 6](#6-optional-classification-with-the-approved-list-check-democlassify)
+  below (`POST /demo/classify`). Source: `backend/internal/app/classification.go`,
+  `backend/internal/app/classification_test.go`.
 - **A review-required result**: unlike the base stack fake runtime (which
   returns the approved synthetic code `ontology:telecom/voice/mobile`), a real,
   unconstrained model's free-text answer can fail even that format check. The
@@ -82,9 +86,11 @@ to the Model Gateway and, this time, on to Groq).
   processing is unaffected. Nothing was changed." and "took N seconds", rather
   than an error page -- the governed path degrades to review, it does not
   crash. (`AI_GATEWAY_UNAVAILABLE` is in the API response and gateway logs
-  only, not on the screen.) If the AI has not answered after 5 seconds, the
+  only, not on the screen.) If the AI has not answered after 3 seconds, the
   page first shows "Still waiting for the AI" with "The AI is taking longer
-  than usual.".
+  than usual." (the Go call times out at 5 seconds; the screen cuts off at
+  10 seconds; source: `frontend/src/pages/intelligence/viewOfProposal.ts`,
+  `tests/test_slow_response_threshold.py`).
 - **Time and concurrency limits**: the demo Gateway gives up on a model call
   after 45 seconds, and at most 8 model calls run at once. A call that hits
   either limit is refused with "model runtime unavailable" and one evidence
@@ -352,7 +358,7 @@ This script maps the five demonstration capabilities to what is operational in t
 
 | Step | Action | What actually happens today |
 |---|---|---|
-| **1. Classify** | Submit item description on the Intelligence UI page or via `POST /demo/classify`. | • **Main page (Go gRPC path):** Runs format check only (`ontology:*`). UI disclaimer *"whether that code is a real ontology node is not verified here"* is correct.<br>• **HTTP endpoint (`/demo/classify`):** Runs the approved-list check against `config/approved_ontology.live-demo.json`; returns `PROPOSED` or `ABSTAIN`. |
+| **1. Classify** | Submit item description on the Intelligence UI page or via `POST /demo/classify`. | • **Main page (Go gRPC path):** Runs format check only (`ontology:*`). The Go path has an approved-list check built (`backend/internal/app/classification.go`) but it is off unless `ZTAX_ONTOLOGY_APPROVED_LIST` names a file; no demo stack sets it on the Go path. UI disclaimer *"whether that code is a real ontology node is not verified here"* is correct for all current stacks.<br>• **HTTP endpoint (`/demo/classify`):** Runs the approved-list check against `config/approved_ontology.live-demo.json`; returns `PROPOSED` or `ABSTAIN`. |
 | **2. Explain** | Open Reports (demo) page and click Explain on any row. | `report_ai_http.py` (`POST /demo/explain`) runs `explanation_guard`. Checks model reply against cited row IDs, numbers, and statuses; returns `EXPLAINED` or `ABSTAINED`. |
 | **3. Kill switch** | Edit `intelligence/config/registry.live-demo.json` in place to add a use case to `"killed"` or set `"global_kill": true`. | Python gateway re-reads flags on the next request without container restart (`Gateway._refresh_kill_state`). Call is immediately refused with `KILL_SWITCH_ENGAGED` / `REVIEW_REQUIRED` (explain route). The classify route answers `REFUSED` with `AI_KILL_SWITCH_ENGAGED`. |
 | **4. Evidence & events** | Inspect container logs (`docker compose logs ztax-model-gateway`). | Every model invocation seals a tamper-evident `PROPOSE` record (`ztax_gateway.evidence`) with prompt hash, latency, and token metrics (`UsageMetrics`, with `prompt_tokens` and `completion_tokens` captured from hosted providers; zero when unreported). `TokenPricing` calculates cost in USD with price caps. Answer checks append a linked `AnswerCheckedEvent` naming the invocation ID. |

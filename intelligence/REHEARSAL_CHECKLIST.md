@@ -98,9 +98,9 @@ curl -X POST http://127.0.0.1:18090/demo/classify \
 
 | Screen text | Meaning |
 |---|---|
-| "The AI suggested a code", the proposed code, a confidence line "Not calibrated", the provenance table and "took N seconds". On the base stack (fake runtime with `BASE_STACK_CANNED`, returning `ontology:telecom/voice/mobile`) a badge "Test runtime: not a real AI answer" shows too (`viewOfProposal.ts`); with the live Groq overlay it does not. | Model passed format check (`ontology:*`). Disclaimer: "whether that code is a real ontology node is not verified here" (format check only; no approved-list check on this path). |
+| "The AI suggested a code", the proposed code, a confidence line "Not calibrated", the provenance table and "took N seconds". On the base stack (fake runtime with `BASE_STACK_CANNED`, returning `ontology:telecom/voice/mobile`) a badge "Test runtime: not a real AI answer" shows too (`viewOfProposal.ts`); with the live Groq overlay it does not. | Model passed format check (`ontology:*`). Disclaimer: "whether that code is a real ontology node is not verified here" (format check only; the Go path's approved-list check is built but off unless `ZTAX_ONTOLOGY_APPROVED_LIST` is configured — no demo stack sets it on this path). |
 | Headline "Set aside for a person to review", a plain sentence ("Classify it by hand"), "took N seconds". No code and no reason code. | Model's reply failed even the format check — governed boundary working as designed. (`AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE` is in the API response only.) |
-| After 5 seconds with no answer: "Still waiting for the AI" and "The AI is taking longer than usual." | Not a failure. The call may still finish. |
+| After 3 seconds with no answer: "Still waiting for the AI" and "The AI is taking longer than usual." (Go call times out at 5 s; screen cuts off at 10 s. Source: `frontend/src/pages/intelligence/viewOfProposal.ts`, `tests/test_slow_response_threshold.py`.) | Not a failure. The call may still finish. |
 
 *HTTP `/demo/classify` — source: `LIVE_DEMO.md §6`, `report_ai_http.py` docstring*
 
@@ -342,10 +342,13 @@ box is what **not** to claim.
 > The runtime sets a fixed placeholder confidence (`0.5000`). The model returns no probability,
 > so the number has no meaning. The Intelligence page does not show it: it shows "Not calibrated".
 >
-> **The Go path has no approved-list check.**
+> **The Go path approved-list check is built but off.**
 > On the main Intelligence page (the Go → gRPC path), the output check is format-only: the code
-> must start with `ontology:`. It does not verify that the code is on any approved list. Only
-> `POST /demo/classify` runs the approved-list guard.
+> must start with `ontology:`. The Go path also has an approved-list check built in
+> `backend/internal/app/classification.go`, but it is off unless the environment variable
+> `ZTAX_ONTOLOGY_APPROVED_LIST` names a file; no demo stack sets that variable on the Go path.
+> The check applies to the synthetic list only. Only `POST /demo/classify` runs the approved-list
+> guard on a configured list.
 >
 > **Nothing is released until the decisions are signed.**
 > This is a demo of the governed boundary. No determination, obligation, or fiscal decision is
@@ -426,4 +429,4 @@ python tools/step10_demo.py    # NO model at all — boundary claims only
 
 ---
 
-*Checklist version: aligned with code read on 2026-11-19 (explainers in dev registry, base stack canned runtime). No git command was run.*
+*Checklist version: aligned with code read on 2026-11-20 (slow-line threshold 3 s, Go path approved-list check built but off unless `ZTAX_ONTOLOGY_APPROVED_LIST` configured). No git command was run.*
