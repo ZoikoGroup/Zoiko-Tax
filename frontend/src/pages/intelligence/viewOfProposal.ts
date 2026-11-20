@@ -28,10 +28,11 @@ export const DESCRIPTION_MAX = 2000
 
 /**
  * The longest subject reference the service accepts, counted in bytes after
- * trimming: `len(in.SubjectRef) > 512` is refused
- * (backend/internal/app/classification.go:88). The box stops at this many
- * characters; text with multi-byte characters can still be over in bytes, so
- * the check below counts bytes, as the service does.
+ * trimming: the propose check in backend/internal/app/classification.go refuses
+ * a subject reference when `len(in.SubjectRef)` is over 512, and `len` counts
+ * bytes. The box stops at this many characters; text with multi-byte
+ * characters can still be over in bytes, so the check below counts bytes, as
+ * the service does.
  */
 export const SUBJECT_REF_MAX = 512
 
