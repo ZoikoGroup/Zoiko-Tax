@@ -59,6 +59,7 @@ from pathlib import Path
 from typing import Any, Final
 
 from .evidence_sink import EvidenceSink, LoggingEvidenceSink
+from .invocation_check_event import AnswerCheckedEvent
 from .invocation_evidence import InvocationEvidenceRecord
 
 if sys.platform == "win32":
@@ -74,6 +75,7 @@ __all__: list[str] = [
     "EvidenceFileError",
     "FanOutEvidenceSink",
     "FileEvidenceSink",
+    "FileSinkError",
     "default_evidence_sink",
     "read_evidence_file",
 ]
@@ -137,6 +139,13 @@ _LOG_OVERSIZE: Final = (
 )
 _LOG_REPAIRED: Final = "evidence_file_sink: removed an unfinished last line from the file"
 _LOG_EXTRA_FAILED: Final = "evidence_sink: an additional evidence destination raised; ignored"
+_ERR_FAIL_CLOSED: Final = (
+    "evidence file sink: a record could not be written; the call is refused"
+)
+_LOG_CHECK_WRITE_FAILED: Final = (
+    "evidence_file_sink: a check event could not be written to the file; "
+    "AUDIT GAP in the check-event file copy (see write_failures)"
+)
 
 
 class EvidenceFileError(Exception):
@@ -145,6 +154,15 @@ class EvidenceFileError(Exception):
 
 class EvidenceFileConfigError(EvidenceFileError, ValueError):
     """The path or settings given to the file sink are not acceptable."""
+
+
+class FileSinkError(EvidenceFileError):
+    """Raised by a fail-closed FileEvidenceSink when a write could not be completed.
+
+    The text is a fixed string and never carries a path, file content or exception
+    text. Raising this lets the gateway's ``_write_sink`` surface an UNAVAILABLE
+    error on a PERMIT record so an un-audited AI proposal is never returned.
+    """
 
 
 # ---------------------------------------------------------------------------
@@ -279,6 +297,11 @@ class FileEvidenceSink:
     fsync:
         Flush to stable storage after every record. ``True`` is the durable setting; a
         slow disk then slows each call by the cost of one ``fsync``.
+    fail_closed:
+        When ``True``, a failed write still counts and logs as usual, then raises
+        :class:`FileSinkError` with a fixed message so the gateway's ``_write_sink``
+        can surface UNAVAILABLE on a PERMIT record. Defaults to ``False`` so all
+        existing behaviour and tests stay unchanged.
     """
 
     def __init__(
@@ -288,12 +311,14 @@ class FileEvidenceSink:
         base_dir: str | os.PathLike[str] | None = None,
         max_record_bytes: int = DEFAULT_MAX_RECORD_BYTES,
         fsync: bool = True,
+        fail_closed: bool = False,
     ) -> None:
         if type(max_record_bytes) is not int or max_record_bytes <= 0:
             raise EvidenceFileConfigError(_ERR_CAP)
         self._path = _checked_path(path, base_dir)
         self._max_bytes = max_record_bytes
         self._fsync = fsync
+        self._fail_closed = fail_closed
         self._io = threading.Lock()  # one writer at a time; guards the descriptor and the file
         self._stats = threading.Lock()  # guards the counters; never held while waiting for _io
         self._handle = _Handle()
@@ -337,28 +362,91 @@ class FileEvidenceSink:
     # -- the EvidenceSink interface ------------------------------------------
 
     def write(self, record: InvocationEvidenceRecord) -> None:
-        """Append *record*. Never raises: a failure is counted and logged as fixed text."""
+        """Append *record*.
+
+        When ``fail_closed`` is ``False`` (the default), never raises: a failure
+        is counted and logged as fixed text.  When ``fail_closed`` is ``True``,
+        a failure is still counted and logged, then raises :class:`FileSinkError`
+        with a fixed message so the gateway can surface UNAVAILABLE.
+        """
+        failed = False
         try:
             line = json.dumps(record.as_dict(), sort_keys=True, default=str).encode("utf-8")
             line += b"\n"
         except Exception:
             self._note_failure()
+            failed = True
+            if self._fail_closed:
+                raise FileSinkError(_ERR_FAIL_CLOSED) from None
             return
         if len(line) > self._max_bytes:
             self._note_oversize()
             return
         if not self._io.acquire(timeout=_LOCK_WAIT_SECONDS):
-            self._note_failure()  # could not get its turn in time: drop, count, return
+            self._note_failure()
+            failed = True
+            if self._fail_closed:
+                raise FileSinkError(_ERR_FAIL_CLOSED) from None
             return
         try:
             try:
                 self._append_locked(line)
             except Exception:
                 self._note_failure()
+                failed = True
             else:
                 self._note_success()
         finally:
             self._io.release()
+        if failed and self._fail_closed:
+            raise FileSinkError(_ERR_FAIL_CLOSED) from None
+
+    def write_check_event(self, event: AnswerCheckedEvent) -> None:
+        """Append *event* as a separate JSON line linked by ``ai_invocation_id``.
+
+        The original record line is not changed. A failure is counted and logged
+        as fixed text. When ``fail_closed=True`` and the append fails, raises
+        ``FileSinkError`` with a fixed message so the caller can withhold the
+        reply. When ``fail_closed=False`` this method never raises (best-effort).
+
+        Only the allowed metadata fields are written — no prompt, answer,
+        explanation or free text ever appears in the line.
+        """
+        # Field allowlist: ids, enums, versions, timestamps, id lists only.
+        _allowed_fields: frozenset[str] = frozenset({
+            "event_type", "evidence_id", "verdict", "reason_code",
+            "validator_version", "created_at", "source_record_ids",
+            "policy_version",
+        })
+        failed = False
+        try:
+            full = event.to_dict()
+            payload = {k: v for k, v in full.items() if k in _allowed_fields}
+            line = json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
+            line += b"\n"
+        except Exception:
+            self._note_check_failure()
+            failed = True
+        if not failed:
+            if len(line) > self._max_bytes:
+                self._note_oversize()
+                return
+            if not self._io.acquire(timeout=_LOCK_WAIT_SECONDS):
+                self._note_check_failure()
+                failed = True
+            else:
+                try:
+                    try:
+                        self._append_locked(line)
+                    except Exception:
+                        self._note_check_failure()
+                        failed = True
+                    else:
+                        self._note_success()
+                finally:
+                    self._io.release()
+        if failed and self._fail_closed:
+            raise FileSinkError(_ERR_FAIL_CLOSED) from None
 
     def close(self) -> None:
         """Close the file and release its lock. A later write reopens (and relocks) it."""
@@ -377,6 +465,13 @@ class FileEvidenceSink:
             self._failures += 1
             if self._last_ok or self._failures % _LOG_EVERY == 0:
                 _log.error(_LOG_WRITE_FAILED, extra={"write_failures": self._failures})
+            self._last_ok = False
+
+    def _note_check_failure(self) -> None:
+        with self._stats:
+            self._failures += 1
+            if self._last_ok or self._failures % _LOG_EVERY == 0:
+                _log.error(_LOG_CHECK_WRITE_FAILED, extra={"write_failures": self._failures})
             self._last_ok = False
 
     def _note_oversize(self) -> None:
@@ -534,7 +629,10 @@ def default_evidence_sink(environ: Mapping[str, str] | None = None) -> EvidenceS
     if not raw:
         return LoggingEvidenceSink()
     base = env.get(ENV_BASE_DIR, "").strip() or None
-    return FanOutEvidenceSink(LoggingEvidenceSink(), FileEvidenceSink(raw, base_dir=base))
+    # FileEvidenceSink is primary so FileSinkError propagates to _write_sink on a
+    # PERMIT record (fail-closed). LoggingEvidenceSink is an extra (best-effort).
+    file_sink = FileEvidenceSink(raw, base_dir=base, fail_closed=True)
+    return FanOutEvidenceSink(file_sink, LoggingEvidenceSink())
 
 
 # ---------------------------------------------------------------------------

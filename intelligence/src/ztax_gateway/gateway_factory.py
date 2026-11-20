@@ -21,7 +21,12 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Final
 
-from .evidence_file_sink import EvidenceFileConfigError, default_evidence_sink
+from .evidence_file_sink import (
+    EvidenceFileConfigError,
+    FanOutEvidenceSink,
+    FileEvidenceSink,
+    default_evidence_sink,
+)
 from .governance import UseCaseRegistry
 from .invocation_check_event import LoggingCheckEventSink
 from .invocation_evidence import MAX_PRICE_USD_PER_1K, TokenPricing
@@ -125,10 +130,26 @@ def build_gateway(
 
     # Optional file copy of every evidence record (ZTAX_EVIDENCE_FILE_PATH). Off unless set.
     # A path that is set and not usable stops start-up with the sink's own fixed text.
+    # When the file sink is active, it also serves as the check-event sink on the same
+    # object (one file, one lock). LoggingCheckEventSink is used only when no file is set.
     try:
         evidence_sink = default_evidence_sink()
     except EvidenceFileConfigError as exc:
         raise GatewayFactoryError(str(exc)) from None
+
+    # Resolve the check-event sink: if the evidence sink is a FanOutEvidenceSink whose
+    # primary is a FileEvidenceSink, reuse that primary object (one file, one lock).
+    # Otherwise fall back to LoggingCheckEventSink.
+    from .invocation_check_event import CheckEventSink
+
+    resolved_check_event_sink: CheckEventSink
+    if (
+        isinstance(evidence_sink, FanOutEvidenceSink)
+        and isinstance(evidence_sink._primary, FileEvidenceSink)
+    ):
+        resolved_check_event_sink = evidence_sink._primary
+    else:
+        resolved_check_event_sink = LoggingCheckEventSink()
 
     return Gateway(
         registry,
@@ -139,7 +160,7 @@ def build_gateway(
         evidence_sink=evidence_sink,
         kill_state_path=config_path,
         prompt_profile_registry=profiles,
-        check_event_sink=LoggingCheckEventSink(),
+        check_event_sink=resolved_check_event_sink,
         runtime_timeout_seconds=runtime_timeout_seconds,
         token_pricing=token_pricing,
     )
