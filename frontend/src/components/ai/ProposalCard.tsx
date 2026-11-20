@@ -149,7 +149,7 @@ const ReviewerPanel = ({ proposal, onAccept }: { proposal: Proposal; onAccept?: 
                 value={modifiedCode}
                 required
                 maxLength={CODE_MAX}
-                placeholder="ontology:â€¦"
+                placeholder="ontology:…"
                 onChange={(e) => { setModifiedCode(e.target.value) }}
               />
             </Field>
