@@ -14150,8 +14150,7 @@ paths:
                         mismatch: true
                         findings:
                           - reason: OPERATION_NOT_SUPPORTED
-                            detail:
-                              No filing gate in GB is ready for this legal entity (HMRC VAT: AUTHORIZATION_MISSING). The calculation may be covered while the right to file a return is not.
+                            detail: "No filing gate in GB is ready for this legal entity (HMRC VAT: AUTHORIZATION_MISSING). The calculation may be covered while the right to file a return is not."
                         coverage:
                           state: UNPROVEN
                           marketStatus: PILOT
@@ -14166,8 +14165,7 @@ paths:
                             reason: AUTHORIZATION_MISSING
                           findings:
                             - reason: OPERATION_NOT_SUPPORTED
-                              detail:
-                                No filing gate in GB is ready for this legal entity (HMRC VAT: AUTHORIZATION_MISSING). The calculation may be covered while the right to file a return is not.
+                              detail: "No filing gate in GB is ready for this legal entity (HMRC VAT: AUTHORIZATION_MISSING). The calculation may be covered while the right to file a return is not."
                         version: 3
                         actions:
                           - SUSPEND
