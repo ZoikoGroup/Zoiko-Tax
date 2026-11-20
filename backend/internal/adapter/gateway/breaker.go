@@ -26,6 +26,9 @@ const (
 //
 // Time comes from the caller, so the breaker reads no clock of its own and a
 // test drives it with fixed instants.
+//
+// The Client keeps one Breaker per registered use case, so a use case that is
+// failing is stopped without stopping the others.
 type Breaker struct {
 	mu        sync.Mutex
 	threshold int
@@ -43,6 +46,12 @@ func NewBreaker(threshold int, cooldown time.Duration) *Breaker {
 		threshold = 1
 	}
 	return &Breaker{threshold: threshold, cooldown: cooldown}
+}
+
+// sameSettings returns a new, closed breaker with this one's threshold and
+// cooldown. The settings never change after NewBreaker, so no lock is needed.
+func (b *Breaker) sameSettings() *Breaker {
+	return &Breaker{threshold: b.threshold, cooldown: b.cooldown}
 }
 
 // Allow reports whether a call may be attempted at now. When it returns true
