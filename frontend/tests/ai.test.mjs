@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import { readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, test } from 'node:test'
 
 import { evidenceIdText } from '../src/components/ai/evidenceId.ts'
@@ -145,5 +147,33 @@ describe('evidenceIdText', () => {
 
   test('a 65-character id gives null', () => {
     assert.equal(evidenceIdText({ invocationId: 'a'.repeat(65) }), null)
+  })
+})
+
+// Text saved in one encoding and read in another turns an ellipsis, dash or
+// quote into a run of odd characters. The sequences below are written as
+// escapes so that this file stays plain ASCII.
+describe('source text encoding', () => {
+  const GARBLED = [
+    ['a broken ellipsis, dash or quote (U+00E2 U+20AC)', /\u00e2\u20ac/],
+    ['a broken accent (U+00C3 then a symbol or letter)', /\u00c3[\u0080-\u00ff]/],
+    ['a stray U+00C2 before a space or symbol', /\u00c2[ \u00a0-\u00bf]/],
+    ['the replacement character (U+FFFD)', /\ufffd/],
+  ]
+  const sources = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = join(dir, e.name)
+    return e.isDirectory() ? sources(p) : /\.(ts|tsx|css)$/.test(e.name) ? [p] : []
+  })
+
+  test('no .ts, .tsx or .css file under src holds garbled characters', () => {
+    const found = []
+    for (const file of sources(join(process.cwd(), 'src'))) {
+      readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
+        for (const [what, re] of GARBLED) {
+          if (re.test(line)) found.push(`${file.slice(process.cwd().length + 1)}:${String(i + 1)} ${what}`)
+        }
+      })
+    }
+    assert.deepEqual(found, [], `garbled characters:\n${found.join('\n')}`)
   })
 })

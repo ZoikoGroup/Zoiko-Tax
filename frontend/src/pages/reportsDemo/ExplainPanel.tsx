@@ -3,14 +3,15 @@
  * AI label, the cited rows and the provenance table.
  *
  * The AI only ever explains; nothing here edits or computes a number. When the
- * outcome is not EXPLAINED the panel shows the reason plainly and never the
- * explanation text, and says a person should check.
+ * outcome is not EXPLAINED the panel shows plain words for it (from outcomes.ts,
+ * never the raw outcome word), the reason, and never the explanation text.
  */
 import { useEffect, useRef } from 'react'
 
 import '../obligations.css'
 import { CitedRows, type RegisterRow } from './CitedRows'
 import type { ExplainReply, ExplainTarget, Provenance } from './model'
+import { explainOutcomeWords } from './outcomes'
 
 export type PanelState =
   | { readonly status: 'closed' }
@@ -37,11 +38,13 @@ const ProvenanceTable = ({ provenance }: { provenance: Provenance }) => (
 
 const Answer = ({
   reply, onCite, resolveRow,
-}: { reply: ExplainReply; onCite: (id: string) => void; resolveRow: (id: string) => RegisterRow | null }) => (
+}: { reply: ExplainReply; onCite: (id: string) => void; resolveRow: (id: string) => RegisterRow | null }) => {
+  const words = explainOutcomeWords(reply.outcome)
+  return (
   <>
     <p className="ztax-note rd-ai-label" role="note">{AI_LABEL}</p>
 
-    {reply.outcome === 'EXPLAINED' ? (
+    {words === null ? (
       <>
         <p className="rd-explanation">{reply.explanation}</p>
         <p className="rd-cited">
@@ -69,16 +72,16 @@ const Answer = ({
     ) : (
       <>
         <p className="ztax-error-note" role="status">
-          <strong>{reply.outcome.replaceAll('_', ' ')}.</strong> {reply.reason}{' '}
+          <strong>{words}</strong> {reply.reason}{' '}
           The figures on this page are deterministic and unaffected.
         </p>
-        <p className="rd-check"><strong>A person should check this.</strong></p>
       </>
     )}
 
     {reply.provenance !== null ? <ProvenanceTable provenance={reply.provenance} /> : null}
   </>
-)
+  )
+}
 
 export const ExplainPanel = ({
   state, onClose, onCite, resolveRow,

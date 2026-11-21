@@ -220,6 +220,11 @@ func run() error {
 	defer closeModels()
 	router.Models = models
 	router.Classification = app.NewClassificationService(models)
+	// Explaining an obligation reads it through the determination surface, so a
+	// cell without one leaves the service unwired and the route answers 503.
+	if router.Determination != nil {
+		router.ObligationExplanation = app.NewObligationExplanationService(models, router.Determination)
+	}
 	// Reviewers' decisions on those proposals are stored wherever the store is.
 	router.ClassificationDecisions = app.NewClassificationDecisionService(store.ClassificationDecisions(), store.Audit(), store, clk, ids)
 	if cfg.OntologyApprovedList != "" {

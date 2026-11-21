@@ -3,6 +3,8 @@ package gateway_test
 import (
 	"context"
 	"errors"
+	"slices"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -29,6 +31,12 @@ var (
 
 const cell = "eu-west-1"
 
+// The two use cases the per-use-case breaker tests run side by side.
+const (
+	classifyUC ai.AiUseCase = "classification-review"
+	explainUC  ai.AiUseCase = "explain-obligation-row"
+)
+
 // movableClock is a clock a test can advance.
 type movableClock struct{ now atomic.Int64 }
 
@@ -51,6 +59,13 @@ func policy(t *testing.T, killed []ai.AiUseCase) ai.Policy {
 		MaxRiskTier:          ai.RiskTierT2,
 		PermittedRegions:     []string{cell},
 		PermittedDataClasses: []privacy.Class{privacy.P0, privacy.P1, privacy.P5},
+	}, {
+		UseCase:              explainUC,
+		Owner:                "lane-l",
+		MaxAuthority:         ai.AuthorityOutcomeA1,
+		MaxRiskTier:          ai.RiskTierT1,
+		PermittedRegions:     []string{cell},
+		PermittedDataClasses: []privacy.Class{privacy.P0},
 	}}, killed, false)
 	if err != nil {
 		t.Fatal(err)
@@ -400,4 +415,244 @@ func TestStaticZeroPolicyRefusesEverything(t *testing.T) {
 	h := newHarness(t, func(c *gateway.Config) { c.Policy = gateway.StaticPolicy{} })
 	_, err := h.client.Suggest(tenantCtx(), invocation())
 	wantReason(t, err, ai.ReasonUnknownUseCase, errs.CategoryPolicy)
+}
+
+// ---------------------------------------------------------------------------
+// One circuit breaker per use case.
+// ---------------------------------------------------------------------------
+
+// ask makes one governed call for a use case: an extraction for the explainer,
+// a suggestion for classification.
+func ask(h *harness, uc ai.AiUseCase) error {
+	inv := invocation()
+	inv.UseCase, inv.DataClasses = uc, []privacy.Class{privacy.P0}
+	if uc == explainUC {
+		inv.RiskTier = ai.RiskTierT1
+		_, err := h.client.Extract(tenantCtx(), inv)
+		return err
+	}
+	_, err := h.client.Suggest(tenantCtx(), inv)
+	return err
+}
+
+// reached counts the calls that got as far as the transport for a use case.
+func reached(h *harness, uc ai.AiUseCase) int {
+	n := 0
+	for _, c := range h.transport.Calls() {
+		if c.Governance.UseCase == uc {
+			n++
+		}
+	}
+	return n
+}
+
+// failOnly makes the transport fail for one use case and answer for the others.
+func failOnly(h *harness, failing ai.AiUseCase) {
+	h.transport.Respond = func(_ context.Context, c gateway.Call) (gateway.Reply, error) {
+		if c.Governance.UseCase == failing {
+			return gateway.Reply{}, errors.New("connection refused")
+		}
+		return goodReply(), nil
+	}
+}
+
+func TestOneUseCaseFailingOpensOnlyItsOwnBreaker(t *testing.T) {
+	for _, c := range []struct{ failing, other ai.AiUseCase }{
+		{explainUC, classifyUC},
+		{classifyUC, explainUC},
+	} {
+		t.Run(string(c.failing)+" fails", func(t *testing.T) {
+			h := newHarness(t, nil) // the default breaker: 5 failures
+			failOnly(h, c.failing)
+			for i := range 5 {
+				wantReason(t, ask(h, c.failing), gateway.ReasonGatewayUnavailable, errs.CategoryUnavailable)
+				if got := reached(h, c.failing); got != i+1 {
+					t.Fatalf("call %d: %d reached the transport", i+1, got)
+				}
+			}
+			// The sixth is refused by its own open breaker without reaching the transport.
+			wantReason(t, ask(h, c.failing), gateway.ReasonGatewayUnavailable, errs.CategoryUnavailable)
+			if got := reached(h, c.failing); got != 5 {
+				t.Fatalf("the open breaker let a call through: %d reached the transport, want 5", got)
+			}
+			// The other use case is untouched: it reaches the transport and succeeds.
+			if err := ask(h, c.other); err != nil {
+				t.Fatalf("%s was stopped by %s's breaker: %v", c.other, c.failing, err)
+			}
+			if got := reached(h, c.other); got != 1 {
+				t.Fatalf("%s reached the transport %d times, want 1", c.other, got)
+			}
+			if n := h.client.BreakerCount(); n != 2 {
+				t.Fatalf("breakers = %d, want 2", n)
+			}
+		})
+	}
+}
+
+func TestAUseCaseBreakerProbesAfterTheCooldownAndClosesOnSuccess(t *testing.T) {
+	h := newHarness(t, nil) // 5 failures, 30 s
+	failOnly(h, explainUC)
+	for range 5 {
+		_ = ask(h, explainUC)
+	}
+	wantReason(t, ask(h, explainUC), gateway.ReasonGatewayUnavailable, errs.CategoryUnavailable)
+	if got := reached(h, explainUC); got != 5 {
+		t.Fatalf("reached = %d, want 5 while open", got)
+	}
+
+	// Inside the window it is still open.
+	h.clock.advance(29 * time.Second)
+	wantReason(t, ask(h, explainUC), gateway.ReasonGatewayUnavailable, errs.CategoryUnavailable)
+	if got := reached(h, explainUC); got != 5 {
+		t.Fatalf("reached = %d, want 5 inside the cooldown", got)
+	}
+
+	// After the window one probe goes through; it succeeds and closes the breaker.
+	h.clock.advance(2 * time.Second)
+	h.transport.Respond = nil
+	h.transport.Reply = goodReply()
+	if err := ask(h, explainUC); err != nil {
+		t.Fatalf("probe: %v", err)
+	}
+	if got := reached(h, explainUC); got != 6 {
+		t.Fatalf("the probe did not reach the transport: %d", got)
+	}
+	if err := ask(h, explainUC); err != nil {
+		t.Fatalf("after the probe succeeded: %v", err)
+	}
+	if got := reached(h, explainUC); got != 7 {
+		t.Fatalf("a closed breaker did not let the next call through: %d", got)
+	}
+}
+
+func TestAGovernanceRefusalNeitherOpensNorCreatesABreaker(t *testing.T) {
+	h := newHarness(t, func(c *gateway.Config) { c.Breaker = gateway.NewBreaker(1, time.Minute) })
+
+	// Refused at the gate: a class the use case may not send. Nothing is created.
+	for range 3 {
+		inv := invocation()
+		inv.UseCase, inv.RiskTier, inv.DataClasses = explainUC, ai.RiskTierT1, []privacy.Class{privacy.P5}
+		_, err := h.client.Extract(tenantCtx(), inv)
+		wantReason(t, err, ai.ReasonDataClassRefused, errs.CategoryPolicy)
+	}
+	if n := h.client.BreakerCount(); n != 0 {
+		t.Fatalf("a gate refusal created %d breaker(s)", n)
+	}
+	if got := reached(h, explainUC); got != 0 {
+		t.Fatalf("a gate refusal reached the transport %d times", got)
+	}
+
+	// Refused by the Gateway after the gate: the use case has a breaker now,
+	// but with a threshold of one it is still closed after three refusals.
+	h.transport.Err = errs.New(errs.CategoryPolicy, ai.ReasonKillSwitchEngaged, "refused by the Gateway")
+	for range 3 {
+		wantReason(t, ask(h, explainUC), ai.ReasonKillSwitchEngaged, errs.CategoryPolicy)
+	}
+	if got := reached(h, explainUC); got != 3 {
+		t.Fatalf("a Gateway refusal opened a breaker: %d calls reached the transport, want 3", got)
+	}
+	if n := h.client.BreakerCount(); n != 1 {
+		t.Fatalf("breakers = %d, want 1", n)
+	}
+	// And the other use case is unaffected.
+	h.transport.Err = nil
+	if err := ask(h, classifyUC); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAnUnknownUseCaseCreatesNoBreaker(t *testing.T) {
+	h := newHarness(t, nil)
+	for _, name := range []ai.AiUseCase{"nobody-registered-this", "nor-this", ""} {
+		inv := invocation()
+		inv.UseCase = name
+		_, err := h.client.Suggest(tenantCtx(), inv)
+		if !slices.Contains(ai.RefusalCodes, errs.ReasonOf(err)) {
+			t.Fatalf("%q: %v, want a refusal by the gate", name, err)
+		}
+	}
+	if n := h.client.BreakerCount(); n != 0 {
+		t.Fatalf("unknown use cases created %d breaker(s)", n)
+	}
+	if len(h.transport.Calls()) != 0 {
+		t.Fatal("an unknown use case reached the transport")
+	}
+	// A registered one creates exactly one.
+	if err := ask(h, classifyUC); err != nil {
+		t.Fatal(err)
+	}
+	if n := h.client.BreakerCount(); n != 1 {
+		t.Fatalf("breakers = %d, want 1", n)
+	}
+}
+
+// Run with -race: two use cases called at once share the Client and its map of
+// breakers, and neither may stop the other.
+func TestTwoUseCasesCalledAtOnceKeepSeparateBreakers(t *testing.T) {
+	h := newHarness(t, nil)
+	failOnly(h, explainUC)
+	const rounds = 200
+	var wg sync.WaitGroup
+	// Every write to this map finishes before the first goroutine starts; the
+	// goroutines only read it, and each adds to its own counter.
+	errsBy := make(map[ai.AiUseCase]*atomic.Int64)
+	for _, uc := range []ai.AiUseCase{explainUC, classifyUC} {
+		errsBy[uc] = new(atomic.Int64)
+	}
+	for uc, failed := range errsBy {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for range rounds {
+				if ask(h, uc) != nil {
+					failed.Add(1)
+				}
+			}
+		}()
+	}
+	wg.Wait()
+	if n := errsBy[classifyUC].Load(); n != 0 {
+		t.Fatalf("classification failed %d times while explain was failing", n)
+	}
+	if n := errsBy[explainUC].Load(); n != rounds {
+		t.Fatalf("explain failed %d of %d calls, want all", n, rounds)
+	}
+	if got := reached(h, explainUC); got != 5 {
+		t.Fatalf("explain reached the transport %d times, want 5 before its breaker opened", got)
+	}
+	if got := reached(h, classifyUC); got != rounds {
+		t.Fatalf("classification reached the transport %d times, want %d", got, rounds)
+	}
+	if n := h.client.BreakerCount(); n != 2 {
+		t.Fatalf("breakers = %d, want 2", n)
+	}
+}
+
+// The map of breakers is written by the first call of each use case. Many fresh
+// clients, each hit by both use cases at the same instant, make that the
+// moment under test, with or without the race detector.
+func TestTheFirstCallsOfTwoUseCasesMeetAtTheBreakerMap(t *testing.T) {
+	const perUseCase = 8
+	for i := range 500 {
+		h := newHarness(t, nil)
+		start := make(chan struct{})
+		var wg sync.WaitGroup
+		for _, uc := range []ai.AiUseCase{explainUC, classifyUC} {
+			for range perUseCase {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					<-start
+					if err := ask(h, uc); err != nil {
+						t.Errorf("round %d, %s: %v", i, uc, err)
+					}
+				}()
+			}
+		}
+		close(start)
+		wg.Wait()
+		if n := h.client.BreakerCount(); n != 2 {
+			t.Fatalf("round %d: breakers = %d, want 2", i, n)
+		}
+	}
 }

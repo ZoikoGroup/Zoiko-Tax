@@ -11,6 +11,8 @@ import (
 
 	"github.com/zoikogroup/zoikotax/backend/internal/app"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/id"
+	"github.com/zoikogroup/zoikotax/backend/internal/domain/obligation"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/security"
 )
 
@@ -221,6 +223,53 @@ func TestGoNeverSendsAboveTheRegistryCeiling(t *testing.T) {
 			if !allowed[string(d)] {
 				t.Errorf("%s: Go sends data class %s, which %s does not permit", file, d, c.UseCaseID)
 			}
+		}
+	}
+}
+
+// (b2) The obligation explanation sends the tiers the registry carries, within
+// the ceiling in both files, and declares P5 because its row carries the
+// amount. Neither registry permits P5 for it today, so the real call is
+// refused at the gate: that is the intended state until the use case is
+// approved for that class. When it is, this test is the place that changes.
+type explainRecorder struct {
+	tierRecorder
+	extracted []ai.Invocation
+}
+
+func (r *explainRecorder) Extract(_ context.Context, inv ai.Invocation) (ai.AiExtraction, error) {
+	r.extracted = append(r.extracted, inv)
+	return ai.AiExtraction{}, nil
+}
+
+func TestExplanationSendsTheRegistryTiersAndDeclaresItsFiscalClass(t *testing.T) {
+	row := explainRow(t, tenantID)
+	rec := &explainRecorder{}
+	reader := &explainReader{rows: map[id.ObligationID]obligation.Obligation{row.ID: row}}
+	if _, err := app.NewObligationExplanationService(rec, reader).Explain(as(security.RoleAnalyst), row.ID); err != nil {
+		t.Fatalf("Explain: %v", err)
+	}
+	if len(rec.extracted) != 1 {
+		t.Fatalf("expected exactly one gateway call, got %d", len(rec.extracted))
+	}
+	sent := rec.extracted[0]
+	if string(sent.UseCase) != "explain-obligation-row" || sent.AuthorityOutcome != "A1" || sent.RiskTier != "T1" {
+		t.Fatalf("Go sends %s %s/%s, want explain-obligation-row A1/T1. %s", sent.UseCase, sent.AuthorityOutcome, sent.RiskTier, ratchetMessage)
+	}
+	sentRisk, sentAuth := rank(t, string(sent.RiskTier), "T"), rank(t, string(sent.AuthorityOutcome), "A")
+	for file, reg := range map[string]map[string]registryEntry{
+		registryDev: loadRegistry(t, registryDev), registryLive: loadRegistry(t, registryLive),
+	} {
+		e := entry(t, reg, file, string(sent.UseCase))
+		if sentRisk > rank(t, e.MaxRiskTier, "T") || sentAuth > rank(t, e.MaxAuthority, "A") {
+			t.Errorf("%s: Go sends %s/%s above the registry ceiling %s/%s", file, sent.AuthorityOutcome, sent.RiskTier, e.MaxAuthority, e.MaxRiskTier)
+		}
+		permitted := false
+		for _, c := range e.DataClasses {
+			permitted = permitted || c == "P5"
+		}
+		if permitted {
+			t.Errorf("%s permits P5 for %s: the use case has been approved for fiscal data, so update this test and the refusal test together", file, sent.UseCase)
 		}
 	}
 }

@@ -82,6 +82,11 @@ type Router struct {
 	// ClassificationDecisions saves reviewers' decisions on those proposals. It
 	// writes its own table only. Nil answers 503.
 	ClassificationDecisions *app.ClassificationDecisionService
+
+	// ObligationExplanation asks the AI plane to explain one obligation,
+	// through Models. Nil answers 503, as when there is no Determination to
+	// read the obligation from.
+	ObligationExplanation *app.ObligationExplanationService
 	// Refunds serves POST /v1/transactions:refund and the refund reads and
 	// provider reports. Nil in a cell deployed without the determination
 	// surface, which answers 503.
@@ -485,6 +490,10 @@ func (rt *Router) routes() []struct {
 		// decide, until the named signers are decided.
 		{Route{"POST", "/v1/classifications/decisions", false, []security.Role{operator, analyst}}, rt.handleRecordClassificationDecision},
 		{Route{"GET", "/v1/classifications/decisions/{proposalId}", false, []security.Role{operator, analyst}}, rt.handleGetClassificationDecision},
+		// An advisory explanation of one obligation, through the Governed Model
+		// Gateway only: the roles that may propose may ask, and an auditor
+		// reads the obligation itself.
+		{Route{"POST", "/v1/obligations/{obligationId}/explanation", false, []security.Role{operator, analyst}}, rt.handleExplainObligation},
 	}
 }
 
