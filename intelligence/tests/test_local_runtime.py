@@ -28,6 +28,7 @@ import pytest
 from ztax_gateway import local_runtime
 from ztax_gateway.local_runtime import (
     ENDPOINT_ENV,
+    ENV_ALLOWED_HOSTS,
     MODEL_ENV,
     LocalModelRuntime,
     LocalRuntimeConfigError,
@@ -387,12 +388,23 @@ def test_an_unacceptable_endpoint_is_refused_with_fixed_text(
     assert exc.value.__cause__ is None
 
 
-@pytest.mark.parametrize("endpoint", ["http://127.0.0.1:9", "https://models.internal:8443/base"])
+@pytest.mark.parametrize("endpoint", ["http://127.0.0.1:9", "https://127.0.0.1:8443/base"])
 def test_http_and_https_endpoints_are_accepted(
     monkeypatch: pytest.MonkeyPatch, endpoint: str
 ) -> None:
     monkeypatch.setenv(ENDPOINT_ENV, endpoint)
     monkeypatch.setenv(MODEL_ENV, _MODEL)
+    LocalModelRuntime()  # no network call is made by construction
+
+
+def test_a_non_loopback_https_endpoint_in_the_allow_list_is_accepted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Old intent: "https://models.internal:8443/base" was accepted by the basic URL check.
+    # New intent: same URL is accepted when the host is in the allow-list over https.
+    monkeypatch.setenv(ENDPOINT_ENV, "https://models.internal:8443/base")
+    monkeypatch.setenv(MODEL_ENV, _MODEL)
+    monkeypatch.setenv(ENV_ALLOWED_HOSTS, "models.internal")
     LocalModelRuntime()  # no network call is made by construction
 
 
@@ -641,7 +653,9 @@ def test_a_unicode_error_from_the_opener_is_a_fixed_network_error(
         def open(self, request: object, timeout: float) -> object:
             raise UnicodeEncodeError("idna", f"{ADDR_MARK}.example", 0, 5, "label too long")
 
-    monkeypatch.setenv(ENDPOINT_ENV, f"http://{ADDR_MARK}.example:9")
+    # Construction uses 127.0.0.1 (always allowed) so LocalModelRuntime() succeeds.
+    # The opener patch makes the subsequent run() call raise UnicodeEncodeError.
+    monkeypatch.setenv(ENDPOINT_ENV, "http://127.0.0.1:9")
     monkeypatch.setenv(MODEL_ENV, _MODEL)
     runtime = LocalModelRuntime()
     monkeypatch.setattr(local_runtime, "_opener", lambda: _Opener())

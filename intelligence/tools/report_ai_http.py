@@ -91,6 +91,7 @@ from groq_demo_runtime import (
     GroqDemoRuntime,
 )
 
+from ztax_gateway.evidence_file_sink import FileSinkError
 from ztax_gateway.explanation_guard import (
     _numeric_values,  # noqa: F401 -- accessed as report_ai_http._numeric_values in tests
     apply_guard,
@@ -127,11 +128,17 @@ def _record_answer_check_safe(
 ) -> None:
     """Write a check event; on failure log a fixed WARNING and continue.
 
-    Demo path only. A failing sink must never drop the caller's reply.
+    When the check-event sink is the fail-closed file sink and its append
+    fails, ``FileSinkError`` propagates to the caller so the reply is
+    withheld and the existing AI_GATEWAY_UNAVAILABLE outcome is returned.
+    For every other exception, log a fixed WARNING and continue: a failing
+    sink must never drop the caller's reply in that case.
     Never logs str(exc) or repr(exc) to prevent leaking runtime messages.
     """
     try:
         gateway.record_answer_check(invocation_id, verdict, reason, validator)
+    except FileSinkError:
+        raise
     except Exception:
         log.warning(
             "check_event_write_failed reason=%s",

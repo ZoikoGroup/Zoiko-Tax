@@ -52,36 +52,45 @@ to the Model Gateway and, this time, on to Groq).
   says "The AI suggested a code" and shows the proposed code, a confidence
   line that reads "Not calibrated", the provenance table (use
   case, model profile, provider profile, prompt profile, AI train) and
-  "took N seconds". On the base stack (fake runtime) it also shows the badge
-  "Test runtime: not a real AI answer"; with this Groq overlay it does not.
+  "took N seconds". On the base stack (fake runtime with `BASE_STACK_CANNED`),
+  it answers the synthetic approved code `ontology:telecom/voice/mobile`
+  (`server.py::_runtime()`, `tests/test_fake_runtime.py::TestBaseStackCanned`)
+  and shows the badge "Test runtime: not a real AI answer" (`frontend/src/pages/intelligence/viewOfProposal.ts`);
+  with this Groq overlay it does not.
   On this
   main Intelligence page (the Go-to-gRPC path), the output check is
   **format-only**: the code must start with `ontology:` and name something
-  after it; it does **not** check that the code is on an approved list (the Go
-  core holds no such list, and the screen note "whether that code is a real
-  ontology node is not verified here" is accurate). For the approved-list check
-  that validates proposed codes against an approved list and yields `ABSTAIN`
-  on unknown codes, see [Section 6](#6-optional-classification-with-the-approved-list-check-democlassify)
-  below (`POST /demo/classify`).
-- **A review-required result**: unlike the fake runtime (which always
-  returns a valid placeholder code), a real, unconstrained model's free-text
-  answer can fail even that format check. The page then ends in the headline
-  "Set aside for a person to review", with the sentence "The AI did not give a
-  usable suggestion for this item. Classify it by hand. Deterministic
-  processing is unaffected. Nothing was changed." and "took N seconds". No code
-  and no reason code is shown. This is the governed boundary working as
-  designed (`backend/internal/app/classification.go`), not a bug in the demo.
-  (The reason, `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`, is in the API response
-  only, not on the screen.)
+  after it. The Go path has an approved-list check built in
+  `backend/internal/app/classification.go`, but that check is **off** unless the
+  environment variable `ZTAX_ONTOLOGY_APPROVED_LIST` names a file; no demo stack
+  sets that variable on the Go path, so no stack runs it. The check applies to the
+  synthetic list only. The screen note "whether that code is a real ontology node
+  is not verified here" remains accurate for all current demo stacks. For the
+  approved-list check that is active on the HTTP demo route, see
+  [Section 6](#6-optional-classification-with-the-approved-list-check-democlassify)
+  below (`POST /demo/classify`). Source: `backend/internal/app/classification.go`,
+  `backend/internal/app/classification_test.go`.
+- **A review-required result**: unlike the base stack fake runtime (which
+  returns the approved synthetic code `ontology:telecom/voice/mobile`), a real,
+  unconstrained model's free-text answer can fail even that format check. The
+  page then ends in the headline "Set aside for a person to review", with the
+  sentence "The AI did not give a usable suggestion for this item. Classify it
+  by hand. Deterministic processing is unaffected. Nothing was changed." and
+  "took N seconds". No code and no reason code is shown. This is the governed
+  boundary working as designed (`backend/internal/app/classification.go`), not
+  a bug in the demo. (The reason, `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`, is in
+  the API response only, not on the screen.)
 - A provider failure, a timeout, or a malformed reply ends the page in the
   headline "The AI could not be reached", with the sentence "Try again in a
   moment. If it keeps happening, classify the item by hand. Deterministic
   processing is unaffected. Nothing was changed." and "took N seconds", rather
   than an error page -- the governed path degrades to review, it does not
   crash. (`AI_GATEWAY_UNAVAILABLE` is in the API response and gateway logs
-  only, not on the screen.) If the AI has not answered after 5 seconds, the
+  only, not on the screen.) If the AI has not answered after 3 seconds, the
   page first shows "Still waiting for the AI" with "The AI is taking longer
-  than usual.".
+  than usual." (the Go call times out at 5 seconds; the screen cuts off at
+  10 seconds; source: `frontend/src/pages/intelligence/viewOfProposal.ts`,
+  `tests/test_slow_response_threshold.py`).
 - **Time and concurrency limits**: the demo Gateway gives up on a model call
   after 45 seconds, and at most 8 model calls run at once. A call that hits
   either limit is refused with "model runtime unavailable" and one evidence
@@ -139,7 +148,15 @@ browser.
 **The report service is unauthenticated and loopback-only.** It has no login;
 the compose overlay publishes it on `127.0.0.1` only. Never forward, tunnel or
 otherwise expose that port. Its use cases (`explain-*`) are registered at risk
-tier T1 and data class P0 only.
+tier T1 and data class P0 only. In the development registry
+(`config/registry.dev.json`), all three explainers (`explain-report-figure`,
+`explain-obligation-row`, `explain-shadow-variance`) are registered on the fake
+route (`model:fake-v1`, `provider:fake`, prompt profile `prompt:explain-*-v1`)
+with fixed canned answers beginning with `[fake]`
+(`src/ztax_gateway/fake_runtime.py::BASE_STACK_CANNED`, verified by
+`tests/test_fake_runtime.py::TestExplainersInDevRegistry`). No Go backend route
+exists for the explainers (`backend/internal/transport/http/router.go`); they are
+reachable only via this sample HTTP service and its Reports (demo) UI panel.
 
 ## 6. Optional: classification with the approved-list check (/demo/classify)
 
@@ -341,7 +358,7 @@ This script maps the five demonstration capabilities to what is operational in t
 
 | Step | Action | What actually happens today |
 |---|---|---|
-| **1. Classify** | Submit item description on the Intelligence UI page or via `POST /demo/classify`. | • **Main page (Go gRPC path):** Runs format check only (`ontology:*`). UI disclaimer *"whether that code is a real ontology node is not verified here"* is correct.<br>• **HTTP endpoint (`/demo/classify`):** Runs the approved-list check against `config/approved_ontology.live-demo.json`; returns `PROPOSED` or `ABSTAIN`. |
+| **1. Classify** | Submit item description on the Intelligence UI page or via `POST /demo/classify`. | • **Main page (Go gRPC path):** Runs format check only (`ontology:*`). The Go path has an approved-list check built (`backend/internal/app/classification.go`) but it is off unless `ZTAX_ONTOLOGY_APPROVED_LIST` names a file; no demo stack sets it on the Go path. UI disclaimer *"whether that code is a real ontology node is not verified here"* is correct for all current stacks.<br>• **HTTP endpoint (`/demo/classify`):** Runs the approved-list check against `config/approved_ontology.live-demo.json`; returns `PROPOSED` or `ABSTAIN`. |
 | **2. Explain** | Open Reports (demo) page and click Explain on any row. | `report_ai_http.py` (`POST /demo/explain`) runs `explanation_guard`. Checks model reply against cited row IDs, numbers, and statuses; returns `EXPLAINED` or `ABSTAINED`. |
 | **3. Kill switch** | Edit `intelligence/config/registry.live-demo.json` in place to add a use case to `"killed"` or set `"global_kill": true`. | Python gateway re-reads flags on the next request without container restart (`Gateway._refresh_kill_state`). Call is immediately refused with `KILL_SWITCH_ENGAGED` / `REVIEW_REQUIRED` (explain route). The classify route answers `REFUSED` with `AI_KILL_SWITCH_ENGAGED`. |
 | **4. Evidence & events** | Inspect container logs (`docker compose logs ztax-model-gateway`). | Every model invocation seals a tamper-evident `PROPOSE` record (`ztax_gateway.evidence`) with prompt hash, latency, and token metrics (`UsageMetrics`, with `prompt_tokens` and `completion_tokens` captured from hosted providers; zero when unreported). `TokenPricing` calculates cost in USD with price caps. Answer checks append a linked `AnswerCheckedEvent` naming the invocation ID. |
@@ -364,9 +381,9 @@ only runs the existing Python and Go test suites; no live model is connected.
 
 ## Evaluation harness and gold-set tools
 
-- **`tools/evaluate_gateway.py`**: Runs evaluation against a gold set. The `--approved-list` flag requires `--as-of`; the approved list is read as raw bytes; failures print one fixed message. Two eligibility pre-checks guard against evaluating all-draft or all-synthetic stores. Synthetic runs produce `evidence_grade == "PIPELINE_CHECK"`. The draft gold file cannot be evaluated in automated pipelines because it contains no `REVIEWED` cases (`tests/test_evaluate_gateway.py`). Under Task S6, `evaluate_gateway.py` accepts `--runtime local` to target an OpenAI-compatible local model runtime configured via environment variables (`ZTAX_LOCAL_RUNTIME_ENDPOINT`, `ZTAX_LOCAL_RUNTIME_MODEL`), targeting a local OpenAI-compatible endpoint. The runtime validates that the endpoint is an HTTP or HTTPS URL with a non-empty hostname; it does not yet enforce that the host is loopback-only (`tests/test_evaluate_gateway.py::TestLocalRuntime`).
+- **`tools/evaluate_gateway.py`**: Runs evaluation against a gold set. The `--approved-list` flag requires `--as-of`; the approved list is read as raw bytes; failures print one fixed message. Two eligibility pre-checks guard against evaluating all-draft or all-synthetic stores. Synthetic runs produce `evidence_grade == "PIPELINE_CHECK"`. The draft gold file cannot be evaluated in automated pipelines because it contains no `REVIEWED` cases (`tests/test_evaluate_gateway.py`). Under Task S6, `evaluate_gateway.py` accepts `--runtime local` to target an OpenAI-compatible local model runtime configured via environment variables (`ZTAX_LOCAL_RUNTIME_ENDPOINT`, `ZTAX_LOCAL_RUNTIME_MODEL`), targeting a local OpenAI-compatible endpoint. The runtime enforces loopback-only by default (`127.0.0.0/8` or `::1`; `"localhost"` accepted by name without resolving it); other hosts are permitted only by exact entry in `ZTAX_LOCAL_RUNTIME_ALLOWED_HOSTS` over https; IPv4-mapped IPv6 and non-canonical numeric forms are always refused; redirects (HTTP 301, 302, 303, 307, 308) are refused; the runtime is not wired into the gateway, server or compose yet (proven by `tests/test_local_runtime.py` and `tests/test_local_runtime_host_check.py`).
 - **`tools/gold_set_status.py`**: Read-only tool reporting benchmark case status and coverage. Exporting review sheets (`--review-sheet`) includes write-protection that prevents overwriting any input gold-set file (`tests/test_gold_set_status.py`). Under Task S2, when `--gold` specifies a slot file (`gold/assistant.v0.slots.json`), it reports 54 total slots, 54 EMPTY, 0 REVIEWED, and READINESS indicating it is not usable as evaluation evidence; `--approved-list` and `--review-sheet` are rejected for slot files (`tests/test_gold_set_status.py::TestSlotFileStatus`).
-- **`LocalModelRuntime` & Prompt Single-Source**: Under Task S3, `tools/groq_demo_runtime.py` loads prompt templates from `config/prompt_profiles.live-demo.json` instead of hardcoded strings (`tests/test_groq_demo_runtime.py::test_single_source_proof_changed_word_in_tmp_profile_propagates`). One copy remains in `src/ztax_gateway/local_runtime.py` to preserve isolation between `src` and `tools` (`tests/test_local_runtime.py`). `LocalModelRuntime` is wired as an evaluation option in `tools/evaluate_gateway.py` (`--runtime local`), while remaining unwired into production `server.py` (`tests/test_local_runtime.py`).
+- **`LocalModelRuntime` & Prompt Single-Source**: Under Task S3, `tools/groq_demo_runtime.py` loads prompt templates from `config/prompt_profiles.live-demo.json` instead of hardcoded strings (`tests/test_groq_demo_runtime.py::test_single_source_proof_changed_word_in_tmp_profile_propagates`). One copy remains in `src/ztax_gateway/local_runtime.py` to preserve isolation between `src` and `tools` (`tests/test_local_runtime.py`). `LocalModelRuntime` enforces loopback-only by default; `"localhost"` is accepted by name without resolving it; other hosts are allowed only by exact entry in `ZTAX_LOCAL_RUNTIME_ALLOWED_HOSTS` over https; redirects are refused; the runtime is not wired into the gateway, server or compose yet (proven by `tests/test_local_runtime.py` and `tests/test_local_runtime_host_check.py`). It is wired as an evaluation option in `tools/evaluate_gateway.py` (`--runtime local`).
 - **Assistant 54-Slot Fixture & Draft Thresholds**: Under Task S2, `gold/assistant.v0.slots.json` provides 54 empty placeholder slots (`ASST-001` to `ASST-054`) with status `EMPTY` and 0 reviewed cases; `gold/thresholds.v0.draft.json` records DRAFT evaluation profiles where every metric value is null and nothing reads it (`tests/test_gold_slots_file.py`, `tests/test_thresholds_draft.py`).
 
 ## Prompt profiles

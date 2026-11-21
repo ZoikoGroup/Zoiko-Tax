@@ -18,6 +18,24 @@ What it does, in the same shape as ``tools/groq_demo_runtime.py``:
   code where there is one). No endpoint address, prompt text, answer text or provider
   body is ever in a message, a log line or a record. Redirects are refused.
 
+Host enforcement (``ZTAX_LOCAL_RUNTIME_ENDPOINT``):
+
+* Loopback only by default: the exact hostname ``localhost`` (accepted by name, never
+  resolved; relies on the machine's hosts file) or a loopback IP literal in
+  ``127.0.0.0/8`` or ``::1``. All other hosts are refused.
+* IPv4-mapped IPv6 literals (``::ffff:127.0.0.1``) are always refused, even if they
+  map to loopback. Non-canonical numeric forms (dword, hex, octal, short) and hosts
+  with a trailing dot, percent-encoding or backslashes are always refused.
+* ``ZTAX_LOCAL_RUNTIME_ALLOWED_HOSTS``: optional comma-separated exact-match entries
+  (a bare hostname compared case-insensitively, or a canonical IP literal). No
+  wildcards, no CIDR ranges, no ports, schemes, paths, userinfo or trailing dots in
+  an entry. A non-loopback allowed host must use ``https``; loopback may use ``http``
+  or ``https``. With the allow-list set, loopback is still always allowed.
+* A refused host raises ``LocalRuntimeConfigError`` with one fixed message that never
+  echoes the URL, host or entry.
+* Redirects are refused. ``_NoRedirect`` covers HTTP 301, 302, 303, 307 and 308; the
+  ``Location`` value never appears in any message.
+
 The prompts and the reply mapping are copied from ``tools/groq_demo_runtime.py`` so both
 runtimes ask the same question. ``src`` cannot import from ``tools``, and that file is
 not edited by this change, so the small helpers are duplicated here;
@@ -29,6 +47,7 @@ from __future__ import annotations
 import contextlib
 import functools
 import http.client
+import ipaddress
 import json
 import logging
 import os
@@ -46,6 +65,7 @@ from .wire import Call, Kind
 
 __all__: list[str] = [
     "ENDPOINT_ENV",
+    "ENV_ALLOWED_HOSTS",
     "MODEL_ENV",
     "LocalModelRuntime",
     "LocalRuntimeConfigError",
@@ -56,6 +76,7 @@ log = logging.getLogger("ztax_gateway.local_runtime")
 
 ENDPOINT_ENV: Final = "ZTAX_LOCAL_RUNTIME_ENDPOINT"
 MODEL_ENV: Final = "ZTAX_LOCAL_RUNTIME_MODEL"
+ENV_ALLOWED_HOSTS: Final = "ZTAX_LOCAL_RUNTIME_ALLOWED_HOSTS"
 
 # Per-read limit (connect and each read), like the Groq runtime. It is the second guard:
 # the total below is what ends a reply that keeps arriving slowly. The Gateway's own
@@ -105,6 +126,10 @@ _ERR_ENDPOINT: Final = (
     f"local runtime: {ENDPOINT_ENV} must be an http or https base URL with a host, "
     "and no credentials, query string or fragment"
 )
+_ERR_HOST_NOT_ALLOWED: Final = "local runtime: endpoint host is not allowed"
+_ERR_ALLOWED_HOSTS_MALFORMED: Final = (
+    f"local runtime: {ENV_ALLOWED_HOSTS} contains a malformed entry"
+)
 _FAIL_TIMEOUT: Final = "local runtime: request timed out"
 _FAIL_NETWORK: Final = "local runtime: network error"
 _FAIL_REDIRECT: Final = "local runtime: the server answered with a redirect, which is refused"
@@ -135,6 +160,165 @@ def _env(name: str) -> str:
     return os.environ.get(name, "").strip()
 
 
+def _is_loopback_ip(hostname: str) -> bool:
+    """Return True iff *hostname* is a canonical loopback IP literal (127.0.0.0/8 or ::1).
+
+    IPv4-mapped IPv6 (``::ffff:127.x.x.x``) returns False — always refused.
+    Non-canonical numeric forms are not IP literals as far as ``ipaddress`` is concerned,
+    so they also return False here and are refused.
+    """
+    try:
+        addr = ipaddress.ip_address(hostname)
+    except ValueError:
+        return False
+    if isinstance(addr, ipaddress.IPv6Address):
+        # Refuse IPv4-mapped even if the mapped address is loopback.
+        if addr.ipv4_mapped is not None:
+            return False
+        return addr == ipaddress.ip_address("::1")
+    # IPv4
+    return addr in ipaddress.ip_network("127.0.0.0/8")
+
+
+def _looks_like_noncanonical_ip(s: str) -> bool:
+    """Return True for strings that look like non-canonical IP address forms.
+
+    Detects dword (pure decimal integer), hex (``0x...``), and dotted-octal
+    (``0177.0.0.1``) forms that Python's ``ipaddress`` module rejects as IP
+    literals but that some URL parsers silently accept.
+    """
+    # Pure decimal integer (dword): e.g. "2130706433"
+    if s.isdigit():
+        return True
+    # Hex form: "0x..." or "0X..."
+    if s.lower().startswith("0x"):
+        return True
+    # Dotted form: check each label for leading zero (octal notation)
+    if "." in s:
+        for label in s.split("."):
+            if label.startswith("0") and len(label) > 1 and label.isdigit():
+                return True
+    return False
+
+
+def _parse_allowed_hosts(raw: str) -> list[str]:
+    """Parse and validate ``ZTAX_LOCAL_RUNTIME_ALLOWED_HOSTS``.
+
+    Returns a list of lowercased, stripped entries.  Raises
+    ``LocalRuntimeConfigError`` (with the fixed malformed-entry message) for any
+    entry that contains a wildcard, CIDR slash, port colon, scheme, path,
+    userinfo ``@``, trailing dot, or is a non-canonical numeric host form.
+    """
+    entries = []
+    for raw_entry in raw.split(","):
+        entry = raw_entry.strip()
+        if not entry:
+            continue
+        # Reject any entry that looks like it has a scheme, path, userinfo, port,
+        # wildcard, CIDR range, or other structural character.
+        for bad_char in ("/", "@", "*", " ", "\t", "\\", "%"):
+            if bad_char in entry:
+                raise LocalRuntimeConfigError(_ERR_ALLOWED_HOSTS_MALFORMED) from None
+        # Colons are only valid inside a bracketed IPv6 literal; reject bare colons
+        # (port notation: "host:8080") and unbracketed IPv6.
+        if ":" in entry and not (entry.startswith("[") and entry.endswith("]")):
+            raise LocalRuntimeConfigError(_ERR_ALLOWED_HOSTS_MALFORMED) from None
+        # Strip brackets from an IPv6 literal for validation.
+        inner = entry[1:-1] if entry.startswith("[") and entry.endswith("]") else entry
+        # Reject trailing dot.
+        if inner.endswith("."):
+            raise LocalRuntimeConfigError(_ERR_ALLOWED_HOSTS_MALFORMED) from None
+        # Reject non-canonical numeric IP forms (dword, hex, octal) before attempting
+        # to parse as an IP address: ipaddress would refuse them, but they must not
+        # silently become "hostnames" in the allow-list.
+        if _looks_like_noncanonical_ip(inner):
+            raise LocalRuntimeConfigError(_ERR_ALLOWED_HOSTS_MALFORMED) from None
+        # Try to parse as an IP address.  NOTE: LocalRuntimeConfigError is a subclass
+        # of ValueError, so we must NOT raise it inside this try/except ValueError
+        # block.  Instead, record a flag and raise after.
+        malformed = False
+        addr: ipaddress.IPv4Address | ipaddress.IPv6Address | None = None
+        try:
+            addr = ipaddress.ip_address(inner)
+        except ValueError:
+            addr = None
+        if addr is not None and (
+            str(addr).lower() != inner.lower()
+            or (isinstance(addr, ipaddress.IPv6Address) and addr.ipv4_mapped is not None)
+        ):
+            malformed = True
+        if malformed:
+            raise LocalRuntimeConfigError(_ERR_ALLOWED_HOSTS_MALFORMED) from None
+        if addr is not None:
+            entries.append(str(addr).lower())
+        else:
+            # Treat as a bare hostname (case-insensitive match later).
+            entries.append(inner.lower())
+    return entries
+
+
+def _check_host(url: str, environ: dict[str, str] | None = None) -> None:
+    """Enforce the host-containment rule on a URL that has already passed the basic
+    ``_validated_base_url`` checks (valid scheme, non-empty netloc, no userinfo).
+
+    Raises ``LocalRuntimeConfigError(_ERR_HOST_NOT_ALLOWED)`` from None when the
+    host is not permitted.  Raises ``LocalRuntimeConfigError(_ERR_ALLOWED_HOSTS_MALFORMED)``
+    from None when the allow-list env var contains a malformed entry.
+    """
+    env = environ if environ is not None else os.environ
+    parts = urllib.parse.urlsplit(url)
+    hostname = parts.hostname  # lowercased by urlsplit; None already excluded upstream
+    assert hostname is not None  # guaranteed by _validated_base_url
+
+    # Reject trailing dot (e.g. "localhost." or "127.0.0.1.").
+    # urlsplit strips a trailing dot from the hostname but keeps it in netloc; check netloc.
+    netloc_host = parts.netloc.rsplit(":", 1)[0] if ":" in parts.netloc else parts.netloc
+    # For IPv6 the netloc part is "[::1]" or "[::1]:port"; strip brackets.
+    if netloc_host.startswith("[") and netloc_host.endswith("]"):
+        netloc_host = netloc_host[1:-1]
+    if netloc_host.endswith("."):
+        raise LocalRuntimeConfigError(_ERR_HOST_NOT_ALLOWED) from None
+
+    # Reject percent-encoding in the netloc (e.g. "127.0.0%2e1").
+    if "%" in parts.netloc:
+        raise LocalRuntimeConfigError(_ERR_HOST_NOT_ALLOWED) from None
+
+    # Reject backslashes anywhere in the netloc.
+    if "\\" in parts.netloc:
+        raise LocalRuntimeConfigError(_ERR_HOST_NOT_ALLOWED) from None
+
+    # Decide whether the host is loopback.
+    is_loopback = hostname == "localhost" or _is_loopback_ip(hostname)
+
+    if is_loopback:
+        # Loopback: http or https both fine; no further checks needed.
+        return
+
+    # Non-loopback: consult the allow-list.
+    raw_allowed = env.get(ENV_ALLOWED_HOSTS, "").strip()
+    if not raw_allowed:
+        raise LocalRuntimeConfigError(_ERR_HOST_NOT_ALLOWED) from None
+
+    allowed_entries = _parse_allowed_hosts(raw_allowed)
+
+    # Try to match the hostname as an IP address first, then as a bare hostname.
+    matched = False
+    try:
+        host_addr = ipaddress.ip_address(hostname)
+        host_addr_str = str(host_addr).lower()
+        matched = host_addr_str in allowed_entries
+    except ValueError:
+        # Hostname (not an IP literal): exact case-insensitive match.
+        matched = hostname.lower() in allowed_entries
+
+    if not matched:
+        raise LocalRuntimeConfigError(_ERR_HOST_NOT_ALLOWED) from None
+
+    # Non-loopback allowed host: must use https.
+    if parts.scheme != "https":
+        raise LocalRuntimeConfigError(_ERR_HOST_NOT_ALLOWED) from None
+
+
 def _validated_base_url(endpoint: str) -> str:
     """Return *endpoint* without a trailing slash, or raise LocalRuntimeConfigError."""
     if any(ch.isspace() or ord(ch) < 0x20 or ord(ch) == 0x7F for ch in endpoint):
@@ -160,6 +344,7 @@ def _validated_base_url(endpoint: str) -> str:
     # No userinfo: "user:password@host" or "user@host".
     if "@" in parts.netloc or parts.username is not None or parts.password is not None:
         raise LocalRuntimeConfigError(_ERR_ENDPOINT)
+    _check_host(endpoint)
     return endpoint.rstrip("/")
 
 

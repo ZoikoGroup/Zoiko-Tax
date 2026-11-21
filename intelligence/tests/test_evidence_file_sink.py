@@ -966,3 +966,174 @@ def test_a_bad_path_setting_stops_start_up_with_fixed_text(tmp_path: Path) -> No
     with pytest.raises(EvidenceFileConfigError):
         default_evidence_sink({ENV_PATH: str(tmp_path / "nope" / "ev.jsonl")})
     assert not (tmp_path / "nope").exists()
+
+
+# ---------------------------------------------------------------------------
+# fail_closed parameter (B6) — added tests
+# ---------------------------------------------------------------------------
+
+
+def test_fail_closed_false_default_never_raises_on_a_bad_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With fail_closed=False (the default), a bad write never raises."""
+    path = tmp_path / "ev.jsonl"
+    sink = FileEvidenceSink(path)  # fail_closed defaults to False
+
+    def full_disk(fd: int, data: memoryview) -> int:
+        raise OSError(errno.ENOSPC, "No space left on device")
+
+    monkeypatch.setattr(efs, "_write_fd", full_disk)
+    _w(sink, _Rec(1))  # must NOT raise
+    assert sink.write_failures == 1
+
+
+def test_fail_closed_true_raises_filesink_error_on_a_bad_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """With fail_closed=True, a failed write raises FileSinkError with a fixed message."""
+    from ztax_gateway.evidence_file_sink import FileSinkError
+
+    path = tmp_path / "ev.jsonl"
+    sink = FileEvidenceSink(path, fail_closed=True)
+
+    def full_disk(fd: int, data: memoryview) -> int:
+        raise OSError(errno.ENOSPC, "No space left on device")
+
+    monkeypatch.setattr(efs, "_write_fd", full_disk)
+    with pytest.raises(FileSinkError) as exc_info:
+        _w(sink, _Rec(1))
+    assert sink.write_failures == 1
+    # Fixed message: no path, no exception text
+    assert str(tmp_path) not in str(exc_info.value)
+    assert "ENOSPC" not in str(exc_info.value)
+    assert exc_info.value.__cause__ is None
+    assert exc_info.value.__context__ is None
+
+
+def test_fail_closed_true_error_message_is_fixed_string() -> None:
+    """The FileSinkError message is a fixed string with no dynamic content."""
+    from ztax_gateway.evidence_file_sink import FileSinkError
+
+    err = FileSinkError("evidence file sink: a record could not be written; the call is refused")
+    assert "evidence file sink" in str(err)
+    assert isinstance(err, Exception)
+
+
+def test_build_gateway_with_path_set_uses_file_as_primary_sink(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When ZTAX_EVIDENCE_FILE_PATH is set, the FileEvidenceSink is the primary sink
+    so FileSinkError propagates to _write_sink (fail-closed on PERMIT records)."""
+    path = tmp_path / "ev.jsonl"
+    monkeypatch.setenv(ENV_PATH, str(path))
+    sink = default_evidence_sink()
+    assert isinstance(sink, FanOutEvidenceSink)
+    # FileEvidenceSink must be the primary (first argument)
+    assert isinstance(sink._primary, FileEvidenceSink)
+    assert sink._primary._fail_closed is True
+
+
+def test_check_event_appended_as_separate_line_linked_by_invocation_id(
+    tmp_path: Path,
+) -> None:
+    """write_check_event appends a separate JSON line linked by ai_invocation_id."""
+    from datetime import UTC, datetime
+
+    from ztax_gateway.invocation_check_event import (
+        AnswerCheckedEvent,
+        CheckReason,
+        Verdict,
+    )
+
+    path = tmp_path / "ev.jsonl"
+    sink = FileEvidenceSink(path)
+    rec = _Rec(42)
+    _w(sink, rec)
+    invocation_id = "id-000042"
+    event = AnswerCheckedEvent(
+        evidence_id=invocation_id,
+        verdict=Verdict.PASS,
+        reason_code=CheckReason.CHECKS_PASSED,
+        validator_version="ontology_guard@1",
+        created_at=datetime.now(UTC),
+    )
+    sink.write_check_event(event)
+    sink.close()
+
+    lines = path.read_bytes().splitlines()
+    assert len(lines) == 2  # one record + one check event
+    record_obj = json.loads(lines[0])
+    event_obj = json.loads(lines[1])
+    # Record line unchanged
+    assert record_obj["ai_invocation_id"] == invocation_id
+    # Check event line distinguishable and linked
+    assert event_obj.get("event_type") == "answer_checked"
+    assert event_obj.get("evidence_id") == invocation_id
+    # Sentinel not in either line
+    assert SENTINEL not in lines[0].decode()
+    assert SENTINEL not in lines[1].decode()
+
+
+def test_check_event_does_not_alter_the_record_line(tmp_path: Path) -> None:
+    """The record line bytes are identical before and after write_check_event."""
+    from datetime import UTC, datetime
+
+    from ztax_gateway.invocation_check_event import (
+        AnswerCheckedEvent,
+        CheckReason,
+        Verdict,
+    )
+
+    path = tmp_path / "ev.jsonl"
+    sink = FileEvidenceSink(path)
+    _w(sink, _Rec(7))
+    record_line_before = path.read_bytes().splitlines()[0]
+
+    event = AnswerCheckedEvent(
+        evidence_id="id-000007",
+        verdict=Verdict.ABSTAIN,
+        reason_code=CheckReason.GUARD_NO_CITATION,
+        validator_version="explanation_guard@1",
+        created_at=datetime.now(UTC),
+    )
+    sink.write_check_event(event)
+    sink.close()
+
+    record_line_after = path.read_bytes().splitlines()[0]
+    assert record_line_before == record_line_after
+
+
+def test_check_event_write_failure_is_best_effort_no_raise(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A failed write_check_event call never raises (best-effort)."""
+    from datetime import UTC, datetime
+
+    from ztax_gateway.invocation_check_event import (
+        AnswerCheckedEvent,
+        CheckReason,
+        Verdict,
+    )
+
+    path = tmp_path / "ev.jsonl"
+    sink = FileEvidenceSink(path, fail_closed=False)
+
+    # Write the record successfully first
+    _w(sink, _Rec(99))
+
+    def full_disk(fd: int, data: memoryview) -> int:
+        raise OSError(errno.ENOSPC, "No space left on device")
+
+    monkeypatch.setattr(efs, "_write_fd", full_disk)
+
+    event = AnswerCheckedEvent(
+        evidence_id="id-000099",
+        verdict=Verdict.PASS,
+        reason_code=CheckReason.CHECKS_PASSED,
+        validator_version="v1",
+        created_at=datetime.now(UTC),
+    )
+    # Must NOT raise when fail_closed=False — check events are best-effort in that mode
+    sink.write_check_event(event)
+    assert sink.write_failures == 1
