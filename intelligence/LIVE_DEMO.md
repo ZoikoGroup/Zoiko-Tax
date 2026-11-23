@@ -92,7 +92,7 @@ to the Model Gateway and, this time, on to Groq).
   10 seconds; source: `frontend/src/pages/intelligence/viewOfProposal.ts`,
   `tests/test_slow_response_threshold.py`).
 - **Time and concurrency limits**: the demo Gateway gives up on a model call
-  after 45 seconds, and at most 8 model calls run at once. A call that hits
+  after 4 seconds (starting point, to be re-checked after real models), and at most 8 model calls run at once. A call that hits
   either limit is refused with "model runtime unavailable" and one evidence
   record, and the screen ends in "The AI could not be reached", as above.
 - **Confidence is a fixed placeholder** (`0.5000`, set in
@@ -154,9 +154,7 @@ tier T1 and data class P0 only. In the development registry
 route (`model:fake-v1`, `provider:fake`, prompt profile `prompt:explain-*-v1`)
 with fixed canned answers beginning with `[fake]`
 (`src/ztax_gateway/fake_runtime.py::BASE_STACK_CANNED`, verified by
-`tests/test_fake_runtime.py::TestExplainersInDevRegistry`). No Go backend route
-exists for the explainers (`backend/internal/transport/http/router.go`); they are
-reachable only via this sample HTTP service and its Reports (demo) UI panel.
+`tests/test_fake_runtime.py::TestExplainersInDevRegistry`). An obligation explain route is present in the Go router (`POST /v1/obligations/{obligationId}/explanation` in `backend/internal/transport/http/router.go`, read from source, not run here), while the other explainers remain reachable only via this sample HTTP service and its Reports (demo) UI panel.
 
 ## 6. Optional: classification with the approved-list check (/demo/classify)
 
@@ -325,8 +323,22 @@ Two separate records are logged:
    `PROPOSE` (reflecting the authority state at model invocation time).
 2. **Linked answer-checked event**: `_record_answer_check_safe()` records an `AnswerCheckedEvent`
    with validator `ontology_guard@1`, linked to the evidence record by `ai_invocation_id`.
+   When `ZTAX_EVIDENCE_FILE_PATH` is set, `FileEvidenceSink` appends check events to the file;
+   if the append fails, it raises `FileSinkError` and fails closed with `AI_GATEWAY_UNAVAILABLE`
+   (`report_ai_http.py`, `src/ztax_gateway/evidence_file_sink.py`). When unset, the file sink is
+   not active and the logging sink remains primary (unchanged).
    The actual guard decision (`PASS` or `ABSTAIN`) lives in this check event, **not** in the initial
    gateway evidence record.
+
+### Status of pending items
+
+The following items remain strictly pending and are not yet completed:
+- **B2b (audit record and error-path evidence id):** PENDING, waits on Decision Q3.
+- **Full T21 (no-leak evidence with tenant reference):** PENDING, waits on Decision Q3.
+- **B3b (real approved list for Go check and gateway guard):** PENDING, waits on Decision Q5.
+- **Evidence retention days:** PENDING, waits on Decision Q9.
+- **Model hosting (Google Cloud / self-hosting):** PENDING, waits on Decision Q6.
+- **54-case pass rate and catalogue:** PENDING, waits on Decision Q7.
 
 ### Manual check list for the classify panel
 
@@ -344,7 +356,7 @@ change. Use synthetic text only. Never publish or forward port 18090.
 4. **Rejected input.** Clear a field and submit (the browser blocks it), then send a request that is
    too long with curl. In the page, a rejected request shows "The request was not accepted. Check the
    fields and try again." and no server text.
-5. **Slow service.** The page waits for `DEMO_AI_TIMEOUT_MS` (30 seconds), while the gateway enforces a 45-second deadline per model call (`GATEWAY_RUNTIME_TIMEOUT_SECONDS`). When a call exceeds 30 seconds, the frontend shows the timeout text with a "Try again" button. Pressing it resubmits the form; there is no automatic retry. The address the page calls is the constant `DEMO_AI_BASE_URL` in `frontend/src/platform/demoAi.ts`, so a stand-in service has to answer on `127.0.0.1:18090` (with the real one stopped) and allow the origin `http://localhost:13000`.
+5. **Slow service.** The page waits for `DEMO_AI_TIMEOUT_MS` (30 seconds), while the gateway enforces a 4-second deadline per model call (`GATEWAY_RUNTIME_TIMEOUT_SECONDS`; starting point, to be re-checked after real models). When a call exceeds 30 seconds, the frontend shows the timeout text with a "Try again" button. Pressing it resubmits the form; there is no automatic retry. The address the page calls is the constant `DEMO_AI_BASE_URL` in `frontend/src/platform/demoAi.ts`, so a stand-in service has to answer on `127.0.0.1:18090` (with the real one stopped) and allow the origin `http://localhost:13000`.
 6. **Unknown outcome.** With a stand-in service that answers `{"outcome": "SOMETHING_NEW", ...}` and
    valid other fields, the page shows "Result could not be interpreted" and no error.
 7. **Keyboard only.** Tab to the two fields and the button, press Enter to submit, and tab to
@@ -362,7 +374,7 @@ This script maps the five demonstration capabilities to what is operational in t
 | **2. Explain** | Open Reports (demo) page and click Explain on any row. | `report_ai_http.py` (`POST /demo/explain`) runs `explanation_guard`. Checks model reply against cited row IDs, numbers, and statuses; returns `EXPLAINED` or `ABSTAINED`. |
 | **3. Kill switch** | Edit `intelligence/config/registry.live-demo.json` in place to add a use case to `"killed"` or set `"global_kill": true`. | Python gateway re-reads flags on the next request without container restart (`Gateway._refresh_kill_state`). Call is immediately refused with `KILL_SWITCH_ENGAGED` / `REVIEW_REQUIRED` (explain route). The classify route answers `REFUSED` with `AI_KILL_SWITCH_ENGAGED`. |
 | **4. Evidence & events** | Inspect container logs (`docker compose logs ztax-model-gateway`). | Every model invocation seals a tamper-evident `PROPOSE` record (`ztax_gateway.evidence`) with prompt hash, latency, and token metrics (`UsageMetrics`, with `prompt_tokens` and `completion_tokens` captured from hosted providers; zero when unreported). `TokenPricing` calculates cost in USD with price caps. Answer checks append a linked `AnswerCheckedEvent` naming the invocation ID. |
-| **5. Governed fallback** | Cause a model failure, timeout (>45s), or format error. | The UI never crashes with an unhandled exception. It degrades gracefully to human review (screen: "Set aside for a person to review" or "The AI could not be reached"; in API responses and logs: `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`, `AI_GATEWAY_UNAVAILABLE`, `REVIEW_REQUIRED`), proving fail-closed governance. The classify route answers `REFUSED` with `AI_GATEWAY_UNAVAILABLE`. Release gates run the full 21-case adversarial suite (`ADV-001` through `ADV-021`) by default. |
+| **5. Governed fallback** | Cause a model failure, timeout (>4 s), or format error. | The UI never crashes with an unhandled exception. It degrades gracefully to human review (screen: "Set aside for a person to review" or "The AI could not be reached"; in API responses and logs: `AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE`, `AI_GATEWAY_UNAVAILABLE`, `REVIEW_REQUIRED`), proving fail-closed governance. The classify route answers `REFUSED` with `AI_GATEWAY_UNAVAILABLE`. Release gates run the full 21-case adversarial suite (`ADV-001` through `ADV-021`) by default. |
 
 ## Fallback: no frontend, no Docker
 
@@ -381,9 +393,9 @@ only runs the existing Python and Go test suites; no live model is connected.
 
 ## Evaluation harness and gold-set tools
 
-- **`tools/evaluate_gateway.py`**: Runs evaluation against a gold set. The `--approved-list` flag requires `--as-of`; the approved list is read as raw bytes; failures print one fixed message. Two eligibility pre-checks guard against evaluating all-draft or all-synthetic stores. Synthetic runs produce `evidence_grade == "PIPELINE_CHECK"`. The draft gold file cannot be evaluated in automated pipelines because it contains no `REVIEWED` cases (`tests/test_evaluate_gateway.py`). Under Task S6, `evaluate_gateway.py` accepts `--runtime local` to target an OpenAI-compatible local model runtime configured via environment variables (`ZTAX_LOCAL_RUNTIME_ENDPOINT`, `ZTAX_LOCAL_RUNTIME_MODEL`), targeting a local OpenAI-compatible endpoint. The runtime enforces loopback-only by default (`127.0.0.0/8` or `::1`; `"localhost"` accepted by name without resolving it); other hosts are permitted only by exact entry in `ZTAX_LOCAL_RUNTIME_ALLOWED_HOSTS` over https; IPv4-mapped IPv6 and non-canonical numeric forms are always refused; redirects (HTTP 301, 302, 303, 307, 308) are refused; the runtime is not wired into the gateway, server or compose yet (proven by `tests/test_local_runtime.py` and `tests/test_local_runtime_host_check.py`).
+- **`tools/evaluate_gateway.py`**: Runs evaluation against a gold set. The `--approved-list` flag requires `--as-of`; the approved list is read as raw bytes; failures print one fixed message. Two eligibility pre-checks guard against evaluating all-draft or all-synthetic stores. Synthetic runs produce `evidence_grade == "PIPELINE_CHECK"`. The draft gold file cannot be evaluated in automated pipelines because it contains no `REVIEWED` cases (`tests/test_evaluate_gateway.py`). Under Task S6, `evaluate_gateway.py` accepts `--runtime local` to target an OpenAI-compatible local model runtime configured via environment variables (`ZTAX_LOCAL_RUNTIME_ENDPOINT`, `ZTAX_LOCAL_RUNTIME_MODEL`), targeting a local OpenAI-compatible endpoint. The runtime enforces loopback-only by default (`127.0.0.0/8` or `::1`; `"localhost"` accepted by name without resolving it); other hosts are permitted only by exact entry in `ZTAX_LOCAL_RUNTIME_ALLOWED_HOSTS` over https; IPv4-mapped IPv6 and non-canonical numeric forms are always refused; redirects (HTTP 301, 302, 303, 307, 308) are refused; the runtime is not wired into the gateway, server or compose yet (proven by `tests/test_local_runtime.py` and `tests/test_local_runtime_host_check.py`). Host check enforcement is active: loopback only by default (`127.0.0.0/8` or `::1`; `"localhost"` accepted by name without resolving it); other hosts only by exact entry in `ZTAX_LOCAL_RUNTIME_ALLOWED_HOSTS` over https; IPv4-mapped IPv6 literals, non-canonical numeric forms (dword, hex, octal, short), trailing dots, percent-encodings, backslashes, and redirects (HTTP 301, 302, 303, 307, 308) are strictly refused.
 - **`tools/gold_set_status.py`**: Read-only tool reporting benchmark case status and coverage. Exporting review sheets (`--review-sheet`) includes write-protection that prevents overwriting any input gold-set file (`tests/test_gold_set_status.py`). Under Task S2, when `--gold` specifies a slot file (`gold/assistant.v0.slots.json`), it reports 54 total slots, 54 EMPTY, 0 REVIEWED, and READINESS indicating it is not usable as evaluation evidence; `--approved-list` and `--review-sheet` are rejected for slot files (`tests/test_gold_set_status.py::TestSlotFileStatus`).
-- **`LocalModelRuntime` & Prompt Single-Source**: Under Task S3, `tools/groq_demo_runtime.py` loads prompt templates from `config/prompt_profiles.live-demo.json` instead of hardcoded strings (`tests/test_groq_demo_runtime.py::test_single_source_proof_changed_word_in_tmp_profile_propagates`). One copy remains in `src/ztax_gateway/local_runtime.py` to preserve isolation between `src` and `tools` (`tests/test_local_runtime.py`). `LocalModelRuntime` enforces loopback-only by default; `"localhost"` is accepted by name without resolving it; other hosts are allowed only by exact entry in `ZTAX_LOCAL_RUNTIME_ALLOWED_HOSTS` over https; redirects are refused; the runtime is not wired into the gateway, server or compose yet (proven by `tests/test_local_runtime.py` and `tests/test_local_runtime_host_check.py`). It is wired as an evaluation option in `tools/evaluate_gateway.py` (`--runtime local`).
+- **`LocalModelRuntime` & Prompt Single-Source**: Under Task S3, `tools/groq_demo_runtime.py` loads prompt templates from `config/prompt_profiles.live-demo.json` instead of hardcoded strings (`tests/test_groq_demo_runtime.py::test_single_source_proof_changed_word_in_tmp_profile_propagates`). One copy remains in `src/ztax_gateway/local_runtime.py` to preserve isolation between `src` and `tools` (`tests/test_local_runtime.py`). `LocalModelRuntime` enforces loopback-only by default; `"localhost"` is accepted by name without resolving it; other hosts are allowed only by exact entry in `ZTAX_LOCAL_RUNTIME_ALLOWED_HOSTS` over https; redirects are refused; the runtime is not wired into the gateway, server or compose yet (proven by `tests/test_local_runtime.py` and `tests/test_local_runtime_host_check.py`). Host check enforcement is active: loopback only by default (`127.0.0.0/8` or `::1`; `"localhost"` accepted by name without resolving it); other hosts only by exact entry in `ZTAX_LOCAL_RUNTIME_ALLOWED_HOSTS` over https; IPv4-mapped IPv6 literals, non-canonical numeric forms (dword, hex, octal, short), trailing dots, percent-encodings, backslashes, and redirects (HTTP 301, 302, 303, 307, 308) are strictly refused. It is wired as an evaluation option in `tools/evaluate_gateway.py` (`--runtime local`).
 - **Assistant 54-Slot Fixture & Draft Thresholds**: Under Task S2, `gold/assistant.v0.slots.json` provides 54 empty placeholder slots (`ASST-001` to `ASST-054`) with status `EMPTY` and 0 reviewed cases; `gold/thresholds.v0.draft.json` records DRAFT evaluation profiles where every metric value is null and nothing reads it (`tests/test_gold_slots_file.py`, `tests/test_thresholds_draft.py`).
 
 ## Prompt profiles

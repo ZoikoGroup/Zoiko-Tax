@@ -132,11 +132,12 @@ Source: `LIVE_DEMO.md §3`.
 Open `http://localhost:13000`, navigate to **Reports (demo)**, and click **Explain** on any row.
 
 > [!NOTE]
-> The three explainers (`explain-report-figure`, `explain-obligation-row`, `explain-shadow-variance`)
-> have no Go backend route (`backend/internal/transport/http/router.go`). The buttons reach the
-> demo HTTP service (`report_ai_http.py`) on port 18090 directly. On the base stack (no Groq overlay),
-> the development registry (`config/registry.dev.json`) routes to `FakeRuntime(canned=BASE_STACK_CANNED)`
-> which answers fixed `[fake]`-prefixed texts (`src/ztax_gateway/fake_runtime.py`).
+> The dev registry (`config/registry.dev.json`) registers three explainers (`explain-report-figure`,
+> `explain-obligation-row`, `explain-shadow-variance`). An obligation explain route is present in
+> the Go router (`POST /v1/obligations/{obligationId}/explanation` in `backend/internal/transport/http/router.go`,
+> read from source, not run here), while the buttons on Reports (demo) reach the demo HTTP service
+> (`report_ai_http.py`) on port 18090 directly. On the base stack (no Groq overlay), the development registry
+> routes to `FakeRuntime(canned=BASE_STACK_CANNED)` which answers fixed `[fake]`-prefixed texts (`src/ztax_gateway/fake_runtime.py`).
 
 Or via curl:
 
@@ -245,6 +246,16 @@ docker compose logs ztax-model-gateway
 2. **Linked answer-checked event** — logger `ztax_gateway.evidence`, level `INFO`.
    - Validator: `ontology_guard@1` (classify) or `explanation_guard@1` (explain).
    - Linked by `ai_invocation_id` (trailer key `ztax-invocation-id` from `server.py` line 92).
+   - Under B6, when `ZTAX_EVIDENCE_FILE_PATH` is set, `FileEvidenceSink` appends check events to the file; an append failure raises `FileSinkError` and fails closed (`AI_GATEWAY_UNAVAILABLE`). When unset, the logging sink remains primary and unchanged.
+   - Under B2a, the evidence ID propagates through Go provenance (`ids.go`), API response (`ledger.go`), OpenAPI contract, and UI proposal card (read from source, not run here). Audit record and error-path evidence ID remain PENDING under Decision Q3 (B2b).
+
+3. **Status of pending decisions and items:**
+   - **B2b (audit record & error-path evidence id):** PENDING on Decision Q3.
+   - **Full T21 (no-leak evidence with tenant reference):** PENDING on Decision Q3.
+   - **B3b (real approved list for Go check and gateway guard):** PENDING on Decision Q5.
+   - **Evidence retention days:** PENDING on Decision Q9.
+   - **Model hosting (Google Cloud / self-hosting):** PENDING on Decision Q6.
+   - **54-case pass rate and catalogue:** PENDING on Decision Q7.
    - The actual guard decision (`PASS` or `ABSTAIN`) lives here, **not** in the initial record.
    - Source: `LIVE_DEMO.md §6` "Evidence record vs answer-checked event".
 
@@ -298,7 +309,7 @@ The stand-in must allow CORS from `http://localhost:13000`.
 | Constant | Value | Source |
 |---|---|---|
 | `DEMO_AI_TIMEOUT_MS` | 30000 ms (30 s) | `demoAi.ts` line `export const DEMO_AI_TIMEOUT_MS = 30_000` |
-| Gateway model-call deadline | 45 s | `LIVE_DEMO.md §3`, `groq_demo_runtime.py` `GATEWAY_RUNTIME_TIMEOUT_SECONDS` |
+| Gateway model-call deadline | 4 s (starting point, to be re-checked after real models) | `LIVE_DEMO.md §3`, `groq_demo_runtime.py` `GATEWAY_RUNTIME_TIMEOUT_SECONDS` |
 
 **What you should see**
 

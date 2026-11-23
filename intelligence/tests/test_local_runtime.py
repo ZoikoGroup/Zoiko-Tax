@@ -1126,7 +1126,7 @@ def test_connect_raises_before_any_socket_is_opened_when_no_time_is_left(
     assert connection.sock is None
 
 
-@pytest.mark.parametrize(("total", "expected"), [(5.0, 5.0), (100.0, 30.0)])
+@pytest.mark.parametrize(("total", "expected"), [(2.0, 2.0), (100.0, 3.0)])
 def test_connect_is_given_what_is_left_but_never_more_than_the_read_limit(
     monkeypatch: pytest.MonkeyPatch, total: float, expected: float
 ) -> None:
