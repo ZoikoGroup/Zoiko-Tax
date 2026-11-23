@@ -136,8 +136,9 @@ type Config struct {
 	// AIGatewayDeadline defaults to 5s. The layers must keep this order, outside
 	// to inside: the screen's request limit (frontend platform/client.ts) > this
 	// deadline > the screen's "still waiting" line (frontend viewOfProposal.ts).
-	// A hosted model answers in under a second, so 5s holds. A self-hosted model
-	// must be measured before this changes; do not guess a larger number.
+	// The Go path has been measured only with the fake runtime: about 30 to 40 ms
+	// warm and about 217 ms on the first call. A real model has not been
+	// measured. The 5s default stays until one is; do not guess a larger number.
 	AIGatewayDeadline time.Duration
 	AIPolicyFile      string
 	// OntologyApprovedList, when set, names an approved-ontology list file (the
