@@ -8,6 +8,7 @@
  */
 import { useEffect, useRef } from 'react'
 
+import { AI_LABEL } from '../../components/ai/aiLabel'
 import '../obligations.css'
 import { CitedRows, type RegisterRow } from './CitedRows'
 import type { ExplainReply, ExplainTarget, Provenance } from './model'
@@ -18,11 +19,6 @@ export type PanelState =
   | { readonly status: 'loading'; readonly target: ExplainTarget }
   | { readonly status: 'unavailable'; readonly target: ExplainTarget }
   | { readonly status: 'done'; readonly target: ExplainTarget; readonly reply: ExplainReply }
-
-export const AI_LABEL =
-  'AI-generated explanation. General information, not tax advice or an authoritative determination. ' +
-  'The figures come from the deterministic register. ' +
-  'The wording can be wrong: check it against the cited rows.'
 
 const ProvenanceTable = ({ provenance }: { provenance: Provenance }) => (
   <table className="ztax-action-table" style={{ marginTop: 8 }}>

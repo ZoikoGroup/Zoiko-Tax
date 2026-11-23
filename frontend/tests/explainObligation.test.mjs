@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, test } from 'node:test'
+
+import { AI_LABEL } from '../src/components/ai/aiLabel.ts'
 
 import { SLOW_AFTER_MS } from '../src/pages/intelligence/viewOfProposal.ts'
 import { viewOfExplanation, viewOfExplanationWaiting } from '../src/pages/obligations/viewOfExplanation.ts'
@@ -178,6 +180,27 @@ describe('the panel and the page', () => {
     for (const src of [panel(), page(), code(read('pages', 'obligations', 'viewOfExplanation.ts'))]) {
       assert.ok(!/demoAi/.test(src))
     }
+  })
+
+  test('nothing under pages/obligations imports from reportsDemo', () => {
+    const dir = join(process.cwd(), 'src', 'pages', 'obligations')
+    const files = readdirSync(dir).filter((f) => /\.(ts|tsx)$/.test(f))
+    assert.ok(files.length >= 2, 'no source files found under pages/obligations')
+    for (const f of files) {
+      const src = readFileSync(join(dir, f), 'utf8')
+      assert.ok(!/from\s+['"][^'"]*reportsDemo/.test(src), `${f} imports from reportsDemo`)
+    }
+  })
+
+  test('the AI label is one shared text, unchanged, used by both panels', () => {
+    assert.equal(
+      AI_LABEL,
+      'AI-generated explanation. General information, not tax advice or an authoritative determination. ' +
+      'The figures come from the deterministic register. The wording can be wrong: check it against the cited rows.',
+    )
+    assert.match(panel(), /from '\.\.\/\.\.\/components\/ai\/aiLabel'/)
+    assert.match(read('pages', 'reportsDemo', 'ExplainPanel.tsx'), /from '\.\.\/\.\.\/components\/ai\/aiLabel'/)
+    assert.ok(!/export const AI_LABEL/.test(read('pages', 'reportsDemo', 'ExplainPanel.tsx')))
   })
 
   test('the panel calls the SDK method and cancels the request when it goes away', () => {

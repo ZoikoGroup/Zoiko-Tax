@@ -9,11 +9,11 @@
  */
 import { useEffect, useRef, useState } from 'react'
 
+import { AI_LABEL } from '../../components/ai/aiLabel'
 import { EvidenceIdValue } from '../../components/ai/EvidenceIdValue'
 import { ztax } from '../../platform/client'
 import { Id } from '../../ui/kit'
 import '../obligations.css'
-import { AI_LABEL } from '../reportsDemo/ExplainPanel'
 import {
   viewOfExplanation, viewOfExplanationWaiting, type ExplanationEnding, type ExplanationView,
 } from './viewOfExplanation'
