@@ -2,6 +2,8 @@ package app_test
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/adapter/gateway"
@@ -70,6 +72,54 @@ func TestProposalRefusesWithoutARoleOrAnInput(t *testing.T) {
 	}
 	if _, err := svc.Propose(as(security.RoleOperator), app.ProposeInput{SubjectRef: " ", Description: "y"}); errs.CategoryOf(err) != errs.CategoryValidation {
 		t.Fatalf("an empty subject: %v", err)
+	}
+}
+
+// The subject reference is trimmed, then its length in BYTES is checked against
+// 512 (classification.go counts with len, not with runes). The message says
+// "characters"; the count is bytes, so a two-byte character costs two.
+func TestSubjectReferenceLimitIsCountedInBytesAfterTrimming(t *testing.T) {
+	const message = "A subject reference of at most 512 characters is required."
+	twoByte := "é" // 2 bytes in UTF-8
+	cases := []struct {
+		name    string
+		ref     string
+		refused bool
+	}{
+		{"exactly 512 bytes", strings.Repeat("a", 512), false},
+		{"513 bytes", strings.Repeat("a", 513), true},
+		{"256 two-byte characters (512 bytes)", strings.Repeat(twoByte, 256), false},
+		{"257 two-byte characters (514 bytes)", strings.Repeat(twoByte, 257), true},
+		{"empty", "", true},
+		{"spaces only", "   ", true},
+		{"512 bytes with spaces around it", "  " + strings.Repeat("a", 512) + "  ", false},
+		{"513 bytes with spaces around it", "  " + strings.Repeat("a", 513) + "  ", true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			models := &fakeModels{}
+			_, err := app.NewClassificationService(models).Propose(as(security.RoleOperator),
+				app.ProposeInput{SubjectRef: c.ref, Description: "Unlimited 5G plan"})
+			if !c.refused {
+				if err != nil {
+					t.Fatalf("refused: %v", err)
+				}
+				if len(models.seen) != 1 {
+					t.Fatalf("the Gateway was called %d times, want 1", len(models.seen))
+				}
+				return
+			}
+			var e *errs.Error
+			if !errors.As(err, &e) {
+				t.Fatalf("err = %v, want an estate error", err)
+			}
+			if e.Category != errs.CategoryValidation || e.Reason != errs.ReasonMissingField || e.Field != "subjectRef" || e.Detail != message {
+				t.Fatalf("got %s/%s field %q detail %q", e.Category, e.Reason, e.Field, e.Detail)
+			}
+			if len(models.seen) != 0 {
+				t.Fatal("a refused reference reached the Gateway")
+			}
+		})
 	}
 }
 
