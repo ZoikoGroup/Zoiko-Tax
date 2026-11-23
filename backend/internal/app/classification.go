@@ -99,7 +99,7 @@ func (s *ClassificationService) Propose(ctx context.Context, in ProposeInput) (P
 	}
 	in.SubjectRef, in.Description = strings.TrimSpace(in.SubjectRef), strings.TrimSpace(in.Description)
 	if in.SubjectRef == "" || len(in.SubjectRef) > 512 {
-		return ProposeOutcome{}, errs.Invalid("subjectRef", errs.ReasonMissingField, "A subject reference of at most 512 characters is required.")
+		return ProposeOutcome{}, errs.Invalid("subjectRef", errs.ReasonMissingField, "A subject reference of at most 512 bytes is required.")
 	}
 	if in.Description == "" || len(in.Description) > 2000 {
 		return ProposeOutcome{}, errs.Invalid("description", errs.ReasonMissingField, "A description of at most 2000 characters is required.")

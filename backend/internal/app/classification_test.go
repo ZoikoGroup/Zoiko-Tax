@@ -79,7 +79,8 @@ func TestProposalRefusesWithoutARoleOrAnInput(t *testing.T) {
 // 512 (classification.go counts with len, not with runes). The message says
 // "characters"; the count is bytes, so a two-byte character costs two.
 func TestSubjectReferenceLimitIsCountedInBytesAfterTrimming(t *testing.T) {
-	const message = "A subject reference of at most 512 characters is required."
+	// The wording is pinned: it says bytes, because that is what is counted.
+	const message = "A subject reference of at most 512 bytes is required."
 	twoByte := "é" // 2 bytes in UTF-8
 	cases := []struct {
 		name    string
