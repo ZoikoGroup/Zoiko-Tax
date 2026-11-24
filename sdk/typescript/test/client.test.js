@@ -200,7 +200,7 @@ test("the fiscal surface is reachable: paths, query strings and idempotency keys
     "listRetentionPolicies", "recordRetentionPolicy", "listLegalHolds", "placeLegalHold", "getLegalHold",
     "changeLegalHoldScope", "releaseLegalHold", "getDecisionRetention", "getLegalMatrix", "listAuthorizations",
     "grantAuthorization", "getAuthorization", "revokeAuthorization", "checkAuthorization", "proposeClassification",
-    "recordClassificationDecision", "getClassificationDecision",
+    "recordClassificationDecision", "getClassificationDecision", "explainObligation",
     "listCompliancePackages", "createCompliancePackage", "getCompliancePackage", "prepareCompliancePackage",
     "reviewCompliancePackage", "approveCompliancePackage", "submitCompliancePackage", "acknowledgeCompliancePackage",
     "resolveCompliancePackage", "cancelCompliancePackage",
@@ -405,6 +405,22 @@ test("a classification decision is posted and read back by proposal id", async (
   assert.deepEqual(JSON.parse(calls[0].init.body), body);
   assert.equal(calls[1].url, `https://eu-west-1.zoikotax.com/v1/classifications/decisions/${proposalId}`);
   assert.equal(calls[1].init.method, "GET");
+});
+
+test("explaining an obligation posts to its path with no body and no Idempotency-Key", async () => {
+  const obligationId = "01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01";
+  const reply = { obligationId, status: "REVIEW_REQUIRED", reviewReason: "AI_GATEWAY_UNAVAILABLE", citedIds: [], authoritative: false };
+  const { fetch, calls } = stub(json(200, reply));
+  const client = new ZoikoTaxClient({ baseUrl: "https://eu-west-1.zoikotax.com", fetch });
+
+  const result = await client.explainObligation(obligationId);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.data.status, "REVIEW_REQUIRED");
+  assert.equal(calls[0].url, `https://eu-west-1.zoikotax.com/v1/obligations/${obligationId}/explanation`);
+  assert.equal(calls[0].init.method, "POST");
+  assert.equal(calls[0].init.body ?? null, null);
+  assert.equal("Idempotency-Key" in calls[0].init.headers, false);
 });
 
 test("a second classification decision is a 409 error value, not an exception", async () => {

@@ -13,8 +13,9 @@
 //     earlier, never permit what the Gateway would refuse. What it buys is that
 //     a refusal never leaves the process: an A5 request's input is never
 //     transmitted, never logged by the Gateway and never on a network.
-//  3. Consults the circuit breaker, then makes the call under a hard client-side
-//     deadline (ADR-0006 §2.4). Synchronous calls are permitted only in
+//  3. Consults the circuit breaker of that use case (each registered use case
+//     has its own, so one that is failing does not stop the others), then
+//     makes the call under a hard client-side deadline (ADR-0006 §2.4). Synchronous calls are permitted only in
 //     operator-initiated flows off the C0 path; the C0 path reaches the AI plane
 //     through the outbox and never through this client.
 //  4. Records the crossing — refused, failed or completed — as ADR-0006 §2.7's
@@ -50,6 +51,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
@@ -162,7 +164,9 @@ type Config struct {
 	// caller's own shorter deadline still wins, because context deadlines
 	// only ever shorten.
 	Deadline time.Duration
-	// Breaker is optional; nil means a breaker with default settings.
+	// Breaker is optional. Its threshold and cooldown are the settings of the
+	// breaker each use case gets; the instance itself is not consulted. Nil
+	// means the default settings.
 	Breaker *Breaker
 }
 
@@ -176,7 +180,13 @@ type Client struct {
 	ids       idgen.Generator
 	region    string
 	deadline  time.Duration
-	breaker   *Breaker
+
+	// One circuit breaker per use case, created the first time that use case
+	// passes the policy gate and never before it, so the number of breakers is
+	// bounded by the registry. settings is only the template for new ones.
+	settings *Breaker
+	mu       sync.Mutex
+	breakers map[ai.AiUseCase]*Breaker
 }
 
 // New validates the wiring and builds a Client.
@@ -211,8 +221,22 @@ func New(cfg Config) (*Client, error) {
 		ids:       cfg.IDs,
 		region:    cfg.Region,
 		deadline:  cfg.Deadline,
-		breaker:   b,
+		settings:  b,
+		breakers:  make(map[ai.AiUseCase]*Breaker),
 	}, nil
+}
+
+// breakerFor returns the use case's circuit breaker, creating it on first use.
+// Call it only for a use case the policy gate has allowed.
+func (c *Client) breakerFor(uc ai.AiUseCase) *Breaker {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	b, ok := c.breakers[uc]
+	if !ok {
+		b = c.settings.sameSettings()
+		c.breakers[uc] = b
+	}
+	return b
 }
 
 // Suggest asks the Gateway for an AiSuggestion.
@@ -307,8 +331,10 @@ func (c *Client) invoke(ctx context.Context, kind Kind, inv ai.Invocation) (Repl
 		return Reply{}, ai.Provenance{}, c.settle(ctx, t, OutcomeRefused, d.Reason, d.Err())
 	}
 
-	// 2. The circuit breaker.
-	if !c.breaker.Allow(c.clock.Now()) {
+	// 2. The use case's own circuit breaker. It is looked up here, after the
+	//    gate, so a refused or unknown use case never adds one.
+	breaker := c.breakerFor(g.UseCase)
+	if !breaker.Allow(c.clock.Now()) {
 		err := errs.New(errs.CategoryUnavailable, ReasonGatewayUnavailable,
 			"AI assistance is temporarily unavailable.")
 		return Reply{}, ai.Provenance{}, c.settle(ctx, t, OutcomeFailed, ReasonGatewayUnavailable, err)
@@ -323,10 +349,10 @@ func (c *Client) invoke(ctx context.Context, kind Kind, inv ai.Invocation) (Repl
 	if err != nil {
 		err = classify(callCtx, err)
 		if countsAgainstBreaker(err) {
-			c.breaker.Failure(c.clock.Now())
+			breaker.Failure(c.clock.Now())
 		} else {
 			// The Gateway answered — a refusal is a working Gateway.
-			c.breaker.Success()
+			breaker.Success()
 		}
 		outcome := OutcomeFailed
 		if errs.IsCategory(err, errs.CategoryPolicy) {
@@ -334,7 +360,7 @@ func (c *Client) invoke(ctx context.Context, kind Kind, inv ai.Invocation) (Repl
 		}
 		return Reply{}, ai.Provenance{}, c.settle(ctx, t, outcome, errs.ReasonOf(err), err)
 	}
-	c.breaker.Success()
+	breaker.Success()
 
 	// 4. Provenance. The governance half is what this process sent; only the
 	//    routing half comes from the reply.

@@ -3983,6 +3983,93 @@ paths:
         "500": { $ref: "#/components/responses/Internal" }
         "503": { $ref: "#/components/responses/Unavailable" }
 
+  /v1/obligations/{obligationId}/explanation:
+    post:
+      operationId: explainObligation
+      tags: [obligations]
+      summary: Ask the AI plane to explain one obligation
+      description: |
+        `OPERATOR` or `ANALYST`. Sends one obligation row of the caller's own
+        tenant to the Governed Model Gateway under the `explain-obligation-row`
+        use case (ADR-0006) and returns the explanation it gives. The request
+        has no body: the tenant comes from the session and the row from the
+        store, so a caller cannot choose what is sent.
+
+        The explanation is **advisory and never authoritative**. It is not a
+        determination, an assessment or tax advice, and nothing in this
+        response changes an obligation. A person must read it against the row.
+
+        The answer is checked by the AI Gateway, not here. The service reads
+        the checked answer and fails closed: `explanation` is returned only
+        when the Gateway reports `ANSWERED` and every id in `citedIds` is the
+        row that was sent. Any other answer carries no explanation text.
+
+        The row carries the assessed amount, which is class P5 fiscal data. A
+        use case is refused data classes it is not approved for, so until
+        `explain-obligation-row` is approved for P5 the Gateway refuses the
+        call with `403` `AI_DATA_CLASS_REFUSED` before anything leaves the
+        process. That is the intended state of a cell whose use case is not
+        approved.
+
+        When the AI plane cannot help, the answer is still `200`: a Gateway
+        with no approved provider, one that is down or slow, a reply without
+        its provenance, or a reply that cannot be used all give
+        `status: REVIEW_REQUIRED` with the reason in `reviewReason` and no
+        explanation. `status: ABSTAINED` means the Gateway answered and set the
+        explanation aside. Deterministic processing is unaffected by any of
+        them. An obligation of another tenant, or one that does not exist, is
+        `404`. A cell with no obligation or no explanation service wired
+        answers `503`. A governance refusal (kill switch, residency,
+        authority, data class) is a `403` with the Gateway's reason code.
+      parameters:
+        - $ref: "#/components/parameters/ObligationId"
+      responses:
+        "200":
+          description: The advisory explanation with the provenance that produced it, or why there is none.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ObligationExplanation"
+              examples:
+                default:
+                  summary: An explanation that cites the row it was given
+                  value:
+                    obligationId: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                    status: ANSWERED
+                    explanation: This VAT return for 2026-07-01 to 2026-09-30 is open and due on 2026-10-20. The assessed amount is 42.00 EUR.
+                    citedIds: [01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01]
+                    validatorVersion: explanation_guard@1
+                    authoritative: false
+                    provenance:
+                      useCase: explain-obligation-row
+                      modelProfile: model:explain-2027.03
+                      providerProfile: provider:approved-a
+                      promptProfile: prompt:explain-obligation-row-v1
+                      aiTrainVersion: ai-2027.03.1
+                      invocationId: call-id-1
+                abstained:
+                  summary: The Gateway set the answer aside
+                  value:
+                    obligationId: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                    status: ABSTAINED
+                    reviewReason: AI_EXPLANATION_ABSTAINED
+                    citedIds: []
+                    authoritative: false
+                aiUnavailable:
+                  summary: The AI plane could not help
+                  value:
+                    obligationId: 01920a4d-1b2c-7d3e-8f40-5a6b7c8d9e01
+                    status: REVIEW_REQUIRED
+                    reviewReason: AI_GATEWAY_UNAVAILABLE
+                    citedIds: []
+                    authoritative: false
+        "400": { $ref: "#/components/responses/Validation" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/Internal" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
   /v1/obligations/{obligationId}/transitions:
     post:
       operationId: transitionObligation
@@ -18105,6 +18192,51 @@ components:
           x-ztax-privacy: { class: P0 }
           type: string
           description: The model's own score as a canonical decimal in [0, 1]. Never a threshold that makes the proposal authoritative.
+        authoritative:
+          x-ztax-privacy: { class: P0 }
+          type: boolean
+          enum: [false]
+        provenance: { $ref: "#/components/schemas/AiProvenance" }
+
+    ObligationExplanation:
+      type: object
+      title: ObligationExplanation
+      description: |
+        An advisory explanation of one obligation row. `authoritative` is always false; a person reads it against the row.
+
+        `status` says what the AI plane contributed. `ANSWERED` carries the explanation and the ids it cites; every
+        cited id is the row that was sent. `ABSTAINED` means the Gateway answered and set the explanation aside.
+        `REVIEW_REQUIRED` means the AI plane was unavailable, not configured in this cell, or answered with something
+        that cannot be used. Only `ANSWERED` carries `explanation`. `reviewReason` is a fixed reason code and never
+        holds model text.
+      additionalProperties: false
+      required: [obligationId, status, citedIds, authoritative]
+      properties:
+        obligationId: { $ref: "#/components/schemas/ObligationId" }
+        status:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          enum: [ANSWERED, ABSTAINED, REVIEW_REQUIRED]
+        reviewReason:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: |
+            Present unless `status` is `ANSWERED`. With `REVIEW_REQUIRED`: `AI_GATEWAY_UNAVAILABLE`,
+            `AI_GATEWAY_NOT_CONFIGURED`, `AI_GATEWAY_REPLY_UNEVIDENCED` or `AI_EXPLANATION_REPLY_UNUSABLE`
+            (a reply with no usable status, no citation, or a citation to a row that was not sent). With
+            `ABSTAINED`: `AI_EXPLANATION_ABSTAINED` or `AI_EXPLANATION_REFUSED`.
+        explanation:
+          x-ztax-privacy: { class: P5, purposes: [PURP-AI-ASSIST, PURP-EVID], retention: RET-EVIDENCE, redaction: NO_LOG, aiAllowed: NONE }
+          type: string
+          description: Plain-language text. Present only when `status` is `ANSWERED`. It quotes figures from the row, so it is held at the row's highest class.
+        citedIds:
+          type: array
+          description: The ids the explanation cites. Each is the obligation that was sent. Empty unless `status` is `ANSWERED`.
+          items: { $ref: "#/components/schemas/ObligationId" }
+        validatorVersion:
+          x-ztax-privacy: { class: P0 }
+          type: string
+          description: The version of the answer check that passed the explanation, as the Gateway reported it. Absent when none was reported.
         authoritative:
           x-ztax-privacy: { class: P0 }
           type: boolean

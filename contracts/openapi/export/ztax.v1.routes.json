@@ -879,6 +879,12 @@
     },
     {
       "method": "POST",
+      "path": "/v1/obligations/{obligationId}/explanation",
+      "operationId": "explainObligation",
+      "public": false
+    },
+    {
+      "method": "POST",
       "path": "/v1/obligations/{obligationId}/transitions",
       "operationId": "transitionObligation",
       "public": false

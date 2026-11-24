@@ -10,6 +10,9 @@
  * BLOCKED and BLOCK are accepted too, so a renamed backend word cannot break
  * the page. Anything else is 'needs_review'.
  *
+ * It also holds the plain words for an explain outcome (`explainOutcomeWords`),
+ * the only place those words live.
+ *
  * It also owns every text for a screen that did not get a usable answer
  * (`viewOfFailure`), so the panel holds no sentence of its own. Each of those
  * says what the person should do next, and each cause has its own words: an
@@ -196,4 +199,22 @@ export function viewOf(reply: ClassifyReply): ClassifyView {
     case null:
       return view('needs_review', NEEDS_REVIEW_SENTENCE, null, listVersion)
   }
+}
+
+const EXPLAIN_FALLBACK = 'The AI could not explain this. A person should check it.'
+
+// A Map, not a plain object, so a word such as "constructor" finds nothing.
+const EXPLAIN_WORDS: ReadonlyMap<string, string> = new Map([
+  ['ABSTAINED', 'The AI set this aside. A person should check it.'],
+  ['REVIEW_REQUIRED', 'A person should review this.'],
+])
+
+/**
+ * The plain words for an explain outcome, or null when it was explained and
+ * the explanation and cited rows are shown instead. Any other word, an empty
+ * value or no value gets the fallback. The raw word is never returned.
+ */
+export function explainOutcomeWords(outcome: unknown): string | null {
+  if (outcome === 'EXPLAINED') return null
+  return (typeof outcome === 'string' ? EXPLAIN_WORDS.get(outcome) : undefined) ?? EXPLAIN_FALLBACK
 }
