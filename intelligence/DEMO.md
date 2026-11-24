@@ -112,11 +112,11 @@ than the claim's full text. It reports FAIL if they do not pass.
 
 ---
 
-## Limitation — No Live Model
+## Limitation — No Approved Model on Base Stack
 
 These tests prove that **gateway governance is independent of model output**.
-They do not prove that a live, unverified model would produce accurate tax
-answers.  Connecting a real model provider requires Security/Lane C approval
+The base stack runs against a fake runtime; no live model is connected on that path. (The live-demo overlay connects to a hosted model on synthetic data only; neither is an approved model.) They do not prove that a live, unverified model would produce accurate tax
+answers. Connecting an approved model provider requires Security, Privacy and Legal approval (D-01)
 and vault credentials (ADR-0017 §2.5) and is outside the scope of this demo.
 
 ---

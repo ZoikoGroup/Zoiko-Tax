@@ -42,7 +42,7 @@
     {
       "use_case_id": "explain-obligation-row",
       "owner": "lane-l",
-      "description": "Explain one row of the synthetic demo obligations register or of its payments / remittances tab, grounded only in the rows supplied with the call. Demo only -- the register is synthetic (intelligence/tools/report_fixture.py); this use case never reaches a real obligation.",
+      "description": "Explain one row of an obligation or of its payments / remittances tab, grounded only in the fields supplied with the call. On the Go path, the route reads a real obligation row from the database (backend/internal/app/obligation_explanation.go, read from source, not run here); currently allows P0 data only, so calls carrying P5 assessed amounts are refused at the gateway policy gate.",
       "max_risk_tier": "T1",
       "max_authority": "A1",
       "permitted_regions": [

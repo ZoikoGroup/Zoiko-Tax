@@ -388,8 +388,8 @@ python tools/step10_demo.py      # NO model at all -- the boundary claims on the
 ```
 
 `live_demo.py` loads `config/registry.live-demo.json` and labels its routes with
-your `GROQ_MODEL`, so its provenance names the real model. `step10_demo.py`
-only runs the existing Python and Go test suites; no live model is connected.
+your `GROQ_MODEL`, so its provenance names the real model (evaluation on synthetic data only; not an approved model). `step10_demo.py`
+only runs the existing Python and Go test suites against the base stack fake runtime; no live model is connected on that path.
 
 ## Evaluation harness and gold-set tools
 
