@@ -524,6 +524,97 @@ test("the registration and exemption calls send intake under an Idempotency-Key 
   for (const c of calls.filter((_, i) => i !== 0 && i !== 6)) assert.equal(c.init.headers["Idempotency-Key"], undefined);
 });
 
+test("the content workbench calls send intake under an Idempotency-Key and nothing else", async () => {
+  const { fetch, calls } = stub(json(201, { id: "01920e10-0000-7000-8000-00000000c001" }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+  const xw = "01920e10-0000-7000-8000-00000000c001";
+  const rc = "01920e20-0000-7000-8000-00000000d001";
+  const version = {
+    rights: { basis: "CUSTOMER_SUPPLIED", reference: "CFG-1" }, effectiveFrom: "2026-10-01",
+    entries: [{ externalCode: "010101", description: "Local", match: "EXACT", serviceTarget: "ontology:telecom/voice/fixed/local" }],
+  };
+
+  await client.createCrosswalk("k-xw", { vendor: "SURETAX", namespace: "TRANS_TYPE", vendorRelease: "2026.10", title: "SureTax", version });
+  await client.listCrosswalks({ vendor: "SURETAX", status: "IN_REVIEW" });
+  await client.getCrosswalk(xw);
+  await client.addCrosswalkVersion(xw, "k-v2", version);
+  await client.transitionCrosswalkVersion(xw, 2, { to: "APPROVED", expectedRevision: 2, reason: "ok" });
+  await client.lookupCrosswalk(xw, { code: "010101", on: "2026-11-20" });
+  await client.proposeRuleChange("k-rc", {
+    packId: "US-NY-TELECOM", baseVersion: "3.2.0", jurisdiction: "US-NY", changeType: "RATE_CHANGE", summary: "s", detail: "d",
+    citation: { sourceId: "NY-186-C", reference: "§1", edition: "2026", authorityClass: "A0" }, effectiveFrom: "2027-01-01",
+  });
+  await client.listRuleChanges({ status: "RECOMMENDED" });
+  await client.getRuleChange(rc);
+  await client.recordRuleChangeTestEvidence(rc, { testEvidence: { ref: "GS-1" }, expectedRevision: 1 });
+  await client.transitionRuleChange(rc, { to: "APPROVED_FOR_RELEASE", expectedRevision: 3, reason: "ok" });
+
+  assert.deepEqual(calls.map((c) => `${c.init.method} ${c.url}`), [
+    "POST /api/v1/content/crosswalks",
+    "GET /api/v1/content/crosswalks?vendor=SURETAX&status=IN_REVIEW",
+    `GET /api/v1/content/crosswalks/${xw}`,
+    `POST /api/v1/content/crosswalks/${xw}/versions`,
+    `POST /api/v1/content/crosswalks/${xw}/versions/2/transitions`,
+    `GET /api/v1/content/crosswalks/${xw}/lookup?code=010101&on=2026-11-20`,
+    "POST /api/v1/content/rule-changes",
+    "GET /api/v1/content/rule-changes?status=RECOMMENDED",
+    `GET /api/v1/content/rule-changes/${rc}`,
+    `POST /api/v1/content/rule-changes/${rc}/test-evidence`,
+    `POST /api/v1/content/rule-changes/${rc}/transitions`,
+  ]);
+  assert.equal(calls[0].init.headers["Idempotency-Key"], "k-xw");
+  assert.equal(calls[3].init.headers["Idempotency-Key"], "k-v2");
+  assert.equal(calls[6].init.headers["Idempotency-Key"], "k-rc");
+  for (const c of calls.filter((_, i) => ![0, 3, 6].includes(i))) assert.equal(c.init.headers["Idempotency-Key"], undefined);
+});
+
+test("the regulatory change calls send intake and drafting under an Idempotency-Key and nothing else", async () => {
+  const { fetch, calls } = stub(json(201, { id: "01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01" }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+  const ch = "01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+  const as = "01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+  const rec = "01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+
+  await client.recordRegulatoryChange("k-chg", {
+    jurisdiction: "US-NY", kind: "RATE_CHANGE", title: "NY excise rises", detectedBy: "HUMAN",
+    source: { authority: "NY DTF", citation: "N.Y. Tax Law §186-e", edition: "TB-ST-2026-11", documentSha256: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08" },
+    publishedOn: "2026-11-01", effectiveFrom: "2027-01-01",
+  });
+  await client.listRegulatoryChanges({ status: "TRIAGED", jurisdiction: "US" });
+  await client.getRegulatoryChange(ch);
+  await client.transitionRegulatoryChange(ch, { to: "TRIAGED", priority: "MATERIAL", reason: "ok", expectedVersion: 1 });
+  await client.assessRegulatoryChange(ch);
+  await client.listImpactAssessments({ changeId: ch, minSeverity: "HIGH" });
+  await client.getImpactAssessment(as);
+  await client.draftReviewRecommendation("k-rec", { assessmentId: as, origin: "HUMAN", action: "MONITOR", rationale: "watch", targets: [] });
+  await client.listReviewRecommendations({ status: "RECOMMENDED" });
+  await client.getReviewRecommendation(rec);
+  await client.reviseReviewRecommendation(rec, { action: "NO_ACTION", rationale: "below threshold", targets: [], expectedVersion: 1 });
+  await client.recommendReviewRecommendation(rec, { reason: "checked", expectedVersion: 2 });
+  await client.reviewReviewRecommendation(rec, { decision: "ACCEPT", reason: "agreed", expectedVersion: 3 });
+  await client.withdrawReviewRecommendation(rec, { reason: "superseded", expectedVersion: 1 });
+
+  assert.deepEqual(calls.map((c) => `${c.init.method} ${c.url}`), [
+    "POST /api/v1/regulatory-changes",
+    "GET /api/v1/regulatory-changes?status=TRIAGED&jurisdiction=US",
+    `GET /api/v1/regulatory-changes/${ch}`,
+    `POST /api/v1/regulatory-changes/${ch}/transitions`,
+    `POST /api/v1/regulatory-changes/${ch}/assessments`,
+    `GET /api/v1/impact-assessments?changeId=${ch}&minSeverity=HIGH`,
+    `GET /api/v1/impact-assessments/${as}`,
+    "POST /api/v1/review-recommendations",
+    "GET /api/v1/review-recommendations?status=RECOMMENDED",
+    `GET /api/v1/review-recommendations/${rec}`,
+    `POST /api/v1/review-recommendations/${rec}/revisions`,
+    `POST /api/v1/review-recommendations/${rec}/recommend`,
+    `POST /api/v1/review-recommendations/${rec}/review`,
+    `POST /api/v1/review-recommendations/${rec}/withdrawal`,
+  ]);
+  assert.equal(calls[0].init.headers["Idempotency-Key"], "k-chg");
+  assert.equal(calls[7].init.headers["Idempotency-Key"], "k-rec");
+  for (const c of calls.filter((_, i) => i !== 0 && i !== 7)) assert.equal(c.init.headers["Idempotency-Key"], undefined);
+});
+
 test("the ERP bridge calls put ids in the path, amounts as strings and send no Idempotency-Key", async () => {
   const { fetch, calls } = stub(json(201, { id: "01920c20-0000-7000-8000-0000000000b1" }));
   const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
@@ -566,5 +657,93 @@ test("the ERP bridge calls put ids in the path, amounts as strings and send no I
     `GET /api/v1/erp-bridges/${bridge}/gl-reconciliations`,
   ]);
   assert.equal(JSON.parse(calls[9].init.body).balances[0].credits, "10.00");
+  for (const c of calls) assert.equal(c.init.headers["Idempotency-Key"], undefined);
+});
+
+test("the entitlement, subscription and usage calls send intake under an Idempotency-Key and nothing else", async () => {
+  const { fetch, calls } = stub(json(201, { id: "01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01" }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+  const gid = "01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+  const pid = "01920e20-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+
+  await client.createEntitlement("k-ent", {
+    jurisdiction: "GB", service: "MOBILE_VOICE", mode: "NATIVE", operation: "FILE", effectiveFrom: "2026-11-20",
+    contractRef: "MSA-2026-014", submit: true,
+  });
+  await client.listEntitlements({ effective: "RESTRICTED", mismatch: "true" });
+  await client.getEntitlement(gid);
+  await client.actOnEntitlement(gid, { action: "APPROVE", expectedVersion: 2, reason: "signed" });
+  await client.proposeSubscriptionPlan("k-plan", {
+    planCode: "PILOT-2026", planName: "Pilot 2026", contractRef: "MSA-2026-014", termStart: "2026-11-20",
+    quotas: [{ meter: "COMMITTED_DECISIONS", included: 100000, overage: "ALLOW_OVERAGE" }],
+  });
+  await client.listSubscriptionPlans();
+  await client.getSubscriptionPlan(pid);
+  await client.actOnSubscriptionPlan(pid, { action: "APPROVE", expectedVersion: 1 });
+  await client.getUsage({ period: "2026-11" });
+  await client.getUsageBasis({ meter: "COMMITTED_DECISIONS", period: "2026-11", limit: 50 });
+
+  assert.deepEqual(calls.map((c) => `${c.init.method} ${c.url}`), [
+    "POST /api/v1/entitlements",
+    "GET /api/v1/entitlements?effective=RESTRICTED&mismatch=true",
+    `GET /api/v1/entitlements/${gid}`,
+    `POST /api/v1/entitlements/${gid}/actions`,
+    "POST /api/v1/subscriptions",
+    "GET /api/v1/subscriptions",
+    `GET /api/v1/subscriptions/${pid}`,
+    `POST /api/v1/subscriptions/${pid}/actions`,
+    "GET /api/v1/usage?period=2026-11",
+    "GET /api/v1/usage/basis?meter=COMMITTED_DECISIONS&period=2026-11&limit=50",
+  ]);
+  assert.equal(calls[0].init.headers["Idempotency-Key"], "k-ent");
+  assert.equal(calls[4].init.headers["Idempotency-Key"], "k-plan");
+  assert.equal(JSON.parse(calls[4].init.body).quotas[0].included, 100000);
+  for (const c of calls.filter((_, i) => i !== 0 && i !== 4)) assert.equal(c.init.headers["Idempotency-Key"], undefined);
+});
+
+test("the e-invoicing / CTC calls put ids in the path and filters in the query, and send no Idempotency-Key", async () => {
+  const { fetch, calls } = stub(json(201, { id: "01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01" }));
+  const client = new ZoikoTaxClient({ baseUrl: "/api", fetch });
+  const rec = "01920e10-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+  const doc = "01920a90-1a2b-7c3d-8e4f-5a6b7c8d9e0f";
+  const sub = "01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e01";
+  const terms = { duty: "REQUIRED", model: "CLEARANCE", profile: "IT_FATTURAPA", formatVersion: "FPR12 1.9", authority: "SdI",
+    legalSource: "D.Lgs. 127/2015", sourceAsOf: "2026-10-30", effectiveFrom: "2026-01-01" };
+
+  await client.listCTCApplicability({ country: "IT", status: "ACTIVE" });
+  await client.createCTCApplicability({ country: "IT", documentType: "INVOICE", buyerKind: "B2B", terms });
+  await client.getCTCApplicability(rec);
+  await client.reviseCTCApplicability(rec, terms);
+  await client.addCTCApplicabilityEvidence(rec, { sha256: "a".repeat(64), filename: "o.pdf", mediaType: "application/pdf", bytes: 1 });
+  await client.signCTCApplicabilityGate(rec, { gate: "G0_SCOPE_AUTHORITY", version: 1, signoffRef: "CAB-1" });
+  await client.transitionCTCApplicability(rec, { action: "ACTIVATE", version: 1 });
+  await client.resolveCTCApplicability({ country: "IT", documentType: "INVOICE", buyerKind: "B2B", date: "2026-11-05" });
+  await client.validateCTCDocument({ documentId: doc, applicabilityId: rec });
+  await client.listCTCValidations({ documentId: doc });
+  await client.prepareCTCSubmission({ documentId: doc, applicabilityId: rec });
+  await client.listCTCSubmissions({ status: "AUTHORITY_REJECTED" });
+  await client.getCTCSubmission(sub);
+  await client.dispatchCTCSubmission(sub, { payloadDigest: "zt1:" + "0".repeat(64) });
+  await client.recordCTCResponse(sub, { kind: "TRANSPORT_RECEIVED", attemptId: "01920e30-1a2b-7c3d-8e4f-5a6b7c8d9e20", transportRef: "R-1" });
+  await client.withdrawCTCSubmission(sub, { reason: "revised" });
+
+  assert.deepEqual(calls.map((c) => `${c.init.method} ${c.url}`), [
+    "GET /api/v1/ctc/applicability?country=IT&status=ACTIVE",
+    "POST /api/v1/ctc/applicability",
+    `GET /api/v1/ctc/applicability/${rec}`,
+    `POST /api/v1/ctc/applicability/${rec}/versions`,
+    `POST /api/v1/ctc/applicability/${rec}/evidence`,
+    `POST /api/v1/ctc/applicability/${rec}/gates`,
+    `POST /api/v1/ctc/applicability/${rec}/transitions`,
+    "GET /api/v1/ctc/resolution?country=IT&documentType=INVOICE&buyerKind=B2B&date=2026-11-05",
+    "POST /api/v1/ctc/validations",
+    `GET /api/v1/ctc/validations?documentId=${doc}`,
+    "POST /api/v1/ctc/submissions",
+    "GET /api/v1/ctc/submissions?status=AUTHORITY_REJECTED",
+    `GET /api/v1/ctc/submissions/${sub}`,
+    `POST /api/v1/ctc/submissions/${sub}/dispatch`,
+    `POST /api/v1/ctc/submissions/${sub}/responses`,
+    `POST /api/v1/ctc/submissions/${sub}/withdrawal`,
+  ]);
   for (const c of calls) assert.equal(c.init.headers["Idempotency-Key"], undefined);
 });

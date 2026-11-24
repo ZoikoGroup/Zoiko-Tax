@@ -195,6 +195,72 @@
     },
     {
       "method": "GET",
+      "path": "/v1/content/crosswalks",
+      "operationId": "listCrosswalks",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/content/crosswalks",
+      "operationId": "createCrosswalk",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/content/crosswalks/{crosswalkId}",
+      "operationId": "getCrosswalk",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/content/crosswalks/{crosswalkId}/lookup",
+      "operationId": "lookupCrosswalk",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/content/crosswalks/{crosswalkId}/versions",
+      "operationId": "addCrosswalkVersion",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/content/crosswalks/{crosswalkId}/versions/{version}/transitions",
+      "operationId": "transitionCrosswalkVersion",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/content/rule-changes",
+      "operationId": "listRuleChanges",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/content/rule-changes",
+      "operationId": "proposeRuleChange",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/content/rule-changes/{changeId}",
+      "operationId": "getRuleChange",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/content/rule-changes/{changeId}/test-evidence",
+      "operationId": "recordRuleChangeTestEvidence",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/content/rule-changes/{changeId}/transitions",
+      "operationId": "transitionRuleChange",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/contributions",
       "operationId": "listContributions",
       "public": false
@@ -233,6 +299,108 @@
       "method": "GET",
       "path": "/v1/coverage",
       "operationId": "getCoverage",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/ctc/applicability",
+      "operationId": "listCTCApplicability",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/applicability",
+      "operationId": "createCTCApplicability",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/ctc/applicability/{applicabilityId}",
+      "operationId": "getCTCApplicability",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/applicability/{applicabilityId}/evidence",
+      "operationId": "addCTCApplicabilityEvidence",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/applicability/{applicabilityId}/gates",
+      "operationId": "signCTCApplicabilityGate",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/applicability/{applicabilityId}/transitions",
+      "operationId": "transitionCTCApplicability",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/applicability/{applicabilityId}/versions",
+      "operationId": "reviseCTCApplicability",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/ctc/resolution",
+      "operationId": "resolveCTCApplicability",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/ctc/submissions",
+      "operationId": "listCTCSubmissions",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/submissions",
+      "operationId": "prepareCTCSubmission",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/ctc/submissions/{submissionId}",
+      "operationId": "getCTCSubmission",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/submissions/{submissionId}/dispatch",
+      "operationId": "dispatchCTCSubmission",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/submissions/{submissionId}/responses",
+      "operationId": "recordCTCResponse",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/submissions/{submissionId}/withdrawal",
+      "operationId": "withdrawCTCSubmission",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/ctc/validations",
+      "operationId": "listCTCValidations",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/ctc/validations",
+      "operationId": "validateCTCDocument",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/ctc/validations/{validationId}",
+      "operationId": "getCTCValidation",
       "public": false
     },
     {
@@ -305,6 +473,30 @@
       "method": "GET",
       "path": "/v1/documents/{documentId}/lineage",
       "operationId": "getDocumentLineage",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/entitlements",
+      "operationId": "listEntitlements",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/entitlements",
+      "operationId": "createEntitlement",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/entitlements/{entitlementId}",
+      "operationId": "getEntitlement",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/entitlements/{entitlementId}/actions",
+      "operationId": "actOnEntitlement",
       "public": false
     },
     {
@@ -431,6 +623,18 @@
       "method": "POST",
       "path": "/v1/exemptions/{certificateId}/versions",
       "operationId": "addExemptionCertificateVersion",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/impact-assessments",
+      "operationId": "listImpactAssessments",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/impact-assessments/{assessmentId}",
+      "operationId": "getImpactAssessment",
       "public": false
     },
     {
@@ -771,6 +975,36 @@
     },
     {
       "method": "GET",
+      "path": "/v1/regulatory-changes",
+      "operationId": "listRegulatoryChanges",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/regulatory-changes",
+      "operationId": "recordRegulatoryChange",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/regulatory-changes/{changeId}",
+      "operationId": "getRegulatoryChange",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/regulatory-changes/{changeId}/assessments",
+      "operationId": "assessRegulatoryChange",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/regulatory-changes/{changeId}/transitions",
+      "operationId": "transitionRegulatoryChange",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/remittances",
       "operationId": "listRemittances",
       "public": false
@@ -867,6 +1101,48 @@
     },
     {
       "method": "GET",
+      "path": "/v1/review-recommendations",
+      "operationId": "listReviewRecommendations",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/review-recommendations",
+      "operationId": "draftReviewRecommendation",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/review-recommendations/{recommendationId}",
+      "operationId": "getReviewRecommendation",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/review-recommendations/{recommendationId}/recommend",
+      "operationId": "recommendReviewRecommendation",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/review-recommendations/{recommendationId}/review",
+      "operationId": "reviewReviewRecommendation",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/review-recommendations/{recommendationId}/revisions",
+      "operationId": "reviseReviewRecommendation",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/review-recommendations/{recommendationId}/withdrawal",
+      "operationId": "withdrawReviewRecommendation",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/seals",
       "operationId": "listSeals",
       "public": false
@@ -957,6 +1233,30 @@
     },
     {
       "method": "GET",
+      "path": "/v1/subscriptions",
+      "operationId": "listSubscriptionPlans",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/subscriptions",
+      "operationId": "proposeSubscriptionPlan",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/subscriptions/{planId}",
+      "operationId": "getSubscriptionPlan",
+      "public": false
+    },
+    {
+      "method": "POST",
+      "path": "/v1/subscriptions/{planId}/actions",
+      "operationId": "actOnSubscriptionPlan",
+      "public": false
+    },
+    {
+      "method": "GET",
       "path": "/v1/support/cases",
       "operationId": "listSupportCases",
       "public": false
@@ -995,6 +1295,18 @@
       "method": "POST",
       "path": "/v1/transactions:refund",
       "operationId": "refundTransaction",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/usage",
+      "operationId": "getUsage",
+      "public": false
+    },
+    {
+      "method": "GET",
+      "path": "/v1/usage/basis",
+      "operationId": "getUsageBasis",
       "public": false
     },
     {

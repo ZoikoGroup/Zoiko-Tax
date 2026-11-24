@@ -16,9 +16,12 @@ import { HomePage } from './home/HomePage'
 import { CompliancePage } from './pages/CompliancePage'
 import { ContributionsPage } from './pages/ContributionsPage'
 import { RegistrationsPage } from './pages/RegistrationsPage'
+import { RegulatoryIntelligencePage } from './pages/RegulatoryIntelligencePage'
 import { ContentPage } from './pages/ContentPage'
 import { DeterminePage } from './pages/DeterminePage'
 import { DocumentsPage } from './pages/DocumentsPage'
+import { EntitlementsPage } from './pages/EntitlementsPage'
+import { EInvoicingPage } from './pages/EInvoicingPage'
 import { ErpReconciliationPage } from './pages/ErpReconciliationPage'
 import { EvidencePage } from './pages/EvidencePage'
 import { IntelligencePage } from './pages/IntelligencePage'
@@ -31,6 +34,7 @@ import { RemittancePage } from './pages/RemittancePage'
 import { ReportsDemoPage } from './pages/ReportsDemoPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { ShadowPage } from './pages/ShadowPage'
+import { SubscriptionsPage } from './pages/SubscriptionsPage'
 import { SupportCasesPage } from './pages/SupportCasesPage'
 import { WorkpapersPage } from './pages/WorkpapersPage'
 import type { PageProps } from './pages/types'
@@ -206,8 +210,16 @@ export function App() {
             return <RegulatoryNoticesPage {...page} />
           case 'workpapers':
             return <WorkpapersPage {...page} />
+          case 'regulatory-intelligence':
+            return <RegulatoryIntelligencePage {...page} />
           case 'erp-reconciliation':
             return <ErpReconciliationPage {...page} />
+          case 'entitlements':
+            return <EntitlementsPage {...page} />
+          case 'subscriptions':
+            return <SubscriptionsPage {...page} />
+          case 'einvoicing':
+            return <EInvoicingPage {...page} />
           case 'dashboard':
             return <HomePage {...page} capabilities={capabilities} />
         }

@@ -188,6 +188,17 @@ func run() error {
 	// Registrations and exemption evidence read and write their own records
 	// and no decision; like notices they need only the store.
 	router.Registrations = app.NewRegistrationService(store.Registrations(), store.LegalEntities(), store, clk, ids)
+	// The content workbench reads and writes its own records only: vendor
+	// crosswalks and the rule approval queue.
+	router.Crosswalks = app.NewCrosswalkService(store.Crosswalks(), store, clk, ids)
+	router.RuleChanges = app.NewRuleChangeService(store.RuleChanges(), store, clk, ids)
+	// E-invoicing / CTC reads committed fiscal documents and writes only its
+	// own records; it recomputes no tax, so it needs only the store.
+	router.CTC = app.NewCTCService(store.CTC(), store.Documents(), store.LegalEntities(), store, clk, ids)
+	// Regulatory change intelligence reads the active content's coverage,
+	// registrations and obligations, and writes only its own ledgers.
+	router.RegulatoryChanges = app.NewRegulatoryChangeService(store.RegulatoryChanges(), app.BundleCoverage{Holder: content},
+		store.Registrations(), store.Obligations(), store, clk, ids)
 	if router.Determination != nil {
 		// Compliance packages execute the obligations commits assess, and
 		// move them only on filing evidence, so they are served wherever the
@@ -213,6 +224,10 @@ func run() error {
 		return err
 	}
 	router.Dashboard.WithMarkets(catalogue, contentInForce(content), cfg.Authoritative)
+	// Entitlements are read against the same verified coverage the dashboard
+	// reports, and change none of it; usage is counted from the store.
+	router.Entitlements = app.NewEntitlementService(store.Entitlements(), store.Usage(), store.LegalEntities(), store, clk, ids).
+		WithCoverage(catalogue, contentInForce(content), cfg.Authoritative, matrix, store.Authorizations())
 	models, closeModels, err := wireModelGateway(cfg, clk, ids, log)
 	if err != nil {
 		return err
