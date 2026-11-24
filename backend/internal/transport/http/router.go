@@ -157,6 +157,27 @@ type Router struct {
 	// certificates held as evidence (Doc 17). It reads and writes those
 	// records only, so it is served wherever the store is.
 	Registrations *app.RegistrationService
+	// RegulatoryChanges serves the regulatory change feed, impact
+	// assessments and review recommendations (Doc 03 WF-05, WF-09; Sidebar
+	// WF-02). It writes its own ledgers only and publishes no content.
+	RegulatoryChanges *app.RegulatoryChangeService
+
+	// Crosswalks serves the vendor crosswalk library and RuleChanges the
+	// rule approval queue (the content workbench). Neither reads or writes a
+	// rule bundle, a pack activation or a tax result.
+	Crosswalks  *app.CrosswalkService
+	RuleChanges *app.RuleChangeService
+
+	// Entitlements serves the commercial entitlement register, subscription
+	// plans and metered usage (Doc 18). It reads the cell's coverage and
+	// its own records, so it is served wherever the store is.
+	Entitlements *app.EntitlementService
+
+	// CTC serves global e-invoicing and continuous transaction controls
+	// (Doc 21): country applicability, format validation and authority
+	// submissions over committed fiscal documents. It reads documents from
+	// the store, so it is served wherever the store is.
+	CTC *app.CTCService
 
 	// Shadow serves shadow assurance: comparator profiles, comparison runs
 	// and their discrepancies. Nil when the cell has no evidence store to
@@ -451,6 +472,75 @@ func (rt *Router) routes() []struct {
 		{Route{"POST", "/v1/exemptions/{certificateId}/recommendation", false, []security.Role{analyst}}, rt.handleRecommendExemptionCertificate},
 		{Route{"POST", "/v1/exemptions/{certificateId}/decision", false, []security.Role{analyst}}, rt.handleDecideExemptionCertificate},
 		{Route{"POST", "/v1/exemptions/{certificateId}/transitions", false, []security.Role{analyst}}, rt.handleTransitionExemptionCertificate},
+		// The content workbench: vendor crosswalks (Doc 02 WF-06/WF-07) and the
+		// rule approval queue (Doc 03 §07, WF-02). OPERATOR and ANALYST write;
+		// ANALYST reviews and approves, and the service compares the people for
+		// the four-eye rules. AUDITOR and ADMIN read.
+		{Route{"GET", "/v1/content/crosswalks", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListCrosswalks},
+		{Route{"POST", "/v1/content/crosswalks", false, []security.Role{operator, analyst}}, rt.handleCreateCrosswalk},
+		{Route{"GET", "/v1/content/crosswalks/{crosswalkId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetCrosswalk},
+		{Route{"POST", "/v1/content/crosswalks/{crosswalkId}/versions", false, []security.Role{operator, analyst}}, rt.handleAddCrosswalkVersion},
+		{Route{"POST", "/v1/content/crosswalks/{crosswalkId}/versions/{version}/transitions", false, []security.Role{operator, analyst}}, rt.handleTransitionCrosswalkVersion},
+		{Route{"GET", "/v1/content/crosswalks/{crosswalkId}/lookup", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleLookupCrosswalk},
+		{Route{"GET", "/v1/content/rule-changes", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListRuleChanges},
+		{Route{"POST", "/v1/content/rule-changes", false, []security.Role{operator, analyst}}, rt.handleProposeRuleChange},
+		{Route{"GET", "/v1/content/rule-changes/{changeId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetRuleChange},
+		{Route{"POST", "/v1/content/rule-changes/{changeId}/test-evidence", false, []security.Role{operator, analyst}}, rt.handleRecordRuleChangeTestEvidence},
+		{Route{"POST", "/v1/content/rule-changes/{changeId}/transitions", false, []security.Role{operator, analyst}}, rt.handleTransitionRuleChange},
+		// Commercial entitlements, subscriptions and usage (Doc 18, G-004,
+		// G-049): every role reads; ADMIN records and acts, and the service
+		// compares the people for the second-administrator approvals.
+		{Route{"GET", "/v1/entitlements", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListEntitlements},
+		{Route{"POST", "/v1/entitlements", false, []security.Role{admin}}, rt.handleCreateEntitlement},
+		{Route{"GET", "/v1/entitlements/{entitlementId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetEntitlement},
+		{Route{"POST", "/v1/entitlements/{entitlementId}/actions", false, []security.Role{admin}}, rt.handleActOnEntitlement},
+		{Route{"GET", "/v1/subscriptions", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListSubscriptionPlans},
+		{Route{"POST", "/v1/subscriptions", false, []security.Role{admin}}, rt.handleProposeSubscriptionPlan},
+		{Route{"GET", "/v1/subscriptions/{planId}", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetSubscriptionPlan},
+		{Route{"POST", "/v1/subscriptions/{planId}/actions", false, []security.Role{admin}}, rt.handleActOnSubscriptionPlan},
+		{Route{"GET", "/v1/usage", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetUsage},
+		{Route{"GET", "/v1/usage/basis", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleGetUsageBasis},
+		// E-invoicing / CTC (Doc 21, G-030): OPERATOR and ANALYST record
+		// applicability, attach evidence and validate; ANALYST signs gates and
+		// activates (the service checks the action, and compares the people
+		// for the four-eye rules); OPERATOR prepares submissions and an
+		// OPERATOR or ANALYST other than the preparer dispatches. AUDITOR
+		// reads. ADMIN reads no fiscal record.
+		{Route{"GET", "/v1/ctc/applicability", false, []security.Role{operator, analyst, auditor}}, rt.handleListCTCApplicability},
+		{Route{"POST", "/v1/ctc/applicability", false, []security.Role{operator, analyst}}, rt.handleCreateCTCApplicability},
+		{Route{"GET", "/v1/ctc/applicability/{applicabilityId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetCTCApplicability},
+		{Route{"POST", "/v1/ctc/applicability/{applicabilityId}/versions", false, []security.Role{operator, analyst}}, rt.handleReviseCTCApplicability},
+		{Route{"POST", "/v1/ctc/applicability/{applicabilityId}/evidence", false, []security.Role{operator, analyst}}, rt.handleAddCTCApplicabilityEvidence},
+		{Route{"POST", "/v1/ctc/applicability/{applicabilityId}/gates", false, []security.Role{analyst}}, rt.handleSignCTCApplicabilityGate},
+		{Route{"POST", "/v1/ctc/applicability/{applicabilityId}/transitions", false, []security.Role{operator, analyst}}, rt.handleTransitionCTCApplicability},
+		{Route{"GET", "/v1/ctc/resolution", false, []security.Role{operator, analyst, auditor}}, rt.handleResolveCTCApplicability},
+		{Route{"GET", "/v1/ctc/validations", false, []security.Role{operator, analyst, auditor}}, rt.handleListCTCValidations},
+		{Route{"POST", "/v1/ctc/validations", false, []security.Role{operator, analyst}}, rt.handleValidateCTCDocument},
+		{Route{"GET", "/v1/ctc/validations/{validationId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetCTCValidation},
+		{Route{"GET", "/v1/ctc/submissions", false, []security.Role{operator, analyst, auditor}}, rt.handleListCTCSubmissions},
+		{Route{"POST", "/v1/ctc/submissions", false, []security.Role{operator}}, rt.handlePrepareCTCSubmission},
+		{Route{"GET", "/v1/ctc/submissions/{submissionId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetCTCSubmission},
+		{Route{"POST", "/v1/ctc/submissions/{submissionId}/dispatch", false, []security.Role{operator, analyst}}, rt.handleDispatchCTCSubmission},
+		{Route{"POST", "/v1/ctc/submissions/{submissionId}/responses", false, []security.Role{operator, analyst}}, rt.handleRecordCTCResponse},
+		{Route{"POST", "/v1/ctc/submissions/{submissionId}/withdrawal", false, []security.Role{operator}}, rt.handleWithdrawCTCSubmission},
+		// Regulatory change intelligence (Doc 03 WF-05, WF-09; Sidebar
+		// WF-02): OPERATOR and ANALYST record changes; ANALYST triages,
+		// assesses, recommends and independently reviews, and the service
+		// compares the people. AUDITOR reads. Nothing here publishes content.
+		{Route{"GET", "/v1/regulatory-changes", false, []security.Role{operator, analyst, auditor}}, rt.handleListRegulatoryChanges},
+		{Route{"POST", "/v1/regulatory-changes", false, []security.Role{operator, analyst}}, rt.handleRecordRegulatoryChange},
+		{Route{"GET", "/v1/regulatory-changes/{changeId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetRegulatoryChange},
+		{Route{"POST", "/v1/regulatory-changes/{changeId}/transitions", false, []security.Role{analyst}}, rt.handleTransitionRegulatoryChange},
+		{Route{"POST", "/v1/regulatory-changes/{changeId}/assessments", false, []security.Role{analyst}}, rt.handleAssessRegulatoryChange},
+		{Route{"GET", "/v1/impact-assessments", false, []security.Role{operator, analyst, auditor}}, rt.handleListImpactAssessments},
+		{Route{"GET", "/v1/impact-assessments/{assessmentId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetImpactAssessment},
+		{Route{"GET", "/v1/review-recommendations", false, []security.Role{operator, analyst, auditor}}, rt.handleListReviewRecommendations},
+		{Route{"POST", "/v1/review-recommendations", false, []security.Role{analyst}}, rt.handleDraftReviewRecommendation},
+		{Route{"GET", "/v1/review-recommendations/{recommendationId}", false, []security.Role{operator, analyst, auditor}}, rt.handleGetReviewRecommendation},
+		{Route{"POST", "/v1/review-recommendations/{recommendationId}/revisions", false, []security.Role{analyst}}, rt.handleReviseReviewRecommendation},
+		{Route{"POST", "/v1/review-recommendations/{recommendationId}/recommend", false, []security.Role{analyst}}, rt.handleRecommendReviewRecommendation},
+		{Route{"POST", "/v1/review-recommendations/{recommendationId}/review", false, []security.Role{analyst}}, rt.handleReviewReviewRecommendation},
+		{Route{"POST", "/v1/review-recommendations/{recommendationId}/withdrawal", false, []security.Role{analyst}}, rt.handleWithdrawReviewRecommendation},
 		// Shadow: non-impact reads of committed decisions, compared with
 		// another engine's results (ZTAX-SHD-001).
 		{Route{"GET", "/v1/shadow/comparators", false, []security.Role{admin, operator, analyst, auditor}}, rt.handleListComparators},

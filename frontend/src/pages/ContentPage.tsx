@@ -3,18 +3,22 @@ import { useEffect, useState } from 'react'
 import { PageHeader } from '../ui/kit'
 import { AuthorizationsCard, CheckForm, GrantForm, type CheckDraft } from './content/Authorizations'
 import { CodesTab, ReleasesTab, SourcesTab } from './content/CatalogueTabs'
+import { CrosswalksTab } from './content/Crosswalks'
+import { RuleApprovalsTab } from './content/RuleApprovals'
 import { CapabilitiesCard, MatrixCard } from './content/GoverningCards'
 import { TabBar } from './determine/shared'
 import './evidence/pages.css'
 import { useRoutedTab } from './routedTab'
 import type { PageProps } from './types'
 
-type Tab = 'packs' | 'codes' | 'sources' | 'releases'
+type Tab = 'packs' | 'codes' | 'sources' | 'crosswalks' | 'approvals' | 'releases'
 
 const TABS: readonly { value: Tab; label: string }[] = [
   { value: 'packs', label: 'Rule packs' },
   { value: 'codes', label: 'Service & levy codes' },
   { value: 'sources', label: 'Legal sources' },
+  { value: 'crosswalks', label: 'Vendor crosswalks' },
+  { value: 'approvals', label: 'Rule approvals' },
   { value: 'releases', label: 'Content releases' },
 ]
 
@@ -60,6 +64,8 @@ export const ContentPage = ({ session, period, route, onTabChange }: PageProps) 
       ) : null}
       {tab === 'codes' ? <CodesTab /> : null}
       {tab === 'sources' ? <SourcesTab /> : null}
+      {tab === 'crosswalks' ? <CrosswalksTab roles={session.user.roles} me={session.user.id} /> : null}
+      {tab === 'approvals' ? <RuleApprovalsTab roles={session.user.roles} me={session.user.id} /> : null}
       {tab === 'releases' ? <ReleasesTab /> : null}
     </div>
   )

@@ -282,6 +282,465 @@ func (e BeneficiaryState) Valid() bool {
 	}
 }
 
+// Defines values for CTCAction.
+const (
+	CTCActionACTIVATE CTCAction = "ACTIVATE"
+	CTCActionRESUME   CTCAction = "RESUME"
+	CTCActionRETIRE   CTCAction = "RETIRE"
+	CTCActionRETURN   CTCAction = "RETURN"
+	CTCActionSUBMIT   CTCAction = "SUBMIT"
+	CTCActionSUSPEND  CTCAction = "SUSPEND"
+)
+
+// Valid indicates whether the value is a known member of the CTCAction enum.
+func (e CTCAction) Valid() bool {
+	switch e {
+	case CTCActionACTIVATE:
+		return true
+	case CTCActionRESUME:
+		return true
+	case CTCActionRETIRE:
+		return true
+	case CTCActionRETURN:
+		return true
+	case CTCActionSUBMIT:
+		return true
+	case CTCActionSUSPEND:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCApplicabilityEventKind.
+const (
+	CTCApplicabilityEventKindACTIVATED     CTCApplicabilityEventKind = "ACTIVATED"
+	CTCApplicabilityEventKindCREATED       CTCApplicabilityEventKind = "CREATED"
+	CTCApplicabilityEventKindEVIDENCEADDED CTCApplicabilityEventKind = "EVIDENCE_ADDED"
+	CTCApplicabilityEventKindGATESIGNED    CTCApplicabilityEventKind = "GATE_SIGNED"
+	CTCApplicabilityEventKindRESUMED       CTCApplicabilityEventKind = "RESUMED"
+	CTCApplicabilityEventKindRETIRED       CTCApplicabilityEventKind = "RETIRED"
+	CTCApplicabilityEventKindRETURNED      CTCApplicabilityEventKind = "RETURNED"
+	CTCApplicabilityEventKindREVISED       CTCApplicabilityEventKind = "REVISED"
+	CTCApplicabilityEventKindSUBMITTED     CTCApplicabilityEventKind = "SUBMITTED"
+	CTCApplicabilityEventKindSUSPENDED     CTCApplicabilityEventKind = "SUSPENDED"
+)
+
+// Valid indicates whether the value is a known member of the CTCApplicabilityEventKind enum.
+func (e CTCApplicabilityEventKind) Valid() bool {
+	switch e {
+	case CTCApplicabilityEventKindACTIVATED:
+		return true
+	case CTCApplicabilityEventKindCREATED:
+		return true
+	case CTCApplicabilityEventKindEVIDENCEADDED:
+		return true
+	case CTCApplicabilityEventKindGATESIGNED:
+		return true
+	case CTCApplicabilityEventKindRESUMED:
+		return true
+	case CTCApplicabilityEventKindRETIRED:
+		return true
+	case CTCApplicabilityEventKindRETURNED:
+		return true
+	case CTCApplicabilityEventKindREVISED:
+		return true
+	case CTCApplicabilityEventKindSUBMITTED:
+		return true
+	case CTCApplicabilityEventKindSUSPENDED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCApplicabilityStatus.
+const (
+	CTCApplicabilityStatusACTIVE    CTCApplicabilityStatus = "ACTIVE"
+	CTCApplicabilityStatusDRAFT     CTCApplicabilityStatus = "DRAFT"
+	CTCApplicabilityStatusINREVIEW  CTCApplicabilityStatus = "IN_REVIEW"
+	CTCApplicabilityStatusRETIRED   CTCApplicabilityStatus = "RETIRED"
+	CTCApplicabilityStatusSUSPENDED CTCApplicabilityStatus = "SUSPENDED"
+)
+
+// Valid indicates whether the value is a known member of the CTCApplicabilityStatus enum.
+func (e CTCApplicabilityStatus) Valid() bool {
+	switch e {
+	case CTCApplicabilityStatusACTIVE:
+		return true
+	case CTCApplicabilityStatusDRAFT:
+		return true
+	case CTCApplicabilityStatusINREVIEW:
+		return true
+	case CTCApplicabilityStatusRETIRED:
+		return true
+	case CTCApplicabilityStatusSUSPENDED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCBuyerKind.
+const (
+	B2B CTCBuyerKind = "B2B"
+	B2C CTCBuyerKind = "B2C"
+	B2G CTCBuyerKind = "B2G"
+)
+
+// Valid indicates whether the value is a known member of the CTCBuyerKind enum.
+func (e CTCBuyerKind) Valid() bool {
+	switch e {
+	case B2B:
+		return true
+	case B2C:
+		return true
+	case B2G:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCDocumentType.
+const (
+	CTCDocumentTypeADJUSTMENT CTCDocumentType = "ADJUSTMENT"
+	CTCDocumentTypeCREDITNOTE CTCDocumentType = "CREDIT_NOTE"
+	CTCDocumentTypeDEBITNOTE  CTCDocumentType = "DEBIT_NOTE"
+	CTCDocumentTypeINVOICE    CTCDocumentType = "INVOICE"
+	CTCDocumentTypeREBILL     CTCDocumentType = "REBILL"
+)
+
+// Valid indicates whether the value is a known member of the CTCDocumentType enum.
+func (e CTCDocumentType) Valid() bool {
+	switch e {
+	case CTCDocumentTypeADJUSTMENT:
+		return true
+	case CTCDocumentTypeCREDITNOTE:
+		return true
+	case CTCDocumentTypeDEBITNOTE:
+		return true
+	case CTCDocumentTypeINVOICE:
+		return true
+	case CTCDocumentTypeREBILL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCDuty.
+const (
+	CTCDutyOPTIONAL   CTCDuty = "OPTIONAL"
+	CTCDutyPROHIBITED CTCDuty = "PROHIBITED"
+	CTCDutyREQUIRED   CTCDuty = "REQUIRED"
+)
+
+// Valid indicates whether the value is a known member of the CTCDuty enum.
+func (e CTCDuty) Valid() bool {
+	switch e {
+	case CTCDutyOPTIONAL:
+		return true
+	case CTCDutyPROHIBITED:
+		return true
+	case CTCDutyREQUIRED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCGate.
+const (
+	G0SCOPEAUTHORITY       CTCGate = "G0_SCOPE_AUTHORITY"
+	G1LEGALCONTENTRIGHTS   CTCGate = "G1_LEGAL_CONTENT_RIGHTS"
+	G2TECHNICALQA          CTCGate = "G2_TECHNICAL_QA"
+	G3SECURITYOPERATIONS   CTCGate = "G3_SECURITY_OPERATIONS"
+	G4CONTROLLEDPRODUCTION CTCGate = "G4_CONTROLLED_PRODUCTION"
+)
+
+// Valid indicates whether the value is a known member of the CTCGate enum.
+func (e CTCGate) Valid() bool {
+	switch e {
+	case G0SCOPEAUTHORITY:
+		return true
+	case G1LEGALCONTENTRIGHTS:
+		return true
+	case G2TECHNICALQA:
+		return true
+	case G3SECURITYOPERATIONS:
+		return true
+	case G4CONTROLLEDPRODUCTION:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCModel.
+const (
+	CTCModelCLEARANCE         CTCModel = "CLEARANCE"
+	CTCModelNETWORKEXCHANGE   CTCModel = "NETWORK_EXCHANGE"
+	CTCModelNONE              CTCModel = "NONE"
+	CTCModelPOSTAUDIT         CTCModel = "POST_AUDIT"
+	CTCModelREALTIMEREPORTING CTCModel = "REAL_TIME_REPORTING"
+)
+
+// Valid indicates whether the value is a known member of the CTCModel enum.
+func (e CTCModel) Valid() bool {
+	switch e {
+	case CTCModelCLEARANCE:
+		return true
+	case CTCModelNETWORKEXCHANGE:
+		return true
+	case CTCModelNONE:
+		return true
+	case CTCModelPOSTAUDIT:
+		return true
+	case CTCModelREALTIMEREPORTING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCProfile.
+const (
+	CTCProfileBRNFCOM62   CTCProfile = "BR_NFCOM_62"
+	CTCProfileFREN16931   CTCProfile = "FR_EN16931"
+	CTCProfileINGSTIRP    CTCProfile = "IN_GST_IRP"
+	CTCProfileITFATTURAPA CTCProfile = "IT_FATTURAPA"
+	CTCProfileNONE        CTCProfile = "NONE"
+	CTCProfilePEPPOLBIS3  CTCProfile = "PEPPOL_BIS_3"
+	CTCProfilePLKSEFFA    CTCProfile = "PL_KSEF_FA"
+	CTCProfileSAZATCAUBL  CTCProfile = "SA_ZATCA_UBL"
+)
+
+// Valid indicates whether the value is a known member of the CTCProfile enum.
+func (e CTCProfile) Valid() bool {
+	switch e {
+	case CTCProfileBRNFCOM62:
+		return true
+	case CTCProfileFREN16931:
+		return true
+	case CTCProfileINGSTIRP:
+		return true
+	case CTCProfileITFATTURAPA:
+		return true
+	case CTCProfileNONE:
+		return true
+	case CTCProfilePEPPOLBIS3:
+		return true
+	case CTCProfilePLKSEFFA:
+		return true
+	case CTCProfileSAZATCAUBL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCResolvedDuty.
+const (
+	CTCResolvedDutyOPTIONAL      CTCResolvedDuty = "OPTIONAL"
+	CTCResolvedDutyPROHIBITED    CTCResolvedDuty = "PROHIBITED"
+	CTCResolvedDutyREQUIRED      CTCResolvedDuty = "REQUIRED"
+	CTCResolvedDutyREVIEWBLOCKED CTCResolvedDuty = "REVIEW_BLOCKED"
+)
+
+// Valid indicates whether the value is a known member of the CTCResolvedDuty enum.
+func (e CTCResolvedDuty) Valid() bool {
+	switch e {
+	case CTCResolvedDutyOPTIONAL:
+		return true
+	case CTCResolvedDutyPROHIBITED:
+		return true
+	case CTCResolvedDutyREQUIRED:
+		return true
+	case CTCResolvedDutyREVIEWBLOCKED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCResponseKind.
+const (
+	CTCResponseKindAUTHORITYACCEPTED CTCResponseKind = "AUTHORITY_ACCEPTED"
+	CTCResponseKindAUTHORITYREJECTED CTCResponseKind = "AUTHORITY_REJECTED"
+	CTCResponseKindOUTCOMEUNKNOWN    CTCResponseKind = "OUTCOME_UNKNOWN"
+	CTCResponseKindSTATUSNOTFOUND    CTCResponseKind = "STATUS_NOT_FOUND"
+	CTCResponseKindTRANSPORTRECEIVED CTCResponseKind = "TRANSPORT_RECEIVED"
+)
+
+// Valid indicates whether the value is a known member of the CTCResponseKind enum.
+func (e CTCResponseKind) Valid() bool {
+	switch e {
+	case CTCResponseKindAUTHORITYACCEPTED:
+		return true
+	case CTCResponseKindAUTHORITYREJECTED:
+		return true
+	case CTCResponseKindOUTCOMEUNKNOWN:
+		return true
+	case CTCResponseKindSTATUSNOTFOUND:
+		return true
+	case CTCResponseKindTRANSPORTRECEIVED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCRuleOutcome.
+const (
+	CTCRuleOutcomeFAIL         CTCRuleOutcome = "FAIL"
+	CTCRuleOutcomeNOTEVALUATED CTCRuleOutcome = "NOT_EVALUATED"
+	CTCRuleOutcomePASS         CTCRuleOutcome = "PASS"
+)
+
+// Valid indicates whether the value is a known member of the CTCRuleOutcome enum.
+func (e CTCRuleOutcome) Valid() bool {
+	switch e {
+	case CTCRuleOutcomeFAIL:
+		return true
+	case CTCRuleOutcomeNOTEVALUATED:
+		return true
+	case CTCRuleOutcomePASS:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCRuleSeverity.
+const (
+	FATAL   CTCRuleSeverity = "FATAL"
+	WARNING CTCRuleSeverity = "WARNING"
+)
+
+// Valid indicates whether the value is a known member of the CTCRuleSeverity enum.
+func (e CTCRuleSeverity) Valid() bool {
+	switch e {
+	case FATAL:
+		return true
+	case WARNING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCRuleStage.
+const (
+	APPLICABILITY CTCRuleStage = "APPLICABILITY"
+	REGIME        CTCRuleStage = "REGIME"
+	SEMANTIC      CTCRuleStage = "SEMANTIC"
+	SYNTAX        CTCRuleStage = "SYNTAX"
+)
+
+// Valid indicates whether the value is a known member of the CTCRuleStage enum.
+func (e CTCRuleStage) Valid() bool {
+	switch e {
+	case APPLICABILITY:
+		return true
+	case REGIME:
+		return true
+	case SEMANTIC:
+		return true
+	case SYNTAX:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCSubmissionEventKind.
+const (
+	CTCSubmissionEventKindAUTHORITYACCEPTED CTCSubmissionEventKind = "AUTHORITY_ACCEPTED"
+	CTCSubmissionEventKindAUTHORITYREJECTED CTCSubmissionEventKind = "AUTHORITY_REJECTED"
+	CTCSubmissionEventKindDISPATCHED        CTCSubmissionEventKind = "DISPATCHED"
+	CTCSubmissionEventKindOUTCOMEUNKNOWN    CTCSubmissionEventKind = "OUTCOME_UNKNOWN"
+	CTCSubmissionEventKindPREPARED          CTCSubmissionEventKind = "PREPARED"
+	CTCSubmissionEventKindSTATUSNOTFOUND    CTCSubmissionEventKind = "STATUS_NOT_FOUND"
+	CTCSubmissionEventKindTRANSPORTRECEIVED CTCSubmissionEventKind = "TRANSPORT_RECEIVED"
+	CTCSubmissionEventKindWITHDRAWN         CTCSubmissionEventKind = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the CTCSubmissionEventKind enum.
+func (e CTCSubmissionEventKind) Valid() bool {
+	switch e {
+	case CTCSubmissionEventKindAUTHORITYACCEPTED:
+		return true
+	case CTCSubmissionEventKindAUTHORITYREJECTED:
+		return true
+	case CTCSubmissionEventKindDISPATCHED:
+		return true
+	case CTCSubmissionEventKindOUTCOMEUNKNOWN:
+		return true
+	case CTCSubmissionEventKindPREPARED:
+		return true
+	case CTCSubmissionEventKindSTATUSNOTFOUND:
+		return true
+	case CTCSubmissionEventKindTRANSPORTRECEIVED:
+		return true
+	case CTCSubmissionEventKindWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCSubmissionStatus.
+const (
+	CTCSubmissionStatusAUTHORITYACCEPTED      CTCSubmissionStatus = "AUTHORITY_ACCEPTED"
+	CTCSubmissionStatusAUTHORITYREJECTED      CTCSubmissionStatus = "AUTHORITY_REJECTED"
+	CTCSubmissionStatusPREPARED               CTCSubmissionStatus = "PREPARED"
+	CTCSubmissionStatusSENT                   CTCSubmissionStatus = "SENT"
+	CTCSubmissionStatusTRANSPORTRECEIVED      CTCSubmissionStatus = "TRANSPORT_RECEIVED"
+	CTCSubmissionStatusUNCERTAINEXTERNALSTATE CTCSubmissionStatus = "UNCERTAIN_EXTERNAL_STATE"
+	CTCSubmissionStatusWITHDRAWN              CTCSubmissionStatus = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the CTCSubmissionStatus enum.
+func (e CTCSubmissionStatus) Valid() bool {
+	switch e {
+	case CTCSubmissionStatusAUTHORITYACCEPTED:
+		return true
+	case CTCSubmissionStatusAUTHORITYREJECTED:
+		return true
+	case CTCSubmissionStatusPREPARED:
+		return true
+	case CTCSubmissionStatusSENT:
+		return true
+	case CTCSubmissionStatusTRANSPORTRECEIVED:
+		return true
+	case CTCSubmissionStatusUNCERTAINEXTERNALSTATE:
+		return true
+	case CTCSubmissionStatusWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CTCValidationOutcome.
+const (
+	CTCValidationOutcomeFAILED CTCValidationOutcome = "FAILED"
+	CTCValidationOutcomePASSED CTCValidationOutcome = "PASSED"
+)
+
+// Valid indicates whether the value is a known member of the CTCValidationOutcome enum.
+func (e CTCValidationOutcome) Valid() bool {
+	switch e {
+	case CTCValidationOutcomeFAILED:
+		return true
+	case CTCValidationOutcomePASSED:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CertificateVerification.
 const (
 	CertificateVerificationUNAVAILABLE CertificateVerification = "UNAVAILABLE"
@@ -867,6 +1326,153 @@ func (e CorrectionRequestType) Valid() bool {
 	}
 }
 
+// Defines values for CrosswalkEventKind.
+const (
+	CrosswalkEventKindAPPROVED         CrosswalkEventKind = "APPROVED"
+	CrosswalkEventKindCHANGESREQUESTED CrosswalkEventKind = "CHANGES_REQUESTED"
+	CrosswalkEventKindCREATED          CrosswalkEventKind = "CREATED"
+	CrosswalkEventKindREINSTATED       CrosswalkEventKind = "REINSTATED"
+	CrosswalkEventKindREJECTED         CrosswalkEventKind = "REJECTED"
+	CrosswalkEventKindSUBMITTED        CrosswalkEventKind = "SUBMITTED"
+	CrosswalkEventKindSUPERSEDED       CrosswalkEventKind = "SUPERSEDED"
+	CrosswalkEventKindSUSPENDED        CrosswalkEventKind = "SUSPENDED"
+	CrosswalkEventKindWITHDRAWN        CrosswalkEventKind = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the CrosswalkEventKind enum.
+func (e CrosswalkEventKind) Valid() bool {
+	switch e {
+	case CrosswalkEventKindAPPROVED:
+		return true
+	case CrosswalkEventKindCHANGESREQUESTED:
+		return true
+	case CrosswalkEventKindCREATED:
+		return true
+	case CrosswalkEventKindREINSTATED:
+		return true
+	case CrosswalkEventKindREJECTED:
+		return true
+	case CrosswalkEventKindSUBMITTED:
+		return true
+	case CrosswalkEventKindSUPERSEDED:
+		return true
+	case CrosswalkEventKindSUSPENDED:
+		return true
+	case CrosswalkEventKindWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CrosswalkMatch.
+const (
+	CrosswalkMatchEXACT        CrosswalkMatch = "EXACT"
+	CrosswalkMatchNOEQUIVALENT CrosswalkMatch = "NO_EQUIVALENT"
+	CrosswalkMatchPARTIAL      CrosswalkMatch = "PARTIAL"
+)
+
+// Valid indicates whether the value is a known member of the CrosswalkMatch enum.
+func (e CrosswalkMatch) Valid() bool {
+	switch e {
+	case CrosswalkMatchEXACT:
+		return true
+	case CrosswalkMatchNOEQUIVALENT:
+		return true
+	case CrosswalkMatchPARTIAL:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CrosswalkResolution.
+const (
+	CrosswalkResolutionMAPPED         CrosswalkResolution = "MAPPED"
+	CrosswalkResolutionNOEQUIVALENT   CrosswalkResolution = "NO_EQUIVALENT"
+	CrosswalkResolutionNOTINFORCE     CrosswalkResolution = "NOT_IN_FORCE"
+	CrosswalkResolutionQUARANTINED    CrosswalkResolution = "QUARANTINED"
+	CrosswalkResolutionREVIEWREQUIRED CrosswalkResolution = "REVIEW_REQUIRED"
+	CrosswalkResolutionUNMAPPED       CrosswalkResolution = "UNMAPPED"
+)
+
+// Valid indicates whether the value is a known member of the CrosswalkResolution enum.
+func (e CrosswalkResolution) Valid() bool {
+	switch e {
+	case CrosswalkResolutionMAPPED:
+		return true
+	case CrosswalkResolutionNOEQUIVALENT:
+		return true
+	case CrosswalkResolutionNOTINFORCE:
+		return true
+	case CrosswalkResolutionQUARANTINED:
+		return true
+	case CrosswalkResolutionREVIEWREQUIRED:
+		return true
+	case CrosswalkResolutionUNMAPPED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CrosswalkRightsBasis.
+const (
+	CUSTOMERSUPPLIED    CrosswalkRightsBasis = "CUSTOMER_SUPPLIED"
+	PUBLICDOCUMENTATION CrosswalkRightsBasis = "PUBLIC_DOCUMENTATION"
+	VENDORLICENCE       CrosswalkRightsBasis = "VENDOR_LICENCE"
+)
+
+// Valid indicates whether the value is a known member of the CrosswalkRightsBasis enum.
+func (e CrosswalkRightsBasis) Valid() bool {
+	switch e {
+	case CUSTOMERSUPPLIED:
+		return true
+	case PUBLICDOCUMENTATION:
+		return true
+	case VENDORLICENCE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CrosswalkStatus.
+const (
+	CrosswalkStatusAPPROVED         CrosswalkStatus = "APPROVED"
+	CrosswalkStatusCHANGESREQUESTED CrosswalkStatus = "CHANGES_REQUESTED"
+	CrosswalkStatusDRAFT            CrosswalkStatus = "DRAFT"
+	CrosswalkStatusINREVIEW         CrosswalkStatus = "IN_REVIEW"
+	CrosswalkStatusREJECTED         CrosswalkStatus = "REJECTED"
+	CrosswalkStatusSUPERSEDED       CrosswalkStatus = "SUPERSEDED"
+	CrosswalkStatusSUSPENDED        CrosswalkStatus = "SUSPENDED"
+	CrosswalkStatusWITHDRAWN        CrosswalkStatus = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the CrosswalkStatus enum.
+func (e CrosswalkStatus) Valid() bool {
+	switch e {
+	case CrosswalkStatusAPPROVED:
+		return true
+	case CrosswalkStatusCHANGESREQUESTED:
+		return true
+	case CrosswalkStatusDRAFT:
+		return true
+	case CrosswalkStatusINREVIEW:
+		return true
+	case CrosswalkStatusREJECTED:
+		return true
+	case CrosswalkStatusSUPERSEDED:
+		return true
+	case CrosswalkStatusSUSPENDED:
+		return true
+	case CrosswalkStatusWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CustomerAuthorizationStatus.
 const (
 	CustomerAuthorizationStatusACTIVE     CustomerAuthorizationStatus = "ACTIVE"
@@ -1446,6 +2052,348 @@ func (e EffectiveObligationStatus) Valid() bool {
 	}
 }
 
+// Defines values for EntitlementAction.
+const (
+	EntitlementActionAPPROVE       EntitlementAction = "APPROVE"
+	EntitlementActionREJECT        EntitlementAction = "REJECT"
+	EntitlementActionREQUESTRESUME EntitlementAction = "REQUEST_RESUME"
+	EntitlementActionRESUME        EntitlementAction = "RESUME"
+	EntitlementActionREVOKE        EntitlementAction = "REVOKE"
+	EntitlementActionSUBMIT        EntitlementAction = "SUBMIT"
+	EntitlementActionSUSPEND       EntitlementAction = "SUSPEND"
+	EntitlementActionWITHDRAW      EntitlementAction = "WITHDRAW"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementAction enum.
+func (e EntitlementAction) Valid() bool {
+	switch e {
+	case EntitlementActionAPPROVE:
+		return true
+	case EntitlementActionREJECT:
+		return true
+	case EntitlementActionREQUESTRESUME:
+		return true
+	case EntitlementActionRESUME:
+		return true
+	case EntitlementActionREVOKE:
+		return true
+	case EntitlementActionSUBMIT:
+		return true
+	case EntitlementActionSUSPEND:
+		return true
+	case EntitlementActionWITHDRAW:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementCoverageState.
+const (
+	EntitlementCoverageStateUNPROVEN EntitlementCoverageState = "UNPROVEN"
+	EntitlementCoverageStateVERIFIED EntitlementCoverageState = "VERIFIED"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementCoverageState enum.
+func (e EntitlementCoverageState) Valid() bool {
+	switch e {
+	case EntitlementCoverageStateUNPROVEN:
+		return true
+	case EntitlementCoverageStateVERIFIED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementDecision.
+const (
+	ALLOW EntitlementDecision = "ALLOW"
+	DENY  EntitlementDecision = "DENY"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementDecision enum.
+func (e EntitlementDecision) Valid() bool {
+	switch e {
+	case ALLOW:
+		return true
+	case DENY:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementEffective.
+const (
+	EntitlementEffectiveACTIVE     EntitlementEffective = "ACTIVE"
+	EntitlementEffectiveENDED      EntitlementEffective = "ENDED"
+	EntitlementEffectiveEXPIRED    EntitlementEffective = "EXPIRED"
+	EntitlementEffectivePENDING    EntitlementEffective = "PENDING"
+	EntitlementEffectiveRESTRICTED EntitlementEffective = "RESTRICTED"
+	EntitlementEffectiveSUSPENDED  EntitlementEffective = "SUSPENDED"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementEffective enum.
+func (e EntitlementEffective) Valid() bool {
+	switch e {
+	case EntitlementEffectiveACTIVE:
+		return true
+	case EntitlementEffectiveENDED:
+		return true
+	case EntitlementEffectiveEXPIRED:
+		return true
+	case EntitlementEffectivePENDING:
+		return true
+	case EntitlementEffectiveRESTRICTED:
+		return true
+	case EntitlementEffectiveSUSPENDED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementEventKind.
+const (
+	EntitlementEventKindAPPROVED        EntitlementEventKind = "APPROVED"
+	EntitlementEventKindCREATED         EntitlementEventKind = "CREATED"
+	EntitlementEventKindREJECTED        EntitlementEventKind = "REJECTED"
+	EntitlementEventKindRESUMED         EntitlementEventKind = "RESUMED"
+	EntitlementEventKindRESUMEREQUESTED EntitlementEventKind = "RESUME_REQUESTED"
+	EntitlementEventKindREVOKED         EntitlementEventKind = "REVOKED"
+	EntitlementEventKindSUBMITTED       EntitlementEventKind = "SUBMITTED"
+	EntitlementEventKindSUSPENDED       EntitlementEventKind = "SUSPENDED"
+	EntitlementEventKindWITHDRAWN       EntitlementEventKind = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementEventKind enum.
+func (e EntitlementEventKind) Valid() bool {
+	switch e {
+	case EntitlementEventKindAPPROVED:
+		return true
+	case EntitlementEventKindCREATED:
+		return true
+	case EntitlementEventKindREJECTED:
+		return true
+	case EntitlementEventKindRESUMED:
+		return true
+	case EntitlementEventKindRESUMEREQUESTED:
+		return true
+	case EntitlementEventKindREVOKED:
+		return true
+	case EntitlementEventKindSUBMITTED:
+		return true
+	case EntitlementEventKindSUSPENDED:
+		return true
+	case EntitlementEventKindWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementLifecycle.
+const (
+	EntitlementLifecycleAPPROVED  EntitlementLifecycle = "APPROVED"
+	EntitlementLifecycleDRAFT     EntitlementLifecycle = "DRAFT"
+	EntitlementLifecycleINREVIEW  EntitlementLifecycle = "IN_REVIEW"
+	EntitlementLifecycleREJECTED  EntitlementLifecycle = "REJECTED"
+	EntitlementLifecycleREVOKED   EntitlementLifecycle = "REVOKED"
+	EntitlementLifecycleSUSPENDED EntitlementLifecycle = "SUSPENDED"
+	EntitlementLifecycleWITHDRAWN EntitlementLifecycle = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementLifecycle enum.
+func (e EntitlementLifecycle) Valid() bool {
+	switch e {
+	case EntitlementLifecycleAPPROVED:
+		return true
+	case EntitlementLifecycleDRAFT:
+		return true
+	case EntitlementLifecycleINREVIEW:
+		return true
+	case EntitlementLifecycleREJECTED:
+		return true
+	case EntitlementLifecycleREVOKED:
+		return true
+	case EntitlementLifecycleSUSPENDED:
+		return true
+	case EntitlementLifecycleWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementMarketStatus.
+const (
+	EntitlementMarketStatusACTIVE       EntitlementMarketStatus = "ACTIVE"
+	EntitlementMarketStatusNOTLISTED    EntitlementMarketStatus = "NOT_LISTED"
+	EntitlementMarketStatusPILOT        EntitlementMarketStatus = "PILOT"
+	EntitlementMarketStatusRESEARCHONLY EntitlementMarketStatus = "RESEARCH_ONLY"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementMarketStatus enum.
+func (e EntitlementMarketStatus) Valid() bool {
+	switch e {
+	case EntitlementMarketStatusACTIVE:
+		return true
+	case EntitlementMarketStatusNOTLISTED:
+		return true
+	case EntitlementMarketStatusPILOT:
+		return true
+	case EntitlementMarketStatusRESEARCHONLY:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementMode.
+const (
+	FEDERATED         EntitlementMode = "FEDERATED"
+	MANAGEDCOMPLIANCE EntitlementMode = "MANAGED_COMPLIANCE"
+	NATIVE            EntitlementMode = "NATIVE"
+	OEMEMBEDDED       EntitlementMode = "OEM_EMBEDDED"
+	SHADOWASSURANCE   EntitlementMode = "SHADOW_ASSURANCE"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementMode enum.
+func (e EntitlementMode) Valid() bool {
+	switch e {
+	case FEDERATED:
+		return true
+	case MANAGEDCOMPLIANCE:
+		return true
+	case NATIVE:
+		return true
+	case OEMEMBEDDED:
+		return true
+	case SHADOWASSURANCE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementOperation.
+const (
+	EntitlementOperationCOMMIT        EntitlementOperation = "COMMIT"
+	EntitlementOperationEINVOICE      EntitlementOperation = "E_INVOICE"
+	EntitlementOperationFILE          EntitlementOperation = "FILE"
+	EntitlementOperationQUOTE         EntitlementOperation = "QUOTE"
+	EntitlementOperationREMIT         EntitlementOperation = "REMIT"
+	EntitlementOperationSHADOWCOMPARE EntitlementOperation = "SHADOW_COMPARE"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementOperation enum.
+func (e EntitlementOperation) Valid() bool {
+	switch e {
+	case EntitlementOperationCOMMIT:
+		return true
+	case EntitlementOperationEINVOICE:
+		return true
+	case EntitlementOperationFILE:
+		return true
+	case EntitlementOperationQUOTE:
+		return true
+	case EntitlementOperationREMIT:
+		return true
+	case EntitlementOperationSHADOWCOMPARE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementReason.
+const (
+	AWAITINGEFFECTIVEDATE  EntitlementReason = "AWAITING_EFFECTIVE_DATE"
+	AWAITINGSECONDAPPROVAL EntitlementReason = "AWAITING_SECOND_APPROVAL"
+	AWAITINGSUBMISSION     EntitlementReason = "AWAITING_SUBMISSION"
+	CONTENTNOTACTIVE       EntitlementReason = "CONTENT_NOT_ACTIVE"
+	ENTITLEMENTENDED       EntitlementReason = "ENTITLEMENT_ENDED"
+	ENTITLEMENTEXPIRED     EntitlementReason = "ENTITLEMENT_EXPIRED"
+	ENTITLEMENTSUSPENDED   EntitlementReason = "ENTITLEMENT_SUSPENDED"
+	GEOGRAPHYNOTPROVEN     EntitlementReason = "GEOGRAPHY_NOT_PROVEN"
+	OPERATIONNOTSUPPORTED  EntitlementReason = "OPERATION_NOT_SUPPORTED"
+	PROVIDEREVIDENCEABSENT EntitlementReason = "PROVIDER_EVIDENCE_ABSENT"
+	RESUMEAWAITINGAPPROVAL EntitlementReason = "RESUME_AWAITING_APPROVAL"
+	TECHNICALLYUNAVAILABLE EntitlementReason = "TECHNICALLY_UNAVAILABLE"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementReason enum.
+func (e EntitlementReason) Valid() bool {
+	switch e {
+	case AWAITINGEFFECTIVEDATE:
+		return true
+	case AWAITINGSECONDAPPROVAL:
+		return true
+	case AWAITINGSUBMISSION:
+		return true
+	case CONTENTNOTACTIVE:
+		return true
+	case ENTITLEMENTENDED:
+		return true
+	case ENTITLEMENTEXPIRED:
+		return true
+	case ENTITLEMENTSUSPENDED:
+		return true
+	case GEOGRAPHYNOTPROVEN:
+		return true
+	case OPERATIONNOTSUPPORTED:
+		return true
+	case PROVIDEREVIDENCEABSENT:
+		return true
+	case RESUMEAWAITINGAPPROVAL:
+		return true
+	case TECHNICALLYUNAVAILABLE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EntitlementStatus.
+const (
+	EntitlementStatusACTIVE    EntitlementStatus = "ACTIVE"
+	EntitlementStatusDRAFT     EntitlementStatus = "DRAFT"
+	EntitlementStatusEXPIRED   EntitlementStatus = "EXPIRED"
+	EntitlementStatusINREVIEW  EntitlementStatus = "IN_REVIEW"
+	EntitlementStatusREJECTED  EntitlementStatus = "REJECTED"
+	EntitlementStatusREVOKED   EntitlementStatus = "REVOKED"
+	EntitlementStatusSCHEDULED EntitlementStatus = "SCHEDULED"
+	EntitlementStatusSUSPENDED EntitlementStatus = "SUSPENDED"
+	EntitlementStatusWITHDRAWN EntitlementStatus = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the EntitlementStatus enum.
+func (e EntitlementStatus) Valid() bool {
+	switch e {
+	case EntitlementStatusACTIVE:
+		return true
+	case EntitlementStatusDRAFT:
+		return true
+	case EntitlementStatusEXPIRED:
+		return true
+	case EntitlementStatusINREVIEW:
+		return true
+	case EntitlementStatusREJECTED:
+		return true
+	case EntitlementStatusREVOKED:
+		return true
+	case EntitlementStatusSCHEDULED:
+		return true
+	case EntitlementStatusSUSPENDED:
+		return true
+	case EntitlementStatusWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for EventType.
 const (
 	ComZoikotaxAccumulatorThresholdCrossed EventType = "com.zoikotax.accumulator.threshold-crossed"
@@ -1905,6 +2853,54 @@ func (e GLReconciliationItemStatus) Valid() bool {
 	}
 }
 
+// Defines values for ImpactItemKind.
+const (
+	CONTENTCOMPONENT   ImpactItemKind = "CONTENT_COMPONENT"
+	COVERAGEGAP        ImpactItemKind = "COVERAGE_GAP"
+	TENANTOBLIGATION   ImpactItemKind = "TENANT_OBLIGATION"
+	TENANTREGISTRATION ImpactItemKind = "TENANT_REGISTRATION"
+)
+
+// Valid indicates whether the value is a known member of the ImpactItemKind enum.
+func (e ImpactItemKind) Valid() bool {
+	switch e {
+	case CONTENTCOMPONENT:
+		return true
+	case COVERAGEGAP:
+		return true
+	case TENANTOBLIGATION:
+		return true
+	case TENANTREGISTRATION:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImpactSeverity.
+const (
+	ImpactSeverityCRITICAL ImpactSeverity = "CRITICAL"
+	ImpactSeverityHIGH     ImpactSeverity = "HIGH"
+	ImpactSeverityLOW      ImpactSeverity = "LOW"
+	ImpactSeverityMEDIUM   ImpactSeverity = "MEDIUM"
+)
+
+// Valid indicates whether the value is a known member of the ImpactSeverity enum.
+func (e ImpactSeverity) Valid() bool {
+	switch e {
+	case ImpactSeverityCRITICAL:
+		return true
+	case ImpactSeverityHIGH:
+		return true
+	case ImpactSeverityLOW:
+		return true
+	case ImpactSeverityMEDIUM:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for JobOperation.
 const (
 	JobOperationCOMMIT JobOperation = "COMMIT"
@@ -2246,19 +3242,19 @@ func (e MigrationRunMode) Valid() bool {
 
 // Defines values for MigrationSeverity.
 const (
-	HIGH   MigrationSeverity = "HIGH"
-	LOW    MigrationSeverity = "LOW"
-	MEDIUM MigrationSeverity = "MEDIUM"
+	MigrationSeverityHIGH   MigrationSeverity = "HIGH"
+	MigrationSeverityLOW    MigrationSeverity = "LOW"
+	MigrationSeverityMEDIUM MigrationSeverity = "MEDIUM"
 )
 
 // Valid indicates whether the value is a known member of the MigrationSeverity enum.
 func (e MigrationSeverity) Valid() bool {
 	switch e {
-	case HIGH:
+	case MigrationSeverityHIGH:
 		return true
-	case LOW:
+	case MigrationSeverityLOW:
 		return true
-	case MEDIUM:
+	case MigrationSeverityMEDIUM:
 		return true
 	default:
 		return false
@@ -3108,6 +4104,21 @@ func (e RateBasis) Valid() bool {
 	}
 }
 
+// Defines values for RecommendationAuthorityOutcome.
+const (
+	RecommendationAuthorityOutcomeA1 RecommendationAuthorityOutcome = "A1"
+)
+
+// Valid indicates whether the value is a known member of the RecommendationAuthorityOutcome enum.
+func (e RecommendationAuthorityOutcome) Valid() bool {
+	switch e {
+	case RecommendationAuthorityOutcomeA1:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReconResolutionAction.
 const (
 	ReconResolutionActionADJUST             ReconResolutionAction = "ADJUST"
@@ -3140,16 +4151,16 @@ func (e ReconResolutionAction) Valid() bool {
 
 // Defines values for ReconResolutionActor.
 const (
-	AIA3  ReconResolutionActor = "AI_A3"
-	HUMAN ReconResolutionActor = "HUMAN"
+	ReconResolutionActorAIA3  ReconResolutionActor = "AI_A3"
+	ReconResolutionActorHUMAN ReconResolutionActor = "HUMAN"
 )
 
 // Valid indicates whether the value is a known member of the ReconResolutionActor enum.
 func (e ReconResolutionActor) Valid() bool {
 	switch e {
-	case AIA3:
+	case ReconResolutionActorAIA3:
 		return true
-	case HUMAN:
+	case ReconResolutionActorHUMAN:
 		return true
 	default:
 		return false
@@ -3399,6 +4410,195 @@ func (e RegistrationStatus) Valid() bool {
 	case RegistrationStatusVERIFIED:
 		return true
 	case RegistrationStatusWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RegulatoryChangeDetector.
+const (
+	RegulatoryChangeDetectorHUMAN   RegulatoryChangeDetector = "HUMAN"
+	RegulatoryChangeDetectorMONITOR RegulatoryChangeDetector = "MONITOR"
+)
+
+// Valid indicates whether the value is a known member of the RegulatoryChangeDetector enum.
+func (e RegulatoryChangeDetector) Valid() bool {
+	switch e {
+	case RegulatoryChangeDetectorHUMAN:
+		return true
+	case RegulatoryChangeDetectorMONITOR:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RegulatoryChangeDisposition.
+const (
+	RegulatoryChangeDispositionCHANGENEEDED  RegulatoryChangeDisposition = "CHANGE_NEEDED"
+	RegulatoryChangeDispositionMONITOR       RegulatoryChangeDisposition = "MONITOR"
+	RegulatoryChangeDispositionNOTAPPLICABLE RegulatoryChangeDisposition = "NOT_APPLICABLE"
+)
+
+// Valid indicates whether the value is a known member of the RegulatoryChangeDisposition enum.
+func (e RegulatoryChangeDisposition) Valid() bool {
+	switch e {
+	case RegulatoryChangeDispositionCHANGENEEDED:
+		return true
+	case RegulatoryChangeDispositionMONITOR:
+		return true
+	case RegulatoryChangeDispositionNOTAPPLICABLE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RegulatoryChangeEventKind.
+const (
+	RegulatoryChangeEventKindASSESSMENTSTARTED RegulatoryChangeEventKind = "ASSESSMENT_STARTED"
+	RegulatoryChangeEventKindCLOSED            RegulatoryChangeEventKind = "CLOSED"
+	RegulatoryChangeEventKindHELD              RegulatoryChangeEventKind = "HELD"
+	RegulatoryChangeEventKindNOIMPACT          RegulatoryChangeEventKind = "NO_IMPACT"
+	RegulatoryChangeEventKindRECORDED          RegulatoryChangeEventKind = "RECORDED"
+	RegulatoryChangeEventKindRESUMED           RegulatoryChangeEventKind = "RESUMED"
+	RegulatoryChangeEventKindTRIAGED           RegulatoryChangeEventKind = "TRIAGED"
+)
+
+// Valid indicates whether the value is a known member of the RegulatoryChangeEventKind enum.
+func (e RegulatoryChangeEventKind) Valid() bool {
+	switch e {
+	case RegulatoryChangeEventKindASSESSMENTSTARTED:
+		return true
+	case RegulatoryChangeEventKindCLOSED:
+		return true
+	case RegulatoryChangeEventKindHELD:
+		return true
+	case RegulatoryChangeEventKindNOIMPACT:
+		return true
+	case RegulatoryChangeEventKindRECORDED:
+		return true
+	case RegulatoryChangeEventKindRESUMED:
+		return true
+	case RegulatoryChangeEventKindTRIAGED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RegulatoryChangeHoldReason.
+const (
+	COUNSELQUESTION RegulatoryChangeHoldReason = "COUNSEL_QUESTION"
+	MISSINGFACTS    RegulatoryChangeHoldReason = "MISSING_FACTS"
+	MONITORFAILURE  RegulatoryChangeHoldReason = "MONITOR_FAILURE"
+	RIGHTSHOLD      RegulatoryChangeHoldReason = "RIGHTS_HOLD"
+	SOURCEDISPUTED  RegulatoryChangeHoldReason = "SOURCE_DISPUTED"
+)
+
+// Valid indicates whether the value is a known member of the RegulatoryChangeHoldReason enum.
+func (e RegulatoryChangeHoldReason) Valid() bool {
+	switch e {
+	case COUNSELQUESTION:
+		return true
+	case MISSINGFACTS:
+		return true
+	case MONITORFAILURE:
+		return true
+	case RIGHTSHOLD:
+		return true
+	case SOURCEDISPUTED:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RegulatoryChangeKind.
+const (
+	RegulatoryChangeKindBACKDATEDRULE      RegulatoryChangeKind = "BACKDATED_RULE"
+	RegulatoryChangeKindBASECHANGE         RegulatoryChangeKind = "BASE_CHANGE"
+	RegulatoryChangeKindCLASSCHANGE        RegulatoryChangeKind = "CLASS_CHANGE"
+	RegulatoryChangeKindJURISDICTIONCHANGE RegulatoryChangeKind = "JURISDICTION_CHANGE"
+	RegulatoryChangeKindNEWLEVY            RegulatoryChangeKind = "NEW_LEVY"
+	RegulatoryChangeKindRATECHANGE         RegulatoryChangeKind = "RATE_CHANGE"
+	RegulatoryChangeKindREPEALSUNSET       RegulatoryChangeKind = "REPEAL_SUNSET"
+	RegulatoryChangeKindRIGHTSWITHDRAWAL   RegulatoryChangeKind = "RIGHTS_WITHDRAWAL"
+	RegulatoryChangeKindSOURCEDISPUTE      RegulatoryChangeKind = "SOURCE_DISPUTE"
+)
+
+// Valid indicates whether the value is a known member of the RegulatoryChangeKind enum.
+func (e RegulatoryChangeKind) Valid() bool {
+	switch e {
+	case RegulatoryChangeKindBACKDATEDRULE:
+		return true
+	case RegulatoryChangeKindBASECHANGE:
+		return true
+	case RegulatoryChangeKindCLASSCHANGE:
+		return true
+	case RegulatoryChangeKindJURISDICTIONCHANGE:
+		return true
+	case RegulatoryChangeKindNEWLEVY:
+		return true
+	case RegulatoryChangeKindRATECHANGE:
+		return true
+	case RegulatoryChangeKindREPEALSUNSET:
+		return true
+	case RegulatoryChangeKindRIGHTSWITHDRAWAL:
+		return true
+	case RegulatoryChangeKindSOURCEDISPUTE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RegulatoryChangePriority.
+const (
+	MATERIAL RegulatoryChangePriority = "MATERIAL"
+	ORDINARY RegulatoryChangePriority = "ORDINARY"
+	URGENT   RegulatoryChangePriority = "URGENT"
+)
+
+// Valid indicates whether the value is a known member of the RegulatoryChangePriority enum.
+func (e RegulatoryChangePriority) Valid() bool {
+	switch e {
+	case MATERIAL:
+		return true
+	case ORDINARY:
+		return true
+	case URGENT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RegulatoryChangeStatus.
+const (
+	RegulatoryChangeStatusCLOSED             RegulatoryChangeStatus = "CLOSED"
+	RegulatoryChangeStatusINIMPACTASSESSMENT RegulatoryChangeStatus = "IN_IMPACT_ASSESSMENT"
+	RegulatoryChangeStatusNEW                RegulatoryChangeStatus = "NEW"
+	RegulatoryChangeStatusNOIMPACT           RegulatoryChangeStatus = "NO_IMPACT"
+	RegulatoryChangeStatusONHOLD             RegulatoryChangeStatus = "ON_HOLD"
+	RegulatoryChangeStatusTRIAGED            RegulatoryChangeStatus = "TRIAGED"
+)
+
+// Valid indicates whether the value is a known member of the RegulatoryChangeStatus enum.
+func (e RegulatoryChangeStatus) Valid() bool {
+	switch e {
+	case RegulatoryChangeStatusCLOSED:
+		return true
+	case RegulatoryChangeStatusINIMPACTASSESSMENT:
+		return true
+	case RegulatoryChangeStatusNEW:
+		return true
+	case RegulatoryChangeStatusNOIMPACT:
+		return true
+	case RegulatoryChangeStatusONHOLD:
+		return true
+	case RegulatoryChangeStatusTRIAGED:
 		return true
 	default:
 		return false
@@ -3708,6 +4908,141 @@ func (e RetentionVerdictOutcome) Valid() bool {
 	}
 }
 
+// Defines values for ReviewDecision.
+const (
+	ReviewDecisionACCEPT         ReviewDecision = "ACCEPT"
+	ReviewDecisionREJECT         ReviewDecision = "REJECT"
+	ReviewDecisionREQUESTCHANGES ReviewDecision = "REQUEST_CHANGES"
+)
+
+// Valid indicates whether the value is a known member of the ReviewDecision enum.
+func (e ReviewDecision) Valid() bool {
+	switch e {
+	case ReviewDecisionACCEPT:
+		return true
+	case ReviewDecisionREJECT:
+		return true
+	case ReviewDecisionREQUESTCHANGES:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReviewRecommendationAction.
+const (
+	ReviewRecommendationActionADDRULE                   ReviewRecommendationAction = "ADD_RULE"
+	ReviewRecommendationActionMONITOR                   ReviewRecommendationAction = "MONITOR"
+	ReviewRecommendationActionNOACTION                  ReviewRecommendationAction = "NO_ACTION"
+	ReviewRecommendationActionNOTIFYCUSTOMERS           ReviewRecommendationAction = "NOTIFY_CUSTOMERS"
+	ReviewRecommendationActionRETIRERULE                ReviewRecommendationAction = "RETIRE_RULE"
+	ReviewRecommendationActionRETROSPECTIVEREASSESSMENT ReviewRecommendationAction = "RETROSPECTIVE_REASSESSMENT"
+	ReviewRecommendationActionUPDATERULE                ReviewRecommendationAction = "UPDATE_RULE"
+)
+
+// Valid indicates whether the value is a known member of the ReviewRecommendationAction enum.
+func (e ReviewRecommendationAction) Valid() bool {
+	switch e {
+	case ReviewRecommendationActionADDRULE:
+		return true
+	case ReviewRecommendationActionMONITOR:
+		return true
+	case ReviewRecommendationActionNOACTION:
+		return true
+	case ReviewRecommendationActionNOTIFYCUSTOMERS:
+		return true
+	case ReviewRecommendationActionRETIRERULE:
+		return true
+	case ReviewRecommendationActionRETROSPECTIVEREASSESSMENT:
+		return true
+	case ReviewRecommendationActionUPDATERULE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReviewRecommendationEventKind.
+const (
+	ReviewRecommendationEventKindACCEPTED         ReviewRecommendationEventKind = "ACCEPTED"
+	ReviewRecommendationEventKindCHANGESREQUESTED ReviewRecommendationEventKind = "CHANGES_REQUESTED"
+	ReviewRecommendationEventKindDRAFTED          ReviewRecommendationEventKind = "DRAFTED"
+	ReviewRecommendationEventKindRECOMMENDED      ReviewRecommendationEventKind = "RECOMMENDED"
+	ReviewRecommendationEventKindREJECTED         ReviewRecommendationEventKind = "REJECTED"
+	ReviewRecommendationEventKindREVISED          ReviewRecommendationEventKind = "REVISED"
+	ReviewRecommendationEventKindWITHDRAWN        ReviewRecommendationEventKind = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the ReviewRecommendationEventKind enum.
+func (e ReviewRecommendationEventKind) Valid() bool {
+	switch e {
+	case ReviewRecommendationEventKindACCEPTED:
+		return true
+	case ReviewRecommendationEventKindCHANGESREQUESTED:
+		return true
+	case ReviewRecommendationEventKindDRAFTED:
+		return true
+	case ReviewRecommendationEventKindRECOMMENDED:
+		return true
+	case ReviewRecommendationEventKindREJECTED:
+		return true
+	case ReviewRecommendationEventKindREVISED:
+		return true
+	case ReviewRecommendationEventKindWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReviewRecommendationOrigin.
+const (
+	ReviewRecommendationOriginAIASSISTED ReviewRecommendationOrigin = "AI_ASSISTED"
+	ReviewRecommendationOriginHUMAN      ReviewRecommendationOrigin = "HUMAN"
+)
+
+// Valid indicates whether the value is a known member of the ReviewRecommendationOrigin enum.
+func (e ReviewRecommendationOrigin) Valid() bool {
+	switch e {
+	case ReviewRecommendationOriginAIASSISTED:
+		return true
+	case ReviewRecommendationOriginHUMAN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReviewRecommendationStatus.
+const (
+	ReviewRecommendationStatusACCEPTED         ReviewRecommendationStatus = "ACCEPTED"
+	ReviewRecommendationStatusCHANGESREQUESTED ReviewRecommendationStatus = "CHANGES_REQUESTED"
+	ReviewRecommendationStatusDRAFT            ReviewRecommendationStatus = "DRAFT"
+	ReviewRecommendationStatusRECOMMENDED      ReviewRecommendationStatus = "RECOMMENDED"
+	ReviewRecommendationStatusREJECTED         ReviewRecommendationStatus = "REJECTED"
+	ReviewRecommendationStatusWITHDRAWN        ReviewRecommendationStatus = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the ReviewRecommendationStatus enum.
+func (e ReviewRecommendationStatus) Valid() bool {
+	switch e {
+	case ReviewRecommendationStatusACCEPTED:
+		return true
+	case ReviewRecommendationStatusCHANGESREQUESTED:
+		return true
+	case ReviewRecommendationStatusDRAFT:
+		return true
+	case ReviewRecommendationStatusRECOMMENDED:
+		return true
+	case ReviewRecommendationStatusREJECTED:
+		return true
+	case ReviewRecommendationStatusWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Role.
 const (
 	ADMIN    Role = "ADMIN"
@@ -3837,6 +5172,117 @@ func (e RootCause) Valid() bool {
 	case RootCauseTAXRULE:
 		return true
 	case RootCauseTIMING:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RuleChangeEventKind.
+const (
+	RuleChangeEventKindAPPROVED             RuleChangeEventKind = "APPROVED"
+	RuleChangeEventKindCHANGESREQUESTED     RuleChangeEventKind = "CHANGES_REQUESTED"
+	RuleChangeEventKindPROPOSED             RuleChangeEventKind = "PROPOSED"
+	RuleChangeEventKindRECOMMENDED          RuleChangeEventKind = "RECOMMENDED"
+	RuleChangeEventKindREJECTED             RuleChangeEventKind = "REJECTED"
+	RuleChangeEventKindSUPERSEDED           RuleChangeEventKind = "SUPERSEDED"
+	RuleChangeEventKindTESTEVIDENCERECORDED RuleChangeEventKind = "TEST_EVIDENCE_RECORDED"
+	RuleChangeEventKindWITHDRAWN            RuleChangeEventKind = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the RuleChangeEventKind enum.
+func (e RuleChangeEventKind) Valid() bool {
+	switch e {
+	case RuleChangeEventKindAPPROVED:
+		return true
+	case RuleChangeEventKindCHANGESREQUESTED:
+		return true
+	case RuleChangeEventKindPROPOSED:
+		return true
+	case RuleChangeEventKindRECOMMENDED:
+		return true
+	case RuleChangeEventKindREJECTED:
+		return true
+	case RuleChangeEventKindSUPERSEDED:
+		return true
+	case RuleChangeEventKindTESTEVIDENCERECORDED:
+		return true
+	case RuleChangeEventKindWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RuleChangeStatus.
+const (
+	RuleChangeStatusAPPROVEDFORRELEASE RuleChangeStatus = "APPROVED_FOR_RELEASE"
+	RuleChangeStatusCHANGESREQUESTED   RuleChangeStatus = "CHANGES_REQUESTED"
+	RuleChangeStatusPROPOSED           RuleChangeStatus = "PROPOSED"
+	RuleChangeStatusRECOMMENDED        RuleChangeStatus = "RECOMMENDED"
+	RuleChangeStatusREJECTED           RuleChangeStatus = "REJECTED"
+	RuleChangeStatusSUPERSEDED         RuleChangeStatus = "SUPERSEDED"
+	RuleChangeStatusWITHDRAWN          RuleChangeStatus = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the RuleChangeStatus enum.
+func (e RuleChangeStatus) Valid() bool {
+	switch e {
+	case RuleChangeStatusAPPROVEDFORRELEASE:
+		return true
+	case RuleChangeStatusCHANGESREQUESTED:
+		return true
+	case RuleChangeStatusPROPOSED:
+		return true
+	case RuleChangeStatusRECOMMENDED:
+		return true
+	case RuleChangeStatusREJECTED:
+		return true
+	case RuleChangeStatusSUPERSEDED:
+		return true
+	case RuleChangeStatusWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RuleChangeType.
+const (
+	RuleChangeTypeBASECHANGE           RuleChangeType = "BASE_CHANGE"
+	RuleChangeTypeEXEMPTIONCHANGE      RuleChangeType = "EXEMPTION_CHANGE"
+	RuleChangeTypeLEVYREPEAL           RuleChangeType = "LEVY_REPEAL"
+	RuleChangeTypeNEWLEVY              RuleChangeType = "NEW_LEVY"
+	RuleChangeTypeOBLIGATIONCHANGE     RuleChangeType = "OBLIGATION_CHANGE"
+	RuleChangeTypeOTHER                RuleChangeType = "OTHER"
+	RuleChangeTypeRATECHANGE           RuleChangeType = "RATE_CHANGE"
+	RuleChangeTypeRESPONSIBILITYCHANGE RuleChangeType = "RESPONSIBILITY_CHANGE"
+	RuleChangeTypeSITUSCHANGE          RuleChangeType = "SITUS_CHANGE"
+	RuleChangeTypeTHRESHOLDCHANGE      RuleChangeType = "THRESHOLD_CHANGE"
+)
+
+// Valid indicates whether the value is a known member of the RuleChangeType enum.
+func (e RuleChangeType) Valid() bool {
+	switch e {
+	case RuleChangeTypeBASECHANGE:
+		return true
+	case RuleChangeTypeEXEMPTIONCHANGE:
+		return true
+	case RuleChangeTypeLEVYREPEAL:
+		return true
+	case RuleChangeTypeNEWLEVY:
+		return true
+	case RuleChangeTypeOBLIGATIONCHANGE:
+		return true
+	case RuleChangeTypeOTHER:
+		return true
+	case RuleChangeTypeRATECHANGE:
+		return true
+	case RuleChangeTypeRESPONSIBILITYCHANGE:
+		return true
+	case RuleChangeTypeSITUSCHANGE:
+		return true
+	case RuleChangeTypeTHRESHOLDCHANGE:
 		return true
 	default:
 		return false
@@ -4326,6 +5772,108 @@ func (e SitusEvidenceType) Valid() bool {
 	}
 }
 
+// Defines values for SourceAuthorityClass.
+const (
+	SourceAuthorityClassA0 SourceAuthorityClass = "A0"
+	SourceAuthorityClassA1 SourceAuthorityClass = "A1"
+	SourceAuthorityClassA2 SourceAuthorityClass = "A2"
+	SourceAuthorityClassB1 SourceAuthorityClass = "B1"
+	SourceAuthorityClassB2 SourceAuthorityClass = "B2"
+	SourceAuthorityClassC1 SourceAuthorityClass = "C1"
+	SourceAuthorityClassU  SourceAuthorityClass = "U"
+)
+
+// Valid indicates whether the value is a known member of the SourceAuthorityClass enum.
+func (e SourceAuthorityClass) Valid() bool {
+	switch e {
+	case SourceAuthorityClassA0:
+		return true
+	case SourceAuthorityClassA1:
+		return true
+	case SourceAuthorityClassA2:
+		return true
+	case SourceAuthorityClassB1:
+		return true
+	case SourceAuthorityClassB2:
+		return true
+	case SourceAuthorityClassC1:
+		return true
+	case SourceAuthorityClassU:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SubscriptionPlanAction.
+const (
+	SubscriptionPlanActionAPPROVE  SubscriptionPlanAction = "APPROVE"
+	SubscriptionPlanActionREJECT   SubscriptionPlanAction = "REJECT"
+	SubscriptionPlanActionWITHDRAW SubscriptionPlanAction = "WITHDRAW"
+)
+
+// Valid indicates whether the value is a known member of the SubscriptionPlanAction enum.
+func (e SubscriptionPlanAction) Valid() bool {
+	switch e {
+	case SubscriptionPlanActionAPPROVE:
+		return true
+	case SubscriptionPlanActionREJECT:
+		return true
+	case SubscriptionPlanActionWITHDRAW:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SubscriptionPlanEventKind.
+const (
+	SubscriptionPlanEventKindAPPROVED  SubscriptionPlanEventKind = "APPROVED"
+	SubscriptionPlanEventKindPROPOSED  SubscriptionPlanEventKind = "PROPOSED"
+	SubscriptionPlanEventKindREJECTED  SubscriptionPlanEventKind = "REJECTED"
+	SubscriptionPlanEventKindWITHDRAWN SubscriptionPlanEventKind = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the SubscriptionPlanEventKind enum.
+func (e SubscriptionPlanEventKind) Valid() bool {
+	switch e {
+	case SubscriptionPlanEventKindAPPROVED:
+		return true
+	case SubscriptionPlanEventKindPROPOSED:
+		return true
+	case SubscriptionPlanEventKindREJECTED:
+		return true
+	case SubscriptionPlanEventKindWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SubscriptionPlanStatus.
+const (
+	SubscriptionPlanStatusAPPROVED  SubscriptionPlanStatus = "APPROVED"
+	SubscriptionPlanStatusPROPOSED  SubscriptionPlanStatus = "PROPOSED"
+	SubscriptionPlanStatusREJECTED  SubscriptionPlanStatus = "REJECTED"
+	SubscriptionPlanStatusWITHDRAWN SubscriptionPlanStatus = "WITHDRAWN"
+)
+
+// Valid indicates whether the value is a known member of the SubscriptionPlanStatus enum.
+func (e SubscriptionPlanStatus) Valid() bool {
+	switch e {
+	case SubscriptionPlanStatusAPPROVED:
+		return true
+	case SubscriptionPlanStatusPROPOSED:
+		return true
+	case SubscriptionPlanStatusREJECTED:
+		return true
+	case SubscriptionPlanStatusWITHDRAWN:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SupportCaseAction.
 const (
 	SupportCaseActionADDEVIDENCE      SupportCaseAction = "ADD_EVIDENCE"
@@ -4635,6 +6183,75 @@ func (e Treatment) Valid() bool {
 	case TreatmentPROVIDERCOST:
 		return true
 	case TreatmentREVERSECHARGE:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UsageMeter.
+const (
+	COMMITTEDDECISIONS UsageMeter = "COMMITTED_DECISIONS"
+	FILINGSUBMISSIONS  UsageMeter = "FILING_SUBMISSIONS"
+	FISCALDOCUMENTS    UsageMeter = "FISCAL_DOCUMENTS"
+	SHADOWRUNS         UsageMeter = "SHADOW_RUNS"
+)
+
+// Valid indicates whether the value is a known member of the UsageMeter enum.
+func (e UsageMeter) Valid() bool {
+	switch e {
+	case COMMITTEDDECISIONS:
+		return true
+	case FILINGSUBMISSIONS:
+		return true
+	case FISCALDOCUMENTS:
+		return true
+	case SHADOWRUNS:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UsageOveragePolicy.
+const (
+	ALLOWOVERAGE UsageOveragePolicy = "ALLOW_OVERAGE"
+	HARDLIMIT    UsageOveragePolicy = "HARD_LIMIT"
+)
+
+// Valid indicates whether the value is a known member of the UsageOveragePolicy enum.
+func (e UsageOveragePolicy) Valid() bool {
+	switch e {
+	case ALLOWOVERAGE:
+		return true
+	case HARDLIMIT:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UsageState.
+const (
+	ATQUOTA       UsageState = "AT_QUOTA"
+	NOPLAN        UsageState = "NO_PLAN"
+	NOTCONTRACTED UsageState = "NOT_CONTRACTED"
+	OVERQUOTA     UsageState = "OVER_QUOTA"
+	WITHINQUOTA   UsageState = "WITHIN_QUOTA"
+)
+
+// Valid indicates whether the value is a known member of the UsageState enum.
+func (e UsageState) Valid() bool {
+	switch e {
+	case ATQUOTA:
+		return true
+	case NOPLAN:
+		return true
+	case NOTCONTRACTED:
+		return true
+	case OVERQUOTA:
+		return true
+	case WITHINQUOTA:
 		return true
 	default:
 		return false
@@ -5402,6 +7019,600 @@ type BuyerName = string
 // BuyerRef The buyer's identifier in the tenant's own customer system.
 type BuyerRef = string
 
+// CTCAction A move of a record a person asks for.
+type CTCAction string
+
+// CTCAmount A committed fiscal document's figure in canonical decimal string form — never a JSON number, never computed by a client.
+type CTCAmount = string
+
+// CTCApplicability A country applicability record (Doc 21 W01, W20): one legal entity, country, document type and buyer kind, with versioned terms, sign-offs, evidence and history.
+type CTCApplicability struct {
+	// BuyerKind Who receives the document. A B2C document is never forced through a B2B rail.
+	BuyerKind CTCBuyerKind `json:"buyerKind"`
+
+	// Country An ISO 3166-1 alpha-2 country code.
+	Country CTCCountry `json:"country"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt      Timestamp `json:"createdAt"`
+	CreatedBy      string    `json:"createdBy"`
+	CurrentVersion int32     `json:"currentVersion"`
+
+	// DocumentType The fiscal document types an applicability record may name: billing documents and their corrections that a regime projects into an electronic document.
+	DocumentType CTCDocumentType         `json:"documentType"`
+	Evidence     []EvidenceDocument      `json:"evidence"`
+	History      []CTCApplicabilityEvent `json:"history"`
+
+	// ID A country applicability record.
+	ID CTCApplicabilityID `json:"id"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// MissingGates The required gates not yet signed on the current version.
+	MissingGates []CTCGate `json:"missingGates"`
+
+	// RequiredGates The gates the current version's duty needs.
+	RequiredGates []CTCGate `json:"requiredGates"`
+
+	// Signoffs The sign-offs on the current version.
+	Signoffs []CTCGateSignoff `json:"signoffs"`
+
+	// Status Where a record stands. DRAFT and IN_REVIEW are NOT_ACTIVATED; only ACTIVE decides a duty.
+	Status CTCApplicabilityStatus `json:"status"`
+
+	// Terms One version of what a cell owes.
+	Terms    CTCTerms          `json:"terms"`
+	Versions []CTCTermsVersion `json:"versions"`
+}
+
+// CTCApplicabilityEvent One appended act on a record.
+type CTCApplicabilityEvent struct {
+	// Evidence A document recorded as evidence by its SHA-256, hashed in the browser.
+	// The file itself is not uploaded, scanned or stored.
+	Evidence *EvidenceDocument `json:"evidence,omitempty"`
+
+	// Gate Doc 21 §11's release gates.
+	Gate *CTCGate `json:"gate,omitempty"`
+
+	// Kind What happened to a record.
+	Kind CTCApplicabilityEventKind `json:"kind"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason *EvidenceText `json:"reason,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+	RecordedBy string    `json:"recordedBy"`
+	Seq        int32     `json:"seq"`
+
+	// SignoffRef Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	SignoffRef *CTCReference `json:"signoffRef,omitempty"`
+
+	// Status Where a record stands. DRAFT and IN_REVIEW are NOT_ACTIVATED; only ACTIVE decides a duty.
+	Status  CTCApplicabilityStatus `json:"status"`
+	Version *int32                 `json:"version,omitempty"`
+}
+
+// CTCApplicabilityEventKind What happened to a record.
+type CTCApplicabilityEventKind string
+
+// CTCApplicabilityID A country applicability record.
+type CTCApplicabilityID = string
+
+// CTCApplicabilityList Country applicability records.
+type CTCApplicabilityList struct {
+	Records []CTCApplicability `json:"records"`
+}
+
+// CTCApplicabilityRequest A record to create.
+type CTCApplicabilityRequest struct {
+	// BuyerKind Who receives the document. A B2C document is never forced through a B2B rail.
+	BuyerKind CTCBuyerKind `json:"buyerKind"`
+
+	// Country An ISO 3166-1 alpha-2 country code.
+	Country CTCCountry `json:"country"`
+
+	// DocumentType The fiscal document types an applicability record may name: billing documents and their corrections that a regime projects into an electronic document.
+	DocumentType CTCDocumentType `json:"documentType"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID *LegalEntityID `json:"legalEntityId,omitempty"`
+
+	// Terms One version of what a cell owes.
+	Terms CTCTerms `json:"terms"`
+}
+
+// CTCApplicabilityStatus Where a record stands. DRAFT and IN_REVIEW are NOT_ACTIVATED; only ACTIVE decides a duty.
+type CTCApplicabilityStatus string
+
+// CTCAttemptID One dispatch attempt of a submission.
+type CTCAttemptID = string
+
+// CTCBuyerKind Who receives the document. A B2C document is never forced through a B2B rail.
+type CTCBuyerKind string
+
+// CTCCorrectionTask What an authority rejection opens: the rejected document is corrected through the fiscal corrections flow by a new document naming it, never edited. Open until one exists.
+type CTCCorrectionTask struct {
+	// AuthorityCode Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	AuthorityCode *CTCReference `json:"authorityCode,omitempty"`
+
+	// CorrectedBy Committed documents naming the rejected one as their predecessor.
+	CorrectedBy []DocumentID `json:"correctedBy"`
+
+	// DocumentID A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+	DocumentID DocumentID `json:"documentId"`
+	Open       bool       `json:"open"`
+
+	// OpenedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	OpenedAt Timestamp `json:"openedAt"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason *EvidenceText `json:"reason,omitempty"`
+}
+
+// CTCCountry An ISO 3166-1 alpha-2 country code.
+type CTCCountry = string
+
+// CTCDispatchRequest A checker's authorisation of a dispatch.
+type CTCDispatchRequest struct {
+	// PayloadDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	PayloadDigest Digest `json:"payloadDigest"`
+}
+
+// CTCDocumentType The fiscal document types an applicability record may name: billing documents and their corrections that a regime projects into an electronic document.
+type CTCDocumentType string
+
+// CTCDuty What a record says a cell owes. A PROHIBITED duty has model NONE and profile NONE.
+type CTCDuty string
+
+// CTCGate Doc 21 §11's release gates.
+type CTCGate string
+
+// CTCGateRequest A gate sign-off.
+type CTCGateRequest struct {
+	// Gate Doc 21 §11's release gates.
+	Gate CTCGate `json:"gate"`
+
+	// Note A reason, rationale or note from the person recording an act.
+	Note *EvidenceText `json:"note,omitempty"`
+
+	// SignoffRef Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	SignoffRef CTCReference `json:"signoffRef"`
+
+	// Version The version reviewed. Any other is VERSION_CONFLICT.
+	Version int32 `json:"version"`
+}
+
+// CTCGateSignoff A gate signed on an exact version.
+type CTCGateSignoff struct {
+	// Gate Doc 21 §11's release gates.
+	Gate CTCGate `json:"gate"`
+
+	// Note A reason, rationale or note from the person recording an act.
+	Note *EvidenceText `json:"note,omitempty"`
+
+	// SignedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	SignedAt Timestamp `json:"signedAt"`
+	SignedBy string    `json:"signedBy"`
+
+	// SignoffRef Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	SignoffRef CTCReference `json:"signoffRef"`
+	Version    int32        `json:"version"`
+}
+
+// CTCLegalSource The legal source and reference a duty rests on. Regulatory text, not personal data.
+type CTCLegalSource = string
+
+// CTCModel The control model (Doc 21 §02 clearance_model).
+type CTCModel string
+
+// CTCProfile The format profile a document is projected into (Doc 21 §08). National profiles are used only in their own country; PEPPOL_BIS_3 is a network profile.
+type CTCProfile string
+
+// CTCReference Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+type CTCReference = string
+
+// CTCResolution What a cell owes on a date. No side effect.
+type CTCResolution struct {
+	// ApplicabilityID A country applicability record.
+	ApplicabilityID *CTCApplicabilityID `json:"applicabilityId,omitempty"`
+
+	// ApplicabilityStatus Where a record stands. DRAFT and IN_REVIEW are NOT_ACTIVATED; only ACTIVE decides a duty.
+	ApplicabilityStatus  *CTCApplicabilityStatus `json:"applicabilityStatus,omitempty"`
+	ApplicabilityVersion *int32                  `json:"applicabilityVersion,omitempty"`
+
+	// BuyerKind Who receives the document. A B2C document is never forced through a B2B rail.
+	BuyerKind CTCBuyerKind `json:"buyerKind"`
+
+	// Country An ISO 3166-1 alpha-2 country code.
+	Country CTCCountry `json:"country"`
+
+	// Date A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	Date   CivilDate `json:"date"`
+	Detail string    `json:"detail"`
+
+	// DispatchPermitted Whether documents of the cell may be validated and submitted: the duty is REQUIRED or OPTIONAL.
+	DispatchPermitted bool `json:"dispatchPermitted"`
+
+	// DocumentType The fiscal document types an applicability record may name: billing documents and their corrections that a regime projects into an electronic document.
+	DocumentType CTCDocumentType `json:"documentType"`
+
+	// Duty What resolution answers: an active record's duty, or REVIEW_BLOCKED.
+	Duty CTCResolvedDuty `json:"duty"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// ReasonCode A registered code from a closed vocabulary (ADR-0016 §2.4). Codes are
+	// never renumbered, never reused and never redefined; a retired code stops
+	// being emitted and keeps its meaning so historical evidence still
+	// resolves.
+	//
+	// This is the field to branch on. The set this deployment can emit is
+	// reported by `GET /v1/capabilities`; the enum is deliberately not closed
+	// here, because the register grows by addition and a client that rejects
+	// an unrecognised code would break on an additive change (ADR-0010 §2.6).
+	ReasonCode *ReasonCode `json:"reasonCode,omitempty"`
+
+	// Terms One version of what a cell owes.
+	Terms *CTCTerms `json:"terms,omitempty"`
+}
+
+// CTCResolvedDuty What resolution answers: an active record's duty, or REVIEW_BLOCKED.
+type CTCResolvedDuty string
+
+// CTCResponseKind An answer a person records.
+type CTCResponseKind string
+
+// CTCResponseRequest An answer, as a person records it.
+type CTCResponseRequest struct {
+	// AttemptID One dispatch attempt of a submission.
+	AttemptID CTCAttemptID `json:"attemptId"`
+
+	// AuthorityCode Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	AuthorityCode *CTCReference `json:"authorityCode,omitempty"`
+
+	// AuthorityRef Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	AuthorityRef *CTCReference `json:"authorityRef,omitempty"`
+
+	// Detail A reason, rationale or note from the person recording an act.
+	Detail *EvidenceText `json:"detail,omitempty"`
+
+	// EvidenceSha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	EvidenceSha256 *Sha256Hex `json:"evidenceSha256,omitempty"`
+
+	// Kind An answer a person records.
+	Kind CTCResponseKind `json:"kind"`
+
+	// TransportRef Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	TransportRef *CTCReference `json:"transportRef,omitempty"`
+}
+
+// CTCRuleOutcome One rule's result. NOT_EVALUATED is never a pass.
+type CTCRuleOutcome string
+
+// CTCRuleResult One rule's result on one document.
+type CTCRuleResult struct {
+	BusinessTerm *string `json:"businessTerm,omitempty"`
+	Detail       *string `json:"detail,omitempty"`
+
+	// Outcome One rule's result. NOT_EVALUATED is never a pass.
+	Outcome CTCRuleOutcome `json:"outcome"`
+
+	// ReasonCode A registered code from a closed vocabulary (ADR-0016 §2.4). Codes are
+	// never renumbered, never reused and never redefined; a retired code stops
+	// being emitted and keeps its meaning so historical evidence still
+	// resolves.
+	//
+	// This is the field to branch on. The set this deployment can emit is
+	// reported by `GET /v1/capabilities`; the enum is deliberately not closed
+	// here, because the register grows by addition and a client that rejects
+	// an unrecognised code would break on an additive change (ADR-0010 §2.6).
+	ReasonCode *ReasonCode `json:"reasonCode,omitempty"`
+	RuleID     string      `json:"ruleId"`
+
+	// Severity FATAL blocks submission and is never waived; WARNING is reported.
+	Severity CTCRuleSeverity `json:"severity"`
+
+	// Stage The validation stage a rule belongs to.
+	Stage CTCRuleStage `json:"stage"`
+}
+
+// CTCRuleSeverity FATAL blocks submission and is never waived; WARNING is reported.
+type CTCRuleSeverity string
+
+// CTCRuleStage The validation stage a rule belongs to.
+type CTCRuleStage string
+
+// CTCSubmission An authority submission of a fiscal document under a record version (Doc 21 W14, W15).
+type CTCSubmission struct {
+	// ApplicabilityID A country applicability record.
+	ApplicabilityID      CTCApplicabilityID `json:"applicabilityId"`
+	ApplicabilityVersion int32              `json:"applicabilityVersion"`
+
+	// BuyerKind Who receives the document. A B2C document is never forced through a B2B rail.
+	BuyerKind CTCBuyerKind `json:"buyerKind"`
+
+	// Correction What an authority rejection opens: the rejected document is corrected through the fiscal corrections flow by a new document naming it, never edited. Open until one exists.
+	Correction *CTCCorrectionTask `json:"correction,omitempty"`
+
+	// Country An ISO 3166-1 alpha-2 country code.
+	Country CTCCountry `json:"country"`
+
+	// Currency An ISO 4217 alphabetic currency code.
+	Currency CurrencyCode `json:"currency"`
+
+	// DocumentID A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+	DocumentID DocumentID `json:"documentId"`
+
+	// DocumentNumber The legal, customer-visible document number.
+	DocumentNumber *string `json:"documentNumber,omitempty"`
+
+	// DocumentType The fiscal document types an applicability record may name: billing documents and their corrections that a regime projects into an electronic document.
+	DocumentType CTCDocumentType `json:"documentType"`
+
+	// ExternalRef The reference every attempt carries, and a status enquiry asks by. Never changes across attempts.
+	ExternalRef string `json:"externalRef"`
+
+	// FormatVersion A short regulatory label: an authority, a format version.
+	FormatVersion *CTCText `json:"formatVersion,omitempty"`
+
+	// Gross A committed fiscal document's figure in canonical decimal string form — never a JSON number, never computed by a client.
+	Gross   CTCAmount            `json:"gross"`
+	History []CTCSubmissionEvent `json:"history"`
+
+	// ID An authority submission. Also the reference every dispatch attempt carries.
+	ID CTCSubmissionID `json:"id"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// Model The control model (Doc 21 §02 clearance_model).
+	Model CTCModel `json:"model"`
+
+	// PayloadDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	PayloadDigest Digest `json:"payloadDigest"`
+
+	// PreparedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	PreparedAt Timestamp `json:"preparedAt"`
+	PreparedBy string    `json:"preparedBy"`
+
+	// Profile The format profile a document is projected into (Doc 21 §08). National profiles are used only in their own country; PEPPOL_BIS_3 is a network profile.
+	Profile CTCProfile `json:"profile"`
+
+	// Status Where a submission stands (Doc 21 §06). TRANSPORT_RECEIVED is not acceptance.
+	Status CTCSubmissionStatus `json:"status"`
+
+	// ValidationID An immutable format validation report.
+	ValidationID CTCValidationID `json:"validationId"`
+}
+
+// CTCSubmissionEvent One appended act on a submission.
+type CTCSubmissionEvent struct {
+	// AttemptID One dispatch attempt of a submission.
+	AttemptID *CTCAttemptID `json:"attemptId,omitempty"`
+
+	// AuthorityCode Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	AuthorityCode *CTCReference `json:"authorityCode,omitempty"`
+
+	// AuthorityRef Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	AuthorityRef *CTCReference `json:"authorityRef,omitempty"`
+
+	// Detail A reason, rationale or note from the person recording an act.
+	Detail *EvidenceText `json:"detail,omitempty"`
+
+	// EvidenceSha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	EvidenceSha256 *Sha256Hex `json:"evidenceSha256,omitempty"`
+
+	// Kind What happened to a submission.
+	Kind CTCSubmissionEventKind `json:"kind"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+	RecordedBy string    `json:"recordedBy"`
+	Seq        int32     `json:"seq"`
+
+	// Status Where a submission stands (Doc 21 §06). TRANSPORT_RECEIVED is not acceptance.
+	Status CTCSubmissionStatus `json:"status"`
+
+	// TransportRef Another system's reference: a sign-off ticket, a transport receipt, an authority document id or code.
+	TransportRef *CTCReference `json:"transportRef,omitempty"`
+}
+
+// CTCSubmissionEventKind What happened to a submission.
+type CTCSubmissionEventKind string
+
+// CTCSubmissionID An authority submission. Also the reference every dispatch attempt carries.
+type CTCSubmissionID = string
+
+// CTCSubmissionList Submissions.
+type CTCSubmissionList struct {
+	Submissions []CTCSubmission `json:"submissions"`
+}
+
+// CTCSubmissionRequest A document to submit under a record.
+type CTCSubmissionRequest struct {
+	// ApplicabilityID A country applicability record.
+	ApplicabilityID CTCApplicabilityID `json:"applicabilityId"`
+
+	// DocumentID A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+	DocumentID DocumentID `json:"documentId"`
+}
+
+// CTCSubmissionStatus Where a submission stands (Doc 21 §06). TRANSPORT_RECEIVED is not acceptance.
+type CTCSubmissionStatus string
+
+// CTCTerms One version of what a cell owes.
+type CTCTerms struct {
+	// Authority A short regulatory label: an authority, a format version.
+	Authority CTCText `json:"authority"`
+
+	// Conditions A reason, rationale or note from the person recording an act.
+	Conditions *EvidenceText `json:"conditions,omitempty"`
+
+	// Duty What a record says a cell owes. A PROHIBITED duty has model NONE and profile NONE.
+	Duty CTCDuty `json:"duty"`
+
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate `json:"effectiveFrom"`
+
+	// EffectiveTo A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveTo *CivilDate `json:"effectiveTo,omitempty"`
+
+	// FormatVersion A short regulatory label: an authority, a format version.
+	FormatVersion *CTCText `json:"formatVersion,omitempty"`
+
+	// LegalSource The legal source and reference a duty rests on. Regulatory text, not personal data.
+	LegalSource CTCLegalSource `json:"legalSource"`
+
+	// Model The control model (Doc 21 §02 clearance_model).
+	Model CTCModel `json:"model"`
+
+	// Profile The format profile a document is projected into (Doc 21 §08). National profiles are used only in their own country; PEPPOL_BIS_3 is a network profile.
+	Profile CTCProfile `json:"profile"`
+
+	// SourceAsOf A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	SourceAsOf CivilDate `json:"sourceAsOf"`
+}
+
+// CTCTermsVersion A recorded version of a record's terms. Never edited.
+type CTCTermsVersion struct {
+	// Digest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	Digest Digest `json:"digest"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+	RecordedBy string    `json:"recordedBy"`
+
+	// Terms One version of what a cell owes.
+	Terms   CTCTerms `json:"terms"`
+	Version int32    `json:"version"`
+}
+
+// CTCText A short regulatory label: an authority, a format version.
+type CTCText = string
+
+// CTCTransitionRequest A move of a record.
+type CTCTransitionRequest struct {
+	// Action A move of a record a person asks for.
+	Action CTCAction `json:"action"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason *EvidenceText `json:"reason,omitempty"`
+
+	// Version The version an activation is on.
+	Version *int32 `json:"version,omitempty"`
+}
+
+// CTCValidation An immutable format validation report (Doc 21 W06).
+type CTCValidation struct {
+	// ApplicabilityID A country applicability record.
+	ApplicabilityID      CTCApplicabilityID `json:"applicabilityId"`
+	ApplicabilityVersion int32              `json:"applicabilityVersion"`
+
+	// Digest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	Digest Digest `json:"digest"`
+
+	// DocumentID A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+	DocumentID    DocumentID `json:"documentId"`
+	FatalFailures int32      `json:"fatalFailures"`
+
+	// FormatVersion A short regulatory label: an authority, a format version.
+	FormatVersion *CTCText `json:"formatVersion,omitempty"`
+
+	// ID An immutable format validation report.
+	ID CTCValidationID `json:"id"`
+
+	// InputDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	InputDigest Digest `json:"inputDigest"`
+
+	// Outcome PASSED means no FATAL rule failed. It is not certification.
+	Outcome CTCValidationOutcome `json:"outcome"`
+
+	// Profile The format profile a document is projected into (Doc 21 §08). National profiles are used only in their own country; PEPPOL_BIS_3 is a network profile.
+	Profile CTCProfile      `json:"profile"`
+	Results []CTCRuleResult `json:"results"`
+
+	// Ruleset The ruleset version the rules ran under.
+	Ruleset string `json:"ruleset"`
+
+	// SchemaValidated Whether the official schema and Schematron stage ran. Always false here: no licensed bundle is installed.
+	SchemaValidated bool `json:"schemaValidated"`
+
+	// ValidatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	ValidatedAt Timestamp `json:"validatedAt"`
+	ValidatedBy string    `json:"validatedBy"`
+}
+
+// CTCValidationID An immutable format validation report.
+type CTCValidationID = string
+
+// CTCValidationList Validation reports.
+type CTCValidationList struct {
+	Validations []CTCValidation `json:"validations"`
+}
+
+// CTCValidationOutcome PASSED means no FATAL rule failed. It is not certification.
+type CTCValidationOutcome string
+
+// CTCValidationRequest A document to validate under a record.
+type CTCValidationRequest struct {
+	// ApplicabilityID A country applicability record.
+	ApplicabilityID CTCApplicabilityID `json:"applicabilityId"`
+
+	// DocumentID A fiscal document. A UUIDv7 in lowercase canonical form, never the legal document number.
+	DocumentID DocumentID `json:"documentId"`
+}
+
+// CTCWithdrawalRequest Why a prepared submission is withdrawn.
+type CTCWithdrawalRequest struct {
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason EvidenceText `json:"reason"`
+}
+
+// CanonicalServiceCode A Zoiko canonical service code in the tax ontology.
+type CanonicalServiceCode = string
+
 // Capabilities defines model for Capabilities.
 type Capabilities struct {
 	// Authoritative **Whether this deployment may produce authoritative fiscal output.**
@@ -5578,6 +7789,9 @@ type CodeMapping struct {
 	// Slot A ZoikoTax emitted slot, or UNMAPPED_EXTERNAL_CODE.
 	Slot ZoikoSlot `json:"slot"`
 }
+
+// CommercialText A reason or note from the administrator acting.
+type CommercialText = string
 
 // CommitRequest Exactly one of `input` and `document` is required, as for a quote.
 // `eventTime` is the tax point: every effective date and legal period is
@@ -5988,6 +8202,19 @@ type ContentLabel = string
 
 // ContentText Text from the active content, such as a source citation. Not interpreted.
 type ContentText = string
+
+// ContentTransitionRequest A move of a crosswalk version to the status named.
+type ContentTransitionRequest struct {
+	// ExpectedRevision The `revision` that was read. Anything recorded since is `VERSION_CONFLICT`.
+	ExpectedRevision int32 `json:"expectedRevision"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason *EvidenceText   `json:"reason,omitempty"`
+	To     CrosswalkStatus `json:"to"`
+}
+
+// ContractReference The signed contract, schedule or revision a right or plan comes from, as the contract names it.
+type ContractReference = string
 
 // ContributionAmount A provider's contribution base, or a quantity, in canonical decimal string
 // form — never a JSON number, and never computed by a client
@@ -6495,6 +8722,259 @@ type CreateUserRequest struct {
 
 // CredentialRef Where the authority credential is held in the secrets vault. Never the credential.
 type CredentialRef = string
+
+// Crosswalk One vendor code namespace at one vendor release, mapped onto Zoiko
+// canonical service codes, with every version. Advisory only: a
+// crosswalk is never fiscal authority.
+type Crosswalk struct {
+	// AdvisoryOnly Always true. A crosswalk translates codes; it never determines tax.
+	AdvisoryOnly bool `json:"advisoryOnly"`
+
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf Timestamp `json:"asOf"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// CreatedBy The person who recorded an act.
+	CreatedBy EvidenceActor `json:"createdBy"`
+
+	// CurrentVersion The version in use — the newest approved or suspended one — if any.
+	CurrentVersion *int32      `json:"currentVersion,omitempty"`
+	ID             CrosswalkID `json:"id"`
+
+	// Namespace The vendor's code namespace, upper case.
+	Namespace CrosswalkNamespace `json:"namespace"`
+
+	// Title A short label — a title, a vendor release, a grant reference.
+	Title CrosswalkLabel `json:"title"`
+
+	// Vendor The vendor or source system, upper case.
+	Vendor CrosswalkVendor `json:"vendor"`
+
+	// VendorRelease A short label — a title, a vendor release, a grant reference.
+	VendorRelease CrosswalkLabel     `json:"vendorRelease"`
+	Versions      []CrosswalkVersion `json:"versions"`
+}
+
+// CrosswalkEntry defines model for CrosswalkEntry.
+type CrosswalkEntry struct {
+	// Description The vendor's meaning of a code, a predicate or a note. Vendor configuration, not personal data.
+	Description CrosswalkText `json:"description"`
+
+	// ExternalCode An external code exactly as the vendor emits it.
+	ExternalCode CrosswalkExternalCode `json:"externalCode"`
+
+	// LevyHint A candidate levy component code for a content researcher. Never creates a levy.
+	LevyHint *CrosswalkLevyHint `json:"levyHint,omitempty"`
+
+	// Match How well the external code corresponds to the target.
+	Match CrosswalkMatch `json:"match"`
+
+	// Note The vendor's meaning of a code, a predicate or a note. Vendor configuration, not personal data.
+	Note *CrosswalkText `json:"note,omitempty"`
+
+	// Predicate The vendor's meaning of a code, a predicate or a note. Vendor configuration, not personal data.
+	Predicate *CrosswalkText `json:"predicate,omitempty"`
+
+	// ServiceTarget A Zoiko canonical service code in the tax ontology.
+	ServiceTarget *CanonicalServiceCode `json:"serviceTarget,omitempty"`
+}
+
+// CrosswalkEvent defines model for CrosswalkEvent.
+type CrosswalkEvent struct {
+	Kind CrosswalkEventKind `json:"kind"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason *EvidenceText `json:"reason,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy The person who recorded an act.
+	RecordedBy EvidenceActor   `json:"recordedBy"`
+	Seq        int32           `json:"seq"`
+	Status     CrosswalkStatus `json:"status"`
+}
+
+// CrosswalkEventKind defines model for CrosswalkEventKind.
+type CrosswalkEventKind string
+
+// CrosswalkExternalCode An external code exactly as the vendor emits it.
+type CrosswalkExternalCode = string
+
+// CrosswalkID defines model for CrosswalkId.
+type CrosswalkID = string
+
+// CrosswalkLabel A short label — a title, a vendor release, a grant reference.
+type CrosswalkLabel = string
+
+// CrosswalkLevyHint A candidate levy component code for a content researcher. Never creates a levy.
+type CrosswalkLevyHint = string
+
+// CrosswalkList defines model for CrosswalkList.
+type CrosswalkList struct {
+	Crosswalks []Crosswalk `json:"crosswalks"`
+}
+
+// CrosswalkLookup One external code translated. Advisory only — never a tax treatment.
+type CrosswalkLookup struct {
+	// AdvisoryOnly Always true.
+	AdvisoryOnly bool `json:"advisoryOnly"`
+
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf       Timestamp        `json:"asOf"`
+	Candidates []CrosswalkEntry `json:"candidates"`
+
+	// Code An external code exactly as the vendor emits it.
+	Code        CrosswalkExternalCode `json:"code"`
+	CrosswalkID CrosswalkID           `json:"crosswalkId"`
+
+	// Detail The vendor's meaning of a code, a predicate or a note. Vendor configuration, not personal data.
+	Detail CrosswalkText `json:"detail"`
+
+	// On A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	On         CivilDate           `json:"on"`
+	Resolution CrosswalkResolution `json:"resolution"`
+
+	// Version The version resolved against; absent when none has been approved.
+	Version *int32 `json:"version,omitempty"`
+}
+
+// CrosswalkMatch How well the external code corresponds to the target.
+type CrosswalkMatch string
+
+// CrosswalkNamespace The vendor's code namespace, upper case.
+type CrosswalkNamespace = string
+
+// CrosswalkRequest defines model for CrosswalkRequest.
+type CrosswalkRequest struct {
+	// Namespace The vendor's code namespace, upper case.
+	Namespace CrosswalkNamespace `json:"namespace"`
+
+	// Title A short label — a title, a vendor release, a grant reference.
+	Title CrosswalkLabel `json:"title"`
+
+	// Vendor The vendor or source system, upper case.
+	Vendor CrosswalkVendor `json:"vendor"`
+
+	// VendorRelease A short label — a title, a vendor release, a grant reference.
+	VendorRelease CrosswalkLabel          `json:"vendorRelease"`
+	Version       CrosswalkVersionRequest `json:"version"`
+}
+
+// CrosswalkResolution defines model for CrosswalkResolution.
+type CrosswalkResolution string
+
+// CrosswalkRights The grant a version's vendor data is held under.
+type CrosswalkRights struct {
+	// Basis On what footing the vendor's code data is held.
+	Basis CrosswalkRightsBasis `json:"basis"`
+
+	// EvidenceSha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	EvidenceSha256 *Sha256Hex `json:"evidenceSha256,omitempty"`
+
+	// ExpiresOn A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	ExpiresOn *CivilDate `json:"expiresOn,omitempty"`
+
+	// Reference A short label — a title, a vendor release, a grant reference.
+	Reference CrosswalkLabel `json:"reference"`
+}
+
+// CrosswalkRightsBasis On what footing the vendor's code data is held.
+type CrosswalkRightsBasis string
+
+// CrosswalkStatus defines model for CrosswalkStatus.
+type CrosswalkStatus string
+
+// CrosswalkText The vendor's meaning of a code, a predicate or a note. Vendor configuration, not personal data.
+type CrosswalkText = string
+
+// CrosswalkVendor The vendor or source system, upper case.
+type CrosswalkVendor = string
+
+// CrosswalkVersion One immutable crosswalk version. Its entries never change; its status is its history.
+type CrosswalkVersion struct {
+	// ApprovedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	ApprovedAt *Timestamp `json:"approvedAt,omitempty"`
+
+	// ApprovedBy The person who recorded an act.
+	ApprovedBy *EvidenceActor `json:"approvedBy,omitempty"`
+
+	// ContentDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	ContentDigest Digest `json:"contentDigest"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// CreatedBy The person who recorded an act.
+	CreatedBy EvidenceActor `json:"createdBy"`
+
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate `json:"effectiveFrom"`
+
+	// EffectiveTo A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveTo *CivilDate       `json:"effectiveTo,omitempty"`
+	Entries     []CrosswalkEntry `json:"entries"`
+	History     []CrosswalkEvent `json:"history"`
+
+	// Revision The number of events recorded. A transition names it.
+	Revision int32 `json:"revision"`
+
+	// Rights The grant a version's vendor data is held under.
+	Rights CrosswalkRights `json:"rights"`
+	Status CrosswalkStatus `json:"status"`
+
+	// SubmittedBy The person who recorded an act.
+	SubmittedBy *EvidenceActor `json:"submittedBy,omitempty"`
+	Version     int32          `json:"version"`
+}
+
+// CrosswalkVersionNumber A crosswalk version number.
+type CrosswalkVersionNumber = int32
+
+// CrosswalkVersionRequest defines model for CrosswalkVersionRequest.
+type CrosswalkVersionRequest struct {
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate `json:"effectiveFrom"`
+
+	// EffectiveTo A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveTo *CivilDate       `json:"effectiveTo,omitempty"`
+	Entries     []CrosswalkEntry `json:"entries"`
+
+	// Rights The grant a version's vendor data is held under.
+	Rights CrosswalkRights `json:"rights"`
+
+	// Submit Submit for review now. Otherwise the version is kept as a DRAFT.
+	Submit *bool `json:"submit,omitempty"`
+}
 
 // CurrencyCode An ISO 4217 alphabetic currency code.
 type CurrencyCode = string
@@ -7802,6 +10282,301 @@ type EffectiveObligationStatus string
 // Emitted What the content emitted, by result slot. The slots are the pack's.
 type Emitted map[string]ResultValue
 
+// Entitlement One entitlement grant as of `asOf`, beside the coverage the cell
+// proves for it. `findings` lists every reason it is pending or
+// blocked — its own lifecycle first, then coverage's — and is empty only
+// when `decision` is `ALLOW`. `actions` are the actions its lifecycle
+// allows; the server still compares the people.
+type Entitlement struct {
+	Actions []EntitlementAction `json:"actions"`
+
+	// ActiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	ActiveFrom *CivilDate `json:"activeFrom,omitempty"`
+
+	// ApprovedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	ApprovedAt *Timestamp `json:"approvedAt,omitempty"`
+
+	// ApprovedBy The person who recorded an act.
+	ApprovedBy *EvidenceActor `json:"approvedBy,omitempty"`
+
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf Timestamp `json:"asOf"`
+
+	// ContractRef The signed contract, schedule or revision a right or plan comes from, as the contract names it.
+	ContractRef ContractReference `json:"contractRef"`
+
+	// ContractRevision The signed contract, schedule or revision a right or plan comes from, as the contract names it.
+	ContractRevision *ContractReference `json:"contractRevision,omitempty"`
+
+	// Country ISO 3166-1 alpha-2.
+	Country CountryCode `json:"country"`
+
+	// Coverage What the cell proves for the grant's scope, read now. Never stored; never set by the grant.
+	Coverage EntitlementCoverage `json:"coverage"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// CreatedBy The person who recorded an act.
+	CreatedBy EvidenceActor `json:"createdBy"`
+
+	// Decision The effective-capability decision. Anything false, unknown or unproven is `DENY`.
+	Decision EntitlementDecision `json:"decision"`
+
+	// Effective Whether the right can be used now. `ACTIVE` is an active grant over
+	// coverage the cell proves; `RESTRICTED` is an active grant it does not
+	// prove; `PENDING` is recorded, in review or scheduled; `ENDED` is
+	// rejected, withdrawn or revoked.
+	Effective EntitlementEffective `json:"effective"`
+
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate `json:"effectiveFrom"`
+
+	// EffectiveTo A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveTo *CivilDate           `json:"effectiveTo,omitempty"`
+	Findings    []EntitlementFinding `json:"findings"`
+	History     []EntitlementEvent   `json:"history"`
+
+	// ID An entitlement grant.
+	ID EntitlementID `json:"id"`
+
+	// Jurisdiction A country, or a country and one subdivision, upper case.
+	Jurisdiction EvidenceJurisdiction `json:"jurisdiction"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID LegalEntityID `json:"legalEntityId"`
+
+	// Lifecycle The stored state, the fold of the grant's events.
+	Lifecycle EntitlementLifecycle `json:"lifecycle"`
+
+	// Mismatch An approved grant, active or scheduled, whose coverage the cell does not prove.
+	Mismatch bool `json:"mismatch"`
+
+	// Mode The operating mode (Doc 18 §02). Each is a separate right and none
+	// implies another: `NATIVE` carries `QUOTE`, `COMMIT`, `FILE`, `REMIT`
+	// and `E_INVOICE`; `FEDERATED` and `OEM_EMBEDDED` carry `QUOTE` and
+	// `COMMIT`; `SHADOW_ASSURANCE` carries only `SHADOW_COMPARE`;
+	// `MANAGED_COMPLIANCE` carries `FILE` and `REMIT`.
+	Mode EntitlementMode `json:"mode"`
+
+	// Operation What the grant permits. A quote right is not a commit right; a calculation right is not a filing right.
+	Operation EntitlementOperation `json:"operation"`
+
+	// Service A ZTAX-CLS-001 ontology family. A tenant's SKU is mapped to one before
+	// determination; a line without one is held as `CLASSIFICATION_REQUIRED`
+	// rather than guessed at.
+	Service ServiceFamily `json:"service"`
+
+	// Status The grant read against today's UTC date. An `APPROVED` grant is
+	// `SCHEDULED` before it runs, `ACTIVE` while it runs and `EXPIRED` after
+	// its end date; `SUSPENDED` trumps `ACTIVE`.
+	Status EntitlementStatus `json:"status"`
+
+	// SubmittedBy The person who recorded an act.
+	SubmittedBy *EvidenceActor `json:"submittedBy,omitempty"`
+
+	// Version The number of events recorded. An action names it.
+	Version int32 `json:"version"`
+}
+
+// EntitlementAction defines model for EntitlementAction.
+type EntitlementAction string
+
+// EntitlementActionRequest defines model for EntitlementActionRequest.
+type EntitlementActionRequest struct {
+	Action EntitlementAction `json:"action"`
+
+	// ExpectedVersion The `version` that was read. Anything recorded since is `VERSION_CONFLICT`.
+	ExpectedVersion int32 `json:"expectedVersion"`
+
+	// Reason A reason or note from the administrator acting.
+	Reason *CommercialText `json:"reason,omitempty"`
+}
+
+// EntitlementCoverage What the cell proves for the grant's scope, read now. Never stored; never set by the grant.
+type EntitlementCoverage struct {
+	// Filing The legal filing gate for the grant's legal entity in its country.
+	Filing   *EntitlementFilingGate `json:"filing,omitempty"`
+	Findings []EntitlementFinding   `json:"findings"`
+
+	// MarketReason What keeps the market from the next state.
+	MarketReason *DashboardMarketReason `json:"marketReason,omitempty"`
+
+	// MarketStatus The market's verified coverage status, or `NOT_LISTED` for a country neither the research catalogue nor content names.
+	MarketStatus EntitlementMarketStatus `json:"marketStatus"`
+
+	// Research How far the research behind a catalogue profile has got. Research is never coverage.
+	Research        *DashboardResearch       `json:"research,omitempty"`
+	ServicesInForce []ServiceFamily          `json:"servicesInForce"`
+	State           EntitlementCoverageState `json:"state"`
+}
+
+// EntitlementCoverageState defines model for EntitlementCoverageState.
+type EntitlementCoverageState string
+
+// EntitlementDecision The effective-capability decision. Anything false, unknown or unproven is `DENY`.
+type EntitlementDecision string
+
+// EntitlementEffective Whether the right can be used now. `ACTIVE` is an active grant over
+// coverage the cell proves; `RESTRICTED` is an active grant it does not
+// prove; `PENDING` is recorded, in review or scheduled; `ENDED` is
+// rejected, withdrawn or revoked.
+type EntitlementEffective string
+
+// EntitlementEvent defines model for EntitlementEvent.
+type EntitlementEvent struct {
+	Kind EntitlementEventKind `json:"kind"`
+
+	// Lifecycle The stored state, the fold of the grant's events.
+	Lifecycle EntitlementLifecycle `json:"lifecycle"`
+
+	// Reason A reason or note from the administrator acting.
+	Reason *CommercialText `json:"reason,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy The person who recorded an act.
+	RecordedBy EvidenceActor `json:"recordedBy"`
+	Seq        int32         `json:"seq"`
+}
+
+// EntitlementEventKind defines model for EntitlementEventKind.
+type EntitlementEventKind string
+
+// EntitlementFilingGate The legal filing gate for the grant's legal entity in its country.
+type EntitlementFilingGate struct {
+	// Authority The authority whose gate is ready, or the first considered when none is.
+	Authority *string `json:"authority,omitempty"`
+	Ready     bool    `json:"ready"`
+
+	// Reason The gate's blocking reason when it is not ready.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// EntitlementFinding One reason a grant is pending or blocked, with what a person reads about it.
+type EntitlementFinding struct {
+	// Detail Plain language, written by the cell.
+	Detail string `json:"detail"`
+
+	// Reason Why a grant is pending or blocked. The coverage reasons are Doc 18
+	// §06's: `CONTENT_NOT_ACTIVE` (no content in force for the service
+	// there, or a research profile only), `OPERATION_NOT_SUPPORTED` (the
+	// filing gate or the e-invoicing adapter is not there),
+	// `TECHNICALLY_UNAVAILABLE` (an advisory cell cannot commit),
+	// `GEOGRAPHY_NOT_PROVEN` (coverage is proven per country, not per
+	// subdivision) and `PROVIDER_EVIDENCE_ABSENT` (a federated provider's
+	// coverage is not evidenced).
+	Reason EntitlementReason `json:"reason"`
+}
+
+// EntitlementID An entitlement grant.
+type EntitlementID = string
+
+// EntitlementLifecycle The stored state, the fold of the grant's events.
+type EntitlementLifecycle string
+
+// EntitlementList defines model for EntitlementList.
+type EntitlementList struct {
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf Timestamp `json:"asOf"`
+
+	// Authoritative Whether the cell may emit authoritative output.
+	Authoritative bool `json:"authoritative"`
+
+	// Catalogue The research catalogue's version, absent when the cell has none.
+	Catalogue    *string           `json:"catalogue,omitempty"`
+	Entitlements []Entitlement     `json:"entitlements"`
+	Markets      []DashboardMarket `json:"markets"`
+}
+
+// EntitlementMarketStatus The market's verified coverage status, or `NOT_LISTED` for a country neither the research catalogue nor content names.
+type EntitlementMarketStatus string
+
+// EntitlementMode The operating mode (Doc 18 §02). Each is a separate right and none
+// implies another: `NATIVE` carries `QUOTE`, `COMMIT`, `FILE`, `REMIT`
+// and `E_INVOICE`; `FEDERATED` and `OEM_EMBEDDED` carry `QUOTE` and
+// `COMMIT`; `SHADOW_ASSURANCE` carries only `SHADOW_COMPARE`;
+// `MANAGED_COMPLIANCE` carries `FILE` and `REMIT`.
+type EntitlementMode string
+
+// EntitlementOperation What the grant permits. A quote right is not a commit right; a calculation right is not a filing right.
+type EntitlementOperation string
+
+// EntitlementReason Why a grant is pending or blocked. The coverage reasons are Doc 18
+// §06's: `CONTENT_NOT_ACTIVE` (no content in force for the service
+// there, or a research profile only), `OPERATION_NOT_SUPPORTED` (the
+// filing gate or the e-invoicing adapter is not there),
+// `TECHNICALLY_UNAVAILABLE` (an advisory cell cannot commit),
+// `GEOGRAPHY_NOT_PROVEN` (coverage is proven per country, not per
+// subdivision) and `PROVIDER_EVIDENCE_ABSENT` (a federated provider's
+// coverage is not evidenced).
+type EntitlementReason string
+
+// EntitlementRequest defines model for EntitlementRequest.
+type EntitlementRequest struct {
+	// ContractRef The signed contract, schedule or revision a right or plan comes from, as the contract names it.
+	ContractRef ContractReference `json:"contractRef"`
+
+	// ContractRevision The signed contract, schedule or revision a right or plan comes from, as the contract names it.
+	ContractRevision *ContractReference `json:"contractRevision,omitempty"`
+
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate `json:"effectiveFrom"`
+
+	// EffectiveTo A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveTo *CivilDate `json:"effectiveTo,omitempty"`
+
+	// Jurisdiction A country, or a country and one subdivision, upper case.
+	Jurisdiction EvidenceJurisdiction `json:"jurisdiction"`
+
+	// LegalEntityID A legal entity within the tenant (ZTAX-OBL-REQ-0018). A UUID in lowercase canonical form.
+	LegalEntityID *LegalEntityID `json:"legalEntityId,omitempty"`
+
+	// Mode The operating mode (Doc 18 §02). Each is a separate right and none
+	// implies another: `NATIVE` carries `QUOTE`, `COMMIT`, `FILE`, `REMIT`
+	// and `E_INVOICE`; `FEDERATED` and `OEM_EMBEDDED` carry `QUOTE` and
+	// `COMMIT`; `SHADOW_ASSURANCE` carries only `SHADOW_COMPARE`;
+	// `MANAGED_COMPLIANCE` carries `FILE` and `REMIT`.
+	Mode EntitlementMode `json:"mode"`
+
+	// Operation What the grant permits. A quote right is not a commit right; a calculation right is not a filing right.
+	Operation EntitlementOperation `json:"operation"`
+
+	// Service A ZTAX-CLS-001 ontology family. A tenant's SKU is mapped to one before
+	// determination; a line without one is held as `CLASSIFICATION_REQUIRED`
+	// rather than guessed at.
+	Service ServiceFamily `json:"service"`
+
+	// Submit Submit for review now. Otherwise the grant is kept as a DRAFT.
+	Submit *bool `json:"submit,omitempty"`
+}
+
+// EntitlementStatus The grant read against today's UTC date. An `APPROVED` grant is
+// `SCHEDULED` before it runs, `ACTIVE` while it runs and `EXPIRED` after
+// its end date; `SUSPENDED` trumps `ACTIVE`.
+type EntitlementStatus string
+
 // EventType An event type this cell emits, as the AsyncAPI contract names it.
 type EventType string
 
@@ -8506,6 +11281,104 @@ type GLSnapshotRequest struct {
 	// SourceRef A reference into the customer's ERP or its reports — a message, receipt, query, posted journal or report reference, or a checksum. Never a person.
 	SourceRef ERPRef `json:"sourceRef"`
 }
+
+// HandoffRef The opaque reference an accepted recommendation hands a later workflow.
+type HandoffRef = string
+
+// ImpactAssessment A deterministic impact assessment: the same inputs give the same
+// `inputsDigest` and `assessmentDigest`. Advisory; it writes nothing.
+type ImpactAssessment struct {
+	// AsOf A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	AsOf CivilDate `json:"asOf"`
+
+	// AssessmentDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	AssessmentDigest Digest `json:"assessmentDigest"`
+
+	// BundleDigest A reference, label or basis the assessment generated from content and record identifiers.
+	BundleDigest ImpactText `json:"bundleDigest"`
+
+	// BundleID A reference, label or basis the assessment generated from content and record identifiers.
+	BundleID ImpactText `json:"bundleId"`
+
+	// ChangeID A recorded regulatory change. A later rule-approval workflow may reference it.
+	ChangeID       RegulatoryChangeID `json:"changeId"`
+	ComponentsRead int32              `json:"componentsRead"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// CreatedBy The person who recorded an act.
+	CreatedBy EvidenceActor `json:"createdBy"`
+
+	// Current This is the change's newest assessment.
+	Current bool               `json:"current"`
+	ID      ImpactAssessmentID `json:"id"`
+
+	// InputsDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	InputsDigest      Digest       `json:"inputsDigest"`
+	Items             []ImpactItem `json:"items"`
+	ObligationsRead   int32        `json:"obligationsRead"`
+	RegistrationsRead int32        `json:"registrationsRead"`
+	Retroactive       bool         `json:"retroactive"`
+
+	// Severity How much an impacted item, or a whole assessment, matters. Advisory triage, never an amount.
+	Severity ImpactSeverity `json:"severity"`
+}
+
+// ImpactAssessmentID defines model for ImpactAssessmentId.
+type ImpactAssessmentID = string
+
+// ImpactAssessmentList defines model for ImpactAssessmentList.
+type ImpactAssessmentList struct {
+	Assessments []ImpactAssessment `json:"assessments"`
+}
+
+// ImpactItem defines model for ImpactItem.
+type ImpactItem struct {
+	// Basis A reference, label or basis the assessment generated from content and record identifiers.
+	Basis ImpactText `json:"basis"`
+
+	// Jurisdiction A reference, label or basis the assessment generated from content and record identifiers.
+	Jurisdiction ImpactText `json:"jurisdiction"`
+
+	// Kind `CONTENT_COMPONENT` is a component of the active content in scope;
+	// `COVERAGE_GAP` is the jurisdiction with none; `TENANT_REGISTRATION` and
+	// `TENANT_OBLIGATION` are the tenant's own records in scope.
+	Kind ImpactItemKind `json:"kind"`
+
+	// Label A reference, label or basis the assessment generated from content and record identifiers.
+	Label ImpactText `json:"label"`
+
+	// Ref A reference, label or basis the assessment generated from content and record identifiers.
+	Ref ImpactText `json:"ref"`
+
+	// Retrospective An obligation period a backdated change reaches back into.
+	Retrospective bool `json:"retrospective"`
+
+	// Severity How much an impacted item, or a whole assessment, matters. Advisory triage, never an amount.
+	Severity ImpactSeverity `json:"severity"`
+}
+
+// ImpactItemKind `CONTENT_COMPONENT` is a component of the active content in scope;
+// `COVERAGE_GAP` is the jurisdiction with none; `TENANT_REGISTRATION` and
+// `TENANT_OBLIGATION` are the tenant's own records in scope.
+type ImpactItemKind string
+
+// ImpactSeverity How much an impacted item, or a whole assessment, matters. Advisory triage, never an amount.
+type ImpactSeverity string
+
+// ImpactText A reference, label or basis the assessment generated from content and record identifiers.
+type ImpactText = string
 
 // InclusionProof defines model for InclusionProof.
 type InclusionProof struct {
@@ -10424,6 +13297,50 @@ type ReadSet map[string]MoneyValue
 // an unrecognised code would break on an additive change (ADR-0010 §2.6).
 type ReasonCode = string
 
+// RecommendationAiDraft The model's original text, kept unchanged as evidence.
+type RecommendationAiDraft = string
+
+// RecommendationAiProvenance What ZTAX-AIGOV-001 §14 requires recorded of an AI-assisted draft.
+type RecommendationAiProvenance struct {
+	// AiTrainVersion An authority, citation, edition or reference, as published.
+	AiTrainVersion RegulatoryChangeSourceText `json:"aiTrainVersion"`
+
+	// AuthorityOutcome The AI authority outcome of the draft. Only A1 (propose) is accepted (ZTAX-AIGOV-001 §4).
+	AuthorityOutcome RecommendationAuthorityOutcome `json:"authorityOutcome"`
+
+	// Draft The model's original text, kept unchanged as evidence.
+	Draft RecommendationAiDraft `json:"draft"`
+
+	// InvocationID An authority, citation, edition or reference, as published.
+	InvocationID *RegulatoryChangeSourceText `json:"invocationId,omitempty"`
+
+	// ModelProfile An authority, citation, edition or reference, as published.
+	ModelProfile RegulatoryChangeSourceText `json:"modelProfile"`
+
+	// PromptProfile An authority, citation, edition or reference, as published.
+	PromptProfile RegulatoryChangeSourceText `json:"promptProfile"`
+
+	// ProviderProfile An authority, citation, edition or reference, as published.
+	ProviderProfile RegulatoryChangeSourceText `json:"providerProfile"`
+
+	// UseCase An authority, citation, edition or reference, as published.
+	UseCase RegulatoryChangeSourceText `json:"useCase"`
+}
+
+// RecommendationAuthorityOutcome The AI authority outcome of the draft. Only A1 (propose) is accepted (ZTAX-AIGOV-001 §4).
+type RecommendationAuthorityOutcome string
+
+// RecommendationTarget defines model for RecommendationTarget.
+type RecommendationTarget struct {
+	// Kind `CONTENT_COMPONENT` is a component of the active content in scope;
+	// `COVERAGE_GAP` is the jurisdiction with none; `TENANT_REGISTRATION` and
+	// `TENANT_OBLIGATION` are the tenant's own records in scope.
+	Kind ImpactItemKind `json:"kind"`
+
+	// Ref A reference, label or basis the assessment generated from content and record identifiers.
+	Ref ImpactText `json:"ref"`
+}
+
 // ReconResolution defines model for ReconResolution.
 type ReconResolution struct {
 	Action   ReconResolutionAction `json:"action"`
@@ -10832,6 +13749,263 @@ type RegistrationTransitionRequest struct {
 	// To `SUBMITTED` is not `VERIFIED`, `VERIFIED` is not `ACTIVE`, and `ACTIVE`
 	// is not authority to file (Doc 17 §02, §07).
 	To RegistrationStatus `json:"to"`
+}
+
+// RegulatoryChange A regulatory change as reported, with its triage and disposition. A
+// reported change is not a confirmed legal effect, and nothing about it
+// changes content or a tax result.
+type RegulatoryChange struct {
+	// AcceptedRecommendationCount Recommendations accepted on the current assessment.
+	AcceptedRecommendationCount int32 `json:"acceptedRecommendationCount"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// CreatedBy The person who recorded an act.
+	CreatedBy           EvidenceActor       `json:"createdBy"`
+	CurrentAssessmentID *ImpactAssessmentID `json:"currentAssessmentId,omitempty"`
+
+	// CurrentSeverity How much an impacted item, or a whole assessment, matters. Advisory triage, never an amount.
+	CurrentSeverity *ImpactSeverity `json:"currentSeverity,omitempty"`
+
+	// DetectedBy Human legal intake, or a watcher's alert a person recorded. No watcher is connected to this cell.
+	DetectedBy RegulatoryChangeDetector `json:"detectedBy"`
+
+	// DiscoveredAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	DiscoveredAt Timestamp `json:"discoveredAt"`
+
+	// Disposition The decision every change ends with (Doc 03 WF-05).
+	Disposition *RegulatoryChangeDisposition `json:"disposition,omitempty"`
+
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate                   `json:"effectiveFrom"`
+	History       []RegulatoryChangeEvent     `json:"history"`
+	HoldReason    *RegulatoryChangeHoldReason `json:"holdReason,omitempty"`
+
+	// ID A recorded regulatory change. A later rule-approval workflow may reference it.
+	ID RegulatoryChangeID `json:"id"`
+
+	// Jurisdiction A country, or a country and one subdivision, upper case.
+	Jurisdiction EvidenceJurisdiction `json:"jurisdiction"`
+
+	// Kind The class of legal change (Doc 03 §06). A source with several effects is recorded as one change per kind.
+	Kind RegulatoryChangeKind `json:"kind"`
+
+	// MonitorRef An authority, citation, edition or reference, as published.
+	MonitorRef *RegulatoryChangeSourceText `json:"monitorRef,omitempty"`
+
+	// Priority Triage's urgency (Doc 03 §06 monitoring targets).
+	Priority *RegulatoryChangePriority `json:"priority,omitempty"`
+
+	// PublishedOn A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	PublishedOn         CivilDate `json:"publishedOn"`
+	RecommendationCount int32     `json:"recommendationCount"`
+
+	// RelatedChangeIds The other changes recorded from the same source edition. Empty in a listing.
+	RelatedChangeIds []RegulatoryChangeID `json:"relatedChangeIds"`
+
+	// ResumesTo `NEW` until triaged; `IN_IMPACT_ASSESSMENT` only by an assessment;
+	// `ON_HOLD` with a tracked reason; `CLOSED` and `NO_IMPACT` are final, each
+	// with a disposition and rationale (Doc 03 Z03-AT-09).
+	ResumesTo *RegulatoryChangeStatus `json:"resumesTo,omitempty"`
+
+	// Retroactive Effective before it was published.
+	Retroactive     bool            `json:"retroactive"`
+	ServiceFamilies []ServiceFamily `json:"serviceFamilies"`
+
+	// Source The source edition a change is reported from: its identity (authority,
+	// citation) and version (edition, the captured document's SHA-256, hashed
+	// in the browser — the document is not uploaded or stored).
+	Source RegulatoryChangeSource `json:"source"`
+
+	// SourceKey A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	SourceKey Digest `json:"sourceKey"`
+
+	// Status `NEW` until triaged; `IN_IMPACT_ASSESSMENT` only by an assessment;
+	// `ON_HOLD` with a tracked reason; `CLOSED` and `NO_IMPACT` are final, each
+	// with a disposition and rationale (Doc 03 Z03-AT-09).
+	Status RegulatoryChangeStatus `json:"status"`
+
+	// Summary Free-text summary of the change from the person recording it.
+	Summary  *RegulatoryChangeSummary `json:"summary,omitempty"`
+	TaxTypes []RegulatoryChangeCode   `json:"taxTypes"`
+
+	// Title A headline for the change. About law, not about a person.
+	Title RegulatoryChangeTitle `json:"title"`
+
+	// Version The number of events recorded. An act names it.
+	Version int32 `json:"version"`
+}
+
+// RegulatoryChangeCode A tax type code, as the content packs name them.
+type RegulatoryChangeCode = string
+
+// RegulatoryChangeDetector Human legal intake, or a watcher's alert a person recorded. No watcher is connected to this cell.
+type RegulatoryChangeDetector string
+
+// RegulatoryChangeDisposition The decision every change ends with (Doc 03 WF-05).
+type RegulatoryChangeDisposition string
+
+// RegulatoryChangeEvent defines model for RegulatoryChangeEvent.
+type RegulatoryChangeEvent struct {
+	AssessmentID *ImpactAssessmentID `json:"assessmentId,omitempty"`
+
+	// Disposition The decision every change ends with (Doc 03 WF-05).
+	Disposition *RegulatoryChangeDisposition `json:"disposition,omitempty"`
+	HoldReason  *RegulatoryChangeHoldReason  `json:"holdReason,omitempty"`
+	Kind        RegulatoryChangeEventKind    `json:"kind"`
+
+	// Priority Triage's urgency (Doc 03 §06 monitoring targets).
+	Priority *RegulatoryChangePriority `json:"priority,omitempty"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason *EvidenceText `json:"reason,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy The person who recorded an act.
+	RecordedBy EvidenceActor `json:"recordedBy"`
+	Seq        int32         `json:"seq"`
+
+	// Status `NEW` until triaged; `IN_IMPACT_ASSESSMENT` only by an assessment;
+	// `ON_HOLD` with a tracked reason; `CLOSED` and `NO_IMPACT` are final, each
+	// with a disposition and rationale (Doc 03 Z03-AT-09).
+	Status RegulatoryChangeStatus `json:"status"`
+}
+
+// RegulatoryChangeEventKind defines model for RegulatoryChangeEventKind.
+type RegulatoryChangeEventKind string
+
+// RegulatoryChangeHoldReason defines model for RegulatoryChangeHoldReason.
+type RegulatoryChangeHoldReason string
+
+// RegulatoryChangeID A recorded regulatory change. A later rule-approval workflow may reference it.
+type RegulatoryChangeID = string
+
+// RegulatoryChangeKind The class of legal change (Doc 03 §06). A source with several effects is recorded as one change per kind.
+type RegulatoryChangeKind string
+
+// RegulatoryChangeList defines model for RegulatoryChangeList.
+type RegulatoryChangeList struct {
+	Changes []RegulatoryChange `json:"changes"`
+}
+
+// RegulatoryChangePriority Triage's urgency (Doc 03 §06 monitoring targets).
+type RegulatoryChangePriority string
+
+// RegulatoryChangeRequest defines model for RegulatoryChangeRequest.
+type RegulatoryChangeRequest struct {
+	// DetectedBy Human legal intake, or a watcher's alert a person recorded. No watcher is connected to this cell.
+	DetectedBy RegulatoryChangeDetector `json:"detectedBy"`
+
+	// DiscoveredAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	DiscoveredAt *Timestamp `json:"discoveredAt,omitempty"`
+
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate `json:"effectiveFrom"`
+
+	// Jurisdiction A country, or a country and one subdivision, upper case.
+	Jurisdiction EvidenceJurisdiction `json:"jurisdiction"`
+
+	// Kind The class of legal change (Doc 03 §06). A source with several effects is recorded as one change per kind.
+	Kind RegulatoryChangeKind `json:"kind"`
+
+	// MonitorRef An authority, citation, edition or reference, as published.
+	MonitorRef *RegulatoryChangeSourceText `json:"monitorRef,omitempty"`
+
+	// PublishedOn A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	PublishedOn     CivilDate       `json:"publishedOn"`
+	ServiceFamilies []ServiceFamily `json:"serviceFamilies,omitempty"`
+
+	// Source The source edition a change is reported from: its identity (authority,
+	// citation) and version (edition, the captured document's SHA-256, hashed
+	// in the browser — the document is not uploaded or stored).
+	Source RegulatoryChangeSource `json:"source"`
+
+	// Summary Free-text summary of the change from the person recording it.
+	Summary  *RegulatoryChangeSummary `json:"summary,omitempty"`
+	TaxTypes []RegulatoryChangeCode   `json:"taxTypes,omitempty"`
+
+	// Title A headline for the change. About law, not about a person.
+	Title RegulatoryChangeTitle `json:"title"`
+}
+
+// RegulatoryChangeSource The source edition a change is reported from: its identity (authority,
+// citation) and version (edition, the captured document's SHA-256, hashed
+// in the browser — the document is not uploaded or stored).
+type RegulatoryChangeSource struct {
+	// Authority An authority, citation, edition or reference, as published.
+	Authority RegulatoryChangeSourceText `json:"authority"`
+
+	// Citation An authority, citation, edition or reference, as published.
+	Citation RegulatoryChangeSourceText `json:"citation"`
+
+	// DocumentSha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	DocumentSha256 Sha256Hex `json:"documentSha256"`
+
+	// Edition An authority, citation, edition or reference, as published.
+	Edition RegulatoryChangeSourceText `json:"edition"`
+
+	// URL The source's official https URL.
+	URL *RegulatoryChangeSourceURL `json:"url,omitempty"`
+}
+
+// RegulatoryChangeSourceText An authority, citation, edition or reference, as published.
+type RegulatoryChangeSourceText = string
+
+// RegulatoryChangeSourceURL The source's official https URL.
+type RegulatoryChangeSourceURL = string
+
+// RegulatoryChangeStatus `NEW` until triaged; `IN_IMPACT_ASSESSMENT` only by an assessment;
+// `ON_HOLD` with a tracked reason; `CLOSED` and `NO_IMPACT` are final, each
+// with a disposition and rationale (Doc 03 Z03-AT-09).
+type RegulatoryChangeStatus string
+
+// RegulatoryChangeSummary Free-text summary of the change from the person recording it.
+type RegulatoryChangeSummary = string
+
+// RegulatoryChangeTitle A headline for the change. About law, not about a person.
+type RegulatoryChangeTitle = string
+
+// RegulatoryChangeTransitionRequest defines model for RegulatoryChangeTransitionRequest.
+type RegulatoryChangeTransitionRequest struct {
+	// Disposition The decision every change ends with (Doc 03 WF-05).
+	Disposition *RegulatoryChangeDisposition `json:"disposition,omitempty"`
+
+	// ExpectedVersion The `version` that was read. Anything recorded since is `VERSION_CONFLICT`.
+	ExpectedVersion int32                       `json:"expectedVersion"`
+	HoldReason      *RegulatoryChangeHoldReason `json:"holdReason,omitempty"`
+
+	// Priority Triage's urgency (Doc 03 §06 monitoring targets).
+	Priority *RegulatoryChangePriority `json:"priority,omitempty"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason EvidenceText `json:"reason"`
+
+	// To `NEW` until triaged; `IN_IMPACT_ASSESSMENT` only by an assessment;
+	// `ON_HOLD` with a tracked reason; `CLOSED` and `NO_IMPACT` are final, each
+	// with a disposition and rationale (Doc 03 Z03-AT-09).
+	To RegulatoryChangeStatus `json:"to"`
 }
 
 // Remittance defines model for Remittance.
@@ -11345,6 +14519,155 @@ type RetentionVerdict struct {
 // RetentionVerdictOutcome defines model for RetentionVerdict.Outcome.
 type RetentionVerdictOutcome string
 
+// ReviewDecision defines model for ReviewDecision.
+type ReviewDecision string
+
+// ReviewRecommendation A recommendation derived from one assessment, bound to its digest.
+// Advisory: acceptance yields `handoffRef` and publishes or changes
+// nothing.
+type ReviewRecommendation struct {
+	Action ReviewRecommendationAction `json:"action"`
+
+	// Ai What ZTAX-AIGOV-001 §14 requires recorded of an AI-assisted draft.
+	Ai *RecommendationAiProvenance `json:"ai,omitempty"`
+
+	// AssessmentDigest A canonical digest: SHA-256 over the canonical bytes, lowercase hex,
+	// carrying its profile-and-algorithm prefix (ADR-0011 §2.3). The prefix is
+	// not decoration — a future `zt2:` digest of the same document is a
+	// different digest, and comparing the two without it would be wrong.
+	AssessmentDigest Digest             `json:"assessmentDigest"`
+	AssessmentID     ImpactAssessmentID `json:"assessmentId"`
+
+	// ChangeID A recorded regulatory change. A later rule-approval workflow may reference it.
+	ChangeID RegulatoryChangeID `json:"changeId"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// CreatedBy The person who recorded an act.
+	CreatedBy           EvidenceActor       `json:"createdBy"`
+	CurrentAssessmentID *ImpactAssessmentID `json:"currentAssessmentId,omitempty"`
+
+	// HandoffRef The opaque reference an accepted recommendation hands a later workflow.
+	HandoffRef *HandoffRef                 `json:"handoffRef,omitempty"`
+	History    []ReviewRecommendationEvent `json:"history"`
+
+	// ID A review recommendation. This is the id a later rule-approval workflow names.
+	ID     ReviewRecommendationID     `json:"id"`
+	Origin ReviewRecommendationOrigin `json:"origin"`
+
+	// Rationale A reason, rationale or note from the person recording an act.
+	Rationale EvidenceText `json:"rationale"`
+
+	// RecommendedBy The person who recorded an act.
+	RecommendedBy *EvidenceActor `json:"recommendedBy,omitempty"`
+
+	// ReviewedBy The person who recorded an act.
+	ReviewedBy *EvidenceActor `json:"reviewedBy,omitempty"`
+
+	// Stale Open, and the change has been reassessed since.
+	Stale bool `json:"stale"`
+
+	// Status `ACCEPTED` is an independent reviewer's acceptance and yields a
+	// hand-off reference only; it is not a rule approval or a release.
+	Status  ReviewRecommendationStatus `json:"status"`
+	Targets []RecommendationTarget     `json:"targets"`
+	Version int32                      `json:"version"`
+}
+
+// ReviewRecommendationActRequest defines model for ReviewRecommendationActRequest.
+type ReviewRecommendationActRequest struct {
+	ExpectedVersion int32 `json:"expectedVersion"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason EvidenceText `json:"reason"`
+}
+
+// ReviewRecommendationAction defines model for ReviewRecommendationAction.
+type ReviewRecommendationAction string
+
+// ReviewRecommendationEvent defines model for ReviewRecommendationEvent.
+type ReviewRecommendationEvent struct {
+	Action *ReviewRecommendationAction `json:"action,omitempty"`
+
+	// HandoffRef The opaque reference an accepted recommendation hands a later workflow.
+	HandoffRef *HandoffRef                   `json:"handoffRef,omitempty"`
+	Kind       ReviewRecommendationEventKind `json:"kind"`
+
+	// Rationale A reason, rationale or note from the person recording an act.
+	Rationale *EvidenceText `json:"rationale,omitempty"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason *EvidenceText `json:"reason,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy The person who recorded an act.
+	RecordedBy EvidenceActor `json:"recordedBy"`
+	Seq        int32         `json:"seq"`
+
+	// Status `ACCEPTED` is an independent reviewer's acceptance and yields a
+	// hand-off reference only; it is not a rule approval or a release.
+	Status  ReviewRecommendationStatus `json:"status"`
+	Targets []RecommendationTarget     `json:"targets,omitempty"`
+}
+
+// ReviewRecommendationEventKind defines model for ReviewRecommendationEventKind.
+type ReviewRecommendationEventKind string
+
+// ReviewRecommendationID A review recommendation. This is the id a later rule-approval workflow names.
+type ReviewRecommendationID = string
+
+// ReviewRecommendationList defines model for ReviewRecommendationList.
+type ReviewRecommendationList struct {
+	Recommendations []ReviewRecommendation `json:"recommendations"`
+}
+
+// ReviewRecommendationOrigin defines model for ReviewRecommendationOrigin.
+type ReviewRecommendationOrigin string
+
+// ReviewRecommendationRequest defines model for ReviewRecommendationRequest.
+type ReviewRecommendationRequest struct {
+	Action ReviewRecommendationAction `json:"action"`
+
+	// Ai What ZTAX-AIGOV-001 §14 requires recorded of an AI-assisted draft.
+	Ai           *RecommendationAiProvenance `json:"ai,omitempty"`
+	AssessmentID ImpactAssessmentID          `json:"assessmentId"`
+	Origin       ReviewRecommendationOrigin  `json:"origin"`
+
+	// Rationale A reason, rationale or note from the person recording an act.
+	Rationale EvidenceText           `json:"rationale"`
+	Targets   []RecommendationTarget `json:"targets"`
+}
+
+// ReviewRecommendationReviewRequest defines model for ReviewRecommendationReviewRequest.
+type ReviewRecommendationReviewRequest struct {
+	Decision        ReviewDecision `json:"decision"`
+	ExpectedVersion int32          `json:"expectedVersion"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason EvidenceText `json:"reason"`
+}
+
+// ReviewRecommendationRevisionRequest defines model for ReviewRecommendationRevisionRequest.
+type ReviewRecommendationRevisionRequest struct {
+	Action          ReviewRecommendationAction `json:"action"`
+	ExpectedVersion int32                      `json:"expectedVersion"`
+
+	// Rationale A reason, rationale or note from the person recording an act.
+	Rationale EvidenceText           `json:"rationale"`
+	Targets   []RecommendationTarget `json:"targets"`
+}
+
+// ReviewRecommendationStatus `ACCEPTED` is an independent reviewer's acceptance and yields a
+// hand-off reference only; it is not a rule approval or a release.
+type ReviewRecommendationStatus string
+
 // RevocationRequest defines model for RevocationRequest.
 type RevocationRequest struct {
 	Reason string `json:"reason"`
@@ -11399,11 +14722,230 @@ type RoleRequest struct {
 // RootCause FIN-001 §18's root-cause taxonomy (ZTAX-FIN-REQ-0083).
 type RootCause string
 
+// RuleChange A proposed change to a jurisdiction rule pack and its review.
+// `releaseEligible` is true once approved for release; nothing is
+// published or activated by it.
+type RuleChange struct {
+	// ApprovedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	ApprovedAt *Timestamp `json:"approvedAt,omitempty"`
+
+	// ApprovedBy The person who recorded an act.
+	ApprovedBy *EvidenceActor `json:"approvedBy,omitempty"`
+
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf Timestamp `json:"asOf"`
+
+	// BaseVersion A rule pack version, MAJOR.MINOR.PATCH.
+	BaseVersion RulePackVersion    `json:"baseVersion"`
+	ChangeType  RuleChangeType     `json:"changeType"`
+	Citation    RuleChangeCitation `json:"citation"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// CreatedBy The person who recorded an act.
+	CreatedBy EvidenceActor `json:"createdBy"`
+
+	// Detail Legal content text — a summary, the proposed change, its impact. Not personal data.
+	Detail RuleChangeText `json:"detail"`
+
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate `json:"effectiveFrom"`
+
+	// EffectiveTo A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveTo *CivilDate        `json:"effectiveTo,omitempty"`
+	History     []RuleChangeEvent `json:"history"`
+	ID          RuleChangeID      `json:"id"`
+
+	// Impact Legal content text — a summary, the proposed change, its impact. Not personal data.
+	Impact *RuleChangeText `json:"impact,omitempty"`
+
+	// Jurisdiction A country, or a country and one subdivision, upper case.
+	Jurisdiction EvidenceJurisdiction `json:"jurisdiction"`
+
+	// OriginRef A reference — a source id, passage, edition, test run or origin.
+	OriginRef *RuleChangeRef `json:"originRef,omitempty"`
+
+	// PackID A rule pack identity (CONT-001 §11 pack_id).
+	PackID RulePackID `json:"packId"`
+
+	// PublishedOn A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	PublishedOn *CivilDate `json:"publishedOn,omitempty"`
+
+	// RecommendedBy The person who recorded an act.
+	RecommendedBy *EvidenceActor `json:"recommendedBy,omitempty"`
+
+	// ReleaseEligible True once APPROVED_FOR_RELEASE — eligible for a content release, not released.
+	ReleaseEligible bool `json:"releaseEligible"`
+
+	// Revision The number of events recorded. A transition names it.
+	Revision int32 `json:"revision"`
+
+	// RuleID The stable identity of a logical rule across its versions.
+	RuleID *RuleSemanticID  `json:"ruleId,omitempty"`
+	Status RuleChangeStatus `json:"status"`
+
+	// Summary Legal content text — a summary, the proposed change, its impact. Not personal data.
+	Summary      RuleChangeText          `json:"summary"`
+	Supersedes   *RuleChangeID           `json:"supersedes,omitempty"`
+	TestEvidence *RuleChangeTestEvidence `json:"testEvidence,omitempty"`
+}
+
+// RuleChangeCitation defines model for RuleChangeCitation.
+type RuleChangeCitation struct {
+	// AuthorityClass CONT-001 §4's source authority class. Only A0 and A1 ground a production rule by themselves.
+	AuthorityClass SourceAuthorityClass `json:"authorityClass"`
+
+	// Edition A reference — a source id, passage, edition, test run or origin.
+	Edition RuleChangeRef `json:"edition"`
+
+	// Reference A reference — a source id, passage, edition, test run or origin.
+	Reference RuleChangeRef `json:"reference"`
+
+	// SourceID A reference — a source id, passage, edition, test run or origin.
+	SourceID RuleChangeRef `json:"sourceId"`
+}
+
+// RuleChangeEvent defines model for RuleChangeEvent.
+type RuleChangeEvent struct {
+	Kind RuleChangeEventKind `json:"kind"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason *EvidenceText `json:"reason,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy The person who recorded an act.
+	RecordedBy   EvidenceActor           `json:"recordedBy"`
+	Seq          int32                   `json:"seq"`
+	Status       RuleChangeStatus        `json:"status"`
+	TestEvidence *RuleChangeTestEvidence `json:"testEvidence,omitempty"`
+}
+
+// RuleChangeEventKind defines model for RuleChangeEventKind.
+type RuleChangeEventKind string
+
+// RuleChangeID defines model for RuleChangeId.
+type RuleChangeID = string
+
+// RuleChangeList defines model for RuleChangeList.
+type RuleChangeList struct {
+	RuleChanges []RuleChange `json:"ruleChanges"`
+}
+
+// RuleChangeRef A reference — a source id, passage, edition, test run or origin.
+type RuleChangeRef = string
+
+// RuleChangeRequest defines model for RuleChangeRequest.
+type RuleChangeRequest struct {
+	// BaseVersion A rule pack version, MAJOR.MINOR.PATCH.
+	BaseVersion RulePackVersion    `json:"baseVersion"`
+	ChangeType  RuleChangeType     `json:"changeType"`
+	Citation    RuleChangeCitation `json:"citation"`
+
+	// Detail Legal content text — a summary, the proposed change, its impact. Not personal data.
+	Detail RuleChangeText `json:"detail"`
+
+	// EffectiveFrom A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveFrom CivilDate `json:"effectiveFrom"`
+
+	// EffectiveTo A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	EffectiveTo *CivilDate `json:"effectiveTo,omitempty"`
+
+	// Impact Legal content text — a summary, the proposed change, its impact. Not personal data.
+	Impact *RuleChangeText `json:"impact,omitempty"`
+
+	// Jurisdiction A country, or a country and one subdivision, upper case.
+	Jurisdiction EvidenceJurisdiction `json:"jurisdiction"`
+
+	// OriginRef A reference — a source id, passage, edition, test run or origin.
+	OriginRef *RuleChangeRef `json:"originRef,omitempty"`
+
+	// PackID A rule pack identity (CONT-001 §11 pack_id).
+	PackID RulePackID `json:"packId"`
+
+	// PublishedOn A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	PublishedOn *CivilDate `json:"publishedOn,omitempty"`
+
+	// RuleID The stable identity of a logical rule across its versions.
+	RuleID *RuleSemanticID `json:"ruleId,omitempty"`
+
+	// Summary Legal content text — a summary, the proposed change, its impact. Not personal data.
+	Summary      RuleChangeText          `json:"summary"`
+	Supersedes   *RuleChangeID           `json:"supersedes,omitempty"`
+	TestEvidence *RuleChangeTestEvidence `json:"testEvidence,omitempty"`
+}
+
+// RuleChangeStatus defines model for RuleChangeStatus.
+type RuleChangeStatus string
+
+// RuleChangeTestEvidence defines model for RuleChangeTestEvidence.
+type RuleChangeTestEvidence struct {
+	// Ref A reference — a source id, passage, edition, test run or origin.
+	Ref RuleChangeRef `json:"ref"`
+
+	// Sha256 A document's SHA-256, lowercase hex. The document itself is not stored.
+	Sha256 *Sha256Hex `json:"sha256,omitempty"`
+}
+
+// RuleChangeTestEvidenceRequest defines model for RuleChangeTestEvidenceRequest.
+type RuleChangeTestEvidenceRequest struct {
+	// ExpectedRevision The `revision` that was read.
+	ExpectedRevision int32                  `json:"expectedRevision"`
+	TestEvidence     RuleChangeTestEvidence `json:"testEvidence"`
+}
+
+// RuleChangeText Legal content text — a summary, the proposed change, its impact. Not personal data.
+type RuleChangeText = string
+
+// RuleChangeTransitionRequest defines model for RuleChangeTransitionRequest.
+type RuleChangeTransitionRequest struct {
+	// ExpectedRevision The `revision` that was read. Anything recorded since is `VERSION_CONFLICT`.
+	ExpectedRevision int32 `json:"expectedRevision"`
+
+	// Reason A reason, rationale or note from the person recording an act.
+	Reason EvidenceText     `json:"reason"`
+	To     RuleChangeStatus `json:"to"`
+}
+
+// RuleChangeType defines model for RuleChangeType.
+type RuleChangeType string
+
+// RulePackID A rule pack identity (CONT-001 §11 pack_id).
+type RulePackID = string
+
+// RulePackVersion A rule pack version, MAJOR.MINOR.PATCH.
+type RulePackVersion = string
+
 // RuleRef defines model for RuleRef.
 type RuleRef struct {
 	ID      string `json:"id"`
 	Version int32  `json:"version"`
 }
+
+// RuleSemanticID The stable identity of a logical rule across its versions.
+type RuleSemanticID = string
 
 // RunID defines model for RunId.
 type RunID = string
@@ -11936,6 +15478,9 @@ type SitusEvidenceSource string
 // parties instead, so one fact cannot arrive twice and disagree.
 type SitusEvidenceType string
 
+// SourceAuthorityClass CONT-001 §4's source authority class. Only A0 and A1 ground a production rule by themselves.
+type SourceAuthorityClass string
+
 // SourceComponent defines model for SourceComponent.
 type SourceComponent struct {
 	// Amount A value exactly as the source gave it; validated by the conversion, not by the API, so that a bad value becomes an exception rather than a refusal.
@@ -11975,6 +15520,145 @@ type SubledgerPeriod struct {
 	// Period A subledger legal period, a month.
 	Period LegalPeriod `json:"period"`
 	State  PeriodState `json:"state"`
+}
+
+// SubscriptionPlan A subscription plan revision. No price; it grants no entitlement and changes no tax result.
+type SubscriptionPlan struct {
+	// ApprovedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	ApprovedAt *Timestamp `json:"approvedAt,omitempty"`
+
+	// ApprovedBy The person who recorded an act.
+	ApprovedBy *EvidenceActor `json:"approvedBy,omitempty"`
+
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf Timestamp `json:"asOf"`
+
+	// ContractRef The signed contract, schedule or revision a right or plan comes from, as the contract names it.
+	ContractRef ContractReference `json:"contractRef"`
+
+	// CreatedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	CreatedAt Timestamp `json:"createdAt"`
+
+	// CreatedBy The person who recorded an act.
+	CreatedBy EvidenceActor           `json:"createdBy"`
+	History   []SubscriptionPlanEvent `json:"history"`
+
+	// ID A subscription plan revision.
+	ID SubscriptionPlanID `json:"id"`
+
+	// InForce Whether this is the plan in force on `asOf`'s UTC date.
+	InForce  bool                   `json:"inForce"`
+	PlanCode SubscriptionPlanCode   `json:"planCode"`
+	PlanName SubscriptionPlanName   `json:"planName"`
+	Quotas   []SubscriptionQuota    `json:"quotas"`
+	Status   SubscriptionPlanStatus `json:"status"`
+
+	// TermEnd A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	TermEnd *CivilDate `json:"termEnd,omitempty"`
+
+	// TermStart A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	TermStart CivilDate `json:"termStart"`
+	Version   int32     `json:"version"`
+}
+
+// SubscriptionPlanAction defines model for SubscriptionPlanAction.
+type SubscriptionPlanAction string
+
+// SubscriptionPlanActionRequest defines model for SubscriptionPlanActionRequest.
+type SubscriptionPlanActionRequest struct {
+	Action          SubscriptionPlanAction `json:"action"`
+	ExpectedVersion int32                  `json:"expectedVersion"`
+
+	// Reason A reason or note from the administrator acting.
+	Reason *CommercialText `json:"reason,omitempty"`
+}
+
+// SubscriptionPlanCode defines model for SubscriptionPlanCode.
+type SubscriptionPlanCode = string
+
+// SubscriptionPlanEvent defines model for SubscriptionPlanEvent.
+type SubscriptionPlanEvent struct {
+	Kind SubscriptionPlanEventKind `json:"kind"`
+
+	// Reason A reason or note from the administrator acting.
+	Reason *CommercialText `json:"reason,omitempty"`
+
+	// RecordedAt RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	RecordedAt Timestamp `json:"recordedAt"`
+
+	// RecordedBy The person who recorded an act.
+	RecordedBy EvidenceActor          `json:"recordedBy"`
+	Seq        int32                  `json:"seq"`
+	Status     SubscriptionPlanStatus `json:"status"`
+}
+
+// SubscriptionPlanEventKind defines model for SubscriptionPlanEventKind.
+type SubscriptionPlanEventKind string
+
+// SubscriptionPlanID A subscription plan revision.
+type SubscriptionPlanID = string
+
+// SubscriptionPlanList defines model for SubscriptionPlanList.
+type SubscriptionPlanList struct {
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf               Timestamp `json:"asOf"`
+	DefinitionsVersion string    `json:"definitionsVersion"`
+
+	// InForcePlanID A subscription plan revision.
+	InForcePlanID *SubscriptionPlanID    `json:"inForcePlanId,omitempty"`
+	Meters        []UsageMeterDefinition `json:"meters"`
+	Plans         []SubscriptionPlan     `json:"plans"`
+}
+
+// SubscriptionPlanName defines model for SubscriptionPlanName.
+type SubscriptionPlanName = string
+
+// SubscriptionPlanRequest defines model for SubscriptionPlanRequest.
+type SubscriptionPlanRequest struct {
+	// ContractRef The signed contract, schedule or revision a right or plan comes from, as the contract names it.
+	ContractRef ContractReference    `json:"contractRef"`
+	PlanCode    SubscriptionPlanCode `json:"planCode"`
+	PlanName    SubscriptionPlanName `json:"planName"`
+	Quotas      []SubscriptionQuota  `json:"quotas"`
+
+	// TermEnd A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	TermEnd *CivilDate `json:"termEnd,omitempty"`
+
+	// TermStart A calendar date, `YYYY-MM-DD`, in a legal calendar the enclosing
+	// object names. Not an instant: a due date is a day in the authority's
+	// calendar, and converting it to UTC would move it.
+	TermStart CivilDate `json:"termStart"`
+}
+
+// SubscriptionPlanStatus defines model for SubscriptionPlanStatus.
+type SubscriptionPlanStatus string
+
+// SubscriptionQuota One metered capability's included quantity per monthly period.
+type SubscriptionQuota struct {
+	// Included An exact count of rows or an included quantity. Never an amount.
+	Included UsageCount `json:"included"`
+
+	// Meter A metered capability. Each counts one kind of row the cell itself writes.
+	Meter UsageMeter `json:"meter"`
+
+	// Overage What the contract says happens past the included quantity. Reported, not enforced, by this cell.
+	Overage UsageOveragePolicy `json:"overage"`
 }
 
 // SupportCase A support case, folded from its history. Not a fiscal record.
@@ -12562,6 +16246,148 @@ type Treatment string
 
 // UnitCode A unit of measure, as the content pack names it.
 type UnitCode = string
+
+// UsageBasis defines model for UsageBasis.
+type UsageBasis struct {
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf Timestamp `json:"asOf"`
+
+	// BasisDigest A document's SHA-256, lowercase hex. The document itself is not stored.
+	BasisDigest Sha256Hex `json:"basisDigest"`
+
+	// Count An exact count of rows or an included quantity. Never an amount.
+	Count UsageCount `json:"count"`
+
+	// From RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	From Timestamp `json:"from"`
+
+	// Meter A metered capability. Each counts one kind of row the cell itself writes.
+	Meter UsageMeter `json:"meter"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod     `json:"period"`
+	Rows   []UsageBasisRow `json:"rows"`
+	Rule   string          `json:"rule"`
+	Source string          `json:"source"`
+
+	// To RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	To Timestamp `json:"to"`
+
+	// Truncated Whether `rows` stops short of `count`.
+	Truncated bool   `json:"truncated"`
+	Unit      string `json:"unit"`
+}
+
+// UsageBasisRow defines model for UsageBasisRow.
+type UsageBasisRow struct {
+	// At RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	At Timestamp `json:"at"`
+
+	// ID The counted row's identifier, as digested.
+	ID string `json:"id"`
+}
+
+// UsageCount An exact count of rows or an included quantity. Never an amount.
+type UsageCount = int64
+
+// UsageLine One meter's count for the period, its basis, and its standing against the plan.
+type UsageLine struct {
+	// BasisDigest A document's SHA-256, lowercase hex. The document itself is not stored.
+	BasisDigest Sha256Hex `json:"basisDigest"`
+
+	// Count An exact count of rows or an included quantity. Never an amount.
+	Count UsageCount `json:"count"`
+
+	// Included An exact count of rows or an included quantity. Never an amount.
+	Included *UsageCount `json:"included,omitempty"`
+
+	// Meter A metered capability. Each counts one kind of row the cell itself writes.
+	Meter UsageMeter `json:"meter"`
+
+	// Overage What the contract says happens past the included quantity. Reported, not enforced, by this cell.
+	Overage *UsageOveragePolicy `json:"overage,omitempty"`
+
+	// OverageCount An exact count of rows or an included quantity. Never an amount.
+	OverageCount UsageCount `json:"overageCount"`
+
+	// Remaining An exact count of rows or an included quantity. Never an amount.
+	Remaining UsageCount `json:"remaining"`
+	Rule      string     `json:"rule"`
+	Source    string     `json:"source"`
+
+	// State A meter's standing against the plan in force. `NOT_CONTRACTED`: the
+	// plan does not name the meter, and whether such usage is chargeable is
+	// for the signed contract, never assumed.
+	State UsageState `json:"state"`
+	Unit  string     `json:"unit"`
+}
+
+// UsageMeter A metered capability. Each counts one kind of row the cell itself writes.
+type UsageMeter string
+
+// UsageMeterDefinition What a meter counts, from which table, by which rule.
+type UsageMeterDefinition struct {
+	// Meter A metered capability. Each counts one kind of row the cell itself writes.
+	Meter UsageMeter `json:"meter"`
+
+	// Rule The counting rule in words.
+	Rule string `json:"rule"`
+
+	// Source The table the rows are counted from.
+	Source string `json:"source"`
+	Unit   string `json:"unit"`
+}
+
+// UsageOveragePolicy What the contract says happens past the included quantity. Reported, not enforced, by this cell.
+type UsageOveragePolicy string
+
+// UsagePlanRef defines model for UsagePlanRef.
+type UsagePlanRef struct {
+	// ID A subscription plan revision.
+	ID       SubscriptionPlanID   `json:"id"`
+	PlanCode SubscriptionPlanCode `json:"planCode"`
+	PlanName SubscriptionPlanName `json:"planName"`
+}
+
+// UsageReport defines model for UsageReport.
+type UsageReport struct {
+	// AsOf RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	AsOf Timestamp `json:"asOf"`
+
+	// Complete Whether the period has ended. An open period's counts grow until it does.
+	Complete           bool   `json:"complete"`
+	DefinitionsVersion string `json:"definitionsVersion"`
+
+	// From RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	From  Timestamp   `json:"from"`
+	Lines []UsageLine `json:"lines"`
+
+	// Period A subledger legal period, a month.
+	Period LegalPeriod   `json:"period"`
+	Plan   *UsagePlanRef `json:"plan,omitempty"`
+
+	// To RFC 3339 UTC with exactly six fractional digits and a literal `Z`
+	// (ADR-0011 §2.1 P2). No offsets and no variable precision, because two
+	// encodings of one instant must not produce two digests.
+	To Timestamp `json:"to"`
+}
+
+// UsageState A meter's standing against the plan in force. `NOT_CONTRACTED`: the
+// plan does not name the meter, and whether such usage is chargeable is
+// for the signed contract, never assumed.
+type UsageState string
 
 // User A user as this API represents one. Note what is absent and always will
 // be: there is no password, no verifier, no salt and no parameter set. A
@@ -13606,6 +17432,18 @@ type Limit = int32
 // fetched through an audited path.
 type Conflict = Problem
 
+// CrosswalkResult One vendor code namespace at one vendor release, mapped onto Zoiko
+// canonical service codes, with every version. Advisory only: a
+// crosswalk is never fiscal authority.
+type CrosswalkResult = Crosswalk
+
+// EntitlementResult One entitlement grant as of `asOf`, beside the coverage the cell
+// proves for it. `findings` lists every reason it is pending or
+// blocked — its own lifecycle first, then coverage's — and is empty only
+// when `decision` is `ALLOW`. `actions` are the actions its lifecycle
+// allows; the server still compares the people.
+type EntitlementResult = Entitlement
+
 // ExemptionEvidenceResult An exemption certificate held as evidence, as of `asOf`. `inForce` is
 // `APPROVED` within its approved period: a statement about the document,
 // never a tax treatment.
@@ -13622,6 +17460,10 @@ type Forbidden = Problem
 // data to be understood names a decision or a request, and the data is
 // fetched through an audited path.
 type IdempotencyConflict = Problem
+
+// ImpactAssessmentResult A deterministic impact assessment: the same inputs give the same
+// `inputsDigest` and `assessmentDigest`. Advisory; it writes nothing.
+type ImpactAssessmentResult = ImpactAssessment
 
 // Internal RFC 9457 Problem Details, with the `ztx_` extensions from ADR-0016 §2.5.
 // The extensions carry identifiers rather than data: an error that needs
@@ -13650,6 +17492,24 @@ type RateLimited = Problem
 // Evidence of status: it changes no tax result, and `inForce` is
 // `ACTIVE` within its effective dates, nothing more.
 type RegistrationResult = Registration
+
+// RegulatoryChangeResult A regulatory change as reported, with its triage and disposition. A
+// reported change is not a confirmed legal effect, and nothing about it
+// changes content or a tax result.
+type RegulatoryChangeResult = RegulatoryChange
+
+// ReviewRecommendationResult A recommendation derived from one assessment, bound to its digest.
+// Advisory: acceptance yields `handoffRef` and publishes or changes
+// nothing.
+type ReviewRecommendationResult = ReviewRecommendation
+
+// RuleChangeResult A proposed change to a jurisdiction rule pack and its review.
+// `releaseEligible` is true once approved for release; nothing is
+// published or activated by it.
+type RuleChangeResult = RuleChange
+
+// SubscriptionPlanResult A subscription plan revision. No price; it grants no entitlement and changes no tax result.
+type SubscriptionPlanResult = SubscriptionPlan
 
 // Unauthenticated RFC 9457 Problem Details, with the `ztx_` extensions from ADR-0016 §2.5.
 // The extensions carry identifiers rather than data: an error that needs
@@ -13730,6 +17590,74 @@ type ListCompliancePackagesParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// ListCrosswalksParams defines parameters for ListCrosswalks.
+type ListCrosswalksParams struct {
+	// Vendor Only crosswalks of this vendor.
+	Vendor *CrosswalkVendor `form:"vendor,omitempty" json:"vendor,omitempty"`
+
+	// Status Only crosswalks with a version in this status.
+	Status *CrosswalkStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// CreateCrosswalkParams defines parameters for CreateCrosswalk.
+type CreateCrosswalkParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
+// LookupCrosswalkParams defines parameters for LookupCrosswalk.
+type LookupCrosswalkParams struct {
+	// Code The external code, exactly as the vendor emits it.
+	Code CrosswalkExternalCode `form:"code" json:"code"`
+
+	// On The transaction date. Defaults to today.
+	On *CivilDate `form:"on,omitempty" json:"on,omitempty"`
+
+	// AtVersion Resolve against this approved or superseded version instead of the one in use.
+	AtVersion *CrosswalkVersionNumber `form:"atVersion,omitempty" json:"atVersion,omitempty"`
+}
+
+// AddCrosswalkVersionParams defines parameters for AddCrosswalkVersion.
+type AddCrosswalkVersionParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
+// ListRuleChangesParams defines parameters for ListRuleChanges.
+type ListRuleChangesParams struct {
+	// Status Only changes in this status.
+	Status *RuleChangeStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// PackID Only changes against this rule pack.
+	PackID *RulePackID `form:"packId,omitempty" json:"packId,omitempty"`
+
+	// Jurisdiction Only changes in this jurisdiction.
+	Jurisdiction *EvidenceJurisdiction `form:"jurisdiction,omitempty" json:"jurisdiction,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ProposeRuleChangeParams defines parameters for ProposeRuleChange.
+type ProposeRuleChangeParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
 // ListContributionsParams defines parameters for ListContributions.
 type ListContributionsParams struct {
 	// Period Only contributions of this period.
@@ -13762,6 +17690,57 @@ type GetContributionSummaryParams struct {
 type GetCoverageParams struct {
 	// At The instant to report rates at. Defaults to now.
 	At *Timestamp `form:"at,omitempty" json:"at,omitempty"`
+}
+
+// ListCTCApplicabilityParams defines parameters for ListCTCApplicability.
+type ListCTCApplicabilityParams struct {
+	// LegalEntityID Only records of this legal entity.
+	LegalEntityID *LegalEntityID `form:"legalEntityId,omitempty" json:"legalEntityId,omitempty"`
+
+	// Country Only records for this country.
+	Country *CTCCountry `form:"country,omitempty" json:"country,omitempty"`
+
+	// Status Only records in this status.
+	Status *CTCApplicabilityStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// ResolveCTCApplicabilityParams defines parameters for ResolveCTCApplicability.
+type ResolveCTCApplicabilityParams struct {
+	// LegalEntityID The legal entity.
+	LegalEntityID *LegalEntityID `form:"legalEntityId,omitempty" json:"legalEntityId,omitempty"`
+
+	// Country The country.
+	Country CTCCountry `form:"country" json:"country"`
+
+	// DocumentType The document type.
+	DocumentType CTCDocumentType `form:"documentType" json:"documentType"`
+
+	// BuyerKind The kind of buyer.
+	BuyerKind CTCBuyerKind `form:"buyerKind" json:"buyerKind"`
+
+	// Date The document's issue date.
+	Date CivilDate `form:"date" json:"date"`
+}
+
+// ListCTCSubmissionsParams defines parameters for ListCTCSubmissions.
+type ListCTCSubmissionsParams struct {
+	// DocumentID Only submissions of this fiscal document.
+	DocumentID *DocumentID `form:"documentId,omitempty" json:"documentId,omitempty"`
+
+	// ApplicabilityID Only submissions under this record.
+	ApplicabilityID *CTCApplicabilityID `form:"applicabilityId,omitempty" json:"applicabilityId,omitempty"`
+
+	// Status Only submissions in this status.
+	Status *CTCSubmissionStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// ListCTCValidationsParams defines parameters for ListCTCValidations.
+type ListCTCValidationsParams struct {
+	// DocumentID Only reports of this fiscal document.
+	DocumentID *DocumentID `form:"documentId,omitempty" json:"documentId,omitempty"`
+
+	// ApplicabilityID Only reports under this record.
+	ApplicabilityID *CTCApplicabilityID `form:"applicabilityId,omitempty" json:"applicabilityId,omitempty"`
 }
 
 // GetDashboardParams defines parameters for GetDashboard.
@@ -13801,6 +17780,43 @@ type IssueDocumentParams struct {
 
 // CorrectDocumentParams defines parameters for CorrectDocument.
 type CorrectDocumentParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
+// ListEntitlementsParams defines parameters for ListEntitlements.
+type ListEntitlementsParams struct {
+	// Status Only grants that read as this status today.
+	Status *EntitlementStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Effective Only grants in this effective state.
+	Effective *EntitlementEffective `form:"effective,omitempty" json:"effective,omitempty"`
+
+	// LegalEntityID Only grants to this legal entity.
+	LegalEntityID *LegalEntityID `form:"legalEntityId,omitempty" json:"legalEntityId,omitempty"`
+
+	// Country Only grants in this country, its subdivisions included.
+	Country *CountryCode `form:"country,omitempty" json:"country,omitempty"`
+
+	// Mode Only grants in this mode.
+	Mode *EntitlementMode `form:"mode,omitempty" json:"mode,omitempty"`
+
+	// Operation Only grants for this operation.
+	Operation *EntitlementOperation `form:"operation,omitempty" json:"operation,omitempty"`
+
+	// Mismatch Only approved grants whose coverage the cell does not prove.
+	Mismatch *bool `form:"mismatch,omitempty" json:"mismatch,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// CreateEntitlementParams defines parameters for CreateEntitlement.
+type CreateEntitlementParams struct {
 	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
 	// on every retry of the same request (ADR-0013). Opaque to the server: it
 	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
@@ -13861,6 +17877,19 @@ type ReceiveExemptionCertificateParams struct {
 	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
 	// a key used for a commit can never match an adjust.
 	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
+// ListImpactAssessmentsParams defines parameters for ListImpactAssessments.
+type ListImpactAssessmentsParams struct {
+	// ChangeID Only the assessments of this change.
+	ChangeID *RegulatoryChangeID `form:"changeId,omitempty" json:"changeId,omitempty"`
+
+	// MinSeverity Only assessments of at least this severity.
+	MinSeverity *ImpactSeverity `form:"minSeverity,omitempty" json:"minSeverity,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListJobsParams defines parameters for ListJobs.
@@ -13977,6 +18006,34 @@ type CreateRegistrationParams struct {
 	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
 }
 
+// ListRegulatoryChangesParams defines parameters for ListRegulatoryChanges.
+type ListRegulatoryChangesParams struct {
+	// Status Only changes in this status.
+	Status *RegulatoryChangeStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Kind Only changes of this kind.
+	Kind *RegulatoryChangeKind `form:"kind,omitempty" json:"kind,omitempty"`
+
+	// Jurisdiction Only changes in this jurisdiction; a country matches its subdivisions.
+	Jurisdiction *EvidenceJurisdiction `form:"jurisdiction,omitempty" json:"jurisdiction,omitempty"`
+
+	// Priority Only changes triaged at this priority.
+	Priority *RegulatoryChangePriority `form:"priority,omitempty" json:"priority,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// RecordRegulatoryChangeParams defines parameters for RecordRegulatoryChange.
+type RecordRegulatoryChangeParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
 // ListRemittancesParams defines parameters for ListRemittances.
 type ListRemittancesParams struct {
 	// Status Only payments in this status.
@@ -13985,6 +18042,31 @@ type ListRemittancesParams struct {
 	// Limit Maximum number of items to return. The server caps this independently,
 	// so a larger value is not an error and does not return more.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListReviewRecommendationsParams defines parameters for ListReviewRecommendations.
+type ListReviewRecommendationsParams struct {
+	// Status Only recommendations in this status.
+	Status *ReviewRecommendationStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// ChangeID Only the recommendations on this change.
+	ChangeID *RegulatoryChangeID `form:"changeId,omitempty" json:"changeId,omitempty"`
+
+	// Origin Only HUMAN or only AI_ASSISTED recommendations.
+	Origin *ReviewRecommendationOrigin `form:"origin,omitempty" json:"origin,omitempty"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// DraftReviewRecommendationParams defines parameters for DraftReviewRecommendation.
+type DraftReviewRecommendationParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
 }
 
 // ListSealsParams defines parameters for ListSeals.
@@ -13999,6 +18081,15 @@ type ListShadowRunsParams struct {
 	// Limit Maximum number of items to return. The server caps this independently,
 	// so a larger value is not an error and does not return more.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ProposeSubscriptionPlanParams defines parameters for ProposeSubscriptionPlan.
+type ProposeSubscriptionPlanParams struct {
+	// IdempotencyKey A key the client mints before the first attempt and reuses, unchanged,
+	// on every retry of the same request (ADR-0013). Opaque to the server: it
+	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
+	// a key used for a commit can never match an adjust.
+	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
 }
 
 // ListSupportCasesParams defines parameters for ListSupportCases.
@@ -14063,6 +18154,25 @@ type RefundTransactionParams struct {
 	// is compared, never parsed. Scoped to the tenant and to this endpoint, so
 	// a key used for a commit can never match an adjust.
 	IdempotencyKey IdempotencyKey `json:"Idempotency-Key"`
+}
+
+// GetUsageParams defines parameters for GetUsage.
+type GetUsageParams struct {
+	// Period The month, YYYY-MM. Defaults to the current UTC month; a month not yet started is refused.
+	Period *LegalPeriod `form:"period,omitempty" json:"period,omitempty"`
+}
+
+// GetUsageBasisParams defines parameters for GetUsageBasis.
+type GetUsageBasisParams struct {
+	// Period The month, YYYY-MM. Defaults to the current UTC month.
+	Period *LegalPeriod `form:"period,omitempty" json:"period,omitempty"`
+
+	// Meter The meter.
+	Meter UsageMeter `form:"meter" json:"meter"`
+
+	// Limit Maximum number of items to return. The server caps this independently,
+	// so a larger value is not an error and does not return more.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListWebhooksParams defines parameters for ListWebhooks.
@@ -14158,6 +18268,24 @@ type SubmitCompliancePackageJSONRequestBody = ComplianceSubmissionRequest
 // SubmitContactJSONRequestBody defines body for SubmitContact for application/json ContentType.
 type SubmitContactJSONRequestBody = ContactRequest
 
+// CreateCrosswalkJSONRequestBody defines body for CreateCrosswalk for application/json ContentType.
+type CreateCrosswalkJSONRequestBody = CrosswalkRequest
+
+// AddCrosswalkVersionJSONRequestBody defines body for AddCrosswalkVersion for application/json ContentType.
+type AddCrosswalkVersionJSONRequestBody = CrosswalkVersionRequest
+
+// TransitionCrosswalkVersionJSONRequestBody defines body for TransitionCrosswalkVersion for application/json ContentType.
+type TransitionCrosswalkVersionJSONRequestBody = ContentTransitionRequest
+
+// ProposeRuleChangeJSONRequestBody defines body for ProposeRuleChange for application/json ContentType.
+type ProposeRuleChangeJSONRequestBody = RuleChangeRequest
+
+// RecordRuleChangeTestEvidenceJSONRequestBody defines body for RecordRuleChangeTestEvidence for application/json ContentType.
+type RecordRuleChangeTestEvidenceJSONRequestBody = RuleChangeTestEvidenceRequest
+
+// TransitionRuleChangeJSONRequestBody defines body for TransitionRuleChange for application/json ContentType.
+type TransitionRuleChangeJSONRequestBody = RuleChangeTransitionRequest
+
 // RecordContributionJSONRequestBody defines body for RecordContribution for application/json ContentType.
 type RecordContributionJSONRequestBody = ContributionRequest
 
@@ -14167,11 +18295,47 @@ type QuarantineContributionJSONRequestBody = ContributionTransitionRequest
 // ReleaseContributionJSONRequestBody defines body for ReleaseContribution for application/json ContentType.
 type ReleaseContributionJSONRequestBody = ContributionTransitionRequest
 
+// CreateCTCApplicabilityJSONRequestBody defines body for CreateCTCApplicability for application/json ContentType.
+type CreateCTCApplicabilityJSONRequestBody = CTCApplicabilityRequest
+
+// AddCTCApplicabilityEvidenceJSONRequestBody defines body for AddCTCApplicabilityEvidence for application/json ContentType.
+type AddCTCApplicabilityEvidenceJSONRequestBody = EvidenceDocument
+
+// SignCTCApplicabilityGateJSONRequestBody defines body for SignCTCApplicabilityGate for application/json ContentType.
+type SignCTCApplicabilityGateJSONRequestBody = CTCGateRequest
+
+// TransitionCTCApplicabilityJSONRequestBody defines body for TransitionCTCApplicability for application/json ContentType.
+type TransitionCTCApplicabilityJSONRequestBody = CTCTransitionRequest
+
+// ReviseCTCApplicabilityJSONRequestBody defines body for ReviseCTCApplicability for application/json ContentType.
+type ReviseCTCApplicabilityJSONRequestBody = CTCTerms
+
+// PrepareCTCSubmissionJSONRequestBody defines body for PrepareCTCSubmission for application/json ContentType.
+type PrepareCTCSubmissionJSONRequestBody = CTCSubmissionRequest
+
+// DispatchCTCSubmissionJSONRequestBody defines body for DispatchCTCSubmission for application/json ContentType.
+type DispatchCTCSubmissionJSONRequestBody = CTCDispatchRequest
+
+// RecordCTCResponseJSONRequestBody defines body for RecordCTCResponse for application/json ContentType.
+type RecordCTCResponseJSONRequestBody = CTCResponseRequest
+
+// WithdrawCTCSubmissionJSONRequestBody defines body for WithdrawCTCSubmission for application/json ContentType.
+type WithdrawCTCSubmissionJSONRequestBody = CTCWithdrawalRequest
+
+// ValidateCTCDocumentJSONRequestBody defines body for ValidateCTCDocument for application/json ContentType.
+type ValidateCTCDocumentJSONRequestBody = CTCValidationRequest
+
 // IssueDocumentJSONRequestBody defines body for IssueDocument for application/json ContentType.
 type IssueDocumentJSONRequestBody = DocumentRequest
 
 // CorrectDocumentJSONRequestBody defines body for CorrectDocument for application/json ContentType.
 type CorrectDocumentJSONRequestBody = CorrectionRequest
+
+// CreateEntitlementJSONRequestBody defines body for CreateEntitlement for application/json ContentType.
+type CreateEntitlementJSONRequestBody = EntitlementRequest
+
+// ActOnEntitlementJSONRequestBody defines body for ActOnEntitlement for application/json ContentType.
+type ActOnEntitlementJSONRequestBody = EntitlementActionRequest
 
 // CreateERPBridgeJSONRequestBody defines body for CreateERPBridge for application/json ContentType.
 type CreateERPBridgeJSONRequestBody = ERPBridgeRequest
@@ -14317,6 +18481,12 @@ type RecordRegistrationCheckJSONRequestBody = RegistrationCheckRequest
 // TransitionRegistrationJSONRequestBody defines body for TransitionRegistration for application/json ContentType.
 type TransitionRegistrationJSONRequestBody = RegistrationTransitionRequest
 
+// RecordRegulatoryChangeJSONRequestBody defines body for RecordRegulatoryChange for application/json ContentType.
+type RecordRegulatoryChangeJSONRequestBody = RegulatoryChangeRequest
+
+// TransitionRegulatoryChangeJSONRequestBody defines body for TransitionRegulatoryChange for application/json ContentType.
+type TransitionRegulatoryChangeJSONRequestBody = RegulatoryChangeTransitionRequest
+
 // CreateRemittanceJSONRequestBody defines body for CreateRemittance for application/json ContentType.
 type CreateRemittanceJSONRequestBody = RemittanceRequest
 
@@ -14350,6 +18520,21 @@ type SubmitRemittanceJSONRequestBody = RemittanceSubmissionRequest
 // RecordRetentionPolicyJSONRequestBody defines body for RecordRetentionPolicy for application/json ContentType.
 type RecordRetentionPolicyJSONRequestBody = RetentionPolicyRequest
 
+// DraftReviewRecommendationJSONRequestBody defines body for DraftReviewRecommendation for application/json ContentType.
+type DraftReviewRecommendationJSONRequestBody = ReviewRecommendationRequest
+
+// RecommendReviewRecommendationJSONRequestBody defines body for RecommendReviewRecommendation for application/json ContentType.
+type RecommendReviewRecommendationJSONRequestBody = ReviewRecommendationActRequest
+
+// ReviewReviewRecommendationJSONRequestBody defines body for ReviewReviewRecommendation for application/json ContentType.
+type ReviewReviewRecommendationJSONRequestBody = ReviewRecommendationReviewRequest
+
+// ReviseReviewRecommendationJSONRequestBody defines body for ReviseReviewRecommendation for application/json ContentType.
+type ReviseReviewRecommendationJSONRequestBody = ReviewRecommendationRevisionRequest
+
+// WithdrawReviewRecommendationJSONRequestBody defines body for WithdrawReviewRecommendation for application/json ContentType.
+type WithdrawReviewRecommendationJSONRequestBody = ReviewRecommendationActRequest
+
 // SealPeriodJSONRequestBody defines body for SealPeriod for application/json ContentType.
 type SealPeriodJSONRequestBody = SealRequest
 
@@ -14367,6 +18552,12 @@ type RequestPeriodReopenJSONRequestBody = ReopenRequestBody
 
 // TransitionSubledgerPeriodJSONRequestBody defines body for TransitionSubledgerPeriod for application/json ContentType.
 type TransitionSubledgerPeriodJSONRequestBody = PeriodTransitionRequest
+
+// ProposeSubscriptionPlanJSONRequestBody defines body for ProposeSubscriptionPlan for application/json ContentType.
+type ProposeSubscriptionPlanJSONRequestBody = SubscriptionPlanRequest
+
+// ActOnSubscriptionPlanJSONRequestBody defines body for ActOnSubscriptionPlan for application/json ContentType.
+type ActOnSubscriptionPlanJSONRequestBody = SubscriptionPlanActionRequest
 
 // OpenSupportCaseJSONRequestBody defines body for OpenSupportCase for application/json ContentType.
 type OpenSupportCaseJSONRequestBody = SupportCaseRequest
