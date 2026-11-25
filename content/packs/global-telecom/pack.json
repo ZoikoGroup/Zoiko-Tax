@@ -1,7 +1,7 @@
 {
-  "bundleId": "global-telecom-2026.10",
+  "bundleId": "global-telecom-2026.11",
   "packId": "ZTAX-CP-GLOBAL-TELECOM",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "level": "GLOBAL",
   "status": "RESEARCH",
   "capabilities": ["DETERMINE", "JURISDICTION"],
@@ -9,6 +9,7 @@
   "sources": [
     { "sourceId": "SRC-ZOIKO-GLOBAL-RATES-2026" },
     { "sourceId": "SRC-ZOIKO-US-STATE-TELECOM-2026" },
-    { "sourceId": "SRC-ZOIKO-US-LOCAL-TELECOM-2026" }
+    { "sourceId": "SRC-ZOIKO-US-LOCAL-TELECOM-2026" },
+    { "sourceId": "SRC-ZOIKO-US-NC-COUNTY-2026" }
   ]
 }
