@@ -11,6 +11,7 @@ import { Amount, Card, Field, Raw, Status } from '../../ui/kit'
 import { isDecimal, KV } from '../determine/shared'
 import { Citation } from './ComponentsTable'
 import { coverageInstant, percent, serviceLabel, SERVICES, today, type Coverage, type Service } from './coverage'
+import { localitiesOf } from './localities'
 import { US_STATES } from './usStates'
 import '../locations.css'
 
@@ -55,6 +56,8 @@ export interface LocationDraft {
   sellerSubdivision: string
   country: string
   subdivision: string
+  /** A county or city jurisdiction within the subdivision, or '' for the subdivision itself. */
+  locality: string
   evidence: EvidenceType
   business: boolean
   /** A party the supply went through, or '' for a direct sale. */
@@ -72,6 +75,7 @@ export function emptyLocation(): LocationDraft {
     sellerSubdivision: '',
     country: 'US',
     subdivision: 'US-CA',
+    locality: '',
     evidence: 'PRIMARY_PLACE_OF_USE',
     business: false,
     via: '',
@@ -99,7 +103,7 @@ export function locationEventTime(draft: LocationDraft): string {
 
 /** The document a draft becomes. Call only once locationProblem(draft) is null. */
 export function locationDocument(draft: LocationDraft): S<'TaxDocument'> {
-  const where = place(draft.country, draft.subdivision)
+  const where: S<'Place'> = draft.locality === '' ? place(draft.country, draft.subdivision) : { jurisdiction: draft.locality }
   // The engine establishes a business customer only from a validated VAT
   // registration, which the US does not have.
   const customer: S<'TaxParty'> = draft.business && draft.country !== 'US'
@@ -149,6 +153,7 @@ export const LocationFields = ({ coverage, draft, onChange }: {
 }) => {
   const countries = countriesOf(coverage)
   const subdivisions = subdivisionsOf(coverage, draft.country)
+  const localities = localitiesOf(coverage, draft.subdivision)
   const sellerSubdivisions = subdivisionsOf(coverage, draft.sellerCountry)
   const set = <K extends keyof LocationDraft>(k: K, v: LocationDraft[K]) => { onChange({ ...draft, [k]: v }) }
   return (
@@ -180,7 +185,7 @@ export const LocationFields = ({ coverage, draft, onChange }: {
             value={draft.country}
             onChange={(e) => {
               const c = e.target.value
-              onChange({ ...draft, country: c, subdivision: '', currency: CURRENCY[c] ?? (draft.currency === 'USD' ? 'EUR' : draft.currency) })
+              onChange({ ...draft, country: c, subdivision: '', locality: '', currency: CURRENCY[c] ?? (draft.currency === 'USD' ? 'EUR' : draft.currency) })
             }}
           >
             {countries.map((c) => <option key={c} value={c}>{REGION?.of(c) ?? c}</option>)}
@@ -188,9 +193,17 @@ export const LocationFields = ({ coverage, draft, onChange }: {
         </Field>
         {subdivisions.length === 0 ? null : (
           <Field label="State or province" help="Leave empty to see what a country-only place does">
-            <select value={draft.subdivision} onChange={(e) => { set('subdivision', e.target.value) }}>
+            <select value={draft.subdivision} onChange={(e) => { onChange({ ...draft, subdivision: e.target.value, locality: '' }) }}>
               <option value="">— country only —</option>
               {subdivisions.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
+            </select>
+          </Field>
+        )}
+        {localities.length === 0 ? null : (
+          <Field label="County or city" help="Local taxes apply only when the place is named this precisely">
+            <select value={draft.locality} onChange={(e) => { set('locality', e.target.value) }}>
+              <option value="">— state only —</option>
+              {localities.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
           </Field>
         )}
