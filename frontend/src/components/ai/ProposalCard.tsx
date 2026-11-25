@@ -3,6 +3,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import type { S } from '@zoikotax/sdk'
 
 import '../../pages/obligations.css'
+import '../../pages/intelligence/intelligence.css'
 import { ztax } from '../../platform/client'
 import { Field, Id, Submit } from '../../ui/kit'
 import { CODE_MAX, NOTE_MAX, REASON_MAX, buildDecisionRequest } from './decisionRequest'
@@ -185,7 +186,7 @@ const ReviewerPanel = ({ proposal, onAccept }: { proposal: Proposal; onAccept?: 
  * provenance and the review panel. Shown only for a proposed result. With no
  * `onAccept` it behaves exactly as the Intelligence page always has.
  */
-export const ProposalCard = ({ proposal, onAccept }: { proposal: Proposal; onAccept?: (code: string) => void }) => {
+export const ProposalCard = ({ proposal, onAccept, elapsed }: { proposal: Proposal; onAccept?: (code: string) => void; elapsed?: string | null }) => {
   const provenance = proposal.provenance
   if (provenance === undefined || provenance === null) {
     return null
@@ -194,51 +195,86 @@ export const ProposalCard = ({ proposal, onAccept }: { proposal: Proposal; onAcc
   const evidenceId = evidenceIdText(provenance)
   return (
     <div className="ztax-stepper">
-      <p className="ztax-note" style={{ fontWeight: 600 }}>
-        AI-generated suggestion. General information, not tax advice or an authoritative determination.
-        Deterministic processing decides.{' '}
-        It can be wrong. A qualified person must review it before anything relies on it.
-      </p>
-      {note === null ? null : note.tone === 'badge' ? (
-        <p className="ztax-error-note" role="note"><strong>{note.text}</strong></p>
-      ) : (
-        <p className="ztax-note muted">{note.text}</p>
-      )}
-      <dl className="ztax-kv" style={{ marginTop: 8 }}>
-        <dt>Proposed code</dt>
-        <dd className="ztax-proposed-code mono">{proposal.proposedCode}</dd>
-        <dt>Confidence</dt>
-        <dd className="mono">Not calibrated</dd>
-        <dt>Authoritative</dt>
-        <dd className="mono">{String(proposal.authoritative)}</dd>
-        <dt>Proposal</dt>
-        <dd>{proposal.id === undefined ? '—' : <Id value={proposal.id} />}</dd>
-      </dl>
-      <p className="ztax-note">
-        No measured accuracy exists for this proposal yet, so no confidence figure is shown. The code is checked for
-        ontology format; whether it is an approved ontology node is checked only when an approved list is configured. A person confirms or
-        rejects the mapping before anything relies on it.
-      </p>
-      <table className="ztax-action-table" style={{ marginTop: 8 }}>
-        <tbody>
-          <tr><th scope="row">Use case</th><td className="mono">{provenance.useCase}</td></tr>
-          <tr><th scope="row">Model profile</th><td className="mono">{provenance.modelProfile}</td></tr>
-          <tr><th scope="row">Provider profile</th><td className="mono">{provenance.providerProfile}</td></tr>
-          <tr><th scope="row">Prompt profile</th><td className="mono">{provenance.promptProfile}</td></tr>
-          <tr><th scope="row">AI train</th><td className="mono">{provenance.aiTrainVersion}</td></tr>
-          {evidenceId === null ? null : (
-            <tr><th scope="row">Evidence id</th><td className="mono"><EvidenceIdValue id={evidenceId} /></td></tr>
-          )}
-        </tbody>
-      </table>
-      <p className="ztax-note">The full audit record is kept by the AI service and is not shown on this page.</p>
+      {/* ── Header: title + badges ── */}
+      <div className="ztax-intel-proposal-header">
+        <span className="ztax-intel-proposal-title">Proposal</span>
+        <div className="ztax-intel-badges">
+          <span className="ztax-advisory-badge">Advisory — never authoritative</span>
+          {/* TODO: replace always-shown with real approval flag when D-01 and Q10 are decided */}
+          <span className="ztax-intel-badge ztax-intel-badge--warning">Test model — not approved</span>
+        </div>
+      </div>
 
-      <h3 className="ztax-card-title" style={{ marginTop: 16 }}>Review</h3>
-      <p className="ztax-note">
-        A qualified person reviews the proposal and records Accept, Reject, Modify or Escalate with a reason.
-        The decision is saved with who decided and when. Saving a decision does not change the item&apos;s classification.
+      {/* ── Single result block (replaces four separate grey boxes) ── */}
+      <div className="ztax-intel-result-block">
+        <div className="ztax-intel-result-headline">
+          <span className="ztax-intel-result-label">The AI suggested a code</span>
+          {elapsed != null ? <span className="ztax-intel-timing">{elapsed}</span> : null}
+        </div>
+
+        <div className="ztax-intel-code-chip">{proposal.proposedCode}</div>
+
+        <div className="ztax-intel-confidence-row">
+          <span className="ztax-intel-badge ztax-intel-badge--neutral">Confidence: not calibrated</span>
+        </div>
+
+        <p className="ztax-intel-disclosure" style={{ marginTop: 4, marginBottom: 4 }}>
+          No measured accuracy exists yet, so no confidence figure is shown.
+        </p>
+
+        {/* provenanceNote badge for test/unknown runtime */}
+        {note === null ? null : note.tone === 'badge' ? (
+          <p className="ztax-error-note" role="note" style={{ marginTop: 8, marginBottom: 0 }}><strong>{note.text}</strong></p>
+        ) : (
+          <p className="ztax-note muted" style={{ marginTop: 8, marginBottom: 0 }}>{note.text}</p>
+        )}
+
+        <p className="ztax-intel-disclosure">
+          AI-generated suggestion. General information, not tax advice or an authoritative determination.
+          Deterministic processing decides. It can be wrong. A qualified person must review it before anything relies on it.
+        </p>
+      </div>
+
+      <div className="ztax-intel-divider" />
+
+      {evidenceId === null ? null : (
+        <p className="ztax-intel-evidence-row">
+          <span className="ztax-intel-evidence-label">Evidence id</span>
+          <span className="mono"><EvidenceIdValue id={evidenceId} /></span>
+        </p>
+      )}
+
+      <div className="ztax-intel-divider" />
+
+      {/* ── Review — directly under Evidence id ── */}
+      <h3 className="ztax-intel-review-heading">Review</h3>
+      <p className="ztax-intel-review-hint">
+        Record Accept, Reject, Modify or Escalate with a reason. Saving a decision does not change the item&apos;s classification.
       </p>
       <ReviewerPanel key={proposal.id} proposal={proposal} {...(onAccept === undefined ? {} : { onAccept })} />
+
+      <div className="ztax-intel-divider" />
+
+      {/* ── Technical & provenance details — collapsed by default ── */}
+      <details key={String(proposal.id)} className="ztax-intel-details">
+        <summary>Technical details</summary>
+        <table className="ztax-action-table">
+          <tbody>
+            <tr><th scope="row">Use case</th><td className="mono">{provenance.useCase}</td></tr>
+            <tr><th scope="row">Model</th><td className="mono">{provenance.modelProfile}</td></tr>
+            <tr><th scope="row">Provider</th><td className="mono">{provenance.providerProfile}</td></tr>
+            <tr><th scope="row">Prompt</th><td className="mono">{provenance.promptProfile}</td></tr>
+            <tr><th scope="row">AI release</th><td className="mono">{provenance.aiTrainVersion}</td></tr>
+            {proposal.id === undefined ? null : (
+              <tr><th scope="row">Proposal id</th><td><Id value={proposal.id} /></td></tr>
+            )}
+          </tbody>
+        </table>
+        <p>
+          The code is checked for ontology format; whether it is an approved ontology node is checked only when an approved list is configured.
+        </p>
+        <p>The full audit record is kept by the AI service and is not shown on this page.</p>
+      </details>
     </div>
   )
 }
