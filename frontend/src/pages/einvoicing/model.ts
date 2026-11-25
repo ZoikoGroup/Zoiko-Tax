@@ -128,7 +128,7 @@ export function refusalText(reason: string | null): string | null {
 
 /** An act the page can offer, or the reason it does not. */
 export interface Offer {
-  readonly act: Action | 'SIGN' | 'EVIDENCE'
+  readonly act: Action | 'SIGN' | 'EVIDENCE' | 'REVISE'
   readonly label: string
   /** Null when the act is open to this person; otherwise why it is not. */
   readonly blocked: string | null
@@ -151,6 +151,9 @@ export function recordOffers(a: Applicability, roles: readonly string[], me: str
   const ownRecord = a.createdBy === me || author(a) === me
   const own = 'You recorded this record or its current terms; a different person signs and activates it.'
   const out: Offer[] = []
+  if (a.status === 'DRAFT' || a.status === 'IN_REVIEW') {
+    out.push({ act: 'REVISE', label: 'Revise terms', blocked: maker ? null : makerOnly })
+  }
   switch (a.status) {
     case 'DRAFT':
       out.push({ act: 'SUBMIT', label: 'Submit for review', blocked: maker ? null : makerOnly })
