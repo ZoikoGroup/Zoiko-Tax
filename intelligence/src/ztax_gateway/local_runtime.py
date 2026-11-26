@@ -112,8 +112,8 @@ _FLOATING_ALIASES = frozenset({"latest", "default", "stable", "preview"})
 
 # A fixed placeholder, not a model-derived value (same as the Groq runtime).
 _FIXED_CONFIDENCE = "0.5000"
-_MAX_TOKENS = 64
-_REPORT_EXPLANATION_MAX_TOKENS = 220
+_MAX_TOKENS = 256
+_REPORT_EXPLANATION_MAX_TOKENS = 384
 
 # ---------------------------------------------------------------------------
 # Fixed texts. None of them carries input, output, an address or a status line.
