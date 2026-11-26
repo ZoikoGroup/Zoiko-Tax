@@ -277,6 +277,7 @@ const RecordDetail = ({ id, roles, me, onChanged, onClose }: {
             </Card>
             <Card title="Act on this record">
               {offers.map((o) => <Blocked key={o.act} offer={o} />)}
+              {offer('REVISE')?.blocked === null ? <ReviseTerms a={a} onDone={changed} /> : null}
               {offer('SUBMIT')?.blocked === null ? <Move a={a} action="SUBMIT" label="Submit for review" onDone={changed} /> : null}
               {offer('SIGN')?.blocked === null ? <SignGate a={a} onDone={changed} /> : null}
               {offer('ACTIVATE')?.blocked === null ? <Move a={a} action="ACTIVATE" label={`Activate version ${a.currentVersion}`} onDone={changed} /> : null}
@@ -397,38 +398,92 @@ const AttachEvidence = ({ a, onDone }: { a: Applicability; onDone: () => void })
   )
 }
 
+/** The terms a record carries, as the form holds them. */
+interface TermsDraft {
+  duty: Duty
+  model: Model
+  profile: Profile
+  formatVersion: string
+  authority: string
+  legalSource: string
+  sourceAsOf: string
+  effectiveFrom: string
+  effectiveTo: string
+  conditions: string
+}
+
+const blankTerms = (): TermsDraft => ({
+  duty: 'REQUIRED', model: 'CLEARANCE', profile: 'PEPPOL_BIS_3', formatVersion: '', authority: '', legalSource: '',
+  sourceAsOf: todayUtc(), effectiveFrom: '', effectiveTo: '', conditions: '',
+})
+
+const draftOf = (t: Terms): TermsDraft => ({
+  duty: t.duty, model: t.model, profile: t.profile, formatVersion: t.formatVersion ?? '', authority: t.authority,
+  legalSource: t.legalSource, sourceAsOf: t.sourceAsOf, effectiveFrom: t.effectiveFrom, effectiveTo: t.effectiveTo ?? '',
+  conditions: t.conditions ?? '',
+})
+
+/** The terms the cell receives: the model and profile the country and duty admit, empty optional fields left out. */
+const termsOf = (d: TermsDraft, country: string): Terms => {
+  const profiles = profilesFor(country, d.duty)
+  return {
+    duty: d.duty,
+    model: d.duty === 'PROHIBITED' ? 'NONE' : d.model,
+    profile: profiles.includes(d.profile) ? d.profile : (profiles[0] ?? 'NONE'),
+    authority: d.authority.trim(), legalSource: d.legalSource.trim(), sourceAsOf: d.sourceAsOf, effectiveFrom: d.effectiveFrom,
+    ...(d.formatVersion.trim() === '' ? {} : { formatVersion: d.formatVersion.trim() }),
+    ...(d.effectiveTo === '' ? {} : { effectiveTo: d.effectiveTo }),
+    ...(d.conditions.trim() === '' ? {} : { conditions: d.conditions.trim() }),
+  }
+}
+
+const TermsFields = ({ country, value: d, onChange }: { country: string; value: TermsDraft; onChange: (d: TermsDraft) => void }) => {
+  const set = (patch: Partial<TermsDraft>) => { onChange({ ...d, ...patch }) }
+  const t = termsOf(d, country)
+  const profiles = profilesFor(country, d.duty)
+  return (
+    <>
+      <Field label="Duty">
+        <select value={d.duty} onChange={(e) => { set({ duty: DUTIES.find((x) => x === e.target.value) ?? 'REQUIRED' }) }}>
+          {DUTIES.map((x) => <option key={x} value={x}>{x}</option>)}
+        </select>
+      </Field>
+      <Field label="Control model">
+        <select value={t.model} disabled={d.duty === 'PROHIBITED'} onChange={(e) => { set({ model: MODELS.find((x) => x === e.target.value) ?? 'CLEARANCE' }) }}>
+          {MODELS.filter((m) => (d.duty === 'PROHIBITED') === (m === 'NONE')).map((x) => <option key={x} value={x}>{words(x)}</option>)}
+        </select>
+      </Field>
+      <Field label="Format profile" help="A national profile is offered only for its own country.">
+        <select value={t.profile} onChange={(e) => { set({ profile: profiles.find((p) => p === e.target.value) ?? 'NONE' }) }}>
+          {profiles.map((p) => <option key={p} value={p}>{PROFILES.find((x) => x.value === p)?.label ?? p}</option>)}
+        </select>
+      </Field>
+      <Field label="Format version"><input maxLength={200} required={d.duty !== 'PROHIBITED'} value={d.formatVersion} onChange={(e) => { set({ formatVersion: e.target.value }) }} /></Field>
+      <Field label="Authority / rail"><input required maxLength={200} value={d.authority} onChange={(e) => { set({ authority: e.target.value }) }} /></Field>
+      <Field label="Legal source"><textarea required maxLength={2000} value={d.legalSource} onChange={(e) => { set({ legalSource: e.target.value }) }} /></Field>
+      <Field label="Source reviewed on"><input type="date" required value={d.sourceAsOf} onChange={(e) => { set({ sourceAsOf: e.target.value }) }} /></Field>
+      <Field label="Effective from"><input type="date" required value={d.effectiveFrom} onChange={(e) => { set({ effectiveFrom: e.target.value }) }} /></Field>
+      <Field label="Effective to (optional)"><input type="date" value={d.effectiveTo} onChange={(e) => { set({ effectiveTo: e.target.value }) }} /></Field>
+      <Field label="Eligibility conditions (optional)" help="Issuer size, thresholds, waivers the duty depends on.">
+        <textarea maxLength={2000} value={d.conditions} onChange={(e) => { set({ conditions: e.target.value }) }} />
+      </Field>
+    </>
+  )
+}
+
 const NewRecord = ({ roles, onCreated }: { roles: readonly string[]; onCreated: (id: string) => void }) => {
   const [country, setCountry] = useState('')
   const [documentType, setDocumentType] = useState<DocumentType>('INVOICE')
   const [buyerKind, setBuyerKind] = useState<BuyerKind>('B2B')
-  const [duty, setDuty] = useState<Duty>('REQUIRED')
-  const [model, setModel] = useState<Model>('CLEARANCE')
-  const [profile, setProfile] = useState<Profile>('PEPPOL_BIS_3')
-  const [formatVersion, setFormatVersion] = useState('')
-  const [authority, setAuthority] = useState('')
-  const [legalSource, setLegalSource] = useState('')
-  const [sourceAsOf, setSourceAsOf] = useState(todayUtc())
-  const [effectiveFrom, setEffectiveFrom] = useState('')
-  const [effectiveTo, setEffectiveTo] = useState('')
-  const [conditions, setConditions] = useState('')
+  const [terms, setTerms] = useState<TermsDraft>(blankTerms)
   const action = useAction<Applicability>()
   if (!roles.includes('OPERATOR') && !roles.includes('ANALYST')) {
     return null
   }
-  const profiles = profilesFor(country, duty)
-  const chosenProfile = profiles.includes(profile) ? profile : (profiles[0] ?? 'NONE')
-  const chosenModel: Model = duty === 'PROHIBITED' ? 'NONE' : model
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    void action.run(() => ztax.createCTCApplicability({
-      country, documentType, buyerKind,
-      terms: {
-        duty, model: chosenModel, profile: chosenProfile, authority: authority.trim(), legalSource: legalSource.trim(), sourceAsOf, effectiveFrom,
-        ...(formatVersion.trim() === '' ? {} : { formatVersion: formatVersion.trim() }),
-        ...(effectiveTo === '' ? {} : { effectiveTo }),
-        ...(conditions.trim() === '' ? {} : { conditions: conditions.trim() }),
-      },
-    })).then((r) => { if (r !== null) { onCreated(r.id) } })
+    void action.run(() => ztax.createCTCApplicability({ country, documentType, buyerKind, terms: termsOf(terms, country) }))
+      .then((r) => { if (r !== null) { onCreated(r.id) } })
   }
   return (
     <Card title="Record an applicability record">
@@ -445,34 +500,45 @@ const NewRecord = ({ roles, onCreated }: { roles: readonly string[]; onCreated: 
             {BUYER_KINDS.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </Field>
-        <Field label="Duty">
-          <select value={duty} onChange={(e) => { setDuty(DUTIES.find((t) => t === e.target.value) ?? 'REQUIRED') }}>
-            {DUTIES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </Field>
-        <Field label="Control model">
-          <select value={chosenModel} disabled={duty === 'PROHIBITED'} onChange={(e) => { setModel(MODELS.find((t) => t === e.target.value) ?? 'CLEARANCE') }}>
-            {MODELS.filter((m) => (duty === 'PROHIBITED') === (m === 'NONE')).map((t) => <option key={t} value={t}>{words(t)}</option>)}
-          </select>
-        </Field>
-        <Field label="Format profile" help="A national profile is offered only for its own country.">
-          <select value={chosenProfile} onChange={(e) => { setProfile(profiles.find((p) => p === e.target.value) ?? 'NONE') }}>
-            {profiles.map((p) => <option key={p} value={p}>{PROFILES.find((x) => x.value === p)?.label ?? p}</option>)}
-          </select>
-        </Field>
-        <Field label="Format version"><input maxLength={200} required={duty !== 'PROHIBITED'} value={formatVersion} onChange={(e) => { setFormatVersion(e.target.value) }} /></Field>
-        <Field label="Authority / rail"><input required maxLength={200} value={authority} onChange={(e) => { setAuthority(e.target.value) }} /></Field>
-        <Field label="Legal source"><textarea required maxLength={2000} value={legalSource} onChange={(e) => { setLegalSource(e.target.value) }} /></Field>
-        <Field label="Source reviewed on"><input type="date" required value={sourceAsOf} onChange={(e) => { setSourceAsOf(e.target.value) }} /></Field>
-        <Field label="Effective from"><input type="date" required value={effectiveFrom} onChange={(e) => { setEffectiveFrom(e.target.value) }} /></Field>
-        <Field label="Effective to (optional)"><input type="date" value={effectiveTo} onChange={(e) => { setEffectiveTo(e.target.value) }} /></Field>
-        <Field label="Eligibility conditions (optional)" help="Issuer size, thresholds, waivers the duty depends on.">
-          <textarea maxLength={2000} value={conditions} onChange={(e) => { setConditions(e.target.value) }} />
-        </Field>
+        <TermsFields country={country} value={terms} onChange={setTerms} />
         <div className="ztax-form-actions"><Submit busy={action.busy}>Record</Submit></div>
         <Refusal error={action.error} />
       </form>
     </Card>
+  )
+}
+
+/** The next version of a draft or in-review record's terms. A revision voids its gate sign-offs and returns it to DRAFT. */
+const ReviseTerms = ({ a, onDone }: { a: Applicability; onDone: () => void }) => {
+  const [open, setOpen] = useState(false)
+  const [terms, setTerms] = useState<TermsDraft>(() => draftOf(a.terms))
+  const action = useAction<Applicability>()
+  if (!open) {
+    return (
+      <div className="ztax-form-actions" style={{ marginTop: 12 }}>
+        <button type="button" className="ztax-btn-quiet" onClick={() => { setTerms(draftOf(a.terms)); setOpen(true) }}>Revise terms…</button>
+      </div>
+    )
+  }
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    void action.run(() => ztax.reviseCTCApplicability(a.id, termsOf(terms, a.country))).then((r) => {
+      if (r !== null) {
+        setOpen(false)
+        onDone()
+      }
+    })
+  }
+  return (
+    <form className="ztax-form" onSubmit={submit} style={{ marginTop: 12 }} aria-label="Revise terms">
+      <p className="muted">Records version {a.currentVersion + 1}. Gate sign-offs on version {a.currentVersion} do not carry over, and the record returns to DRAFT. Terms identical to the current version record nothing.</p>
+      <TermsFields country={a.country} value={terms} onChange={setTerms} />
+      <div className="ztax-form-actions">
+        <Submit busy={action.busy}>Record version {a.currentVersion + 1}</Submit>
+        <button type="button" className="ztax-btn-quiet" onClick={() => { setOpen(false) }}>Cancel</button>
+      </div>
+      <Refusal error={action.error} />
+    </form>
   )
 }
 

@@ -40,8 +40,9 @@ export const DocumentsPage: (props: PageProps) => JSX.Element = ({ route, onTabC
     <div className="ztax-page">
       <PageHeader title="E-Invoicing / CTC" subtitle={<span>Fiscal documents that present committed decisions</span>} />
       <p className="ztax-error-note" role="note">
-        Submission to tax authorities — CTC clearance, e-invoice transmission to a network or portal — is not built in the
-        backend. Documents here are committed to ZoikoTax's own record only; nothing is sent to any authority.
+        No tax authority, network or access point is connected. Documents here are committed to ZoikoTax's own record;
+        a submission is prepared under E-Invoicing / CTC › Authority Submissions, where its dispatch and the authority's
+        response are recorded by a person with evidence. Nothing is transmitted from this cell.
       </p>
       <TabBar label="E-Invoicing" tabs={TABS} current={tab} onSelect={setTab} />
 
@@ -74,8 +75,9 @@ export const DocumentsPage: (props: PageProps) => JSX.Element = ({ route, onTabC
           empty="No document has been corrected, credited, voided or disputed."
         />
         <p className="muted ztax-note">
-          Authority rejections arrive only once CTC submission is built; until then this lists the corrections ZoikoTax
-          itself recorded, and originals that were voided, disputed or suspended.
+          This lists the corrections ZoikoTax itself recorded, and originals that were voided, disputed or suspended.
+          A rejection an authority returned is recorded on its submission (status AUTHORITY_REJECTED) under Authority
+          Submissions; the correction is then issued here.
         </p>
       </div>
     </div>

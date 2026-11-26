@@ -120,6 +120,7 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
       { id: 'determine.situs', label: 'Situs & Place of Supply', target: at('locations', 'try') },
       { id: 'determine.liability', label: 'Liability & Recovery', target: at('determine', 'liability') },
       { id: 'determine.corrections', label: 'Corrections', target: at('determine', 'refunds') },
+      { id: 'determine.batches', label: 'Batch Jobs', target: at('determine', 'batch') },
     ],
   },
   {
@@ -184,6 +185,8 @@ export const NAV_DOMAINS: readonly NavDomain[] = [
       { id: 'evidence.provenance', label: 'Source Provenance', target: at('evidence', 'provenance') },
       { id: 'evidence.replay', label: 'Historical Replay', target: at('evidence', 'replay') },
       { id: 'evidence.exports', label: 'Verified Exports', target: at('evidence', 'exports') },
+      { id: 'evidence.holds', label: 'Legal Holds', target: at('evidence', 'holds') },
+      { id: 'evidence.retention', label: 'Retention Policies', target: at('evidence', 'retention') },
     ],
   },
   {
