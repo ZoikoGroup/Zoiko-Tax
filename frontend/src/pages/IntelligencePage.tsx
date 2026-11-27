@@ -10,6 +10,7 @@ import {
 } from './intelligence/viewOfProposal'
 import type { PageProps } from './types'
 import './obligations.css'
+import './intelligence/intelligence.css'
 
 type Proposal = S<'ClassificationProposal'>
 
@@ -88,15 +89,13 @@ export const IntelligencePage = ({ session, route }: PageProps) => {
     <div className="ztax-page">
       <PageHeader title="Intelligence" subtitle="AI-assisted classification suggestions · advisory only" />
 
-      <Card title="Advisory, never authoritative">
-        <p className="ztax-alert-desc" style={{ margin: 0 }}>
-          The AI proposes a code in ontology format for a catalog item; whether that code is a real ontology
-          node is not verified here. A proposal is advice: it never becomes a classification decision
-          on its own, and no confidence score makes it one. A person reviews it
-          and confirms the mapping, or it is nothing. Send catalog text only — the description goes to an AI model,
-          so it must never contain customer data.
-        </p>
-      </Card>
+      <div className="ztax-intel-banner">
+        <span className="ztax-intel-banner-icon" aria-hidden="true">ℹ</span>
+        <div>
+          <p>AI suggestions are advisory. A person must confirm them before anything relies on them.</p>
+          <p>Send catalog text only — never customer data. A proposal is never a decision on its own.</p>
+        </div>
+      </div>
 
       <Columns>
         <Card title="Ask for a proposal">
@@ -148,10 +147,7 @@ export const IntelligencePage = ({ session, route }: PageProps) => {
           )}
         </Card>
 
-        <Card
-          title="Proposal"
-          aside={endView?.state === 'proposed' ? <span className="ztax-advisory-badge">Advisory — never authoritative</span> : undefined}
-        >
+        <Card {...(endView?.state === 'proposed' && proposal !== null ? {} : { title: 'Proposal' })}>
           {/* One status region that is always on the page, so a change in it is announced. */}
           <div role="status" aria-live="polite">
             {action.busy ? (
@@ -159,15 +155,15 @@ export const IntelligencePage = ({ session, route }: PageProps) => {
                 <p className="ztax-empty-note">Asking the AI…</p>
                 {waitingView === null ? null : <EndingText view={waitingView} />}
               </>
-            ) : endView !== null ? (
+            ) : endView !== null && endView.state !== 'proposed' ? (
               <EndingText view={endView} />
             ) : emptyNoteVisible(action.busy, ending !== null) ? (
               <p className="ztax-empty-note">No proposal yet. Describe an item and ask.</p>
             ) : null}
           </div>
           {/* The seconds count sits outside the live region, so it is not read out every second. */}
-          {shownElapsed === null ? null : <p className="ztax-note muted" style={{ marginTop: 0 }}>{shownElapsed}</p>}
-          {!action.busy && endView?.state === 'proposed' && proposal !== null ? <ProposalCard proposal={proposal} /> : null}
+          {shownElapsed === null || (endView?.state === 'proposed' && proposal !== null) ? null : <p className="ztax-note muted" style={{ marginTop: 0 }}>{shownElapsed}</p>}
+          {!action.busy && endView?.state === 'proposed' && proposal !== null ? <ProposalCard proposal={proposal} elapsed={shownElapsed} /> : null}
         </Card>
       </Columns>
     </div>

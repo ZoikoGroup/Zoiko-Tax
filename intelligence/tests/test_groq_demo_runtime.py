@@ -240,7 +240,7 @@ def test_every_report_use_case_is_sent_the_report_explanation_prompt(use_case: s
     body = json.loads(build_request(_FAKE_MODEL, _FAKE_KEY, _report_call(use_case)).data)
     assert body["messages"][0]["content"] == _explain_prompt()
     assert body["messages"][1]["content"] == '[{"id": "FIG-001", "value": "1.00"}]'
-    assert body["max_tokens"] == 220
+    assert body["max_tokens"] == 384
 
 
 def test_report_prompt_restates_only_the_given_values_and_labels() -> None:
@@ -279,7 +279,7 @@ def test_classification_prompt_is_unchanged_by_the_report_prompt() -> None:
     body = json.loads(build_request(_FAKE_MODEL, _FAKE_KEY, _make_call()).data)
     system = body["messages"][0]["content"]
     assert system == _classification_prompt()
-    assert body["max_tokens"] == 64
+    assert body["max_tokens"] == 256
 
 
 def test_run_never_prints_or_logs_the_key(
@@ -920,3 +920,174 @@ class TestShippedProfilesEnvVar:
         # Both shipped profiles must be present (repo fallback works).
         assert registry.get("prompt:classification-review-v1") is not None
         assert registry.get("prompt:explain-report-figure-v1") is not None
+
+
+# ---------------------------------------------------------------------------
+# Part 2 & 3: INFO logging, finish_reason sanitisation, speed
+# ---------------------------------------------------------------------------
+
+
+def _body_with_finish_reason(content: str, finish_reason: str, completion_tokens: int = 5) -> bytes:
+    """Return a minimal chat-completion JSON body with the given finish_reason."""
+    return json.dumps(
+        {
+            "choices": [
+                {
+                    "message": {"content": content},
+                    "finish_reason": finish_reason,
+                }
+            ],
+            "usage": {"prompt_tokens": 20, "completion_tokens": completion_tokens},
+        }
+    ).encode()
+
+
+def test_empty_reply_with_finish_reason_length_logs_info_and_raises(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Empty content + finish_reason='length' → RuntimeUnavailableError with
+    the expected fixed message AND an INFO log containing finish_reason=length
+    and the max_tokens value."""
+    monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
+    monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
+    runtime = GroqDemoRuntime()
+    raw = _body_with_finish_reason("", "length", completion_tokens=256)
+
+    def _fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        return _FakeHTTPResponse(raw)
+
+    monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
+    with (
+        caplog.at_level(logging.INFO, logger="ztax_gateway.groq_demo_runtime"),
+        pytest.raises(RuntimeUnavailableError, match="empty"),
+    ):
+        runtime.run(_ROUTE, _make_call())
+
+    info_text = " ".join(r.getMessage() for r in caplog.records if r.levelno == logging.INFO)
+    assert "finish_reason=length" in info_text
+    assert "max_tokens=256" in info_text
+
+
+def test_http_429_info_log_contains_status_code_not_body(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """HTTP 429 → INFO log has the status code but NOT the provider body text."""
+    monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
+    monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
+    runtime = GroqDemoRuntime()
+    secret_body = b"rate-limit-secret-detail-xyz"
+
+    def _fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        raise urllib.error.HTTPError(
+            request.full_url, 429, "Too Many Requests", {}, BytesIO(secret_body)  # type: ignore[arg-type]
+        )
+
+    monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
+    with (
+        caplog.at_level(logging.INFO, logger="ztax_gateway.groq_demo_runtime"),
+        pytest.raises(RuntimeUnavailableError),
+    ):
+        runtime.run(_ROUTE, _make_call())
+
+    info_text = " ".join(r.getMessage() for r in caplog.records if r.levelno == logging.INFO)
+    assert "429" in info_text
+    assert "rate-limit-secret-detail-xyz" not in info_text
+
+
+def test_unknown_finish_reason_logged_as_other(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """An unknown finish_reason (e.g. 'banana') is logged as 'other', never verbatim."""
+    monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
+    monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
+    runtime = GroqDemoRuntime()
+    raw = _body_with_finish_reason("ontology:demo-class", "banana")
+
+    def _fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        return _FakeHTTPResponse(raw)
+
+    monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
+    with caplog.at_level(logging.INFO, logger="ztax_gateway.groq_demo_runtime"):
+        runtime.run(_ROUTE, _make_call())
+
+    info_text = " ".join(r.getMessage() for r in caplog.records if r.levelno == logging.INFO)
+    assert "finish_reason=other" in info_text
+    assert "banana" not in info_text
+
+
+def test_no_info_or_warning_log_contains_prompt_key_or_reply_body(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """INFO and WARNING log lines must never contain the API key, prompt text,
+    or raw reply body."""
+    monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
+    monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
+    runtime = GroqDemoRuntime()
+    secret_reply_body = "ontology:demo-class-SECRET-CONTENT"
+    raw = _body_with_finish_reason(secret_reply_body, "stop")
+
+    def _fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        return _FakeHTTPResponse(raw)
+
+    monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
+    with caplog.at_level(logging.INFO, logger="ztax_gateway.groq_demo_runtime"):
+        runtime.run(_ROUTE, _make_call())
+
+    sensitive = [_FAKE_KEY, "SECRET-CONTENT", "DEMO ONLY"]
+    for record in caplog.records:
+        if record.levelno in (logging.INFO, logging.WARNING):
+            msg = record.getMessage()
+            for s in sensitive:
+                assert s not in msg, f"Sensitive string {s!r} found in log: {msg!r}"
+
+
+def test_speed_logging_normal_call(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A call finishing in 500 ms logs elapsed_ms=500 at INFO and no WARNING."""
+    monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
+    monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
+    runtime = GroqDemoRuntime()
+    raw = _body_with_finish_reason("ontology:demo-class", "stop")
+
+    times = iter([0.0, 0.5])
+
+    def _fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        return _FakeHTTPResponse(raw)
+
+    monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(groq_demo_runtime.time, "monotonic", lambda: next(times))
+    with caplog.at_level(logging.INFO, logger="ztax_gateway.groq_demo_runtime"):
+        runtime.run(_ROUTE, _make_call())
+
+    info_text = " ".join(r.getMessage() for r in caplog.records if r.levelno == logging.INFO)
+    assert "elapsed_ms=500" in info_text
+    warn_records = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert warn_records == []
+
+
+def test_speed_logging_slow_call_emits_warning(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A call finishing in 2500 ms logs elapsed_ms=2500 at INFO and a WARNING
+    mentioning the Go side's 5 s deadline."""
+    monkeypatch.setenv("GROQ_API_KEY", _FAKE_KEY)
+    monkeypatch.setenv("GROQ_MODEL", _FAKE_MODEL)
+    runtime = GroqDemoRuntime()
+    raw = _body_with_finish_reason("ontology:demo-class", "stop")
+
+    times = iter([0.0, 2.5])
+
+    def _fake_urlopen(request: Any, timeout: float) -> _FakeHTTPResponse:
+        return _FakeHTTPResponse(raw)
+
+    monkeypatch.setattr(groq_demo_runtime.urllib.request, "urlopen", _fake_urlopen)
+    monkeypatch.setattr(groq_demo_runtime.time, "monotonic", lambda: next(times))
+    with caplog.at_level(logging.INFO, logger="ztax_gateway.groq_demo_runtime"):
+        runtime.run(_ROUTE, _make_call())
+
+    info_text = " ".join(r.getMessage() for r in caplog.records if r.levelno == logging.INFO)
+    assert "elapsed_ms=2500" in info_text
+    warn_text = " ".join(r.getMessage() for r in caplog.records if r.levelno == logging.WARNING)
+    assert "slow call" in warn_text
+    assert "5 s" in warn_text

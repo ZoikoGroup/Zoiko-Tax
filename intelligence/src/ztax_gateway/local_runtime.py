@@ -79,15 +79,15 @@ MODEL_ENV: Final = "ZTAX_LOCAL_RUNTIME_MODEL"
 ENV_ALLOWED_HOSTS: Final = "ZTAX_LOCAL_RUNTIME_ALLOWED_HOSTS"
 
 # Per-read limit (connect and each read), like the Groq runtime. It is the second guard:
-# the total below is what ends a reply that keeps arriving slowly. The Gateway's own
-# 45 second deadline stays as it is and sits above both.
-_TIMEOUT_SECONDS = 30
+# the total below is what ends a reply that keeps arriving slowly. The Gateway's inner
+# runtime deadline (starting point: 4 s, to be re-checked after real models) sits above both.
+_TIMEOUT_SECONDS = 3
 
 # The TOTAL time one request may take, from the start of the connect to the last byte of
 # the reply, measured with a monotonic clock. A server that sends a byte every few seconds
 # never trips the per-read limit; it ends here, with the same fixed timeout text. Private
 # on purpose: a test patches it, nothing configures it.
-_TOTAL_SECONDS: float = 30
+_TOTAL_SECONDS: float = 3
 
 # How much of the reply one read takes. Small enough that the total is checked often.
 _READ_CHUNK_BYTES = 65_536
@@ -112,8 +112,8 @@ _FLOATING_ALIASES = frozenset({"latest", "default", "stable", "preview"})
 
 # A fixed placeholder, not a model-derived value (same as the Groq runtime).
 _FIXED_CONFIDENCE = "0.5000"
-_MAX_TOKENS = 64
-_REPORT_EXPLANATION_MAX_TOKENS = 220
+_MAX_TOKENS = 256
+_REPORT_EXPLANATION_MAX_TOKENS = 384
 
 # ---------------------------------------------------------------------------
 # Fixed texts. None of them carries input, output, an address or a status line.

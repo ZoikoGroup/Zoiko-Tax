@@ -1,0 +1,218 @@
+/* intelligence.css — all styles for the Intelligence / AI Assistant page.
+   Every class is prefixed ztax-intel- so nothing leaks to other pages.
+   Imported only by IntelligencePage.tsx and ProposalCard.tsx.
+   Do NOT add non-ztax-intel-* classes here. */
+
+/* ── Banner (replaces the red advisory card) ─────────────────────────── */
+.ztax-intel-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--ztax-info-bg, #f0f4ff);
+  border: 1px solid var(--ztax-info-border, #c7d7f8);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
+  color: var(--ztax-text, #1a1a1a);
+  line-height: 1.5;
+}
+
+.ztax-intel-banner-icon {
+  font-size: 1rem;
+  margin-top: 1px;
+  flex-shrink: 0;
+  color: var(--ztax-info-icon, #3b6de8);
+}
+
+.ztax-intel-banner p {
+  margin: 0;
+}
+
+.ztax-intel-banner p + p {
+  margin-top: 2px;
+  opacity: 0.75;
+}
+
+/* ── Proposal card header ─────────────────────────────────────────────── */
+.ztax-intel-proposal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.ztax-intel-proposal-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--ztax-text, #1a1a1a);
+}
+
+.ztax-intel-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* ── Badges ───────────────────────────────────────────────────────────── */
+.ztax-intel-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.ztax-intel-badge--advisory {
+  background: var(--ztax-advisory-bg, #fff3e0);
+  color: var(--ztax-advisory-fg, #b45309);
+  border: 1px solid var(--ztax-advisory-border, #fcd34d);
+}
+
+.ztax-intel-badge--warning {
+  background: var(--ztax-warn-bg, #fff1f2);
+  color: var(--ztax-warn-fg, #be123c);
+  border: 1px solid var(--ztax-warn-border, #fda4af);
+}
+
+.ztax-intel-badge--neutral {
+  background: var(--ztax-muted-bg, #f3f4f6);
+  color: var(--ztax-muted-fg, #374151);
+  border: 1px solid var(--ztax-muted-border, #d1d5db);
+}
+
+/* ── Result block (single box, replaces four grey boxes) ─────────────── */
+.ztax-intel-result-block {
+  background: var(--ztax-card-inner-bg, #f9fafb);
+  border: 1px solid var(--ztax-border, #e5e7eb);
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+.ztax-intel-result-headline {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.ztax-intel-result-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ztax-muted-text, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ztax-intel-timing {
+  font-size: 0.75rem;
+  color: var(--ztax-muted-text, #6b7280);
+}
+
+.ztax-intel-code-chip {
+  display: inline-block;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: var(--ztax-code-bg, #eff6ff);
+  color: var(--ztax-code-fg, #1d4ed8);
+  border: 1px solid var(--ztax-code-border, #bfdbfe);
+  border-radius: 5px;
+  padding: 2px 7px;
+  margin-bottom: 8px;
+  word-break: break-all;
+}
+
+.ztax-intel-confidence-row {
+  margin-bottom: 8px;
+}
+
+.ztax-intel-disclosure {
+  font-size: 0.78rem;
+  color: var(--ztax-muted-text, #6b7280);
+  margin: 10px 0 0;
+  line-height: 1.5;
+}
+
+/* ── Thin divider between sections ───────────────────────────────────── */
+.ztax-intel-divider {
+  border: none;
+  border-top: 1px solid var(--ztax-border, #e5e7eb);
+  margin: 12px 0;
+}
+
+/* ── Evidence id row ─────────────────────────────────────────────────── */
+.ztax-intel-evidence-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--ztax-muted-text, #6b7280);
+  margin: 0;
+  flex-wrap: wrap;
+}
+
+.ztax-intel-evidence-label {
+  flex-shrink: 0;
+}
+
+/* ── Review section heading ───────────────────────────────────────────── */
+.ztax-intel-review-heading {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--ztax-text, #1a1a1a);
+}
+
+.ztax-intel-review-hint {
+  font-size: 0.8rem;
+  color: var(--ztax-muted-text, #6b7280);
+  margin: 0 0 10px;
+}
+
+/* ── Collapsed technical details ─────────────────────────────────────── */
+.ztax-intel-details {
+  font-size: 0.8rem;
+  color: var(--ztax-muted-text, #6b7280);
+}
+
+.ztax-intel-details summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ztax-muted-text, #6b7280);
+  user-select: none;
+  padding: 2px 0;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ztax-intel-details summary::before {
+  content: '▸';
+  display: inline-block;
+  font-size: 0.65rem;
+  transition: transform 0.15s ease;
+}
+
+.ztax-intel-details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.ztax-intel-details .ztax-action-table {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.ztax-intel-details p {
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+

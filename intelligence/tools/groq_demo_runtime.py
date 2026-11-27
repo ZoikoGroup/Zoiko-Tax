@@ -33,6 +33,7 @@ import hashlib
 import json
 import logging
 import os
+import time
 import urllib.error
 import urllib.request
 from dataclasses import replace
@@ -62,13 +63,15 @@ __all__: list[str] = [
 log = logging.getLogger("ztax_gateway.groq_demo_runtime")
 
 _API_URL = "https://api.groq.com/openai/v1/chat/completions"
-_TIMEOUT_SECONDS = 30
+_TIMEOUT_SECONDS = 3
 
 # The Gateway's total deadline for one runtime call (passed to build_gateway as
-# runtime_timeout_seconds). It must stay above the runtime's own per-step limit,
+# runtime_timeout_seconds). Must stay BELOW the Go caller's outer deadline (5 s,
+# ZTAX_AI_GATEWAY_DEADLINE default "5s") and ABOVE the runtime's own per-step limit
 # _TIMEOUT_SECONDS, so a slow but valid reply is not cut off by the Gateway.
-# tests/test_live_demo_timeout_wiring.py checks that it does.
-GATEWAY_RUNTIME_TIMEOUT_SECONDS = 45
+# Ordering enforced by tests/test_deadline_ordering.py and checked here by
+# tests/test_live_demo_timeout_wiring.py. Starting point; to be re-checked after real models.
+GATEWAY_RUNTIME_TIMEOUT_SECONDS = 4
 
 # Groq returns 403 to the default Python-urllib User-Agent. A fixed,
 # identifying value avoids that, and is not a secret.
@@ -83,12 +86,15 @@ _FLOATING_ALIASES = frozenset({"latest", "default", "stable", "preview"})
 # FakeRuntime uses for its own canned confidence.
 _FIXED_CONFIDENCE = "0.5000"
 
-# Keeps the call fast and keeps max_tokens from ever truncating a short demo
-# answer down to nothing (REQ item 2). "reasoning_effort": "low" is a Groq
-# request field for reasoning-capable models; a model that does not recognise
-# it ignores it.
+# The reply is not streamed, so the whole generation time counts against the
+# 3 s runtime timeout. At a slow 200 tokens/s a full 256-token reply is about
+# 1.3 s and a full 384-token reply about 1.9 s. These are estimates, not
+# measurements. Both stay inside the 3 s model limit, 4 s gateway limit and
+# the Go side's 5 s deadline. These are ceilings, not targets: a short answer
+# still stops early. "reasoning_effort": "low" is a Groq request field for
+# reasoning-capable models; a model that does not recognise it ignores it.
 _REASONING_EFFORT = "low"
-_MAX_TOKENS = 64
+_MAX_TOKENS = 256
 
 # How many characters of a refused raw reply go into the local DEBUG log line
 # (never the request body, never the key, and never an exception message --
@@ -122,7 +128,11 @@ _REPORT_EXPLANATION_USE_CASES: frozenset[str] = frozenset(
 )
 
 # A JSON reply needs more headroom than a short code or phrase.
-_REPORT_EXPLANATION_MAX_TOKENS = 220
+_REPORT_EXPLANATION_MAX_TOKENS = 384
+
+# Elapsed-time threshold (ms) above which a WARNING is emitted to alert that
+# the call is approaching the Go side's 5 s deadline.
+_SLOW_CALL_MS = 2000
 
 # ---------------------------------------------------------------------------
 # Profile IDs used in the bare (no-registry) fallback path.
@@ -143,6 +153,31 @@ _LOADED_PROFILES: PromptProfileRegistry | None = None
 _ERR_NO_SHIPPED_FILE = (
     "groq demo runtime: the shipped prompt-profile file could not be loaded"
 )
+
+# Provider-controlled finish_reason values that are safe to log verbatim.
+# Any other value is logged as "other" so provider-specific text never enters
+# the log.
+_SAFE_FINISH_REASONS: frozenset[str] = frozenset(
+    {"stop", "length", "content_filter", "tool_calls", "function_call"}
+)
+
+
+def _safe_finish_reason(doc: object) -> str:
+    """Extract finish_reason from a decoded reply, sanitized to a known value or 'other'."""
+    try:
+        reason = doc["choices"][0].get("finish_reason")  # type: ignore[index]
+    except (KeyError, IndexError, TypeError):
+        return "other"
+    if isinstance(reason, str) and reason in _SAFE_FINISH_REASONS:
+        return reason
+    return "other"
+
+
+def _max_tokens_for(call: Call) -> int:
+    """The max_tokens ceiling that was sent for *call*."""
+    if call.governance.use_case in _REPORT_EXPLANATION_USE_CASES:
+        return _REPORT_EXPLANATION_MAX_TOKENS
+    return _MAX_TOKENS
 
 
 def _shipped_profiles() -> PromptProfileRegistry:
@@ -451,25 +486,34 @@ class GroqDemoRuntime:
         else:
             profile_prompt = None
         request = build_request(self._model, self._api_key, call, system_prompt=profile_prompt)
+        t0 = time.monotonic()
         try:
             with urllib.request.urlopen(request, timeout=_TIMEOUT_SECONDS) as response:
                 raw = response.read()
         except urllib.error.HTTPError as exc:
+            elapsed_ms = int((time.monotonic() - t0) * 1000)
             try:
                 error_body = exc.read()
             except Exception:
                 error_body = b""
             log.debug("provider HTTP %s; reply starts: %r", exc.code, _snippet(error_body))
+            log.info("http_error status_code=%s elapsed_ms=%s", exc.code, elapsed_ms)
             raise RuntimeUnavailableError(
                 f"groq demo runtime: provider returned HTTP {exc.code}"
             ) from exc
         except urllib.error.URLError as exc:
+            elapsed_ms = int((time.monotonic() - t0) * 1000)
             log.debug("network error: %s", exc.reason)
+            log.info("network_error elapsed_ms=%s", elapsed_ms)
             raise RuntimeUnavailableError("groq demo runtime: network error") from exc
         except TimeoutError as exc:
+            elapsed_ms = int((time.monotonic() - t0) * 1000)
+            log.info("timeout elapsed_ms=%s", elapsed_ms)
             raise RuntimeUnavailableError(
                 f"groq demo runtime: request timed out after {_TIMEOUT_SECONDS}s"
             ) from exc
+
+        elapsed_ms = int((time.monotonic() - t0) * 1000)
 
         try:
             doc = json.loads(raw, parse_int=json_int)
@@ -482,9 +526,26 @@ class GroqDemoRuntime:
                 "groq demo runtime: provider response was not shaped like a chat completion"
             ) from exc
 
+        finish_reason = _safe_finish_reason(doc)
+        _, completion_tokens = usage_counts(doc)
+        max_tokens = _max_tokens_for(call)
+
         if not content.strip():
             log.debug("empty reply; reply starts: %r", _snippet(raw))
+            log.info(
+                "empty_reply finish_reason=%s completion_tokens=%s max_tokens=%s",
+                finish_reason,
+                completion_tokens,
+                max_tokens,
+            )
             raise RuntimeUnavailableError("groq demo runtime: provider returned an empty reply")
+
+        if finish_reason == "length":
+            log.info(
+                "reply_length_cut finish_reason=length completion_tokens=%s max_tokens=%s",
+                completion_tokens,
+                max_tokens,
+            )
 
         try:
             result = _result_from_content(call, content)
@@ -494,4 +555,16 @@ class GroqDemoRuntime:
                 "groq demo runtime: provider reply was not in the required shape"
             ) from exc
         input_tokens, output_tokens = usage_counts(doc)
+
+        log.info(
+            "call_ok use_case=%s elapsed_ms=%s completion_tokens=%s finish_reason=%s max_tokens=%s",
+            call.governance.use_case,
+            elapsed_ms,
+            completion_tokens,
+            finish_reason,
+            max_tokens,
+        )
+        if elapsed_ms >= _SLOW_CALL_MS:
+            log.warning("slow call: elapsed_ms=%s; the Go side gives up at 5 s", elapsed_ms)
+
         return replace(result, input_tokens=input_tokens, output_tokens=output_tokens)

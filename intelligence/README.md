@@ -198,7 +198,7 @@ all, or see `CLAIMS` in `tools/step10_demo.py` for the current set:
 | `NOT IMPLEMENTED` | No test exists yet for this claim (Go side not implemented yet). |
 | `NOT RUN` | The tool or runtime needed to run the claim was unavailable. |
 
-No live model is connected.  These checks show governance is independent of model output and payload content.  They do not show that a real model resists injection.
+The base stack uses a fake runtime; no live model is connected on that path. (The live-demo overlay uses a hosted model on synthetic data only; neither is an approved model.) These checks show governance is independent of model output and payload content. They do not show that a real model resists injection.
 
 Pass `--skip-go` to skip the Go rows (C8, C9), `--dry-run` to see every row without executing anything, or `--json` for machine-readable output.
 

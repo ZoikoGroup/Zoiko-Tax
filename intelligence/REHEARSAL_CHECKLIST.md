@@ -132,11 +132,12 @@ Source: `LIVE_DEMO.md §3`.
 Open `http://localhost:13000`, navigate to **Reports (demo)**, and click **Explain** on any row.
 
 > [!NOTE]
-> The three explainers (`explain-report-figure`, `explain-obligation-row`, `explain-shadow-variance`)
-> have no Go backend route (`backend/internal/transport/http/router.go`). The buttons reach the
-> demo HTTP service (`report_ai_http.py`) on port 18090 directly. On the base stack (no Groq overlay),
-> the development registry (`config/registry.dev.json`) routes to `FakeRuntime(canned=BASE_STACK_CANNED)`
-> which answers fixed `[fake]`-prefixed texts (`src/ztax_gateway/fake_runtime.py`).
+> The dev registry (`config/registry.dev.json`) registers three explainers (`explain-report-figure`,
+> `explain-obligation-row`, `explain-shadow-variance`). An obligation explain route is present in
+> the Go router (`POST /v1/obligations/{obligationId}/explanation` in `backend/internal/transport/http/router.go`,
+> read from source, not run here), while the buttons on Reports (demo) reach the demo HTTP service
+> (`report_ai_http.py`) on port 18090 directly. On the base stack (no Groq overlay), the development registry
+> routes to `FakeRuntime(canned=BASE_STACK_CANNED)` which answers fixed `[fake]`-prefixed texts (`src/ztax_gateway/fake_runtime.py`).
 
 Or via curl:
 
@@ -191,8 +192,8 @@ copy a new file over it; a replaced file may not appear inside the container).
 }
 ```
 
-No container restart needed. The gateway re-reads `killed` and `global_kill` on every call
-(`Gateway._refresh_kill_state` in `server.py` line 507).
+No container restart needed for the Python gateway container: the gateway re-reads `killed` and `global_kill` on every call
+(`Gateway._refresh_kill_state` in `server.py` line 507, verified by `tests/test_server.py::test_unknown_use_case_and_kill_switch_are_refused`). Note per layer: on the Go side, `wireModelGateway` loads the policy file once at startup into `gateway.StaticPolicy` (`backend/cmd/ztax-core/main.go` around lines 761 and 781, read from source, not run here), so any Go-side policy update or kill switch requires a service restart.
 
 **What you should see**
 
@@ -245,6 +246,16 @@ docker compose logs ztax-model-gateway
 2. **Linked answer-checked event** — logger `ztax_gateway.evidence`, level `INFO`.
    - Validator: `ontology_guard@1` (classify) or `explanation_guard@1` (explain).
    - Linked by `ai_invocation_id` (trailer key `ztax-invocation-id` from `server.py` line 92).
+   - Under B6, when `ZTAX_EVIDENCE_FILE_PATH` is set, `FileEvidenceSink` appends check events to the file; an append failure raises `FileSinkError` and fails closed (`AI_GATEWAY_UNAVAILABLE`). When unset, the logging sink remains primary and unchanged.
+   - Under B2a, the evidence ID propagates through Go provenance (`ids.go`), API response (`ledger.go`), OpenAPI contract, and UI proposal card (read from source, not run here). Audit record and error-path evidence ID remain PENDING under Decision Q3 (B2b).
+
+3. **Status of pending decisions and items:**
+   - **B2b (audit record & error-path evidence id):** PENDING on Decision Q3.
+   - **Full T21 (no-leak evidence with tenant reference):** PENDING on Decision Q3.
+   - **B3b (real approved list for Go check and gateway guard):** PENDING on Decision Q5.
+   - **Evidence retention days:** PENDING on Decision Q9.
+   - **Model hosting (Google Cloud / self-hosting):** PENDING on Decision Q6.
+   - **54-case pass rate and catalogue:** PENDING on Decision Q7.
    - The actual guard decision (`PASS` or `ABSTAIN`) lives here, **not** in the initial record.
    - Source: `LIVE_DEMO.md §6` "Evidence record vs answer-checked event".
 
@@ -298,7 +309,7 @@ The stand-in must allow CORS from `http://localhost:13000`.
 | Constant | Value | Source |
 |---|---|---|
 | `DEMO_AI_TIMEOUT_MS` | 30000 ms (30 s) | `demoAi.ts` line `export const DEMO_AI_TIMEOUT_MS = 30_000` |
-| Gateway model-call deadline | 45 s | `LIVE_DEMO.md §3`, `groq_demo_runtime.py` `GATEWAY_RUNTIME_TIMEOUT_SECONDS` |
+| Gateway model-call deadline | 4 s (starting point, to be re-checked after real models) | `LIVE_DEMO.md §3`, `groq_demo_runtime.py` `GATEWAY_RUNTIME_TIMEOUT_SECONDS` |
 
 **What you should see**
 
@@ -385,6 +396,112 @@ Fill in one row per step immediately after running it.
 | 5 — Screen: governed fallback | Trigger a gateway failure (`AI_GATEWAY_UNAVAILABLE` in logs); confirm "The AI could not be reached", no crash | | | | |
 | 5 — Screen: slow service | Stand-in waits > 30 s; confirm timeout headline and "Try again" | | | | |
 | 5 — Screen: unknown result | Stand-in returns `SOMETHING_NEW`; confirm "could not be interpreted" | | | | |
+
+---
+
+## 6. Base-Stack Evidence Volume Rehearsal (Task B6 Follow-up)
+
+> [!NOTE]
+> The rehearsal commands below are written as exact reference steps (marked **not run here**, per sandbox rules).
+> This rehearsal is a test of the base stack only. A platform that mounts volumes differently (for example with its own user or group settings) must repeat it.
+> The rehearsal uses standalone `docker run`, never a compose change, matching compose hardening: `--read-only`, `--cap-drop ALL`, `--security-opt no-new-privileges:true`, and identical environment variables with `ZTAX_EVIDENCE_FILE_PATH` pointing inside `/var/log/ztax/evidence`.
+
+### Step 1 — Build the Gateway Target
+```bash
+docker build -f intelligence/Dockerfile --target ztax-model-gateway -t ztax-model-gateway ./intelligence
+```
+* **Expected result:** Image builds successfully with target `ztax-model-gateway`.
+* **Observed:** `[                                                  ]`
+
+### Step 2 — Run with a New Named Volume (Writable)
+```bash
+# Create a dedicated named volume (separate from the core service's ./.evidence)
+docker volume create ztax-rehearsal-evidence
+
+docker run -d --name ztax-gateway-rehearsal \
+  --read-only --cap-drop ALL --security-opt no-new-privileges:true \
+  -p 8443:8443 \
+  -e ZTAX_ENVIRONMENT=development \
+  -e ZTAX_GATEWAY_CONFIG=/etc/ztax/ai/registry.json \
+  -e ZTAX_GATEWAY_REGION=local \
+  -e ZTAX_GATEWAY_AI_TRAIN=0.0.0-dev \
+  -e ZTAX_GATEWAY_ADDRESS="[::]:8443" \
+  -e ZTAX_GATEWAY_INSECURE_LOCAL="true" \
+  -e ZTAX_GATEWAY_RUNTIME="fake" \
+  -e ZTAX_EVIDENCE_FILE_PATH=/var/log/ztax/evidence/gateway-evidence.jsonl \
+  -v $(pwd)/intelligence/config/registry.dev.json:/etc/ztax/ai/registry.json:ro \
+  -v ztax-rehearsal-evidence:/var/log/ztax/evidence \
+  ztax-model-gateway
+```
+*Tool note:* No existing tool in `intelligence/tools/` is a standalone gRPC client dialing port 8443 directly (existing tools in `tools/` run in-process test harnesses or demo HTTP servers). Trigger a call through the core service stack (`curl -s -X POST http://localhost:8080/v1/classifications/propose ...`) or verify startup logs.
+* **Read back command:**
+```bash
+# Inspect records from the volume using python and read_evidence_file
+docker run --rm -v ztax-rehearsal-evidence:/data -w /data python:3.12-slim python -c "
+import json
+with open('/data/gateway-evidence.jsonl', 'r') as f:
+    for line in f:
+        print(json.loads(line))
+"
+```
+* **Expected result:** Gateway starts cleanly; invocation writes a valid line to `/var/log/ztax/evidence/gateway-evidence.jsonl`; reading back yields valid JSON records.
+* **Observed:** `[                                                  ]`
+
+### Step 3 — Full Volume Simulation (Tiny tmpfs)
+```bash
+docker rm -f ztax-gateway-rehearsal
+
+docker run -d --name ztax-gateway-full-vol \
+  --read-only --cap-drop ALL --security-opt no-new-privileges:true \
+  -p 8443:8443 \
+  --tmpfs /var/log/ztax/evidence:size=1k,mode=0700 \
+  -e ZTAX_ENVIRONMENT=development \
+  -e ZTAX_GATEWAY_CONFIG=/etc/ztax/ai/registry.json \
+  -e ZTAX_GATEWAY_REGION=local \
+  -e ZTAX_GATEWAY_AI_TRAIN=0.0.0-dev \
+  -e ZTAX_GATEWAY_ADDRESS="[::]:8443" \
+  -e ZTAX_GATEWAY_INSECURE_LOCAL="true" \
+  -e ZTAX_GATEWAY_RUNTIME="fake" \
+  -e ZTAX_EVIDENCE_FILE_PATH=/var/log/ztax/evidence/gateway-evidence.jsonl \
+  -v $(pwd)/intelligence/config/registry.dev.json:/etc/ztax/ai/registry.json:ro \
+  ztax-model-gateway
+```
+* **Expected result:** When write exceeds 1 KiB, `FileEvidenceSink` raises `FileSinkError`; the call is refused with `AI_GATEWAY_UNAVAILABLE`; deterministic core processing is unaffected; logs contain no prompt or response content.
+* **Observed:** `[                                                  ]`
+
+### Step 4 — Unwritable Volume (Root-Owned)
+```bash
+docker rm -f ztax-gateway-full-vol
+docker volume create ztax-root-evidence
+
+# Set root:root ownership on volume
+docker run --rm -v ztax-root-evidence:/vol alpine chown 0:0 /vol
+
+docker run --rm --name ztax-gateway-unwritable \
+  --read-only --cap-drop ALL --security-opt no-new-privileges:true \
+  -p 8443:8443 \
+  -e ZTAX_ENVIRONMENT=development \
+  -e ZTAX_GATEWAY_CONFIG=/etc/ztax/ai/registry.json \
+  -e ZTAX_GATEWAY_REGION=local \
+  -e ZTAX_GATEWAY_AI_TRAIN=0.0.0-dev \
+  -e ZTAX_GATEWAY_ADDRESS="[::]:8443" \
+  -e ZTAX_GATEWAY_INSECURE_LOCAL="true" \
+  -e ZTAX_GATEWAY_RUNTIME="fake" \
+  -e ZTAX_EVIDENCE_FILE_PATH=/var/log/ztax/evidence/gateway-evidence.jsonl \
+  -v $(pwd)/intelligence/config/registry.dev.json:/etc/ztax/ai/registry.json:ro \
+  -v ztax-root-evidence:/var/log/ztax/evidence \
+  ztax-model-gateway
+```
+* **Expected result:** **Start-up refusal.** `FileEvidenceSink.__init__` opens the file at startup (`evidence_file_sink.py:333`, `gateway_factory.py:136-138`). Permission denial raises `EvidenceFileConfigError` ("evidence file sink: the file could not be opened for appending"), terminating container startup before port 8443 opens.
+* **Observed:** `[                                                  ]`
+
+### Step 5 — Clean Up
+```bash
+docker rm -f ztax-gateway-rehearsal ztax-gateway-full-vol ztax-gateway-unwritable 2>/dev/null || true
+docker volume rm ztax-rehearsal-evidence ztax-root-evidence 2>/dev/null || true
+```
+* **Expected result:** All test containers and temporary rehearsal volumes removed.
+* **Observed:** `[                                                  ]`
 
 ---
 
