@@ -29,7 +29,6 @@ import (
 	"github.com/zoikogroup/zoikotax/backend/internal/adapter/mailer"
 	"github.com/zoikogroup/zoikotax/backend/internal/adapter/postgres"
 	"github.com/zoikogroup/zoikotax/backend/internal/app"
-	"github.com/zoikogroup/zoikotax/backend/internal/domain/ai"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/errs"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/evidence"
 	"github.com/zoikogroup/zoikotax/backend/internal/domain/legal"
@@ -775,10 +774,14 @@ func wireMail(cfg config.Config, store *postgres.Store, clk clock.Clock, ids idg
 func wireModelGateway(cfg config.Config, clk clock.Clock, ids idgen.Generator, log *slog.Logger) (*gateway.Client, func(), error) {
 	transport := gateway.Transport(gateway.Unconfigured{})
 	closeFn := func() {}
-	var policy ai.Policy
+	// With no Gateway the policy is the zero one, which refuses everything. With
+	// one, the registry file is loaded strictly now (a bad file stops the
+	// process) and its kill switch is then followed on every call, with no
+	// restart, failing closed if the file cannot be read.
+	var policy gateway.PolicySource = gateway.StaticPolicy{}
 	if cfg.AIGatewayTarget != "" {
 		var err error
-		if policy, err = gateway.LoadPolicy(cfg.AIPolicyFile); err != nil {
+		if policy, err = gateway.NewFilePolicy(cfg.AIPolicyFile, log); err != nil {
 			return nil, nil, err
 		}
 		gc := gateway.GRPCConfig{Target: cfg.AIGatewayTarget, InsecureLocal: cfg.AIGatewayInsecure}
@@ -798,7 +801,7 @@ func wireModelGateway(cfg config.Config, clk clock.Clock, ids idgen.Generator, l
 		log.Warn("no ai gateway configured; AI assistance will answer " + string(gateway.ReasonGatewayNotConfigured))
 	}
 	client, err := gateway.New(gateway.Config{
-		Transport: transport, Policy: gateway.StaticPolicy{P: policy},
+		Transport: transport, Policy: policy,
 		Recorder: gateway.SlogRecorder{Logger: log}, Clock: clk, IDs: ids,
 		Region: cfg.Region, Deadline: cfg.AIGatewayDeadline,
 	})

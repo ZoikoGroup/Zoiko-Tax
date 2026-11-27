@@ -37,20 +37,31 @@ type policyFile struct {
 
 // LoadPolicy reads the registry file into a validated policy snapshot.
 func LoadPolicy(path string) (ai.Policy, error) {
+	ucs, killed, global, err := loadRegistry(path)
+	if err != nil {
+		return ai.Policy{}, err
+	}
+	return ai.NewPolicy(ucs, killed, global)
+}
+
+// loadRegistry reads and strictly parses the registry file into its parts: the
+// use cases, and the kill state. LoadPolicy builds a snapshot from them at once;
+// FilePolicy keeps the use cases and follows only the kill state afterwards.
+func loadRegistry(path string) ([]ai.UseCasePolicy, []ai.AiUseCase, bool, error) {
 	raw, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
-		return ai.Policy{}, fmt.Errorf("gateway: read policy: %w", err)
+		return nil, nil, false, fmt.Errorf("gateway: read policy: %w", err)
 	}
 	var f policyFile
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&f); err != nil {
-		return ai.Policy{}, fmt.Errorf("gateway: parse policy %s: %w", path, err)
+		return nil, nil, false, fmt.Errorf("gateway: parse policy %s: %w", path, err)
 	}
 	var ucs []ai.UseCasePolicy
 	for _, u := range f.UseCases {
 		if len(u.Route) == 0 {
-			return ai.Policy{}, fmt.Errorf("gateway: use case %s has no route; the Gateway could not serve it", u.UseCaseID)
+			return nil, nil, false, fmt.Errorf("gateway: use case %s has no route; the Gateway could not serve it", u.UseCaseID)
 		}
 		classes := make([]privacy.Class, len(u.PermittedDataClasses))
 		for i, c := range u.PermittedDataClasses {
@@ -66,7 +77,7 @@ func LoadPolicy(path string) (ai.Policy, error) {
 	for i, k := range f.Killed {
 		killed[i] = ai.AiUseCase(k)
 	}
-	return ai.NewPolicy(ucs, killed, f.GlobalKill)
+	return ucs, killed, f.GlobalKill, nil
 }
 
 // LoadMTLS reads a workload's mTLS material from a mounted secret directory:
