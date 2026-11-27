@@ -296,3 +296,37 @@ func TestTheGatewayDeadlineDefaultIsFiveSeconds(t *testing.T) {
 		t.Fatalf("AIGatewayDeadline = %s, want 5s", cfg.AIGatewayDeadline)
 	}
 }
+
+// A valid override is read as given; the default is not touched.
+func TestTheGatewayDeadlineCanBeOverriddenFromTheEnvironment(t *testing.T) {
+	for raw, want := range map[string]time.Duration{
+		"8s":     8 * time.Second,
+		"1500ms": 1500 * time.Millisecond,
+		"1m":     time.Minute,
+	} {
+		withEnv(t, map[string]string{"ZTAX_AI_GATEWAY_DEADLINE": raw})
+		cfg, err := config.Load()
+		if err != nil {
+			t.Fatalf("%q: %v", raw, err)
+		}
+		if cfg.AIGatewayDeadline != want {
+			t.Fatalf("%q: AIGatewayDeadline = %s, want %s", raw, cfg.AIGatewayDeadline, want)
+		}
+	}
+}
+
+// A deadline that is not a positive duration stops the process at start, and the
+// message names the variable, so nobody finds out from a request that hangs or
+// fails at once.
+func TestAnInvalidGatewayDeadlineRefusesToStart(t *testing.T) {
+	for _, raw := range []string{"0", "0s", "-5s", "five", "5", " ", "5 seconds", "1e3s"} {
+		withEnv(t, map[string]string{"ZTAX_AI_GATEWAY_DEADLINE": raw})
+		_, err := config.Load()
+		if err == nil {
+			t.Fatalf("%q: started with an invalid deadline", raw)
+		}
+		if !strings.Contains(err.Error(), "ZTAX_AI_GATEWAY_DEADLINE") {
+			t.Fatalf("%q: the error does not name the variable: %v", raw, err)
+		}
+	}
+}

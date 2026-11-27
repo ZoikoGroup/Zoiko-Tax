@@ -116,6 +116,14 @@ const UNREACHED_REASONS: ReadonlySet<string> = new Set(['AI_GATEWAY_NOT_CONFIGUR
 // person's review, not a failure: no code, no retry (backend ReasonProposalCodeNotApproved).
 const NOT_APPROVED_REASON = 'AI_PROPOSAL_CODE_NOT_APPROVED'
 
+// The AI answered, and the answer carried no code at all (backend
+// ReasonGatewayReplyUnevidenced, raised when the proposal has no code), against
+// an answer that had text in the code place which is not a code of the right
+// shape: blank spaces, a heading mark, a word (ReasonProposalNotAnOntologyNode).
+// The two read differently on screen. Neither is a failure and neither offers a retry.
+const NO_CODE_REASON = 'AI_GATEWAY_REPLY_UNEVIDENCED'
+const NOT_A_CODE_REASON = 'AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE'
+
 function statusOf(error: unknown): number | null {
   if (typeof error === 'object' && error !== null && 'status' in error) {
     const status = error.status
@@ -206,6 +214,20 @@ export function viewOfProposal(ending: Ending, elapsedMs: number): ProposalView 
       elapsedMs,
       `The AI's suggestion is not a code that can be used today, so it is not shown. A person classifies this item. Nothing was changed. ${UNAFFECTED}`,
       'A person needs to review this item',
+    )
+  }
+  if (p.disposition === 'REVIEW_REQUIRED' && p.reviewReason === NO_CODE_REASON) {
+    return review(
+      elapsedMs,
+      `The AI answered, but gave no code. Classify it by hand. ${UNAFFECTED} Nothing was changed.`,
+      'The AI gave no code',
+    )
+  }
+  if (p.disposition === 'REVIEW_REQUIRED' && p.reviewReason === NOT_A_CODE_REASON) {
+    return review(
+      elapsedMs,
+      `The AI answered with something that is not a usable code, so it is not shown. Classify it by hand. ${UNAFFECTED} Nothing was changed.`,
+      'The AI did not give a usable code',
     )
   }
   // The AI answered and the answer was set aside, or the outcome is one this

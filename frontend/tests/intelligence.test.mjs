@@ -47,6 +47,30 @@ describe('the four states', () => {
     }
   })
 
+  test('an answer with no code and an answer with a code that is not usable read differently', () => {
+    const none = viewOfProposal(reviewRequired('AI_GATEWAY_REPLY_UNEVIDENCED'), 800)
+    const notACode = viewOfProposal(reviewRequired('AI_PROPOSAL_NOT_AN_ONTOLOGY_NODE'), 800)
+    const unreachable = viewOfProposal(reviewRequired('AI_GATEWAY_UNAVAILABLE'), 800)
+    assert.equal(none.headline, 'The AI gave no code')
+    assert.match(none.sentence, /The AI answered, but gave no code\. Classify it by hand\./)
+    assert.equal(notACode.headline, 'The AI did not give a usable code')
+    assert.match(notACode.sentence, /not a usable code, so it is not shown\. Classify it by hand\./)
+    assert.notEqual(none.sentence, notACode.sentence)
+    assert.notEqual(none.headline, notACode.headline)
+    for (const v of [none, notACode]) {
+      assert.equal(v.state, 'review')
+      assert.equal(v.code, null)
+      assert.notEqual(v.sentence, unreachable.sentence)
+      assert.doesNotMatch(v.sentence, /Try again|AI_|reviewReason/)
+    }
+  })
+
+  test('a valid code is still a suggestion, shown with its code', () => {
+    const v = viewOfProposal(proposed(), 800)
+    assert.equal(v.state, 'proposed')
+    assert.equal(v.code, 'ontology:telecom/voice/mobile')
+  })
+
   test('a governance refusal (403) is "review": blocked, not down', () => {
     const v = viewOfProposal(failure(apiError(403)), 300)
     assert.equal(v.state, 'review')
@@ -384,7 +408,8 @@ describe('a code that is not approved', () => {
   test('the other reasons are unchanged', () => {
     assert.equal(viewOfProposal(reviewRequired('AI_GATEWAY_UNAVAILABLE'), 1).state, 'unavailable')
     assert.equal(viewOfProposal(reviewRequired('AI_GATEWAY_NOT_CONFIGURED'), 1).state, 'unavailable')
-    const other = viewOfProposal(reviewRequired('AI_GATEWAY_REPLY_UNEVIDENCED'), 1)
+    // A reason this screen does not know still gets the one general sentence.
+    const other = viewOfProposal(reviewRequired('AI_SOMETHING_NEW'), 1)
     assert.equal(other.headline, 'Set aside for a person to review')
     assert.match(other.sentence, /did not give a usable suggestion/)
   })
